@@ -1,12 +1,11 @@
-use leptos::task::spawn_local;
-use leptos::{leptos_dom::logging::console_log, prelude::*};
+use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, Stylesheet, Title};
 use leptos_router::hooks::use_params;
+use leptos_router::path;
 use leptos_router::{
     components::{Route, Router, Routes},
-    StaticSegment, WildcardSegment,
+    WildcardSegment,
 };
-use leptos_router::{path, ParamSegment};
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -34,6 +33,7 @@ pub fn App() -> impl IntoView {
 }
 use leptos::Params;
 use leptos_router::params::Params;
+use serde::{Deserialize, Serialize};
 
 #[derive(Params, PartialEq)]
 struct PullRequestParams {
@@ -70,20 +70,25 @@ fn PullRequestPage() -> impl IntoView {
             .unwrap_or_default()
     };
 
-    let title = Resource::new(
+    let page_data = Resource::new(
         move || (owner(), repo(), pr_number()),
         |(owner, repo, pr_number)| async move {
-            pull_request_title(owner, repo, pr_number)
-                .await
-                .unwrap_or_default()
+            pull_request_title(owner, repo, pr_number).await.unwrap()
         },
     );
 
     view! {
-        <div>
-            <h1>{title}</h1>
-        </div>
+        <Suspense fallback=move || view! { <p>"Loading..."</p> }>
+                <h1>{move || page_data.get().map(|v| v.title)}</h1>
+                <p>{move || page_data.get().map(|v| v.body)}</p>
+        </Suspense>
     }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct PullRequestPageData {
+    title: String,
+    body: Option<String>,
 }
 
 #[server]
@@ -91,7 +96,7 @@ pub async fn pull_request_title(
     owner: String,
     repo: String,
     pr_number: u64,
-) -> Result<String, ServerFnError> {
+) -> Result<PullRequestPageData, ServerFnError> {
     println!("fetching pr {pr_number}");
     let pull_request = octocrab::instance()
         .pulls(owner, repo)
@@ -99,7 +104,10 @@ pub async fn pull_request_title(
         .await
         .inspect_err(|e| println!("{e:#?}"))?;
 
-    Ok(pull_request.title.unwrap_or_default())
+    Ok(PullRequestPageData {
+        title: pull_request.title.unwrap_or_default(),
+        body: pull_request.body,
+    })
 }
 
 /// 404 - Not Found
