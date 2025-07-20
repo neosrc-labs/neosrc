@@ -16,6 +16,8 @@ leptos_meta = { version = "0.8.2" }
 leptos_actix = { version = "0.8.2", optional = true }
 leptos_router = { version = "0.8.2" }
 wasm-bindgen = "=0.2.100"
+octocrab = { version = "0.44.1", optional = true }
+# octocrab = "0.44.1"
 
 [features]
 csr = ["leptos/csr"]
@@ -24,6 +26,7 @@ ssr = [
   "dep:actix-files",
   "dep:actix-web",
   "dep:leptos_actix",
+  "dep:octocrab",
   "leptos/ssr",
   "leptos_meta/ssr",
   "leptos_router/ssr",

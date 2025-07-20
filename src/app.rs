@@ -1,9 +1,12 @@
-use leptos::prelude::*;
+use leptos::task::spawn_local;
+use leptos::{leptos_dom::logging::console_log, prelude::*};
 use leptos_meta::{provide_meta_context, Stylesheet, Title};
+use leptos_router::hooks::use_params;
 use leptos_router::{
     components::{Route, Router, Routes},
     StaticSegment, WildcardSegment,
 };
+use leptos_router::{path, ParamSegment};
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -13,34 +16,90 @@ pub fn App() -> impl IntoView {
     view! {
         // injects a stylesheet into the document <head>
         // id=leptos means cargo-leptos will hot-reload this stylesheet
-        <Stylesheet id="leptos" href="/pkg/dub.css"/>
+        <Stylesheet id="leptos" href="/pkg/dub.css" />
 
         // sets the document title
-        <Title text="Welcome to Leptos"/>
+        <Title text="Welcome to Leptos" />
 
         // content for this welcome page
         <Router>
             <main>
                 <Routes fallback=move || "Not found.">
-                    <Route path=StaticSegment("") view=HomePage/>
-                    <Route path=WildcardSegment("any") view=NotFound/>
+                    <Route path=path!("/:owner/:repo/pull/:id") view=PullRequestPage />
+                    <Route path=WildcardSegment("any") view=NotFound />
                 </Routes>
             </main>
         </Router>
     }
 }
+use leptos::Params;
+use leptos_router::params::Params;
 
-/// Renders the home page of your application.
+#[derive(Params, PartialEq)]
+struct PullRequestParams {
+    owner: Option<String>,
+    repo: Option<String>,
+    id: Option<u64>,
+}
+
 #[component]
-fn HomePage() -> impl IntoView {
-    // Creates a reactive value to update the button
-    let count = RwSignal::new(0);
-    let on_click = move |_| *count.write() += 1;
+fn PullRequestPage() -> impl IntoView {
+    let params = use_params::<PullRequestParams>();
+    let owner = move || {
+        params
+            .read()
+            .as_ref()
+            .ok()
+            .and_then(|params| params.owner.clone())
+            .unwrap_or_default()
+    };
+    let repo = move || {
+        params
+            .read()
+            .as_ref()
+            .ok()
+            .and_then(|params| params.repo.clone())
+            .unwrap_or_default()
+    };
+    let pr_number = move || {
+        params
+            .read()
+            .as_ref()
+            .ok()
+            .and_then(|params| params.id)
+            .unwrap_or_default()
+    };
+
+    let title = Resource::new(
+        move || (owner(), repo(), pr_number()),
+        |(owner, repo, pr_number)| async move {
+            pull_request_title(owner, repo, pr_number)
+                .await
+                .unwrap_or_default()
+        },
+    );
 
     view! {
-        <h1>"Welcome to Leptos!"</h1>
-        <button on:click=on_click>"Click Me: " {count}</button>
+        <div>
+            <h1>{title}</h1>
+        </div>
     }
+}
+
+#[server]
+pub async fn pull_request_title(
+    owner: String,
+    repo: String,
+    pr_number: u64,
+) -> Result<String, ServerFnError> {
+    println!("fetching pr {pr_number}");
+    let pull_request = octocrab::instance()
+        .pulls(owner, repo)
+        .get(pr_number)
+        .await
+        .inspect_err(|e| println!("{e:#?}"))?;
+
+    Ok(pull_request.title.unwrap_or_default())
 }
 
 /// 404 - Not Found
@@ -60,7 +119,5 @@ fn NotFound() -> impl IntoView {
         resp.set_status(actix_web::http::StatusCode::NOT_FOUND);
     }
 
-    view! {
-        <h1>"Not Found"</h1>
-    }
+    view! { <h1>"Not Found"</h1> }
 }
