@@ -84,7 +84,10 @@ fn PullRequestPage() -> impl IntoView {
                 Some(data) => {
                     Some(
                         view! {
-                            <h1>{data.title}</h1>
+                            <div style="display: flex; align-items: center; gap: 1em">
+                                <h1>{data.title}</h1>
+                                <div>{"#"}{pr_number}</div>
+                            </div>
                             <p>{data.body}</p>
                         },
                     )
