@@ -72,15 +72,24 @@ fn PullRequestPage() -> impl IntoView {
 
     let page_data = Resource::new(
         move || (owner(), repo(), pr_number()),
-        |(owner, repo, pr_number)| async move {
-            pull_request_title(owner, repo, pr_number).await.unwrap()
-        },
+        |(owner, repo, pr_number)| async move { fetch_page_data(owner, repo, pr_number).await.unwrap() },
     );
 
     view! {
-        <Suspense fallback=move || view! { <p>"Loading..."</p> }>
-                <h1>{move || page_data.get().map(|v| v.title)}</h1>
-                <p>{move || page_data.get().map(|v| v.body)}</p>
+        <Suspense fallback=move || {
+            view! { <p>"Loading..."</p> }
+        }>
+            {move || match page_data.get() {
+                None => None,
+                Some(data) => {
+                    Some(
+                        view! {
+                            <h1>{data.title}</h1>
+                            <p>{data.body}</p>
+                        },
+                    )
+                }
+            }}
         </Suspense>
     }
 }
@@ -92,7 +101,7 @@ pub struct PullRequestPageData {
 }
 
 #[server]
-pub async fn pull_request_title(
+pub async fn fetch_page_data(
     owner: String,
     repo: String,
     pr_number: u64,
