@@ -85,10 +85,10 @@ fn PullRequestPage() -> impl IntoView {
                     Some(
                         view! {
                             <div style="display: flex; align-items: center; gap: 1em">
-                                <h1>{data.title}</h1>
+                                <h1>{data.pull_request.title}</h1>
                                 <div>{"#"}{pr_number}</div>
                             </div>
-                            <p>{data.body}</p>
+                            <p>{data.pull_request.body}</p>
                         },
                     )
                 }
@@ -97,10 +97,9 @@ fn PullRequestPage() -> impl IntoView {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PullRequestPageData {
-    title: String,
-    body: Option<String>,
+    pull_request: octocrab::models::pulls::PullRequest,
 }
 
 #[server]
@@ -116,10 +115,7 @@ pub async fn fetch_page_data(
         .await
         .inspect_err(|e| println!("{e:#?}"))?;
 
-    Ok(PullRequestPageData {
-        title: pull_request.title.unwrap_or_default(),
-        body: pull_request.body,
-    })
+    Ok(PullRequestPageData { pull_request })
 }
 
 /// 404 - Not Found
