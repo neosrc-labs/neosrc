@@ -33,6 +33,8 @@ pub fn App() -> impl IntoView {
 }
 use leptos::Params;
 use leptos_router::params::Params;
+use octocrab::models::pulls::PullRequest;
+use octocrab::models::IssueState;
 use serde::{Deserialize, Serialize};
 
 #[derive(Params, PartialEq)]
@@ -82,13 +84,15 @@ fn PullRequestPage() -> impl IntoView {
             {move || match page_data.get() {
                 None => None,
                 Some(data) => {
+                let status = get_pr_status(&data.pull_request);
                     Some(
                         view! {
                             <div style="display: flex; align-items: center; gap: 1em">
                                 <h1>{data.pull_request.title}</h1>
                                 <div>{"#"}{pr_number}</div>
                             </div>
-                            <p>{data.pull_request.body}</p>
+                            <p>{status}</p>
+                            <p>{"Description: "} {data.pull_request.body}</p>
                         },
                     )
                 }
@@ -99,7 +103,7 @@ fn PullRequestPage() -> impl IntoView {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PullRequestPageData {
-    pull_request: octocrab::models::pulls::PullRequest,
+    pull_request: PullRequest,
 }
 
 #[server]
@@ -136,4 +140,20 @@ fn NotFound() -> impl IntoView {
     }
 
     view! { <h1>"Not Found"</h1> }
+}
+
+pub fn get_pr_status(pr: &PullRequest) -> String {
+    if pr.merged_at.is_some() {
+        "Merged".to_string()
+    } else if pr.draft.unwrap_or(false) {
+        // draft is an Option<bool>
+        "Draft".to_string()
+    } else if pr.state == Some(IssueState::Open) {
+        "Open".to_string()
+    } else if pr.state == Some(IssueState::Closed) {
+        "Closed".to_string()
+    } else {
+        // Fallback for any other unexpected states
+        format!("Unknown State ({:?})", pr.state)
+    }
 }
