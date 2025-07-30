@@ -5,6 +5,11 @@ function redirectToLocalhost(url) {
   const githubPrRegex = /^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/pull\/(\d+)\/?.*$/;
   const match = url.match(githubPrRegex);
 
+  if (url.includes('nodub=true')) {
+    console.log('nodub=true, skipping redirect')
+    return false;
+  }
+
   if (match) {
     const owner = match[1];
     const repo = match[2];

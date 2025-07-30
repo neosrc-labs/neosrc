@@ -4,6 +4,11 @@ chrome.webNavigation.onBeforeNavigate.addListener((details) => {
     const githubPrRegex = /^https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/pull\/(\d+)\/?.*$/;
     const match = details.url.match(githubPrRegex);
 
+    if (details.url.includes('nodub=true')) {
+      console.log('nodub=true, skipping redirect')
+      return false;
+    }
+
     if (match) {
       const owner = match[1];
       const repo = match[2];
