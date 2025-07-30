@@ -84,20 +84,67 @@ fn PullRequestPage() -> impl IntoView {
             {move || match page_data.get() {
                 None => None,
                 Some(data) => {
-                let status = get_pr_status(&data.pull_request);
                     Some(
                         view! {
+                            <div style="display: flex; gap: 1em; margin-bottom: 1em; align-items: center">
+                                <a href=format!("https://github.com/{}", owner())>{owner}</a>
+                                <p>{"/"}</p>
+                                <a href=format!(
+                                    "https://github.com/{}/{}",
+                                    owner(),
+                                    repo(),
+                                )>{repo}</a>
+                            </div>
+                            <div style="display: flex; gap: 1em">
+                                <a href=format!(
+                                    "https://github.com/{}/{}",
+                                    owner(),
+                                    repo(),
+                                )>"Code"</a>
+                                <a href=format!(
+                                    "https://github.com/{}/{}/issues",
+                                    owner(),
+                                    repo(),
+                                )>"Issues"</a>
+                                <a href=format!(
+                                    "https://github.com/{}/{}/pulls",
+                                    owner(),
+                                    repo(),
+                                )>"Pull requests"</a>
+                            </div>
                             <div style="display: flex; align-items: center; gap: 1em">
-                                <h1>{data.pull_request.title}</h1>
+                                <h1>{data.pull_request.title.clone()}</h1>
                                 <div>{"#"}{pr_number}</div>
                             </div>
-                            <p>{status}</p>
+                            <StatusPill pull_request=data.pull_request.clone() />
                             <p>{"Description: "} {data.pull_request.body}</p>
                         },
                     )
                 }
             }}
         </Suspense>
+    }
+}
+
+#[component]
+fn StatusPill(pull_request: PullRequest) -> impl IntoView {
+    let (status, color) = if pull_request.merged_at.is_some() {
+        ("Merged".to_string(), "purple")
+    } else if pull_request.draft.unwrap_or(false) {
+        // draft is an Option<bool>
+        ("Draft".to_string(), "gray")
+    } else if pull_request.state == Some(IssueState::Open) {
+        ("Open".to_string(), "green")
+    } else if pull_request.state == Some(IssueState::Closed) {
+        ("Closed".to_string(), "red")
+    } else {
+        // Fallback for any other unexpected states
+        (format!("Unknown State ({:?})", pull_request.state), "")
+    };
+    view! {
+        <div style=format!(
+            "background: {color}; padding: 0.5em 1em; width: fit-content; border-radius: 1.5em; color: white; font-weight: bold",
+        )>{status}</div>
     }
 }
 
@@ -113,7 +160,12 @@ pub async fn fetch_page_data(
     pr_number: u64,
 ) -> Result<PullRequestPageData, ServerFnError> {
     println!("fetching pr {pr_number}");
-    let pull_request = octocrab::instance()
+
+    let client = octocrab::Octocrab::builder()
+        .user_access_token(std::env::var("GITHUB_API_TOKEN")?)
+        .build()?;
+
+    let pull_request = client
         .pulls(owner, repo)
         .get(pr_number)
         .await
@@ -140,20 +192,4 @@ fn NotFound() -> impl IntoView {
     }
 
     view! { <h1>"Not Found"</h1> }
-}
-
-pub fn get_pr_status(pr: &PullRequest) -> String {
-    if pr.merged_at.is_some() {
-        "Merged".to_string()
-    } else if pr.draft.unwrap_or(false) {
-        // draft is an Option<bool>
-        "Draft".to_string()
-    } else if pr.state == Some(IssueState::Open) {
-        "Open".to_string()
-    } else if pr.state == Some(IssueState::Closed) {
-        "Closed".to_string()
-    } else {
-        // Fallback for any other unexpected states
-        format!("Unknown State ({:?})", pr.state)
-    }
 }
