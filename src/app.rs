@@ -37,6 +37,8 @@ use octocrab::models::pulls::PullRequest;
 use octocrab::models::IssueState;
 use serde::{Deserialize, Serialize};
 
+use crate::markdown::Markdown;
+
 #[derive(Params, PartialEq)]
 struct PullRequestParams {
     owner: Option<String>,
@@ -76,6 +78,10 @@ fn PullRequestPage() -> impl IntoView {
         move || (owner(), repo(), pr_number()),
         |(owner, repo, pr_number)| async move { fetch_page_data(owner, repo, pr_number).await.unwrap() },
     );
+
+    let parser = pulldown_cmark::Parser::new("# Hello world");
+    let mut html_output = String::new();
+    pulldown_cmark::html::push_html(&mut html_output, parser);
 
     view! {
         <Suspense fallback=move || {
@@ -117,7 +123,7 @@ fn PullRequestPage() -> impl IntoView {
                                 <div>{"#"}{pr_number}</div>
                             </div>
                             <StatusPill pull_request=data.pull_request.clone() />
-                            <p>{"Description: "} {data.pull_request.body}</p>
+                            <Markdown content={data.pull_request.body.unwrap_or_default()} />
                         },
                     )
                 }
