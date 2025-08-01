@@ -34,7 +34,7 @@ pub fn App() -> impl IntoView {
 use leptos::Params;
 use leptos_router::params::Params;
 use octocrab::models::pulls::PullRequest;
-use octocrab::models::IssueState;
+use octocrab::models::{checks::CheckRun, IssueState};
 use serde::{Deserialize, Serialize};
 
 use crate::markdown::Markdown;
@@ -120,6 +120,14 @@ fn PullRequestPage() -> impl IntoView {
                             </div>
                             <StatusPill pull_request=data.pull_request.clone() />
                             <Markdown content={data.pull_request.body.unwrap_or_default()} />
+
+                            {data.checks.into_iter().map(|check| view! {
+                                <div>
+                                  {check.name.clone()}
+                                </div>
+                            })
+                            .collect_view()}
+
                         },
                     )
                 }
@@ -153,6 +161,7 @@ fn StatusPill(pull_request: PullRequest) -> impl IntoView {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PullRequestPageData {
     pull_request: PullRequest,
+    checks: Vec<CheckRun>,
 }
 
 #[server]
@@ -168,12 +177,24 @@ pub async fn fetch_page_data(
         .build()?;
 
     let pull_request = client
-        .pulls(owner, repo)
+        .pulls(&owner, &repo)
         .get(pr_number)
         .await
         .inspect_err(|e| println!("{e:#?}"))?;
 
-    Ok(PullRequestPageData { pull_request })
+    println!("SHA: {}", pull_request.head.sha);
+
+    let checks = client
+        .checks(&owner, &repo)
+        .list_check_runs_for_git_ref(pull_request.head.sha.clone().into())
+        .send()
+        .await
+        .inspect_err(|e| println!("{e:#?}"))?;
+
+    Ok(PullRequestPageData {
+        pull_request,
+        checks: checks.check_runs,
+    })
 }
 
 /// 404 - Not Found
