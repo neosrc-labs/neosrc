@@ -79,10 +79,6 @@ fn PullRequestPage() -> impl IntoView {
         |(owner, repo, pr_number)| async move { fetch_page_data(owner, repo, pr_number).await.unwrap() },
     );
 
-    let parser = pulldown_cmark::Parser::new("# Hello world");
-    let mut html_output = String::new();
-    pulldown_cmark::html::push_html(&mut html_output, parser);
-
     view! {
         <Suspense fallback=move || {
             view! { <p>"Loading..."</p> }
