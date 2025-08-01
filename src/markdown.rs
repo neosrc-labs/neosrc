@@ -15,7 +15,5 @@ pub fn Markdown(
     #[prop(into, default = String::new())] class: String,
 ) -> impl IntoView {
     let content = render_markdown(content);
-    view! {
-      <div class=format!("{class}")>{leptos::html::div().inner_html(content)}</div>
-    }
+    view! { <div class=format!("{class}")>{leptos::html::div().inner_html(content)}</div> }
 }

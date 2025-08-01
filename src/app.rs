@@ -88,51 +88,77 @@ fn PullRequestPage() -> impl IntoView {
                 Some(data) => {
                     Some(
                         view! {
-                            <div style="display: flex; gap: 1em; margin-bottom: 1em; align-items: center">
-                                <a href=format!("https://github.com/{}", owner())>{owner}</a>
-                                <p>{"/"}</p>
-                                <a href=format!(
-                                    "https://github.com/{}/{}",
-                                    owner(),
-                                    repo(),
-                                )>{repo}</a>
-                            </div>
-                            <div style="display: flex; gap: 1em">
-                                <a href=format!(
-                                    "https://github.com/{}/{}",
-                                    owner(),
-                                    repo(),
-                                )>"Code"</a>
-                                <a href=format!(
-                                    "https://github.com/{}/{}/issues",
-                                    owner(),
-                                    repo(),
-                                )>"Issues"</a>
-                                <a href=format!(
-                                    "https://github.com/{}/{}/pulls",
-                                    owner(),
-                                    repo(),
-                                )>"Pull requests"</a>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 1em">
-                                <h1>{data.pull_request.title.clone()}</h1>
-                                <div>{"#"}{pr_number}</div>
-                            </div>
-                            <StatusPill pull_request=data.pull_request.clone() />
-                            <Markdown content={data.pull_request.body.unwrap_or_default()} />
-
-                            {data.checks.into_iter().map(|check| view! {
-                                <div>
-                                  {check.name.clone()}
+                            <div style="display: flex; flex-direction: column; height: 100vh">
+                                <Header owner=owner repo=repo />
+                                <div style="display: flex; margin-top: 0.5em; gap: 1em; flex-grow: 1">
+                                    <div>
+                                        <Sidebar checks=move || data.checks.clone() />
+                                    </div>
+                                    <div>
+                                        <MainContent pull_request=move || {
+                                            data.pull_request.clone()
+                                        } />
+                                    </div>
                                 </div>
-                            })
-                            .collect_view()}
-
+                            </div>
                         },
                     )
                 }
             }}
         </Suspense>
+    }
+}
+
+#[component]
+fn Header(owner: impl Fn() -> String, repo: impl Fn() -> String) -> impl IntoView {
+    view! {
+        <div style="display: flex; gap: 1em; margin-bottom: 1em; align-items: center">
+            <a href=format!("https://github.com/{}", owner())>{owner()}</a>
+            <p>{"/"}</p>
+            <a href=format!("https://github.com/{}/{}", owner(), repo())>{repo()}</a>
+        </div>
+        <div style="display: flex; gap: 1em">
+            <a href=format!("https://github.com/{}/{}", owner(), repo())>"Code"</a>
+            <a href=format!("https://github.com/{}/{}/issues", owner(), repo())>"Issues"</a>
+            <a href=format!("https://github.com/{}/{}/pulls", owner(), repo())>"Pull requests"</a>
+        </div>
+    }
+}
+
+#[component]
+fn Sidebar(checks: impl Fn() -> Vec<CheckRun>) -> impl IntoView {
+    view! {
+        <div style="height: 100%; display: flex; flex-direction: column; justify-content: space-between">
+            <div style="display: flex; flex-direction: column; gap: 0.5em; margin-top: 1em">
+                <div>"Conversations"</div>
+                <div>"Files changed"</div>
+            </div>
+            <div>
+                <strong>"Actions"</strong>
+                {checks()
+                    .into_iter()
+                    .map(|check| view! { <div>{check.name.clone()}</div> })
+                    .collect_view()}
+            </div>
+            <div>
+                <div style="color: red">"Request Changes"</div>
+                <div style="color: green">"Approve"</div>
+                <div style="color: purple">"Merge"</div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn MainContent(pull_request: impl Fn() -> PullRequest) -> impl IntoView {
+    let pr_number = || pull_request().number;
+    view! {
+        <div style="display: flex; align-items: center; gap: 1em">
+            <h1>{pull_request().title.clone()}</h1>
+            <div>{"#"}{pr_number()}</div>
+        </div>
+        <StatusPill pull_request=pull_request().clone() />
+        <Markdown content=pull_request().body.unwrap_or_default() />
     }
 }
 
