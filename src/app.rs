@@ -128,13 +128,13 @@ fn Header(owner: impl Fn() -> String, repo: impl Fn() -> String) -> impl IntoVie
 #[component]
 fn Sidebar(checks: impl Fn() -> Vec<CheckRun>) -> impl IntoView {
     view! {
-        <div style="height: 100%; display: flex; flex-direction: column; justify-content: space-between">
-            <div style="display: flex; flex-direction: column; gap: 0.5em; margin-top: 1em">
+        <div style="height: 97%; display: flex; flex-direction: column; justify-content: space-between">
+            <div style="display: flex; flex-direction: column; gap: 1em; margin-top: 1em">
                 <div>"Conversations"</div>
                 <div>"Files changed"</div>
             </div>
             <div>
-                <strong>"Actions"</strong>
+                <strong>"Checks"</strong>
                 {checks()
                     .into_iter()
                     .map(|check| view! { <div>{check.name.clone()}</div> })
