@@ -93,13 +93,13 @@ fn PullRequestPage() -> impl IntoView {
                                 <Header owner=owner repo=repo />
                                 <div style="display: flex; margin-top: 0.5em; gap: 1em; flex-grow: 1">
                                     <div>
-                                        <Sidebar checks=data.checks />
+                                        <Sidebar pull_request=data.pull_request.clone() />
                                     </div>
                                     <div style="flex-grow: 1">
                                         <MainContent pull_request=data.pull_request.clone() />
                                     </div>
                                     <div style="display: flex; flex-direction: column; gap: 1em;">
-                                        <Metadata pull_request=data.pull_request />
+                                        <Checks checks=data.checks />
                                         <Commits commits=data.commits />
                                     </div>
                                 </div>
@@ -113,13 +113,28 @@ fn PullRequestPage() -> impl IntoView {
 }
 
 #[component]
+fn Checks(#[prop(into)] checks: Signal<Vec<CheckRun>>) -> impl IntoView {
+    view! {
+        <div>
+            <strong>"Checks"</strong>
+            {checks
+                .get()
+                .into_iter()
+                .map(|check| view! { <div>{check.name.clone()}</div> })
+                .collect_view()}
+        </div>
+    }
+}
+
+#[component]
 fn Metadata(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView {
     view! {
         <div>
             <div style="margin-bottom: 1em; font-weight: bold">"Metadata"</div>
             <div>"Labels"</div>
             <div>
-                {pull_request.get()
+                {pull_request
+                    .get()
                     .labels
                     .unwrap_or_default()
                     .iter()
@@ -137,7 +152,8 @@ fn Commits(#[prop(into)] commits: Signal<Vec<RepoCommit>>) -> impl IntoView {
     view! {
         <div>
             <div style="margin-bottom: 1em; font-weight: bold">"Commits"</div>
-            {commits.get()
+            {commits
+                .get()
                 .iter()
                 .map(|commit| {
                     let message = commit
@@ -171,19 +187,15 @@ fn Header(owner: impl Fn() -> String, repo: impl Fn() -> String) -> impl IntoVie
 }
 
 #[component]
-fn Sidebar(#[prop(into)] checks: Signal<Vec<CheckRun>>) -> impl IntoView {
+fn Sidebar(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView {
     view! {
-        <div style="height: 97%; display: flex; flex-direction: column; justify-content: space-between">
+        <div style="height: 97%; display: flex; flex-direction: column; justify-content: space-between; gap: 1em">
             <div style="display: flex; flex-direction: column; gap: 1em; margin-top: 1em">
                 <div>"Conversations"</div>
                 <div>"Files changed"</div>
             </div>
-            <div>
-                <strong>"Checks"</strong>
-                {checks.get()
-                    .into_iter()
-                    .map(|check| view! { <div>{check.name.clone()}</div> })
-                    .collect_view()}
+            <div style="flex-grow: 1">
+                <Metadata pull_request=pull_request />
             </div>
             <div>
                 <div style="color: red">"Request Changes"</div>
