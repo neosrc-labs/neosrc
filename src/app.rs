@@ -249,6 +249,8 @@ fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView
     let pull_request = move || pull_request.get();
     let pr_number = || pull_request().number;
     let author = || pull_request().user.unwrap().login.clone();
+    let avatar_url = || pull_request().user.unwrap().avatar_url.to_string();
+    let author_url = move || pull_request().user.unwrap().html_url.to_string();
     let created_at = || {
         pull_request()
             .created_at
@@ -275,7 +277,14 @@ fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView
                     </div>
 
                     // Author and date info
-                    <div style="display: flex; align-items: center; gap: 0.5em; color: #586069; font-size: 0.95em;">
+                    <div style="display: flex; align-items: center; gap: 0.75em; color: #586069; font-size: 0.95em;">
+                        <a href=author_url>
+                        <img
+                            src=avatar_url()
+                            alt=format!("{} avatar", author())
+                            style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid #e1e4e8;"
+                        />
+                        </a>
                         <span style="font-weight: 500;">{author()}</span>
                         <span>"opened this pull request on"</span>
                         <span style="font-weight: 500;">{created_at()}</span>
