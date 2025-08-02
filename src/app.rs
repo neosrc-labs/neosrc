@@ -116,22 +116,207 @@ fn PullRequestPage() -> impl IntoView {
 
 #[component]
 fn Checks(#[prop(into)] checks: Signal<Vec<CheckRun>>) -> impl IntoView {
+    let checks_data = move || {
+        let checks = checks.get();
+        let mut passed = 0;
+        let mut failed = 0;
+        let mut running = 0;
+        let mut pending = 0;
+        let mut skipped = 0;
+
+        for check in &checks {
+            // Determine status based on available fields
+            if check.completed_at.is_some() {
+                // Check is completed, look at conclusion
+                match check.conclusion.as_deref() {
+                    Some("success") => passed += 1,
+                    Some("failure") | Some("timed_out") | Some("cancelled") => failed += 1,
+                    Some("skipped") | Some("neutral") => skipped += 1,
+                    Some("action_required") => pending += 1,
+                    None => pending += 1, // Completed but no conclusion yet
+                    _ => pending += 1,
+                }
+            } else if check.started_at.is_some() {
+                // Started but not completed = running
+                running += 1;
+            } else {
+                // Not started = pending/queued
+                pending += 1;
+            }
+        }
+
+        (checks, passed, failed, running, pending, skipped)
+    };
+
+    let get_status_info = |check: &CheckRun| -> (&'static str, &'static str, &'static str) {
+        // Determine status from available data
+        if check.completed_at.is_some() {
+            // Check is completed, look at conclusion
+            match check.conclusion.as_deref() {
+                Some("success") => ("✓", "#28a745", "Success"),
+                Some("failure") => ("✕", "#d73a49", "Failed"),
+                Some("timed_out") => ("⏱", "#f66a0a", "Timed out"),
+                Some("cancelled") => ("⊘", "#6a737d", "Cancelled"),
+                Some("skipped") => ("→", "#6a737d", "Skipped"),
+                Some("neutral") => ("○", "#6a737d", "Neutral"),
+                Some("action_required") => ("⚠", "#f66a0a", "Action required"),
+                None => ("?", "#6a737d", "Completed (no conclusion)"),
+                _ => ("?", "#6a737d", "Unknown"),
+            }
+        } else if check.started_at.is_some() {
+            // Started but not completed = running
+            ("⟳", "#0366d6", "In progress")
+        } else {
+            // Not started = pending/queued
+            ("⋯", "#f66a0a", "Queued")
+        }
+    };
+
     view! {
         <div style="padding: 1em; border: 1px solid #e1e4e8; border-radius: 6px; background: #f6f8fa;">
-            <div style="font-weight: bold; margin-bottom: 0.5em;">"Checks"</div>
-            <div style="display: flex; flex-direction: column; gap: 0.25em;">
-                {checks
-                    .get()
-                    .into_iter()
-                    .map(|check| {
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75em;">
+                <div style="font-weight: bold;">"Checks"</div>
+                <div style="display: flex; gap: 0.5em; font-size: 0.8em;">
+                    {move || {
+                        let (_, passed, failed, running, pending, skipped) = checks_data();
                         view! {
-                            <div style="padding: 0.25em 0; font-size: 0.9em;">
-                                {check.name.clone()}
-                            </div>
+                            <>
+                                <Show when=move || { passed > 0 }>
+                                    <span style="color: #28a745; font-weight: 500;">
+                                        {passed} " passed"
+                                    </span>
+                                </Show>
+                                <Show when=move || { failed > 0 }>
+                                    <span style="color: #d73a49; font-weight: 500;">
+                                        {failed} " failed"
+                                    </span>
+                                </Show>
+                                <Show when=move || { running > 0 }>
+                                    <span style="color: #0366d6; font-weight: 500;">
+                                        {running} " running"
+                                    </span>
+                                </Show>
+                                <Show when=move || { pending > 0 }>
+                                    <span style="color: #f66a0a; font-weight: 500;">
+                                        {pending} " pending"
+                                    </span>
+                                </Show>
+                                <Show when=move || { skipped > 0 }>
+                                    <span style="color: #6a737d; font-weight: 500;">
+                                        {skipped} " skipped"
+                                    </span>
+                                </Show>
+                            </>
                         }
-                    })
-                    .collect_view()}
+                    }}
+                </div>
             </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.5em;">
+                {move || {
+                    let (checks, _, _, _, _, _) = checks_data();
+                    checks
+                        .into_iter()
+                        .map(|check| {
+                            let (icon, color, status_text) = get_status_info(&check);
+                            let details_url = check.details_url.clone().unwrap_or_default();
+                            let html_url = check.html_url.clone().unwrap_or_default();
+                            let url = if !details_url.clone().is_empty() {
+                                details_url.clone()
+                            } else {
+                                html_url.clone()
+                            };
+                            let url2 = url.clone();
+                            let is_empty_url = move || url2.is_empty();
+                            let name = check.name.clone();
+                            let name2 = name.clone();
+                            let title = check.output.clone().title;
+                            let is_empty_title = title.as_deref().unwrap_or_default().is_empty();
+                            // TODO: Fix this terrible code
+
+                            view! {
+                                <div style="display: flex; align-items: center; gap: 0.75em; padding: 0.5em; background: white; border-radius: 4px; border: 1px solid #e1e4e8; transition: all 0.2s ease;">
+                                    // Status icon
+                                    <div
+                                        style=format!(
+                                            "display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: {}; color: white; font-size: 0.7em; font-weight: bold; flex-shrink: 0;",
+                                            color,
+                                        )
+                                        title=status_text
+                                    >
+                                        {icon}
+                                    </div>
+
+                                    // Check name and link
+                                    <div style="flex-grow: 1; min-width: 0;">
+                                        <Show
+                                            when=move || { !is_empty_url() }
+                                            fallback=move || {
+                                                view! {
+                                                    <div style="font-size: 0.9em; font-weight: 500; color: #24292e; truncate;">
+                                                        {name2.clone()}
+                                                    </div>
+                                                }
+                                            }
+                                        >
+                                            <a
+                                                href=url.clone()
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style="font-size: 0.9em; font-weight: 500; color: #0366d6; text-decoration: none; display: block; truncate;"
+                                                onmouseover="this.style.textDecoration='underline';"
+                                                onmouseout="this.style.textDecoration='none';"
+                                            >
+                                                {name.clone()}
+                                            </a>
+                                        </Show>
+
+                                        // Show additional info from output if available
+                                        <Show when=move || !is_empty_title>
+                                            <div style="font-size: 0.75em; color: #586069; margin-top: 0.2em;">
+                                                {title.clone().unwrap_or_default()}
+                                            </div>
+                                        </Show>
+                                    </div>
+
+                                    // Duration or timestamp
+                                    <div style="font-size: 0.75em; color: #586069; flex-shrink: 0;">
+                                        {move || {
+                                            if let (Some(started), Some(completed)) = (
+                                                &check.started_at,
+                                                &check.completed_at,
+                                            ) {
+                                                let duration = completed.signed_duration_since(*started);
+                                                let seconds = duration.num_seconds();
+                                                if seconds < 60 {
+                                                    format!("{}s", seconds)
+                                                } else if seconds < 3600 {
+                                                    format!("{}m {}s", seconds / 60, seconds % 60)
+                                                } else {
+                                                    format!("{}h {}m", seconds / 3600, (seconds % 3600) / 60)
+                                                }
+                                            } else if check.started_at.is_some()
+                                                && check.completed_at.is_none()
+                                            {
+                                                "Running...".to_string()
+                                            } else {
+                                                "".to_string()
+                                            }
+                                        }}
+                                    </div>
+                                </div>
+                            }
+                        })
+                        .collect_view()
+                }}
+            </div>
+
+            // Show empty state if no checks
+            <Show when=move || checks.get().is_empty()>
+                <div style="text-align: center; color: #586069; font-style: italic; padding: 1em;">
+                    "No checks configured"
+                </div>
+            </Show>
         </div>
     }
 }
@@ -498,10 +683,24 @@ fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView
                     // Branch Information - positioned at bottom right
                     <div style="position: absolute; bottom: 1.5em; right: 2em; display: flex; align-items: center; gap: 0.5em; font-size: 0.85em;">
                         <a
-                            href=move || format!("https://github.com/{}/{}/tree/{}",
-                                pull_request().head.repo.as_ref().map(|r| r.owner.clone().unwrap().login).unwrap_or_default(),
-                                pull_request().head.repo.as_ref().map(|r| r.name.clone()).unwrap_or_default(),
-                                pull_request().head.ref_field)
+                            href=move || {
+                                format!(
+                                    "https://github.com/{}/{}/tree/{}",
+                                    pull_request()
+                                        .head
+                                        .repo
+                                        .as_ref()
+                                        .map(|r| r.owner.clone().unwrap().login)
+                                        .unwrap_or_default(),
+                                    pull_request()
+                                        .head
+                                        .repo
+                                        .as_ref()
+                                        .map(|r| r.name.clone())
+                                        .unwrap_or_default(),
+                                    pull_request().head.ref_field,
+                                )
+                            }
                             target="_blank"
                             style="background: #f1f3f4; padding: 0.3em 0.6em; border-radius: 4px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-weight: 500; text-decoration: none; color: inherit; transition: background-color 0.2s;"
                             onmouseover="this.style.backgroundColor='#e1e4e8';"
@@ -509,10 +708,14 @@ fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView
                         >
                             {move || {
                                 let pr = pull_request();
-                                let head_owner = pr.head.repo.as_ref().map(|r| r.owner.clone().unwrap().login).unwrap_or_default();
+                                let head_owner = pr
+                                    .head
+                                    .repo
+                                    .as_ref()
+                                    .map(|r| r.owner.clone().unwrap().login)
+                                    .unwrap_or_default();
                                 let base_owner = pr.base.repo.clone().unwrap().owner.unwrap().login;
                                 let branch_name = pr.head.ref_field.clone();
-
                                 if head_owner != base_owner {
                                     format!("{}:{}", head_owner, branch_name)
                                 } else {
@@ -522,10 +725,14 @@ fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView
                         </a>
                         <span style="color: #586069;">"→"</span>
                         <a
-                            href=move || format!("https://github.com/{}/{}/tree/{}",
-                                pull_request().base.repo.unwrap().owner.unwrap().login,
-                                pull_request().base.repo.unwrap().name,
-                                pull_request().base.ref_field)
+                            href=move || {
+                                format!(
+                                    "https://github.com/{}/{}/tree/{}",
+                                    pull_request().base.repo.unwrap().owner.unwrap().login,
+                                    pull_request().base.repo.unwrap().name,
+                                    pull_request().base.ref_field,
+                                )
+                            }
                             target="_blank"
                             style="background: #f1f3f4; padding: 0.3em 0.6em; border-radius: 4px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-weight: 500; text-decoration: none; color: inherit; transition: background-color 0.2s;"
                             onmouseover="this.style.backgroundColor='#e1e4e8';"
@@ -533,10 +740,14 @@ fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView
                         >
                             {move || {
                                 let pr = pull_request();
-                                let head_owner = pr.head.repo.as_ref().map(|r| r.owner.clone().unwrap().login).unwrap_or_default();
+                                let head_owner = pr
+                                    .head
+                                    .repo
+                                    .as_ref()
+                                    .map(|r| r.owner.clone().unwrap().login)
+                                    .unwrap_or_default();
                                 let base_owner = pr.base.repo.clone().unwrap().owner.unwrap().login;
                                 let branch_name = pr.base.ref_field.clone();
-
                                 if head_owner != base_owner {
                                     format!("{}:{}", base_owner, branch_name)
                                 } else {
@@ -545,7 +756,7 @@ fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView
                             }}
                         </a>
                     </div>
-    </div>
+                </div>
                 // Card Body - Description
                 <div style="padding: 2em;">
                     {move || {
