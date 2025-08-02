@@ -89,16 +89,18 @@ fn PullRequestPage() -> impl IntoView {
                 Some(data) => {
                     Some(
                         view! {
-                            <div style="display: flex; flex-direction: column; height: 100vh">
-                                <Header owner=owner repo=repo />
-                                <div style="display: flex; margin-top: 0.5em; gap: 1em; flex-grow: 1">
-                                    <div>
+                            <div style="display: flex; flex-direction: column; height: 98vh; overflow: hidden;">
+                                <div style="flex-shrink: 0;">
+                                    <Header owner=owner repo=repo />
+                                </div>
+                                <div style="display: flex; gap: 1em; flex-grow: 1; min-height: 0;">
+                                    <div style="flex-shrink: 0; width: 250px; height: 98%;">
                                         <Sidebar pull_request=data.pull_request.clone() />
                                     </div>
-                                    <div style="flex-grow: 1">
+                                    <div style="flex-grow: 1; overflow-y: auto; overflow-x: hidden; height: 100%; padding-right: 1em;">
                                         <MainContent pull_request=data.pull_request.clone() />
                                     </div>
-                                    <div style="display: flex; flex-direction: column; gap: 1em;">
+                                    <div style="flex-shrink: 0; width: 300px; overflow-y: auto; height: 100%; display: flex; flex-direction: column; gap: 1em;">
                                         <Checks checks=data.checks />
                                         <Commits commits=data.commits />
                                     </div>
@@ -115,13 +117,17 @@ fn PullRequestPage() -> impl IntoView {
 #[component]
 fn Checks(#[prop(into)] checks: Signal<Vec<CheckRun>>) -> impl IntoView {
     view! {
-        <div>
-            <strong>"Checks"</strong>
-            {checks
-                .get()
-                .into_iter()
-                .map(|check| view! { <div>{check.name.clone()}</div> })
-                .collect_view()}
+        <div style="padding: 1em; border: 1px solid #e1e4e8; border-radius: 6px; background: #f6f8fa;">
+            <div style="font-weight: bold; margin-bottom: 0.5em;">"Checks"</div>
+            <div style="display: flex; flex-direction: column; gap: 0.25em;">
+                {checks
+                    .get()
+                    .into_iter()
+                    .map(|check| view! {
+                        <div style="padding: 0.25em 0; font-size: 0.9em;">{check.name.clone()}</div>
+                    })
+                    .collect_view()}
+            </div>
         </div>
     }
 }
@@ -129,17 +135,21 @@ fn Checks(#[prop(into)] checks: Signal<Vec<CheckRun>>) -> impl IntoView {
 #[component]
 fn Metadata(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView {
     view! {
-        <div>
+        <div style="padding: 1em; border: 1px solid #e1e4e8; border-radius: 6px; background: #f6f8fa;">
             <div style="margin-bottom: 1em; font-weight: bold">"Metadata"</div>
-            <div>"Labels"</div>
-            <div>
+            <div style="margin-bottom: 0.5em; font-weight: 500;">"Labels"</div>
+            <div style="display: flex; flex-direction: column; gap: 0.25em;">
                 {pull_request
                     .get()
                     .labels
                     .unwrap_or_default()
                     .iter()
                     .map(|label| {
-                        view! { <div>{label.name.clone()}</div> }
+                        view! {
+                            <div style="padding: 0.25em 0.5em; background: #e1e4e8; border-radius: 12px; font-size: 0.8em; width: fit-content;">
+                                {label.name.clone()}
+                            </div>
+                        }
                     })
                     .collect_view()}
             </div>
@@ -150,22 +160,28 @@ fn Metadata(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView {
 #[component]
 fn Commits(#[prop(into)] commits: Signal<Vec<RepoCommit>>) -> impl IntoView {
     view! {
-        <div>
+        <div style="padding: 1em; border: 1px solid #e1e4e8; border-radius: 6px; background: #f6f8fa;">
             <div style="margin-bottom: 1em; font-weight: bold">"Commits"</div>
-            {commits
-                .get()
-                .iter()
-                .map(|commit| {
-                    let message = commit
-                        .commit
-                        .message
-                        .lines()
-                        .into_iter()
-                        .next()
-                        .unwrap_or_default();
-                    view! { <div style="margin-bottom: 0.5em">{message}</div> }
-                })
-                .collect_view()}
+            <div style="display: flex; flex-direction: column; gap: 0.5em;">
+                {commits
+                    .get()
+                    .iter()
+                    .map(|commit| {
+                        let message = commit
+                            .commit
+                            .message
+                            .lines()
+                            .into_iter()
+                            .next()
+                            .unwrap_or_default();
+                        view! {
+                            <div style="padding: 0.5em; background: white; border-radius: 4px; border-left: 3px solid #0366d6; font-size: 0.9em;">
+                                {message}
+                            </div>
+                        }
+                    })
+                    .collect_view()}
+            </div>
         </div>
     }
 }
@@ -173,15 +189,17 @@ fn Commits(#[prop(into)] commits: Signal<Vec<RepoCommit>>) -> impl IntoView {
 #[component]
 fn Header(owner: impl Fn() -> String, repo: impl Fn() -> String) -> impl IntoView {
     view! {
-        <div style="display: flex; gap: 1em; margin-bottom: 1em; align-items: center">
-            <a href=format!("https://github.com/{}", owner())>{owner()}</a>
-            <p>{"/"}</p>
-            <a href=format!("https://github.com/{}/{}", owner(), repo())>{repo()}</a>
-        </div>
-        <div style="display: flex; gap: 1em">
-            <a href=format!("https://github.com/{}/{}", owner(), repo())>"Code"</a>
-            <a href=format!("https://github.com/{}/{}/issues", owner(), repo())>"Issues"</a>
-            <a href=format!("https://github.com/{}/{}/pulls", owner(), repo())>"Pull requests"</a>
+        <div style="padding: 1em; border-bottom: 1px solid #e1e4e8; background: #f6f8fa;">
+            <div style="display: flex; gap: 1em; margin-bottom: 1em; align-items: center">
+                <a href=format!("https://github.com/{}", owner()) style="color: #0366d6; text-decoration: none; font-weight: 600;">{owner()}</a>
+                <p style="margin: 0; color: #586069;">{"/"}</p>
+                <a href=format!("https://github.com/{}/{}", owner(), repo()) style="color: #0366d6; text-decoration: none; font-weight: 600;">{repo()}</a>
+            </div>
+            <div style="display: flex; gap: 2em">
+                <a href=format!("https://github.com/{}/{}", owner(), repo()) style="color: #586069; text-decoration: none; padding: 0.5em 0;">"Code"</a>
+                <a href=format!("https://github.com/{}/{}/issues", owner(), repo()) style="color: #586069; text-decoration: none; padding: 0.5em 0;">"Issues"</a>
+                <a href=format!("https://github.com/{}/{}/pulls", owner(), repo()) style="color: #586069; text-decoration: none; padding: 0.5em 0;">"Pull requests"</a>
+            </div>
         </div>
     }
 }
@@ -189,18 +207,38 @@ fn Header(owner: impl Fn() -> String, repo: impl Fn() -> String) -> impl IntoVie
 #[component]
 fn Sidebar(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView {
     view! {
-        <div style="height: 97%; display: flex; flex-direction: column; justify-content: space-between; gap: 1em">
-            <div style="display: flex; flex-direction: column; gap: 1em; margin-top: 1em">
-                <div>"Conversations"</div>
-                <div>"Files changed"</div>
+        <div style="height: 100%; display: flex; flex-direction: column; padding: 1em; gap: 1em;">
+            <div style="display: flex; flex-direction: column; gap: 1em;">
+                <div style="padding: 0.75em; background: #f1f3f4; border-radius: 6px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s;"
+                     onmouseover="this.style.backgroundColor='#e1e4e8'; this.style.borderColor='#d0d7de';"
+                     onmouseout="this.style.backgroundColor='#f1f3f4'; this.style.borderColor='transparent';">
+                    "Conversation"
+                </div>
+                <div style="padding: 0.75em; background: #f1f3f4; border-radius: 6px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s;"
+                     onmouseover="this.style.backgroundColor='#e1e4e8'; this.style.borderColor='#d0d7de';"
+                     onmouseout="this.style.backgroundColor='#f1f3f4'; this.style.borderColor='transparent';">
+                    "Files changed"
+                </div>
             </div>
-            <div style="flex-grow: 1">
+            <div style="flex-grow: 1; margin: 1em 0;">
                 <Metadata pull_request=pull_request />
             </div>
-            <div>
-                <div style="color: red">"Request Changes"</div>
-                <div style="color: green">"Approve"</div>
-                <div style="color: purple">"Merge"</div>
+            <div style="display: flex; flex-direction: column; gap: 0.5em; margin-top: auto;">
+                <button style="padding: 0.75em; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: background-color 0.2s;"
+                        onmouseover="this.style.backgroundColor='#c82333';"
+                        onmouseout="this.style.backgroundColor='#dc3545';">
+                    "Request Changes"
+                </button>
+                <button style="padding: 0.75em; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: background-color 0.2s;"
+                        onmouseover="this.style.backgroundColor='#218838';"
+                        onmouseout="this.style.backgroundColor='#28a745';">
+                    "Approve"
+                </button>
+                <button style="padding: 0.75em; background: #6f42c1; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: background-color 0.2s;"
+                        onmouseover="this.style.backgroundColor='#5a2d91';"
+                        onmouseout="this.style.backgroundColor='#6f42c1';">
+                    "Merge"
+                </button>
             </div>
         </div>
     }
@@ -211,33 +249,42 @@ fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView
     let pull_request = move || pull_request.get();
     let pr_number = || pull_request().number;
     view! {
-        <div style="display: flex; align-items: center; gap: 1em">
-            <h1>{pull_request().title.clone()}</h1>
-            <div>{"#"}{pr_number()}</div>
+        <div style="padding: 1em;">
+            <div style="display: flex; align-items: center; gap: 1em; margin-bottom: 1em;">
+                <h1 style="margin: 0; font-size: 2em; font-weight: 400;">{pull_request().title.clone()}</h1>
+                <div style="color: #586069; font-size: 1.2em;">{"#"}{pr_number()}</div>
+            </div>
+            <div style="margin-bottom: 2em;">
+                <StatusPill pull_request=pull_request().clone() />
+            </div>
+            <div style="line-height: 1.6; max-width: none;">
+                <Markdown content=pull_request().body.unwrap_or_default() />
+            </div>
         </div>
-        <StatusPill pull_request=pull_request().clone() />
-        <Markdown content=pull_request().body.unwrap_or_default() />
     }
 }
 
 #[component]
 fn StatusPill(pull_request: PullRequest) -> impl IntoView {
     let (status, color) = if pull_request.merged_at.is_some() {
-        ("Merged".to_string(), "purple")
+        ("Merged".to_string(), "#6f42c1")
     } else if pull_request.draft.unwrap_or(false) {
         // draft is an Option<bool>
-        ("Draft".to_string(), "gray")
+        ("Draft".to_string(), "#6a737d")
     } else if pull_request.state == Some(IssueState::Open) {
-        ("Open".to_string(), "green")
+        ("Open".to_string(), "#28a745")
     } else if pull_request.state == Some(IssueState::Closed) {
-        ("Closed".to_string(), "red")
+        ("Closed".to_string(), "#d73a49")
     } else {
         // Fallback for any other unexpected states
-        (format!("Unknown State ({:?})", pull_request.state), "")
+        (
+            format!("Unknown State ({:?})", pull_request.state),
+            "#6a737d",
+        )
     };
     view! {
         <div style=format!(
-            "background: {color}; padding: 0.5em 1em; width: fit-content; border-radius: 1.5em; color: white; font-weight: bold",
+            "background: {color}; padding: 0.5em 1em; width: fit-content; border-radius: 1.5em; color: white; font-weight: 600; font-size: 0.9em",
         )>{status}</div>
     }
 }
