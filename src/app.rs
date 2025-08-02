@@ -123,8 +123,12 @@ fn Checks(#[prop(into)] checks: Signal<Vec<CheckRun>>) -> impl IntoView {
                 {checks
                     .get()
                     .into_iter()
-                    .map(|check| view! {
-                        <div style="padding: 0.25em 0; font-size: 0.9em;">{check.name.clone()}</div>
+                    .map(|check| {
+                        view! {
+                            <div style="padding: 0.25em 0; font-size: 0.9em;">
+                                {check.name.clone()}
+                            </div>
+                        }
                     })
                     .collect_view()}
             </div>
@@ -136,25 +140,209 @@ fn Checks(#[prop(into)] checks: Signal<Vec<CheckRun>>) -> impl IntoView {
 fn Metadata(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView {
     view! {
         <div style="padding: 1em; border: 1px solid #e1e4e8; border-radius: 6px; background: #f6f8fa;">
-            <div style="margin-bottom: 1em; font-weight: bold">"Metadata"</div>
-            <div style="margin-bottom: 0.5em; font-weight: 500;">"Labels"</div>
-            <div style="display: flex; flex-direction: column; gap: 0.25em;">
-                {pull_request
-                    .get()
-                    .labels
-                    .unwrap_or_default()
-                    .iter()
-                    .map(|label| {
-                        view! {
-                            <div style="padding: 0.25em 0.5em; background: #e1e4e8; border-radius: 12px; font-size: 0.8em; width: fit-content;">
-                                {label.name.clone()}
-                            </div>
+            // Reviewers Section
+            <div style="margin-bottom: 1em;">
+                <div style="margin-bottom: 0.5em; font-weight: 500; font-size: 0.9em; color: #586069;">
+                    "Reviewers"
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.25em;">
+                    <Show
+                        when=move || {
+                            pull_request.get().requested_reviewers.unwrap_or_default().len() > 0
                         }
-                    })
-                    .collect_view()}
+                        fallback=|| {
+                            view! {
+                                <div style="color: #586069; font-size: 0.8em; font-style: italic;">
+                                    "No reviewers assigned"
+                                </div>
+                            }
+                        }
+                    >
+
+                        <div>
+                            {pull_request
+                                .get()
+                                .requested_reviewers
+                                .unwrap_or_default()
+                                .iter()
+                                .map(|reviewer| {
+                                    view! {
+                                        <div style="display: flex; align-items: center; gap: 0.5em; padding: 0.25em 0;">
+                                            <img
+                                                src=reviewer.avatar_url.to_string()
+                                                alt=format!("{} avatar", reviewer.login)
+                                                style="width: 20px; height: 20px; border-radius: 50%; border: 1px solid #e1e4e8;"
+                                            />
+                                            <span style="font-size: 0.85em;">
+                                                {reviewer.login.clone()}
+                                            </span>
+                                        </div>
+                                    }
+                                })
+                                .collect_view()}
+                        </div>
+                    </Show>
+                </div>
             </div>
+
+            // Assignees Section
+            <div style="margin-bottom: 1em;">
+                <div style="margin-bottom: 0.5em; font-weight: 500; font-size: 0.9em; color: #586069;">
+                    "Assignees"
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.25em;">
+                    <Show
+                        when=move || { pull_request.get().assignees.unwrap_or_default().len() > 0 }
+                        fallback=|| {
+                            view! {
+                                <div style="color: #586069; font-size: 0.8em; font-style: italic;">
+                                    "No one assigned"
+                                </div>
+                            }
+                        }
+                    >
+
+                        <div>
+                            {pull_request
+                                .get()
+                                .assignees
+                                .unwrap_or_default()
+                                .iter()
+                                .map(|assignee| {
+                                    view! {
+                                        <div style="display: flex; align-items: center; gap: 0.5em; padding: 0.25em 0;">
+                                            <img
+                                                src=assignee.avatar_url.to_string()
+                                                alt=format!("{} avatar", assignee.login)
+                                                style="width: 20px; height: 20px; border-radius: 50%; border: 1px solid #e1e4e8;"
+                                            />
+                                            <span style="font-size: 0.85em;">
+                                                {assignee.login.clone()}
+                                            </span>
+                                        </div>
+                                    }
+                                })
+                                .collect_view()}
+                        </div>
+                    </Show>
+                </div>
+            </div>
+
+            // Labels Section
+            <div style="margin-bottom: 1em;">
+                <div style="margin-bottom: 0.5em; font-weight: 500; font-size: 0.9em; color: #586069;">
+                    "Labels"
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.25em;">
+                    <Show
+                        when=move || { pull_request.get().labels.unwrap_or_default().len() > 0 }
+                        fallback=|| {
+                            view! {
+                                <div style="color: #586069; font-size: 0.8em; font-style: italic;">
+                                    "None yet"
+                                </div>
+                            }
+                        }
+                    >
+
+                        <div>
+                            {pull_request
+                                .get()
+                                .labels
+                                .unwrap_or_default()
+                                .iter()
+                                .map(|label| {
+                                    let color = if !label.color.is_empty() {
+                                        format!("#{}", label.color)
+                                    } else {
+                                        "#e1e4e8".to_string()
+                                    };
+                                    let text_color = if is_light_color(&color) {
+                                        "#24292e"
+                                    } else {
+                                        "#ffffff"
+                                    };
+                                    // Calculate text color based on background brightness
+
+                                    view! {
+                                        <div style=format!(
+                                            "padding: 0.25em 0.5em; background: {}; color: {}; border-radius: 12px; font-size: 0.8em; width: fit-content; font-weight: 500;margin: 0.3em",
+                                            color,
+                                            text_color,
+                                        )>{label.name.clone()}</div>
+                                    }
+                                })
+                                .collect_view()}
+                        </div>
+                    </Show>
+                </div>
+            </div>
+
+            // Milestone Section
+            <div style="margin-bottom: 1em;">
+                <div style="margin-bottom: 0.5em; font-weight: 500; font-size: 0.9em; color: #586069;">
+                    "Milestone"
+                </div>
+                <div>
+                    <Show
+                        when=move || { pull_request.get().milestone.is_some() }
+                        fallback=|| {
+                            view! {
+                                <div style="color: #586069; font-size: 0.8em; font-style: italic;">
+                                    "No milestone"
+                                </div>
+                            }
+                        }
+                    >
+
+                        <div style="display: flex; align-items: center; gap: 0.5em; padding: 0.25em 0;">
+                            <span style="font-size: 0.85em;">
+                                {pull_request.get().milestone.unwrap().title}
+                            </span>
+                        </div>
+                    </Show>
+                </div>
+            </div>
+
+            // Branch Information
+            <div style="margin-bottom: 1em;">
+                <div style="margin-bottom: 0.5em; font-weight: 500; font-size: 0.9em; color: #586069;">
+                    "Branch"
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.5em;">
+                    <div style="display: flex; align-items: center; gap: 0.5em; font-size: 0.85em;">
+                        <span style="background: #f1f3f4; padding: 0.2em 0.5em; border-radius: 4px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;">
+                            {move || pull_request.get().head.ref_field.clone()}
+                        </span>
+                        <span style="color: #586069;">"→"</span>
+                        <span style="background: #f1f3f4; padding: 0.2em 0.5em; border-radius: 4px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;">
+                            {move || pull_request.get().base.ref_field.clone()}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
         </div>
     }
+}
+
+// Helper function to determine if a color is light or dark
+fn is_light_color(hex_color: &str) -> bool {
+    if let Some(hex) = hex_color.strip_prefix('#') {
+        if hex.len() == 6 {
+            if let Ok(r) = u8::from_str_radix(&hex[0..2], 16) {
+                if let Ok(g) = u8::from_str_radix(&hex[2..4], 16) {
+                    if let Ok(b) = u8::from_str_radix(&hex[4..6], 16) {
+                        // Calculate brightness using relative luminance formula
+                        let brightness =
+                            (0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32) / 255.0;
+                        return brightness > 0.5;
+                    }
+                }
+            }
+        }
+    }
+    true // Default to light if we can't parse the color
 }
 
 #[component]
@@ -191,14 +379,39 @@ fn Header(owner: impl Fn() -> String, repo: impl Fn() -> String) -> impl IntoVie
     view! {
         <div style="padding: 1em; border-bottom: 1px solid #e1e4e8; background: #f6f8fa;">
             <div style="display: flex; gap: 1em; margin-bottom: 1em; align-items: center">
-                <a href=format!("https://github.com/{}", owner()) style="color: #0366d6; text-decoration: none; font-weight: 600;">{owner()}</a>
+                <a
+                    href=format!("https://github.com/{}", owner())
+                    style="color: #0366d6; text-decoration: none; font-weight: 600;"
+                >
+                    {owner()}
+                </a>
                 <p style="margin: 0; color: #586069;">{"/"}</p>
-                <a href=format!("https://github.com/{}/{}", owner(), repo()) style="color: #0366d6; text-decoration: none; font-weight: 600;">{repo()}</a>
+                <a
+                    href=format!("https://github.com/{}/{}", owner(), repo())
+                    style="color: #0366d6; text-decoration: none; font-weight: 600;"
+                >
+                    {repo()}
+                </a>
             </div>
             <div style="display: flex; gap: 2em">
-                <a href=format!("https://github.com/{}/{}", owner(), repo()) style="color: #586069; text-decoration: none; padding: 0.5em 0;">"Code"</a>
-                <a href=format!("https://github.com/{}/{}/issues", owner(), repo()) style="color: #586069; text-decoration: none; padding: 0.5em 0;">"Issues"</a>
-                <a href=format!("https://github.com/{}/{}/pulls", owner(), repo()) style="color: #586069; text-decoration: none; padding: 0.5em 0;">"Pull requests"</a>
+                <a
+                    href=format!("https://github.com/{}/{}", owner(), repo())
+                    style="color: #586069; text-decoration: none; padding: 0.5em 0;"
+                >
+                    "Code"
+                </a>
+                <a
+                    href=format!("https://github.com/{}/{}/issues", owner(), repo())
+                    style="color: #586069; text-decoration: none; padding: 0.5em 0;"
+                >
+                    "Issues"
+                </a>
+                <a
+                    href=format!("https://github.com/{}/{}/pulls", owner(), repo())
+                    style="color: #586069; text-decoration: none; padding: 0.5em 0;"
+                >
+                    "Pull requests"
+                </a>
             </div>
         </div>
     }
@@ -209,14 +422,18 @@ fn Sidebar(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView {
     view! {
         <div style="height: 100%; display: flex; flex-direction: column; padding: 1em; gap: 1em;">
             <div style="display: flex; flex-direction: column; gap: 1em;">
-                <div style="padding: 0.75em; background: #f1f3f4; border-radius: 6px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s;"
-                     onmouseover="this.style.backgroundColor='#e1e4e8'; this.style.borderColor='#d0d7de';"
-                     onmouseout="this.style.backgroundColor='#f1f3f4'; this.style.borderColor='transparent';">
+                <div
+                    style="padding: 0.75em; background: #f1f3f4; border-radius: 6px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s;"
+                    onmouseover="this.style.backgroundColor='#e1e4e8'; this.style.borderColor='#d0d7de';"
+                    onmouseout="this.style.backgroundColor='#f1f3f4'; this.style.borderColor='transparent';"
+                >
                     "Conversation"
                 </div>
-                <div style="padding: 0.75em; background: #f1f3f4; border-radius: 6px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s;"
-                     onmouseover="this.style.backgroundColor='#e1e4e8'; this.style.borderColor='#d0d7de';"
-                     onmouseout="this.style.backgroundColor='#f1f3f4'; this.style.borderColor='transparent';">
+                <div
+                    style="padding: 0.75em; background: #f1f3f4; border-radius: 6px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s;"
+                    onmouseover="this.style.backgroundColor='#e1e4e8'; this.style.borderColor='#d0d7de';"
+                    onmouseout="this.style.backgroundColor='#f1f3f4'; this.style.borderColor='transparent';"
+                >
                     "Files changed"
                 </div>
             </div>
@@ -224,19 +441,25 @@ fn Sidebar(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView {
                 <Metadata pull_request=pull_request />
             </div>
             <div style="display: flex; flex-direction: column; gap: 0.5em; margin-top: auto;">
-                <button style="padding: 0.75em; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: background-color 0.2s;"
-                        onmouseover="this.style.backgroundColor='#c82333';"
-                        onmouseout="this.style.backgroundColor='#dc3545';">
+                <button
+                    style="padding: 0.75em; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: background-color 0.2s;"
+                    onmouseover="this.style.backgroundColor='#c82333';"
+                    onmouseout="this.style.backgroundColor='#dc3545';"
+                >
                     "Request Changes"
                 </button>
-                <button style="padding: 0.75em; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: background-color 0.2s;"
-                        onmouseover="this.style.backgroundColor='#218838';"
-                        onmouseout="this.style.backgroundColor='#28a745';">
+                <button
+                    style="padding: 0.75em; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: background-color 0.2s;"
+                    onmouseover="this.style.backgroundColor='#218838';"
+                    onmouseout="this.style.backgroundColor='#28a745';"
+                >
                     "Approve"
                 </button>
-                <button style="padding: 0.75em; background: #6f42c1; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: background-color 0.2s;"
-                        onmouseover="this.style.backgroundColor='#5a2d91';"
-                        onmouseout="this.style.backgroundColor='#6f42c1';">
+                <button
+                    style="padding: 0.75em; background: #6f42c1; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: background-color 0.2s;"
+                    onmouseover="this.style.backgroundColor='#5a2d91';"
+                    onmouseout="this.style.backgroundColor='#6f42c1';"
+                >
                     "Merge"
                 </button>
             </div>
@@ -279,11 +502,11 @@ fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView
                     // Author and date info
                     <div style="display: flex; align-items: center; gap: 0.75em; color: #586069; font-size: 0.95em;">
                         <a href=author_url>
-                        <img
-                            src=avatar_url()
-                            alt=format!("{} avatar", author())
-                            style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid #e1e4e8;"
-                        />
+                            <img
+                                src=avatar_url()
+                                alt=format!("{} avatar", author())
+                                style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid #e1e4e8;"
+                            />
                         </a>
                         <span style="font-weight: 500;">{author()}</span>
                         <span>"opened this pull request on"</span>
@@ -300,13 +523,15 @@ fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView
                                 <div style="color: #586069; font-style: italic; text-align: center; padding: 2em; background: #f8f9fa; border-radius: 6px; border: 1px dashed #d0d7de;">
                                     "No description provided."
                                 </div>
-                            }.into_view()
+                            }
+                                .into_view()
                         } else {
                             view! {
                                 <div style="line-height: 1.6; max-width: none; color: #24292e;">
                                     <Markdown content=body />
                                 </div>
-                            }.into_view()
+                            }
+                                .into_view()
                         }
                     }}
                 </div>
