@@ -1,11 +1,19 @@
 use leptos::prelude::*;
+use leptos::Params;
 use leptos_meta::{provide_meta_context, Stylesheet, Title};
 use leptos_router::hooks::use_params;
+use leptos_router::params::Params;
 use leptos_router::path;
 use leptos_router::{
     components::{Route, Router, Routes},
     WildcardSegment,
 };
+use octocrab::models::pulls::PullRequest;
+use octocrab::models::repos::RepoCommit;
+use octocrab::models::{checks::CheckRun, IssueState};
+use serde::{Deserialize, Serialize};
+
+use crate::markdown::Markdown;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -31,14 +39,6 @@ pub fn App() -> impl IntoView {
         </Router>
     }
 }
-use leptos::Params;
-use leptos_router::params::Params;
-use octocrab::models::pulls::PullRequest;
-use octocrab::models::repos::RepoCommit;
-use octocrab::models::{checks::CheckRun, IssueState};
-use serde::{Deserialize, Serialize};
-
-use crate::markdown::Markdown;
 
 #[derive(Params, PartialEq)]
 struct PullRequestParams {
