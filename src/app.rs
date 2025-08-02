@@ -96,7 +96,7 @@ fn PullRequestPage() -> impl IntoView {
                                     <div>
                                         <Sidebar checks=move || data.checks.clone() />
                                     </div>
-                                    <div>
+                                    <div style="flex-grow: 1">
                                         <MainContent pull_request=pr.clone() />
                                     </div>
                                     <div style="display: flex; flex-direction: column; gap: 1em;">
