@@ -279,7 +279,7 @@ fn Metadata(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView {
             </div>
 
             // Milestone Section
-            <div style="margin-bottom: 1em;">
+            <div>
                 <div style="margin-bottom: 0.5em; font-weight: 500; font-size: 0.9em; color: #586069;">
                     "Milestone"
                 </div>
@@ -301,24 +301,6 @@ fn Metadata(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView {
                             </span>
                         </div>
                     </Show>
-                </div>
-            </div>
-
-            // Branch Information
-            <div style="margin-bottom: 1em;">
-                <div style="margin-bottom: 0.5em; font-weight: 500; font-size: 0.9em; color: #586069;">
-                    "Branch"
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 0.5em;">
-                    <div style="display: flex; align-items: center; gap: 0.5em; font-size: 0.85em;">
-                        <span style="background: #f1f3f4; padding: 0.2em 0.5em; border-radius: 4px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;">
-                            {move || pull_request.get().head.ref_field.clone()}
-                        </span>
-                        <span style="color: #586069;">"→"</span>
-                        <span style="background: #f1f3f4; padding: 0.2em 0.5em; border-radius: 4px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;">
-                            {move || pull_request.get().base.ref_field.clone()}
-                        </span>
-                    </div>
                 </div>
             </div>
 
@@ -486,7 +468,7 @@ fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView
             // Main PR Card
             <div style="background: white; border: 1px solid #e1e4e8; border-radius: 8px; margin-bottom: 1.5em; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                 // Card Header
-                <div style="padding: 1.5em 2em; border-bottom: 1px solid #e1e4e8; background: #fafbfc;">
+                <div style="padding: 1.5em 2em; border-bottom: 1px solid #e1e4e8; background: #fafbfc; position: relative;">
                     <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1em; margin-bottom: 1em;">
                         <h1 style="margin: 0; font-size: 1.75em; font-weight: 600; color: #24292e; line-height: 1.2; flex-grow: 1;">
                             {pull_request().title.clone()}
@@ -512,8 +494,58 @@ fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView
                         <span>"opened this pull request on"</span>
                         <span style="font-weight: 500;">{created_at()}</span>
                     </div>
-                </div>
 
+                    // Branch Information - positioned at bottom right
+                    <div style="position: absolute; bottom: 1.5em; right: 2em; display: flex; align-items: center; gap: 0.5em; font-size: 0.85em;">
+                        <a
+                            href=move || format!("https://github.com/{}/{}/tree/{}",
+                                pull_request().head.repo.as_ref().map(|r| r.owner.clone().unwrap().login).unwrap_or_default(),
+                                pull_request().head.repo.as_ref().map(|r| r.name.clone()).unwrap_or_default(),
+                                pull_request().head.ref_field)
+                            target="_blank"
+                            style="background: #f1f3f4; padding: 0.3em 0.6em; border-radius: 4px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-weight: 500; text-decoration: none; color: inherit; transition: background-color 0.2s;"
+                            onmouseover="this.style.backgroundColor='#e1e4e8';"
+                            onmouseout="this.style.backgroundColor='#f1f3f4';"
+                        >
+                            {move || {
+                                let pr = pull_request();
+                                let head_owner = pr.head.repo.as_ref().map(|r| r.owner.clone().unwrap().login).unwrap_or_default();
+                                let base_owner = pr.base.repo.clone().unwrap().owner.unwrap().login;
+                                let branch_name = pr.head.ref_field.clone();
+
+                                if head_owner != base_owner {
+                                    format!("{}:{}", head_owner, branch_name)
+                                } else {
+                                    branch_name
+                                }
+                            }}
+                        </a>
+                        <span style="color: #586069;">"→"</span>
+                        <a
+                            href=move || format!("https://github.com/{}/{}/tree/{}",
+                                pull_request().base.repo.unwrap().owner.unwrap().login,
+                                pull_request().base.repo.unwrap().name,
+                                pull_request().base.ref_field)
+                            target="_blank"
+                            style="background: #f1f3f4; padding: 0.3em 0.6em; border-radius: 4px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-weight: 500; text-decoration: none; color: inherit; transition: background-color 0.2s;"
+                            onmouseover="this.style.backgroundColor='#e1e4e8';"
+                            onmouseout="this.style.backgroundColor='#f1f3f4';"
+                        >
+                            {move || {
+                                let pr = pull_request();
+                                let head_owner = pr.head.repo.as_ref().map(|r| r.owner.clone().unwrap().login).unwrap_or_default();
+                                let base_owner = pr.base.repo.clone().unwrap().owner.unwrap().login;
+                                let branch_name = pr.base.ref_field.clone();
+
+                                if head_owner != base_owner {
+                                    format!("{}:{}", base_owner, branch_name)
+                                } else {
+                                    branch_name
+                                }
+                            }}
+                        </a>
+                    </div>
+    </div>
                 // Card Body - Description
                 <div style="padding: 2em;">
                     {move || {
