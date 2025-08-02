@@ -248,17 +248,73 @@ fn Sidebar(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView {
 fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView {
     let pull_request = move || pull_request.get();
     let pr_number = || pull_request().number;
+    let author = || pull_request().user.unwrap().login.clone();
+    let created_at = || {
+        pull_request()
+            .created_at
+            .map(|date| date.format("%B %d, %Y").to_string())
+            .unwrap_or_default()
+    };
+
     view! {
-        <div style="padding: 1em;">
-            <div style="display: flex; align-items: center; gap: 1em; margin-bottom: 1em;">
-                <h1 style="margin: 0; font-size: 2em; font-weight: 400;">{pull_request().title.clone()}</h1>
-                <div style="color: #586069; font-size: 1.2em;">{"#"}{pr_number()}</div>
+        <div style="padding: 1.5em;">
+            // Main PR Card
+            <div style="background: white; border: 1px solid #e1e4e8; border-radius: 8px; margin-bottom: 1.5em; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                // Card Header
+                <div style="padding: 1.5em 2em; border-bottom: 1px solid #e1e4e8; background: #fafbfc;">
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1em; margin-bottom: 1em;">
+                        <h1 style="margin: 0; font-size: 1.75em; font-weight: 600; color: #24292e; line-height: 1.2; flex-grow: 1;">
+                            {pull_request().title.clone()}
+                        </h1>
+                        <div style="display: flex; align-items: center; gap: 0.75em; flex-shrink: 0;">
+                            <div style="color: #586069; font-size: 1.1em; font-weight: 500;">
+                                {"#"}{pr_number()}
+                            </div>
+                            <StatusPill pull_request=pull_request().clone() />
+                        </div>
+                    </div>
+
+                    // Author and date info
+                    <div style="display: flex; align-items: center; gap: 0.5em; color: #586069; font-size: 0.95em;">
+                        <span style="font-weight: 500;">{author()}</span>
+                        <span>"opened this pull request on"</span>
+                        <span style="font-weight: 500;">{created_at()}</span>
+                    </div>
+                </div>
+
+                // Card Body - Description
+                <div style="padding: 2em;">
+                    {move || {
+                        let body = pull_request().body.unwrap_or_default();
+                        if body.is_empty() {
+                            view! {
+                                <div style="color: #586069; font-style: italic; text-align: center; padding: 2em; background: #f8f9fa; border-radius: 6px; border: 1px dashed #d0d7de;">
+                                    "No description provided."
+                                </div>
+                            }.into_view()
+                        } else {
+                            view! {
+                                <div style="line-height: 1.6; max-width: none; color: #24292e;">
+                                    <Markdown content=body />
+                                </div>
+                            }.into_view()
+                        }
+                    }}
+                </div>
             </div>
-            <div style="margin-bottom: 2em;">
-                <StatusPill pull_request=pull_request().clone() />
-            </div>
-            <div style="line-height: 1.6; max-width: none;">
-                <Markdown content=pull_request().body.unwrap_or_default() />
+
+            // Additional sections can go here
+            <div style="display: flex; flex-direction: column; gap: 1.5em;">
+                // Placeholder for future content like comments, reviews, etc.
+                <div style="background: white; border: 1px solid #e1e4e8; border-radius: 8px; padding: 1.5em; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="display: flex; align-items: center; gap: 0.5em; margin-bottom: 1em;">
+                        <div style="width: 8px; height: 8px; background: #28a745; border-radius: 50%;"></div>
+                        <span style="font-weight: 600; color: #24292e;">"Activity"</span>
+                    </div>
+                    <div style="color: #586069; font-style: italic;">
+                        "Comments and reviews will appear here..."
+                    </div>
+                </div>
             </div>
         </div>
     }
@@ -266,26 +322,29 @@ fn MainContent(#[prop(into)] pull_request: Signal<PullRequest>) -> impl IntoView
 
 #[component]
 fn StatusPill(pull_request: PullRequest) -> impl IntoView {
-    let (status, color) = if pull_request.merged_at.is_some() {
-        ("Merged".to_string(), "#6f42c1")
+    let (status, color, icon) = if pull_request.merged_at.is_some() {
+        ("Merged".to_string(), "#6f42c1", "✓")
     } else if pull_request.draft.unwrap_or(false) {
-        // draft is an Option<bool>
-        ("Draft".to_string(), "#6a737d")
+        ("Draft".to_string(), "#6a737d", "○")
     } else if pull_request.state == Some(IssueState::Open) {
-        ("Open".to_string(), "#28a745")
+        ("Open".to_string(), "#28a745", "●")
     } else if pull_request.state == Some(IssueState::Closed) {
-        ("Closed".to_string(), "#d73a49")
+        ("Closed".to_string(), "#d73a49", "✕")
     } else {
-        // Fallback for any other unexpected states
         (
             format!("Unknown State ({:?})", pull_request.state),
             "#6a737d",
+            "?",
         )
     };
+
     view! {
         <div style=format!(
-            "background: {color}; padding: 0.5em 1em; width: fit-content; border-radius: 1.5em; color: white; font-weight: 600; font-size: 0.9em",
-        )>{status}</div>
+            "background: {color}; padding: 0.4em 0.8em; border-radius: 1em; color: white; font-weight: 600; font-size: 0.85em; display: flex; align-items: center; gap: 0.4em; box-shadow: 0 1px 2px rgba(0,0,0,0.1);",
+        )>
+            <span style="font-size: 0.9em;">{icon}</span>
+            <span>{status}</span>
+        </div>
     }
 }
 
