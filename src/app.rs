@@ -34,6 +34,7 @@ pub fn App() -> impl IntoView {
 use leptos::Params;
 use leptos_router::params::Params;
 use octocrab::models::pulls::PullRequest;
+use octocrab::models::repos::RepoCommit;
 use octocrab::models::{checks::CheckRun, IssueState};
 use serde::{Deserialize, Serialize};
 
@@ -86,6 +87,7 @@ fn PullRequestPage() -> impl IntoView {
             {move || match page_data.get() {
                 None => None,
                 Some(data) => {
+                    let pr = move || data.pull_request.clone();
                     Some(
                         view! {
                             <div style="display: flex; flex-direction: column; height: 100vh">
@@ -95,9 +97,11 @@ fn PullRequestPage() -> impl IntoView {
                                         <Sidebar checks=move || data.checks.clone() />
                                     </div>
                                     <div>
-                                        <MainContent pull_request=move || {
-                                            data.pull_request.clone()
-                                        } />
+                                        <MainContent pull_request=pr.clone() />
+                                    </div>
+                                    <div style="display: flex; flex-direction: column; gap: 1em;">
+                                        <Metadata pull_request=pr.clone() />
+                                        <Commits commits=move || data.commits.clone() />
                                     </div>
                                 </div>
                             </div>
@@ -106,6 +110,48 @@ fn PullRequestPage() -> impl IntoView {
                 }
             }}
         </Suspense>
+    }
+}
+
+#[component]
+fn Metadata(pull_request: impl Fn() -> PullRequest) -> impl IntoView {
+    view! {
+        <div>
+            <div style="margin-bottom: 1em; font-weight: bold">"Metadata"</div>
+            <div>"Labels"</div>
+            <div>
+                {pull_request()
+                    .labels
+                    .unwrap_or_default()
+                    .iter()
+                    .map(|label| {
+                        view! { <div>{label.name.clone()}</div> }
+                    })
+                    .collect_view()}
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn Commits(commits: impl Fn() -> Vec<RepoCommit>) -> impl IntoView {
+    view! {
+        <div>
+            <div style="margin-bottom: 1em; font-weight: bold">"Commits"</div>
+            {commits()
+                .iter()
+                .map(|commit| {
+                    let message = commit
+                        .commit
+                        .message
+                        .lines()
+                        .into_iter()
+                        .next()
+                        .unwrap_or_default();
+                    view! { <div style="margin-bottom: 0.5em">{message}</div> }
+                })
+                .collect_view()}
+        </div>
     }
 }
 
@@ -188,6 +234,7 @@ fn StatusPill(pull_request: PullRequest) -> impl IntoView {
 pub struct PullRequestPageData {
     pull_request: PullRequest,
     checks: Vec<CheckRun>,
+    commits: Vec<RepoCommit>,
 }
 
 #[server]
@@ -217,9 +264,17 @@ pub async fn fetch_page_data(
         .await
         .inspect_err(|e| println!("{e:#?}"))?;
 
+    let commits = client
+        .pulls(&owner, &repo)
+        .pr_commits(pr_number)
+        .send()
+        .await
+        .inspect_err(|e| println!("{e:#?}"))?;
+
     Ok(PullRequestPageData {
         pull_request,
         checks: checks.check_runs,
+        commits: commits.items,
     })
 }
 
