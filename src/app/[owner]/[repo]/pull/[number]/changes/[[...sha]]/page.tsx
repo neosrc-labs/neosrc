@@ -6,12 +6,17 @@ import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
 import {
 	createOctokit,
+	getCommit,
 	getCommitFiles,
+	getPullRequestCommits,
 	getPullRequestFiles,
 } from "~/server/github";
 
 type PullsListFilesResponseData =
 	RestEndpointMethodTypes["pulls"]["listFiles"]["response"]["data"];
+type PullsListCommitsResponseData =
+	RestEndpointMethodTypes["pulls"]["listCommits"]["response"]["data"];
+type CommitData = RestEndpointMethodTypes["repos"]["getCommit"]["response"]["data"];
 
 interface ChangesPageProps {
 	params: Promise<{
@@ -52,9 +57,22 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 	const octokit = createOctokit(account.accessToken);
 
 	let files: PullsListFilesResponseData = [];
+	let commit: CommitData | null = null;
+	let commits: PullsListCommitsResponseData = [];
+	let currentIndex = -1;
+
 	try {
 		if (commitSha) {
-			files = await getCommitFiles(octokit, owner, repo, commitSha);
+			// Fetch commit details and all PR commits in parallel
+			const [commitResult, commitsResult] = await Promise.all([
+				getCommit(octokit, owner, repo, commitSha),
+				getPullRequestCommits(octokit, owner, repo, parseInt(number, 10)),
+			]);
+			commit = commitResult;
+			commits = commitsResult;
+			files = commitResult.files || [];
+			// Find current commit index
+			currentIndex = commits.findIndex((c) => c.sha === commitSha);
 		} else {
 			files = await getPullRequestFiles(
 				octokit,
@@ -87,19 +105,82 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 		);
 	}
 
+	const prevCommit = currentIndex > 0 ? commits[currentIndex - 1] : null;
+	const nextCommit =
+		currentIndex >= 0 && currentIndex < commits.length - 1
+			? commits[currentIndex + 1]
+			: null;
+
 	return (
 		<div className="px-6 py-8">
-			<h2 className="mb-6 font-semibold text-gray-900 text-lg">
-				{commitSha ? (
-					<>
-						Files Changed (Commit:{" "}
-						<code className="font-mono text-sm">{commitSha.slice(0, 7)}</code>
-						)
-					</>
-				) : (
-					`Files Changed (${files.length})`
-				)}
-			</h2>
+			{commit ? (
+				<div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+					<div className="mb-3 flex items-center justify-between">
+						<h2 className="font-semibold text-gray-900 text-lg">
+							{commit.commit.message.split("\n")[0]}
+						</h2>
+						<div className="flex gap-2">
+							{prevCommit ? (
+								<a
+									className="rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 whitespace-nowrap"
+									href={`/${owner}/${repo}/pull/${number}/changes/${prevCommit.sha}`}
+								>
+									← Previous
+								</a>
+							) : (
+								<button
+									className="rounded-md bg-gray-100 px-3 py-1.5 font-medium text-gray-400 text-sm ring-1 ring-gray-200 cursor-not-allowed"
+									disabled
+									type="button"
+								>
+									← Previous
+								</button>
+							)}
+							{nextCommit ? (
+								<a
+									className="rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 whitespace-nowrap"
+									href={`/${owner}/${repo}/pull/${number}/changes/${nextCommit.sha}`}
+								>
+									Next →
+								</a>
+							) : (
+								<button
+									className="rounded-md bg-gray-100 px-3 py-1.5 font-medium text-gray-400 text-sm ring-1 ring-gray-200 cursor-not-allowed"
+									disabled
+									type="button"
+								>
+									Next →
+								</button>
+							)}
+						</div>
+					</div>
+					{commit.commit.message.split("\n").length > 1 && (
+						<p className="whitespace-pre-wrap text-gray-600 text-sm">
+							{commit.commit.message.split("\n").slice(1).join("\n").trim()}
+						</p>
+					)}
+					<div className="mt-3 flex items-center gap-2">
+						{commit.author && (
+							<img
+								alt={commit.author.login}
+								className="h-5 w-5 rounded-full"
+								src={commit.author.avatar_url}
+							/>
+						)}
+						<span className="text-gray-600 text-sm">
+							{commit.author?.login || commit.commit.author?.name} committed{" "}
+							{new Date(commit.commit.committer?.date || "").toLocaleDateString()}
+						</span>
+						<code className="ml-2 font-mono text-gray-500 text-xs">
+							{commit.sha.slice(0, 7)}
+						</code>
+					</div>
+				</div>
+			) : (
+				<h2 className="mb-6 font-semibold text-gray-900 text-lg">
+					Files Changed ({files.length})
+				</h2>
+			)}
 			{files.map((file) => (
 				<FileDiff
 					file={file}
