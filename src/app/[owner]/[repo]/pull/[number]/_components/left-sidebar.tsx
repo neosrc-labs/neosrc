@@ -44,7 +44,7 @@ export default function LeftSidebar({
 }: LeftSidebarProps) {
 	const pathname = usePathname();
 	const basePath = `/${owner}/${repo}/pull/${number}`;
-	const isFilesActive = pathname === `${basePath}/files`;
+	const isFilesActive = pathname === `${basePath}/changes`;
 	const isConversationActive =
 		pathname === basePath || pathname === `${basePath}/`;
 
@@ -57,7 +57,7 @@ export default function LeftSidebar({
 					label="Conversation"
 				/>
 				<NavItem
-					href={`${basePath}/files`}
+					href={`${basePath}/changes`}
 					isActive={isFilesActive}
 					label="Files Changed"
 				/>
