@@ -39,8 +39,9 @@ export default function RightSidebar({
 	}
 
 	return (
-		<aside className="border-gray-200 border-l bg-white px-4 py-6">
-			<div className="space-y-6">
+		<aside className="flex h-full flex-col border-gray-200 border-l bg-white px-4 py-6">
+			{/* Metadata Section - Sticky Top */}
+			<div className="sticky top-0 z-10 space-y-6 bg-white pb-4">
 				{/* Labels Section */}
 				<section>
 					<h3 className="mb-2 font-semibold text-gray-900 text-sm">Labels</h3>
@@ -116,8 +117,8 @@ export default function RightSidebar({
 				</section>
 			</div>
 
-			{/* Commits Section */}
-			<div className="mt-6 border-gray-200 border-t pt-6">
+			{/* Commits Section - Scrollable */}
+			<div className="min-h-0 flex-1 overflow-y-auto border-gray-200 border-t pt-6">
 				<h3 className="mb-3 font-semibold text-gray-900 text-sm">Commits</h3>
 				{commits.length > 0 ? (
 					<div className="space-y-4">

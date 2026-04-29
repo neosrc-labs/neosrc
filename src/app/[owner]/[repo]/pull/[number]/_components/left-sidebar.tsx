@@ -50,7 +50,7 @@ export default function LeftSidebar({
 
 	return (
 		<aside className="flex h-full flex-col border-gray-200 border-r bg-white px-4 py-6">
-			<nav className="space-y-1">
+			<nav className="sticky top-0 z-10 space-y-1 bg-white pb-4">
 				<NavItem
 					href={basePath}
 					isActive={isConversationActive}
@@ -64,7 +64,7 @@ export default function LeftSidebar({
 			</nav>
 
 			{/* Checks Section */}
-			<div className="mt-6 border-gray-200 border-t pt-4">
+			<div className="min-h-0 flex-1 overflow-y-auto border-gray-200 border-t pt-4">
 				<h3 className="mb-2 font-semibold text-gray-900 text-sm">Checks</h3>
 				{checks && checks.length > 0 ? (
 					<div className="space-y-2">
@@ -98,9 +98,7 @@ export default function LeftSidebar({
 				)}
 			</div>
 
-			<div className="flex-1" />
-
-			<div className="flex-none space-y-2 border-gray-200 border-t pt-6">
+			<div className="sticky bottom-0 z-10 space-y-2 border-gray-200 border-t bg-white pt-6">
 				<button
 					className="w-full rounded-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:opacity-50"
 					disabled
