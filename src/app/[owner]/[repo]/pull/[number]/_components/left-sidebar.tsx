@@ -33,6 +33,7 @@ interface LeftSidebarProps {
     name: string;
     conclusion: string | null;
     status: string;
+    html_url?: string;
   }>;
 }
 
@@ -66,7 +67,13 @@ export default function LeftSidebar({
         {checks && checks.length > 0 ? (
           <div className="space-y-2">
             {checks.map((check, idx) => (
-              <div key={idx} className="flex items-center gap-2">
+              <a
+                key={idx}
+                href={check.html_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50"
+              >
                 <span className="text-sm">
                   {check.conclusion === "success" ? (
                     <span className="text-green-600">✓</span>
@@ -81,7 +88,7 @@ export default function LeftSidebar({
                 <span className="truncate text-sm text-gray-700">
                   {check.name}
                 </span>
-              </div>
+              </a>
             ))}
           </div>
         ) : (

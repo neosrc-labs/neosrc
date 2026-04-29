@@ -32,6 +32,7 @@ export default async function PullRequestLayout({
     name: string;
     conclusion: string | null;
     status: string;
+    html_url?: string;
   }> = [];
 
   if (session?.user?.id) {
@@ -86,7 +87,12 @@ export default async function PullRequestLayout({
 
           if (checksResponse.ok) {
             const checksData = await checksResponse.json();
-            checks = checksData.check_runs || [];
+            checks = (checksData.check_runs || []).map((check: any) => ({
+              name: check.name,
+              conclusion: check.conclusion,
+              status: check.status,
+              html_url: check.html_url,
+            }));
           }
         }
       }
