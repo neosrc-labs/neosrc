@@ -44,7 +44,9 @@ export default function LeftSidebar({
 }: LeftSidebarProps) {
 	const pathname = usePathname();
 	const basePath = `/${owner}/${repo}/pull/${number}`;
-	const isFilesActive = pathname === `${basePath}/changes`;
+	const isFilesActive =
+		pathname === `${basePath}/changes` ||
+		pathname.startsWith(`${basePath}/changes/`);
 	const isConversationActive =
 		pathname === basePath || pathname === `${basePath}/`;
 

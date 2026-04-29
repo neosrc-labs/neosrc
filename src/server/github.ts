@@ -66,3 +66,17 @@ export async function getCheckRuns(
 	);
 	return response.data;
 }
+
+export async function getCommitFiles(
+	octokit: Octokit,
+	owner: string,
+	repo: string,
+	commitSha: string,
+) {
+	const response = await octokit.repos.getCommit({
+		owner,
+		repo,
+		ref: commitSha,
+	});
+	return response.data.files || [];
+}

@@ -4,29 +4,33 @@ import FileDiff from "~/components/FileDiff";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
-import { createOctokit, getPullRequestFiles } from "~/server/github";
+import {
+	createOctokit,
+	getCommitFiles,
+	getPullRequestFiles,
+} from "~/server/github";
 
 type PullsListFilesResponseData =
 	RestEndpointMethodTypes["pulls"]["listFiles"]["response"]["data"];
 
-interface FilesPageProps {
+interface ChangesPageProps {
 	params: Promise<{
 		owner: string;
 		repo: string;
 		number: string;
+		sha?: string[];
 	}>;
 }
 
-export default async function FilesPage({ params }: FilesPageProps) {
-	const { owner, repo, number } = await params;
+export default async function ChangesPage({ params }: ChangesPageProps) {
+	const { owner, repo, number, sha } = await params;
+	const commitSha = sha && sha.length > 0 ? sha[0] : null;
 	const session = await auth();
 
 	if (!session?.user?.id) {
 		return (
 			<div className="px-6 py-8">
-				<p className="text-gray-600">
-					Please sign in to view this pull request.
-				</p>
+				<p className="text-gray-600">Please sign in to view this pull request.</p>
 			</div>
 		);
 	}
@@ -49,16 +53,24 @@ export default async function FilesPage({ params }: FilesPageProps) {
 
 	let files: PullsListFilesResponseData = [];
 	try {
-		files = await getPullRequestFiles(
-			octokit,
-			owner,
-			repo,
-			parseInt(number, 10),
-		);
+		if (commitSha) {
+			files = await getCommitFiles(octokit, owner, repo, commitSha);
+		} else {
+			files = await getPullRequestFiles(
+				octokit,
+				owner,
+				repo,
+				parseInt(number, 10),
+			);
+		}
 	} catch {
 		return (
 			<div className="px-6 py-8">
-				<p className="text-gray-600">Failed to fetch file changes.</p>
+				<p className="text-gray-600">
+					{commitSha
+						? "Failed to fetch commit changes."
+						: "Failed to fetch file changes."}
+				</p>
 			</div>
 		);
 	}
@@ -66,7 +78,11 @@ export default async function FilesPage({ params }: FilesPageProps) {
 	if (!files || files.length === 0) {
 		return (
 			<div className="px-6 py-8">
-				<p className="text-gray-600">No files changed in this pull request.</p>
+				<p className="text-gray-600">
+					{commitSha
+						? "No files changed in this commit."
+						: "No files changed in this pull request."}
+				</p>
 			</div>
 		);
 	}
@@ -74,7 +90,15 @@ export default async function FilesPage({ params }: FilesPageProps) {
 	return (
 		<div className="px-6 py-8">
 			<h2 className="mb-6 font-semibold text-gray-900 text-lg">
-				Files Changed ({files.length})
+				{commitSha ? (
+					<>
+						Files Changed (Commit:{" "}
+						<code className="font-mono text-sm">{commitSha.slice(0, 7)}</code>
+						)
+					</>
+				) : (
+					`Files Changed (${files.length})`
+				)}
 			</h2>
 			{files.map((file) => (
 				<FileDiff
