@@ -1,6 +1,6 @@
 import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import { eq } from "drizzle-orm";
-import DiffViewer from "~/components/DiffViewer";
+import FileDiff from "~/components/FileDiff";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
@@ -77,10 +77,12 @@ export default async function FilesPage({ params }: FilesPageProps) {
 				Files Changed ({files.length})
 			</h2>
 			{files.map((file) => (
-				<DiffViewer
-					diff={file.patch || ""}
-					fileName={file.filename}
+				<FileDiff
+					file={file}
 					key={file.filename}
+					number={number}
+					owner={owner}
+					repo={repo}
 				/>
 			))}
 		</div>
