@@ -26,6 +26,7 @@
 		"@trpc/client": "^11.0.0",
 		"@trpc/react-query": "^11.0.0",
 		"@trpc/server": "^11.0.0",
+		"diff2html": "^3.4.56",
 		"drizzle-orm": "^0.41.0",
 		"next": "^15.2.3",
 		"next-auth": "5.0.0-beta.25",
