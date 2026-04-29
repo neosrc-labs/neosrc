@@ -1,6 +1,6 @@
 "use client";
 
-import { html as diff2html } from "diff2html";
+import { Diff2HtmlUI } from "diff2html/lib/ui/js/diff2html-ui";
 import { useEffect, useRef, useState } from "react";
 import "diff2html/bundles/css/diff2html.min.css";
 
@@ -58,12 +58,14 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 			const normalizedDiff = file.patch.startsWith("---")
 				? file.patch
 				: `--- a/${file.filename}\n+++ b/${file.filename}\n${file.patch}`;
-			const diffHtml = diff2html(normalizedDiff, {
+			console.log('ross2');
+			const diff2htmlUi = new Diff2HtmlUI(containerRef.current, normalizedDiff, {
 				drawFileList: false,
 				matching: "lines",
 				outputFormat: "line-by-line",
+				highlight: true
 			});
-			containerRef.current.innerHTML = diffHtml;
+			diff2htmlUi.draw();
 		}
 	}, [file.patch, file.filename, isCollapsed]);
 
@@ -178,8 +180,19 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 			{/* Diff Content */}
 			{!isCollapsed && (
 				<div className="overflow-x-auto">
-					{/* We render our own header so hide the built in one */}
-					<style>{`.d2h-file-header { display: none; }`}</style>
+					<style>{`
+						/* We render our own header so hide the built in one */
+						.d2h-file-header { display: none; }
+
+
+						/* Reset hljs background on diff lines */
+						.d2h-del .hljs,
+						.d2h-ins .hljs {
+						  background: transparent !important;
+						}
+					`}</style>
+
+
 					{file.patch ? (
 						<div ref={containerRef} />
 					) : (

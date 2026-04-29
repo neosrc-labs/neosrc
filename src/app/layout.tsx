@@ -21,6 +21,21 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
 	return (
 		<html className={`${geist.variable}`} lang="en">
+			<head>
+				{/* FIXME: Make this support darkmode and properly use media queries */}
+				<link
+					rel="stylesheet"
+					href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css"
+				// media="screen and (prefers-color-scheme: light)"
+				/>
+				{/* <link */}
+				{/* 	rel="stylesheet" */}
+				{/* 	href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" */}
+				{/* 	media="screen and (prefers-color-scheme: dark)" */}
+				{/* /> */}
+
+				<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
+			</head>
 			<body>
 				<TRPCReactProvider>{children}</TRPCReactProvider>
 			</body>
