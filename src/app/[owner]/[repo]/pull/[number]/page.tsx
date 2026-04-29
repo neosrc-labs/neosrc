@@ -17,9 +17,9 @@ export default async function PullRequestPage({ params }: PageProps) {
 
   if (!session?.user?.id) {
     return (
-      <main className="container mx-auto px-4 py-8">
-        <p>Please sign in to view this pull request.</p>
-      </main>
+      <div className="px-6 py-8">
+        <p className="text-gray-600">Please sign in to view this pull request.</p>
+      </div>
     );
   }
 
@@ -31,9 +31,9 @@ export default async function PullRequestPage({ params }: PageProps) {
 
   if (!account?.accessToken) {
     return (
-      <main className="container mx-auto px-4 py-8">
-        <p>GitHub account not connected properly.</p>
-      </main>
+      <div className="px-6 py-8">
+        <p className="text-gray-600">GitHub account not connected properly.</p>
+      </div>
     );
   }
 
@@ -50,20 +50,42 @@ export default async function PullRequestPage({ params }: PageProps) {
 
   if (!response.ok) {
     return (
-      <main className="container mx-auto px-4 py-8">
-        <p>Failed to fetch pull request data.</p>
-      </main>
+      <div className="px-6 py-8">
+        <p className="text-gray-600">Failed to fetch pull request data.</p>
+      </div>
     );
   }
 
   const pullRequest = await response.json();
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold">{pullRequest.title}</h1>
-      <p className="mt-2 text-gray-600">
-        #{number} by {pullRequest.user?.login}
-      </p>
-    </main>
+    <div className="px-6 py-8">
+      {/* PR Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {pullRequest.title}
+        </h1>
+        <p className="mt-2 text-sm text-gray-600">
+          #{number} opened by {pullRequest.user?.login}
+        </p>
+      </div>
+
+      {/* PR Description */}
+      <div className="prose prose-sm max-w-none">
+        {pullRequest.body ? (
+          <pre className="whitespace-pre-wrap text-sm text-gray-700">
+            {pullRequest.body}
+          </pre>
+        ) : (
+          <p className="text-gray-500 italic">No description provided.</p>
+        )}
+      </div>
+
+      {/* Comments Placeholder */}
+      <div className="mt-8 border-t border-gray-200 pt-6">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">Comments</h2>
+        <p className="text-sm text-gray-500">Comments section coming soon.</p>
+      </div>
+    </div>
   );
 }
