@@ -137,17 +137,20 @@ export default function RightSidebar({
 
 			{/* Commits Section - Scrollable */}
 			<div className="min-h-0 flex-1 overflow-y-auto border-gray-200 border-t pt-6">
-				<h3 className="mb-3 font-semibold text-gray-900 text-sm">Commits</h3>
+				<h3 className="mb-3 font-semibold text-gray-900 text-sm">
+					Commits ({commits.length})
+				</h3>
 				{commits.length > 0 ? (
 					<div className="space-y-3">
 						{commits.map((commit: Commit) => {
 							const isCurrent = currentSha ? commit.sha.startsWith(currentSha) : false;
 							return (
 								<Link
-									className={`flex items-start gap-2 text-sm transition-colors hover:bg-gray-50 ${isCurrent
-											? "border-l-2 border-blue-500 bg-blue-50 px-2"
+									className={`flex items-start gap-2 text-sm transition-colors hover:bg-gray-50 ${
+										isCurrent
+											? "border-l-2 border-blue-500 bg-blue-50 px-2 rounded"
 											: ""
-										}`}
+									}`}
 									href={`/${pullRequest.base.repo.owner.login}/${pullRequest.base.repo.name}/pull/${pullRequest.number}/changes/${commit.sha}`}
 									key={commit.sha}
 								>
