@@ -2,6 +2,7 @@ import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
+import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 
 interface PageProps {
   params: Promise<{
@@ -73,9 +74,7 @@ export default async function PullRequestPage({ params }: PageProps) {
       {/* PR Description */}
       <div className="prose prose-sm max-w-none">
         {pullRequest.body ? (
-          <pre className="whitespace-pre-wrap text-sm text-gray-700">
-            {pullRequest.body}
-          </pre>
+          <MarkdownRenderer content={pullRequest.body} />
         ) : (
           <p className="text-gray-500 italic">No description provided.</p>
         )}
