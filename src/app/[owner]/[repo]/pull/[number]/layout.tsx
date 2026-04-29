@@ -5,6 +5,11 @@ import { accounts } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import LeftSidebar from "./_components/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
+import { createOctokit, getPullRequest, getPullRequestCommits, getCheckRuns } from "~/server/github";
+import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
+
+type PullsGetResponseData = RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
+type PullsListCommitsResponseData = RestEndpointMethodTypes["pulls"]["listCommits"]["response"]["data"];
 
 interface LayoutProps {
   children: ReactNode;
@@ -22,17 +27,13 @@ export default async function PullRequestLayout({
   const { owner, repo, number } = await params;
   const session = await auth();
 
-  let pullRequest = null;
-  let commits: Array<{
-    sha: string;
-    commit: { message: string; committer: { date: string } };
-    author: { login: string; avatar_url: string } | null;
-  }> = [];
+  let pullRequest: PullsGetResponseData | null = null;
+  let commits: PullsListCommitsResponseData = [];
   let checks: Array<{
     name: string;
     conclusion: string | null;
     status: string;
-    html_url?: string;
+    html_url?: string | undefined;
   }> = [];
 
   if (session?.user?.id) {
@@ -43,57 +44,34 @@ export default async function PullRequestLayout({
       .limit(1);
 
     if (account?.accessToken) {
-      const [prResponse, commitsResponse] = await Promise.all([
-        fetch(
-          `https://api.github.com/repos/${owner}/${repo}/pulls/${number}`,
-          {
-            headers: {
-              Authorization: `Bearer ${account.accessToken}`,
-              Accept: "application/vnd.github.v3+json",
-            },
-            next: { revalidate: 60 },
-          }
-        ),
-        fetch(
-          `https://api.github.com/repos/${owner}/${repo}/pulls/${number}/commits`,
-          {
-            headers: {
-              Authorization: `Bearer ${account.accessToken}`,
-              Accept: "application/vnd.github.v3+json",
-            },
-            next: { revalidate: 60 },
-          }
-        ),
+      const octokit = createOctokit(account.accessToken);
+
+      const [prResult, commitsResult] = await Promise.allSettled([
+        getPullRequest(octokit, owner, repo, parseInt(number)),
+        getPullRequestCommits(octokit, owner, repo, parseInt(number)),
       ]);
 
-      if (commitsResponse.ok) {
-        commits = await commitsResponse.json();
+      if (commitsResult.status === "fulfilled") {
+        commits = commitsResult.value;
       }
 
       // Fetch check runs if we have the PR head SHA
-      if (prResponse.ok) {
-        pullRequest = await prResponse.json();
+      if (prResult.status === "fulfilled") {
+        pullRequest = prResult.value;
         if (pullRequest?.head?.sha) {
-          const checksResponse = await fetch(
-            `https://api.github.com/repos/${owner}/${repo}/commits/${pullRequest.head.sha}/check-runs`,
-            {
-              headers: {
-                Authorization: `Bearer ${account.accessToken}`,
-                Accept: "application/vnd.github.v3+json",
-              },
-              next: { revalidate: 60 },
-            }
+          const checksResult = await getCheckRuns(
+            octokit,
+            owner,
+            repo,
+            pullRequest.head.sha
           );
 
-          if (checksResponse.ok) {
-            const checksData = await checksResponse.json();
-            checks = (checksData.check_runs || []).map((check: any) => ({
-              name: check.name,
-              conclusion: check.conclusion,
-              status: check.status,
-              html_url: check.html_url,
-            }));
-          }
+           checks = (checksResult.check_runs || []).map((check: { name: string; conclusion: string | null; status: string; html_url?: string | undefined }) => ({
+            name: check.name,
+            conclusion: check.conclusion,
+            status: check.status,
+            html_url: check.html_url,
+          }));
         }
       }
     }

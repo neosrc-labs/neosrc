@@ -3,6 +3,7 @@ import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
+import { createOctokit, getPullRequest } from "~/server/github";
 
 interface PageProps {
   params: Promise<{
@@ -38,26 +39,18 @@ export default async function PullRequestPage({ params }: PageProps) {
     );
   }
 
-  const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/pulls/${number}`,
-    {
-      headers: {
-        Authorization: `Bearer ${account.accessToken}`,
-        Accept: "application/vnd.github.v3+json",
-      },
-      next: { revalidate: 60 },
-    }
-  );
+  const octokit = createOctokit(account.accessToken);
 
-  if (!response.ok) {
+  let pullRequest;
+  try {
+    pullRequest = await getPullRequest(octokit, owner, repo, parseInt(number));
+  } catch {
     return (
       <div className="px-6 py-8">
         <p className="text-gray-600">Failed to fetch pull request data.</p>
       </div>
     );
   }
-
-  const pullRequest = await response.json();
 
   return (
     <div className="px-6 py-8">
