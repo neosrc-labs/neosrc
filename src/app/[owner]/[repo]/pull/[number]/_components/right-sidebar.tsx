@@ -71,11 +71,16 @@ export default function RightSidebar({
 						Reviewers
 					</h3>
 					{pullRequest.requested_reviewers &&
-					pullRequest.requested_reviewers.length > 0 ? (
-						<ul className="space-y-1">
+						pullRequest.requested_reviewers.length > 0 ? (
+						<ul className="space-y-2">
 							{pullRequest.requested_reviewers.map((reviewer: Reviewer) => (
-								<li className="text-gray-600 text-sm" key={reviewer.login}>
-									{reviewer.login}
+								<li className="flex items-center gap-2 text-sm" key={reviewer.login}>
+									<img
+										alt={reviewer.login}
+										className="h-5 w-5 rounded-full"
+										src={reviewer.avatar_url}
+									/>
+									<span className="text-gray-600">{reviewer.login}</span>
 								</li>
 							))}
 						</ul>
@@ -90,10 +95,15 @@ export default function RightSidebar({
 						Assignees
 					</h3>
 					{pullRequest.assignees && pullRequest.assignees.length > 0 ? (
-						<ul className="space-y-1">
+						<ul className="space-y-2">
 							{pullRequest.assignees.map((assignee: Assignee) => (
-								<li className="text-gray-600 text-sm" key={assignee.login}>
-									{assignee.login}
+								<li className="flex items-center gap-2 text-sm" key={assignee.login}>
+									<img
+										alt={assignee.login}
+										className="h-5 w-5 rounded-full"
+										src={assignee.avatar_url}
+									/>
+									<span className="text-gray-600">{assignee.login}</span>
 								</li>
 							))}
 						</ul>
