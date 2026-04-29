@@ -29,6 +29,11 @@ interface LeftSidebarProps {
   repo: string;
   number: string;
   activeTab: "conversation" | "files";
+  checks?: Array<{
+    name: string;
+    conclusion: string | null;
+    status: string;
+  }>;
 }
 
 export default function LeftSidebar({
@@ -36,6 +41,7 @@ export default function LeftSidebar({
   repo,
   number,
   activeTab,
+  checks,
 }: LeftSidebarProps) {
   const basePath = `/${owner}/${repo}/pull/${number}`;
 
@@ -53,6 +59,35 @@ export default function LeftSidebar({
           isActive={activeTab === "files"}
         />
       </nav>
+
+      {/* Checks Section */}
+      <div className="mt-6 border-t border-gray-200 pt-4">
+        <h3 className="mb-2 text-sm font-semibold text-gray-900">Checks</h3>
+        {checks && checks.length > 0 ? (
+          <div className="space-y-2">
+            {checks.map((check, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="text-sm">
+                  {check.conclusion === "success" ? (
+                    <span className="text-green-600">✓</span>
+                  ) : check.conclusion === "failure" ? (
+                    <span className="text-red-600">✗</span>
+                  ) : check.status === "in_progress" ? (
+                    <span className="text-gray-400">⏳</span>
+                  ) : (
+                    <span className="text-gray-400">○</span>
+                  )}
+                </span>
+                <span className="truncate text-sm text-gray-700">
+                  {check.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">No checks</p>
+        )}
+      </div>
 
       <div className="flex-1" />
 

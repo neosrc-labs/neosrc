@@ -28,6 +28,11 @@ export default async function PullRequestLayout({
     commit: { message: string; committer: { date: string } };
     author: { login: string; avatar_url: string } | null;
   }> = [];
+  let checks: Array<{
+    name: string;
+    conclusion: string | null;
+    status: string;
+  }> = [];
 
   if (session?.user?.id) {
     const [account] = await db
@@ -60,12 +65,30 @@ export default async function PullRequestLayout({
         ),
       ]);
 
-      if (prResponse.ok) {
-        pullRequest = await prResponse.json();
-      }
-
       if (commitsResponse.ok) {
         commits = await commitsResponse.json();
+      }
+
+      // Fetch check runs if we have the PR head SHA
+      if (prResponse.ok) {
+        pullRequest = await prResponse.json();
+        if (pullRequest?.head?.sha) {
+          const checksResponse = await fetch(
+            `https://api.github.com/repos/${owner}/${repo}/commits/${pullRequest.head.sha}/check-runs`,
+            {
+              headers: {
+                Authorization: `Bearer ${account.accessToken}`,
+                Accept: "application/vnd.github.v3+json",
+              },
+              next: { revalidate: 60 },
+            }
+          );
+
+          if (checksResponse.ok) {
+            const checksData = await checksResponse.json();
+            checks = checksData.check_runs || [];
+          }
+        }
       }
     }
   }
@@ -79,6 +102,7 @@ export default async function PullRequestLayout({
           repo={repo}
           number={number}
           activeTab="conversation"
+          checks={checks}
         />
       </div>
 
