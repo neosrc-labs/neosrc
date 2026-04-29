@@ -23,6 +23,11 @@ export default async function PullRequestLayout({
   const session = await auth();
 
   let pullRequest = null;
+  let commits: Array<{
+    sha: string;
+    commit: { message: string; committer: { date: string } };
+    author: { login: string; avatar_url: string } | null;
+  }> = [];
 
   if (session?.user?.id) {
     const [account] = await db
@@ -32,19 +37,35 @@ export default async function PullRequestLayout({
       .limit(1);
 
     if (account?.accessToken) {
-      const response = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/pulls/${number}`,
-        {
-          headers: {
-            Authorization: `Bearer ${account.accessToken}`,
-            Accept: "application/vnd.github.v3+json",
-          },
-          next: { revalidate: 60 },
-        }
-      );
+      const [prResponse, commitsResponse] = await Promise.all([
+        fetch(
+          `https://api.github.com/repos/${owner}/${repo}/pulls/${number}`,
+          {
+            headers: {
+              Authorization: `Bearer ${account.accessToken}`,
+              Accept: "application/vnd.github.v3+json",
+            },
+            next: { revalidate: 60 },
+          }
+        ),
+        fetch(
+          `https://api.github.com/repos/${owner}/${repo}/pulls/${number}/commits`,
+          {
+            headers: {
+              Authorization: `Bearer ${account.accessToken}`,
+              Accept: "application/vnd.github.v3+json",
+            },
+            next: { revalidate: 60 },
+          }
+        ),
+      ]);
 
-      if (response.ok) {
-        pullRequest = await response.json();
+      if (prResponse.ok) {
+        pullRequest = await prResponse.json();
+      }
+
+      if (commitsResponse.ok) {
+        commits = await commitsResponse.json();
       }
     }
   }
@@ -68,7 +89,7 @@ export default async function PullRequestLayout({
 
       {/* Right Sidebar - Sticky */}
       <div className="sticky top-0 h-screen overflow-y-auto">
-        <RightSidebar pullRequest={pullRequest} />
+        <RightSidebar pullRequest={pullRequest} commits={commits} />
       </div>
     </div>
   );
