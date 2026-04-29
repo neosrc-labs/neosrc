@@ -45,6 +45,8 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 
 	const containerRef = useRef<HTMLDivElement>(null);
 
+	const fileId = file.filename.replace(/\//g, "-");
+
 	// Hydrate from localStorage after mount, on the client only
 	useEffect(() => {
 		const viewed = getStoredSet(getViewedKey(owner, repo, number));
@@ -58,13 +60,17 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 			const normalizedDiff = file.patch.startsWith("---")
 				? file.patch
 				: `--- a/${file.filename}\n+++ b/${file.filename}\n${file.patch}`;
-			console.log('ross2');
-			const diff2htmlUi = new Diff2HtmlUI(containerRef.current, normalizedDiff, {
-				drawFileList: false,
-				matching: "lines",
-				outputFormat: "line-by-line",
-				highlight: true
-			});
+			console.log("ross2");
+			const diff2htmlUi = new Diff2HtmlUI(
+				containerRef.current,
+				normalizedDiff,
+				{
+					drawFileList: false,
+					matching: "lines",
+					outputFormat: "line-by-line",
+					highlight: true,
+				},
+			);
 			diff2htmlUi.draw();
 		}
 	}, [file.patch, file.filename, isCollapsed]);
@@ -97,7 +103,8 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 
 	return (
 		<div
-			className={`mb-6 rounded-lg border ${isViewed ? "border-green-200 bg-green-50/30" : "border-gray-200"}`}
+			className="mb-6 rounded-lg border border-gray-200"
+			id={fileId}
 		>
 			{/* File Header */}
 			<div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2">
@@ -124,29 +131,30 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 				</button>
 
 				{/* File Icon */}
-				<svg
+				<button
 					className="h-4 w-4 cursor-pointer text-gray-500"
-					fill="none"
 					onClick={toggleCollapsed}
-					stroke="currentColor"
-					viewBox="0 0 24 24"
+					type="button"
 				>
-					<title>File</title>
-					<path
-						d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={2}
-					/>
-				</svg>
+					<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<title>File</title>
+						<path
+							d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+						/>
+					</svg>
+				</button>
 
 				{/* Filename */}
-				<span
-					className="flex-1 cursor-pointer truncate font-mono text-gray-700 text-sm"
+				<button
+					className="flex-1 cursor-pointer truncate font-mono text-gray-700 text-sm text-left"
 					onClick={toggleCollapsed}
+					type="button"
 				>
 					{file.filename}
-				</span>
+				</button>
 
 				{/* Status Badge */}
 				<span className={`font-medium text-xs ${statusColor}`}>
@@ -191,7 +199,6 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 						  background: transparent !important;
 						}
 					`}</style>
-
 
 					{file.patch ? (
 						<div ref={containerRef} />

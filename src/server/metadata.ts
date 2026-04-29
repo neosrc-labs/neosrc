@@ -1,9 +1,9 @@
+import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
 import { createOctokit, getPullRequest } from "~/server/github";
-import { eq } from "drizzle-orm";
 
 export async function generatePRMetadata(
 	owner: string,

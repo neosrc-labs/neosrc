@@ -5,13 +5,13 @@ import FileDiff from "~/components/FileDiff";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
-import { createOctokit } from "~/server/github";
-import { generatePRMetadata } from "~/server/metadata";
 import {
+	createOctokit,
 	getCommit,
 	getPullRequestCommits,
 	getPullRequestFiles,
 } from "~/server/github";
+import { generatePRMetadata } from "~/server/metadata";
 
 type PullsListFilesResponseData =
 	RestEndpointMethodTypes["pulls"]["listFiles"]["response"]["data"];
