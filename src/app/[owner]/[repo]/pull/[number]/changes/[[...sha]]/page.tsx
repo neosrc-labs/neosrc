@@ -1,13 +1,14 @@
 import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import { eq } from "drizzle-orm";
+import type { Metadata } from "next";
 import FileDiff from "~/components/FileDiff";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
+import { createOctokit } from "~/server/github";
+import { generatePRMetadata } from "~/server/metadata";
 import {
-	createOctokit,
 	getCommit,
-	getCommitFiles,
 	getPullRequestCommits,
 	getPullRequestFiles,
 } from "~/server/github";
@@ -16,7 +17,8 @@ type PullsListFilesResponseData =
 	RestEndpointMethodTypes["pulls"]["listFiles"]["response"]["data"];
 type PullsListCommitsResponseData =
 	RestEndpointMethodTypes["pulls"]["listCommits"]["response"]["data"];
-type CommitData = RestEndpointMethodTypes["repos"]["getCommit"]["response"]["data"];
+type CommitData =
+	RestEndpointMethodTypes["repos"]["getCommit"]["response"]["data"];
 
 interface ChangesPageProps {
 	params: Promise<{
@@ -27,6 +29,13 @@ interface ChangesPageProps {
 	}>;
 }
 
+export async function generateMetadata({
+	params,
+}: ChangesPageProps): Promise<Metadata> {
+	const { owner, repo, number } = await params;
+	return generatePRMetadata(owner, repo, number);
+}
+
 export default async function ChangesPage({ params }: ChangesPageProps) {
 	const { owner, repo, number, sha } = await params;
 	const commitSha = sha && sha.length > 0 ? sha[0] : null;
@@ -35,7 +44,9 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 	if (!session?.user?.id) {
 		return (
 			<div className="px-6 py-8">
-				<p className="text-gray-600">Please sign in to view this pull request.</p>
+				<p className="text-gray-600">
+					Please sign in to view this pull request.
+				</p>
 			</div>
 		);
 	}
@@ -122,14 +133,14 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 						<div className="flex gap-2">
 							{prevCommit ? (
 								<a
-									className="rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 whitespace-nowrap"
+									className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50"
 									href={`/${owner}/${repo}/pull/${number}/changes/${prevCommit.sha}`}
 								>
 									← Previous
 								</a>
 							) : (
 								<button
-									className="rounded-md bg-gray-100 px-3 py-1.5 font-medium text-gray-400 text-sm ring-1 ring-gray-200 cursor-not-allowed"
+									className="cursor-not-allowed rounded-md bg-gray-100 px-3 py-1.5 font-medium text-gray-400 text-sm ring-1 ring-gray-200"
 									disabled
 									type="button"
 								>
@@ -138,14 +149,14 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 							)}
 							{nextCommit ? (
 								<a
-									className="rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 whitespace-nowrap"
+									className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50"
 									href={`/${owner}/${repo}/pull/${number}/changes/${nextCommit.sha}`}
 								>
 									Next →
 								</a>
 							) : (
 								<button
-									className="rounded-md bg-gray-100 px-3 py-1.5 font-medium text-gray-400 text-sm ring-1 ring-gray-200 cursor-not-allowed"
+									className="cursor-not-allowed rounded-md bg-gray-100 px-3 py-1.5 font-medium text-gray-400 text-sm ring-1 ring-gray-200"
 									disabled
 									type="button"
 								>
@@ -169,7 +180,9 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 						)}
 						<span className="text-gray-600 text-sm">
 							{commit.author?.login || commit.commit.author?.name} committed{" "}
-							{new Date(commit.commit.committer?.date || "").toLocaleDateString()}
+							{new Date(
+								commit.commit.committer?.date || "",
+							).toLocaleDateString()}
 						</span>
 						<code className="ml-2 font-mono text-gray-500 text-xs">
 							{commit.sha.slice(0, 7)}

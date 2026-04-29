@@ -101,7 +101,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 			<div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2">
 				{/* Collapse Toggle */}
 				<button
-					className="text-gray-500 hover:text-gray-700 cursor-pointer"
+					className="cursor-pointer text-gray-500 hover:text-gray-700"
 					onClick={toggleCollapsed}
 					type="button"
 				>
@@ -123,11 +123,11 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 
 				{/* File Icon */}
 				<svg
-					className="h-4 w-4 text-gray-500 cursor-pointer"
+					className="h-4 w-4 cursor-pointer text-gray-500"
 					fill="none"
+					onClick={toggleCollapsed}
 					stroke="currentColor"
 					viewBox="0 0 24 24"
-					onClick={toggleCollapsed}
 				>
 					<title>File</title>
 					<path
@@ -140,7 +140,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 
 				{/* Filename */}
 				<span
-					className="flex-1 truncate font-mono text-gray-700 text-sm cursor-pointer"
+					className="flex-1 cursor-pointer truncate font-mono text-gray-700 text-sm"
 					onClick={toggleCollapsed}
 				>
 					{file.filename}
@@ -164,10 +164,10 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 				)}
 
 				{/* Viewed Checkbox */}
-				<label className="flex items-center gap-1 text-gray-600 text-xs hover:text-gray-800 cursor-pointer">
+				<label className="flex cursor-pointer items-center gap-1 text-gray-600 text-xs hover:text-gray-800">
 					<input
 						checked={isViewed}
-						className="rounded border-gray-300 cursor-pointer"
+						className="cursor-pointer rounded border-gray-300"
 						onChange={toggleViewed}
 						type="checkbox"
 					/>

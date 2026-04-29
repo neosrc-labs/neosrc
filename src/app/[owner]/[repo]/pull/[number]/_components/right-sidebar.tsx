@@ -1,8 +1,8 @@
 "use client";
 
+import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 
 type PullsGetResponseData =
 	RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
@@ -79,10 +79,13 @@ export default function RightSidebar({
 						Reviewers
 					</h3>
 					{pullRequest.requested_reviewers &&
-						pullRequest.requested_reviewers.length > 0 ? (
+					pullRequest.requested_reviewers.length > 0 ? (
 						<ul className="space-y-2">
 							{pullRequest.requested_reviewers.map((reviewer: Reviewer) => (
-								<li className="flex items-center gap-2 text-sm" key={reviewer.login}>
+								<li
+									className="flex items-center gap-2 text-sm"
+									key={reviewer.login}
+								>
 									<img
 										alt={reviewer.login}
 										className="h-5 w-5 rounded-full"
@@ -105,7 +108,10 @@ export default function RightSidebar({
 					{pullRequest.assignees && pullRequest.assignees.length > 0 ? (
 						<ul className="space-y-2">
 							{pullRequest.assignees.map((assignee: Assignee) => (
-								<li className="flex items-center gap-2 text-sm" key={assignee.login}>
+								<li
+									className="flex items-center gap-2 text-sm"
+									key={assignee.login}
+								>
 									<img
 										alt={assignee.login}
 										className="h-5 w-5 rounded-full"
@@ -143,12 +149,14 @@ export default function RightSidebar({
 				{commits.length > 0 ? (
 					<div className="space-y-3">
 						{commits.map((commit: Commit) => {
-							const isCurrent = currentSha ? commit.sha.startsWith(currentSha) : false;
+							const isCurrent = currentSha
+								? commit.sha.startsWith(currentSha)
+								: false;
 							return (
 								<Link
 									className={`flex items-start gap-2 text-sm transition-colors hover:bg-gray-50 ${
 										isCurrent
-											? "border-l-2 border-blue-500 bg-blue-50 px-2 rounded"
+											? "rounded border-blue-500 border-l-2 bg-blue-50 px-2"
 											: ""
 									}`}
 									href={`/${pullRequest.base.repo.owner.login}/${pullRequest.base.repo.name}/pull/${pullRequest.number}/changes/${commit.sha}`}

@@ -1,10 +1,12 @@
 import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import { eq } from "drizzle-orm";
+import type { Metadata } from "next";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
 import { createOctokit, getPullRequest } from "~/server/github";
+import { generatePRMetadata } from "~/server/metadata";
 
 type PullsGetResponseData =
 	RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
@@ -15,6 +17,13 @@ interface PageProps {
 		repo: string;
 		number: string;
 	}>;
+}
+
+export async function generateMetadata({
+	params,
+}: PageProps): Promise<Metadata> {
+	const { owner, repo, number } = await params;
+	return generatePRMetadata(owner, repo, number);
 }
 
 export default async function PullRequestPage({ params }: PageProps) {
