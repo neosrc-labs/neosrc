@@ -1,7 +1,7 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { eq } from "drizzle-orm";
 import type { DefaultSession, NextAuthConfig } from "next-auth";
 import GitHubProvider from "next-auth/providers/github";
-import { eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import {
 	accounts,
@@ -88,12 +88,12 @@ export const authConfig = {
 	}),
 	callbacks: {
 		async signIn({ account }) {
-			if (account?.provider === 'github' && account.refresh_token_expires_in) {
+			if (account?.provider === "github" && account.refresh_token_expires_in) {
 				await db
 					.update(accounts)
 					.set({
 						refresh_token_expires_in: Math.floor(
-							Date.now() / 1000 + (account.refresh_token_expires_in as number)
+							Date.now() / 1000 + (account.refresh_token_expires_in as number),
 						),
 					})
 					.where(eq(accounts.providerAccountId, account.providerAccountId));
@@ -108,7 +108,11 @@ export const authConfig = {
 					.where(eq(accounts.userId, user.id))
 					.limit(1);
 
-				if (account?.expires_at && account.expires_at < Date.now() && account?.refresh_token) {
+				if (
+					account?.expires_at &&
+					account.expires_at < Date.now() &&
+					account?.refresh_token
+				) {
 					const refresh = await refreshAccessToken(account.refresh_token);
 					await db
 						.update(accounts)
@@ -117,20 +121,21 @@ export const authConfig = {
 							refresh_token: refresh.refresh_token,
 							expires_at: refresh.expires_in,
 							refresh_token_expires_in: Math.floor(
-								Date.now() / 1000 + (refresh.refresh_token_expires_in as number)
+								Date.now() / 1000 +
+									(refresh.refresh_token_expires_in as number),
 							),
 						})
 						.where(eq(accounts.providerAccountId, account.providerAccountId));
 				}
 			}
 
-			return ({
+			return {
 				...session,
 				user: {
 					...session.user,
 					id: user.id,
 				},
-			})
+			};
 		},
 	},
 } satisfies NextAuthConfig;

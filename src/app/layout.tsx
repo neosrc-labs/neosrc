@@ -3,6 +3,7 @@ import "~/styles/globals.css";
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 
+import { Header } from "~/components/Header";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
@@ -40,6 +41,7 @@ export default function RootLayout({
 				></script>
 			</head>
 			<body>
+				<Header />
 				<TRPCReactProvider>{children}</TRPCReactProvider>
 			</body>
 		</html>

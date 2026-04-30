@@ -18,10 +18,11 @@ interface NavItemProps {
 function NavItem({ href, label, isActive }: NavItemProps) {
 	return (
 		<Link
-			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${isActive
+			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${
+				isActive
 					? "bg-gray-100 text-gray-900"
 					: "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-				}`}
+			}`}
 			href={href}
 		>
 			{label}
@@ -177,7 +178,7 @@ function FileTreeNode({
 	return (
 		<div>
 			<button
-				className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-gray-700 text-sm transition-colors hover:bg-gray-50 cursor-pointer"
+				className="flex w-full cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-gray-700 text-sm transition-colors hover:bg-gray-50"
 				onClick={() => setIsOpen(!isOpen)}
 				style={{ paddingLeft: `${paddingLeft}px` }}
 				type="button"

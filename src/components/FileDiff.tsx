@@ -146,7 +146,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 
 				{/* Filename */}
 				<button
-					className="flex-1 cursor-pointer truncate text-left font-mono text-sm text-gray-700"
+					className="flex-1 cursor-pointer truncate text-left font-mono text-gray-700 text-sm"
 					onClick={toggleCollapsed}
 					type="button"
 				>
@@ -154,7 +154,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 				</button>
 
 				{/* Status Badge */}
-				<span className={`text-xs font-medium ${statusColor}`}>
+				<span className={`font-medium text-xs ${statusColor}`}>
 					{file.status}
 				</span>
 

@@ -59,7 +59,7 @@ export async function GET(request: Request) {
 
 		return Response.json({ files });
 	} catch (e) {
-		console.log(e)
+		console.log(e);
 		return Response.json({ error: "Failed to fetch files" }, { status: 500 });
 	}
 }
