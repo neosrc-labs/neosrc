@@ -18,11 +18,10 @@ interface NavItemProps {
 function NavItem({ href, label, isActive }: NavItemProps) {
 	return (
 		<Link
-			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${
-				isActive
-					? "bg-gray-100 text-gray-900"
-					: "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-			}`}
+			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${isActive
+				? "bg-gray-100 text-gray-900"
+				: "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+				}`}
 			href={href}
 		>
 			{label}
@@ -221,6 +220,37 @@ function FileTreeNode({
 	);
 }
 
+function FileTreeSkeleton() {
+	const skeletonItems = [
+		{ depth: 0 },
+		{ depth: 0 },
+		{ depth: 1 },
+		{ depth: 1 },
+		{ depth: 1 },
+		{ depth: 0 },
+		{ depth: 2 },
+		{ depth: 0 },
+	];
+
+	return (
+		<div className="space-y-0.5">
+			{skeletonItems.map((item, i) => {
+				const paddingLeft = item.depth * 12 + 16;
+				return (
+					<div
+						className="flex items-center gap-1.5 rounded px-2 py-2"
+						key={i}
+						style={{ paddingLeft: `${paddingLeft}px` }}
+					>
+						<div className="h-4 w-4 flex-shrink-0 animate-pulse rounded bg-gray-200" />
+						<div className="h-4 flex-1 animate-pulse rounded bg-gray-200" />
+					</div>
+				);
+			})}
+		</div>
+	);
+}
+
 export default function LeftSidebar({
 	owner,
 	repo,
@@ -305,7 +335,7 @@ export default function LeftSidebar({
 							Files Changed ({files.length})
 						</h3>
 						{loading ? (
-							<p className="text-gray-500 text-sm">Loading...</p>
+							<FileTreeSkeleton />
 						) : files.length > 0 ? (
 							<FileTree basePath={basePath} files={fileTree} />
 						) : (
