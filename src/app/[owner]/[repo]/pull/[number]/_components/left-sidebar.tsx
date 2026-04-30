@@ -4,6 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+// Import the icon map with proper typing
+import iconMapData from "~/utils/iconMap.json";
+
+const iconMap: Record<string, string> = iconMapData as Record<string, string>;
+
 interface NavItemProps {
 	href: string;
 	label: string;
@@ -13,10 +18,11 @@ interface NavItemProps {
 function NavItem({ href, label, isActive }: NavItemProps) {
 	return (
 		<Link
-			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${isActive
-				? "bg-gray-100 text-gray-900"
-				: "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-				}`}
+			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${
+				isActive
+					? "bg-gray-100 text-gray-900"
+					: "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+			}`}
 			href={href}
 		>
 			{label}
@@ -131,13 +137,29 @@ function FileTreeNode({
 
 	const fileId = node.path.replace(/\//g, "-");
 
+	const getFileIcon = (filename: string) => {
+		const parts = filename.split(".");
+		if (parts.length > 1) {
+			const ext = parts.pop()?.toLowerCase();
+			return ext ? (iconMap[ext] ?? "file") : "file";
+		}
+		return "file";
+	};
+
 	if (node.isFile) {
+		const iconName = getFileIcon(node.name);
 		return (
 			<a
-				className="flex items-center gap-1 truncate rounded px-2 py-1 text-gray-700 text-sm transition-colors hover:bg-gray-50"
+				className="flex items-center gap-1.5 truncate rounded px-2 py-1 text-gray-700 text-sm transition-colors hover:bg-gray-50"
 				href={`${basePath}/changes#${fileId}`}
 				style={{ paddingLeft: `${paddingLeft}px` }}
 			>
+				<img
+					alt=""
+					className="h-4 w-4 flex-shrink-0"
+					loading="lazy"
+					src={`/material-icons/${iconName}.svg`}
+				/>
 				<span className="flex-1 truncate">{node.name}</span>
 				{node.additions ? (
 					<span className="font-medium text-green-600 text-xs">
@@ -156,13 +178,13 @@ function FileTreeNode({
 	return (
 		<div>
 			<button
-				className="flex w-full items-center gap-1 rounded px-2 py-1 text-gray-700 text-sm transition-colors hover:bg-gray-50"
+				className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-gray-700 text-sm transition-colors hover:bg-gray-50"
 				onClick={() => setIsOpen(!isOpen)}
 				style={{ paddingLeft: `${paddingLeft}px` }}
 				type="button"
 			>
 				<svg
-					className={`h-3 w-3 transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`}
+					className={`h-3 w-3 flex-shrink-0 transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`}
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
@@ -175,20 +197,12 @@ function FileTreeNode({
 						strokeWidth={2}
 					/>
 				</svg>
-				<svg
-					className="h-4 w-4 text-gray-400"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<title>Folder</title>
-					<path
-						d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={2}
-					/>
-				</svg>
+				<img
+					alt=""
+					className="h-4 w-4 flex-shrink-0"
+					loading="lazy"
+					src={`/material-icons/folder${isOpen ? "-open" : ""}.svg`}
+				/>
 				<span className="truncate">{node.name}</span>
 			</button>
 			{isOpen && node.children ? (

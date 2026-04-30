@@ -102,10 +102,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 					: "text-yellow-600";
 
 	return (
-		<div
-			className="mb-6 rounded-lg border border-gray-200"
-			id={fileId}
-		>
+		<div className="mb-6 rounded-lg border border-gray-200" id={fileId}>
 			{/* File Header */}
 			<div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2">
 				{/* Collapse Toggle */}
@@ -149,7 +146,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 
 				{/* Filename */}
 				<button
-					className="flex-1 cursor-pointer truncate font-mono text-gray-700 text-sm text-left"
+					className="flex-1 cursor-pointer truncate text-left font-mono text-sm text-gray-700"
 					onClick={toggleCollapsed}
 					type="button"
 				>
@@ -157,7 +154,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 				</button>
 
 				{/* Status Badge */}
-				<span className={`font-medium text-xs ${statusColor}`}>
+				<span className={`text-xs font-medium ${statusColor}`}>
 					{file.status}
 				</span>
 

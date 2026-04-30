@@ -13,6 +13,7 @@
 		"db:push": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"dev": "next dev --turbo",
+		"generate:icon-map": "pnpx tsx scripts/generate-icon-map.ts",
 		"preview": "next build && next start",
 		"start": "next start",
 		"typecheck": "tsc --noEmit"
@@ -28,6 +29,7 @@
 		"@trpc/server": "^11.0.0",
 		"diff2html": "^3.4.56",
 		"drizzle-orm": "^0.41.0",
+		"material-icon-theme": "^5.34.0",
 		"next": "^15.2.3",
 		"next-auth": "5.0.0-beta.25",
 		"postgres": "^3.4.4",
