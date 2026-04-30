@@ -94,3 +94,17 @@ export async function getCommit(
 	});
 	return response.data;
 }
+
+export async function getPullRequestReactions(
+	octokit: Octokit,
+	owner: string,
+	repo: string,
+	pullNumber: number,
+) {
+	const response = await octokit.rest.reactions.listForIssue({
+		owner,
+		repo,
+		issue_number: pullNumber,
+	});
+	return response.data;
+}

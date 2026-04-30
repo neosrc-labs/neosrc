@@ -2,6 +2,7 @@ import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-meth
 import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
+import { Reactions } from "~/components/Reactions";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
@@ -91,6 +92,15 @@ export default async function PullRequestPage({ params }: PageProps) {
 				) : (
 					<p className="text-gray-500 italic">No description provided.</p>
 				)}
+			</div>
+
+			{/* Reactions */}
+			<div className="mt-4 border-gray-200 border-t pt-4">
+				<Reactions
+					number={parseInt(number, 10)}
+					owner={owner}
+					repo={repo}
+				/>
 			</div>
 
 			{/* Comments Placeholder */}
