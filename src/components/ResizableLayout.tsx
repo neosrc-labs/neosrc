@@ -74,7 +74,7 @@ export function ResizableLayout({
 			style={{ gridTemplateColumns: `${leftWidth}px 1fr 300px` }}
 		>
 			{/* Left Sidebar - Sticky */}
-			<div className="relative sticky top-0 h-screen overflow-y-auto">
+			<div className="relative sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto">
 				{leftSidebar}
 				{/* Drag Handle */}
 				<div
@@ -89,7 +89,7 @@ export function ResizableLayout({
 			</main>
 
 			{/* Right Sidebar - Sticky */}
-			<div className="sticky top-0 h-screen overflow-y-auto">
+			<div className="sticky sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))]  overflow-y-auto">
 				{rightSidebar}
 			</div>
 		</div>
