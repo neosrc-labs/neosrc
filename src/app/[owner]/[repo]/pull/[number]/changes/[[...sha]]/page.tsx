@@ -222,19 +222,36 @@ async function CommitHeader({ commitPromise, commitsPromise, filesPromise, owner
 				</p>
 			)}
 			<div className="mt-3 flex items-center gap-2">
-				{commit.author && (
-					<img
-						alt={commit.author.login}
-						className="h-5 w-5 rounded-full"
-						src={commit.author.avatar_url}
-					/>
+				{commit.author ? (
+					<>
+						<a className="flex items-center gap-2" href={commit.author.html_url} rel="noopener noreferrer" target="_blank">
+							<img
+								alt={commit.author.login}
+								className="h-5 w-5 rounded-full"
+								src={commit.author.avatar_url}
+							/>
+						</a>
+
+						<a className="flex items-center gap-2" href={commit.author.html_url} rel="noopener noreferrer" target="_blank">
+							<span className="text-gray-600 text-sm hover:text-gray-900">
+								{commit.author.login}
+							</span>
+						</a>
+						<span className="text-gray-600 text-sm">
+							committed{" "}
+							{new Date(
+								commit.commit.committer?.date || "",
+							).toLocaleDateString()}
+						</span>
+					</>
+				) : (
+					<span className="text-gray-600 text-sm">
+						{commit.commit.author?.name} committed{" "}
+						{new Date(
+							commit.commit.committer?.date || "",
+						).toLocaleDateString()}
+					</span>
 				)}
-				<span className="text-gray-600 text-sm">
-					{commit.author?.login || commit.commit.author?.name} committed{" "}
-					{new Date(
-						commit.commit.committer?.date || "",
-					).toLocaleDateString()}
-				</span>
 				<code className="ml-2 font-mono text-gray-500 text-xs">
 					{commit.sha.slice(0, 7)}
 				</code>
