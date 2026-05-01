@@ -6,7 +6,7 @@ import {
 	protectedProcedure,
 } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
-import { createOctokit, getPullRequestReactions } from "~/server/github";
+import { getPullRequestReactions } from "~/server/github";
 
 export const reactionsRouter = createTRPCRouter({
 	get: protectedProcedure
@@ -28,9 +28,8 @@ export const reactionsRouter = createTRPCRouter({
 				throw new Error("GitHub account not connected");
 			}
 
-			const octokit = createOctokit(account.accessToken);
 			const reactions = await getPullRequestReactions(
-				octokit,
+				account.accessToken,
 				input.owner,
 				input.repo,
 				input.number,

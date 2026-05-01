@@ -1,6 +1,5 @@
-import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import { eq } from "drizzle-orm";
-import { Suspense, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
@@ -9,22 +8,20 @@ import {
 	getCheckRuns,
 	getPullRequest,
 	getPullRequestCommits,
+	type PullsGetResponseData,
+	type PullsListCommitsResponseData,
 } from "~/server/github";
 import { ResizableLayout } from "~/components/ResizableLayout";
 import LeftSidebar from "./_components/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
 
-type PullsGetResponseData =
-	RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
-type PullsListCommitsResponseData =
-	RestEndpointMethodTypes["pulls"]["listCommits"]["response"]["data"];
 
 interface LayoutProps {
 	children: ReactNode;
 	params: Promise<{
 		owner: string;
 		repo: string;
-		number: string;
+		number: number;
 	}>;
 }
 
@@ -52,16 +49,16 @@ export default async function PullRequestLayout({
 			.limit(1);
 
 		if (account?.accessToken) {
-			const octokit = createOctokit(account.accessToken);
-			commits = getPullRequestCommits(octokit, owner, repo, parseInt(number, 10));
-			pullRequest = getPullRequest(octokit, owner, repo, parseInt(number, 10));
+			const accessToken = account.accessToken;
+			commits = getPullRequestCommits(accessToken, owner, repo, number);
+			pullRequest = getPullRequest(accessToken, owner, repo, number);
 
 			// Fetch check runs if we have the PR head SHA
 			checks = pullRequest
 				.then(async pullRequest => {
 					if (pullRequest?.head?.sha) {
 						const checksResult = await getCheckRuns(
-							octokit,
+							accessToken,
 							owner,
 							repo,
 							pullRequest.head.sha,
@@ -90,6 +87,7 @@ export default async function PullRequestLayout({
 		<ResizableLayout
 			leftSidebar={
 				<LeftSidebar
+					pullRequestPromise={pullRequest}
 					checksPromise={checks}
 					number={number}
 					owner={owner}

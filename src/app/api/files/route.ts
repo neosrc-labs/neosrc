@@ -1,65 +1,35 @@
-import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
-import { eq } from "drizzle-orm";
-import { auth } from "~/server/auth";
-import { db } from "~/server/db";
-import { accounts } from "~/server/db/schema";
-import { createOctokit, getCommit, getPullRequestFiles } from "~/server/github";
-
-type PullsListFilesResponseData =
-	RestEndpointMethodTypes["pulls"]["listFiles"]["response"]["data"];
+import { githubAccessToken } from "~/server/auth";
+import { getPullRequestFilesStream } from "~/server/github";
 
 export async function GET(request: Request) {
 	const { searchParams } = new URL(request.url);
-	const owner = searchParams.get("owner");
-	const repo = searchParams.get("repo");
-	const number = searchParams.get("number");
-	const sha = searchParams.get("sha");
+	// FIXME: Better null handling
+	const owner = searchParams.get("owner") ?? '';
+	const repo = searchParams.get("repo") ?? '';
+	const number = searchParams.get("number") ?? '';
+	const commitSha = searchParams.get("commitSha") ?? undefined;
 
-	if (!owner || !repo || !number) {
-		return Response.json(
-			{ error: "Missing required parameters: owner, repo, number" },
-			{ status: 400 },
-		);
+	const accessToken = await githubAccessToken();
+	if (!accessToken) {
+		return new Response(null, { status: 401 });
 	}
 
-	const session = await auth();
-	if (!session?.user?.id) {
-		return Response.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	const encoder = new TextEncoder();
+	const stream = new ReadableStream({
+		async start(controller) {
+			for await (const page of getPullRequestFilesStream(
+				accessToken, owner, repo, parseInt(number, 10), commitSha
+			)) {
+				controller.enqueue(encoder.encode(JSON.stringify(page) + '\n'));
+			}
+			controller.close();
+		},
+	});
 
-	const [account] = await db
-		.select({ accessToken: accounts.access_token })
-		.from(accounts)
-		.where(eq(accounts.userId, session.user.id))
-		.limit(1);
-
-	if (!account?.accessToken) {
-		return Response.json(
-			{ error: "GitHub account not connected" },
-			{ status: 400 },
-		);
-	}
-
-	const octokit = createOctokit(account.accessToken);
-
-	try {
-		let files: PullsListFilesResponseData = [];
-
-		if (sha) {
-			const commit = await getCommit(octokit, owner, repo, sha);
-			files = (commit.files || []) as PullsListFilesResponseData;
-		} else {
-			files = await getPullRequestFiles(
-				octokit,
-				owner,
-				repo,
-				parseInt(number, 10),
-			);
-		}
-
-		return Response.json({ files });
-	} catch (e) {
-		console.log(e);
-		return Response.json({ error: "Failed to fetch files" }, { status: 500 });
-	}
+	return new Response(stream, {
+		headers: {
+			'Content-Type': 'text/plain; charset=utf-8',
+			'X-Content-Type-Options': 'nosniff',
+		},
+	});
 }

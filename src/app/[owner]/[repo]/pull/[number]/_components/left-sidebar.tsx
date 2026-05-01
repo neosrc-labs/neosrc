@@ -1,16 +1,18 @@
-import { LeftSidebarContentSection, SidebarFileTree, SidebarNavMenu } from "./left-sidebar-client";
+import type { PullsGetResponseData } from "~/server/github";
+import { LeftSidebarContentSection, SidebarNavMenu } from "./left-sidebar-client";
 import { Suspense } from "react";
 
 interface LeftSidebarProps {
 	owner: string;
 	repo: string;
-	number: string;
+	number: number;
 	checksPromise: Promise<Array<{
 		name: string;
 		conclusion: string | null;
 		status: string;
 		html_url?: string;
 	}>> | null;
+	pullRequestPromise: Promise<PullsGetResponseData> | null;
 }
 
 export default function LeftSidebar({
@@ -18,6 +20,7 @@ export default function LeftSidebar({
 	repo,
 	number,
 	checksPromise,
+	pullRequestPromise
 }: LeftSidebarProps) {
 	return (
 		<aside className="flex h-full flex-col border-gray-200 border-r bg-white px-4 py-6">
@@ -35,6 +38,7 @@ export default function LeftSidebar({
 						repo={repo}
 						number={number}
 						checksPromise={checksPromise}
+						pullRequestPromise={pullRequestPromise}
 					/>
 				</Suspense>
 			</div>

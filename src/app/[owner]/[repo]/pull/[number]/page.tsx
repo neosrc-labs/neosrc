@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 import { Reactions } from "~/components/Reactions";
-import { auth } from "~/server/auth";
+import { auth, githubAccessToken } from "~/server/auth";
 import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
 import { createOctokit, getPullRequest } from "~/server/github";
@@ -29,9 +29,9 @@ export async function generateMetadata({
 
 export default async function PullRequestPage({ params }: PageProps) {
 	const { owner, repo, number } = await params;
-	const session = await auth();
+	const accessToken = await githubAccessToken();
 
-	if (!session?.user?.id) {
+	if (!accessToken) {
 		return (
 			<div className="px-6 py-8">
 				<p className="text-gray-600">
@@ -41,26 +41,10 @@ export default async function PullRequestPage({ params }: PageProps) {
 		);
 	}
 
-	const [account] = await db
-		.select({ accessToken: accounts.access_token })
-		.from(accounts)
-		.where(eq(accounts.userId, session.user.id))
-		.limit(1);
-
-	if (!account?.accessToken) {
-		return (
-			<div className="px-6 py-8">
-				<p className="text-gray-600">GitHub account not connected properly.</p>
-			</div>
-		);
-	}
-
-	const octokit = createOctokit(account.accessToken);
-
 	let pullRequest: PullsGetResponseData | null = null;
 	try {
 		pullRequest = await getPullRequest(
-			octokit,
+			accessToken,
 			owner,
 			repo,
 			parseInt(number, 10),

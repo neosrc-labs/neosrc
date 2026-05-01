@@ -1,4 +1,13 @@
-import { Octokit } from "@octokit/rest";
+import { Octokit, type RestEndpointMethodTypes } from "@octokit/rest";
+import { cache } from "react";
+
+
+export type PullsGetResponseData =
+	RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
+export type PullsListCommitsResponseData =
+	RestEndpointMethodTypes["pulls"]["listCommits"]["response"]["data"];
+export type CommitData =
+	RestEndpointMethodTypes["repos"]["getCommit"]["response"]["data"];
 
 export function createOctokit(accessToken: string) {
 	return new Octokit({
@@ -8,54 +17,58 @@ export function createOctokit(accessToken: string) {
 
 export type { Octokit };
 
-export async function getPullRequest(
-	octokit: Octokit,
+export const getPullRequest = cache(async (
+	accessToken: string,
 	owner: string,
 	repo: string,
 	pullNumber: number,
-) {
+) => {
+	const octokit = createOctokit(accessToken);
 	const response = await octokit.pulls.get({
 		owner,
 		repo,
 		pull_number: pullNumber,
 	});
 	return response.data;
-}
+})
 
-export async function getPullRequestCommits(
-	octokit: Octokit,
+export const getPullRequestCommits = cache(async (
+	accessToken: string,
 	owner: string,
 	repo: string,
 	pullNumber: number,
-) {
+) => {
+	const octokit = createOctokit(accessToken);
 	const response = await octokit.pulls.listCommits({
 		owner,
 		repo,
 		pull_number: pullNumber,
 	});
 	return response.data;
-}
+})
 
-export async function getPullRequestFiles(
-	octokit: Octokit,
+export const getPullRequestFiles = cache(async (
+	accessToken: string,
 	owner: string,
 	repo: string,
 	pullNumber: number,
-) {
+) => {
+	const octokit = createOctokit(accessToken);
 	const response = await octokit.pulls.listFiles({
 		owner,
 		repo,
 		pull_number: pullNumber,
 	});
 	return response.data;
-}
+})
 
-export async function getCheckRuns(
-	octokit: Octokit,
+export const getCheckRuns = cache(async (
+	accessToken: string,
 	owner: string,
 	repo: string,
 	commitSha: string,
-) {
+) => {
+	const octokit = createOctokit(accessToken);
 	const response = await octokit.request(
 		"GET /repos/{owner}/{repo}/commits/{commit_sha}/check-runs",
 		{
@@ -65,46 +78,79 @@ export async function getCheckRuns(
 		},
 	);
 	return response.data;
-}
+})
 
-export async function getCommitFiles(
-	octokit: Octokit,
+export const getCommitFiles = cache(async (
+	accessToken: string,
 	owner: string,
 	repo: string,
 	commitSha: string,
-) {
+) => {
+	const octokit = createOctokit(accessToken);
 	const response = await octokit.repos.getCommit({
 		owner,
 		repo,
 		ref: commitSha,
 	});
 	return response.data.files || [];
-}
+})
 
-export async function getCommit(
-	octokit: Octokit,
+export const getCommit = cache(async (
+	accessToken: string,
 	owner: string,
 	repo: string,
 	commitSha: string,
-) {
+) => {
+	const octokit = createOctokit(accessToken);
 	const response = await octokit.repos.getCommit({
 		owner,
 		repo,
 		ref: commitSha,
 	});
 	return response.data;
-}
+})
 
-export async function getPullRequestReactions(
-	octokit: Octokit,
+export const getPullRequestReactions = cache(async (
+	accessToken: string,
 	owner: string,
 	repo: string,
 	pullNumber: number,
-) {
+) => {
+	const octokit = createOctokit(accessToken);
 	const response = await octokit.rest.reactions.listForIssue({
 		owner,
 		repo,
 		issue_number: pullNumber,
 	});
 	return response.data;
+})
+
+// TODO: Check if generators support cache() or maybe interally we can cache?
+export async function* getPullRequestFilesStream(
+	accessToken: string,
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	commitSha?: string
+) {
+	if (commitSha) {
+		// Fetch files changed in a specific commit.
+		// getCommit returns all files in one response (no pagination), so we
+		// yield a single page to keep the shape consistent with the PR path.
+		const { files } = await getCommit(
+			accessToken,
+			owner,
+			repo,
+			commitSha,
+		);
+		yield files ?? [];
+	} else {
+		const octokit = createOctokit(accessToken);
+		for await (const page of octokit.paginate.iterator(
+			octokit.pulls.listFiles,
+			{ owner, repo, pull_number: pullNumber, per_page: 30 }
+		)) {
+			yield page.data;
+		}
+	}
 }

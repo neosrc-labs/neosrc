@@ -1,25 +1,17 @@
-import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
-import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import FileDiff from "~/components/FileDiff";
-import { auth } from "~/server/auth";
-import { db } from "~/server/db";
-import { accounts } from "~/server/db/schema";
+import { githubAccessToken } from "~/server/auth";
 import {
-	createOctokit,
 	getCommit,
+	getPullRequest,
 	getPullRequestCommits,
-	getPullRequestFiles,
+	type CommitData,
+	type PullsGetResponseData,
+	type PullsListCommitsResponseData,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
+import { FilesSection } from "../../_components/files-client";
 
-type PullsListFilesResponseData =
-	RestEndpointMethodTypes["pulls"]["listFiles"]["response"]["data"];
-type PullsListCommitsResponseData =
-	RestEndpointMethodTypes["pulls"]["listCommits"]["response"]["data"];
-type CommitData =
-	RestEndpointMethodTypes["repos"]["getCommit"]["response"]["data"];
 
 interface ChangesPageProps {
 	params: Promise<{
@@ -38,11 +30,13 @@ export async function generateMetadata({
 }
 
 export default async function ChangesPage({ params }: ChangesPageProps) {
-	const { owner, repo, number, sha } = await params;
+	const { owner, repo, number: numberStr, sha } = await params;
+	const number = parseInt(numberStr, 10);
 	const commitSha = sha && sha.length > 0 ? sha[0] : null;
-	const session = await auth();
 
-	if (!session?.user?.id) {
+	const accessToken = await githubAccessToken();
+
+	if (!accessToken) {
 		return (
 			<div className="px-6 py-8">
 				<p className="text-gray-600">
@@ -51,40 +45,15 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 			</div>
 		);
 	}
+	const pullRequest = getPullRequest(accessToken, owner, repo, number);
 
-	const [account] = await db
-		.select({ accessToken: accounts.access_token })
-		.from(accounts)
-		.where(eq(accounts.userId, session.user.id))
-		.limit(1);
-
-	if (!account?.accessToken) {
-		return (
-			<div className="px-6 py-8">
-				<p className="text-gray-600">GitHub account not connected properly.</p>
-			</div>
-		);
-	}
-
-	const octokit = createOctokit(account.accessToken);
-
-	let files: Promise<PullsListFilesResponseData> = new Promise(() => { });
 	let commit: Promise<CommitData> | null = null;
 	let commits: Promise<PullsListCommitsResponseData> | null = null;
-
 	try {
 		if (commitSha) {
 			// Fetch commit details and all PR commits in parallel and don't block the main page render
-			commit = getCommit(octokit, owner, repo, commitSha);
-			commits = getPullRequestCommits(octokit, owner, repo, parseInt(number, 10));
-			files = commit.then(commit => commit.files ?? []);
-		} else {
-			files = getPullRequestFiles(
-				octokit,
-				owner,
-				repo,
-				parseInt(number, 10),
-			);
+			commit = getCommit(accessToken, owner, repo, commitSha);
+			commits = getPullRequestCommits(accessToken, owner, repo, number);
 		}
 	} catch {
 		return (
@@ -104,7 +73,7 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 				<CommitHeader
 					commitPromise={commit}
 					commitsPromise={commits}
-					filesPromise={files}
+					pullRequestPromise={pullRequest}
 					number={number}
 					owner={owner}
 					repo={repo}
@@ -113,55 +82,33 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 			</Suspense>
 			<Suspense>
 				<FilesSection
-					files={files}
 					number={number}
 					owner={owner}
 					repo={repo}
+					commitSha={commitSha ?? undefined}
 				/>
 			</Suspense>
 		</div>
 	);
 }
 
-interface FilesSectionProps {
-	files: Promise<PullsListFilesResponseData>;
-	owner: string;
-	repo: string;
-	number: string;
-}
-
-async function FilesSection({ files, owner, repo, number }: FilesSectionProps) {
-	const filesResolved = await files;
-	return (
-		filesResolved.map((file) => (
-			<FileDiff
-				file={file}
-				key={file.filename}
-				number={number}
-				owner={owner}
-				repo={repo}
-			/>
-		))
-	)
-}
-
 interface CommitHeaderProps {
 	commitPromise: Promise<CommitData> | null;
 	commitsPromise: Promise<PullsListCommitsResponseData> | null;
-	filesPromise: Promise<PullsListFilesResponseData>;
+	pullRequestPromise: Promise<PullsGetResponseData>;
 	owner: string;
 	repo: string;
-	number: string;
+	number: number;
 	commitSha: string | null;
 }
 
-async function CommitHeader({ commitPromise, commitsPromise, filesPromise, owner, repo, number, commitSha }: CommitHeaderProps) {
+async function CommitHeader({ commitPromise, commitsPromise, pullRequestPromise, owner, repo, number, commitSha }: CommitHeaderProps) {
+	const pullRequest = await pullRequestPromise;
 
 	if (commitPromise == null || commitsPromise == null) {
-		const files = await filesPromise;
 		return (
 			<div>
-				Files Changed ({files.length})
+				Files Changed ({pullRequest.changed_files})
 			</div>
 		)
 	}
