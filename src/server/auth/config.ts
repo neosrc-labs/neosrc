@@ -63,6 +63,7 @@ async function refreshAccessToken(refreshToken: string) {
  * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
  *
  * @see https://next-auth.js.org/configuration/options
+ * @see https://next-auth.js.org/providers/github
  */
 export const authConfig = {
 	providers: [
@@ -70,15 +71,6 @@ export const authConfig = {
 			clientId: process.env.GITHUB_ID,
 			clientSecret: process.env.GITHUB_SECRET,
 		}),
-		/**
-		 * ...add more providers here.
-		 *
-		 * Most other providers require a bit more work than the Discord provider. For example, the
-		 * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-		 * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-		 *
-		 * @see https://next-auth.js.org/providers/github
-		 */
 	],
 	adapter: DrizzleAdapter(db, {
 		usersTable: users,
@@ -113,16 +105,17 @@ export const authConfig = {
 					account.expires_at < Date.now() &&
 					account?.refresh_token
 				) {
+					console.log('refreshing token');
 					const refresh = await refreshAccessToken(account.refresh_token);
 					await db
 						.update(accounts)
 						.set({
 							access_token: refresh.access_token,
 							refresh_token: refresh.refresh_token,
-							expires_at: refresh.expires_in,
+							expires_at: Date.now() + (refresh.expires_in * 1000),
 							refresh_token_expires_in: Math.floor(
 								Date.now() / 1000 +
-									(refresh.refresh_token_expires_in as number),
+								(refresh.refresh_token_expires_in as number),
 							),
 						})
 						.where(eq(accounts.providerAccountId, account.providerAccountId));

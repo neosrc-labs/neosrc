@@ -1,6 +1,7 @@
 import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import FileDiff from "~/components/FileDiff";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
@@ -67,25 +68,18 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 
 	const octokit = createOctokit(account.accessToken);
 
-	let files: PullsListFilesResponseData = [];
-	let commit: CommitData | null = null;
-	let commits: PullsListCommitsResponseData = [];
-	let currentIndex = -1;
+	let files: Promise<PullsListFilesResponseData> = new Promise(() => { });
+	let commit: Promise<CommitData> | null = null;
+	let commits: Promise<PullsListCommitsResponseData> | null = null;
 
 	try {
 		if (commitSha) {
-			// Fetch commit details and all PR commits in parallel
-			const [commitResult, commitsResult] = await Promise.all([
-				getCommit(octokit, owner, repo, commitSha),
-				getPullRequestCommits(octokit, owner, repo, parseInt(number, 10)),
-			]);
-			commit = commitResult;
-			commits = commitsResult;
-			files = commitResult.files || [];
-			// Find current commit index
-			currentIndex = commits.findIndex((c) => c.sha === commitSha);
+			// Fetch commit details and all PR commits in parallel and don't block the main page render
+			commit = getCommit(octokit, owner, repo, commitSha);
+			commits = getPullRequestCommits(octokit, owner, repo, parseInt(number, 10));
+			files = commit.then(commit => commit.files ?? []);
 		} else {
-			files = await getPullRequestFiles(
+			files = getPullRequestFiles(
 				octokit,
 				owner,
 				repo,
@@ -104,105 +98,147 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 		);
 	}
 
-	if (!files || files.length === 0) {
+	return (
+		<div className="px-6 py-8">
+			<Suspense>
+				<CommitHeader
+					commitPromise={commit}
+					commitsPromise={commits}
+					filesPromise={files}
+					number={number}
+					owner={owner}
+					repo={repo}
+					commitSha={commitSha ?? null}
+				/>
+			</Suspense>
+			<Suspense>
+				<FilesSection
+					files={files}
+					number={number}
+					owner={owner}
+					repo={repo}
+				/>
+			</Suspense>
+		</div>
+	);
+}
+
+interface FilesSectionProps {
+	files: Promise<PullsListFilesResponseData>;
+	owner: string;
+	repo: string;
+	number: string;
+}
+
+async function FilesSection({ files, owner, repo, number }: FilesSectionProps) {
+	const filesResolved = await files;
+	return (
+		filesResolved.map((file) => (
+			<FileDiff
+				file={file}
+				key={file.filename}
+				number={number}
+				owner={owner}
+				repo={repo}
+			/>
+		))
+	)
+}
+
+interface CommitHeaderProps {
+	commitPromise: Promise<CommitData> | null;
+	commitsPromise: Promise<PullsListCommitsResponseData> | null;
+	filesPromise: Promise<PullsListFilesResponseData>;
+	owner: string;
+	repo: string;
+	number: string;
+	commitSha: string | null;
+}
+
+async function CommitHeader({ commitPromise, commitsPromise, filesPromise, owner, repo, number, commitSha }: CommitHeaderProps) {
+
+	if (commitPromise == null || commitsPromise == null) {
+		const files = await filesPromise;
 		return (
-			<div className="px-6 py-8">
-				<p className="text-gray-600">
-					{commitSha
-						? "No files changed in this commit."
-						: "No files changed in this pull request."}
-				</p>
+			<div>
+				Files Changed ({files.length})
 			</div>
-		);
+		)
 	}
 
+	const commit = await commitPromise;
+	const commits = await commitsPromise;
+
+	const currentIndex = commits.findIndex((c) => c.sha === commitSha);
 	const prevCommit = currentIndex > 0 ? commits[currentIndex - 1] : null;
 	const nextCommit =
 		currentIndex >= 0 && currentIndex < commits.length - 1
 			? commits[currentIndex + 1]
 			: null;
-
 	return (
-		<div className="px-6 py-8">
-			{commit ? (
-				<div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
-					<div className="mb-3 flex items-center justify-between">
-						<h2 className="font-semibold text-gray-900 text-lg">
-							{commit.commit.message.split("\n")[0]}
-						</h2>
-						<div className="flex gap-2">
-							{prevCommit ? (
-								<a
-									className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50"
-									href={`/${owner}/${repo}/pull/${number}/changes/${prevCommit.sha}`}
-								>
-									← Previous
-								</a>
-							) : (
-								<button
-									className="cursor-not-allowed rounded-md bg-gray-100 px-3 py-1.5 font-medium text-gray-400 text-sm ring-1 ring-gray-200"
-									disabled
-									type="button"
-								>
-									← Previous
-								</button>
-							)}
-							{nextCommit ? (
-								<a
-									className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50"
-									href={`/${owner}/${repo}/pull/${number}/changes/${nextCommit.sha}`}
-								>
-									Next →
-								</a>
-							) : (
-								<button
-									className="cursor-not-allowed rounded-md bg-gray-100 px-3 py-1.5 font-medium text-gray-400 text-sm ring-1 ring-gray-200"
-									disabled
-									type="button"
-								>
-									Next →
-								</button>
-							)}
-						</div>
-					</div>
-					{commit.commit.message.split("\n").length > 1 && (
-						<p className="whitespace-pre-wrap text-gray-600 text-sm">
-							{commit.commit.message.split("\n").slice(1).join("\n").trim()}
-						</p>
-					)}
-					<div className="mt-3 flex items-center gap-2">
-						{commit.author && (
-							<img
-								alt={commit.author.login}
-								className="h-5 w-5 rounded-full"
-								src={commit.author.avatar_url}
-							/>
-						)}
-						<span className="text-gray-600 text-sm">
-							{commit.author?.login || commit.commit.author?.name} committed{" "}
-							{new Date(
-								commit.commit.committer?.date || "",
-							).toLocaleDateString()}
-						</span>
-						<code className="ml-2 font-mono text-gray-500 text-xs">
-							{commit.sha.slice(0, 7)}
-						</code>
-					</div>
-				</div>
-			) : (
-				<h2 className="mb-6 font-semibold text-gray-900 text-lg">
-					Files Changed ({files.length})
+		<div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+			<div className="mb-3 flex items-center justify-between">
+				<h2 className="font-semibold text-gray-900 text-lg">
+					{commit.commit.message.split("\n")[0]}
 				</h2>
+				<div className="flex gap-2">
+					{prevCommit ? (
+						<a
+							className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50"
+							href={`/${owner}/${repo}/pull/${number}/changes/${prevCommit.sha}`}
+						>
+							← Previous
+						</a>
+					) : (
+						<button
+							className="cursor-not-allowed rounded-md bg-gray-100 px-3 py-1.5 font-medium text-gray-400 text-sm ring-1 ring-gray-200"
+							disabled
+							type="button"
+						>
+							← Previous
+						</button>
+					)}
+					{nextCommit ? (
+						<a
+							className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50"
+							href={`/${owner}/${repo}/pull/${number}/changes/${nextCommit.sha}`}
+						>
+							Next →
+						</a>
+					) : (
+						<button
+							className="cursor-not-allowed rounded-md bg-gray-100 px-3 py-1.5 font-medium text-gray-400 text-sm ring-1 ring-gray-200"
+							disabled
+							type="button"
+						>
+							Next →
+						</button>
+					)}
+				</div>
+			</div>
+			{commit.commit.message.split("\n").length > 1 && (
+				<p className="whitespace-pre-wrap text-gray-600 text-sm">
+					{commit.commit.message.split("\n").slice(1).join("\n").trim()}
+				</p>
 			)}
-			{files.map((file) => (
-				<FileDiff
-					file={file}
-					key={file.filename}
-					number={number}
-					owner={owner}
-					repo={repo}
-				/>
-			))}
+			<div className="mt-3 flex items-center gap-2">
+				{commit.author && (
+					<img
+						alt={commit.author.login}
+						className="h-5 w-5 rounded-full"
+						src={commit.author.avatar_url}
+					/>
+				)}
+				<span className="text-gray-600 text-sm">
+					{commit.author?.login || commit.commit.author?.name} committed{" "}
+					{new Date(
+						commit.commit.committer?.date || "",
+					).toLocaleDateString()}
+				</span>
+				<code className="ml-2 font-mono text-gray-500 text-xs">
+					{commit.sha.slice(0, 7)}
+				</code>
+			</div>
 		</div>
 	);
 }

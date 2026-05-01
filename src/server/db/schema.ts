@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { index, pgTableCreator, primaryKey } from "drizzle-orm/pg-core";
+import { index, pgTableCreator, primaryKey, bigint } from "drizzle-orm/pg-core";
 import type { AdapterAccount } from "next-auth/adapters";
 
 /**
@@ -64,7 +64,7 @@ export const accounts = createTable(
 		providerAccountId: d.varchar({ length: 255 }).notNull(),
 		refresh_token: d.text(),
 		access_token: d.text(),
-		expires_at: d.integer(),
+		expires_at: d.bigint({ mode: "number" }),
 		token_type: d.varchar({ length: 255 }),
 		scope: d.varchar({ length: 255 }),
 		id_token: d.text(),

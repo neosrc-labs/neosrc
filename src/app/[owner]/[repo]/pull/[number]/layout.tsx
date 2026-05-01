@@ -1,6 +1,6 @@
 import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import { eq } from "drizzle-orm";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
@@ -13,6 +13,7 @@ import {
 import { ResizableLayout } from "~/components/ResizableLayout";
 import LeftSidebar from "./_components/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
+import { headers } from 'next/headers'
 
 type PullsGetResponseData =
 	RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
@@ -34,15 +35,18 @@ export default async function PullRequestLayout({
 }: LayoutProps) {
 	const { owner, repo, number } = await params;
 	const session = await auth();
+	const pathname = (await headers()).get('x-pathname') ?? ''
+	const isFilesActive = pathname.includes('/changes'); // TODO: This is probably a better way to do this
+	const isConversationActive = !isFilesActive;
 
-	let pullRequest: PullsGetResponseData | null = null;
-	let commits: PullsListCommitsResponseData = [];
-	let checks: Array<{
+	let pullRequest: Promise<PullsGetResponseData> | null = null;
+	let commits: Promise<PullsListCommitsResponseData> | null = null;
+	let checks: Promise<Array<{
 		name: string;
 		conclusion: string | null;
 		status: string;
 		html_url?: string | undefined;
-	}> = [];
+	}>> | null = null;
 
 	if (session?.user?.id) {
 		const [account] = await db
@@ -53,42 +57,36 @@ export default async function PullRequestLayout({
 
 		if (account?.accessToken) {
 			const octokit = createOctokit(account.accessToken);
-
-			const [prResult, commitsResult] = await Promise.allSettled([
-				getPullRequest(octokit, owner, repo, parseInt(number, 10)),
-				getPullRequestCommits(octokit, owner, repo, parseInt(number, 10)),
-			]);
-
-			if (commitsResult.status === "fulfilled") {
-				commits = commitsResult.value;
-			}
+			commits = getPullRequestCommits(octokit, owner, repo, parseInt(number, 10));
+			pullRequest = getPullRequest(octokit, owner, repo, parseInt(number, 10));
 
 			// Fetch check runs if we have the PR head SHA
-			if (prResult.status === "fulfilled") {
-				pullRequest = prResult.value;
-				if (pullRequest?.head?.sha) {
-					const checksResult = await getCheckRuns(
-						octokit,
-						owner,
-						repo,
-						pullRequest.head.sha,
-					);
+			checks = pullRequest
+				.then(async pullRequest => {
+					if (pullRequest?.head?.sha) {
+						const checksResult = await getCheckRuns(
+							octokit,
+							owner,
+							repo,
+							pullRequest.head.sha,
+						);
 
-					checks = (checksResult.check_runs || []).map(
-						(check: {
-							name: string;
-							conclusion: string | null;
-							status: string;
-							html_url?: string | undefined;
-						}) => ({
-							name: check.name,
-							conclusion: check.conclusion,
-							status: check.status,
-							html_url: check.html_url,
-						}),
-					);
-				}
-			}
+						return (checksResult.check_runs || []).map(
+							(check: {
+								name: string;
+								conclusion: string | null;
+								status: string;
+								html_url?: string | undefined;
+							}) => ({
+								name: check.name,
+								conclusion: check.conclusion,
+								status: check.status,
+								html_url: check.html_url,
+							}),
+						);
+					}
+					return [];
+				});
 		}
 	}
 
@@ -96,17 +94,35 @@ export default async function PullRequestLayout({
 		<ResizableLayout
 			leftSidebar={
 				<LeftSidebar
-					checks={checks}
+					isConversationActive={isConversationActive}
+					isFilesActive={isFilesActive}
+					checksPromise={checks}
 					number={number}
 					owner={owner}
 					repo={repo}
 				/>
 			}
 			rightSidebar={
-				<RightSidebar commits={commits} pullRequest={pullRequest} />
+				<Suspense>
+					<RightSidebarWrapper commitsPromise={commits} pullRequestPromise={pullRequest} />
+				</Suspense>
 			}
 		>
 			{children}
 		</ResizableLayout>
 	);
 }
+
+interface RightSidebarWrapperProps {
+	pullRequestPromise: Promise<PullsGetResponseData> | null;
+	commitsPromise: Promise<PullsListCommitsResponseData> | null;
+}
+
+async function RightSidebarWrapper({ commitsPromise, pullRequestPromise }: RightSidebarWrapperProps) {
+	const commits = (await commitsPromise) || [];
+	const pullRequest = await pullRequestPromise;
+	return (
+		<RightSidebar commits={commits} pullRequest={pullRequest} />
+	);
+}
+

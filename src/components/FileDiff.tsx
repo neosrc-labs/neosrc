@@ -60,7 +60,6 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 			const normalizedDiff = file.patch.startsWith("---")
 				? file.patch
 				: `--- a/${file.filename}\n+++ b/${file.filename}\n${file.patch}`;
-			console.log("ross2");
 			const diff2htmlUi = new Diff2HtmlUI(
 				containerRef.current,
 				normalizedDiff,
