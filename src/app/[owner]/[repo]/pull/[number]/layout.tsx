@@ -97,26 +97,14 @@ export default async function PullRequestLayout({
 				/>
 			}
 			rightSidebar={
-				<Suspense>
-					<RightSidebarWrapper commitsPromise={commits} pullRequestPromise={pullRequest} />
-				</Suspense>
+				<RightSidebar
+					commitsPromise={commits}
+					pullRequestPromise={pullRequest}
+				/>
 			}
 		>
 			{children}
 		</ResizableLayout>
-	);
-}
-
-interface RightSidebarWrapperProps {
-	pullRequestPromise: Promise<PullsGetResponseData> | null;
-	commitsPromise: Promise<PullsListCommitsResponseData> | null;
-}
-
-async function RightSidebarWrapper({ commitsPromise, pullRequestPromise }: RightSidebarWrapperProps) {
-	const commits = (await commitsPromise) || [];
-	const pullRequest = await pullRequestPromise;
-	return (
-		<RightSidebar commits={commits} pullRequest={pullRequest} />
 	);
 }
 
