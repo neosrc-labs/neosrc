@@ -13,7 +13,6 @@ import {
 import { ResizableLayout } from "~/components/ResizableLayout";
 import LeftSidebar from "./_components/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
-import { headers } from 'next/headers'
 
 type PullsGetResponseData =
 	RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
@@ -35,9 +34,6 @@ export default async function PullRequestLayout({
 }: LayoutProps) {
 	const { owner, repo, number } = await params;
 	const session = await auth();
-	const pathname = (await headers()).get('x-pathname') ?? ''
-	const isFilesActive = pathname.includes('/changes'); // TODO: This is probably a better way to do this
-	const isConversationActive = !isFilesActive;
 
 	let pullRequest: Promise<PullsGetResponseData> | null = null;
 	let commits: Promise<PullsListCommitsResponseData> | null = null;
@@ -46,7 +42,7 @@ export default async function PullRequestLayout({
 		conclusion: string | null;
 		status: string;
 		html_url?: string | undefined;
-	}>> | null = null;
+	}>> | null = new Promise(() => { });
 
 	if (session?.user?.id) {
 		const [account] = await db
@@ -94,8 +90,6 @@ export default async function PullRequestLayout({
 		<ResizableLayout
 			leftSidebar={
 				<LeftSidebar
-					isConversationActive={isConversationActive}
-					isFilesActive={isFilesActive}
 					checksPromise={checks}
 					number={number}
 					owner={owner}
