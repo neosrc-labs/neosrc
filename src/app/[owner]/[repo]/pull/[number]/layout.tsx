@@ -10,6 +10,7 @@ import {
 	getPullRequest,
 	getPullRequestCommits,
 } from "~/server/github";
+import { ResizableLayout } from "~/components/ResizableLayout";
 import LeftSidebar from "./_components/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
 
@@ -92,26 +93,20 @@ export default async function PullRequestLayout({
 	}
 
 	return (
-		<div className="grid grid-cols-[250px_1fr_300px]">
-			{/* Left Sidebar - Sticky */}
-			<div className="sticky top-0 h-screen overflow-y-auto">
+		<ResizableLayout
+			leftSidebar={
 				<LeftSidebar
 					checks={checks}
 					number={number}
 					owner={owner}
 					repo={repo}
 				/>
-			</div>
-
-			{/* Middle Section - PR Content */}
-			<main className="min-w-0 border-gray-200 border-r bg-white">
-				{children}
-			</main>
-
-			{/* Right Sidebar - Sticky */}
-			<div className="sticky top-0 h-screen overflow-y-auto">
+			}
+			rightSidebar={
 				<RightSidebar commits={commits} pullRequest={pullRequest} />
-			</div>
-		</div>
+			}
+		>
+			{children}
+		</ResizableLayout>
 	);
 }
