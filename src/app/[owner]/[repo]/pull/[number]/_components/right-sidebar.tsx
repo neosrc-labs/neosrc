@@ -3,6 +3,7 @@
 import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { formatRelativeTime } from "~/utils";
 
 type PullsGetResponseData =
 	RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
@@ -18,16 +19,6 @@ type Commit = PullsListCommitsResponseData[number];
 interface RightSidebarProps {
 	pullRequest: PullsGetResponseData | null;
 	commits: PullsListCommitsResponseData;
-}
-
-function formatRelativeTime(isoDate: string): string {
-	const diffMs = Date.now() - new Date(isoDate).getTime();
-	const diffMin = Math.floor(diffMs / 60000);
-	if (diffMin < 60) return `${diffMin}m ago`;
-	const diffHr = Math.floor(diffMin / 60);
-	if (diffHr < 24) return `${diffHr}h ago`;
-	const diffDay = Math.floor(diffHr / 24);
-	return `${diffDay}d ago`;
 }
 
 export default function RightSidebar({
@@ -79,7 +70,7 @@ export default function RightSidebar({
 						Reviewers
 					</h3>
 					{pullRequest.requested_reviewers &&
-					pullRequest.requested_reviewers.length > 0 ? (
+						pullRequest.requested_reviewers.length > 0 ? (
 						<ul className="space-y-2">
 							{pullRequest.requested_reviewers.map((reviewer: Reviewer) => (
 								<li
@@ -154,11 +145,10 @@ export default function RightSidebar({
 								: false;
 							return (
 								<Link
-									className={`flex items-start gap-2 text-sm transition-colors hover:bg-gray-50 ${
-										isCurrent
-											? "rounded border-blue-500 border-l-2 bg-blue-50 px-2"
-											: ""
-									}`}
+									className={`flex items-start gap-2 text-sm transition-colors hover:bg-gray-50 ${isCurrent
+										? "rounded border-blue-500 border-l-2 bg-blue-50 px-2"
+										: ""
+										}`}
 									href={`/${pullRequest.base.repo.owner.login}/${pullRequest.base.repo.name}/pull/${pullRequest.number}/changes/${commit.sha}`}
 									key={commit.sha}
 								>
