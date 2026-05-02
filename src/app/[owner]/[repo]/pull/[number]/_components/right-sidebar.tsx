@@ -30,9 +30,7 @@ export default function RightSidebar({
 			</div>
 			{/* Commits Section - Scrollable */}
 			<div className="min-h-0 flex-1 overflow-y-auto border-gray-200 border-t pt-6">
-				<Suspense>
-					<CommitsSection pullRequestPromise={pullRequestPromise} commitsPromise={commitsPromise} />
-				</Suspense>
+				<CommitsSection pullRequestPromise={pullRequestPromise} commitsPromise={commitsPromise} />
 			</div>
 		</aside>
 	);
