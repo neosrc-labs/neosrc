@@ -71,7 +71,6 @@ interface PullRequestPageContentProps {
 function PullRequestPageContent({ owner, repo, number, pullRequestPromise }: PullRequestPageContentProps) {
 	return (
 		<div className="px-6 py-8">
-
 			<PullRequestDescriptionSection
 				owner={owner}
 				repo={repo}
@@ -80,7 +79,7 @@ function PullRequestPageContent({ owner, repo, number, pullRequestPromise }: Pul
 			/>
 
 			{/* Comments Placeholder */}
-			<div className="mt-8 border-gray-200 border-t pt-6">
+			<div className="mt-4 border-gray-200 border-t pt-6">
 				<h2 className="mb-4 font-semibold text-gray-900 text-lg">Comments</h2>
 				<p className="text-gray-500 text-sm">Comments section coming soon.</p>
 			</div>
