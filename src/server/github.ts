@@ -8,6 +8,13 @@ export type PullsListCommitsResponseData =
 	RestEndpointMethodTypes["pulls"]["listCommits"]["response"]["data"];
 export type CommitData =
 	RestEndpointMethodTypes["repos"]["getCommit"]["response"]["data"];
+export type Label = NonNullable<PullsGetResponseData["labels"]>[number];
+export type Reviewer = NonNullable<
+	PullsGetResponseData["requested_reviewers"]
+>[number];
+export type Assignee = NonNullable<PullsGetResponseData["assignees"]>[number];
+export type Commit = PullsListCommitsResponseData[number];
+
 
 export function createOctokit(accessToken: string) {
 	return new Octokit({
