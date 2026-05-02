@@ -1,14 +1,13 @@
 import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
-import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { Async } from "~/components/async";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 import { Reactions } from "~/components/Reactions";
-import { auth, githubAccessToken } from "~/server/auth";
-import { db } from "~/server/db";
-import { accounts } from "~/server/db/schema";
-import { createOctokit, getPullRequest } from "~/server/github";
+import { githubAccessToken } from "~/server/auth";
+import { getPullRequest } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
+import { PullRequestDescriptionSection } from "./_components/description";
 
 type PullsGetResponseData =
 	RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
@@ -69,47 +68,16 @@ interface PullRequestPageContentProps {
 	pullRequestPromise: Promise<PullsGetResponseData>;
 }
 
-async function PullRequestPageContent({ owner, repo, number, pullRequestPromise }: PullRequestPageContentProps) {
-	let pullRequest;
-	try {
-		pullRequest = await pullRequestPromise;
-	} catch {
-		return (
-			<div className="px-6 py-8">
-				<p className="text-gray-600">Failed to fetch pull request data.</p>
-			</div>
-		);
-	}
-
+function PullRequestPageContent({ owner, repo, number, pullRequestPromise }: PullRequestPageContentProps) {
 	return (
 		<div className="px-6 py-8">
-			{/* PR Header */}
-			<div className="mb-6">
-				<h1 className="font-bold text-2xl text-gray-900">
-					{pullRequest.title}
-				</h1>
-				<p className="mt-2 text-gray-600 text-sm">
-					#{number} opened by {pullRequest.user?.login}
-				</p>
-			</div>
 
-			{/* PR Description */}
-			<div className="prose prose-sm max-w-none">
-				{pullRequest.body ? (
-					<MarkdownRenderer content={pullRequest.body} />
-				) : (
-					<p className="text-gray-500 italic">No description provided.</p>
-				)}
-			</div>
-
-			{/* Reactions */}
-			<div className="mt-4 border-gray-200 border-t pt-4">
-				<Reactions
-					number={number}
-					owner={owner}
-					repo={repo}
-				/>
-			</div>
+			<PullRequestDescriptionSection
+				owner={owner}
+				repo={repo}
+				number={number}
+				pullRequestPromise={pullRequestPromise}
+			/>
 
 			{/* Comments Placeholder */}
 			<div className="mt-8 border-gray-200 border-t pt-6">
@@ -119,3 +87,4 @@ async function PullRequestPageContent({ owner, repo, number, pullRequestPromise 
 		</div>
 	);
 }
+
