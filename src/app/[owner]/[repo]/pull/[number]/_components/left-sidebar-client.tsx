@@ -99,7 +99,7 @@ export function SidebarNavMenu({ owner, repo, number }: SidebarNavMenuProps) {
 		pathname === `${basePath}/changes` ||
 		pathname.startsWith(`${basePath}/changes/`);
 	return (
-		<nav className="sticky top-0 z-10 space-y-1 bg-white pb-4">
+		<nav className="sticky top-0 z-10 space-y-1 bg-white pb-4 pr-4">
 			<NavItem
 				href={basePath}
 				isActive={!isFilesActive}
