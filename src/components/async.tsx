@@ -9,7 +9,7 @@ export function Async<T>({ promise, fallback, children }: {
 	children: (value: T) => React.ReactNode
 }) {
 	return (
-		<Suspense fallback={fallback ?? <span>…</span>}>
+		<Suspense fallback={fallback ?? <span></span>}>
 			<AsyncValue promise={promise}>{children}</AsyncValue>
 		</Suspense>
 	)
