@@ -1,9 +1,12 @@
 "use client";
 
 import { Suspense } from "react";
-import { MetadataSection, MetadataSectionSkeleton } from "./metadata-section";
-import type { PullsGetResponseData, PullsListCommitsResponseData } from "~/server/github";
+import type {
+	PullsGetResponseData,
+	PullsListCommitsResponseData,
+} from "~/server/github";
 import { CommitsSection } from "./commits-section";
+import { MetadataSection } from "./metadata-section";
 
 interface RightSidebarProps {
 	pullRequestPromise: Promise<PullsGetResponseData> | null;
@@ -30,9 +33,11 @@ export default function RightSidebar({
 			</div>
 			{/* Commits Section - Scrollable */}
 			<div className="min-h-0 flex-1 overflow-y-auto border-gray-200 border-t pt-6">
-				<CommitsSection pullRequestPromise={pullRequestPromise} commitsPromise={commitsPromise} />
+				<CommitsSection
+					commitsPromise={commitsPromise}
+					pullRequestPromise={pullRequestPromise}
+				/>
 			</div>
 		</aside>
 	);
 }
-

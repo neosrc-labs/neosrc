@@ -1,10 +1,9 @@
+import { eq } from "drizzle-orm/pg-core/expressions";
 import NextAuth from "next-auth";
 import { cache } from "react";
-
-import { authConfig } from "./config";
-import { accounts } from "../db/schema";
-import { eq } from "drizzle-orm/pg-core/expressions";
 import { db } from "../db";
+import { accounts } from "../db/schema";
+import { authConfig } from "./config";
 
 const { auth: uncachedAuth, handlers, signIn, signOut } = NextAuth(authConfig);
 
@@ -14,7 +13,7 @@ const githubAccessToken = cache(async () => {
 	const session = await auth();
 
 	if (!session?.user?.id) {
-		return null
+		return null;
 	}
 
 	const [account] = await db
@@ -24,10 +23,9 @@ const githubAccessToken = cache(async () => {
 		.limit(1);
 
 	if (!account?.accessToken) {
-		return null
+		return null;
 	}
 	return account.accessToken;
 });
 
-
-export { auth, handlers, signIn, signOut, githubAccessToken };
+export { auth, githubAccessToken, handlers, signIn, signOut };

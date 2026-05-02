@@ -1,0 +1,62 @@
+"use client";
+
+import { useInView } from "react-intersection-observer";
+import { api } from "~/trpc/react";
+import { TimelineEvent } from "./timeline-event";
+
+interface TimelineSectionProps {
+	owner: string;
+	repo: string;
+	number: number;
+}
+
+export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
+	const { ref, inView } = useInView();
+
+	const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+		api.timeline.list.useInfiniteQuery(
+			{ owner, repo, number, limit: 30 },
+			{
+				getNextPageParam: (lastPage) => lastPage.nextCursor,
+			},
+		);
+
+	if (inView && hasNextPage && !isFetchingNextPage) {
+		fetchNextPage();
+	}
+
+	if (isLoading) {
+		return (
+			<div className="py-4 text-gray-500 text-sm">Loading timeline...</div>
+		);
+	}
+
+	const allEvents = data?.pages.flatMap((page) => page.events) ?? [];
+
+	return (
+		<div className="mt-4 border-gray-200 border-t pt-6">
+			<h2 className="mb-4 font-semibold text-gray-900 text-lg">Timeline</h2>
+
+			{allEvents.length === 0 && (
+				<p className="text-gray-500 text-sm">No timeline events yet.</p>
+			)}
+
+			<div className="relative">
+				<div className="absolute top-0 bottom-0 left-5 w-px bg-gray-200" />
+
+				{allEvents.map((event, index) => (
+					<TimelineEvent event={event} key={`${event.id}-${index}`} />
+				))}
+			</div>
+
+			<div className="py-4 text-center" ref={ref}>
+				{isFetchingNextPage && (
+					<p className="text-gray-500 text-sm">Loading more...</p>
+				)}
+				{!hasNextPage && allEvents.length > 0 && (
+					<p className="text-gray-400 text-sm">No more events</p>
+				)}
+			</div>
+		</div>
+	);
+}

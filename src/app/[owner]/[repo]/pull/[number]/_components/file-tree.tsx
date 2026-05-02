@@ -71,7 +71,7 @@ export function FileTree({
 	basePath: string;
 }) {
 	return (
-		<div className="space-y-0.5 overflow-y-auto max-h-full">
+		<div className="max-h-full space-y-0.5 overflow-y-auto">
 			{files.map((node) => (
 				<FileTreeNode
 					basePath={basePath}

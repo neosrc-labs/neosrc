@@ -1,17 +1,22 @@
-import type { PullsGetResponseData } from "~/server/github";
-import { LeftSidebarContentSection, SidebarNavMenu } from "./left-sidebar-client";
 import { Suspense } from "react";
+import type { PullsGetResponseData } from "~/server/github";
+import {
+	LeftSidebarContentSection,
+	SidebarNavMenu,
+} from "./left-sidebar-client";
 
 interface LeftSidebarProps {
 	owner: string;
 	repo: string;
 	number: number;
-	checksPromise: Promise<Array<{
-		name: string;
-		conclusion: string | null;
-		status: string;
-		html_url?: string;
-	}>> | null;
+	checksPromise: Promise<
+		Array<{
+			name: string;
+			conclusion: string | null;
+			status: string;
+			html_url?: string;
+		}>
+	> | null;
 	pullRequestPromise: Promise<PullsGetResponseData> | null;
 }
 
@@ -20,25 +25,21 @@ export default function LeftSidebar({
 	repo,
 	number,
 	checksPromise,
-	pullRequestPromise
+	pullRequestPromise,
 }: LeftSidebarProps) {
 	return (
-		<aside className="flex h-full flex-col border-gray-200 border-r bg-white px-4 pr-1 py-6">
-			<SidebarNavMenu
-				owner={owner}
-				repo={repo}
-				number={number}
-			/>
+		<aside className="flex h-full flex-col border-gray-200 border-r bg-white px-4 py-6 pr-1">
+			<SidebarNavMenu number={number} owner={owner} repo={repo} />
 
 			{/* Checks or File Tree Section */}
 			<div className="min-h-0 flex-1 border-gray-200 border-t pt-4 pr-0">
 				<Suspense>
 					<LeftSidebarContentSection
-						owner={owner}
-						repo={repo}
-						number={number}
 						checksPromise={checksPromise}
+						number={number}
+						owner={owner}
 						pullRequestPromise={pullRequestPromise}
+						repo={repo}
 					/>
 				</Suspense>
 			</div>
@@ -47,7 +48,6 @@ export default function LeftSidebar({
 		</aside>
 	);
 }
-
 
 function SidebarActionButtons() {
 	return (

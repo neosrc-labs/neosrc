@@ -1,26 +1,34 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { buildFileTree, FileTree, FileTreeSkeleton } from "./file-tree";
-import { use, useMemo } from "react";
 import Link from "next/link";
-import type { PullsGetResponseData } from "~/server/github";
+import { usePathname } from "next/navigation";
+import { use, useMemo } from "react";
 import { useFiles } from "~/hooks/files";
+import type { PullsGetResponseData } from "~/server/github";
+import { buildFileTree, FileTree, FileTreeSkeleton } from "./file-tree";
 
 interface LeftSidebarContentSectionProps {
 	owner: string;
 	repo: string;
 	number: number;
-	checksPromise: Promise<Array<{
-		name: string;
-		conclusion: string | null;
-		status: string;
-		html_url?: string;
-	}>> | null;
+	checksPromise: Promise<
+		Array<{
+			name: string;
+			conclusion: string | null;
+			status: string;
+			html_url?: string;
+		}>
+	> | null;
 	pullRequestPromise: Promise<PullsGetResponseData> | null;
 }
 
-export function LeftSidebarContentSection({ owner, repo, number, checksPromise, pullRequestPromise }: LeftSidebarContentSectionProps) {
+export function LeftSidebarContentSection({
+	owner,
+	repo,
+	number,
+	checksPromise,
+	pullRequestPromise,
+}: LeftSidebarContentSectionProps) {
 	const pathname = usePathname();
 	const basePath = `/${owner}/${repo}/pull/${number}`;
 	const isFilesActive =
@@ -29,16 +37,15 @@ export function LeftSidebarContentSection({ owner, repo, number, checksPromise, 
 
 	return isFilesActive ? (
 		<SidebarFileTree
-			owner={owner}
-			repo={repo}
 			number={number}
+			owner={owner}
 			pullRequestPromise={pullRequestPromise}
+			repo={repo}
 		/>
 	) : (
 		<Checks checksPromise={checksPromise!} />
-	)
+	);
 }
-
 
 interface SidebarFileTreeProps {
 	owner: string;
@@ -47,7 +54,12 @@ interface SidebarFileTreeProps {
 	pullRequestPromise: Promise<PullsGetResponseData> | null;
 }
 
-export function SidebarFileTree({ owner, repo, number, pullRequestPromise }: SidebarFileTreeProps) {
+export function SidebarFileTree({
+	owner,
+	repo,
+	number,
+	pullRequestPromise,
+}: SidebarFileTreeProps) {
 	const pathname = usePathname();
 	const basePath = `/${owner}/${repo}/pull/${number}`;
 	// Extract commit SHA from pathname if present
@@ -65,23 +77,16 @@ export function SidebarFileTree({ owner, repo, number, pullRequestPromise }: Sid
 
 	return (
 		<>
-
 			<h3 className="mb-2 font-semibold text-gray-900 text-sm">
-				Files Changed{" "}
-				{filesChanged ? (
-					<span>({filesChanged})</span>
-				) : <></>}
-
-			</h3 >
-			{
-				isLoading ? (
-					<FileTreeSkeleton />
-				) : files.length > 0 ? (
-					<FileTree basePath={basePath} files={fileTree} />
-				) : (
-					<p className="text-gray-500 text-sm">No files changed</p>
-				)
-			}
+				Files Changed {filesChanged ? <span>({filesChanged})</span> : <></>}
+			</h3>
+			{isLoading ? (
+				<FileTreeSkeleton />
+			) : files.length > 0 ? (
+				<FileTree basePath={basePath} files={fileTree} />
+			) : (
+				<p className="text-gray-500 text-sm">No files changed</p>
+			)}
 		</>
 	);
 }
@@ -99,19 +104,15 @@ export function SidebarNavMenu({ owner, repo, number }: SidebarNavMenuProps) {
 		pathname === `${basePath}/changes` ||
 		pathname.startsWith(`${basePath}/changes/`);
 	return (
-		<nav className="sticky top-0 z-10 space-y-1 bg-white pb-4 pr-4">
-			<NavItem
-				href={basePath}
-				isActive={!isFilesActive}
-				label="Conversation"
-			/>
+		<nav className="sticky top-0 z-10 space-y-1 bg-white pr-4 pb-4">
+			<NavItem href={basePath} isActive={!isFilesActive} label="Conversation" />
 			<NavItem
 				href={`${basePath}/changes`}
 				isActive={isFilesActive}
 				label="Files Changed"
 			/>
 		</nav>
-	)
+	);
 }
 
 interface NavItemProps {
@@ -123,10 +124,11 @@ interface NavItemProps {
 function NavItem({ href, label, isActive }: NavItemProps) {
 	return (
 		<Link
-			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${isActive
-				? "bg-gray-100 text-gray-900"
-				: "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-				}`}
+			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${
+				isActive
+					? "bg-gray-100 text-gray-900"
+					: "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+			}`}
 			href={href}
 		>
 			{label}
@@ -135,12 +137,14 @@ function NavItem({ href, label, isActive }: NavItemProps) {
 }
 
 interface ChecksProps {
-	checksPromise: Promise<Array<{
-		name: string;
-		conclusion: string | null;
-		status: string;
-		html_url?: string;
-	}>>;
+	checksPromise: Promise<
+		Array<{
+			name: string;
+			conclusion: string | null;
+			status: string;
+			html_url?: string;
+		}>
+	>;
 }
 
 function Checks({ checksPromise }: ChecksProps) {
@@ -149,7 +153,7 @@ function Checks({ checksPromise }: ChecksProps) {
 		<>
 			<h3 className="mb-2 font-semibold text-gray-900 text-sm">Checks</h3>
 			{checks && checks.length > 0 ? (
-				<div className="space-y-2 overflow-y-auto max-h-full">
+				<div className="max-h-full space-y-2 overflow-y-auto">
 					{checks.map((check) => (
 						<a
 							className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50"
@@ -179,5 +183,5 @@ function Checks({ checksPromise }: ChecksProps) {
 				<p className="text-gray-500 text-sm">No checks</p>
 			)}
 		</>
-	)
+	);
 }

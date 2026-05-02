@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-
 interface UseFilesParams {
 	owner: string;
 	repo: string;
@@ -22,8 +21,9 @@ export function useFiles({ owner, repo, number, commitSha }: UseFilesParams) {
 			try {
 				setIsLoading(true);
 				const res = await fetch(
-					`/api/files?owner=${owner}&repo=${repo}&number=${number}` + (commitSha ? `&commitSha=${commitSha}` : ''),
-					{ signal: controller.signal }
+					`/api/files?owner=${owner}&repo=${repo}&number=${number}` +
+						(commitSha ? `&commitSha=${commitSha}` : ""),
+					{ signal: controller.signal },
 				);
 				const reader = res.body!.getReader();
 				const decoder = new TextDecoder();

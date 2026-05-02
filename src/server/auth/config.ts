@@ -105,17 +105,17 @@ export const authConfig = {
 					account.expires_at < Date.now() &&
 					account?.refresh_token
 				) {
-					console.log('refreshing token');
+					console.log("refreshing token");
 					const refresh = await refreshAccessToken(account.refresh_token);
 					await db
 						.update(accounts)
 						.set({
 							access_token: refresh.access_token,
 							refresh_token: refresh.refresh_token,
-							expires_at: Date.now() + (refresh.expires_in * 1000),
+							expires_at: Date.now() + refresh.expires_in * 1000,
 							refresh_token_expires_in: Math.floor(
 								Date.now() / 1000 +
-								(refresh.refresh_token_expires_in as number),
+									(refresh.refresh_token_expires_in as number),
 							),
 						})
 						.where(eq(accounts.providerAccountId, account.providerAccountId));

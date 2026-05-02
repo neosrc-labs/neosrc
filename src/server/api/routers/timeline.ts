@@ -3,15 +3,25 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
-import { getPullRequestReactions } from "~/server/github";
+import {
+	getPullRequestTimeline,
+	type TimelineEventData,
+} from "~/server/github";
 
-export const reactionsRouter = createTRPCRouter({
-	get: protectedProcedure
+export type TimelineResult = {
+	events: TimelineEventData[];
+	nextCursor: number | undefined;
+};
+
+export const timelineRouter = createTRPCRouter({
+	list: protectedProcedure
 		.input(
 			z.object({
 				owner: z.string(),
 				repo: z.string(),
 				number: z.number(),
+				limit: z.number().min(1).max(100).default(30),
+				cursor: z.number().optional(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -25,13 +35,21 @@ export const reactionsRouter = createTRPCRouter({
 				throw new Error("GitHub account not connected");
 			}
 
-			const reactions = await getPullRequestReactions(
+			const page = input.cursor ?? 1;
+			const result = await getPullRequestTimeline(
 				account.accessToken,
 				input.owner,
 				input.repo,
 				input.number,
+				page,
+				input.limit,
 			);
 
-			return { reactions };
+			const response: TimelineResult = {
+				events: result.events,
+				nextCursor: result.hasMore ? result.nextPage : undefined,
+			};
+
+			return response;
 		}),
 });

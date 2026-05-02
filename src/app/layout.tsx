@@ -27,7 +27,7 @@ export default function RootLayout({
 				<link
 					href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css"
 					rel="stylesheet"
-				// media="screen and (prefers-color-scheme: light)"
+					// media="screen and (prefers-color-scheme: light)"
 				/>
 				{/* <link */}
 				{/* 	rel="stylesheet" */}

@@ -23,9 +23,13 @@ export function PullRequestDescriptionSection({
 		<div>
 			{/* PR Header */}
 			<div className="mb-6">
-
 				<div className="mb-2 flex items-center gap-2">
-					<Async promise={pullRequestPromise} fallback={<div className="h-5 w-16 animate-pulse rounded-full bg-gray-200" />}>
+					<Async
+						fallback={
+							<div className="h-5 w-16 animate-pulse rounded-full bg-gray-200" />
+						}
+						promise={pullRequestPromise}
+					>
 						{(pullRequest) => {
 							const isMerged = pullRequest.merged;
 							const isOpen = pullRequest.state === "open";
@@ -47,7 +51,9 @@ export function PullRequestDescriptionSection({
 
 							return (
 								<>
-									<span className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-xs ${statusColor}`}>
+									<span
+										className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-xs ${statusColor}`}
+									>
 										{statusText}
 									</span>
 									{isDraft && (
@@ -56,31 +62,44 @@ export function PullRequestDescriptionSection({
 										</span>
 									)}
 								</>
-							)
+							);
 						}}
 					</Async>
-					<Async promise={pullRequestPromise} fallback={<div className="h-8 w-96 animate-pulse rounded bg-gray-200" />}>
+					<Async
+						fallback={
+							<div className="h-8 w-96 animate-pulse rounded bg-gray-200" />
+						}
+						promise={pullRequestPromise}
+					>
 						{(pullRequest) => (
 							<h1 className="font-bold text-2xl text-gray-900">
 								{pullRequest.title}
 							</h1>
 						)}
 					</Async>
-					<h1 className="text-2xl text-gray-400">
-						#{number}
-					</h1>
+					<h1 className="text-2xl text-gray-400">#{number}</h1>
 				</div>
 
-				<Async promise={pullRequestPromise} fallback={<div className="h-5 w-104 animate-pulse rounded bg-gray-200" />}>
+				<Async
+					fallback={
+						<div className="h-5 w-104 animate-pulse rounded bg-gray-200" />
+					}
+					promise={pullRequestPromise}
+				>
 					{(pullRequest) => (
 						<div className="mt-2 flex items-center gap-2">
 							<div className="text-gray-600 text-sm">
-								<span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs">{pullRequest.base.ref}</span>
+								<span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs">
+									{pullRequest.base.ref}
+								</span>
 								<span className="mx-2">←</span>
-								<span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs">{pullRequest.head.ref}</span>
+								<span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs">
+									{pullRequest.head.ref}
+								</span>
 							</div>
 							<div className="flex items-center gap-2 text-gray-600 text-sm">
-								opened by <img
+								opened by{" "}
+								<img
 									alt={pullRequest.user?.login}
 									className="h-5 w-5 rounded-full"
 									src={pullRequest.user?.avatar_url}
@@ -95,7 +114,12 @@ export function PullRequestDescriptionSection({
 
 			<div className="mt-4 border-gray-200 border-t pt-4" />
 
-			<Async promise={pullRequestPromise} fallback={<div className="h-48 w-fill animate-pulse rounded bg-gray-200" />}>
+			<Async
+				fallback={
+					<div className="h-48 w-fill animate-pulse rounded bg-gray-200" />
+				}
+				promise={pullRequestPromise}
+			>
 				{(pullRequest) => (
 					<>
 						{/* PR Description */}
@@ -116,6 +140,6 @@ export function PullRequestDescriptionSection({
 
 			{/* Reactions */}
 			<Reactions number={number} owner={owner} repo={repo} />
-		</div >
+		</div>
 	);
 }

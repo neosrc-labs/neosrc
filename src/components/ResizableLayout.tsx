@@ -78,7 +78,7 @@ export function ResizableLayout({
 				{leftSidebar}
 				{/* Drag Handle */}
 				<div
-					className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600"
+					className="absolute top-0 right-0 h-full w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600"
 					onMouseDown={handleMouseDown}
 				/>
 			</div>
@@ -89,7 +89,7 @@ export function ResizableLayout({
 			</main>
 
 			{/* Right Sidebar - Sticky */}
-			<div className="sticky sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))]  overflow-y-auto">
+			<div className="sticky sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto">
 				{rightSidebar}
 			</div>
 		</div>

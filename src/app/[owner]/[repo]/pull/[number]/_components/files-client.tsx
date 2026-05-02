@@ -10,18 +10,21 @@ interface FilesSectionProps {
 	commitSha?: string;
 }
 
-export function FilesSection({ owner, repo, number, commitSha }: FilesSectionProps) {
+export function FilesSection({
+	owner,
+	repo,
+	number,
+	commitSha,
+}: FilesSectionProps) {
 	const { files } = useFiles({ owner, repo, number, commitSha });
 
-	return (
-		files.map((file) => (
-			<FileDiff
-				key={file.filename}
-				file={file}
-				number={number.toString()}
-				owner={owner}
-				repo={repo}
-			/>
-		))
-	)
+	return files.map((file) => (
+		<FileDiff
+			file={file}
+			key={file.filename}
+			number={number.toString()}
+			owner={owner}
+			repo={repo}
+		/>
+	));
 }

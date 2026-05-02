@@ -16,8 +16,8 @@ export function Header() {
 		const observer = new ResizeObserver(([entry]) => {
 			if (entry) {
 				document.documentElement.style.setProperty(
-					'--header-height',
-					`${entry.contentRect.height}px`
+					"--header-height",
+					`${entry.contentRect.height}px`,
 				);
 			}
 		});
@@ -27,7 +27,10 @@ export function Header() {
 	}, []);
 
 	return (
-		<header ref={headerRef} className="sticky top-0 z-50 border-gray-200 border-b bg-white">
+		<header
+			className="sticky top-0 z-50 border-gray-200 border-b bg-white"
+			ref={headerRef}
+		>
 			<div className="max-w-7xl px-4 sm:px-6 lg:px-8">
 				<div className="flex h-16 items-center">
 					{prMatch && (

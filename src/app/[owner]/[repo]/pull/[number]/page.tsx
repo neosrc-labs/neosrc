@@ -8,6 +8,7 @@ import { githubAccessToken } from "~/server/auth";
 import { getPullRequest } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
 import { PullRequestDescriptionSection } from "./_components/description";
+import { TimelineSection } from "./_components/timeline-section";
 
 type PullsGetResponseData =
 	RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
@@ -42,7 +43,7 @@ export default async function PullRequestPage({ params }: PageProps) {
 		);
 	}
 
-	let pullRequest: Promise<PullsGetResponseData> = getPullRequest(
+	const pullRequest: Promise<PullsGetResponseData> = getPullRequest(
 		accessToken,
 		owner,
 		repo,
@@ -52,9 +53,9 @@ export default async function PullRequestPage({ params }: PageProps) {
 	return (
 		<Suspense>
 			<PullRequestPageContent
-				pullRequestPromise={pullRequest}
 				number={number}
 				owner={owner}
+				pullRequestPromise={pullRequest}
 				repo={repo}
 			/>
 		</Suspense>
@@ -68,22 +69,22 @@ interface PullRequestPageContentProps {
 	pullRequestPromise: Promise<PullsGetResponseData>;
 }
 
-function PullRequestPageContent({ owner, repo, number, pullRequestPromise }: PullRequestPageContentProps) {
+function PullRequestPageContent({
+	owner,
+	repo,
+	number,
+	pullRequestPromise,
+}: PullRequestPageContentProps) {
 	return (
 		<div className="px-6 py-8">
 			<PullRequestDescriptionSection
+				pullRequestPromise={pullRequestPromise}
 				owner={owner}
 				repo={repo}
 				number={number}
-				pullRequestPromise={pullRequestPromise}
 			/>
 
-			{/* Comments Placeholder */}
-			<div className="mt-4 border-gray-200 border-t pt-6">
-				<h2 className="mb-4 font-semibold text-gray-900 text-lg">Comments</h2>
-				<p className="text-gray-500 text-sm">Comments section coming soon.</p>
-			</div>
+			<TimelineSection number={number} owner={owner} repo={repo} />
 		</div>
 	);
 }
-

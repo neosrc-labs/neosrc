@@ -4,9 +4,9 @@ import { getPullRequestFilesStream } from "~/server/github";
 export async function GET(request: Request) {
 	const { searchParams } = new URL(request.url);
 	// FIXME: Better null handling
-	const owner = searchParams.get("owner") ?? '';
-	const repo = searchParams.get("repo") ?? '';
-	const number = searchParams.get("number") ?? '';
+	const owner = searchParams.get("owner") ?? "";
+	const repo = searchParams.get("repo") ?? "";
+	const number = searchParams.get("number") ?? "";
 	const commitSha = searchParams.get("commitSha") ?? undefined;
 
 	const accessToken = await githubAccessToken();
@@ -18,9 +18,13 @@ export async function GET(request: Request) {
 	const stream = new ReadableStream({
 		async start(controller) {
 			for await (const page of getPullRequestFilesStream(
-				accessToken, owner, repo, parseInt(number, 10), commitSha
+				accessToken,
+				owner,
+				repo,
+				parseInt(number, 10),
+				commitSha,
 			)) {
-				controller.enqueue(encoder.encode(JSON.stringify(page) + '\n'));
+				controller.enqueue(encoder.encode(JSON.stringify(page) + "\n"));
 			}
 			controller.close();
 		},
@@ -28,8 +32,8 @@ export async function GET(request: Request) {
 
 	return new Response(stream, {
 		headers: {
-			'Content-Type': 'text/plain; charset=utf-8',
-			'X-Content-Type-Options': 'nosniff',
+			"Content-Type": "text/plain; charset=utf-8",
+			"X-Content-Type-Options": "nosniff",
 		},
 	});
 }
