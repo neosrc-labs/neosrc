@@ -1,6 +1,7 @@
 import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 import { Reactions } from "~/components/Reactions";
 import { auth, githubAccessToken } from "~/server/auth";
@@ -28,8 +29,9 @@ export async function generateMetadata({
 }
 
 export default async function PullRequestPage({ params }: PageProps) {
-	const { owner, repo, number } = await params;
+	const { owner, repo, number: numberAsStr } = await params;
 	const accessToken = await githubAccessToken();
+	const number = parseInt(numberAsStr, 10);
 
 	if (!accessToken) {
 		return (
@@ -41,14 +43,36 @@ export default async function PullRequestPage({ params }: PageProps) {
 		);
 	}
 
-	let pullRequest: PullsGetResponseData | null = null;
+	let pullRequest: Promise<PullsGetResponseData> = getPullRequest(
+		accessToken,
+		owner,
+		repo,
+		number,
+	);
+
+	return (
+		<Suspense>
+			<PullRequestPageContent
+				pullRequestPromise={pullRequest}
+				number={number}
+				owner={owner}
+				repo={repo}
+			/>
+		</Suspense>
+	);
+}
+
+interface PullRequestPageContentProps {
+	owner: string;
+	repo: string;
+	number: number;
+	pullRequestPromise: Promise<PullsGetResponseData>;
+}
+
+async function PullRequestPageContent({ owner, repo, number, pullRequestPromise }: PullRequestPageContentProps) {
+	let pullRequest;
 	try {
-		pullRequest = await getPullRequest(
-			accessToken,
-			owner,
-			repo,
-			parseInt(number, 10),
-		);
+		pullRequest = await pullRequestPromise;
 	} catch {
 		return (
 			<div className="px-6 py-8">
@@ -81,7 +105,7 @@ export default async function PullRequestPage({ params }: PageProps) {
 			{/* Reactions */}
 			<div className="mt-4 border-gray-200 border-t pt-4">
 				<Reactions
-					number={parseInt(number, 10)}
+					number={number}
 					owner={owner}
 					repo={repo}
 				/>
