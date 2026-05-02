@@ -149,7 +149,7 @@ function Checks({ checksPromise }: ChecksProps) {
 		<>
 			<h3 className="mb-2 font-semibold text-gray-900 text-sm">Checks</h3>
 			{checks && checks.length > 0 ? (
-				<div className="space-y-2">
+				<div className="space-y-2 overflow-y-auto max-h-full">
 					{checks.map((check) => (
 						<a
 							className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50"
