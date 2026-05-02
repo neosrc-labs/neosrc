@@ -44,7 +44,9 @@ export function useFiles({ owner, repo, number, commitSha }: UseFilesParams) {
 				if (err instanceof DOMException && err.name === "AbortError") return;
 				throw err;
 			} finally {
-				setIsLoading(false);
+				if (!controller.signal.aborted) {
+					setIsLoading(false);
+				}
 			}
 		}
 
