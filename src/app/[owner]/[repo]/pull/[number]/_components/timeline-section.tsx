@@ -32,19 +32,25 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 	}
 
 	const allEvents = data?.pages.flatMap((page) => page.events) ?? [];
+	const filteredEvents = allEvents.filter(event => {
+		if (["mentioned", "subscribed"].includes(event.event)) {
+			return false
+		}
+		return true
+	})
 
 	return (
 		<div className="mt-4 border-gray-200 border-t pt-6">
 			<h2 className="mb-4 font-semibold text-gray-900 text-lg">Timeline</h2>
 
-			{allEvents.length === 0 && (
+			{filteredEvents.length === 0 && (
 				<p className="text-gray-500 text-sm">No timeline events yet.</p>
 			)}
 
 			<div className="relative">
 				<div className="absolute top-0 bottom-0 left-5 w-px bg-gray-200" />
 
-				{allEvents.map((event, index) => (
+				{filteredEvents.map((event, index) => (
 					<TimelineEvent event={event} key={`${event.id}-${index}`} />
 				))}
 			</div>
@@ -53,7 +59,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 				{isFetchingNextPage && (
 					<p className="text-gray-500 text-sm">Loading more...</p>
 				)}
-				{!hasNextPage && allEvents.length > 0 && (
+				{!hasNextPage && filteredEvents.length > 0 && (
 					<p className="text-gray-400 text-sm">No more events</p>
 				)}
 			</div>
