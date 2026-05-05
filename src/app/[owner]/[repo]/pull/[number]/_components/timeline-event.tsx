@@ -2,6 +2,7 @@
 
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 import type { TimelineEventData } from "~/server/github";
+import { formatRelativeTime } from "~/utils";
 
 interface TimelineEventProps {
 	event: TimelineEventData;
@@ -22,15 +23,9 @@ type EventWithDismissedReview = TimelineEventData & {
 };
 
 export function TimelineEvent({ event }: TimelineEventProps) {
-	const actor = event.actor;
-	const createdAt = new Date(event.created_at).toLocaleDateString("en-US", {
-		month: "short",
-		day: "numeric",
-		year: "numeric",
-		hour: "2-digit",
-		minute: "2-digit",
-	});
-
+	// FIXME: Fix the types so that we don't need `any`
+	const actor = event.actor ?? (event as any).user;
+	const createdAt = formatRelativeTime(event.created_at ?? (event as any).submitted_at);
 	return (
 		<div className="relative mb-4 ml-12">
 			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200">
