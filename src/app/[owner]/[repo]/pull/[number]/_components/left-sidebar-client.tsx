@@ -158,7 +158,7 @@ function Checks({ checksPromise }: ChecksProps) {
 						<a
 							className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50"
 							href={check.html_url}
-							key={check.name}
+							key={check.html_url ?? check.name}
 							rel="noopener noreferrer"
 							target="_blank"
 						>
