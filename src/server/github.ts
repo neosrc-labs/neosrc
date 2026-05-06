@@ -14,7 +14,7 @@ export type Reviewer = NonNullable<
 export type Assignee = NonNullable<PullsGetResponseData["assignees"]>[number];
 export type Commit = PullsListCommitsResponseData[number];
 export type TimelineEventData =
-	RestEndpointMethodTypes["issues"]["listEvents"]["response"]["data"][number];
+	RestEndpointMethodTypes["issues"]["listEventsForTimeline"]["response"]["data"][number];
 
 export function createOctokit(accessToken: string) {
 	return new Octokit({

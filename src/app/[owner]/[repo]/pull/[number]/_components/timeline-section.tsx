@@ -39,6 +39,8 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 		return true
 	})
 
+	console.log({ filteredEvents })
+
 	return (
 		<div className="mt-4 border-gray-200 border-t pt-6">
 			<h2 className="mb-4 font-semibold text-gray-900 text-lg">Timeline</h2>
@@ -48,7 +50,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 			)}
 
 			<div className="relative">
-				<div className="absolute top-0 bottom-0 left-5 w-px bg-gray-200" />
+				<div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200" />
 
 				{filteredEvents.map((event, index) => (
 					<TimelineEvent event={event} key={`${event.id}-${index}`} />
