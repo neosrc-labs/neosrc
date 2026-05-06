@@ -108,9 +108,10 @@ function EventContent({ event }: { event: TimelineEventData }) {
 		case "unlabeled": {
 			const e = event as LabelEvent;
 			const added = event.event === 'labeled';
+			const timestamp = formatRelativeTime(e.created_at);
 			if (e.label) {
 				return (
-					<div>
+					<div className="text-gray-600 text-sm">
 						{added ? 'Added the' : 'Removed the'}
 						<span
 							className="inline-block rounded-full px-2 py-1 font-medium text-xs"
@@ -121,7 +122,7 @@ function EventContent({ event }: { event: TimelineEventData }) {
 						>
 							{e.label.name}
 						</span>
-						label
+						label {timestamp}
 					</div>
 				);
 			}
