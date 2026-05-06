@@ -8,32 +8,6 @@ interface MetadataSectionProps {
 export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 	return (
 		<>
-			{/* Labels Section */}
-			< section>
-				<h3 className="mb-2 font-semibold text-gray-900 text-sm">Labels</h3>
-				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
-					{(pullRequest) =>
-						pullRequest.labels && pullRequest.labels.length > 0 ? (
-							<div className="flex flex-wrap gap-2">
-								{pullRequest.labels.map((label: Label) => (
-									<span
-										className="inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-xs"
-										key={label.name}
-										style={{
-											backgroundColor: `#${label.color}20`,
-											color: `#${label.color}`,
-										}}
-									>
-										{label.name}
-									</span>
-								))}
-							</div>
-						) : (
-							<p className="text-gray-500 text-sm">No labels</p>
-						)}
-				</Async>
-			</section>
-
 			{/* Reviewers Section */}
 			<section>
 				<h3 className="mb-2 font-semibold text-gray-900 text-sm">
@@ -111,6 +85,32 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 							<p className="text-gray-500 text-sm">No milestone</p>
 						)
 					}
+				</Async>
+			</section>
+
+			{/* Labels Section */}
+			<section className="min-h-30">
+				<h3 className="mb-2 font-semibold text-gray-900 text-sm">Labels</h3>
+				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
+					{(pullRequest) =>
+						pullRequest.labels && pullRequest.labels.length > 0 ? (
+							<div className="flex flex-wrap gap-2">
+								{pullRequest.labels.map((label: Label) => (
+									<span
+										className="inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-xs"
+										key={label.name}
+										style={{
+											backgroundColor: `#${label.color}20`,
+											color: `#${label.color}`,
+										}}
+									>
+										{label.name}
+									</span>
+								))}
+							</div>
+						) : (
+							<p className="text-gray-500 text-sm">No labels</p>
+						)}
 				</Async>
 			</section>
 		</>
