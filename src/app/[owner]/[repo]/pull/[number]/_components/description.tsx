@@ -1,9 +1,12 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
+import { MarkdownEditor } from "~/components/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/MarkdownRenderer";
 import { Reactions } from "~/components/Reactions";
 import type { PullsGetResponseData } from "~/server/github";
+import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 
 interface PullRequestDescriptionSectionProps {
@@ -19,6 +22,32 @@ export function PullRequestDescriptionSection({
 	number,
 	pullRequestPromise,
 }: PullRequestDescriptionSectionProps) {
+	const [isEditing, setIsEditing] = useState(false);
+	const [editBody, setEditBody] = useState("");
+	const [savedBody, setSavedBody] = useState<string | null>(null);
+
+	const updateMutation = api.pulls.updateBody.useMutation();
+
+	const handleStartEdit = useCallback((currentBody: string) => {
+		setEditBody(currentBody);
+		setIsEditing(true);
+	}, []);
+
+	const handleCancel = useCallback(() => {
+		setIsEditing(false);
+		setEditBody("");
+	}, []);
+
+	const handleSave = useCallback(async () => {
+		try {
+			await updateMutation.mutateAsync({ owner, repo, number, body: editBody });
+			setSavedBody(editBody);
+			setIsEditing(false);
+		} catch {
+			// TODO: Show error toast
+		}
+	}, [editBody, owner, repo, number, updateMutation]);
+
 	return (
 		<div>
 			{/* PR Header */}
@@ -120,22 +149,46 @@ export function PullRequestDescriptionSection({
 				}
 				promise={pullRequestPromise}
 			>
-				{(pullRequest) => (
-					<>
-						{/* PR Description */}
-						<div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-							<div className="prose prose-sm max-w-none">
-								{pullRequest.body ? (
-									<MarkdownRenderer content={pullRequest.body} />
+				{(pullRequest) => {
+					const displayBody = savedBody ?? pullRequest.body;
+					return (
+						<>
+							{/* PR Description */}
+							<div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+								<div className="flex items-center justify-between">
+									{!isEditing && (
+										<button
+											className="ml-auto text-blue-600 text-sm hover:text-blue-800"
+											onClick={() => handleStartEdit(pullRequest.body ?? "")}
+											type="button"
+										>
+											Edit
+										</button>
+									)}
+								</div>
+								{isEditing ? (
+									<MarkdownEditor
+										onCancel={handleCancel}
+										onChange={setEditBody}
+										onSubmit={handleSave}
+										submitLabel="Save"
+										value={editBody}
+									/>
 								) : (
-									<p className="text-gray-500 italic">
-										No description provided.
-									</p>
+									<div className="prose prose-sm max-w-none">
+										{displayBody ? (
+											<MarkdownRenderer content={displayBody} />
+										) : (
+											<p className="text-gray-500 italic">
+												No description provided.
+											</p>
+										)}
+									</div>
 								)}
 							</div>
-						</div>
-					</>
-				)}
+						</>
+					);
+				}}
 			</Async>
 
 			{/* Reactions */}

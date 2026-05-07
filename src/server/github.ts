@@ -75,6 +75,23 @@ export const getPullRequestFiles = cache(
 	},
 );
 
+export const updatePullRequest = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	body: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.pulls.update({
+		owner,
+		repo,
+		pull_number: pullNumber,
+		body,
+	});
+	return response.data;
+};
+
 export const getCheckRuns = cache(
 	async (
 		accessToken: string,
@@ -156,7 +173,7 @@ export const getPullRequestTimeline = cache(
 		perPage: number = 30,
 	) => {
 		// FIXME: The GitHub API does not return all timeline events when an GitHub App granted OAuth
-		//        token is used... So for now, we just don't use a token. This will eventually hit rate 
+		//        token is used... So for now, we just don't use a token. This will eventually hit rate
 		//        limit issues. Ideally we ask GitHub to fix this or try to use heuristics like using the
 		//        users access token for private repositories only?
 		const octokit = new Octokit();
