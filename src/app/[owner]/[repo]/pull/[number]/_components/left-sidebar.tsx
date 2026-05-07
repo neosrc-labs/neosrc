@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { PullsGetResponseData } from "~/server/github";
 import {
 	LeftSidebarContentSection,
+	SidebarActionButtons,
 	SidebarNavMenu,
 } from "./left-sidebar-client";
 
@@ -44,35 +45,11 @@ export default function LeftSidebar({
 				</Suspense>
 			</div>
 
-			<SidebarActionButtons />
+			<SidebarActionButtons
+				number={number}
+				owner={owner}
+				repo={repo}
+			/>
 		</aside>
-	);
-}
-
-function SidebarActionButtons() {
-	return (
-		<div className="sticky bottom-0 z-10 space-y-2 border-gray-200 border-t bg-white pt-6 pr-4 dark:border-gray-800 dark:bg-gray-950">
-			<button
-				className="w-full rounded-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:opacity-50"
-				disabled
-				type="button"
-			>
-				Approve
-			</button>
-			<button
-				className="w-full rounded-md bg-[#cf222e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#b91c23] disabled:opacity-50"
-				disabled
-				type="button"
-			>
-				Request Changes
-			</button>
-			<button
-				className="w-full rounded-md bg-[#8250df] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#6e40c9] disabled:opacity-50"
-				disabled
-				type="button"
-			>
-				Merge
-			</button>
-		</div>
 	);
 }

@@ -17,6 +17,8 @@ export type TimelineEventData =
 	RestEndpointMethodTypes["issues"]["listEventsForTimeline"]["response"]["data"][number];
 export type IssueCommentData =
 	RestEndpointMethodTypes["issues"]["createComment"]["response"]["data"];
+export type PullRequestReviewData =
+	RestEndpointMethodTypes["pulls"]["createReview"]["response"]["data"];
 
 export function createOctokit(accessToken: string) {
 	return new Octokit({
@@ -106,6 +108,25 @@ export const createIssueComment = async (
 		owner,
 		repo,
 		issue_number: issueNumber,
+		body,
+	});
+	return response.data;
+};
+
+export const createPullRequestReview = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	event: "APPROVE" | "COMMENT" | "REQUEST_CHANGES",
+	body?: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.pulls.createReview({
+		owner,
+		repo,
+		pull_number: pullNumber,
+		event,
 		body,
 	});
 	return response.data;
