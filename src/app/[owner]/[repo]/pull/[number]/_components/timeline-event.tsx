@@ -13,6 +13,7 @@ type LabelEvent = components["schemas"]["labeled-issue-event"]
 type CommentEvent = components["schemas"]["timeline-comment-event"]
 type CommittedEvent = components["schemas"]["timeline-committed-event"]
 type CrossReferencedEvent = components["schemas"]["timeline-cross-referenced-event"]
+type AssignedEvent = components["schemas"]["timeline-assigned-issue-event"]
 type ForcePushEvent = {
 	event: "head_ref_force_pushed";
 	id: number;
@@ -228,6 +229,51 @@ function EventContent({ event }: { event: TimelineEventData }) {
 							)}
 						</a>
 					)}
+				</div>
+			);
+		}
+		case "assigned":
+		case "unassigned": {
+			const e = event as AssignedEvent;
+			const timestamp = formatRelativeTime(e.created_at);
+			const isSelfAssigned = e.actor?.login === e.assignee?.login;
+			const isAssigned = event.event === "assigned";
+
+			if (isSelfAssigned) {
+				return (
+					<div className="flex items-center gap-2 text-gray-600 text-sm">
+						<img
+							src={e.assignee.avatar_url}
+							alt={e.assignee.login}
+							className="h-5 w-5 rounded-full"
+						/>
+						<span>
+							<span className="font-medium text-gray-800">{e.assignee.login}</span>
+							{isAssigned ? " self-assigned this " : " removed their assignment "}
+							{timestamp}
+						</span>
+					</div>
+				);
+			}
+			return (
+				<div className="flex items-center gap-2 text-gray-600 text-sm">
+					<img
+						src={e.actor.avatar_url}
+						alt={e.actor.login}
+						className="h-5 w-5 rounded-full"
+					/>
+					<div className="flex gap-1">
+						<span className="font-medium text-gray-800">{e.actor.login}</span>
+						{isAssigned ? " assigned " : " unassigned "}
+						<img
+							src={e.assignee.avatar_url}
+							alt={e.assignee.login}
+							className="h-5 w-5 rounded-full"
+						/>
+						<span className="font-medium text-gray-800">{e.assignee.login}</span>
+						{" "}
+						{timestamp}
+					</div>
 				</div>
 			);
 		}
