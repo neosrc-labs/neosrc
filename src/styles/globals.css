@@ -8,9 +8,9 @@
 }
 
 html {
-  /*
+	/*
   * This makes the page reserve space for the scrollbar so loading states do not shift the page when
   * the scroll bar is temporarily removed. This makes the page feel so much better.
   */
-  scrollbar-gutter: stable;
+	scrollbar-gutter: stable;
 }

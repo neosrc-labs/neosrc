@@ -12,8 +12,7 @@
 			"recommended": true,
 			"source": {
 				"recommended": true,
-				"organizeImports": "on",
-				"useSortedAttributes": "on"
+				"organizeImports": "on"
 			}
 		}
 	},

@@ -32,14 +32,14 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 	}
 
 	const allEvents = data?.pages.flatMap((page) => page.events) ?? [];
-	const filteredEvents = allEvents.filter(event => {
+	const filteredEvents = allEvents.filter((event) => {
 		if (["mentioned", "subscribed"].includes(event.event)) {
-			return false
+			return false;
 		}
-		return true
-	})
+		return true;
+	});
 
-	console.log({ filteredEvents })
+	console.log({ filteredEvents });
 
 	return (
 		<div className="mt-4 border-gray-200 border-t pt-6">

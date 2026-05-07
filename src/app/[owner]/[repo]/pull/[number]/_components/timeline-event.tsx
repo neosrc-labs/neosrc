@@ -9,11 +9,12 @@ interface TimelineEventProps {
 	event: TimelineEventData;
 }
 
-type LabelEvent = components["schemas"]["labeled-issue-event"]
-type CommentEvent = components["schemas"]["timeline-comment-event"]
-type CommittedEvent = components["schemas"]["timeline-committed-event"]
-type CrossReferencedEvent = components["schemas"]["timeline-cross-referenced-event"]
-type AssignedEvent = components["schemas"]["timeline-assigned-issue-event"]
+type LabelEvent = components["schemas"]["labeled-issue-event"];
+type CommentEvent = components["schemas"]["timeline-comment-event"];
+type CommittedEvent = components["schemas"]["timeline-committed-event"];
+type CrossReferencedEvent =
+	components["schemas"]["timeline-cross-referenced-event"];
+type AssignedEvent = components["schemas"]["timeline-assigned-issue-event"];
 type ForcePushEvent = {
 	event: "head_ref_force_pushed";
 	id: number;
@@ -70,9 +71,9 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 		head_ref_force_pushed: "⬆️",
 	};
 
-	if (event.event === 'commented') {
+	if (event.event === "commented") {
 		// TODO: Add link to user account
-		const e = event as CommentEvent
+		const e = event as CommentEvent;
 		const actor = e.actor;
 		return (
 			<>
@@ -86,7 +87,7 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 			</>
 		);
 	}
-	return <span className="text-xs">{iconMap[event.event ?? ''] ?? "●"}</span>;
+	return <span className="text-xs">{iconMap[event.event ?? ""] ?? "●"}</span>;
 }
 
 function EventContent({ event }: { event: TimelineEventData }) {
@@ -109,12 +110,12 @@ function EventContent({ event }: { event: TimelineEventData }) {
 		case "labeled":
 		case "unlabeled": {
 			const e = event as LabelEvent;
-			const added = event.event === 'labeled';
+			const added = event.event === "labeled";
 			const timestamp = formatRelativeTime(e.created_at);
 			if (e.label) {
 				return (
 					<div className="text-gray-600 text-sm">
-						{added ? 'Added the' : 'Removed the'}
+						{added ? "Added the" : "Removed the"}
 						<span
 							className="inline-block rounded-full px-2 py-1 font-medium text-xs"
 							style={{
@@ -136,7 +137,7 @@ function EventContent({ event }: { event: TimelineEventData }) {
 			// TODO: Add author / committer profile pictures here.
 			//       We could probably pass in the `commits` which we already load for the commit section in the sidebar
 			return (
-				<div className="flex item-center justify-between text-gray-600 text-sm my-6">
+				<div className="item-center my-6 flex justify-between text-gray-600 text-sm">
 					<div>
 						<p>{e.message.split("\n")[0]}</p>
 					</div>
@@ -159,12 +160,12 @@ function EventContent({ event }: { event: TimelineEventData }) {
 		case "head_ref_force_pushed": {
 			const e = event as ForcePushEvent;
 			const timestamp = formatRelativeTime(e.created_at);
-			const branch = 'branch-name' // FIXME: Get the branch name somehow
-			const before = 'before' // FIXME: Get the previous commit somehow
-			const after = e.commit_id.slice(0, 7)
+			const branch = "branch-name"; // FIXME: Get the branch name somehow
+			const before = "before"; // FIXME: Get the previous commit somehow
+			const after = e.commit_id.slice(0, 7);
 			// TODO: Add links for the commits, branch, and author
 			return (
-				<div className="flex items-center gap-2 text-gray-600 text-sm my-9">
+				<div className="my-9 flex items-center gap-2 text-gray-600 text-sm">
 					<img
 						src={e.actor.avatar_url}
 						alt={e.actor.login}
@@ -175,9 +176,9 @@ function EventContent({ event }: { event: TimelineEventData }) {
 						{" force pushed the "}
 						<span className="font-medium text-gray-800">{branch}</span>
 						{" branch from "}
-						<code className="text-xs bg-gray-100 px-1 rounded">{before}</code>
+						<code className="rounded bg-gray-100 px-1 text-xs">{before}</code>
 						{" to "}
-						<code className="text-xs bg-gray-100 px-1 rounded">{after}</code>
+						<code className="rounded bg-gray-100 px-1 text-xs">{after}</code>
 					</p>
 					{timestamp}
 				</div>
@@ -189,9 +190,7 @@ function EventContent({ event }: { event: TimelineEventData }) {
 			const timestamp = formatRelativeTime(e.created_at);
 			const source = e.source?.issue;
 			const repo = source?.repository;
-			const repoFullName = repo
-				? `${repo.owner.login}/${repo.name}`
-				: null;
+			const repoFullName = repo ? `${repo.owner.login}/${repo.name}` : null;
 			const sourceNumber = source?.number;
 			const sourceTitle = source?.title;
 			const sourceUrl = source?.html_url;
@@ -219,7 +218,7 @@ function EventContent({ event }: { event: TimelineEventData }) {
 							href={sourceUrl ?? undefined}
 							target="_blank"
 							rel="noreferrer"
-							className="mt-1 ml-7 flex items-center gap-1.5 hover:underline w-fit"
+							className="mt-1 ml-7 flex w-fit items-center gap-1.5 hover:underline"
 						>
 							<span className="font-medium text-gray-800">{sourceTitle}</span>
 							{repoFullName && sourceNumber && (
@@ -248,8 +247,12 @@ function EventContent({ event }: { event: TimelineEventData }) {
 							className="h-5 w-5 rounded-full"
 						/>
 						<span>
-							<span className="font-medium text-gray-800">{e.assignee.login}</span>
-							{isAssigned ? " self-assigned this " : " removed their assignment "}
+							<span className="font-medium text-gray-800">
+								{e.assignee.login}
+							</span>
+							{isAssigned
+								? " self-assigned this "
+								: " removed their assignment "}
 							{timestamp}
 						</span>
 					</div>
@@ -270,15 +273,16 @@ function EventContent({ event }: { event: TimelineEventData }) {
 							alt={e.assignee.login}
 							className="h-5 w-5 rounded-full"
 						/>
-						<span className="font-medium text-gray-800">{e.assignee.login}</span>
-						{" "}
+						<span className="font-medium text-gray-800">
+							{e.assignee.login}
+						</span>{" "}
 						{timestamp}
 					</div>
 				</div>
 			);
 		}
 		default:
-			console.warn('unknown event type: ' + event.event, event)
+			console.warn("unknown event type: " + event.event, event);
 			return null;
 	}
 }

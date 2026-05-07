@@ -1,5 +1,10 @@
 import { Async } from "~/components/async";
-import type { Assignee, Label, PullsGetResponseData, Reviewer } from "~/server/github";
+import type {
+	Assignee,
+	Label,
+	PullsGetResponseData,
+	Reviewer,
+} from "~/server/github";
 
 interface MetadataSectionProps {
 	pullRequestPromise: Promise<PullsGetResponseData>;
@@ -10,14 +15,12 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 		<>
 			{/* Reviewers Section */}
 			<section>
-				<h3 className="mb-2 font-semibold text-gray-900 text-sm">
-					Reviewers
-				</h3>
+				<h3 className="mb-2 font-semibold text-gray-900 text-sm">Reviewers</h3>
 
 				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
 					{(pullRequest) =>
 						pullRequest.requested_reviewers &&
-							pullRequest.requested_reviewers.length > 0 ? (
+						pullRequest.requested_reviewers.length > 0 ? (
 							<ul className="space-y-2">
 								{pullRequest.requested_reviewers.map((reviewer: Reviewer) => (
 									<li
@@ -41,10 +44,8 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 			</section>
 
 			{/* Assignees Section */}
-			< section >
-				<h3 className="mb-2 font-semibold text-gray-900 text-sm">
-					Assignees
-				</h3>
+			<section>
+				<h3 className="mb-2 font-semibold text-gray-900 text-sm">Assignees</h3>
 				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
 					{(pullRequest) =>
 						pullRequest.assignees && pullRequest.assignees.length > 0 ? (
@@ -68,13 +69,11 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 						)
 					}
 				</Async>
-			</section >
+			</section>
 
 			{/* Milestone Section */}
 			<section>
-				<h3 className="mb-2 font-semibold text-gray-900 text-sm">
-					Milestone
-				</h3>
+				<h3 className="mb-2 font-semibold text-gray-900 text-sm">Milestone</h3>
 				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
 					{(pullRequest) =>
 						pullRequest.milestone ? (
@@ -110,7 +109,8 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 							</div>
 						) : (
 							<p className="text-gray-500 text-sm">No labels</p>
-						)}
+						)
+					}
 				</Async>
 			</section>
 		</>
@@ -122,6 +122,5 @@ function FieldSkeleton() {
 		<section>
 			<div className="mb-3 h-5 w-24 animate-pulse rounded bg-gray-200" />
 		</section>
-	)
+	);
 }
-

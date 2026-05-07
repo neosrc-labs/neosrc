@@ -118,7 +118,7 @@ export const authConfig = {
 							expires_at: Date.now() + refresh.expires_in * 1000,
 							refresh_token_expires_in: Math.floor(
 								Date.now() / 1000 +
-								(refresh.refresh_token_expires_in as number),
+									(refresh.refresh_token_expires_in as number),
 							),
 						})
 						.where(eq(accounts.providerAccountId, account.providerAccountId));

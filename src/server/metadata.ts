@@ -5,7 +5,7 @@ export async function generatePRMetadata(
 	repo: string,
 	number: string,
 ): Promise<Metadata> {
-	let title = `${owner}/${repo} #${number}`;
+	const title = `${owner}/${repo} #${number}`;
 	// NOTE: We don't want to load the PR title here since its slow and blocks the page load
 	return { title };
 }

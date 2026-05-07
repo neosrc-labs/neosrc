@@ -2,16 +2,15 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { githubAccessToken } from "~/server/auth";
 import {
+	type CommitData,
 	getCommit,
 	getPullRequest,
 	getPullRequestCommits,
-	type CommitData,
 	type PullsGetResponseData,
 	type PullsListCommitsResponseData,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
 import { FilesSection } from "../../_components/files-client";
-
 
 interface ChangesPageProps {
 	params: Promise<{
@@ -102,15 +101,19 @@ interface CommitHeaderProps {
 	commitSha: string | null;
 }
 
-async function CommitHeader({ commitPromise, commitsPromise, pullRequestPromise, owner, repo, number, commitSha }: CommitHeaderProps) {
+async function CommitHeader({
+	commitPromise,
+	commitsPromise,
+	pullRequestPromise,
+	owner,
+	repo,
+	number,
+	commitSha,
+}: CommitHeaderProps) {
 	const pullRequest = await pullRequestPromise;
 
 	if (commitPromise == null || commitsPromise == null) {
-		return (
-			<div>
-				Files Changed ({pullRequest.changed_files})
-			</div>
-		)
+		return <div>Files Changed ({pullRequest.changed_files})</div>;
 	}
 
 	const commit = await commitPromise;
@@ -171,7 +174,12 @@ async function CommitHeader({ commitPromise, commitsPromise, pullRequestPromise,
 			<div className="mt-3 flex items-center gap-2">
 				{commit.author ? (
 					<>
-						<a className="flex items-center gap-2" href={commit.author.html_url} rel="noopener noreferrer" target="_blank">
+						<a
+							className="flex items-center gap-2"
+							href={commit.author.html_url}
+							rel="noopener noreferrer"
+							target="_blank"
+						>
 							<img
 								alt={commit.author.login}
 								className="h-5 w-5 rounded-full"
@@ -179,7 +187,12 @@ async function CommitHeader({ commitPromise, commitsPromise, pullRequestPromise,
 							/>
 						</a>
 
-						<a className="flex items-center gap-2" href={commit.author.html_url} rel="noopener noreferrer" target="_blank">
+						<a
+							className="flex items-center gap-2"
+							href={commit.author.html_url}
+							rel="noopener noreferrer"
+							target="_blank"
+						>
 							<span className="text-gray-600 text-sm hover:text-gray-900">
 								{commit.author.login}
 							</span>
@@ -194,9 +207,7 @@ async function CommitHeader({ commitPromise, commitsPromise, pullRequestPromise,
 				) : (
 					<span className="text-gray-600 text-sm">
 						{commit.commit.author?.name} committed{" "}
-						{new Date(
-							commit.commit.committer?.date || "",
-						).toLocaleDateString()}
+						{new Date(commit.commit.committer?.date || "").toLocaleDateString()}
 					</span>
 				)}
 				<code className="ml-2 font-mono text-gray-500 text-xs">

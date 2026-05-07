@@ -25,7 +25,7 @@ export function MarkdownEditor({
 	onChange,
 	onSubmit,
 	onCancel,
-	placeholder = "Leave a comment",
+	placeholder = "",
 	submitLabel = "Comment",
 	cancelLabel = "Cancel",
 	disabled = false,

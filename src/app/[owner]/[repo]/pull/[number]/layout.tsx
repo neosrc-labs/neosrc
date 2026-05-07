@@ -41,7 +41,7 @@ export default async function PullRequestLayout({
 			status: string;
 			html_url?: string | undefined;
 		}>
-	> | null = new Promise(() => { });
+	> | null = new Promise(() => {});
 
 	if (session?.user?.id) {
 		const [account] = await db
@@ -106,4 +106,3 @@ export default async function PullRequestLayout({
 		</ResizableLayout>
 	);
 }
-
