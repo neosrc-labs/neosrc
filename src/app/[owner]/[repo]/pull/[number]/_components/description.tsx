@@ -154,11 +154,12 @@ export function PullRequestDescriptionSection({
 					return (
 						<>
 							{/* PR Description */}
-							<div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-								<div className="flex items-center justify-between">
+							<div className="rounded-lg border border-gray-200 bg-gray-50">
+								<div className="flex items-center justify-between px-4 py-1 border-b border-gray-200">
+									<h3 className="text-sm font-semibold text-gray-700">Description</h3>
 									{!isEditing && (
 										<button
-											className="ml-auto text-blue-600 text-sm hover:text-blue-800"
+											className="text-blue-600 text-sm hover:text-blue-800 cursor-pointer"
 											onClick={() => handleStartEdit(pullRequest.body ?? "")}
 											type="button"
 										>
@@ -166,25 +167,25 @@ export function PullRequestDescriptionSection({
 										</button>
 									)}
 								</div>
-								{isEditing ? (
-									<MarkdownEditor
-										onCancel={handleCancel}
-										onChange={setEditBody}
-										onSubmit={handleSave}
-										submitLabel="Save"
-										value={editBody}
-									/>
-								) : (
-									<div className="prose prose-sm max-w-none">
-										{displayBody ? (
-											<MarkdownRenderer content={displayBody} />
-										) : (
-											<p className="text-gray-500 italic">
-												No description provided.
-											</p>
-										)}
-									</div>
-								)}
+								<div className="p-4">
+									{isEditing ? (
+										<MarkdownEditor
+											onCancel={handleCancel}
+											onChange={setEditBody}
+											onSubmit={handleSave}
+											submitLabel="Save"
+											value={editBody}
+										/>
+									) : (
+										<div className="prose prose-sm max-w-none">
+											{displayBody ? (
+												<MarkdownRenderer content={displayBody} />
+											) : (
+												<p className="text-gray-500 italic">No description provided.</p>
+											)}
+										</div>
+									)}
+								</div>
 							</div>
 						</>
 					);
