@@ -26,6 +26,7 @@ type ForcePushEvent = {
 	created_at: string;
 	performed_via_github_app: components["schemas"]["nullable-integration"];
 };
+type StateChangeEvent = components["schemas"]["state-change-issue-event"];
 // TODO: Replace this with the octokit types
 type EventWithDismissedReview = TimelineEventData & {
 	dismissed_review?: { dismissal_message?: string | null };
@@ -184,6 +185,27 @@ function EventContent({ event }: { event: TimelineEventData }) {
 				</div>
 			);
 		}
+		case "head_ref_deleted":
+		case "head_ref_restored": {
+			const e = event as any;
+			const timestamp = formatRelativeTime(e.created_at);
+			const verb = event.event === "head_ref_deleted" ? "deleted" : "restored";
+			return (
+				<div className="flex items-center gap-2 text-gray-600 text-sm">
+					<img
+						src={e.actor.avatar_url}
+						alt={e.actor.login}
+						className="h-5 w-5 rounded-full"
+					/>
+					<p>
+						<span className="font-medium text-gray-800">{e.actor.login}</span>
+						{` ${verb} the `}
+						<span className="font-medium text-gray-800">branch</span>
+						{` ${timestamp}`}
+					</p>
+				</div>
+			);
+		}
 		case "cross-referenced": {
 			const e = event as CrossReferencedEvent;
 			const actor = e.actor;
@@ -278,6 +300,31 @@ function EventContent({ event }: { event: TimelineEventData }) {
 						</span>{" "}
 						{timestamp}
 					</div>
+				</div>
+			);
+		}
+		case "closed":
+		case "merged":
+		case "reopened": {
+			const e = event as StateChangeEvent;
+			const timestamp = formatRelativeTime(e.created_at);
+			const verb = event.event === "closed" ? "closed" : event.event === "merged" ? "merged" : "reopened";
+			return (
+				<div className="flex items-center gap-2 text-gray-600 text-sm">
+					<img
+						src={e.actor?.avatar_url}
+						alt={e.actor?.login ?? ""}
+						className="h-5 w-5 rounded-full"
+					/>
+					<p>
+						<span className="font-medium text-gray-800">
+							{e.actor?.login}
+						</span>
+						{" "}
+						{verb}
+						{" this "}
+						{timestamp}
+					</p>
 				</div>
 			);
 		}
