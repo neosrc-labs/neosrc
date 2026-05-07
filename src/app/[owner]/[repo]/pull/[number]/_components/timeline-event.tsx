@@ -27,6 +27,7 @@ type ForcePushEvent = {
 	performed_via_github_app: components["schemas"]["nullable-integration"];
 };
 type StateChangeEvent = components["schemas"]["state-change-issue-event"];
+type ReviewEvent = components["schemas"]["timeline-reviewed-event"];
 // TODO: Replace this with the octokit types
 type EventWithDismissedReview = TimelineEventData & {
 	dismissed_review?: { dismissal_message?: string | null };
@@ -72,6 +73,19 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 		head_ref_force_pushed: "⬆️",
 	};
 
+	if (event.event === "reviewed") {
+		const e = event as ReviewEvent;
+		const state = e.state;
+		return (
+			<img
+				alt={e.user?.login}
+				className="h-6 w-6 rounded-full"
+				src={e.user?.avatar_url}
+				title={state === "approved" ? "Approved" : state === "changes_requested" ? "Changes requested" : "Reviewed"}
+			/>
+		);
+	}
+
 	if (event.event === "commented") {
 		// TODO: Add link to user account
 		const e = event as CommentEvent;
@@ -93,8 +107,7 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 
 function EventContent({ event }: { event: TimelineEventData }) {
 	switch (event.event) {
-		case "commented":
-		case "reviewed": {
+		case "commented": {
 			const e = event as CommentEvent;
 			if (e.body) {
 				return (
@@ -106,6 +119,41 @@ function EventContent({ event }: { event: TimelineEventData }) {
 				);
 			}
 			return null;
+		}
+
+		case "reviewed": {
+			const e = event as ReviewEvent;
+			const timestamp = formatRelativeTime(e.submitted_at ?? e.updated_at ?? "");
+			const isApproved = e.state === "approved";
+			const isChangesRequested = e.state === "changes_requested";
+			const stateLabel = isApproved
+				? "approved these changes"
+				: isChangesRequested
+					? "requested changes"
+					: "reviewed";
+			return (
+				<div className="text-gray-600 text-sm dark:text-gray-400">
+					<p className="flex items-center gap-1.5">
+						{isApproved && (
+							<span className="text-green-500 text-base">✓</span>
+						)}
+						{isChangesRequested && (
+							<span className="text-red-500 text-base">📄</span>
+						)}
+						<span className="font-medium text-gray-800 dark:text-gray-200">
+							{e.user?.login}
+						</span>
+						{` ${stateLabel} ${timestamp}`}
+					</p>
+					{e.body && (
+						<div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
+							<div className="prose prose-sm max-w-none">
+								<MarkdownRenderer content={e.body} />
+							</div>
+						</div>
+					)}
+				</div>
+			);
 		}
 
 		case "labeled":
