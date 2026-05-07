@@ -77,7 +77,7 @@ export function SidebarFileTree({
 
 	return (
 		<>
-			<h3 className="mb-2 font-semibold text-gray-900 text-sm">
+			<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-gray-100">
 				Files Changed {filesChanged ? <span>({filesChanged})</span> : <></>}
 			</h3>
 			{isLoading ? (
@@ -85,7 +85,9 @@ export function SidebarFileTree({
 			) : files.length > 0 ? (
 				<FileTree basePath={basePath} files={fileTree} />
 			) : (
-				<p className="text-gray-500 text-sm">No files changed</p>
+				<p className="text-gray-500 text-sm dark:text-gray-400">
+					No files changed
+				</p>
 			)}
 		</>
 	);
@@ -104,7 +106,7 @@ export function SidebarNavMenu({ owner, repo, number }: SidebarNavMenuProps) {
 		pathname === `${basePath}/changes` ||
 		pathname.startsWith(`${basePath}/changes/`);
 	return (
-		<nav className="sticky top-0 z-10 space-y-1 bg-white pr-4 pb-4">
+		<nav className="sticky top-0 z-10 space-y-1 bg-white pr-4 pb-4 dark:bg-gray-950">
 			<NavItem href={basePath} isActive={!isFilesActive} label="Conversation" />
 			<NavItem
 				href={`${basePath}/changes`}
@@ -126,8 +128,8 @@ function NavItem({ href, label, isActive }: NavItemProps) {
 		<Link
 			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${
 				isActive
-					? "bg-gray-100 text-gray-900"
-					: "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+					? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+					: "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
 			}`}
 			href={href}
 		>
@@ -151,12 +153,14 @@ function Checks({ checksPromise }: ChecksProps) {
 	const checks = use(checksPromise);
 	return (
 		<>
-			<h3 className="mb-2 font-semibold text-gray-900 text-sm">Checks</h3>
+			<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-gray-100">
+				Checks
+			</h3>
 			{checks && checks.length > 0 ? (
 				<div className="max-h-full space-y-2 overflow-y-auto">
 					{checks.map((check) => (
 						<a
-							className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50"
+							className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
 							href={check.html_url}
 							key={check.html_url ?? check.name}
 							rel="noopener noreferrer"
@@ -173,14 +177,14 @@ function Checks({ checksPromise }: ChecksProps) {
 									<span className="text-gray-400">○</span>
 								)}
 							</span>
-							<span className="truncate text-gray-700 text-sm">
+							<span className="truncate text-gray-700 text-sm dark:text-gray-300">
 								{check.name}
 							</span>
 						</a>
 					))}
 				</div>
 			) : (
-				<p className="text-gray-500 text-sm">No checks</p>
+				<p className="text-gray-500 text-sm dark:text-gray-400">No checks</p>
 			)}
 		</>
 	);

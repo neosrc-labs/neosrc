@@ -101,12 +101,15 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 					: "text-yellow-600";
 
 	return (
-		<div className="mb-6 rounded-lg border border-gray-200" id={fileId}>
+		<div
+			className="mb-6 rounded-lg border border-gray-200 dark:border-gray-700"
+			id={fileId}
+		>
 			{/* File Header */}
-			<div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2">
+			<div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-900">
 				{/* Collapse Toggle */}
 				<button
-					className="cursor-pointer text-gray-500 hover:text-gray-700"
+					className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
 					onClick={toggleCollapsed}
 					type="button"
 				>
@@ -128,7 +131,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 
 				{/* File Icon */}
 				<button
-					className="h-4 w-4 cursor-pointer text-gray-500"
+					className="h-4 w-4 cursor-pointer text-gray-500 dark:text-gray-400"
 					onClick={toggleCollapsed}
 					type="button"
 				>
@@ -145,7 +148,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 
 				{/* Filename */}
 				<button
-					className="flex-1 cursor-pointer truncate text-left font-mono text-gray-700 text-sm"
+					className="flex-1 cursor-pointer truncate text-left font-mono text-gray-700 text-sm dark:text-gray-300"
 					onClick={toggleCollapsed}
 					type="button"
 				>
@@ -170,10 +173,10 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 				)}
 
 				{/* Viewed Checkbox */}
-				<label className="flex cursor-pointer items-center gap-1 text-gray-600 text-xs hover:text-gray-800">
+				<label className="flex cursor-pointer items-center gap-1 text-gray-600 text-xs hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">
 					<input
 						checked={isViewed}
-						className="cursor-pointer rounded border-gray-300"
+						className="cursor-pointer rounded border-gray-300 dark:border-gray-600"
 						onChange={toggleViewed}
 						type="checkbox"
 					/>
@@ -199,7 +202,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 					{file.patch ? (
 						<div ref={containerRef} />
 					) : (
-						<div className="px-4 py-3 text-gray-500 text-sm italic">
+						<div className="px-4 py-3 text-gray-500 text-sm italic dark:text-gray-400">
 							Binary file not shown
 						</div>
 					)}

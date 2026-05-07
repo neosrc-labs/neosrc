@@ -15,7 +15,9 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 		<>
 			{/* Reviewers Section */}
 			<section>
-				<h3 className="mb-2 font-semibold text-gray-900 text-sm">Reviewers</h3>
+				<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-gray-100">
+					Reviewers
+				</h3>
 
 				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
 					{(pullRequest) =>
@@ -32,12 +34,16 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 											className="h-5 w-5 rounded-full"
 											src={reviewer.avatar_url}
 										/>
-										<span className="text-gray-600">{reviewer.login}</span>
+										<span className="text-gray-600 dark:text-gray-400">
+											{reviewer.login}
+										</span>
 									</li>
 								))}
 							</ul>
 						) : (
-							<p className="text-gray-500 text-sm">No reviewers</p>
+							<p className="text-gray-500 text-sm dark:text-gray-400">
+								No reviewers
+							</p>
 						)
 					}
 				</Async>
@@ -45,7 +51,9 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 
 			{/* Assignees Section */}
 			<section>
-				<h3 className="mb-2 font-semibold text-gray-900 text-sm">Assignees</h3>
+				<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-gray-100">
+					Assignees
+				</h3>
 				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
 					{(pullRequest) =>
 						pullRequest.assignees && pullRequest.assignees.length > 0 ? (
@@ -60,12 +68,16 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 											className="h-5 w-5 rounded-full"
 											src={assignee.avatar_url}
 										/>
-										<span className="text-gray-600">{assignee.login}</span>
+										<span className="text-gray-600 dark:text-gray-400">
+											{assignee.login}
+										</span>
 									</li>
 								))}
 							</ul>
 						) : (
-							<p className="text-gray-500 text-sm">No assignees</p>
+							<p className="text-gray-500 text-sm dark:text-gray-400">
+								No assignees
+							</p>
 						)
 					}
 				</Async>
@@ -73,15 +85,19 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 
 			{/* Milestone Section */}
 			<section>
-				<h3 className="mb-2 font-semibold text-gray-900 text-sm">Milestone</h3>
+				<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-gray-100">
+					Milestone
+				</h3>
 				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
 					{(pullRequest) =>
 						pullRequest.milestone ? (
-							<p className="text-gray-600 text-sm">
+							<p className="text-gray-600 text-sm dark:text-gray-400">
 								{pullRequest.milestone.title}
 							</p>
 						) : (
-							<p className="text-gray-500 text-sm">No milestone</p>
+							<p className="text-gray-500 text-sm dark:text-gray-400">
+								No milestone
+							</p>
 						)
 					}
 				</Async>
@@ -89,7 +105,9 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 
 			{/* Labels Section */}
 			<section className="min-h-30">
-				<h3 className="mb-2 font-semibold text-gray-900 text-sm">Labels</h3>
+				<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-gray-100">
+					Labels
+				</h3>
 				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
 					{(pullRequest) =>
 						pullRequest.labels && pullRequest.labels.length > 0 ? (
@@ -108,7 +126,9 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 								))}
 							</div>
 						) : (
-							<p className="text-gray-500 text-sm">No labels</p>
+							<p className="text-gray-500 text-sm dark:text-gray-400">
+								No labels
+							</p>
 						)
 					}
 				</Async>
@@ -120,7 +140,7 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 function FieldSkeleton() {
 	return (
 		<section>
-			<div className="mb-3 h-5 w-24 animate-pulse rounded bg-gray-200" />
+			<div className="mb-3 h-5 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
 		</section>
 	);
 }

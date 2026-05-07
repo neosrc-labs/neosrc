@@ -35,7 +35,7 @@ type EventWithDismissedReview = TimelineEventData & {
 export function TimelineEvent({ event }: TimelineEventProps) {
 	return (
 		<div className="relative mb-4 ml-12">
-			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200">
+			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-gray-950 dark:ring-gray-700">
 				<TimelineIcon event={event} />
 			</div>
 
@@ -98,7 +98,7 @@ function EventContent({ event }: { event: TimelineEventData }) {
 			const e = event as CommentEvent;
 			if (e.body) {
 				return (
-					<div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+					<div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
 						<div className="prose prose-sm max-w-none">
 							<MarkdownRenderer content={e.body} />
 						</div>
@@ -115,7 +115,7 @@ function EventContent({ event }: { event: TimelineEventData }) {
 			const timestamp = formatRelativeTime(e.created_at);
 			if (e.label) {
 				return (
-					<div className="text-gray-600 text-sm">
+					<div className="text-gray-600 text-sm dark:text-gray-400">
 						{added ? "Added the" : "Removed the"}
 						<span
 							className="inline-block rounded-full px-2 py-1 font-medium text-xs"
@@ -138,7 +138,7 @@ function EventContent({ event }: { event: TimelineEventData }) {
 			// TODO: Add author / committer profile pictures here.
 			//       We could probably pass in the `commits` which we already load for the commit section in the sidebar
 			return (
-				<div className="item-center my-6 flex justify-between text-gray-600 text-sm">
+				<div className="item-center my-6 flex justify-between text-gray-600 text-sm dark:text-gray-400">
 					<div>
 						<p>{e.message.split("\n")[0]}</p>
 					</div>
@@ -151,7 +151,7 @@ function EventContent({ event }: { event: TimelineEventData }) {
 			const e = event as EventWithDismissedReview;
 			if (e.dismissed_review?.dismissal_message) {
 				return (
-					<p className="text-gray-600 text-sm">
+					<p className="text-gray-600 text-sm dark:text-gray-400">
 						{e.dismissed_review.dismissal_message}
 					</p>
 				);
@@ -166,20 +166,28 @@ function EventContent({ event }: { event: TimelineEventData }) {
 			const after = e.commit_id.slice(0, 7);
 			// TODO: Add links for the commits, branch, and author
 			return (
-				<div className="my-9 flex items-center gap-2 text-gray-600 text-sm">
+				<div className="my-9 flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
 					<img
 						src={e.actor.avatar_url}
 						alt={e.actor.login}
 						className="h-5 w-5 rounded-full"
 					/>
 					<p>
-						<span className="font-medium text-gray-800">{e.actor.login}</span>
+						<span className="font-medium text-gray-800 dark:text-gray-200">
+							{e.actor.login}
+						</span>
 						{" force pushed the "}
-						<span className="font-medium text-gray-800">{branch}</span>
+						<span className="font-medium text-gray-800 dark:text-gray-200">
+							{branch}
+						</span>
 						{" branch from "}
-						<code className="rounded bg-gray-100 px-1 text-xs">{before}</code>
+						<code className="rounded bg-gray-100 px-1 text-xs dark:bg-gray-800">
+							{before}
+						</code>
 						{" to "}
-						<code className="rounded bg-gray-100 px-1 text-xs">{after}</code>
+						<code className="rounded bg-gray-100 px-1 text-xs dark:bg-gray-800">
+							{after}
+						</code>
 					</p>
 					{timestamp}
 				</div>
@@ -191,16 +199,16 @@ function EventContent({ event }: { event: TimelineEventData }) {
 			const timestamp = formatRelativeTime(e.created_at);
 			const verb = event.event === "head_ref_deleted" ? "deleted" : "restored";
 			return (
-				<div className="flex items-center gap-2 text-gray-600 text-sm">
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
 					<img
 						src={e.actor.avatar_url}
 						alt={e.actor.login}
 						className="h-5 w-5 rounded-full"
 					/>
 					<p>
-						<span className="font-medium text-gray-800">{e.actor.login}</span>
+						<span className="font-medium text-gray-800 dark:text-gray-200">{e.actor.login}</span>
 						{` ${verb} the `}
-						<span className="font-medium text-gray-800">branch</span>
+						<span className="font-medium text-gray-800 dark:text-gray-200">branch</span>
 						{` ${timestamp}`}
 					</p>
 				</div>
@@ -220,7 +228,7 @@ function EventContent({ event }: { event: TimelineEventData }) {
 
 			// TODO: Add the source status
 			return (
-				<div className="text-gray-600 text-sm">
+				<div className="text-gray-600 text-sm dark:text-gray-400">
 					<div className="flex items-center gap-2">
 						{actor && (
 							<img
@@ -230,7 +238,9 @@ function EventContent({ event }: { event: TimelineEventData }) {
 							/>
 						)}
 						<span>
-							<span className="font-medium text-gray-800">{actor?.login}</span>
+							<span className="font-medium text-gray-800 dark:text-gray-200">
+								{actor?.login}
+							</span>
 							{` mentioned this ${isPR ? "pull request" : "issue"} `}
 							{timestamp}
 						</span>
@@ -242,9 +252,11 @@ function EventContent({ event }: { event: TimelineEventData }) {
 							rel="noreferrer"
 							className="mt-1 ml-7 flex w-fit items-center gap-1.5 hover:underline"
 						>
-							<span className="font-medium text-gray-800">{sourceTitle}</span>
+							<span className="font-medium text-gray-800 dark:text-gray-200">
+								{sourceTitle}
+							</span>
 							{repoFullName && sourceNumber && (
-								<span className="text-gray-400 text-xs">
+								<span className="text-gray-400 text-xs dark:text-gray-500">
 									{repoFullName}#{sourceNumber}
 								</span>
 							)}
@@ -262,14 +274,14 @@ function EventContent({ event }: { event: TimelineEventData }) {
 
 			if (isSelfAssigned) {
 				return (
-					<div className="flex items-center gap-2 text-gray-600 text-sm">
+					<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
 						<img
 							src={e.assignee.avatar_url}
 							alt={e.assignee.login}
 							className="h-5 w-5 rounded-full"
 						/>
 						<span>
-							<span className="font-medium text-gray-800">
+							<span className="font-medium text-gray-800 dark:text-gray-200">
 								{e.assignee.login}
 							</span>
 							{isAssigned
@@ -281,21 +293,23 @@ function EventContent({ event }: { event: TimelineEventData }) {
 				);
 			}
 			return (
-				<div className="flex items-center gap-2 text-gray-600 text-sm">
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
 					<img
 						src={e.actor.avatar_url}
 						alt={e.actor.login}
 						className="h-5 w-5 rounded-full"
 					/>
 					<div className="flex gap-1">
-						<span className="font-medium text-gray-800">{e.actor.login}</span>
+						<span className="font-medium text-gray-800 dark:text-gray-200">
+							{e.actor.login}
+						</span>
 						{isAssigned ? " assigned " : " unassigned "}
 						<img
 							src={e.assignee.avatar_url}
 							alt={e.assignee.login}
 							className="h-5 w-5 rounded-full"
 						/>
-						<span className="font-medium text-gray-800">
+						<span className="font-medium text-gray-800 dark:text-gray-200">
 							{e.assignee.login}
 						</span>{" "}
 						{timestamp}
@@ -310,14 +324,14 @@ function EventContent({ event }: { event: TimelineEventData }) {
 			const timestamp = formatRelativeTime(e.created_at);
 			const verb = event.event === "closed" ? "closed" : event.event === "merged" ? "merged" : "reopened";
 			return (
-				<div className="flex items-center gap-2 text-gray-600 text-sm">
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
 					<img
 						src={e.actor?.avatar_url}
 						alt={e.actor?.login ?? ""}
 						className="h-5 w-5 rounded-full"
 					/>
 					<p>
-						<span className="font-medium text-gray-800">
+						<span className="font-medium text-gray-800 dark:text-gray-200">
 							{e.actor?.login}
 						</span>
 						{" "}

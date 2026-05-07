@@ -111,7 +111,7 @@ function FileTreeNode({
 		const iconName = getFileIcon(node.name);
 		return (
 			<a
-				className="flex items-center gap-1.5 truncate rounded px-2 py-1 text-gray-700 text-sm transition-colors hover:bg-gray-50"
+				className="flex items-center gap-1.5 truncate rounded px-2 py-1 text-gray-700 text-sm transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
 				href={`${basePath}/changes#${fileId}`}
 				style={{ paddingLeft: `${paddingLeft}px` }}
 			>
@@ -139,7 +139,7 @@ function FileTreeNode({
 	return (
 		<div>
 			<button
-				className="flex w-full cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-gray-700 text-sm transition-colors hover:bg-gray-50"
+				className="flex w-full cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-gray-700 text-sm transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
 				onClick={() => setIsOpen(!isOpen)}
 				style={{ paddingLeft: `${paddingLeft}px` }}
 				type="button"
@@ -204,8 +204,8 @@ export function FileTreeSkeleton() {
 						key={i}
 						style={{ paddingLeft: `${paddingLeft}px` }}
 					>
-						<div className="h-4 w-4 flex-shrink-0 animate-pulse rounded bg-gray-200" />
-						<div className="h-4 flex-1 animate-pulse rounded bg-gray-200" />
+						<div className="h-4 w-4 flex-shrink-0 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+						<div className="h-4 flex-1 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
 					</div>
 				);
 			})}

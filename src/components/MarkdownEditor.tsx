@@ -325,13 +325,15 @@ export function MarkdownEditor({
 	];
 
 	return (
-		<div className={`rounded-lg border border-gray-300 ${className}`}>
-			<div className="-mb-px flex items-center gap-6 rounded-t-lg border-gray-300 border-b bg-gray-50 px-3">
+		<div
+			className={`rounded-lg border border-gray-300 dark:border-gray-600 ${className}`}
+		>
+			<div className="-mb-px flex items-center gap-6 rounded-t-lg border-gray-300 border-b bg-gray-50 px-3 dark:border-gray-600 dark:bg-gray-900">
 				<button
 					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
 						mode === "write"
 							? "border-blue-500 text-blue-600"
-							: "border-transparent text-gray-600 hover:text-gray-800"
+							: "border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
 					}`}
 					onClick={() => setMode("write")}
 					type="button"
@@ -342,7 +344,7 @@ export function MarkdownEditor({
 					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
 						mode === "preview"
 							? "border-blue-500 text-blue-600"
-							: "border-transparent text-gray-600 hover:text-gray-800"
+							: "border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
 					}`}
 					onClick={() => setMode("preview")}
 					type="button"
@@ -353,16 +355,18 @@ export function MarkdownEditor({
 
 			{mode === "write" ? (
 				<>
-					<div className="flex flex-wrap items-center gap-0.5 border-gray-300 border-b px-3 py-1.5">
+					<div className="flex flex-wrap items-center gap-0.5 border-gray-300 border-b px-3 py-1.5 dark:border-gray-600">
 						{toolbarGroups.map((group, gi) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: toolbar groups are static
 							<span className="flex items-center gap-0.5" key={gi}>
 								{gi > 0 && (
-									<span className="mx-1 select-none text-gray-300">|</span>
+									<span className="mx-1 select-none text-gray-300 dark:text-gray-600">
+										|
+									</span>
 								)}
 								{group.map((btn) => (
 									<button
-										className="inline-flex items-center justify-center rounded-md px-1.5 py-1 font-medium text-gray-600 text-sm hover:bg-gray-200 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+										className="inline-flex items-center justify-center rounded-md px-1.5 py-1 font-medium text-gray-600 text-sm hover:bg-gray-200 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
 										disabled={disabled}
 										key={btn.label}
 										onClick={btn.onClick}
@@ -377,7 +381,7 @@ export function MarkdownEditor({
 					</div>
 
 					<textarea
-						className="w-full resize-y rounded-b-lg border-0 px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50"
+						className="w-full resize-y rounded-b-lg border-0 px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-gray-950 dark:text-gray-100 dark:placeholder-gray-500"
 						disabled={disabled}
 						onChange={(e) => onChange(e.target.value)}
 						onKeyDown={handleKeyDown}
@@ -389,7 +393,7 @@ export function MarkdownEditor({
 				</>
 			) : (
 				<div
-					className="prose prose-sm max-w-none px-3 py-2"
+					className="prose prose-sm dark:prose-invert max-w-none px-3 py-2"
 					style={{ minHeight }}
 				>
 					<MarkdownRenderer content={value} />
@@ -397,10 +401,10 @@ export function MarkdownEditor({
 			)}
 
 			{(onSubmit || onCancel) && (
-				<div className="flex items-center justify-end gap-2 border-gray-300 border-t px-3 py-2">
+				<div className="flex items-center justify-end gap-2 border-gray-300 border-t px-3 py-2 dark:border-gray-600">
 					{onCancel && (
 						<button
-							className="cursor-pointer rounded-md border border-gray-300 px-4 py-1.5 font-medium text-gray-600 text-sm transition-colors hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+							className="cursor-pointer rounded-md border border-gray-300 px-4 py-1.5 font-medium text-gray-600 text-sm transition-colors hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 							disabled={disabled}
 							onClick={onCancel}
 							type="button"

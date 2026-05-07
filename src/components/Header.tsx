@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Header() {
 	const pathname = usePathname();
@@ -28,14 +29,14 @@ export function Header() {
 
 	return (
 		<header
-			className="sticky top-0 z-50 border-gray-200 border-b bg-white"
+			className="sticky top-0 z-50 border-gray-200 border-b bg-white dark:border-gray-800 dark:bg-gray-950"
 			ref={headerRef}
 		>
-			<div className="max-w-7xl px-4 sm:px-6 lg:px-8">
+			<div className="px-4 sm:px-6 lg:px-8">
 				<div className="flex h-16 items-center">
 					{prMatch && (
 						<a
-							className="font-medium text-gray-700 text-sm hover:text-gray-900"
+							className="font-medium text-gray-700 text-sm hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
 							href={`https://github.com/${prMatch[1]}/${prMatch[2]}/pull/${prMatch[3]}`}
 							rel="noopener noreferrer"
 							target="_blank"
@@ -43,6 +44,9 @@ export function Header() {
 							← Back to GitHub
 						</a>
 					)}
+					<div className="ml-auto">
+						<ThemeToggle />
+					</div>
 				</div>
 			</div>
 		</header>

@@ -33,7 +33,7 @@ export function CommitsSection({
 
 	return (
 		<>
-			<h3 className="mb-3 font-semibold text-gray-900 text-sm">
+			<h3 className="mb-3 font-semibold text-gray-900 text-sm dark:text-gray-100">
 				Commits
 				<Async fallback={null} promise={dataPromise}>
 					{([, commits]) => <span> ({commits.length})</span>}
@@ -43,7 +43,11 @@ export function CommitsSection({
 			<Async fallback={<CommitsSkeleton />} promise={dataPromise}>
 				{([pullRequest, commits]) => {
 					if (commits.length === 0) {
-						return <p className="text-gray-500 text-sm">No commits</p>;
+						return (
+							<p className="text-gray-500 text-sm dark:text-gray-400">
+								No commits
+							</p>
+						);
 					}
 
 					const baseUrl = `/${pullRequest.base.repo.owner.login}/${pullRequest.base.repo.name}/pull/${pullRequest.number}/changes`;
@@ -56,9 +60,9 @@ export function CommitsSection({
 									: false;
 								return (
 									<AsyncLink
-										className={`flex items-start gap-2 text-sm transition-colors hover:bg-gray-50 ${
+										className={`flex items-start gap-2 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 ${
 											isCurrent
-												? "rounded border-blue-500 border-l-2 bg-blue-50 px-2"
+												? "rounded border-blue-500 border-l-2 bg-blue-50 px-2 dark:bg-blue-950"
 												: ""
 										}`}
 										href={`${baseUrl}/${commit.sha}`}
@@ -72,11 +76,11 @@ export function CommitsSection({
 											/>
 										)}
 										<div className="min-w-0">
-											<p className="truncate font-medium text-gray-900 text-sm">
+											<p className="truncate font-medium text-gray-900 text-sm dark:text-gray-100">
 												{commit.commit.message.split("\n")[0]}
 											</p>
 											{commit.author && commit.commit.committer && (
-												<p className="mt-0.5 text-gray-500 text-xs">
+												<p className="mt-0.5 text-gray-500 text-xs dark:text-gray-400">
 													{commit.author.login} committed{" "}
 													{formatRelativeTime(
 														commit.commit.committer.date ?? "",
@@ -102,8 +106,8 @@ function CommitsSkeleton() {
 				<div className="flex items-start gap-2" key={i}>
 					<div className="mt-0.5 h-5 w-5 shrink-0 animate-pulse rounded-full bg-gray-200" />
 					<div className="min-w-0 flex-1">
-						<div className="h-4 w-3/4 animate-pulse rounded bg-gray-200" />
-						<div className="mt-1.5 h-3 w-1/3 animate-pulse rounded bg-gray-200" />
+						<div className="h-4 w-3/4 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+						<div className="mt-1.5 h-3 w-1/3 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
 					</div>
 				</div>
 			))}
