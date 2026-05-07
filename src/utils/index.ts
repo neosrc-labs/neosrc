@@ -1,6 +1,7 @@
 export function formatRelativeTime(isoDate: string): string {
 	const diffMs = Date.now() - new Date(isoDate).getTime();
 	const diffMin = Math.floor(diffMs / 60000);
+	if (diffMin === 0) return 'now'
 	if (diffMin < 60) return diffMin === 1 ? `${diffMin} mins ago` : `${diffMin} min ago`;
 
 	const diffHr = Math.floor(diffMin / 60);
