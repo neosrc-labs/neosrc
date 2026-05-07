@@ -12,6 +12,7 @@ interface TimelineEventProps {
 type LabelEvent = components["schemas"]["labeled-issue-event"]
 type CommentEvent = components["schemas"]["timeline-comment-event"]
 type CommittedEvent = components["schemas"]["timeline-committed-event"]
+type CrossReferencedEvent = components["schemas"]["timeline-cross-referenced-event"]
 type ForcePushEvent = {
 	event: "head_ref_force_pushed";
 	id: number;
@@ -178,6 +179,55 @@ function EventContent({ event }: { event: TimelineEventData }) {
 						<code className="text-xs bg-gray-100 px-1 rounded">{after}</code>
 					</p>
 					{timestamp}
+				</div>
+			);
+		}
+		case "cross-referenced": {
+			const e = event as CrossReferencedEvent;
+			const actor = e.actor;
+			const timestamp = formatRelativeTime(e.created_at);
+			const source = e.source?.issue;
+			const repo = source?.repository;
+			const repoFullName = repo
+				? `${repo.owner.login}/${repo.name}`
+				: null;
+			const sourceNumber = source?.number;
+			const sourceTitle = source?.title;
+			const sourceUrl = source?.html_url;
+			const isPR = source?.pull_request !== undefined;
+
+			// TODO: Add the source status
+			return (
+				<div className="text-gray-600 text-sm">
+					<div className="flex items-center gap-2">
+						{actor && (
+							<img
+								src={actor.avatar_url}
+								alt={actor.login}
+								className="h-5 w-5 rounded-full"
+							/>
+						)}
+						<span>
+							<span className="font-medium text-gray-800">{actor?.login}</span>
+							{` mentioned this ${isPR ? "pull request" : "issue"} `}
+							{timestamp}
+						</span>
+					</div>
+					{source && (
+						<a
+							href={sourceUrl ?? undefined}
+							target="_blank"
+							rel="noreferrer"
+							className="mt-1 ml-7 flex items-center gap-1.5 hover:underline w-fit"
+						>
+							<span className="font-medium text-gray-800">{sourceTitle}</span>
+							{repoFullName && sourceNumber && (
+								<span className="text-gray-400 text-xs">
+									{repoFullName}#{sourceNumber}
+								</span>
+							)}
+						</a>
+					)}
 				</div>
 			);
 		}
