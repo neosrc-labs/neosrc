@@ -19,20 +19,22 @@ export default function RightSidebar({
 }: RightSidebarProps) {
 	if (!pullRequestPromise) {
 		return (
-			<aside className="border-gray-200 border-l bg-white px-4 py-6">
-				<p className="text-gray-500 text-sm">No pull request data available.</p>
+			<aside className="border-gray-200 border-l bg-white px-4 py-6 dark:border-gray-800 dark:bg-gray-950">
+				<p className="text-gray-500 text-sm dark:text-gray-400">
+					No pull request data available.
+				</p>
 			</aside>
 		);
 	}
 
 	return (
-		<aside className="flex h-full flex-col border-gray-200 border-l bg-white px-4 py-6">
+		<aside className="flex h-full flex-col border-gray-200 border-l bg-white px-4 py-6 dark:border-gray-800 dark:bg-gray-950">
 			{/* Metadata Section - Sticky Top */}
-			<div className="sticky top-0 z-10 space-y-6 bg-white pb-4">
+			<div className="sticky top-0 z-10 space-y-6 bg-white pb-4 dark:bg-gray-950">
 				<MetadataSection pullRequestPromise={pullRequestPromise} />
 			</div>
 			{/* Commits Section - Scrollable */}
-			<div className="min-h-0 flex-1 overflow-y-auto border-gray-200 border-t pt-6">
+			<div className="min-h-0 flex-1 overflow-y-auto border-gray-200 border-t pt-6 dark:border-gray-800">
 				<CommitsSection
 					commitsPromise={commitsPromise}
 					pullRequestPromise={pullRequestPromise}

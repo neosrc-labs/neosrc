@@ -36,7 +36,7 @@ export default async function PullRequestPage({ params }: PageProps) {
 	if (!accessToken) {
 		return (
 			<div className="px-6 py-8">
-				<p className="text-gray-600">
+				<p className="text-gray-600 dark:text-gray-400">
 					Please sign in to view this pull request.
 				</p>
 			</div>

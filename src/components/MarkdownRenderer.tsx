@@ -16,7 +16,11 @@ const schema = {
 
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
 	if (!content) {
-		return <p className="text-gray-500 italic">No description provided.</p>;
+		return (
+			<p className="text-gray-500 italic dark:text-gray-400">
+				No description provided.
+			</p>
+		);
 	}
 
 	const stripped = content.replace(/<!--[\s\S]*?-->/g, "");

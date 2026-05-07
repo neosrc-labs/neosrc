@@ -28,7 +28,9 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 
 	if (isLoading) {
 		return (
-			<div className="py-4 text-gray-500 text-sm">Loading timeline...</div>
+			<div className="py-4 text-gray-500 text-sm dark:text-gray-400">
+				Loading timeline...
+			</div>
 		);
 	}
 
@@ -43,15 +45,19 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 	console.log({ filteredEvents });
 
 	return (
-		<div className="mt-4 border-gray-200 border-t pt-6">
-			<h2 className="mb-4 font-semibold text-gray-900 text-lg">Timeline</h2>
+		<div className="mt-4 border-gray-200 border-t pt-6 dark:border-gray-700">
+			<h2 className="mb-4 font-semibold text-gray-900 text-lg dark:text-gray-100">
+				Timeline
+			</h2>
 
 			{filteredEvents.length === 0 && (
-				<p className="text-gray-500 text-sm">No timeline events yet.</p>
+				<p className="text-gray-500 text-sm dark:text-gray-400">
+					No timeline events yet.
+				</p>
 			)}
 
 			<div className="relative">
-				<div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200" />
+				<div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200 dark:bg-gray-700" />
 
 				{filteredEvents.map((event, index) => (
 					<TimelineEvent event={event} key={`${event.id}-${index}`} />
@@ -62,10 +68,14 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 
 			<div className="py-4 text-center" ref={ref}>
 				{isFetchingNextPage && (
-					<p className="text-gray-500 text-sm">Loading more...</p>
+					<p className="text-gray-500 text-sm dark:text-gray-400">
+						Loading more...
+					</p>
 				)}
 				{!hasNextPage && filteredEvents.length > 0 && (
-					<p className="text-gray-400 text-sm">No more events</p>
+					<p className="text-gray-400 text-sm dark:text-gray-500">
+						No more events
+					</p>
 				)}
 			</div>
 		</div>

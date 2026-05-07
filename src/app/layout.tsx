@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 
 import { Header } from "~/components/Header";
+import { ThemeProvider } from "~/components/ThemeProvider";
+import { ThemeStylesheets } from "~/components/ThemeStylesheets";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
@@ -21,19 +23,12 @@ export default function RootLayout({
 	children,
 }: Readonly<{ children: React.ReactNode }>) {
 	return (
-		<html className={`${geist.variable}`} lang="en">
+		<html className={`${geist.variable}`} lang="en" suppressHydrationWarning>
 			<head>
-				{/* FIXME: Make this support darkmode and properly use media queries */}
 				<link
 					href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css"
 					rel="stylesheet"
-					// media="screen and (prefers-color-scheme: light)"
 				/>
-				{/* <link */}
-				{/* 	rel="stylesheet" */}
-				{/* 	href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" */}
-				{/* 	media="screen and (prefers-color-scheme: dark)" */}
-				{/* /> */}
 
 				<script
 					src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"
@@ -41,8 +36,11 @@ export default function RootLayout({
 				></script>
 			</head>
 			<body>
-				<Header />
-				<TRPCReactProvider>{children}</TRPCReactProvider>
+				<ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+					<Header />
+					<ThemeStylesheets />
+					<TRPCReactProvider>{children}</TRPCReactProvider>
+				</ThemeProvider>
 			</body>
 		</html>
 	);

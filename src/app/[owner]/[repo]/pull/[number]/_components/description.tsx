@@ -55,7 +55,7 @@ export function PullRequestDescriptionSection({
 				<div className="mb-2 flex items-center gap-2">
 					<Async
 						fallback={
-							<div className="h-5 w-16 animate-pulse rounded-full bg-gray-200" />
+							<div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
 						}
 						promise={pullRequestPromise}
 					>
@@ -86,7 +86,7 @@ export function PullRequestDescriptionSection({
 										{statusText}
 									</span>
 									{isDraft && (
-										<span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-800 text-xs">
+										<span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-800 text-xs dark:bg-gray-700 dark:text-gray-200">
 											Draft
 										</span>
 									)}
@@ -96,29 +96,31 @@ export function PullRequestDescriptionSection({
 					</Async>
 					<Async
 						fallback={
-							<div className="h-8 w-96 animate-pulse rounded bg-gray-200" />
+							<div className="h-8 w-96 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
 						}
 						promise={pullRequestPromise}
 					>
 						{(pullRequest) => (
-							<h1 className="font-bold text-2xl text-gray-900">
+							<h1 className="font-bold text-2xl text-gray-900 dark:text-gray-100">
 								{pullRequest.title}
 							</h1>
 						)}
 					</Async>
-					<h1 className="text-2xl text-gray-400">#{number}</h1>
+					<h1 className="text-2xl text-gray-400 dark:text-gray-500">
+						#{number}
+					</h1>
 				</div>
 
 				<Async
 					fallback={
-						<div className="h-5 w-104 animate-pulse rounded bg-gray-200" />
+						<div className="h-5 w-104 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
 					}
 					promise={pullRequestPromise}
 				>
 					{(pullRequest) => (
 						<div className="mt-2 flex items-center gap-2">
-							<div className="text-gray-600 text-sm">
-								<span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs">
+							<div className="text-gray-600 text-sm dark:text-gray-400">
+								<span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs dark:bg-gray-700">
 									{pullRequest.base.ref}
 								</span>
 								<span className="mx-2">←</span>
@@ -126,7 +128,7 @@ export function PullRequestDescriptionSection({
 									{pullRequest.head.ref}
 								</span>
 							</div>
-							<div className="flex items-center gap-2 text-gray-600 text-sm">
+							<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
 								opened by{" "}
 								<img
 									alt={pullRequest.user?.login}
@@ -141,11 +143,11 @@ export function PullRequestDescriptionSection({
 				</Async>
 			</div>
 
-			<div className="mt-4 border-gray-200 border-t pt-4" />
+			<div className="mt-4 border-gray-200 border-t pt-4 dark:border-gray-700" />
 
 			<Async
 				fallback={
-					<div className="h-48 w-fill animate-pulse rounded bg-gray-200" />
+					<div className="h-48 w-fill animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
 				}
 				promise={pullRequestPromise}
 			>
@@ -154,9 +156,9 @@ export function PullRequestDescriptionSection({
 					return (
 						<>
 							{/* PR Description */}
-							<div className="rounded-lg border border-gray-200 bg-gray-50">
-								<div className="flex items-center justify-between border-gray-200 border-b px-4 py-1">
-									<h3 className="font-semibold text-gray-700 text-sm">
+							<div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+								<div className="flex items-center justify-between border-gray-200 border-b px-4 py-1 dark:border-gray-700">
+									<h3 className="font-semibold text-gray-700 text-sm dark:text-gray-300">
 										Description
 									</h3>
 									{!isEditing && (
@@ -183,7 +185,7 @@ export function PullRequestDescriptionSection({
 											{displayBody ? (
 												<MarkdownRenderer content={displayBody} />
 											) : (
-												<p className="text-gray-500 italic">
+												<p className="text-gray-500 italic dark:text-gray-400">
 													No description provided.
 												</p>
 											)}

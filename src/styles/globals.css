@@ -1,16 +1,86 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
 	--font-sans:
 		var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
 		"Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--color-surface: #ffffff;
+	--color-surface-secondary: #f9fafb;
+	--color-border: #e5e7eb;
+	--color-text-primary: #111827;
+	--color-text-secondary: #4b5563;
+	--color-text-muted: #9ca3af;
 }
 
 html {
-	/*
-  * This makes the page reserve space for the scrollbar so loading states do not shift the page when
-  * the scroll bar is temporarily removed. This makes the page feel so much better.
-  */
 	scrollbar-gutter: stable;
+}
+
+/* Diff2html dark mode overrides */
+.dark .d2h-wrapper {
+	color: #e5e7eb;
+}
+.dark .d2h-file-header {
+	background-color: #1f2937;
+	border-color: #374151;
+}
+.dark .d2h-file-list-wrapper {
+	border-color: #374151;
+}
+.dark .d2h-file-list-line {
+	background-color: #111827;
+	border-color: #374151;
+}
+.dark .d2h-file-list-line:hover {
+	background-color: #1f2937;
+}
+.dark .d2h-code-linenumber {
+	background-color: #111827;
+	border-color: #374151;
+	color: #6b7280;
+}
+.dark .d2h-code-line {
+	background-color: #111827;
+	border-color: #374151;
+}
+.dark .d2h-ins {
+	background-color: rgba(34, 197, 94, 0.1);
+	border-color: rgba(34, 197, 94, 0.2);
+}
+.dark .d2h-del {
+	background-color: rgba(239, 68, 68, 0.1);
+	border-color: rgba(239, 68, 68, 0.2);
+}
+.dark .d2h-info {
+	background-color: #1f2937;
+	border-color: #374151;
+	color: #9ca3af;
+}
+.dark .d2h-changed-tag {
+	background-color: #1f2937;
+}
+.dark .d2h-code-line del,
+.dark .d2h-code-side-line del {
+	background-color: rgba(239, 68, 68, 0.4);
+}
+.dark .d2h-code-line ins,
+.dark .d2h-code-side-line ins {
+	background-color: rgba(34, 197, 94, 0.4);
+}
+
+/* Prose dark mode */
+.dark .prose {
+	--tw-prose-body: #d1d5db;
+	--tw-prose-headings: #f9fafb;
+	--tw-prose-links: #60a5fa;
+	--tw-prose-bold: #f3f4f6;
+	--tw-prose-code: #f3f4f6;
+	--tw-prose-quotes: #d1d5db;
+	--tw-prose-quote-borders: #4b5563;
+	--tw-prose-hr: #374151;
+	--tw-prose-th-borders: #4b5563;
+	--tw-prose-td-borders: #374151;
 }
