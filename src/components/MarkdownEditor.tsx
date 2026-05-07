@@ -328,20 +328,22 @@ export function MarkdownEditor({
 		<div className={`rounded-lg border border-gray-300 ${className}`}>
 			<div className="-mb-px flex items-center gap-6 rounded-t-lg border-gray-300 border-b bg-gray-50 px-3">
 				<button
-					className={`border-b-2 px-1 py-2 font-medium text-sm cursor-pointer ${mode === "write"
-						? "border-blue-500 text-blue-600"
-						: "border-transparent text-gray-600 hover:text-gray-800"
-						}`}
+					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
+						mode === "write"
+							? "border-blue-500 text-blue-600"
+							: "border-transparent text-gray-600 hover:text-gray-800"
+					}`}
 					onClick={() => setMode("write")}
 					type="button"
 				>
 					Write
 				</button>
 				<button
-					className={`border-b-2 px-1 py-2 font-medium text-sm cursor-pointer ${mode === "preview"
-						? "border-blue-500 text-blue-600"
-						: "border-transparent text-gray-600 hover:text-gray-800"
-						}`}
+					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
+						mode === "preview"
+							? "border-blue-500 text-blue-600"
+							: "border-transparent text-gray-600 hover:text-gray-800"
+					}`}
 					onClick={() => setMode("preview")}
 					type="button"
 				>
@@ -398,7 +400,7 @@ export function MarkdownEditor({
 				<div className="flex items-center justify-end gap-2 border-gray-300 border-t px-3 py-2">
 					{onCancel && (
 						<button
-							className="rounded-md border border-gray-300 px-4 py-1.5 font-medium text-gray-600 text-sm transition-colors hover:bg-gray-100 hover:text-gray-800 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+							className="cursor-pointer rounded-md border border-gray-300 px-4 py-1.5 font-medium text-gray-600 text-sm transition-colors hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
 							disabled={disabled}
 							onClick={onCancel}
 							type="button"
@@ -408,7 +410,7 @@ export function MarkdownEditor({
 					)}
 					{onSubmit && (
 						<button
-							className="rounded-md bg-[#2da44e] px-4 py-1.5 font-medium text-sm text-white transition-colors hover:bg-[#218838] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+							className="cursor-pointer rounded-md bg-[#2da44e] px-4 py-1.5 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
 							disabled={disabled || !value.trim()}
 							onClick={onSubmit}
 							type="button"

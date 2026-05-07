@@ -15,6 +15,8 @@ export type Assignee = NonNullable<PullsGetResponseData["assignees"]>[number];
 export type Commit = PullsListCommitsResponseData[number];
 export type TimelineEventData =
 	RestEndpointMethodTypes["issues"]["listEventsForTimeline"]["response"]["data"][number];
+export type IssueCommentData =
+	RestEndpointMethodTypes["issues"]["createComment"]["response"]["data"];
 
 export function createOctokit(accessToken: string) {
 	return new Octokit({
@@ -87,6 +89,23 @@ export const updatePullRequest = async (
 		owner,
 		repo,
 		pull_number: pullNumber,
+		body,
+	});
+	return response.data;
+};
+
+export const createIssueComment = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	issueNumber: number,
+	body: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.issues.createComment({
+		owner,
+		repo,
+		issue_number: issueNumber,
 		body,
 	});
 	return response.data;

@@ -155,11 +155,13 @@ export function PullRequestDescriptionSection({
 						<>
 							{/* PR Description */}
 							<div className="rounded-lg border border-gray-200 bg-gray-50">
-								<div className="flex items-center justify-between px-4 py-1 border-b border-gray-200">
-									<h3 className="text-sm font-semibold text-gray-700">Description</h3>
+								<div className="flex items-center justify-between border-gray-200 border-b px-4 py-1">
+									<h3 className="font-semibold text-gray-700 text-sm">
+										Description
+									</h3>
 									{!isEditing && (
 										<button
-											className="text-blue-600 text-sm hover:text-blue-800 cursor-pointer"
+											className="cursor-pointer text-blue-600 text-sm hover:text-blue-800"
 											onClick={() => handleStartEdit(pullRequest.body ?? "")}
 											type="button"
 										>
@@ -181,7 +183,9 @@ export function PullRequestDescriptionSection({
 											{displayBody ? (
 												<MarkdownRenderer content={displayBody} />
 											) : (
-												<p className="text-gray-500 italic">No description provided.</p>
+												<p className="text-gray-500 italic">
+													No description provided.
+												</p>
 											)}
 										</div>
 									)}

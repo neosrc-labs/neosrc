@@ -2,6 +2,7 @@
 
 import { useInView } from "react-intersection-observer";
 import { api } from "~/trpc/react";
+import { CommentForm } from "./comment-form";
 import { TimelineEvent } from "./timeline-event";
 
 interface TimelineSectionProps {
@@ -56,6 +57,8 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 					<TimelineEvent event={event} key={`${event.id}-${index}`} />
 				))}
 			</div>
+
+			<CommentForm number={number} owner={owner} repo={repo} />
 
 			<div className="py-4 text-center" ref={ref}>
 				{isFetchingNextPage && (
