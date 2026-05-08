@@ -3,6 +3,7 @@
 import { Diff2HtmlUI } from "diff2html/lib/ui/js/diff2html-ui";
 import { useEffect, useRef, useState } from "react";
 import "diff2html/bundles/css/diff2html.min.css";
+import { useTheme } from "next-themes";
 
 interface FileDiffProps {
 	file: {
@@ -42,6 +43,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 
 	const [isCollapsed, setIsCollapsed] = useState<boolean>(isViewed);
 	const toggleCollapsed = () => setIsCollapsed(!isCollapsed);
+	const { resolvedTheme } = useTheme();
 
 	const containerRef = useRef<HTMLDivElement>(null);
 
@@ -60,6 +62,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 			const normalizedDiff = file.patch.startsWith("---")
 				? file.patch
 				: `--- a/${file.filename}\n+++ b/${file.filename}\n${file.patch}`;
+
 			const diff2htmlUi = new Diff2HtmlUI(
 				containerRef.current,
 				normalizedDiff,
@@ -68,11 +71,12 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 					matching: "lines",
 					outputFormat: "line-by-line",
 					highlight: true,
+					colorScheme: resolvedTheme
 				},
 			);
 			diff2htmlUi.draw();
 		}
-	}, [file.patch, file.filename, isCollapsed]);
+	}, [file.patch, file.filename, isCollapsed, resolvedTheme]);
 
 	const toggleViewed = () => {
 		const key = getViewedKey(owner, repo, number);
