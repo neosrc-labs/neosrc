@@ -26,10 +26,6 @@ export function CommentForm({ owner, repo, number }: CommentFormProps) {
 		addComment.mutate({ owner, repo, number, body });
 	}, [body, owner, repo, number, addComment]);
 
-	const handleCancel = useCallback(() => {
-		setBody("");
-	}, []);
-
 	return (
 		<div className="mt-6 border-gray-200 border-t pt-6">
 			<h3 className="mb-3 font-semibold text-gray-900 dark:text-gray-300 text-sm">
@@ -37,7 +33,6 @@ export function CommentForm({ owner, repo, number }: CommentFormProps) {
 			</h3>
 			<MarkdownEditor
 				disabled={addComment.isPending}
-				onCancel={handleCancel}
 				onChange={setBody}
 				onSubmit={handleSubmit}
 				placeholder="Leave a comment"
