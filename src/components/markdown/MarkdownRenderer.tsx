@@ -5,6 +5,7 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
+import { remarkMentionPlugin } from "./plugins/remark-mention";
 
 interface MarkdownRendererProps {
 	content: string;
@@ -33,7 +34,11 @@ export function MarkdownRenderer({
 	const stripped = content.replace(/<!--[\s\S]*?-->/g, "");
 	return (
 		<ReactMarkdown
-			remarkPlugins={[remarkGfm, remarkIssuePlugin(owner, repo)]}
+			remarkPlugins={[
+				remarkGfm,
+				remarkIssuePlugin(owner, repo),
+				remarkMentionPlugin,
+			]}
 			rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
 			components={{
 				summary({ children, ...props }) {
