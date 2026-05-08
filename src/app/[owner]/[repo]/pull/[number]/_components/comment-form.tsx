@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { MarkdownEditor } from "~/components/MarkdownEditor";
+import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { api } from "~/trpc/react";
 
 interface CommentFormProps {
@@ -42,6 +42,8 @@ export function CommentForm({ owner, repo, number }: CommentFormProps) {
 				onSubmit={handleSubmit}
 				placeholder="Leave a comment"
 				value={body}
+				owner={owner}
+				repo={repo}
 			/>
 			{addComment.isError && (
 				<p className="mt-2 text-red-600 text-sm">

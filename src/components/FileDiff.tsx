@@ -71,7 +71,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 					matching: "lines",
 					outputFormat: "line-by-line",
 					highlight: true,
-					colorScheme: resolvedTheme
+					colorScheme: resolvedTheme,
 				},
 			);
 			diff2htmlUi.draw();
@@ -106,7 +106,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 
 	return (
 		<div
-			className="mb-6 rounded-lg border border-gray-200 dark:border-gray-700 scroll-mt-[calc(var(--header-height)+8px)]"
+			className="mb-6 scroll-mt-[calc(var(--header-height)+8px)] rounded-lg border border-gray-200 dark:border-gray-700"
 			id={fileId}
 		>
 			{/* File Header */}

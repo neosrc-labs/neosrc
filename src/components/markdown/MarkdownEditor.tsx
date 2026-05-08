@@ -14,6 +14,8 @@ interface MarkdownEditorProps {
 	disabled?: boolean;
 	minHeight?: string;
 	className?: string;
+	owner?: string;
+	repo?: string;
 }
 
 function findLineStart(text: string, position: number): number {
@@ -29,8 +31,10 @@ export function MarkdownEditor({
 	submitLabel = "Comment",
 	cancelLabel = "Cancel",
 	disabled = false,
-	minHeight = "200px",
+	minHeight = "auto",
 	className = "",
+	owner,
+	repo,
 }: MarkdownEditorProps) {
 	const [mode, setMode] = useState<"write" | "preview">("write");
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -396,7 +400,7 @@ export function MarkdownEditor({
 					className="prose prose-sm dark:prose-invert max-w-none px-3 py-2"
 					style={{ minHeight }}
 				>
-					<MarkdownRenderer content={value} />
+					<MarkdownRenderer content={value} owner={owner} repo={repo} />
 				</div>
 			)}
 

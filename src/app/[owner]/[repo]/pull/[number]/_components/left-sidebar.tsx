@@ -45,11 +45,7 @@ export default function LeftSidebar({
 				</Suspense>
 			</div>
 
-			<SidebarActionButtons
-				number={number}
-				owner={owner}
-				repo={repo}
-			/>
+			<SidebarActionButtons number={number} owner={owner} repo={repo} />
 		</aside>
 	);
 }

@@ -127,10 +127,11 @@ interface NavItemProps {
 function NavItem({ href, label, isActive }: NavItemProps) {
 	return (
 		<Link
-			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${isActive
-				? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-				: "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
-				}`}
+			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${
+				isActive
+					? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+					: "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+			}`}
 			href={href}
 		>
 			{label}
@@ -170,12 +171,11 @@ export function SidebarActionButtons({
 		approveMutation.mutate({ owner, repo, number, event: "APPROVE" });
 	}, [owner, repo, number, approveMutation]);
 
-
 	// TODO: Disable approve button based on if the user is allowed to approve this PR
 	return (
 		<div className="sticky bottom-0 z-10 space-y-2 border-gray-200 border-t bg-white pt-6 pr-4 dark:border-gray-800 dark:bg-gray-950">
 			<button
-				className="w-full rounded-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+				className="w-full cursor-pointer rounded-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
 				disabled={approveMutation.isPending || approved}
 				onClick={handleApprove}
 				type="button"

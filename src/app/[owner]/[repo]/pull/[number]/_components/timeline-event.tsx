@@ -1,12 +1,14 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { MarkdownRenderer } from "~/components/MarkdownRenderer";
+import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import type { TimelineEventData } from "~/server/github";
 import { formatRelativeTime } from "~/utils";
 
 interface TimelineEventProps {
 	event: TimelineEventData;
+	owner: string;
+	repo: string;
 }
 
 type LabelEvent = components["schemas"]["labeled-issue-event"];
@@ -33,14 +35,14 @@ type EventWithDismissedReview = TimelineEventData & {
 	dismissed_review?: { dismissal_message?: string | null };
 };
 
-export function TimelineEvent({ event }: TimelineEventProps) {
+export function TimelineEvent({ event, owner, repo }: TimelineEventProps) {
 	return (
 		<div className="relative mb-4 ml-12">
 			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-gray-950 dark:ring-gray-700">
 				<TimelineIcon event={event} />
 			</div>
 
-			<EventContent event={event} />
+			<EventContent event={event} owner={owner} repo={repo} />
 		</div>
 	);
 }
@@ -81,7 +83,13 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 				alt={e.user?.login}
 				className="h-6 w-6 rounded-full"
 				src={e.user?.avatar_url}
-				title={state === "approved" ? "Approved" : state === "changes_requested" ? "Changes requested" : "Reviewed"}
+				title={
+					state === "approved"
+						? "Approved"
+						: state === "changes_requested"
+							? "Changes requested"
+							: "Reviewed"
+				}
 			/>
 		);
 	}
@@ -105,7 +113,15 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 	return <span className="text-xs">{iconMap[event.event ?? ""] ?? "●"}</span>;
 }
 
-function EventContent({ event }: { event: TimelineEventData }) {
+function EventContent({
+	event,
+	owner,
+	repo,
+}: {
+	event: TimelineEventData;
+	owner: string;
+	repo: string;
+}) {
 	switch (event.event) {
 		case "commented": {
 			const e = event as CommentEvent;
@@ -113,7 +129,7 @@ function EventContent({ event }: { event: TimelineEventData }) {
 				return (
 					<div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
 						<div className="prose prose-sm max-w-none">
-							<MarkdownRenderer content={e.body} />
+							<MarkdownRenderer content={e.body} owner={owner} repo={repo} />
 						</div>
 					</div>
 				);
@@ -123,7 +139,9 @@ function EventContent({ event }: { event: TimelineEventData }) {
 
 		case "reviewed": {
 			const e = event as ReviewEvent;
-			const timestamp = formatRelativeTime(e.submitted_at ?? e.updated_at ?? "");
+			const timestamp = formatRelativeTime(
+				e.submitted_at ?? e.updated_at ?? "",
+			);
 			const isApproved = e.state === "approved";
 			const isChangesRequested = e.state === "changes_requested";
 			const stateLabel = isApproved
@@ -134,11 +152,9 @@ function EventContent({ event }: { event: TimelineEventData }) {
 			return (
 				<div className="text-gray-600 text-sm dark:text-gray-400">
 					<p className="flex items-center gap-1.5">
-						{isApproved && (
-							<span className="text-green-500 text-base">✓</span>
-						)}
+						{isApproved && <span className="text-base text-green-500">✓</span>}
 						{isChangesRequested && (
-							<span className="text-red-500 text-base">📄</span>
+							<span className="text-base text-red-500">📄</span>
 						)}
 						<span className="font-medium text-gray-800 dark:text-gray-200">
 							{e.user?.login}
@@ -148,7 +164,7 @@ function EventContent({ event }: { event: TimelineEventData }) {
 					{e.body && (
 						<div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
 							<div className="prose prose-sm max-w-none">
-								<MarkdownRenderer content={e.body} />
+								<MarkdownRenderer content={e.body} owner={owner} repo={repo} />
 							</div>
 						</div>
 					)}
@@ -254,9 +270,13 @@ function EventContent({ event }: { event: TimelineEventData }) {
 						className="h-5 w-5 rounded-full"
 					/>
 					<p>
-						<span className="font-medium text-gray-800 dark:text-gray-200">{e.actor.login}</span>
+						<span className="font-medium text-gray-800 dark:text-gray-200">
+							{e.actor.login}
+						</span>
 						{` ${verb} the `}
-						<span className="font-medium text-gray-800 dark:text-gray-200">branch</span>
+						<span className="font-medium text-gray-800 dark:text-gray-200">
+							branch
+						</span>
 						{` ${timestamp}`}
 					</p>
 				</div>
@@ -370,7 +390,12 @@ function EventContent({ event }: { event: TimelineEventData }) {
 		case "reopened": {
 			const e = event as StateChangeEvent;
 			const timestamp = formatRelativeTime(e.created_at);
-			const verb = event.event === "closed" ? "closed" : event.event === "merged" ? "merged" : "reopened";
+			const verb =
+				event.event === "closed"
+					? "closed"
+					: event.event === "merged"
+						? "merged"
+						: "reopened";
 			return (
 				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
 					<img
@@ -381,8 +406,7 @@ function EventContent({ event }: { event: TimelineEventData }) {
 					<p>
 						<span className="font-medium text-gray-800 dark:text-gray-200">
 							{e.actor?.login}
-						</span>
-						{" "}
+						</span>{" "}
 						{verb}
 						{" this "}
 						{timestamp}

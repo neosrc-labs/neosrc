@@ -19,7 +19,6 @@ html {
 	scrollbar-gutter: stable;
 }
 
-
 /* Prose dark mode */
 .dark .prose {
 	--tw-prose-body: #d1d5db;

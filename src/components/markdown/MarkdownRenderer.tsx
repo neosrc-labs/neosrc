@@ -4,9 +4,12 @@ import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
+import { remarkIssuePlugin } from "./plugins/remark-issue";
 
 interface MarkdownRendererProps {
 	content: string;
+	owner?: string;
+	repo?: string;
 }
 
 const schema = {
@@ -14,7 +17,11 @@ const schema = {
 	tagNames: [...(defaultSchema.tagNames ?? []), "details", "summary"],
 };
 
-export function MarkdownRenderer({ content }: MarkdownRendererProps) {
+export function MarkdownRenderer({
+	content,
+	owner,
+	repo,
+}: MarkdownRendererProps) {
 	if (!content) {
 		return (
 			<p className="text-gray-500 italic dark:text-gray-400">
@@ -24,10 +31,9 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
 	}
 
 	const stripped = content.replace(/<!--[\s\S]*?-->/g, "");
-	// TODO: Could this be done easier with remark-collapse? I am a bit worried about XXS
 	return (
 		<ReactMarkdown
-			remarkPlugins={[remarkGfm]}
+			remarkPlugins={[remarkGfm, remarkIssuePlugin(owner, repo)]}
 			rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
 			components={{
 				summary({ children, ...props }) {

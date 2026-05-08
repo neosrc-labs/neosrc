@@ -2,8 +2,8 @@
 
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
-import { MarkdownEditor } from "~/components/MarkdownEditor";
-import { MarkdownRenderer } from "~/components/MarkdownRenderer";
+import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
+import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { Reactions } from "~/components/Reactions";
 import type { PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -183,7 +183,11 @@ export function PullRequestDescriptionSection({
 									) : (
 										<div className="prose prose-sm max-w-none">
 											{displayBody ? (
-												<MarkdownRenderer content={displayBody} />
+												<MarkdownRenderer
+													content={displayBody}
+													owner={owner}
+													repo={repo}
+												/>
 											) : (
 												<p className="text-gray-500 italic dark:text-gray-400">
 													No description provided.

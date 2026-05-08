@@ -60,7 +60,12 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 				<div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200 dark:bg-gray-700" />
 
 				{filteredEvents.map((event, index) => (
-					<TimelineEvent event={event} key={`${event.id}-${index}`} />
+					<TimelineEvent
+						event={event}
+						key={`${event.id}-${index}`}
+						owner={owner}
+						repo={repo}
+					/>
 				))}
 			</div>
 
