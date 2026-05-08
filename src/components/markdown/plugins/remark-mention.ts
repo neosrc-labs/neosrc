@@ -16,7 +16,8 @@ export function remarkMentionPlugin() {
 				parent.type !== "code"
 			) {
 				const value = node.value as string;
-				const mentionRegex = /(?<!\w)@([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)\b/g;
+				const mentionRegex =
+					/(?<!\w)@([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)\b/g;
 				const parts: any[] = [];
 				let cursor = 0;
 				let match: RegExpExecArray | null;

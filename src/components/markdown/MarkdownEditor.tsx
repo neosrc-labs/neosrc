@@ -1,6 +1,9 @@
 "use client";
 
+import { keepPreviousData } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { api } from "~/trpc/react";
+import { IssueAutocomplete } from "./issue-autocomplete";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 
 interface MarkdownEditorProps {
@@ -37,15 +40,78 @@ export function MarkdownEditor({
 	repo,
 }: MarkdownEditorProps) {
 	const [mode, setMode] = useState<"write" | "preview">("write");
+	const [autocompleteQuery, setAutocompleteQuery] = useState<string | null>(
+		null,
+	);
+	const [autocompleteIndex, setAutocompleteIndex] = useState(0);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const cursorRef = useRef<{ start: number; end: number } | null>(null);
 	const valueRef = useRef(value);
 	const onChangeRef = useRef(onChange);
 	const disabledRef = useRef(disabled);
+	const containerRef = useRef<HTMLDivElement>(null);
+	const cursorPosRef = useRef(0);
+	const [dropdownTop, setDropdownTop] = useState(80);
 
 	valueRef.current = value;
 	onChangeRef.current = onChange;
 	disabledRef.current = disabled;
+
+	const {
+		data: autocompleteIssues = [],
+		isFetching: issuesLoading,
+		isError: issuesError,
+		error: issuesErrorObj,
+	} = api.issues.search.useQuery(
+		{
+			owner: owner ?? "",
+			repo: repo ?? "",
+			query: autocompleteQuery ?? "",
+		},
+		{
+			enabled: autocompleteQuery !== null && !!owner && !!repo,
+			staleTime: 30_000,
+			placeholderData: keepPreviousData,
+		},
+	);
+
+	function detectAutocomplete(text: string, cursorPos: number): string | null {
+		const textBeforeCursor = text.slice(0, cursorPos);
+		const match = textBeforeCursor.match(/(?:^|\s)(#[\w-]*)$/);
+		if (!match || !match[1]) return null;
+		const query = match[1].slice(1);
+		return query;
+	}
+
+	const dismissAutocomplete = useCallback(() => {
+		setAutocompleteQuery(null);
+		setAutocompleteIndex(0);
+	}, []);
+
+	const handleAutocompleteSelect = useCallback(
+		(issueNumber: number) => {
+			const textarea = textareaRef.current;
+			if (!textarea) return;
+			const cursorPos = textarea.selectionStart;
+			const textBeforeCursor = valueRef.current.slice(0, cursorPos);
+			const match = textBeforeCursor.match(/(?:^|\s)(#[\w-]*)$/);
+			if (!match) return;
+			const hashStart = match.index! + (match[0].startsWith("#") ? 0 : 1);
+			const replaceEnd = cursorPos;
+			const replacement = `#${issueNumber}`;
+			const newText =
+				valueRef.current.slice(0, hashStart) +
+				replacement +
+				valueRef.current.slice(replaceEnd);
+			cursorRef.current = {
+				start: hashStart + replacement.length,
+				end: hashStart + replacement.length,
+			};
+			onChangeRef.current(newText);
+			dismissAutocomplete();
+		},
+		[dismissAutocomplete],
+	);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: need to re-run after value changes to restore cursor
 	useEffect(() => {
@@ -250,6 +316,32 @@ export function MarkdownEditor({
 
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+			if (autocompleteQuery !== null) {
+				if (e.key === "ArrowUp") {
+					e.preventDefault();
+					setAutocompleteIndex((i) => Math.max(0, i - 1));
+					return;
+				}
+				if (e.key === "ArrowDown") {
+					e.preventDefault();
+					setAutocompleteIndex((i) => i + 1);
+					return;
+				}
+				if (e.key === "Enter") {
+					e.preventDefault();
+					const issue = autocompleteIssues[autocompleteIndex];
+					if (issue) {
+						handleAutocompleteSelect(issue.number);
+					}
+					return;
+				}
+				if (e.key === "Escape") {
+					e.preventDefault();
+					dismissAutocomplete();
+					return;
+				}
+			}
+
 			if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "b") {
 				e.preventDefault();
 				handleBold();
@@ -273,7 +365,19 @@ export function MarkdownEditor({
 				onCancel?.();
 			}
 		},
-		[handleBold, handleItalic, handleLink, handleCodeBlock, onSubmit, onCancel],
+		[
+			autocompleteQuery,
+			autocompleteIssues,
+			autocompleteIndex,
+			handleAutocompleteSelect,
+			dismissAutocomplete,
+			handleBold,
+			handleItalic,
+			handleLink,
+			handleCodeBlock,
+			onSubmit,
+			onCancel,
+		],
 	);
 
 	const isMac =
@@ -330,7 +434,8 @@ export function MarkdownEditor({
 
 	return (
 		<div
-			className={`rounded-lg border border-gray-300 dark:border-gray-600 ${className}`}
+			className={`relative rounded-lg border border-gray-300 dark:border-gray-600 ${className}`}
+			ref={containerRef}
 		>
 			<div className="-mb-px flex items-center gap-6 rounded-t-lg border-gray-300 border-b bg-gray-50 px-3 dark:border-gray-600 dark:bg-gray-900">
 				<button
@@ -384,11 +489,67 @@ export function MarkdownEditor({
 						))}
 					</div>
 
+					{autocompleteQuery !== null && owner && repo && !issuesLoading && autocompleteIssues.length > 0 && (
+						<IssueAutocomplete
+							issues={autocompleteIssues}
+							loading={issuesLoading}
+							error={issuesError ? issuesErrorObj?.message ?? "Unknown error" : null}
+							selectedIndex={autocompleteIndex}
+							onSelect={handleAutocompleteSelect}
+							style={{ top: dropdownTop }}
+						/>
+					)}
 					<textarea
 						className="w-full resize-y rounded-b-lg border-0 px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-gray-950 dark:text-gray-100 dark:placeholder-gray-500"
 						disabled={disabled}
-						onChange={(e) => onChange(e.target.value)}
+						onBlur={() => {
+							setTimeout(() => {
+								if (
+									document.activeElement?.closest('[data-autocomplete="true"]')
+								)
+									return;
+								dismissAutocomplete();
+							}, 100);
+						}}
+						onChange={(e) => {
+							const newValue = e.target.value;
+							const cursorPos = e.target.selectionStart;
+							onChangeRef.current(newValue);
+							if (!disabledRef.current && owner && repo) {
+								const q = detectAutocomplete(newValue, cursorPos);
+								setAutocompleteQuery(q);
+								setAutocompleteIndex(0);
+								if (q !== null) {
+									const textarea = e.target;
+									const lineNumber =
+										newValue.slice(0, cursorPos).split("\n").length - 1;
+									const top =
+										textarea.offsetTop +
+										8 +
+										(lineNumber + 1) * 20 -
+										textarea.scrollTop;
+									setDropdownTop(top);
+								}
+							}
+						}}
 						onKeyDown={handleKeyDown}
+						onKeyUp={(e) => {
+							if (
+								autocompleteQuery !== null &&
+								["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)
+							) {
+								const textarea = textareaRef.current;
+								if (textarea) {
+									const q = detectAutocomplete(
+										textarea.value,
+										textarea.selectionStart,
+									);
+									if (q === null) {
+										dismissAutocomplete();
+									}
+								}
+							}
+						}}
 						placeholder={placeholder}
 						ref={textareaRef}
 						style={{ minHeight }}

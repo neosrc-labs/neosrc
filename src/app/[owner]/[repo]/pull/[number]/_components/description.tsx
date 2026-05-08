@@ -179,6 +179,8 @@ export function PullRequestDescriptionSection({
 											onSubmit={handleSave}
 											submitLabel="Save"
 											value={editBody}
+											owner={owner}
+											repo={repo}
 										/>
 									) : (
 										<div className="prose prose-sm max-w-none">

@@ -236,6 +236,38 @@ export const getPullRequestTimeline = cache(
 	},
 );
 
+export type IssueSearchItem = {
+	number: number;
+	title: string;
+	state: string;
+	type: "issue" | "pull_request";
+	user: { login: string } | null;
+};
+
+export const searchIssues = cache(
+	async (accessToken: string, owner: string, repo: string, query: string) => {
+		const octokit = createOctokit(accessToken);
+		const q = query
+			? `repo:${owner}/${repo} state:open ${query} in:title`
+			: `repo:${owner}/${repo} state:open`;
+		const response = await octokit.search.issuesAndPullRequests({
+			q,
+			per_page: 5,
+			sort: "updated",
+			order: "desc",
+		});
+		return response.data.items.map(
+			(item): IssueSearchItem => ({
+				number: item.number,
+				title: item.title,
+				state: item.state,
+				type: item.pull_request ? "pull_request" : "issue",
+				user: item.user ? { login: item.user.login } : null,
+			}),
+		);
+	},
+);
+
 // TODO: Check if generators support cache() or maybe interally we can cache?
 export async function* getPullRequestFilesStream(
 	accessToken: string,
