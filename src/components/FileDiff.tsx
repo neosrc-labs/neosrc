@@ -106,7 +106,7 @@ export default function FileDiff({ file, owner, repo, number }: FileDiffProps) {
 
 	return (
 		<div
-			className="mb-6 rounded-lg border border-gray-200 dark:border-gray-700"
+			className="mb-6 rounded-lg border border-gray-200 dark:border-gray-700 scroll-mt-[calc(var(--header-height)+8px)]"
 			id={fileId}
 		>
 			{/* File Header */}
