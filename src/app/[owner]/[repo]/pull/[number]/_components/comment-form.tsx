@@ -32,7 +32,7 @@ export function CommentForm({ owner, repo, number }: CommentFormProps) {
 
 	return (
 		<div className="mt-6 border-gray-200 border-t pt-6">
-			<h3 className="mb-3 font-semibold text-gray-900 text-sm">
+			<h3 className="mb-3 font-semibold text-gray-900 dark:text-gray-300 text-sm">
 				Add a comment
 			</h3>
 			<MarkdownEditor
