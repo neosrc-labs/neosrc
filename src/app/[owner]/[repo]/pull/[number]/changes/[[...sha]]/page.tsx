@@ -4,9 +4,7 @@ import { githubAccessToken } from "~/server/auth";
 import {
 	type CommitData,
 	getCommit,
-	getPullRequest,
 	getPullRequestCommits,
-	type PullsGetResponseData,
 	type PullsListCommitsResponseData,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
@@ -44,8 +42,6 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 			</div>
 		);
 	}
-	const pullRequest = getPullRequest(accessToken, owner, repo, number);
-
 	let commit: Promise<CommitData> | null = null;
 	let commits: Promise<PullsListCommitsResponseData> | null = null;
 	try {
@@ -72,7 +68,6 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 				<CommitHeader
 					commitPromise={commit}
 					commitsPromise={commits}
-					pullRequestPromise={pullRequest}
 					number={number}
 					owner={owner}
 					repo={repo}
@@ -94,7 +89,6 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 interface CommitHeaderProps {
 	commitPromise: Promise<CommitData> | null;
 	commitsPromise: Promise<PullsListCommitsResponseData> | null;
-	pullRequestPromise: Promise<PullsGetResponseData>;
 	owner: string;
 	repo: string;
 	number: number;
@@ -104,16 +98,13 @@ interface CommitHeaderProps {
 async function CommitHeader({
 	commitPromise,
 	commitsPromise,
-	pullRequestPromise,
 	owner,
 	repo,
 	number,
 	commitSha,
 }: CommitHeaderProps) {
-	const pullRequest = await pullRequestPromise;
-
 	if (commitPromise == null || commitsPromise == null) {
-		return <div>Files Changed ({pullRequest.changed_files})</div>;
+		return null;
 	}
 
 	const commit = await commitPromise;

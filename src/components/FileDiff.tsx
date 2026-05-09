@@ -22,6 +22,7 @@ interface FileDiffProps {
 	repo: string;
 	number: string;
 	comments?: ReviewCommentData[];
+	showComments?: boolean;
 }
 
 interface ActiveComment {
@@ -55,6 +56,7 @@ export default function FileDiff({
 	repo,
 	number,
 	comments = [],
+	showComments = true,
 }: FileDiffProps) {
 	const [isViewed, setIsViewed] = useState(false);
 	const [isCollapsed, setIsCollapsed] = useState(isViewed);
@@ -290,6 +292,7 @@ export default function FileDiff({
 												setActiveComment(null);
 												setCommentBody("");
 											}}
+											showComments={showComments}
 										/>
 									))}
 								</tbody>
@@ -336,6 +339,7 @@ interface BlockRowsProps {
 	commentPending: boolean;
 	commentError: boolean;
 	onCancelComment: () => void;
+	showComments: boolean;
 }
 
 function BlockRows({
@@ -352,6 +356,7 @@ function BlockRows({
 	commentPending,
 	commentError,
 	onCancelComment,
+	showComments,
 }: BlockRowsProps) {
 	return (
 		<>
@@ -422,7 +427,7 @@ function BlockRows({
 								</div>
 							</td>
 						</tr>
-						{hasComments &&
+						{showComments && hasComments &&
 							groupThreads(lineComments).map((thread) => (
 								<tr key={`thread-${thread.parent.id}`}>
 									<td colSpan={2} className="p-0">

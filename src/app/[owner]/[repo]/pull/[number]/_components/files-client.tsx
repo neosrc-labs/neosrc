@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import FileDiff from "~/components/FileDiff";
 import { useFiles } from "~/hooks/files";
 import { api } from "~/trpc/react";
@@ -17,6 +18,7 @@ export function FilesSection({
 	number,
 	commitSha,
 }: FilesSectionProps) {
+	const [showComments, setShowComments] = useState(true);
 	const { files } = useFiles({ owner, repo, number, commitSha });
 
 	const { data: allComments = [] } = api.reviewComments.list.useQuery(
@@ -24,18 +26,37 @@ export function FilesSection({
 		{ staleTime: 30_000 },
 	);
 
-	return files.map((file) => {
-		const fileComments = allComments.filter((c) => c.path === file.filename);
+	return (
+		<div>
+			<div className="mb-4 flex items-center justify-between">
+				<h2 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
+					Files Changed ({files.length})
+				</h2>
+				<button
+					className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
+					onClick={() => setShowComments(!showComments)}
+					type="button"
+				>
+					{showComments ? "Hide comments" : "Show comments"}
+				</button>
+			</div>
+			{files.map((file) => {
+				const fileComments = allComments.filter(
+					(c) => c.path === file.filename,
+				);
 
-		return (
-			<FileDiff
-				comments={fileComments}
-				file={file}
-				key={file.filename}
-				number={number.toString()}
-				owner={owner}
-				repo={repo}
-			/>
-		);
-	});
+				return (
+					<FileDiff
+						comments={fileComments}
+						file={file}
+						key={file.filename}
+						number={number.toString()}
+						owner={owner}
+						repo={repo}
+						showComments={showComments}
+					/>
+				);
+			})}
+		</div>
+	);
 }
