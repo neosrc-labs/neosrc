@@ -3,6 +3,7 @@ import { pullsRouter } from "~/server/api/routers/pulls";
 import { reactionsRouter } from "~/server/api/routers/reactions";
 import { reviewCommentsRouter } from "~/server/api/routers/reviewComments";
 import { timelineRouter } from "~/server/api/routers/timeline";
+import { usersRouter } from "~/server/api/routers/users";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -16,6 +17,7 @@ export const appRouter = createTRPCRouter({
 	reactions: reactionsRouter,
 	reviewComments: reviewCommentsRouter,
 	timeline: timelineRouter,
+	users: usersRouter,
 });
 
 // export type definition of API

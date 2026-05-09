@@ -1,4 +1,10 @@
 import { Async } from "~/components/async";
+import {
+	HoverCard,
+	HoverCardContent,
+	HoverCardTrigger,
+} from "~/components/ui/hover-card";
+import { UserHoverCard } from "~/components/user-hover-card";
 import type {
 	Assignee,
 	Label,
@@ -59,19 +65,26 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 						pullRequest.assignees && pullRequest.assignees.length > 0 ? (
 							<ul className="space-y-2">
 								{pullRequest.assignees.map((assignee: Assignee) => (
-									<li
-										className="flex items-center gap-2 text-sm"
-										key={assignee.login}
-									>
-										<img
-											alt={assignee.login}
-											className="h-5 w-5 rounded-full"
-											src={assignee.avatar_url}
-										/>
-										<span className="text-gray-600 dark:text-gray-400">
-											{assignee.login}
-										</span>
-									</li>
+									<UserHoverCard login={assignee.login}>
+										<a
+											className="flex items-center gap-2"
+											href={assignee.html_url}
+										>
+											<li
+												className="flex items-center gap-2 text-sm"
+												key={assignee.login}
+											>
+												<img
+													alt={assignee.login}
+													className="h-5 w-5 rounded-full"
+													src={assignee.avatar_url}
+												/>
+												<span className="text-gray-600 dark:text-gray-400">
+													{assignee.login}
+												</span>
+											</li>
+										</a>
+									</UserHoverCard>
 								))}
 							</ul>
 						) : (

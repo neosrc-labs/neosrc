@@ -28,6 +28,9 @@ export function createOctokit(accessToken: string) {
 	});
 }
 
+export type UsersGetByUsernameResponseData =
+	RestEndpointMethodTypes["users"]["getByUsername"]["response"]["data"];
+
 export type { Octokit };
 
 export const getPullRequest = cache(
@@ -357,3 +360,11 @@ export async function* getPullRequestFilesStream(
 		}
 	}
 }
+
+export const getGitHubUser = cache(
+	async (accessToken: string, username: string) => {
+		const octokit = createOctokit(accessToken);
+		const response = await octokit.users.getByUsername({ username });
+		return response.data;
+	},
+);

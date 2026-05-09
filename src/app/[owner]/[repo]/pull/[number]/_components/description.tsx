@@ -1,10 +1,12 @@
 "use client";
 
+import NextLink from "next/link";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { Reactions } from "~/components/Reactions";
+import { UserHoverCard } from "~/components/user-hover-card";
 import type { PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
@@ -130,12 +132,19 @@ export function PullRequestDescriptionSection({
 							</div>
 							<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
 								opened by{" "}
-								<img
-									alt={pullRequest.user?.login}
-									className="h-5 w-5 rounded-full"
-									src={pullRequest.user?.avatar_url}
-								/>
-								{pullRequest.user?.login}{" "}
+								<UserHoverCard login={pullRequest.user.login}>
+									<NextLink
+										className="flex items-center gap-2"
+										href={pullRequest.user.html_url}
+									>
+										<img
+											alt={pullRequest.user?.login}
+											className="h-5 w-5 rounded-full"
+											src={pullRequest.user?.avatar_url}
+										/>
+										{pullRequest.user?.login}{" "}
+									</NextLink>
+								</UserHoverCard>
 								{formatRelativeTime(pullRequest.created_at)}
 							</div>
 						</div>

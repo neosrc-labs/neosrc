@@ -3,12 +3,19 @@
 import { parse } from "diff2html";
 import "diff2html/bundles/css/diff2html.min.css";
 import hljs from "highlight.js";
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "next-themes";
+import {
+	Fragment,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import type { ReviewCommentData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { InlineCommentThread } from "./InlineCommentThread";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
-import { useTheme } from "next-themes";
 
 interface FileDiffProps {
 	file: {
@@ -269,7 +276,10 @@ export default function FileDiff({
 
 			{!isCollapsed && (
 				<div className="overflow-x-auto">
-					<div className={`d2h-wrapper ${resolvedTheme === 'light' ? 'd2h-light-color-scheme' : 'd2h-dark-color-scheme'}`} ref={diffRef}>
+					<div
+						className={`d2h-wrapper ${resolvedTheme === "light" ? "d2h-light-color-scheme" : "d2h-dark-color-scheme"}`}
+						ref={diffRef}
+					>
 						{parsed ? (
 							<table className="d2h-diff-table">
 								<tbody className="d2h-diff-tbody">
@@ -427,7 +437,8 @@ function BlockRows({
 								</div>
 							</td>
 						</tr>
-						{showComments && hasComments &&
+						{showComments &&
+							hasComments &&
 							groupThreads(lineComments).map((thread) => (
 								<tr key={`thread-${thread.parent.id}`}>
 									<td colSpan={2} className="p-0">

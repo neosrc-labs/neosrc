@@ -375,20 +375,22 @@ export function MarkdownEditor({
 		>
 			<div className="-mb-px flex items-center gap-6 rounded-t-lg border-gray-300 border-b bg-gray-50 px-3 dark:border-gray-600 dark:bg-zinc-900">
 				<button
-					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${mode === "write"
-						? "border-blue-500 text-blue-600"
-						: "border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-						}`}
+					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
+						mode === "write"
+							? "border-blue-500 text-blue-600"
+							: "border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+					}`}
 					onClick={() => setMode("write")}
 					type="button"
 				>
 					Write
 				</button>
 				<button
-					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${mode === "preview"
-						? "border-blue-500 text-blue-600"
-						: "border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-						}`}
+					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
+						mode === "preview"
+							? "border-blue-500 text-blue-600"
+							: "border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+					}`}
 					onClick={() => setMode("preview")}
 					type="button"
 				>

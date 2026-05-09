@@ -88,10 +88,11 @@ export function IssueAutocomplete({
 			<ul ref={listRef} className="max-h-60 overflow-y-auto py-1">
 				{issues.map((issue: IssueItem, index: number) => (
 					<li
-						className={`flex items-center gap-2 cursor-pointer px-3 py-2 text-sm ${index === selectedIndex
-							? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-							: "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-zinc-800"
-							}`}
+						className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm ${
+							index === selectedIndex
+								? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+								: "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-zinc-800"
+						}`}
 						key={issue.number}
 						onClick={() => onSelect(issue.number)}
 						onMouseDown={(e) => e.preventDefault()}
