@@ -17,6 +17,7 @@ type CommittedEvent = components["schemas"]["timeline-committed-event"];
 type CrossReferencedEvent =
 	components["schemas"]["timeline-cross-referenced-event"];
 type AssignedEvent = components["schemas"]["timeline-assigned-issue-event"];
+type RenamedEvent = components["schemas"]["renamed-issue-event"];
 type ForcePushEvent = {
 	event: "head_ref_force_pushed";
 	id: number;
@@ -254,6 +255,34 @@ function EventContent({
 						</code>
 					</p>
 					{timestamp}
+				</div>
+			);
+		}
+		case "renamed": {
+			const e = event as RenamedEvent;
+			const timestamp = formatRelativeTime(e.created_at);
+			return (
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
+					<img
+						src={e.actor?.avatar_url}
+						alt={e.actor?.login ?? ""}
+						className="h-5 w-5 rounded-full"
+					/>
+					<p>
+						<span className="font-medium text-gray-800 dark:text-gray-200">
+							{e.actor?.login}
+						</span>
+						{" renamed this "}
+						<span className="font-medium text-gray-800 line-through dark:text-gray-200">
+							{e.rename.from}
+						</span>
+						{" → "}
+						<span className="font-medium text-gray-800 dark:text-gray-200">
+							{e.rename.to}
+						</span>
+						{" "}
+						{timestamp}
+					</p>
 				</div>
 			);
 		}
