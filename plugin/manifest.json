@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Neosrc GitHub integration",
+  "version": "0.1.0",
+  "description": "Nesrc GitHub integration",
+  "host_permissions": [
+    "https://github.com/*",
+    "https://www.github.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://github.com/*/*/pull/*",
+        "https://github.com/*/*/pull/*/*"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ]
+}
