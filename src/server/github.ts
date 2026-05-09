@@ -19,6 +19,8 @@ export type IssueCommentData =
 	RestEndpointMethodTypes["issues"]["createComment"]["response"]["data"];
 export type PullRequestReviewData =
 	RestEndpointMethodTypes["pulls"]["createReview"]["response"]["data"];
+export type ReviewCommentData =
+	RestEndpointMethodTypes["pulls"]["listReviewComments"]["response"]["data"][number];
 
 export function createOctokit(accessToken: string) {
 	return new Octokit({
@@ -267,6 +269,69 @@ export const searchIssues = cache(
 		);
 	},
 );
+
+export const getPullRequestReviewComments = cache(
+	async (
+		accessToken: string,
+		owner: string,
+		repo: string,
+		pullNumber: number,
+	) => {
+		const octokit = createOctokit(accessToken);
+		const response = await octokit.pulls.listReviewComments({
+			owner,
+			repo,
+			pull_number: pullNumber,
+			per_page: 100,
+		});
+		return response.data;
+	},
+);
+
+export const createPullRequestReviewComment = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	commitId: string,
+	path: string,
+	line: number,
+	side: "LEFT" | "RIGHT",
+	body: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.pulls.createReviewComment({
+		owner,
+		repo,
+		pull_number: pullNumber,
+		commit_id: commitId,
+		path,
+		line,
+		side,
+		body,
+	});
+	return response.data;
+};
+
+export const replyToPullRequestReviewComment = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	body: string,
+	inReplyTo: number,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.pulls.createReviewComment({
+		owner,
+		repo,
+		pull_number: pullNumber,
+		body,
+		in_reply_to: inReplyTo,
+		// biome-ignore lint/suspicious/noExplicitAny: Octokit type requires commit_id/path even for replies, but API only needs in_reply_to
+	} as any);
+	return response.data;
+};
 
 // TODO: Check if generators support cache() or maybe interally we can cache?
 export async function* getPullRequestFilesStream(
