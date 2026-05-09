@@ -51,6 +51,7 @@ export function MarkdownEditor({
 	const disabledRef = useRef(disabled);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const cursorPosRef = useRef(0);
+	const savedSelectionRef = useRef({ start: 0, end: 0 });
 	const [dropdownTop, setDropdownTop] = useState(80);
 
 	valueRef.current = value;
@@ -133,8 +134,13 @@ export function MarkdownEditor({
 			const textarea = textareaRef.current;
 			if (!textarea || disabledRef.current) return;
 
-			const start = textarea.selectionStart;
-			const end = textarea.selectionEnd;
+			const isFocused = document.activeElement === textarea;
+			const start = isFocused
+				? textarea.selectionStart
+				: savedSelectionRef.current.start;
+			const end = isFocused
+				? textarea.selectionEnd
+				: savedSelectionRef.current.end;
 			const { newText, newStart, newEnd } = formatter(
 				valueRef.current,
 				start,
@@ -478,6 +484,16 @@ export function MarkdownEditor({
 										className="inline-flex items-center justify-center rounded-md px-1.5 py-1 font-medium text-gray-600 text-sm hover:bg-gray-200 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
 										disabled={disabled}
 										key={btn.label}
+										onMouseDown={(e) => {
+											const textarea = textareaRef.current;
+											if (textarea) {
+												savedSelectionRef.current = {
+													start: textarea.selectionStart,
+													end: textarea.selectionEnd,
+												};
+											}
+											e.preventDefault();
+										}}
 										onClick={btn.onClick}
 										title={btn.title}
 										type="button"
@@ -489,20 +505,32 @@ export function MarkdownEditor({
 						))}
 					</div>
 
-					{autocompleteQuery !== null && owner && repo && !issuesLoading && autocompleteIssues.length > 0 && (
-						<IssueAutocomplete
-							issues={autocompleteIssues}
-							loading={issuesLoading}
-							error={issuesError ? issuesErrorObj?.message ?? "Unknown error" : null}
-							selectedIndex={autocompleteIndex}
-							onSelect={handleAutocompleteSelect}
-							style={{ top: dropdownTop }}
-						/>
-					)}
+					{autocompleteQuery !== null &&
+						owner &&
+						repo &&
+						!issuesLoading &&
+						autocompleteIssues.length > 0 && (
+							<IssueAutocomplete
+								issues={autocompleteIssues}
+								loading={issuesLoading}
+								error={
+									issuesError
+										? (issuesErrorObj?.message ?? "Unknown error")
+										: null
+								}
+								selectedIndex={autocompleteIndex}
+								onSelect={handleAutocompleteSelect}
+								style={{ top: dropdownTop }}
+							/>
+						)}
 					<textarea
 						className="w-full resize-y rounded-b-lg border-0 px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-gray-950 dark:text-gray-100 dark:placeholder-gray-500"
 						disabled={disabled}
-						onBlur={() => {
+						onBlur={(e) => {
+							savedSelectionRef.current = {
+								start: e.target.selectionStart,
+								end: e.target.selectionEnd,
+							};
 							setTimeout(() => {
 								if (
 									document.activeElement?.closest('[data-autocomplete="true"]')
