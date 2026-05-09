@@ -39,7 +39,7 @@ type EventWithDismissedReview = TimelineEventData & {
 export function TimelineEvent({ event, owner, repo }: TimelineEventProps) {
 	return (
 		<div className="relative mb-4 ml-12">
-			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-gray-950 dark:ring-gray-700">
+			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-gray-700">
 				<TimelineIcon event={event} />
 			</div>
 
@@ -128,7 +128,7 @@ function EventContent({
 			const e = event as CommentEvent;
 			if (e.body) {
 				return (
-					<div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
+					<div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
 						<div className="prose prose-sm max-w-none">
 							<MarkdownRenderer content={e.body} owner={owner} repo={repo} />
 						</div>
@@ -163,7 +163,7 @@ function EventContent({
 						{` ${stateLabel} ${timestamp}`}
 					</p>
 					{e.body && (
-						<div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
+						<div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
 							<div className="prose prose-sm max-w-none">
 								<MarkdownRenderer content={e.body} owner={owner} repo={repo} />
 							</div>
@@ -246,11 +246,11 @@ function EventContent({
 							{branch}
 						</span>
 						{" branch from "}
-						<code className="rounded bg-gray-100 px-1 text-xs dark:bg-gray-800">
+						<code className="rounded bg-gray-100 px-1 text-xs dark:bg-zinc-800">
 							{before}
 						</code>
 						{" to "}
-						<code className="rounded bg-gray-100 px-1 text-xs dark:bg-gray-800">
+						<code className="rounded bg-gray-100 px-1 text-xs dark:bg-zinc-800">
 							{after}
 						</code>
 					</p>

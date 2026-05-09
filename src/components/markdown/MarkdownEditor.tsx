@@ -373,24 +373,22 @@ export function MarkdownEditor({
 			className={`relative rounded-lg border border-gray-300 dark:border-gray-600 ${className}`}
 			ref={containerRef}
 		>
-			<div className="-mb-px flex items-center gap-6 rounded-t-lg border-gray-300 border-b bg-gray-50 px-3 dark:border-gray-600 dark:bg-gray-900">
+			<div className="-mb-px flex items-center gap-6 rounded-t-lg border-gray-300 border-b bg-gray-50 px-3 dark:border-gray-600 dark:bg-zinc-900">
 				<button
-					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
-						mode === "write"
-							? "border-blue-500 text-blue-600"
-							: "border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-					}`}
+					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${mode === "write"
+						? "border-blue-500 text-blue-600"
+						: "border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+						}`}
 					onClick={() => setMode("write")}
 					type="button"
 				>
 					Write
 				</button>
 				<button
-					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
-						mode === "preview"
-							? "border-blue-500 text-blue-600"
-							: "border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-					}`}
+					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${mode === "preview"
+						? "border-blue-500 text-blue-600"
+						: "border-transparent text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+						}`}
 					onClick={() => setMode("preview")}
 					type="button"
 				>
@@ -454,7 +452,7 @@ export function MarkdownEditor({
 							/>
 						)}
 					<textarea
-						className="w-full resize-y rounded-b-lg border-0 px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-gray-950 dark:text-gray-100 dark:placeholder-gray-500"
+						className="w-full resize-y rounded-b-lg border-0 px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-zinc-950 dark:text-gray-100 dark:placeholder-gray-500"
 						disabled={disabled}
 						onBlur={(e) => {
 							savedSelectionRef.current = {

@@ -29,7 +29,7 @@ export function Header() {
 
 	return (
 		<header
-			className="sticky top-0 z-50 border-gray-200 border-b bg-white dark:border-gray-800 dark:bg-gray-950"
+			className="sticky top-0 z-50 border-gray-200 border-b bg-white dark:border-zinc-800 dark:bg-zinc-950"
 			ref={headerRef}
 		>
 			<div className="px-4 sm:px-6 lg:px-8">

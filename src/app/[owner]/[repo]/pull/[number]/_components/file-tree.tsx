@@ -204,8 +204,8 @@ export function FileTreeSkeleton() {
 						key={i}
 						style={{ paddingLeft: `${paddingLeft}px` }}
 					>
-						<div className="h-4 w-4 flex-shrink-0 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-						<div className="h-4 flex-1 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+						<div className="h-4 w-4 flex-shrink-0 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+						<div className="h-4 flex-1 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
 					</div>
 				);
 			})}

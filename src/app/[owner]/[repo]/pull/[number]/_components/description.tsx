@@ -55,7 +55,7 @@ export function PullRequestDescriptionSection({
 				<div className="mb-2 flex items-center gap-2">
 					<Async
 						fallback={
-							<div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
+							<div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
 						}
 						promise={pullRequestPromise}
 					>
@@ -86,7 +86,7 @@ export function PullRequestDescriptionSection({
 										{statusText}
 									</span>
 									{isDraft && (
-										<span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-800 text-xs dark:bg-gray-700 dark:text-gray-200">
+										<span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-800 text-xs dark:bg-zinc-700 dark:text-gray-200">
 											Draft
 										</span>
 									)}
@@ -96,7 +96,7 @@ export function PullRequestDescriptionSection({
 					</Async>
 					<Async
 						fallback={
-							<div className="h-8 w-96 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+							<div className="h-8 w-96 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
 						}
 						promise={pullRequestPromise}
 					>
@@ -113,14 +113,14 @@ export function PullRequestDescriptionSection({
 
 				<Async
 					fallback={
-						<div className="h-5 w-104 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+						<div className="h-5 w-104 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
 					}
 					promise={pullRequestPromise}
 				>
 					{(pullRequest) => (
 						<div className="mt-2 flex items-center gap-2">
 							<div className="text-gray-600 text-sm dark:text-gray-400">
-								<span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs dark:bg-gray-700">
+								<span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs dark:bg-zinc-700">
 									{pullRequest.base.ref}
 								</span>
 								<span className="mx-2">←</span>
@@ -147,7 +147,7 @@ export function PullRequestDescriptionSection({
 
 			<Async
 				fallback={
-					<div className="h-48 w-fill animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+					<div className="h-48 w-fill animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
 				}
 				promise={pullRequestPromise}
 			>
@@ -156,7 +156,7 @@ export function PullRequestDescriptionSection({
 					return (
 						<>
 							{/* PR Description */}
-							<div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+							<div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-zinc-900">
 								<div className="flex items-center justify-between border-gray-200 border-b px-4 py-1 dark:border-gray-700">
 									<h3 className="font-semibold text-gray-700 text-sm dark:text-gray-300">
 										Description

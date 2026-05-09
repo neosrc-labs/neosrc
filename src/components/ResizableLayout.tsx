@@ -78,13 +78,13 @@ export function ResizableLayout({
 				{leftSidebar}
 				{/* Drag Handle */}
 				<div
-					className="absolute top-0 right-0 h-full w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600 dark:bg-gray-700"
+					className="absolute top-0 right-0 h-full w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600 dark:bg-zinc-700"
 					onMouseDown={handleMouseDown}
 				/>
 			</div>
 
 			{/* Middle Section - PR Content */}
-			<main className="min-w-0 border-gray-200 border-r bg-white dark:border-gray-800 dark:bg-gray-950">
+			<main className="min-w-0 border-gray-200 border-r bg-white dark:border-zinc-800 dark:bg-zinc-950">
 				{children}
 			</main>
 

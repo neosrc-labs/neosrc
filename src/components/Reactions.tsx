@@ -28,8 +28,8 @@ export function Reactions({ owner, repo, number }: ReactionsProps) {
 	if (isLoading) {
 		return (
 			<div className="flex gap-2 py-2">
-				<div className="h-6 w-12 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
-				<div className="h-6 w-12 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
+				<div className="h-6 w-12 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
+				<div className="h-6 w-12 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
 			</div>
 		);
 	}
@@ -49,7 +49,7 @@ export function Reactions({ owner, repo, number }: ReactionsProps) {
 		<div className="flex flex-wrap gap-2 py-2">
 			{entries.map(([content, count]) => (
 				<span
-					className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-700 text-sm dark:bg-gray-800 dark:text-gray-300"
+					className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-700 text-sm dark:bg-zinc-800 dark:text-gray-300"
 					key={content}
 				>
 					<span>{reactionEmojis[content] ?? content}</span>

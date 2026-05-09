@@ -60,11 +60,10 @@ export function CommitsSection({
 									: false;
 								return (
 									<AsyncLink
-										className={`flex items-start gap-2 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 ${
-											isCurrent
-												? "rounded border-blue-500 border-l-2 bg-blue-50 px-2 dark:bg-blue-950"
-												: ""
-										}`}
+										className={`flex items-start gap-2 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800 ${isCurrent
+											? "rounded border-blue-500 border-l-2 bg-blue-50 px-2 dark:bg-blue-950"
+											: ""
+											}`}
 										href={`${baseUrl}/${commit.sha}`}
 										key={commit.sha}
 									>
@@ -106,8 +105,8 @@ function CommitsSkeleton() {
 				<div className="flex items-start gap-2" key={i}>
 					<div className="mt-0.5 h-5 w-5 shrink-0 animate-pulse rounded-full bg-gray-200" />
 					<div className="min-w-0 flex-1">
-						<div className="h-4 w-3/4 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-						<div className="mt-1.5 h-3 w-1/3 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+						<div className="h-4 w-3/4 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+						<div className="mt-1.5 h-3 w-1/3 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
 					</div>
 				</div>
 			))}

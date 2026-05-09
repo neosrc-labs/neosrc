@@ -40,7 +40,7 @@ export function IssueAutocomplete({
 	if (loading) {
 		return (
 			<div
-				className="absolute z-50 w-96 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
+				className="absolute z-50 w-96 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
 				data-autocomplete="true"
 				style={style}
 			>
@@ -54,7 +54,7 @@ export function IssueAutocomplete({
 	if (error) {
 		return (
 			<div
-				className="absolute z-50 w-96 rounded-lg border border-red-200 bg-white shadow-lg dark:border-red-800 dark:bg-gray-900"
+				className="absolute z-50 w-96 rounded-lg border border-red-200 bg-white shadow-lg dark:border-red-800 dark:bg-zinc-900"
 				data-autocomplete="true"
 				style={style}
 			>
@@ -68,7 +68,7 @@ export function IssueAutocomplete({
 	if (issues.length === 0) {
 		return (
 			<div
-				className="absolute z-50 w-96 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
+				className="absolute z-50 w-96 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
 				data-autocomplete="true"
 				style={style}
 			>
@@ -81,18 +81,17 @@ export function IssueAutocomplete({
 
 	return (
 		<div
-			className="absolute z-50 w-96 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
+			className="absolute z-50 w-96 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
 			data-autocomplete="true"
 			style={style}
 		>
 			<ul ref={listRef} className="max-h-60 overflow-y-auto py-1">
 				{issues.map((issue: IssueItem, index: number) => (
 					<li
-						className={`flex items-center gap-2 cursor-pointer px-3 py-2 text-sm ${
-							index === selectedIndex
-								? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-								: "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
-						}`}
+						className={`flex items-center gap-2 cursor-pointer px-3 py-2 text-sm ${index === selectedIndex
+							? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+							: "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-zinc-800"
+							}`}
 						key={issue.number}
 						onClick={() => onSelect(issue.number)}
 						onMouseDown={(e) => e.preventDefault()}

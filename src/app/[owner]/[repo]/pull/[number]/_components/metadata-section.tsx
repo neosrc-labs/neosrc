@@ -22,7 +22,7 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
 					{(pullRequest) =>
 						pullRequest.requested_reviewers &&
-						pullRequest.requested_reviewers.length > 0 ? (
+							pullRequest.requested_reviewers.length > 0 ? (
 							<ul className="space-y-2">
 								{pullRequest.requested_reviewers.map((reviewer: Reviewer) => (
 									<li
@@ -140,7 +140,7 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 function FieldSkeleton() {
 	return (
 		<section>
-			<div className="mb-3 h-5 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+			<div className="mb-3 h-5 w-24 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
 		</section>
 	);
 }

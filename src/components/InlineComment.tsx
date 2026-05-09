@@ -24,8 +24,8 @@ const formatDate = (dateStr: string) => {
 
 export function InlineComment({ comment }: InlineCommentProps) {
 	return (
-		<div className="border-gray-200 border-t bg-white dark:border-gray-700 dark:bg-gray-950">
-			<div className="flex items-center gap-2 bg-gray-50 px-4 py-2 dark:bg-gray-900">
+		<div className="border-gray-200 border-t bg-white dark:border-zinc-700 dark:bg-zinc-950">
+			<div className="flex items-center gap-2 bg-gray-50 px-4 py-2 dark:bg-zinc-900">
 				{/* biome-ignore lint/performance/noImgElement: established pattern in codebase */}
 				<img
 					alt={comment.user?.login ?? "user"}

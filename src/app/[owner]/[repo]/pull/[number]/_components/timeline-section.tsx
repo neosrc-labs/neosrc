@@ -45,7 +45,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 	console.log({ filteredEvents });
 
 	return (
-		<div className="mt-4 border-gray-200 border-t pt-6 dark:border-gray-700">
+		<div className="mt-4 border-gray-200 border-t pt-6 dark:border-zinc-700">
 			<h2 className="mb-4 font-semibold text-gray-900 text-lg dark:text-gray-100">
 				Timeline
 			</h2>
@@ -57,7 +57,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 			)}
 
 			<div className="relative">
-				<div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200 dark:bg-gray-700" />
+				<div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200 dark:bg-zinc-700" />
 
 				{filteredEvents.map((event, index) => (
 					<TimelineEvent

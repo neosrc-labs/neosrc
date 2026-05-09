@@ -48,19 +48,18 @@ export function ThemeToggle() {
 				{mounted ? (
 					<CurrentIcon />
 				) : (
-					<span className="h-5 w-5 rounded bg-gray-200 dark:bg-gray-700" />
+					<span className="h-5 w-5 rounded bg-gray-200 dark:bg-zinc-700" />
 				)}
 			</button>
 
 			{open && (
-				<div className="absolute right-0 z-50 mt-1 min-w-32 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+				<div className="absolute right-0 z-50 mt-1 min-w-32 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-zinc-900">
 					{themes.map(({ key, label, icon: Icon }) => (
 						<button
-							className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm transition-colors ${
-								theme === key
-									? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-									: "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-							}`}
+							className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm transition-colors ${theme === key
+								? "bg-gray-100 text-gray-900 dark:bg-zinc-800 dark:text-gray-100"
+								: "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
+								}`}
 							key={key}
 							onClick={() => {
 								setTheme(key);

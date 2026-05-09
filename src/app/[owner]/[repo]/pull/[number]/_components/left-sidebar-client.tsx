@@ -107,7 +107,7 @@ export function SidebarNavMenu({ owner, repo, number }: SidebarNavMenuProps) {
 		pathname === `${basePath}/changes` ||
 		pathname.startsWith(`${basePath}/changes/`);
 	return (
-		<nav className="sticky top-0 z-10 space-y-1 bg-white pr-4 pb-4 dark:bg-gray-950">
+		<nav className="sticky top-0 z-10 space-y-1 bg-white pr-4 pb-4 dark:bg-zinc-950">
 			<NavItem href={basePath} isActive={!isFilesActive} label="Conversation" />
 			<NavItem
 				href={`${basePath}/changes`}
@@ -127,11 +127,10 @@ interface NavItemProps {
 function NavItem({ href, label, isActive }: NavItemProps) {
 	return (
 		<Link
-			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${
-				isActive
-					? "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100"
-					: "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
-			}`}
+			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${isActive
+				? "bg-gray-100 text-gray-900 dark:bg-zinc-800 dark:text-gray-100"
+				: "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-100"
+				}`}
 			href={href}
 		>
 			{label}
@@ -173,7 +172,7 @@ export function SidebarActionButtons({
 
 	// TODO: Disable approve button based on if the user is allowed to approve this PR
 	return (
-		<div className="sticky bottom-0 z-10 space-y-2 border-gray-200 border-t bg-white pt-6 pr-4 dark:border-gray-800 dark:bg-gray-950">
+		<div className="sticky bottom-0 z-10 space-y-2 border-gray-200 border-t bg-white pt-6 pr-4 dark:border-zinc-800 dark:bg-zinc-950">
 			<button
 				className="w-full cursor-pointer rounded-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
 				disabled={approveMutation.isPending || approved}
@@ -220,7 +219,7 @@ function Checks({ checksPromise }: ChecksProps) {
 				<div className="max-h-full space-y-2 overflow-y-auto">
 					{checks.map((check) => (
 						<a
-							className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+							className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800"
 							href={check.html_url}
 							key={check.html_url ?? check.name}
 							rel="noopener noreferrer"

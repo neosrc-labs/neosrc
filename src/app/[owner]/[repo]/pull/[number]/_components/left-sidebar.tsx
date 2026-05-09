@@ -29,7 +29,7 @@ export default function LeftSidebar({
 	pullRequestPromise,
 }: LeftSidebarProps) {
 	return (
-		<aside className="flex h-full flex-col border-gray-200 border-r bg-white px-4 py-6 pr-1 dark:border-gray-800 dark:bg-gray-950">
+		<aside className="flex h-full flex-col border-gray-200 border-r bg-white px-4 py-6 pr-1 dark:border-zinc-800 dark:bg-zinc-950">
 			<SidebarNavMenu number={number} owner={owner} repo={repo} />
 
 			{/* Checks or File Tree Section */}
