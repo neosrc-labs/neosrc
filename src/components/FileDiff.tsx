@@ -2,7 +2,8 @@
 
 import { parse } from "diff2html";
 import "diff2html/bundles/css/diff2html.min.css";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import hljs from "highlight.js";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReviewCommentData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { InlineCommentThread } from "./InlineCommentThread";
@@ -79,6 +80,41 @@ export default function FileDiff({
 		const files = parse(normalizedDiff);
 		return files[0] ?? null;
 	}, [file.patch, file.filename]);
+
+	const diffRef = useRef<HTMLDivElement>(null);
+
+	const language = useMemo(() => {
+		const ext = file.filename.split(".").pop()?.toLowerCase();
+		if (!ext) return null;
+		const langMap: Record<string, string> = {
+			tsx: "typescript",
+			jsx: "javascript",
+			mjs: "javascript",
+			cjs: "javascript",
+			mts: "typescript",
+			cts: "typescript",
+			vue: "html",
+			svelte: "html",
+		};
+		const lang = langMap[ext] ?? ext;
+		try {
+			return hljs.getLanguage(lang) ? lang : null;
+		} catch {
+			return null;
+		}
+	}, [file.filename]);
+
+	useEffect(() => {
+		if (!diffRef.current || !language || !parsed) return;
+		const lines =
+			diffRef.current.querySelectorAll<HTMLElement>(".d2h-code-line-ctn");
+		lines.forEach((el) => {
+			const text = el.textContent;
+			if (!text) return;
+			const result = hljs.highlight(text, { language });
+			el.innerHTML = result.value;
+		});
+	}, [language, parsed]);
 
 	const commentsByLine = useMemo(() => {
 		const map = new Map<number, ReviewCommentData[]>();
@@ -276,7 +312,7 @@ export default function FileDiff({
 						  white-space: nowrap;
 						}
 					`}</style>
-					<div className="neosrc-diff">
+					<div className="neosrc-diff" ref={diffRef}>
 						{parsed ? (
 							<table className="d2h-diff-table">
 								<tbody className="d2h-diff-tbody">
