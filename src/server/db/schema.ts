@@ -8,7 +8,7 @@ import type { AdapterAccount } from "next-auth/adapters";
  *
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
-export const createTable = pgTableCreator((name) => `dub_${name}`);
+export const createTable = pgTableCreator((name) => `${name}`);
 
 export const users = createTable("user", (d) => ({
 	id: d

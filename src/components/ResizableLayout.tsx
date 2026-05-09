@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
-const STORAGE_KEY = "dub-sidebar-width";
+const STORAGE_KEY = "neosrc-sidebar-width";
 const DEFAULT_WIDTH = 250;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 500;
