@@ -8,6 +8,7 @@ import type { ReviewCommentData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { InlineCommentThread } from "./InlineCommentThread";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
+import { useTheme } from "next-themes";
 
 interface FileDiffProps {
 	file: {
@@ -62,6 +63,7 @@ export default function FileDiff({
 	);
 	const [commentBody, setCommentBody] = useState("");
 	const utils = api.useUtils();
+	const { resolvedTheme } = useTheme();
 
 	const fileId = file.filename.replace(/\//g, "-");
 
@@ -77,9 +79,11 @@ export default function FileDiff({
 		const normalizedDiff = file.patch.startsWith("---")
 			? file.patch
 			: `--- a/${file.filename}\n+++ b/${file.filename}\n${file.patch}`;
-		const files = parse(normalizedDiff);
+		const files = parse(normalizedDiff, {
+			colorScheme: resolvedTheme,
+		});
 		return files[0] ?? null;
-	}, [file.patch, file.filename]);
+	}, [file.patch, file.filename, resolvedTheme]);
 
 	const diffRef = useRef<HTMLDivElement>(null);
 
@@ -263,56 +267,7 @@ export default function FileDiff({
 
 			{!isCollapsed && (
 				<div className="overflow-x-auto">
-					<style>{`
-						.d2h-file-header { display: none !important; }
-						.d2h-del .hljs, .d2h-ins .hljs {
-						  background: transparent !important;
-						}
-						.neosrc-diff .d2h-code-line {
-						  padding: 0 !important;
-						  width: auto !important;
-						  display: block !important;
-						  white-space: pre !important;
-						}
-						.neosrc-diff .d2h-code-linenumber {
-						  position: relative !important;
-						  display: table-cell !important;
-						  width: 7.5em !important;
-						  min-width: 7.5em !important;
-						  padding: 0 !important;
-						  vertical-align: top !important;
-						  text-align: right !important;
-						  direction: rtl !important;
-						  border-right: 1px solid var(--d2h-line-border-color, #eee) !important;
-						}
-						.neosrc-diff .d2h-diff-table td:last-child {
-						  width: 100% !important;
-						}
-						.neosrc-diff .d2h-code-line-ctn {
-						  width: 100% !important;
-						}
-						.neosrc-diff .comment-btn {
-						  opacity: 0;
-						  transition: opacity 0.1s;
-						  cursor: pointer;
-						  background: none;
-						  border: none;
-						  color: #6366f1;
-						  font-size: 13px;
-						  line-height: 1;
-						  padding: 0 4px;
-						  vertical-align: middle;
-						  margin-left: 4px;
-						}
-						.neosrc-diff tr:hover .comment-btn,
-						.neosrc-diff tr:hover .comment-btn-active {
-						  opacity: 1;
-						}
-						.neosrc-diff td {
-						  white-space: nowrap;
-						}
-					`}</style>
-					<div className="neosrc-diff" ref={diffRef}>
+					<div className={`d2h-wrapper ${resolvedTheme === 'light' ? 'd2h-light-color-scheme' : 'd2h-dark-color-scheme'}`} ref={diffRef}>
 						{parsed ? (
 							<table className="d2h-diff-table">
 								<tbody className="d2h-diff-tbody">
@@ -437,7 +392,7 @@ function BlockRows({
 
 				return (
 					<Fragment key={`${oldNum ?? ""}-${newNum ?? ""}-${line.content}`}>
-						<tr className="d2h-code-line">
+						<tr>
 							<td className={`d2h-code-linenumber ${typeClass}`}>
 								<div className="line-num1">
 									{oldNum !== undefined ? oldNum : ""}
