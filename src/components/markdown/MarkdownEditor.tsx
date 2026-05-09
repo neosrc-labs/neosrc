@@ -5,6 +5,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { IssueAutocomplete } from "./issue-autocomplete";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import {
+	applyCodeBlockFormat,
+	applyInlineFormat,
+	applyListFormat,
+	findLineStart,
+} from "./markdown-utils";
 
 interface MarkdownEditorProps {
 	value: string;
@@ -19,55 +25,6 @@ interface MarkdownEditorProps {
 	className?: string;
 	owner?: string;
 	repo?: string;
-}
-
-function findLineStart(text: string, position: number): number {
-	return text.lastIndexOf("\n", position - 1) + 1;
-}
-
-function getListPrefixLength(lineText: string): number {
-	if (lineText.startsWith("- [ ] ") || lineText.startsWith("- [x] ")) return 6;
-	if (lineText.startsWith("- ")) return 2;
-	const orderedMatch = lineText.match(/^\d+\.\s/);
-	if (orderedMatch) return orderedMatch[0].length;
-	return 0;
-}
-
-function findEnclosingCodeBlock(
-	text: string,
-	pos: number,
-): {
-	openStart: number;
-	openEnd: number;
-	closeStart: number;
-	closeEnd: number;
-} | null {
-	const lines = text.split("\n");
-	const cursorLine = text.slice(0, pos).split("\n").length - 1;
-	let openLine = -1;
-
-	for (let i = 0; i < lines.length; i++) {
-		if (lines[i]!.trimStart().startsWith("```")) {
-			if (openLine === -1) {
-				openLine = i;
-			} else if (cursorLine > openLine && cursorLine < i) {
-				let openStart = 0;
-				for (let j = 0; j < openLine; j++) openStart += lines[j]!.length + 1;
-				const openEndIdx = text.indexOf("\n", openStart);
-				const openEnd = openEndIdx === -1 ? text.length : openEndIdx + 1;
-
-				let closeStart = 0;
-				for (let j = 0; j < i; j++) closeStart += lines[j]!.length + 1;
-				const closeEndIdx = text.indexOf("\n", closeStart);
-				const closeEnd = closeEndIdx === -1 ? text.length : closeEndIdx + 1;
-
-				return { openStart, openEnd, closeStart, closeEnd };
-			} else {
-				openLine = -1;
-			}
-		}
-	}
-	return null;
 }
 
 export function MarkdownEditor({
@@ -199,71 +156,15 @@ export function MarkdownEditor({
 	);
 
 	const handleBold = useCallback(() => {
-		applyFormatting((text, start, end) => {
-			if (start === end) {
-				let wordStart = start;
-				while (wordStart > 0 && /\S/.test(text.charAt(wordStart - 1)))
-					wordStart--;
-				let wordEnd = start;
-				while (wordEnd < text.length && /\S/.test(text.charAt(wordEnd)))
-					wordEnd++;
-				if (wordStart < wordEnd) {
-					const word = text.slice(wordStart, wordEnd);
-					return {
-						newText: `${text.slice(0, wordStart)}**${word}**${text.slice(wordEnd)}`,
-						newStart: wordStart + 2,
-						newEnd: wordStart + 2 + word.length,
-					};
-				}
-			}
-			const selected = text.slice(start, end);
-			if (selected) {
-				return {
-					newText: `${text.slice(0, start)}**${selected}**${text.slice(end)}`,
-					newStart: start,
-					newEnd: end + 4,
-				};
-			}
-			return {
-				newText: `${text.slice(0, start)}**bold**${text.slice(end)}`,
-				newStart: start + 2,
-				newEnd: start + 6,
-			};
-		});
+		applyFormatting((text, start, end) =>
+			applyInlineFormat(text, start, end, "**", "bold"),
+		);
 	}, [applyFormatting]);
 
 	const handleItalic = useCallback(() => {
-		applyFormatting((text, start, end) => {
-			if (start === end) {
-				let wordStart = start;
-				while (wordStart > 0 && /\S/.test(text.charAt(wordStart - 1)))
-					wordStart--;
-				let wordEnd = start;
-				while (wordEnd < text.length && /\S/.test(text.charAt(wordEnd)))
-					wordEnd++;
-				if (wordStart < wordEnd) {
-					const word = text.slice(wordStart, wordEnd);
-					return {
-						newText: `${text.slice(0, wordStart)}_${word}_${text.slice(wordEnd)}`,
-						newStart: wordStart + 1,
-						newEnd: wordStart + 1 + word.length,
-					};
-				}
-			}
-			const selected = text.slice(start, end);
-			if (selected) {
-				return {
-					newText: `${text.slice(0, start)}_${selected}_${text.slice(end)}`,
-					newStart: start,
-					newEnd: end + 2,
-				};
-			}
-			return {
-				newText: `${text.slice(0, start)}_italic_${text.slice(end)}`,
-				newStart: start + 1,
-				newEnd: start + 7,
-			};
-		});
+		applyFormatting((text, start, end) =>
+			applyInlineFormat(text, start, end, "_", "italic"),
+		);
 	}, [applyFormatting]);
 
 	const handleHeading = useCallback(() => {
@@ -279,112 +180,21 @@ export function MarkdownEditor({
 	}, [applyFormatting]);
 
 	const handleStrikethrough = useCallback(() => {
-		applyFormatting((text, start, end) => {
-			if (start === end) {
-				let wordStart = start;
-				while (wordStart > 0 && /\S/.test(text.charAt(wordStart - 1)))
-					wordStart--;
-				let wordEnd = start;
-				while (wordEnd < text.length && /\S/.test(text.charAt(wordEnd)))
-					wordEnd++;
-				if (wordStart < wordEnd) {
-					const word = text.slice(wordStart, wordEnd);
-					return {
-						newText: `${text.slice(0, wordStart)}~~${word}~~${text.slice(wordEnd)}`,
-						newStart: wordStart + 2,
-						newEnd: wordStart + 2 + word.length,
-					};
-				}
-			}
-			const selected = text.slice(start, end);
-			if (selected) {
-				return {
-					newText: `${text.slice(0, start)}~~${selected}~~${text.slice(end)}`,
-					newStart: start,
-					newEnd: end + 4,
-				};
-			}
-			return {
-				newText: `${text.slice(0, start)}~~strikethrough~~${text.slice(end)}`,
-				newStart: start + 2,
-				newEnd: start + 15,
-			};
-		});
+		applyFormatting((text, start, end) =>
+			applyInlineFormat(text, start, end, "~~", "strikethrough"),
+		);
 	}, [applyFormatting]);
 
 	const handleCode = useCallback(() => {
-		applyFormatting((text, start, end) => {
-			if (start === end) {
-				let wordStart = start;
-				while (wordStart > 0 && /\S/.test(text.charAt(wordStart - 1))) {
-					wordStart--;
-				}
-				let wordEnd = start;
-				while (wordEnd < text.length && /\S/.test(text.charAt(wordEnd))) {
-					wordEnd++;
-				}
-				if (wordStart < wordEnd) {
-					const word = text.slice(wordStart, wordEnd);
-					return {
-						newText: `${text.slice(0, wordStart)}\`${word}\`${text.slice(wordEnd)}`,
-						newStart: wordStart + 1,
-						newEnd: wordStart + 1 + word.length,
-					};
-				}
-			}
-			const selected = text.slice(start, end);
-			if (selected) {
-				return {
-					newText: `${text.slice(0, start)}\`${selected}\`${text.slice(end)}`,
-					newStart: start,
-					newEnd: end + 2,
-				};
-			}
-			return {
-				newText: `${text.slice(0, start)}\`code\`${text.slice(end)}`,
-				newStart: start + 1,
-				newEnd: start + 5,
-			};
-		});
+		applyFormatting((text, start, end) =>
+			applyInlineFormat(text, start, end, "`", "code"),
+		);
 	}, [applyFormatting]);
 
 	const handleCodeBlock = useCallback(() => {
-		applyFormatting((text, start, end) => {
-			const block = findEnclosingCodeBlock(text, start);
-			if (block) {
-				const before = text.slice(0, block.openStart);
-				const content = text.slice(block.openEnd, block.closeStart);
-				const after = text.slice(block.closeEnd);
-				const removedBefore = block.openEnd - block.openStart;
-				const removedTotal =
-					removedBefore + (block.closeEnd - block.closeStart);
-				const newCursorStart = Math.max(start - removedBefore, block.openStart);
-				const newCursorEnd = Math.max(end - removedTotal, block.openStart);
-				return {
-					newText: before + content + after,
-					newStart: newCursorStart,
-					newEnd: newCursorEnd,
-				};
-			}
-			const selected = text.slice(start, end);
-			if (selected) {
-				return {
-					newText:
-						text.slice(0, start) +
-						"```\n" +
-						selected +
-						"\n```" +
-						text.slice(end),
-					newStart: start,
-					newEnd: end + 8,
-				};
-			}
-			return {
-				newText: `${text.slice(0, start)}\`\`\`\n\n\`\`\`${text.slice(end)}`,
-				newStart: start + 4,
-				newEnd: start + 4,
-			};
-		});
+		applyFormatting((text, start, end) =>
+			applyCodeBlockFormat(text, start, end),
+		);
 	}, [applyFormatting]);
 
 	const handleLink = useCallback(() => {
@@ -400,114 +210,21 @@ export function MarkdownEditor({
 	}, [applyFormatting]);
 
 	const handleUnorderedList = useCallback(() => {
-		applyFormatting((text, start, end) => {
-			const lineStart = findLineStart(text, start);
-			const lineEnd = text.indexOf("\n", lineStart);
-			const lineText =
-				lineEnd === -1 ? text.slice(lineStart) : text.slice(lineStart, lineEnd);
-			const prefix = "- ";
-			const prefixLen = getListPrefixLength(lineText);
-
-			if (prefixLen === prefix.length && lineText.startsWith(prefix)) {
-				return {
-					newText: text.slice(0, lineStart) + text.slice(lineStart + prefixLen),
-					newStart: Math.max(start - prefixLen, lineStart),
-					newEnd: Math.max(end - prefixLen, lineStart),
-				};
-			}
-
-			const stripped =
-				prefixLen > 0
-					? {
-							text:
-								text.slice(0, lineStart) + text.slice(lineStart + prefixLen),
-							start: Math.max(start - prefixLen, lineStart),
-							end: Math.max(end - prefixLen, lineStart),
-						}
-					: { text, start, end };
-			return {
-				newText:
-					stripped.text.slice(0, lineStart) +
-					prefix +
-					stripped.text.slice(lineStart),
-				newStart: stripped.start + prefix.length,
-				newEnd: stripped.end + prefix.length,
-			};
-		});
+		applyFormatting((text, start, end) =>
+			applyListFormat(text, start, end, "- "),
+		);
 	}, [applyFormatting]);
 
 	const handleOrderedList = useCallback(() => {
-		applyFormatting((text, start, end) => {
-			const lineStart = findLineStart(text, start);
-			const lineEnd = text.indexOf("\n", lineStart);
-			const lineText =
-				lineEnd === -1 ? text.slice(lineStart) : text.slice(lineStart, lineEnd);
-			const prefix = "1. ";
-			const prefixLen = getListPrefixLength(lineText);
-
-			if (prefixLen === prefix.length && lineText.startsWith(prefix)) {
-				return {
-					newText: text.slice(0, lineStart) + text.slice(lineStart + prefixLen),
-					newStart: Math.max(start - prefixLen, lineStart),
-					newEnd: Math.max(end - prefixLen, lineStart),
-				};
-			}
-
-			const stripped =
-				prefixLen > 0
-					? {
-							text:
-								text.slice(0, lineStart) + text.slice(lineStart + prefixLen),
-							start: Math.max(start - prefixLen, lineStart),
-							end: Math.max(end - prefixLen, lineStart),
-						}
-					: { text, start, end };
-			return {
-				newText:
-					stripped.text.slice(0, lineStart) +
-					prefix +
-					stripped.text.slice(lineStart),
-				newStart: stripped.start + prefix.length,
-				newEnd: stripped.end + prefix.length,
-			};
-		});
+		applyFormatting((text, start, end) =>
+			applyListFormat(text, start, end, "1. "),
+		);
 	}, [applyFormatting]);
 
 	const handleTaskList = useCallback(() => {
-		applyFormatting((text, start, end) => {
-			const lineStart = findLineStart(text, start);
-			const lineEnd = text.indexOf("\n", lineStart);
-			const lineText =
-				lineEnd === -1 ? text.slice(lineStart) : text.slice(lineStart, lineEnd);
-			const prefix = "- [ ] ";
-			const prefixLen = getListPrefixLength(lineText);
-
-			if (prefixLen === prefix.length && lineText.startsWith(prefix)) {
-				return {
-					newText: text.slice(0, lineStart) + text.slice(lineStart + prefixLen),
-					newStart: Math.max(start - prefixLen, lineStart),
-					newEnd: Math.max(end - prefixLen, lineStart),
-				};
-			}
-
-			const stripped =
-				prefixLen > 0
-					? {
-							text:
-								text.slice(0, lineStart) + text.slice(lineStart + prefixLen),
-							start: Math.max(start - prefixLen, lineStart),
-							end: Math.max(end - prefixLen, lineStart),
-						}
-					: { text, start, end };
-			return {
-				newText:
-					stripped.text.slice(0, lineStart) +
-					prefix +
-					stripped.text.slice(lineStart),
-				newStart: stripped.start + prefix.length,
-				newEnd: stripped.end + prefix.length,
-			};
-		});
+		applyFormatting((text, start, end) =>
+			applyListFormat(text, start, end, "- [ ] "),
+		);
 	}, [applyFormatting]);
 
 	const handleBlockquote = useCallback(() => {
