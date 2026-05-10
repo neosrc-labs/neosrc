@@ -81,7 +81,7 @@ export function SidebarFileTree({
 
 	return (
 		<>
-			<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-gray-100">
+			<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-zinc-100">
 				Files Changed {filesChanged ? <span>({filesChanged})</span> : <></>}
 			</h3>
 			{isLoading ? (
@@ -89,7 +89,7 @@ export function SidebarFileTree({
 			) : files.length > 0 ? (
 				<FileTree basePath={basePath} files={fileTree} />
 			) : (
-				<p className="text-gray-500 text-sm dark:text-gray-400">
+				<p className="text-gray-500 text-sm dark:text-zinc-400">
 					No files changed
 				</p>
 			)}
@@ -195,7 +195,7 @@ function Checks({ checksPromise }: ChecksProps) {
 	const checks = use(checksPromise);
 	return (
 		<>
-			<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-gray-100">
+			<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-zinc-100">
 				Checks
 			</h3>
 			{checks && checks.length > 0 ? (
@@ -219,14 +219,14 @@ function Checks({ checksPromise }: ChecksProps) {
 									<span className="text-gray-400">○</span>
 								)}
 							</span>
-							<span className="truncate text-gray-700 text-sm dark:text-gray-300">
+							<span className="truncate text-gray-700 text-sm dark:text-zinc-300">
 								{check.name}
 							</span>
 						</a>
 					))}
 				</div>
 			) : (
-				<p className="text-gray-500 text-sm dark:text-gray-400">No checks</p>
+				<p className="text-gray-500 text-sm dark:text-zinc-400">No checks</p>
 			)}
 		</>
 	);

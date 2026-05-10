@@ -33,7 +33,7 @@ export default function LeftSidebar({
 			<SidebarNavMenu number={number} owner={owner} repo={repo} />
 
 			{/* Checks or File Tree Section */}
-			<div className="min-h-0 flex-1 border-gray-200 border-t pt-4 pr-0 dark:border-gray-800">
+			<div className="min-h-0 flex-1 border-gray-200 border-t pt-4 pr-0 dark:border-zinc-800">
 				<Suspense>
 					<LeftSidebarContentSection
 						checksPromise={checksPromise}

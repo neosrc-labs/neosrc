@@ -88,7 +88,7 @@ export function PullRequestDescriptionSection({
 										{statusText}
 									</span>
 									{isDraft && (
-										<span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-800 text-xs dark:bg-zinc-700 dark:text-gray-200">
+										<span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-800 text-xs dark:bg-zinc-700 dark:text-zinc-200">
 											Draft
 										</span>
 									)}
@@ -103,12 +103,12 @@ export function PullRequestDescriptionSection({
 						promise={pullRequestPromise}
 					>
 						{(pullRequest) => (
-							<h1 className="font-bold text-2xl text-gray-900 dark:text-gray-100">
+							<h1 className="font-bold text-2xl text-gray-900 dark:text-zinc-100">
 								{pullRequest.title}
 							</h1>
 						)}
 					</Async>
-					<h1 className="text-2xl text-gray-400 dark:text-gray-500">
+					<h1 className="text-2xl text-gray-400 dark:text-zinc-500">
 						#{number}
 					</h1>
 				</div>
@@ -121,7 +121,7 @@ export function PullRequestDescriptionSection({
 				>
 					{(pullRequest) => (
 						<div className="mt-2 flex items-center gap-2">
-							<div className="text-gray-600 text-sm dark:text-gray-400">
+							<div className="text-gray-600 text-sm dark:text-zinc-400">
 								<span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs dark:bg-zinc-700">
 									{pullRequest.base.ref}
 								</span>
@@ -130,7 +130,7 @@ export function PullRequestDescriptionSection({
 									{pullRequest.head.ref}
 								</span>
 							</div>
-							<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
+							<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
 								opened by{" "}
 								<UserHoverCard login={pullRequest.user.login}>
 									<NextLink
@@ -152,7 +152,7 @@ export function PullRequestDescriptionSection({
 				</Async>
 			</div>
 
-			<div className="mt-4 border-gray-200 border-t pt-4 dark:border-gray-700" />
+			<div className="mt-4 border-gray-200 border-t pt-4 dark:border-zinc-700" />
 
 			<Async
 				fallback={
@@ -165,9 +165,9 @@ export function PullRequestDescriptionSection({
 					return (
 						<>
 							{/* PR Description */}
-							<div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-zinc-900">
-								<div className="flex items-center justify-between border-gray-200 border-b px-4 py-1 dark:border-gray-700">
-									<h3 className="font-semibold text-gray-700 text-sm dark:text-gray-300">
+							<div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-900">
+								<div className="flex items-center justify-between border-gray-200 border-b px-4 py-1 dark:border-zinc-700">
+									<h3 className="font-semibold text-gray-700 text-sm dark:text-zinc-300">
 										Description
 									</h3>
 									{!isEditing && (
@@ -200,7 +200,7 @@ export function PullRequestDescriptionSection({
 													repo={repo}
 												/>
 											) : (
-												<p className="text-gray-500 italic dark:text-gray-400">
+												<p className="text-gray-500 italic dark:text-zinc-400">
 													No description provided.
 												</p>
 											)}

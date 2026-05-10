@@ -41,7 +41,7 @@ type EventWithDismissedReview = TimelineEventData & {
 export function TimelineEvent({ event, owner, repo }: TimelineEventProps) {
 	return (
 		<div className="relative mb-4 ml-12">
-			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-gray-700">
+			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700">
 				<TimelineIcon event={event} />
 			</div>
 
@@ -159,13 +159,13 @@ function EventContent({
 					? "requested changes"
 					: "reviewed";
 			return (
-				<div className="text-gray-600 text-sm dark:text-gray-400">
+				<div className="text-gray-600 text-sm dark:text-zinc-400">
 					<p className="flex items-center gap-1.5">
 						{isApproved && <span className="text-base text-green-500">✓</span>}
 						{isChangesRequested && (
 							<span className="text-base text-red-500">📄</span>
 						)}
-						<span className="font-medium text-gray-800 dark:text-gray-200">
+						<span className="font-medium text-gray-800 dark:text-zinc-200">
 							{e.user?.login}
 						</span>
 						{` ${stateLabel} ${timestamp}`}
@@ -188,7 +188,7 @@ function EventContent({
 			const timestamp = formatRelativeTime(e.created_at);
 			if (e.label) {
 				return (
-					<div className="text-gray-600 text-sm dark:text-gray-400">
+					<div className="text-gray-600 text-sm dark:text-zinc-400">
 						{added ? "Added the" : "Removed the"}
 						<Label color={e.label.color} className="mx-1">
 							{e.label.name}
@@ -205,7 +205,7 @@ function EventContent({
 			// TODO: Add author / committer profile pictures here.
 			//       We could probably pass in the `commits` which we already load for the commit section in the sidebar
 			return (
-				<div className="item-center my-6 flex justify-between text-gray-600 text-sm dark:text-gray-400">
+				<div className="item-center my-6 flex justify-between text-gray-600 text-sm dark:text-zinc-400">
 					<div>
 						<p>{e.message.split("\n")[0]}</p>
 					</div>
@@ -218,7 +218,7 @@ function EventContent({
 			const e = event as EventWithDismissedReview;
 			if (e.dismissed_review?.dismissal_message) {
 				return (
-					<p className="text-gray-600 text-sm dark:text-gray-400">
+					<p className="text-gray-600 text-sm dark:text-zinc-400">
 						{e.dismissed_review.dismissal_message}
 					</p>
 				);
@@ -233,7 +233,7 @@ function EventContent({
 			const after = e.commit_id.slice(0, 7);
 			// TODO: Add links for the commits, branch, and author
 			return (
-				<div className="my-9 flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
+				<div className="my-9 flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
 					<UserHoverCard login={e.actor.login}>
 						<a
 							className="flex items-center gap-2"
@@ -249,7 +249,7 @@ function EventContent({
 					</UserHoverCard>
 					<p>
 						{" force pushed the "}
-						<span className="font-medium text-gray-800 dark:text-gray-200">
+						<span className="font-medium text-gray-800 dark:text-zinc-200">
 							{branch}
 						</span>
 						{" branch from "}
@@ -269,22 +269,22 @@ function EventContent({
 			const e = event as RenamedEvent;
 			const timestamp = formatRelativeTime(e.created_at);
 			return (
-				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
 					<img
 						src={e.actor?.avatar_url}
 						alt={e.actor?.login ?? ""}
 						className="h-5 w-5 rounded-full"
 					/>
 					<p>
-						<span className="font-medium text-gray-800 dark:text-gray-200">
+						<span className="font-medium text-gray-800 dark:text-zinc-200">
 							{e.actor?.login}
 						</span>
 						{" renamed this "}
-						<span className="font-medium text-gray-800 line-through dark:text-gray-200">
+						<span className="font-medium text-gray-800 line-through dark:text-zinc-200">
 							{e.rename.from}
 						</span>
 						{" → "}
-						<span className="font-medium text-gray-800 dark:text-gray-200">
+						<span className="font-medium text-gray-800 dark:text-zinc-200">
 							{e.rename.to}
 						</span>{" "}
 						{timestamp}
@@ -298,18 +298,18 @@ function EventContent({
 			const timestamp = formatRelativeTime(e.created_at);
 			const verb = event.event === "head_ref_deleted" ? "deleted" : "restored";
 			return (
-				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
 					<img
 						src={e.actor.avatar_url}
 						alt={e.actor.login}
 						className="h-5 w-5 rounded-full"
 					/>
 					<p>
-						<span className="font-medium text-gray-800 dark:text-gray-200">
+						<span className="font-medium text-gray-800 dark:text-zinc-200">
 							{e.actor.login}
 						</span>
 						{` ${verb} the `}
-						<span className="font-medium text-gray-800 dark:text-gray-200">
+						<span className="font-medium text-gray-800 dark:text-zinc-200">
 							branch
 						</span>
 						{` ${timestamp}`}
@@ -331,7 +331,7 @@ function EventContent({
 
 			// TODO: Add the source status
 			return (
-				<div className="text-gray-600 text-sm dark:text-gray-400">
+				<div className="text-gray-600 text-sm dark:text-zinc-400">
 					<div className="flex items-center gap-2">
 						{actor && (
 							<UserHoverCard login={actor.login}>
@@ -344,7 +344,7 @@ function EventContent({
 										alt={actor.login}
 										className="h-5 w-5 rounded-full"
 									/>
-									<span className="font-medium text-gray-800 dark:text-gray-200">
+									<span className="font-medium text-gray-800 dark:text-zinc-200">
 										{actor?.login}
 									</span>
 								</a>
@@ -362,11 +362,11 @@ function EventContent({
 							rel="noreferrer"
 							className="mt-1 ml-7 flex w-fit items-center gap-1.5 hover:underline"
 						>
-							<span className="font-medium text-gray-800 dark:text-gray-200">
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
 								{sourceTitle}
 							</span>
 							{repoFullName && sourceNumber && (
-								<span className="text-gray-400 text-xs dark:text-gray-500">
+								<span className="text-gray-400 text-xs dark:text-zinc-500">
 									{repoFullName}#{sourceNumber}
 								</span>
 							)}
@@ -384,7 +384,7 @@ function EventContent({
 
 			if (isSelfAssigned) {
 				return (
-					<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
+					<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
 						<UserHoverCard login={e.assignee.login}>
 							<a
 								className="flex items-center gap-2"
@@ -395,7 +395,7 @@ function EventContent({
 									alt={e.assignee.login}
 									className="h-5 w-5 rounded-full"
 								/>
-								<span className="font-medium text-gray-800 dark:text-gray-200">
+								<span className="font-medium text-gray-800 dark:text-zinc-200">
 									{e.assignee.login}
 								</span>
 							</a>
@@ -410,7 +410,7 @@ function EventContent({
 				);
 			}
 			return (
-				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
 					<UserHoverCard login={e.actor.login}>
 						<a
 							className="flex items-center gap-2"
@@ -421,7 +421,7 @@ function EventContent({
 								alt={e.actor.login}
 								className="h-5 w-5 rounded-full"
 							/>
-							<span className="font-medium text-gray-800 dark:text-gray-200">
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
 								{e.actor.login}
 							</span>
 						</a>
@@ -438,7 +438,7 @@ function EventContent({
 									alt={e.assignee.login}
 									className="h-5 w-5 rounded-full"
 								/>
-								<span className="font-medium text-gray-800 dark:text-gray-200">
+								<span className="font-medium text-gray-800 dark:text-zinc-200">
 									{e.assignee.login}
 								</span>
 							</a>
@@ -461,7 +461,7 @@ function EventContent({
 						? "merged"
 						: "reopened";
 			return (
-				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
 					<UserHoverCard login={e.actor.login}>
 						<a
 							className="flex items-center gap-2"
@@ -473,7 +473,7 @@ function EventContent({
 								className="h-5 w-5 rounded-full"
 							/>
 
-							<span className="font-medium text-gray-800 dark:text-gray-200">
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
 								{e.actor?.login}
 							</span>{" "}
 						</a>

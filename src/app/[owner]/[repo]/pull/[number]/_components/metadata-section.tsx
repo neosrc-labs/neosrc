@@ -22,7 +22,7 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 		<>
 			{/* Reviewers Section */}
 			<section>
-				<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-gray-100">
+				<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-zinc-100">
 					Reviewers
 				</h3>
 
@@ -41,14 +41,14 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 											className="h-5 w-5 rounded-full"
 											src={reviewer.avatar_url}
 										/>
-										<span className="text-gray-600 dark:text-gray-400">
+										<span className="text-gray-600 dark:text-zinc-400">
 											{reviewer.login}
 										</span>
 									</li>
 								))}
 							</ul>
 						) : (
-							<p className="text-gray-500 text-sm dark:text-gray-400">
+							<p className="text-gray-500 text-sm dark:text-zinc-400">
 								No reviewers
 							</p>
 						)
@@ -58,7 +58,7 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 
 			{/* Assignees Section */}
 			<section>
-				<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-gray-100">
+				<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-zinc-100">
 					Assignees
 				</h3>
 				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
@@ -80,7 +80,7 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 													className="h-5 w-5 rounded-full"
 													src={assignee.avatar_url}
 												/>
-												<span className="text-gray-600 dark:text-gray-400">
+												<span className="text-gray-600 dark:text-zinc-400">
 													{assignee.login}
 												</span>
 											</li>
@@ -89,7 +89,7 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 								))}
 							</ul>
 						) : (
-							<p className="text-gray-500 text-sm dark:text-gray-400">
+							<p className="text-gray-500 text-sm dark:text-zinc-400">
 								No assignees
 							</p>
 						)
@@ -99,17 +99,17 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 
 			{/* Milestone Section */}
 			<section>
-				<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-gray-100">
+				<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-zinc-100">
 					Milestone
 				</h3>
 				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
 					{(pullRequest) =>
 						pullRequest.milestone ? (
-							<p className="text-gray-600 text-sm dark:text-gray-400">
+							<p className="text-gray-600 text-sm dark:text-zinc-400">
 								{pullRequest.milestone.title}
 							</p>
 						) : (
-							<p className="text-gray-500 text-sm dark:text-gray-400">
+							<p className="text-gray-500 text-sm dark:text-zinc-400">
 								No milestone
 							</p>
 						)
@@ -119,7 +119,7 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 
 			{/* Labels Section */}
 			<section className="min-h-30">
-				<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-gray-100">
+				<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-zinc-100">
 					Labels
 				</h3>
 				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
@@ -133,7 +133,7 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 								))}
 							</div>
 						) : (
-							<p className="text-gray-500 text-sm dark:text-gray-400">
+							<p className="text-gray-500 text-sm dark:text-zinc-400">
 								No labels
 							</p>
 						)

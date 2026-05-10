@@ -26,8 +26,8 @@ export function NavItem({ href, label, isActive }: NavItemProps) {
   return (
     <Link
       className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${isActive
-        ? "bg-gray-100 text-gray-900 dark:bg-zinc-800 dark:text-gray-100"
-        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-100"
+        ? "bg-gray-100 text-gray-900 dark:bg-zinc-800 dark:text-zinc-100"
+        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
         }`}
       href={href}
     >
