@@ -160,15 +160,16 @@ export function PullRequestDescriptionSection({
 								</div>
 								<div className="p-4">
 									{isEditing ? (
-										<MarkdownEditor
-											onCancel={handleCancel}
-											onChange={setEditBody}
-											onSubmit={handleSave}
-											submitLabel="Save"
-											value={editBody}
-											owner={owner}
-											repo={repo}
-										/>
+									<MarkdownEditor
+										onCancel={handleCancel}
+										onChange={setEditBody}
+										onSubmit={handleSave}
+										submitLabel="Save"
+										value={editBody}
+										owner={owner}
+										repo={repo}
+										minHeight="200px"
+									/>
 									) : (
 										<div className="prose prose-sm max-w-none">
 											{displayBody ? (
@@ -186,10 +187,11 @@ export function PullRequestDescriptionSection({
 									)}
 								</div>
 
-								{/* Reactions */}
-								<div className="p-3">
-									<ReactionRollup number={number} owner={owner} repo={repo} isIssue />
-								</div>
+								{!isEditing && (
+									<div className="p-3">
+										<ReactionRollup number={number} owner={owner} repo={repo} isIssue />
+									</div>
+								)}
 							</div>
 						</>
 					);
