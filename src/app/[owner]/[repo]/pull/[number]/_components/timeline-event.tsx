@@ -469,7 +469,9 @@ function EventContent({
 		}
 		case "closed":
 		case "merged":
-		case "reopened": {
+		case "reopened":
+		case "convert_to_draft":
+		case "ready_for_review": {
 			const e = event as StateChangeEvent;
 			const timestamp = formatRelativeTime(e.created_at);
 			const verb =
@@ -477,7 +479,11 @@ function EventContent({
 					? "closed"
 					: event.event === "merged"
 						? "merged"
-						: "reopened";
+						: event.event === "reopened"
+							? "reopened"
+							: event.event === "convert_to_draft"
+								? "converted to draft"
+								: "marked ready for review";
 			return (
 				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
 					<UserHoverCard login={e.actor.login}>
