@@ -39,12 +39,14 @@ interface TimelineEventProps {
 type LabelEvent = components["schemas"]["labeled-issue-event"];
 type CommentEvent = components["schemas"]["timeline-comment-event"];
 type CommittedEvent = components["schemas"]["timeline-committed-event"];
-type CrossReferencedEvent = components["schemas"]["timeline-cross-referenced-event"];
+type CrossReferencedEvent =
+	components["schemas"]["timeline-cross-referenced-event"];
 type AssignedEvent = components["schemas"]["timeline-assigned-issue-event"];
 type RenamedEvent = components["schemas"]["renamed-issue-event"];
 type StateChangeEvent = components["schemas"]["state-change-issue-event"];
 type ReviewEvent = components["schemas"]["timeline-reviewed-event"];
-type EventWithDismissedReview = components["schemas"]["review-dismissed-issue-event"];
+type EventWithDismissedReview =
+	components["schemas"]["review-dismissed-issue-event"];
 type ForcePushEvent = {
 	event: "head_ref_force_pushed";
 	id: number;
