@@ -41,6 +41,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 			(acc, page) => ({ ...acc, ...page.commentReactions }),
 			{},
 		) ?? {};
+	const currentUserLogin = data?.pages[0]?.currentUserLogin ?? "";
 	const filteredEvents = allEvents.filter((event) => {
 		if (["mentioned", "subscribed"].includes(event.event)) {
 			return false;
@@ -71,6 +72,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 						owner={owner}
 						repo={repo}
 						commentReactions={allCommentReactions}
+						currentUserLogin={currentUserLogin}
 					/>
 				))}
 			</div>

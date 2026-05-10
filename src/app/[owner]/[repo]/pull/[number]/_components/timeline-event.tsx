@@ -36,6 +36,7 @@ interface TimelineEventProps {
 	repo: string;
 	number: number;
 	commentReactions: Record<number, Reaction[]>;
+	currentUserLogin: string;
 }
 
 type LabelEvent = components["schemas"]["labeled-issue-event"];
@@ -78,6 +79,7 @@ export function TimelineEvent({
 	repo,
 	number,
 	commentReactions,
+	currentUserLogin,
 }: TimelineEventProps) {
 	return (
 		<div className="relative mb-8 ml-12">
@@ -91,6 +93,7 @@ export function TimelineEvent({
 				repo={repo}
 				number={number}
 				commentReactions={commentReactions}
+				currentUserLogin={currentUserLogin}
 			/>
 		</div>
 	);
@@ -137,12 +140,14 @@ function EventContent({
 	repo,
 	number,
 	commentReactions,
+	currentUserLogin,
 }: {
 	event: TimelineEventData;
 	owner: string;
 	repo: string;
 	number: number;
 	commentReactions: Record<number, Reaction[]>;
+	currentUserLogin: string;
 }) {
 	switch (event.event) {
 		case "commented": {
@@ -174,17 +179,15 @@ function EventContent({
 						<div className="prose prose-sm max-w-none p-4">
 							<MarkdownRenderer content={e.body} owner={owner} repo={repo} />
 						</div>
-						{commentReactions[e.id]?.length ? (
-							<div className="px-4 pb-3">
-								<ReactionRollup
-									reactions={
-										commentReactions[
-											e.id
-										] as import("~/components/ReactionRollup").Reaction[]
-									}
-								/>
-							</div>
-						) : null}
+						<div className="px-4 pb-3">
+							<ReactionRollup
+								reactions={commentReactions[e.id] ?? []}
+								currentUserLogin={currentUserLogin}
+								commentId={e.id}
+								owner={owner}
+								repo={repo}
+							/>
+						</div>
 					</div>
 				);
 			}

@@ -239,6 +239,53 @@ export const getIssueCommentReactions = async (
 	return response.data;
 };
 
+export const createIssueCommentReaction = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	commentId: number,
+	content: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.rest.reactions.createForIssueComment({
+		owner,
+		repo,
+		comment_id: commentId,
+		content: content as
+			| "+1"
+			| "-1"
+			| "laugh"
+			| "confused"
+			| "heart"
+			| "hooray"
+			| "rocket"
+			| "eyes",
+	});
+	return response.data;
+};
+
+export const deleteIssueCommentReaction = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	commentId: number,
+	reactionId: number,
+) => {
+	const octokit = createOctokit(accessToken);
+	await octokit.rest.reactions.deleteForIssueComment({
+		owner,
+		repo,
+		comment_id: commentId,
+		reaction_id: reactionId,
+	});
+};
+
+export const getAuthenticatedUser = async (accessToken: string) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.rest.users.getAuthenticated();
+	return response.data;
+};
+
 export const getPullRequestTimeline = cache(
 	async (
 		accessToken: string,

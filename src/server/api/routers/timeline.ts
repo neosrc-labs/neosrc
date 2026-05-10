@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
 import {
+	getAuthenticatedUser,
 	getIssueCommentReactions,
 	getPullRequestTimeline,
 	type TimelineEventData,
@@ -16,6 +17,7 @@ export type TimelineResult = {
 	events: TimelineEventData[];
 	nextCursor: number | undefined;
 	commentReactions: Record<number, ReactionData[]>;
+	currentUserLogin: string;
 };
 
 export const timelineRouter = createTRPCRouter({
@@ -70,10 +72,13 @@ export const timelineRouter = createTRPCRouter({
 			const commentReactions: Record<number, ReactionData[]> =
 				Object.fromEntries(reactionEntries);
 
+			const currentUser = await getAuthenticatedUser(account.accessToken!);
+
 			const response: TimelineResult = {
 				events: result.events,
 				nextCursor: result.hasMore ? result.nextPage : undefined,
 				commentReactions,
+				currentUserLogin: currentUser.login,
 			};
 
 			return response;
