@@ -63,6 +63,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 					<TimelineEvent
 						event={event}
 						key={`${event.id}-${index}`}
+						number={number}
 						owner={owner}
 						repo={repo}
 					/>

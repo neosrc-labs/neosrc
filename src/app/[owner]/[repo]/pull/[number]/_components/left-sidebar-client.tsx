@@ -2,14 +2,11 @@
 
 import { usePathname } from "next/navigation";
 import { use, useCallback, useMemo, useState } from "react";
+import { NavItem, NavMenu } from "~/components/ui/nav-menu";
 import { useFiles } from "~/hooks/files";
 import type { PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { buildFileTree, FileTree, FileTreeSkeleton } from "./file-tree";
-import {
-	NavItem,
-	NavMenu,
-} from "~/components/ui/nav-menu"
 
 interface LeftSidebarContentSectionProps {
 	owner: string;

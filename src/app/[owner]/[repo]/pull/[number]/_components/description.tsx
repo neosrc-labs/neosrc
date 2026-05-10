@@ -6,7 +6,10 @@ import { Async } from "~/components/async";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { Reactions } from "~/components/Reactions";
-import { extractPullRequestState, StatusPill } from "~/components/ui/status-pill";
+import {
+	extractPullRequestState,
+	StatusPill,
+} from "~/components/ui/status-pill";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -64,9 +67,7 @@ export function PullRequestDescriptionSection({
 					>
 						{(pullRequest) => {
 							const state = extractPullRequestState(pullRequest);
-							return (
-								<StatusPill state={state} />
-							);
+							return <StatusPill state={state} />;
 						}}
 					</Async>
 					<Async

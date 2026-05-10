@@ -27,11 +27,13 @@ import { Label } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { TimelineEventData } from "~/server/github";
 import { formatRelativeTime } from "~/utils";
+import { ReviewComments } from "./review-comments";
 
 interface TimelineEventProps {
 	event: TimelineEventData;
 	owner: string;
 	repo: string;
+	number: number;
 }
 
 type LabelEvent = components["schemas"]["labeled-issue-event"];
@@ -59,14 +61,19 @@ type EventWithDismissedReview = TimelineEventData & {
 	dismissed_review?: { dismissal_message?: string | null };
 };
 
-export function TimelineEvent({ event, owner, repo }: TimelineEventProps) {
+export function TimelineEvent({
+	event,
+	owner,
+	repo,
+	number,
+}: TimelineEventProps) {
 	return (
 		<div className="relative mb-4 ml-12">
 			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700">
 				<TimelineIcon event={event} />
 			</div>
 
-			<EventContent event={event} owner={owner} repo={repo} />
+			<EventContent event={event} owner={owner} repo={repo} number={number} />
 		</div>
 	);
 }
@@ -103,10 +110,7 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 		const e = event as ReviewEvent;
 		return (
 			<UserHoverCard login={e.user.login}>
-				<a
-					className="flex items-center gap-2"
-					href={e.user.html_url}
-				>
+				<a className="flex items-center gap-2" href={e.user.html_url}>
 					<img
 						alt={e.user?.login}
 						className="h-6 w-6 rounded-full"
@@ -125,10 +129,7 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 			<>
 				{actor && (
 					<UserHoverCard login={actor.login}>
-						<a
-							className="flex items-center gap-2"
-							href={actor.html_url}
-						>
+						<a className="flex items-center gap-2" href={actor.html_url}>
 							<img
 								alt={actor.login}
 								className="h-6 w-6 rounded-full"
@@ -140,17 +141,23 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 			</>
 		);
 	}
-	return <span className="flex">{iconMap[event.event ?? ""] ?? <Circle size={14} />}</span>;
+	return (
+		<span className="flex">
+			{iconMap[event.event ?? ""] ?? <Circle size={14} />}
+		</span>
+	);
 }
 
 function EventContent({
 	event,
 	owner,
 	repo,
+	number,
 }: {
 	event: TimelineEventData;
 	owner: string;
 	repo: string;
+	number: number;
 }) {
 	switch (event.event) {
 		case "commented": {
@@ -198,6 +205,12 @@ function EventContent({
 							</div>
 						</div>
 					)}
+					<ReviewComments
+						owner={owner}
+						repo={repo}
+						number={number}
+						reviewId={e.id}
+					/>
 				</div>
 			);
 		}
@@ -256,10 +269,7 @@ function EventContent({
 			return (
 				<div className="my-9 flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
 					<UserHoverCard login={e.actor.login}>
-						<a
-							className="flex items-center gap-2"
-							href={e.actor.html_url}
-						>
+						<a className="flex items-center gap-2" href={e.actor.html_url}>
 							<img
 								src={e.actor.avatar_url}
 								alt={e.actor.login}
@@ -356,10 +366,7 @@ function EventContent({
 					<div className="flex items-center gap-2">
 						{actor && (
 							<UserHoverCard login={actor.login}>
-								<a
-									className="flex items-center gap-2"
-									href={actor.html_url}
-								>
+								<a className="flex items-center gap-2" href={actor.html_url}>
 									<img
 										src={actor.avatar_url}
 										alt={actor.login}
@@ -407,10 +414,7 @@ function EventContent({
 				return (
 					<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
 						<UserHoverCard login={e.assignee.login}>
-							<a
-								className="flex items-center gap-2"
-								href={e.assignee.html_url}
-							>
+							<a className="flex items-center gap-2" href={e.assignee.html_url}>
 								<img
 									src={e.assignee.avatar_url}
 									alt={e.assignee.login}
@@ -433,10 +437,7 @@ function EventContent({
 			return (
 				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
 					<UserHoverCard login={e.actor.login}>
-						<a
-							className="flex items-center gap-2"
-							href={e.actor.html_url}
-						>
+						<a className="flex items-center gap-2" href={e.actor.html_url}>
 							<img
 								src={e.actor.avatar_url}
 								alt={e.actor.login}
@@ -450,10 +451,7 @@ function EventContent({
 					<div className="flex gap-1">
 						{isAssigned ? " assigned " : " unassigned "}
 						<UserHoverCard login={e.assignee.login}>
-							<a
-								className="flex items-center gap-2"
-								href={e.assignee.html_url}
-							>
+							<a className="flex items-center gap-2" href={e.assignee.html_url}>
 								<img
 									src={e.assignee.avatar_url}
 									alt={e.assignee.login}
@@ -463,8 +461,7 @@ function EventContent({
 									{e.assignee.login}
 								</span>
 							</a>
-						</UserHoverCard>
-						{" "}
+						</UserHoverCard>{" "}
 						{timestamp}
 					</div>
 				</div>
@@ -484,16 +481,12 @@ function EventContent({
 			return (
 				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
 					<UserHoverCard login={e.actor.login}>
-						<a
-							className="flex items-center gap-2"
-							href={e.actor.html_url}
-						>
+						<a className="flex items-center gap-2" href={e.actor.html_url}>
 							<img
 								src={e.actor?.avatar_url}
 								alt={e.actor?.login ?? ""}
 								className="h-5 w-5 rounded-full"
 							/>
-
 							<span className="font-medium text-gray-800 dark:text-zinc-200">
 								{e.actor?.login}
 							</span>{" "}

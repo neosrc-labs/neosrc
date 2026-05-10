@@ -29,7 +29,7 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
 					{(pullRequest) =>
 						pullRequest.requested_reviewers &&
-							pullRequest.requested_reviewers.length > 0 ? (
+						pullRequest.requested_reviewers.length > 0 ? (
 							<ul className="space-y-2">
 								{pullRequest.requested_reviewers.map((reviewer: Reviewer) => (
 									<li
