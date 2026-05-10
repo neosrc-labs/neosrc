@@ -186,6 +186,7 @@ function EventContent({
 								commentId={e.id}
 								owner={owner}
 								repo={repo}
+								number={number}
 							/>
 						</div>
 					</div>

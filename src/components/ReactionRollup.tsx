@@ -39,6 +39,7 @@ interface ReactionRollupProps {
 	commentId: number;
 	owner: string;
 	repo: string;
+	number: number;
 }
 
 export function ReactionRollup({
@@ -47,11 +48,75 @@ export function ReactionRollup({
 	commentId,
 	owner,
 	repo,
+	number,
 }: ReactionRollupProps) {
 	const utils = api.useUtils();
 	const toggleMutation = api.reactions.toggleIssueComment.useMutation({
-		onSuccess: () => {
-			utils.timeline.list.invalidate();
+		onMutate: async ({ content }) => {
+			await utils.timeline.list.cancel({ owner, repo, number, limit: 30 });
+			const prevData = utils.timeline.list.getInfiniteData({
+				owner,
+				repo,
+				number,
+				limit: 30,
+			});
+
+			utils.timeline.list.setInfiniteData(
+				{ owner, repo, number, limit: 30 },
+				(old) => {
+					if (!old) return old;
+					const existing = reactions.find(
+						(r) =>
+							r.user?.login === currentUserLogin && r.content === content,
+					);
+					const updatedReactions = existing
+						? reactions.filter((r) => r.id !== existing.id)
+						: [
+								...reactions,
+								{
+									id: -Date.now(),
+									node_id: "",
+									user: {
+										login: currentUserLogin,
+										avatar_url: "",
+										html_url: "",
+										id: 0,
+										node_id: "",
+										gravatar_id: "",
+										url: "",
+										received_events_url: "",
+										type: "User",
+										site_admin: false,
+									},
+									content,
+									created_at: new Date().toISOString(),
+								} as Reaction,
+							];
+					return {
+						...old,
+						pages: old.pages.map((page) => ({
+							...page,
+							commentReactions: {
+								...page.commentReactions,
+								[commentId]: updatedReactions,
+							},
+						})),
+					};
+				},
+			);
+
+			return { prevData };
+		},
+		onError: (_err, _vars, ctx) => {
+			if (ctx?.prevData) {
+				utils.timeline.list.setInfiniteData(
+					{ owner, repo, number, limit: 30 },
+					ctx.prevData,
+				);
+			}
+		},
+		onSettled: () => {
+			utils.timeline.list.invalidate({ owner, repo, number, limit: 30 });
 		},
 	});
 
@@ -101,7 +166,6 @@ export function ReactionRollup({
 							<button
 								type="button"
 								onClick={() => handleToggle(content)}
-								disabled={toggleMutation.isPending}
 								className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 font-medium text-xs transition-colors ${
 									isActive
 										? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
