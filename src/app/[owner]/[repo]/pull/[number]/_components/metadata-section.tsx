@@ -4,6 +4,7 @@ import {
 	HoverCardContent,
 	HoverCardTrigger,
 } from "~/components/ui/hover-card";
+import { Label as LabelComponent } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type {
 	Assignee,
@@ -126,16 +127,9 @@ export function MetadataSection({ pullRequestPromise }: MetadataSectionProps) {
 						pullRequest.labels && pullRequest.labels.length > 0 ? (
 							<div className="flex flex-wrap gap-2">
 								{pullRequest.labels.map((label: Label) => (
-									<span
-										className="inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-xs"
-										key={label.name}
-										style={{
-											backgroundColor: `#${label.color}20`,
-											color: `#${label.color}`,
-										}}
-									>
+									<LabelComponent color={label.color}>
 										{label.name}
-									</span>
+									</LabelComponent>
 								))}
 							</div>
 						) : (

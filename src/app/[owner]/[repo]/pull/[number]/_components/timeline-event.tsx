@@ -2,6 +2,7 @@
 
 import type { components } from "@octokit/openapi-types";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
+import { Label } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { TimelineEventData } from "~/server/github";
 import { formatRelativeTime } from "~/utils";
@@ -189,15 +190,9 @@ function EventContent({
 				return (
 					<div className="text-gray-600 text-sm dark:text-gray-400">
 						{added ? "Added the" : "Removed the"}
-						<span
-							className="inline-block rounded-full px-2 py-1 font-medium text-xs"
-							style={{
-								backgroundColor: `#${e.label.color}20`,
-								color: `#${e.label.color}`,
-							}}
-						>
+						<Label color={e.label.color} className="mx-1">
 							{e.label.name}
-						</span>
+						</Label>
 						label {timestamp}
 					</div>
 				);
