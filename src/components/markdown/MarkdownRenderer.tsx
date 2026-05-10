@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
+import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
 
@@ -38,6 +39,7 @@ export function MarkdownRenderer({
 				remarkGfm,
 				remarkIssuePlugin(owner, repo),
 				remarkMentionPlugin,
+				remarkEmojiPlugin,
 			]}
 			rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
 			components={{
