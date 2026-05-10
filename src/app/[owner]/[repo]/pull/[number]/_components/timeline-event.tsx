@@ -115,41 +115,6 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 		head_ref_force_pushed: <ArrowUp size={14} />,
 	};
 
-	if (event.event === "reviewed") {
-		const e = event as ReviewEvent;
-		return (
-			<UserHoverCard login={e.user.login}>
-				<a className="flex items-center gap-2" href={e.user.html_url}>
-					<img
-						alt={e.user?.login}
-						className="h-6 w-6 rounded-full"
-						src={e.user?.avatar_url}
-					/>
-				</a>
-			</UserHoverCard>
-		);
-	}
-
-	if (event.event === "commented") {
-		// TODO: Add link to user account
-		const e = event as CommentEvent;
-		const actor = e.actor;
-		return (
-			<>
-				{actor && (
-					<UserHoverCard login={actor.login}>
-						<a className="flex items-center gap-2" href={actor.html_url}>
-							<img
-								alt={actor.login}
-								className="h-6 w-6 rounded-full"
-								src={actor.avatar_url}
-							/>
-						</a>
-					</UserHoverCard>
-				)}
-			</>
-		);
-	}
 	return (
 		<span className="flex">
 			{iconMap[event.event ?? ""] ?? <Circle size={14} />}
@@ -172,9 +137,30 @@ function EventContent({
 		case "commented": {
 			const e = event as CommentEvent;
 			if (e.body) {
+				const actor = e.actor ?? e.user;
+				const timestamp = formatRelativeTime(e.created_at);
 				return (
-					<div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
-						<div className="prose prose-sm max-w-none">
+					<div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-900">
+						<div className="flex items-center gap-2 border-b border-gray-200 px-4 py-2 dark:border-zinc-700">
+							{actor && (
+								<UserHoverCard login={actor.login}>
+									<a className="flex items-center gap-2" href={actor.html_url}>
+										<img
+											src={actor.avatar_url}
+											alt={actor.login}
+											className="h-5 w-5 rounded-full"
+										/>
+										<span className="font-medium text-gray-800 text-sm dark:text-zinc-200">
+											{actor.login}
+										</span>
+									</a>
+								</UserHoverCard>
+							)}
+							<span className="text-gray-500 text-xs dark:text-zinc-400">
+								{timestamp}
+							</span>
+						</div>
+						<div className="prose prose-sm max-w-none p-4">
 							<MarkdownRenderer content={e.body} owner={owner} repo={repo} />
 						</div>
 					</div>
@@ -202,9 +188,20 @@ function EventContent({
 						{isChangesRequested && (
 							<FileText className="text-red-500" size={16} />
 						)}
-						<span className="font-medium text-gray-800 dark:text-zinc-200">
-							{e.user?.login}
-						</span>
+						{e.user && (
+							<UserHoverCard login={e.user.login}>
+								<a className="flex items-center gap-1.5" href={e.user.html_url}>
+									<img
+										src={e.user.avatar_url}
+										alt={e.user.login}
+										className="h-5 w-5 rounded-full"
+									/>
+									<span className="font-medium text-gray-800 dark:text-zinc-200">
+										{e.user.login}
+									</span>
+								</a>
+							</UserHoverCard>
+						)}
 						{` ${stateLabel} ${timestamp}`}
 					</p>
 					{e.body && (
