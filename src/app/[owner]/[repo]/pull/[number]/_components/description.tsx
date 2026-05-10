@@ -6,6 +6,7 @@ import { Async } from "~/components/async";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { Reactions } from "~/components/Reactions";
+import { extractPullRequestState, StatusPill } from "~/components/ui/status-pill";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -62,37 +63,9 @@ export function PullRequestDescriptionSection({
 						promise={pullRequestPromise}
 					>
 						{(pullRequest) => {
-							const isMerged = pullRequest.merged;
-							const isOpen = pullRequest.state === "open";
-							const isDraft = pullRequest.draft;
-
-							let statusText = "";
-							let statusColor = "";
-
-							if (isMerged) {
-								statusText = "Merged";
-								statusColor = "bg-purple-100 text-purple-800";
-							} else if (isOpen) {
-								statusText = "Open";
-								statusColor = "bg-green-100 text-green-800";
-							} else {
-								statusText = "Closed";
-								statusColor = "bg-red-100 text-red-800";
-							}
-
+							const state = extractPullRequestState(pullRequest);
 							return (
-								<>
-									<span
-										className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-xs ${statusColor}`}
-									>
-										{statusText}
-									</span>
-									{isDraft && (
-										<span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-800 text-xs dark:bg-zinc-700 dark:text-zinc-200">
-											Draft
-										</span>
-									)}
-								</>
+								<StatusPill state={state} />
 							);
 						}}
 					</Async>
