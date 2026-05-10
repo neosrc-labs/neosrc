@@ -17,16 +17,20 @@ import {
 	MessageSquare,
 	Pencil,
 	RefreshCw,
+	SquarePen,
 	Tag,
 	Target,
 	Trash2,
 	User,
 } from "lucide-react";
+import { useState } from "react";
+import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { type Reaction, ReactionRollup } from "~/components/ReactionRollup";
 import { Label } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { TimelineEventData } from "~/server/github";
+import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 import { ReviewComments } from "./review-comments";
 
@@ -149,46 +153,105 @@ function EventContent({
 	commentReactions: Record<number, Reaction[]>;
 	currentUserLogin: string;
 }) {
+	const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+	const [editBody, setEditBody] = useState("");
+	const [savedBodies, setSavedBodies] = useState<Record<number, string>>({});
+
+	const updateCommentMutation = api.pulls.updateComment.useMutation({
+		onMutate: ({ commentId, body }) => {
+			setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
+			setEditingCommentId(null);
+		},
+		onError: (_, { commentId }) => {
+			setSavedBodies((prev) => {
+				const next = { ...prev };
+				delete next[commentId];
+				return next;
+			});
+			setEditingCommentId(commentId);
+		},
+	});
+
 	switch (event.event) {
 		case "commented": {
 			const e = event as CommentEvent;
 			if (e.body) {
 				const actor = e.actor ?? e.user;
 				const timestamp = formatRelativeTime(e.created_at);
+				const isEditing = editingCommentId === e.id;
+				const isAuthor = actor?.login === currentUserLogin;
+				const displayBody = savedBodies[e.id] ?? e.body;
 				return (
 					<div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-900">
-						<div className="flex items-center gap-2 border-gray-200 border-b px-4 py-2 dark:border-zinc-700">
-							{actor && (
-								<UserHoverCard login={actor.login}>
-									<a className="flex items-center gap-2" href={actor.html_url}>
-										<img
-											src={actor.avatar_url}
-											alt={actor.login}
-											className="h-5 w-5 rounded-full"
-										/>
-										<span className="font-medium text-gray-800 text-sm dark:text-zinc-200">
-											{actor.login}
-										</span>
-									</a>
-								</UserHoverCard>
+						<div className="flex items-center justify-between border-gray-200 border-b px-4 py-2 dark:border-zinc-700">
+							<div className="flex items-center gap-2">
+								{actor && (
+									<UserHoverCard login={actor.login}>
+										<a className="flex items-center gap-2" href={actor.html_url}>
+											<img
+												src={actor.avatar_url}
+												alt={actor.login}
+												className="h-5 w-5 rounded-full"
+											/>
+											<span className="font-medium text-gray-800 text-sm dark:text-zinc-200">
+												{actor.login}
+											</span>
+										</a>
+									</UserHoverCard>
+								)}
+								<span className="text-gray-500 text-xs dark:text-zinc-400">
+									{timestamp}
+								</span>
+							</div>
+							{!isEditing && isAuthor && (
+								<button
+									className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+									onClick={() => {
+										setEditBody(displayBody);
+										setEditingCommentId(e.id);
+									}}
+									type="button"
+								>
+									<SquarePen size={14} />
+								</button>
 							)}
-							<span className="text-gray-500 text-xs dark:text-zinc-400">
-								{timestamp}
-							</span>
 						</div>
-						<div className="prose prose-sm max-w-none p-4">
-							<MarkdownRenderer content={e.body} owner={owner} repo={repo} />
+						<div className="p-4">
+							{isEditing ? (
+								<MarkdownEditor
+									onCancel={() => setEditingCommentId(null)}
+									onChange={setEditBody}
+									onSubmit={() =>
+										updateCommentMutation.mutate({
+											owner,
+											repo,
+											commentId: e.id,
+											body: editBody,
+										})
+									}
+									submitLabel="Save"
+									value={editBody}
+									owner={owner}
+									repo={repo}
+								/>
+							) : (
+								<div className="prose prose-sm max-w-none">
+									<MarkdownRenderer content={displayBody} owner={owner} repo={repo} />
+								</div>
+							)}
 						</div>
-						<div className="px-3 pb-3">
-							<ReactionRollup
-								reactions={commentReactions[e.id] ?? []}
-								currentUserLogin={currentUserLogin}
-								commentId={e.id}
-								owner={owner}
-								repo={repo}
-								number={number}
-							/>
-						</div>
+						{!isEditing && (
+							<div className="px-3 pb-3">
+								<ReactionRollup
+									reactions={commentReactions[e.id] ?? []}
+									currentUserLogin={currentUserLogin}
+									commentId={e.id}
+									owner={owner}
+									repo={repo}
+									number={number}
+								/>
+							</div>
+						)}
 					</div>
 				);
 			}
