@@ -1,12 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { use, useCallback, useMemo, useState } from "react";
 import { useFiles } from "~/hooks/files";
 import type { PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { buildFileTree, FileTree, FileTreeSkeleton } from "./file-tree";
+import {
+	NavItem,
+	NavMenu,
+} from "~/components/ui/nav-menu"
 
 interface LeftSidebarContentSectionProps {
 	owner: string;
@@ -107,35 +110,14 @@ export function SidebarNavMenu({ owner, repo, number }: SidebarNavMenuProps) {
 		pathname === `${basePath}/changes` ||
 		pathname.startsWith(`${basePath}/changes/`);
 	return (
-		<nav className="sticky top-0 z-10 space-y-1 bg-white pr-4 pb-4 dark:bg-zinc-950">
+		<NavMenu>
 			<NavItem href={basePath} isActive={!isFilesActive} label="Conversation" />
 			<NavItem
 				href={`${basePath}/changes`}
 				isActive={isFilesActive}
 				label="Files Changed"
 			/>
-		</nav>
-	);
-}
-
-interface NavItemProps {
-	href: string;
-	label: string;
-	isActive?: boolean;
-}
-
-function NavItem({ href, label, isActive }: NavItemProps) {
-	return (
-		<Link
-			className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${
-				isActive
-					? "bg-gray-100 text-gray-900 dark:bg-zinc-800 dark:text-gray-100"
-					: "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-100"
-			}`}
-			href={href}
-		>
-			{label}
-		</Link>
+		</NavMenu>
 	);
 }
 
