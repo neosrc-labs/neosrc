@@ -1,11 +1,17 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
+import { useState } from "react";
 import {
 	HoverCard,
 	HoverCardContent,
 	HoverCardTrigger,
 } from "~/components/ui/hover-card";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "~/components/ui/popover";
 import { SmilePlus } from "lucide-react";
 import { api } from "~/trpc/react";
 
@@ -319,6 +325,7 @@ function ReactionPicker({
 	) => void;
 	reactions: Reaction[];
 }) {
+	const [open, setOpen] = useState(false);
 	const available = allReactions.filter(
 		(c) =>
 			!reactions.some(
@@ -329,29 +336,32 @@ function ReactionPicker({
 	if (available.length === 0) return null;
 
 	return (
-		<HoverCard openDelay={100}>
-			<HoverCardTrigger asChild>
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger asChild>
 				<button
 					type="button"
 					className="inline-flex cursor-pointer items-center rounded-full border border-dashed border-gray-300 px-2 py-0.5 text-gray-400 text-xs transition-colors hover:border-gray-400 hover:text-gray-600 dark:border-zinc-600 dark:text-zinc-500 dark:hover:border-zinc-500 dark:hover:text-zinc-300"
 				>
 					<SmilePlus size={14} />
 				</button>
-			</HoverCardTrigger>
-			<HoverCardContent className="w-fit bg-white p-2 dark:bg-zinc-950">
+			</PopoverTrigger>
+			<PopoverContent className="w-fit bg-white p-2 dark:bg-zinc-950">
 				<div className="flex gap-1">
 					{available.map((content) => (
 						<button
 							key={content}
 							type="button"
-							onClick={() => handleToggle(content)}
+							onClick={() => {
+								handleToggle(content);
+								setOpen(false);
+							}}
 							className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
 						>
 							{reactionEmojis[content] ?? content}
 						</button>
 					))}
 				</div>
-			</HoverCardContent>
-		</HoverCard>
+			</PopoverContent>
+		</Popover>
 	);
 }
