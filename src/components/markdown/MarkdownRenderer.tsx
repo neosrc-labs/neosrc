@@ -3,6 +3,7 @@
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
@@ -36,6 +37,7 @@ export function MarkdownRenderer({
 	return (
 		<ReactMarkdown
 			remarkPlugins={[
+				remarkBreaks,
 				remarkGfm,
 				remarkIssuePlugin(owner, repo),
 				remarkMentionPlugin,
