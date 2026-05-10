@@ -66,8 +66,8 @@ export function CommitsSection({
 										key={commit.sha}
 									>
 										<AsyncLink
-											className={`flex items-start gap-2 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800 ${isCurrent
-												? "rounded border-blue-500 border-l-2 bg-blue-50 px-2 dark:bg-blue-950"
+											className={`flex items-start gap-2 rounded-md px-2 py-1 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800 ${isCurrent
+												? "border-blue-500 border-l-2 bg-blue-50 dark:bg-blue-950"
 												: ""
 												}`}
 											href={`${baseUrl}/${commit.sha}`}
