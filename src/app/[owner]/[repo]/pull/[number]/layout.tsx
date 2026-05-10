@@ -106,6 +106,9 @@ export default async function PullRequestLayout({
 				<RightSidebar
 					commitsPromise={commits}
 					pullRequestPromise={pullRequest}
+					owner={owner}
+					repo={repo}
+					number={number}
 				/>
 			}
 		>

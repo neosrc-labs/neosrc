@@ -524,3 +524,52 @@ export const getGitHubUser = cache(
 		return response.data;
 	},
 );
+
+export type RepoLabel =
+	RestEndpointMethodTypes["issues"]["listLabelsForRepo"]["response"]["data"][number];
+
+export const listLabelsForRepo = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.issues.listLabelsForRepo({
+		owner,
+		repo,
+	});
+	return response.data;
+};
+
+export const addLabelsToIssue = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	issueNumber: number,
+	labels: string[],
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.issues.addLabels({
+		owner,
+		repo,
+		issue_number: issueNumber,
+		labels,
+	});
+	return response.data;
+};
+
+export const removeLabelFromIssue = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	issueNumber: number,
+	labelName: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	await octokit.issues.removeLabel({
+		owner,
+		repo,
+		issue_number: issueNumber,
+		name: labelName,
+	});
+};

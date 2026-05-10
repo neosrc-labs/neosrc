@@ -4,8 +4,11 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
 import {
+	addLabelsToIssue,
 	createIssueComment,
 	createPullRequestReview,
+	listLabelsForRepo,
+	removeLabelFromIssue,
 	updateIssueComment,
 	updatePullRequest,
 } from "~/server/github";
@@ -102,6 +105,89 @@ export const pullsRouter = createTRPCRouter({
 			);
 
 			return { success: true as const, body: comment.body };
+		}),
+
+	listLabels: protectedProcedure
+		.input(
+			z.object({
+				owner: z.string(),
+				repo: z.string(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const [account] = await ctx.db
+				.select({ accessToken: accounts.access_token })
+				.from(accounts)
+				.where(eq(accounts.userId, ctx.session.user.id))
+				.limit(1);
+
+			if (!account?.accessToken) {
+				throw new Error("GitHub account not connected");
+			}
+
+			return listLabelsForRepo(account.accessToken, input.owner, input.repo);
+		}),
+
+	addLabel: protectedProcedure
+		.input(
+			z.object({
+				owner: z.string(),
+				repo: z.string(),
+				number: z.number(),
+				label: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const [account] = await ctx.db
+				.select({ accessToken: accounts.access_token })
+				.from(accounts)
+				.where(eq(accounts.userId, ctx.session.user.id))
+				.limit(1);
+
+			if (!account?.accessToken) {
+				throw new Error("GitHub account not connected");
+			}
+
+			await addLabelsToIssue(
+				account.accessToken,
+				input.owner,
+				input.repo,
+				input.number,
+				[input.label],
+			);
+
+			return { success: true as const };
+		}),
+
+	removeLabel: protectedProcedure
+		.input(
+			z.object({
+				owner: z.string(),
+				repo: z.string(),
+				number: z.number(),
+				label: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const [account] = await ctx.db
+				.select({ accessToken: accounts.access_token })
+				.from(accounts)
+				.where(eq(accounts.userId, ctx.session.user.id))
+				.limit(1);
+
+			if (!account?.accessToken) {
+				throw new Error("GitHub account not connected");
+			}
+
+			await removeLabelFromIssue(
+				account.accessToken,
+				input.owner,
+				input.repo,
+				input.number,
+				input.label,
+			);
+
+			return { success: true as const };
 		}),
 
 	approve: protectedProcedure

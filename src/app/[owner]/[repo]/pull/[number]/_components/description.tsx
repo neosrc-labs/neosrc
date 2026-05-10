@@ -1,5 +1,6 @@
 "use client";
 
+import { SquarePen } from "lucide-react";
 import NextLink from "next/link";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
@@ -10,7 +11,6 @@ import {
 	extractPullRequestState,
 	StatusPill,
 } from "~/components/ui/status-pill";
-import { SquarePen } from "lucide-react";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -151,7 +151,9 @@ export function PullRequestDescriptionSection({
 									{!isEditing && (
 										<button
 											className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-											onClick={() => handleStartEdit(savedBody ?? pullRequest.body ?? "")}
+											onClick={() =>
+												handleStartEdit(savedBody ?? pullRequest.body ?? "")
+											}
 											type="button"
 										>
 											<SquarePen size={16} />
@@ -160,16 +162,16 @@ export function PullRequestDescriptionSection({
 								</div>
 								<div className="p-4">
 									{isEditing ? (
-									<MarkdownEditor
-										onCancel={handleCancel}
-										onChange={setEditBody}
-										onSubmit={handleSave}
-										submitLabel="Save"
-										value={editBody}
-										owner={owner}
-										repo={repo}
-										minHeight="200px"
-									/>
+										<MarkdownEditor
+											onCancel={handleCancel}
+											onChange={setEditBody}
+											onSubmit={handleSave}
+											submitLabel="Save"
+											value={editBody}
+											owner={owner}
+											repo={repo}
+											minHeight="200px"
+										/>
 									) : (
 										<div className="prose prose-sm max-w-none">
 											{displayBody ? (
@@ -189,7 +191,12 @@ export function PullRequestDescriptionSection({
 
 								{!isEditing && (
 									<div className="p-3">
-										<ReactionRollup number={number} owner={owner} repo={repo} isIssue />
+										<ReactionRollup
+											number={number}
+											owner={owner}
+											repo={repo}
+											isIssue
+										/>
 									</div>
 								)}
 							</div>
@@ -197,7 +204,6 @@ export function PullRequestDescriptionSection({
 					);
 				}}
 			</Async>
-
 		</div>
 	);
 }
