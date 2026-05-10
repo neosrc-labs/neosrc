@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import {
 	HoverCard,
@@ -14,7 +14,10 @@ import { formatRelativeTime } from "~/utils";
 function CommitHoverCardContent({
 	commit,
 	baseUrl,
-}: { commit: Commit; baseUrl: string }) {
+}: {
+	commit: Commit;
+	baseUrl: string;
+}) {
 	const shortSha = commit.sha.slice(0, 7);
 	const message = commit.commit.message;
 	const subject = message.split("\n")[0];

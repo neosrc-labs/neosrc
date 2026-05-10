@@ -1,16 +1,21 @@
+import type { components } from "@octokit/openapi-types";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
 import {
+	getIssueCommentReactions,
 	getPullRequestTimeline,
 	type TimelineEventData,
 } from "~/server/github";
 
+type ReactionData = components["schemas"]["reaction"];
+
 export type TimelineResult = {
 	events: TimelineEventData[];
 	nextCursor: number | undefined;
+	commentReactions: Record<number, ReactionData[]>;
 };
 
 export const timelineRouter = createTRPCRouter({
@@ -45,9 +50,30 @@ export const timelineRouter = createTRPCRouter({
 				input.limit,
 			);
 
+			const commentEvents = result.events.filter(
+				(e): e is TimelineEventData & { event: "commented"; id: number } =>
+					e.event === "commented" && "id" in e,
+			);
+
+			const reactionEntries = await Promise.all(
+				commentEvents.map(async (e) => {
+					const reactions = await getIssueCommentReactions(
+						account.accessToken!,
+						input.owner,
+						input.repo,
+						e.id,
+					);
+					return [e.id, reactions] as const;
+				}),
+			);
+
+			const commentReactions: Record<number, ReactionData[]> =
+				Object.fromEntries(reactionEntries);
+
 			const response: TimelineResult = {
 				events: result.events,
 				nextCursor: result.hasMore ? result.nextPage : undefined,
+				commentReactions,
 			};
 
 			return response;

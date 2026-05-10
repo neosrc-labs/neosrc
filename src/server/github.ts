@@ -224,6 +224,21 @@ export const getPullRequestReactions = cache(
 	},
 );
 
+export const getIssueCommentReactions = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	commentId: number,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.rest.reactions.listForIssueComment({
+		owner,
+		repo,
+		comment_id: commentId,
+	});
+	return response.data;
+};
+
 export const getPullRequestTimeline = cache(
 	async (
 		accessToken: string,

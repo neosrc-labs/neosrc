@@ -1,6 +1,7 @@
 "use client";
 
 import { useInView } from "react-intersection-observer";
+import type { TimelineResult } from "~/server/api/routers/timeline";
 import { api } from "~/trpc/react";
 import { CommentForm } from "./comment-form";
 import { TimelineEvent } from "./timeline-event";
@@ -35,14 +36,17 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 	}
 
 	const allEvents = data?.pages.flatMap((page) => page.events) ?? [];
+	const allCommentReactions =
+		data?.pages.reduce<TimelineResult["commentReactions"]>(
+			(acc, page) => ({ ...acc, ...page.commentReactions }),
+			{},
+		) ?? {};
 	const filteredEvents = allEvents.filter((event) => {
 		if (["mentioned", "subscribed"].includes(event.event)) {
 			return false;
 		}
 		return true;
 	});
-
-	console.log({ filteredEvents });
 
 	return (
 		<div className="mt-4 border-gray-200 border-t pt-6 dark:border-zinc-700">
@@ -66,6 +70,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 						number={number}
 						owner={owner}
 						repo={repo}
+						commentReactions={allCommentReactions}
 					/>
 				))}
 			</div>

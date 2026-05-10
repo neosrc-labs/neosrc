@@ -23,7 +23,7 @@ import {
 	User,
 } from "lucide-react";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
-import { ReactionRollup } from "~/components/ReactionRollup";
+import { type Reaction, ReactionRollup } from "~/components/ReactionRollup";
 import { Label } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { TimelineEventData } from "~/server/github";
@@ -35,6 +35,7 @@ interface TimelineEventProps {
 	owner: string;
 	repo: string;
 	number: number;
+	commentReactions: Record<number, Reaction[]>;
 }
 
 type LabelEvent = components["schemas"]["labeled-issue-event"];
@@ -76,6 +77,7 @@ export function TimelineEvent({
 	owner,
 	repo,
 	number,
+	commentReactions,
 }: TimelineEventProps) {
 	return (
 		<div className="relative mb-8 ml-12">
@@ -83,7 +85,13 @@ export function TimelineEvent({
 				<TimelineIcon event={event} />
 			</div>
 
-			<EventContent event={event} owner={owner} repo={repo} number={number} />
+			<EventContent
+				event={event}
+				owner={owner}
+				repo={repo}
+				number={number}
+				commentReactions={commentReactions}
+			/>
 		</div>
 	);
 }
@@ -128,11 +136,13 @@ function EventContent({
 	owner,
 	repo,
 	number,
+	commentReactions,
 }: {
 	event: TimelineEventData;
 	owner: string;
 	repo: string;
 	number: number;
+	commentReactions: Record<number, Reaction[]>;
 }) {
 	switch (event.event) {
 		case "commented": {
@@ -142,7 +152,7 @@ function EventContent({
 				const timestamp = formatRelativeTime(e.created_at);
 				return (
 					<div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-900">
-						<div className="flex items-center gap-2 border-b border-gray-200 px-4 py-2 dark:border-zinc-700">
+						<div className="flex items-center gap-2 border-gray-200 border-b px-4 py-2 dark:border-zinc-700">
 							{actor && (
 								<UserHoverCard login={actor.login}>
 									<a className="flex items-center gap-2" href={actor.html_url}>
@@ -164,11 +174,17 @@ function EventContent({
 						<div className="prose prose-sm max-w-none p-4">
 							<MarkdownRenderer content={e.body} owner={owner} repo={repo} />
 						</div>
-						{e.reactions && (
+						{commentReactions[e.id]?.length ? (
 							<div className="px-4 pb-3">
-								<ReactionRollup reactions={e.reactions} />
+								<ReactionRollup
+									reactions={
+										commentReactions[
+											e.id
+										] as import("~/components/ReactionRollup").Reaction[]
+									}
+								/>
 							</div>
-						)}
+						) : null}
 					</div>
 				);
 			}
