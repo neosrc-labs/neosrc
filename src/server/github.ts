@@ -280,6 +280,47 @@ export const deleteIssueCommentReaction = async (
 	});
 };
 
+export const createIssueReaction = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	issueNumber: number,
+	content: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.rest.reactions.createForIssue({
+		owner,
+		repo,
+		issue_number: issueNumber,
+		content: content as
+			| "+1"
+			| "-1"
+			| "laugh"
+			| "confused"
+			| "heart"
+			| "hooray"
+			| "rocket"
+			| "eyes",
+	});
+	return response.data;
+};
+
+export const deleteIssueReaction = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	issueNumber: number,
+	reactionId: number,
+) => {
+	const octokit = createOctokit(accessToken);
+	await octokit.rest.reactions.deleteForIssue({
+		owner,
+		repo,
+		issue_number: issueNumber,
+		reaction_id: reactionId,
+	});
+};
+
 export const getAuthenticatedUser = async (accessToken: string) => {
 	const octokit = createOctokit(accessToken);
 	const response = await octokit.rest.users.getAuthenticated();

@@ -34,40 +34,112 @@ const reactionOrder: (
 )[] = ["+1", "heart", "laugh", "hooray", "confused", "rocket", "eyes", "-1"];
 
 interface ReactionRollupProps {
-	reactions: Reaction[];
-	currentUserLogin: string;
-	commentId: number;
+	reactions?: Reaction[];
+	currentUserLogin?: string;
+	commentId?: number;
 	owner: string;
 	repo: string;
 	number: number;
+	isIssue?: boolean;
 }
 
 export function ReactionRollup({
-	reactions,
-	currentUserLogin,
+	reactions: initialReactions = [],
+	currentUserLogin: propUserLogin = "",
 	commentId,
 	owner,
 	repo,
 	number,
+	isIssue,
 }: ReactionRollupProps) {
 	const utils = api.useUtils();
-	const toggleMutation = api.reactions.toggleIssueComment.useMutation({
+
+	const { data: issueData } = api.reactions.get.useQuery(
+		{ owner, repo, number },
+		{ staleTime: 5 * 60 * 1000, enabled: isIssue },
+	);
+
+	const reactions = isIssue ? (issueData?.reactions ?? []) : initialReactions;
+	const resolvedUserLogin = isIssue
+		? (issueData?.currentUserLogin ?? propUserLogin)
+		: propUserLogin;
+
+	const issueMutation = api.reactions.toggleIssue.useMutation({
 		onMutate: async ({ content }) => {
-			await utils.timeline.list.cancel({ owner, repo, number, limit: 30 });
+			await utils.reactions.get.cancel({ owner, repo, number });
+			const prevData = utils.reactions.get.getData({
+				owner,
+				repo,
+				number,
+			});
+			utils.reactions.get.setData({ owner, repo, number }, (old) => {
+				if (!old) return old;
+				const existing = reactions.find(
+					(r) =>
+						r.user?.login === resolvedUserLogin && r.content === content,
+				);
+				const updated = existing
+					? reactions.filter((r) => r.id !== existing.id)
+					: [
+							...reactions,
+							{
+								id: -Date.now(),
+								node_id: "",
+								user: {
+									login: resolvedUserLogin,
+									avatar_url: "",
+									html_url: "",
+									id: 0,
+									node_id: "",
+									gravatar_id: "",
+									url: "",
+									received_events_url: "",
+									type: "User",
+									site_admin: false,
+								},
+								content,
+								created_at: new Date().toISOString(),
+							} as Reaction,
+						];
+				return { reactions: updated, currentUserLogin: resolvedUserLogin };
+			});
+			return { prevData };
+		},
+		onError: (_err, _vars, ctx) => {
+			if (ctx?.prevData) {
+				utils.reactions.get.setData(
+					{ owner, repo, number },
+					ctx.prevData,
+				);
+			}
+		},
+		onSettled: () => {
+			utils.reactions.get.invalidate({ owner, repo, number });
+		},
+	});
+
+	const commentMutation = api.reactions.toggleIssueComment.useMutation({
+		onMutate: async ({ content }) => {
+			await utils.timeline.list.cancel({
+				owner,
+				repo,
+				number,
+				limit: 30,
+			});
 			const prevData = utils.timeline.list.getInfiniteData({
 				owner,
 				repo,
 				number,
 				limit: 30,
 			});
-
 			utils.timeline.list.setInfiniteData(
 				{ owner, repo, number, limit: 30 },
 				(old) => {
 					if (!old) return old;
 					const existing = reactions.find(
 						(r) =>
-							r.user?.login === currentUserLogin && r.content === content,
+							r.user?.login === resolvedUserLogin &&
+							r.content === content,
 					);
 					const updatedReactions = existing
 						? reactions.filter((r) => r.id !== existing.id)
@@ -77,7 +149,7 @@ export function ReactionRollup({
 									id: -Date.now(),
 									node_id: "",
 									user: {
-										login: currentUserLogin,
+										login: resolvedUserLogin,
 										avatar_url: "",
 										html_url: "",
 										id: 0,
@@ -98,13 +170,12 @@ export function ReactionRollup({
 							...page,
 							commentReactions: {
 								...page.commentReactions,
-								[commentId]: updatedReactions,
+								[commentId!]: updatedReactions,
 							},
 						})),
 					};
 				},
 			);
-
 			return { prevData };
 		},
 		onError: (_err, _vars, ctx) => {
@@ -116,7 +187,12 @@ export function ReactionRollup({
 			}
 		},
 		onSettled: () => {
-			utils.timeline.list.invalidate({ owner, repo, number, limit: 30 });
+			utils.timeline.list.invalidate({
+				owner,
+				repo,
+				number,
+				limit: 30,
+			});
 		},
 	});
 
@@ -133,7 +209,7 @@ export function ReactionRollup({
 
 	const userReacted = (content: string) =>
 		reactions.some(
-			(r) => r.user?.login === currentUserLogin && r.content === content,
+			(r) => r.user?.login === resolvedUserLogin && r.content === content,
 		);
 
 	const handleToggle = (
@@ -147,14 +223,22 @@ export function ReactionRollup({
 			| "rocket"
 			| "eyes",
 	) => {
-		toggleMutation.mutate({ owner, repo, commentId, content });
+		if (isIssue) {
+			issueMutation.mutate({ owner, repo, number, content });
+		} else {
+			commentMutation.mutate({
+				owner,
+				repo,
+				commentId: commentId!,
+				content,
+			});
+		}
 	};
 
 	return (
 		<div className="flex flex-wrap items-center gap-1.5">
 			<ReactionPicker
-				commentId={commentId}
-				currentUserLogin={currentUserLogin}
+				resolvedUserLogin={resolvedUserLogin}
 				handleToggle={handleToggle}
 				reactions={reactions}
 			/>
@@ -217,13 +301,11 @@ const allReactions: (
 )[] = ["+1", "-1", "laugh", "confused", "heart", "hooray", "rocket", "eyes"];
 
 function ReactionPicker({
-	commentId,
-	currentUserLogin,
+	resolvedUserLogin,
 	handleToggle,
 	reactions,
 }: {
-	commentId: number;
-	currentUserLogin: string;
+	resolvedUserLogin: string;
 	handleToggle: (
 		content:
 			| "+1"
@@ -240,7 +322,7 @@ function ReactionPicker({
 	const available = allReactions.filter(
 		(c) =>
 			!reactions.some(
-				(r) => r.user?.login === currentUserLogin && r.content === c,
+				(r) => r.user?.login === resolvedUserLogin && r.content === c,
 			),
 	);
 

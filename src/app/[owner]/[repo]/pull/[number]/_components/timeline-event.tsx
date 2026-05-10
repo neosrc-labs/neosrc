@@ -179,7 +179,7 @@ function EventContent({
 						<div className="prose prose-sm max-w-none p-4">
 							<MarkdownRenderer content={e.body} owner={owner} repo={repo} />
 						</div>
-						<div className="px-4 pb-3">
+						<div className="px-3 pb-3">
 							<ReactionRollup
 								reactions={commentReactions[e.id] ?? []}
 								currentUserLogin={currentUserLogin}

@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
-import { Reactions } from "~/components/Reactions";
+import { ReactionRollup } from "~/components/ReactionRollup";
 import {
 	extractPullRequestState,
 	StatusPill,
@@ -181,14 +181,17 @@ export function PullRequestDescriptionSection({
 										</div>
 									)}
 								</div>
+
+								{/* Reactions */}
+								<div className="p-3">
+									<ReactionRollup number={number} owner={owner} repo={repo} isIssue />
+								</div>
 							</div>
 						</>
 					);
 				}}
 			</Async>
 
-			{/* Reactions */}
-			<Reactions number={number} owner={owner} repo={repo} />
 		</div>
 	);
 }
