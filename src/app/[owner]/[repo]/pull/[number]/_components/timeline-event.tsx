@@ -187,7 +187,10 @@ function EventContent({
 							<div className="flex items-center gap-2">
 								{actor && (
 									<UserHoverCard login={actor.login}>
-										<a className="flex items-center gap-2" href={actor.html_url}>
+										<a
+											className="flex items-center gap-2"
+											href={actor.html_url}
+										>
 											<img
 												src={actor.avatar_url}
 												alt={actor.login}
@@ -237,7 +240,11 @@ function EventContent({
 								/>
 							) : (
 								<div className="prose prose-sm max-w-none">
-									<MarkdownRenderer content={displayBody} owner={owner} repo={repo} />
+									<MarkdownRenderer
+										content={displayBody}
+										owner={owner}
+										repo={repo}
+									/>
 								</div>
 							)}
 						</div>
