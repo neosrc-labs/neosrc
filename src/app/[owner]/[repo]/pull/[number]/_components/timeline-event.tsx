@@ -233,6 +233,7 @@ function EventContent({
 									value={editBody}
 									owner={owner}
 									repo={repo}
+									minHeight={`${Math.min(Math.max(editBody.split("\n").length * 28, 120), 400)}px`}
 								/>
 							) : (
 								<div className="prose prose-sm max-w-none">
