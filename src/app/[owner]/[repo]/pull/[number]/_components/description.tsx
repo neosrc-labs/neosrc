@@ -10,6 +10,7 @@ import {
 	extractPullRequestState,
 	StatusPill,
 } from "~/components/ui/status-pill";
+import { SquarePen } from "lucide-react";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -146,11 +147,11 @@ export function PullRequestDescriptionSection({
 									</h3>
 									{!isEditing && (
 										<button
-											className="cursor-pointer text-blue-600 text-sm hover:text-blue-800"
+											className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
 											onClick={() => handleStartEdit(pullRequest.body ?? "")}
 											type="button"
 										>
-											Edit
+											<SquarePen size={16} />
 										</button>
 									)}
 								</div>
