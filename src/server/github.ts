@@ -33,6 +33,20 @@ export function createOctokit(accessToken: string) {
 export type UsersGetByUsernameResponseData =
 	RestEndpointMethodTypes["users"]["getByUsername"]["response"]["data"];
 
+export type CheckRun = {
+	name: string;
+	conclusion: string | null;
+	status: string;
+	html_url?: string;
+	details_url?: string | null;
+	started_at?: string | null;
+	completed_at?: string | null;
+	app?: {
+		name: string;
+		icon?: string | null;
+	} | null;
+};
+
 export type { Octokit };
 
 export const getPullRequest = cache(

@@ -5,6 +5,7 @@ import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
 import {
+	type CheckRun,
 	createOctokit,
 	getCheckRuns,
 	getPullRequest,
@@ -34,14 +35,7 @@ export default async function PullRequestLayout({
 
 	let pullRequest: Promise<PullsGetResponseData> | null = null;
 	let commits: Promise<PullsListCommitsResponseData> | null = null;
-	let checks: Promise<
-		Array<{
-			name: string;
-			conclusion: string | null;
-			status: string;
-			html_url?: string | undefined;
-		}>
-	> | null = new Promise(() => {});
+	let checks: Promise<Array<CheckRun>> | null = new Promise(() => {});
 
 	if (session?.user?.id) {
 		const [account] = await db
@@ -70,12 +64,25 @@ export default async function PullRequestLayout({
 							name: string;
 							conclusion: string | null;
 							status: string;
-							html_url?: string | undefined;
+							html_url?: string;
+							details_url?: string | null;
+							started_at?: string | null;
+							completed_at?: string | null;
+							app?: {
+								name: string;
+								icon?: string | null;
+							} | null;
 						}) => ({
 							name: check.name,
 							conclusion: check.conclusion,
 							status: check.status,
 							html_url: check.html_url,
+							details_url: check.details_url,
+							started_at: check.started_at,
+							completed_at: check.completed_at,
+							app: check.app
+								? { name: check.app.name, icon: check.app.icon }
+								: null,
 						}),
 					);
 				}
