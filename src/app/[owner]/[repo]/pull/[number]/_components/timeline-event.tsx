@@ -77,7 +77,7 @@ export function TimelineEvent({
 	number,
 }: TimelineEventProps) {
 	return (
-		<div className="relative mb-4 ml-12">
+		<div className="relative mb-8 ml-12">
 			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700">
 				<TimelineIcon event={event} />
 			</div>
@@ -248,7 +248,7 @@ function EventContent({
 			// TODO: Add author / committer profile pictures here.
 			//       We could probably pass in the `commits` which we already load for the commit section in the sidebar
 			return (
-				<div className="item-center my-6 flex justify-between text-gray-600 text-sm dark:text-zinc-400">
+				<div className="item-center flex justify-between text-gray-600 text-sm dark:text-zinc-400">
 					<div>
 						<p>{e.message.split("\n")[0]}</p>
 					</div>
@@ -276,7 +276,7 @@ function EventContent({
 			const after = e.commit_id.slice(0, 7);
 			// TODO: Add links for the commits, branch, and author
 			return (
-				<div className="my-9 flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
 					<UserHoverCard login={e.actor.login}>
 						<a className="flex items-center gap-2" href={e.actor.html_url}>
 							<img
