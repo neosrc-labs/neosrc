@@ -33,7 +33,16 @@ export function PullRequestDescriptionSection({
 	const [editBody, setEditBody] = useState("");
 	const [savedBody, setSavedBody] = useState<string | null>(null);
 
-	const updateMutation = api.pulls.updateBody.useMutation();
+	const updateMutation = api.pulls.updateBody.useMutation({
+		onMutate: () => {
+			setSavedBody(editBody);
+			setIsEditing(false);
+		},
+		onError: () => {
+			setSavedBody(null);
+			setIsEditing(true);
+		},
+	});
 
 	const handleStartEdit = useCallback((currentBody: string) => {
 		setEditBody(currentBody);
@@ -45,14 +54,8 @@ export function PullRequestDescriptionSection({
 		setEditBody("");
 	}, []);
 
-	const handleSave = useCallback(async () => {
-		try {
-			await updateMutation.mutateAsync({ owner, repo, number, body: editBody });
-			setSavedBody(editBody);
-			setIsEditing(false);
-		} catch {
-			// TODO: Show error toast
-		}
+	const handleSave = useCallback(() => {
+		updateMutation.mutate({ owner, repo, number, body: editBody });
 	}, [editBody, owner, repo, number, updateMutation]);
 
 	return (
@@ -148,7 +151,7 @@ export function PullRequestDescriptionSection({
 									{!isEditing && (
 										<button
 											className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-											onClick={() => handleStartEdit(pullRequest.body ?? "")}
+											onClick={() => handleStartEdit(savedBody ?? pullRequest.body ?? "")}
 											type="button"
 										>
 											<SquarePen size={16} />
