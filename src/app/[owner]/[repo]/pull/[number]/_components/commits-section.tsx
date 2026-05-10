@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { Async, AsyncLink } from "~/components/async";
+import { CommitHoverCard } from "~/components/commit-hover-card";
 import type {
 	Commit,
 	PullsGetResponseData,
@@ -59,36 +60,40 @@ export function CommitsSection({
 									? commit.sha.startsWith(currentSha)
 									: false;
 								return (
-									<AsyncLink
-										className={`flex items-start gap-2 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800 ${
-											isCurrent
-												? "rounded border-blue-500 border-l-2 bg-blue-50 px-2 dark:bg-blue-950"
-												: ""
-										}`}
-										href={`${baseUrl}/${commit.sha}`}
+									<CommitHoverCard
+										baseUrl={baseUrl}
+										commit={commit}
 										key={commit.sha}
 									>
-										{commit.author && (
-											<img
-												alt={commit.author.login}
-												className="mt-0.5 h-5 w-5 shrink-0 rounded-full"
-												src={commit.author.avatar_url}
-											/>
-										)}
-										<div className="min-w-0">
-											<p className="truncate font-medium text-gray-900 text-sm dark:text-gray-100">
-												{commit.commit.message.split("\n")[0]}
-											</p>
-											{commit.author && commit.commit.committer && (
-												<p className="mt-0.5 text-gray-500 text-xs dark:text-gray-400">
-													{commit.author.login} committed{" "}
-													{formatRelativeTime(
-														commit.commit.committer.date ?? "",
-													)}
-												</p>
+										<AsyncLink
+											className={`flex items-start gap-2 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800 ${isCurrent
+												? "rounded border-blue-500 border-l-2 bg-blue-50 px-2 dark:bg-blue-950"
+												: ""
+												}`}
+											href={`${baseUrl}/${commit.sha}`}
+										>
+											{commit.author && (
+												<img
+													alt={commit.author.login}
+													className="mt-0.5 h-5 w-5 shrink-0 rounded-full"
+													src={commit.author.avatar_url}
+												/>
 											)}
-										</div>
-									</AsyncLink>
+											<div className="min-w-0">
+												<p className="truncate font-medium text-gray-900 text-sm dark:text-gray-100">
+													{commit.commit.message.split("\n")[0]}
+												</p>
+												{commit.author && commit.commit.committer && (
+													<p className="mt-0.5 text-gray-500 text-xs dark:text-gray-400">
+														{commit.author.login} committed{" "}
+														{formatRelativeTime(
+															commit.commit.committer.date ?? "",
+														)}
+													</p>
+												)}
+											</div>
+										</AsyncLink>
+									</CommitHoverCard>
 								);
 							})}
 						</div>
