@@ -23,6 +23,7 @@ import {
 	User,
 } from "lucide-react";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
+import { ReactionRollup } from "~/components/ReactionRollup";
 import { Label } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { TimelineEventData } from "~/server/github";
@@ -163,6 +164,11 @@ function EventContent({
 						<div className="prose prose-sm max-w-none p-4">
 							<MarkdownRenderer content={e.body} owner={owner} repo={repo} />
 						</div>
+						{e.reactions && (
+							<div className="px-4 pb-3">
+								<ReactionRollup reactions={e.reactions} />
+							</div>
+						)}
 					</div>
 				);
 			}
