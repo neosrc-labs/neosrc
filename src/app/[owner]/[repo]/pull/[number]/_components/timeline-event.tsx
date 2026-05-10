@@ -39,10 +39,12 @@ interface TimelineEventProps {
 type LabelEvent = components["schemas"]["labeled-issue-event"];
 type CommentEvent = components["schemas"]["timeline-comment-event"];
 type CommittedEvent = components["schemas"]["timeline-committed-event"];
-type CrossReferencedEvent =
-	components["schemas"]["timeline-cross-referenced-event"];
+type CrossReferencedEvent = components["schemas"]["timeline-cross-referenced-event"];
 type AssignedEvent = components["schemas"]["timeline-assigned-issue-event"];
 type RenamedEvent = components["schemas"]["renamed-issue-event"];
+type StateChangeEvent = components["schemas"]["state-change-issue-event"];
+type ReviewEvent = components["schemas"]["timeline-reviewed-event"];
+type EventWithDismissedReview = components["schemas"]["review-dismissed-issue-event"];
 type ForcePushEvent = {
 	event: "head_ref_force_pushed";
 	id: number;
@@ -54,11 +56,16 @@ type ForcePushEvent = {
 	created_at: string;
 	performed_via_github_app: components["schemas"]["nullable-integration"];
 };
-type StateChangeEvent = components["schemas"]["state-change-issue-event"];
-type ReviewEvent = components["schemas"]["timeline-reviewed-event"];
-// TODO: Replace this with the octokit types
-type EventWithDismissedReview = TimelineEventData & {
-	dismissed_review?: { dismissal_message?: string | null };
+type ReferencedEvent = {
+	event: "referenced";
+	id: number;
+	node_id: string;
+	url: string;
+	actor: components["schemas"]["simple-user"];
+	commit_id: string;
+	commit_url: string | null;
+	created_at: string;
+	performed_via_github_app: components["schemas"]["nullable-integration"];
 };
 
 export function TimelineEvent({
@@ -293,6 +300,41 @@ function EventContent({
 						</code>
 					</p>
 					{timestamp}
+				</div>
+			);
+		}
+		case "referenced": {
+			const e = event as ReferencedEvent;
+			const timestamp = formatRelativeTime(e.created_at);
+			const sha = e.commit_id?.slice(0, 7);
+			return (
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+					<UserHoverCard login={e.actor.login}>
+						<a className="flex items-center gap-2" href={e.actor.html_url}>
+							<img
+								src={e.actor.avatar_url}
+								alt={e.actor.login}
+								className="h-5 w-5 rounded-full"
+							/>
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
+								{e.actor.login}
+							</span>
+						</a>
+					</UserHoverCard>
+					<p>
+						{" referenced this "}
+						{timestamp}
+					</p>
+					{sha && (
+						<a
+							href={e.commit_url ?? undefined}
+							target="_blank"
+							rel="noreferrer"
+							className="font-mono text-xs hover:underline"
+						>
+							{sha}
+						</a>
+					)}
 				</div>
 			);
 		}
