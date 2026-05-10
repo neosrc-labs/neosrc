@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import type { PullsGetResponseData } from "~/server/github";
+import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import {
 	LeftSidebarContentSection,
 	SidebarActionButtons,
@@ -10,14 +10,7 @@ interface LeftSidebarProps {
 	owner: string;
 	repo: string;
 	number: number;
-	checksPromise: Promise<
-		Array<{
-			name: string;
-			conclusion: string | null;
-			status: string;
-			html_url?: string;
-		}>
-	> | null;
+	checksPromise: Promise<Array<CheckRun>> | null;
 	pullRequestPromise: Promise<PullsGetResponseData> | null;
 }
 

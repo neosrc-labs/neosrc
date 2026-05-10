@@ -2,9 +2,10 @@
 
 import { usePathname } from "next/navigation";
 import { use, useCallback, useMemo, useState } from "react";
+import { CheckHoverCard } from "~/components/check-hover-card";
 import { NavItem, NavMenu } from "~/components/ui/nav-menu";
 import { useFiles } from "~/hooks/files";
-import type { PullsGetResponseData } from "~/server/github";
+import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { buildFileTree, FileTree, FileTreeSkeleton } from "./file-tree";
 
@@ -12,14 +13,7 @@ interface LeftSidebarContentSectionProps {
 	owner: string;
 	repo: string;
 	number: number;
-	checksPromise: Promise<
-		Array<{
-			name: string;
-			conclusion: string | null;
-			status: string;
-			html_url?: string;
-		}>
-	> | null;
+	checksPromise: Promise<Array<CheckRun>> | null;
 	pullRequestPromise: Promise<PullsGetResponseData> | null;
 }
 
@@ -119,14 +113,7 @@ export function SidebarNavMenu({ owner, repo, number }: SidebarNavMenuProps) {
 }
 
 interface ChecksProps {
-	checksPromise: Promise<
-		Array<{
-			name: string;
-			conclusion: string | null;
-			status: string;
-			html_url?: string;
-		}>
-	>;
+	checksPromise: Promise<Array<CheckRun>>;
 }
 
 interface SidebarActionButtonsProps {
@@ -198,28 +185,29 @@ function Checks({ checksPromise }: ChecksProps) {
 			{checks && checks.length > 0 ? (
 				<div className="max-h-full space-y-2 overflow-y-auto">
 					{checks.map((check) => (
-						<a
-							className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800"
-							href={check.html_url}
-							key={check.html_url ?? check.name}
-							rel="noopener noreferrer"
-							target="_blank"
-						>
-							<span className="text-sm">
-								{check.conclusion === "success" ? (
-									<span className="text-green-600">✓</span>
-								) : check.conclusion === "failure" ? (
-									<span className="text-red-600">✗</span>
-								) : check.status === "in_progress" ? (
-									<span className="text-gray-400">⏳</span>
-								) : (
-									<span className="text-gray-400">○</span>
-								)}
-							</span>
-							<span className="truncate text-gray-700 text-sm dark:text-zinc-300">
-								{check.name}
-							</span>
-						</a>
+						<CheckHoverCard check={check} key={check.html_url ?? check.name}>
+							<a
+								className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800"
+								href={check.html_url}
+								rel="noopener noreferrer"
+								target="_blank"
+							>
+								<span className="text-sm">
+									{check.conclusion === "success" ? (
+										<span className="text-green-600">✓</span>
+									) : check.conclusion === "failure" ? (
+										<span className="text-red-600">✗</span>
+									) : check.status === "in_progress" ? (
+										<span className="text-gray-400">⏳</span>
+									) : (
+										<span className="text-gray-400">○</span>
+									)}
+								</span>
+								<span className="truncate text-gray-700 text-sm dark:text-zinc-300">
+									{check.name}
+								</span>
+							</a>
+						</CheckHoverCard>
 					))}
 				</div>
 			) : (
