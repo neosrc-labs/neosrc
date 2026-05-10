@@ -1,6 +1,27 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
+import {
+	ArrowUp,
+	Check,
+	CheckCheck,
+	Circle,
+	ClipboardList,
+	Eye,
+	FileText,
+	GitCommitHorizontal,
+	GitMerge,
+	Link,
+	Lock,
+	LockOpen,
+	MessageSquare,
+	Pencil,
+	RefreshCw,
+	Tag,
+	Target,
+	Trash2,
+	User,
+} from "lucide-react";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { Label } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
@@ -51,31 +72,31 @@ export function TimelineEvent({ event, owner, repo }: TimelineEventProps) {
 }
 
 function TimelineIcon({ event }: { event: TimelineEventData }) {
-	const iconMap: Record<string, string> = {
-		commented: "💬",
-		reviewed: "👀",
-		closed: "🔴",
-		reopened: "🟢",
-		merged: "🟣",
-		labeled: "🏷️",
-		unlabeled: "🏷️",
-		assigned: "👤",
-		unassigned: "👤",
-		review_requested: "📋",
-		review_request_removed: "📋",
-		committed: "📝",
-		renamed: "✏️",
-		locked: "🔒",
-		unlocked: "🔓",
-		milestoned: "🎯",
-		demilestoned: "🎯",
-		"cross-referenced": "🔗",
-		referenced: "🔗",
-		head_ref_deleted: "🗑️",
-		head_ref_restored: "♻️",
-		convert_to_draft: "📄",
-		ready_for_review: "✅",
-		head_ref_force_pushed: "⬆️",
+	const iconMap: Record<string, React.ReactNode> = {
+		commented: <MessageSquare size={14} />,
+		reviewed: <Eye size={14} />,
+		closed: <Circle className="fill-red-500/20 text-red-500" size={14} />,
+		reopened: <Circle className="fill-green-500/20 text-green-500" size={14} />,
+		merged: <GitMerge className="text-purple-500" size={14} />,
+		labeled: <Tag size={14} />,
+		unlabeled: <Tag size={14} />,
+		assigned: <User size={14} />,
+		unassigned: <User size={14} />,
+		review_requested: <ClipboardList size={14} />,
+		review_request_removed: <ClipboardList size={14} />,
+		committed: <GitCommitHorizontal size={14} />,
+		renamed: <Pencil size={14} />,
+		locked: <Lock size={14} />,
+		unlocked: <LockOpen size={14} />,
+		milestoned: <Target size={14} />,
+		demilestoned: <Target size={14} />,
+		"cross-referenced": <Link size={14} />,
+		referenced: <Link size={14} />,
+		head_ref_deleted: <Trash2 size={14} />,
+		head_ref_restored: <RefreshCw size={14} />,
+		convert_to_draft: <FileText size={14} />,
+		ready_for_review: <CheckCheck size={14} />,
+		head_ref_force_pushed: <ArrowUp size={14} />,
 	};
 
 	if (event.event === "reviewed") {
@@ -119,7 +140,7 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 			</>
 		);
 	}
-	return <span className="text-xs">{iconMap[event.event ?? ""] ?? "●"}</span>;
+	return <span className="flex">{iconMap[event.event ?? ""] ?? <Circle size={14} />}</span>;
 }
 
 function EventContent({
@@ -161,9 +182,9 @@ function EventContent({
 			return (
 				<div className="text-gray-600 text-sm dark:text-zinc-400">
 					<p className="flex items-center gap-1.5">
-						{isApproved && <span className="text-base text-green-500">✓</span>}
+						{isApproved && <Check className="text-green-500" size={16} />}
 						{isChangesRequested && (
-							<span className="text-base text-red-500">📄</span>
+							<FileText className="text-red-500" size={16} />
 						)}
 						<span className="font-medium text-gray-800 dark:text-zinc-200">
 							{e.user?.login}
