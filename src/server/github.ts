@@ -525,6 +525,43 @@ export const getGitHubUser = cache(
 	},
 );
 
+export type Milestone = NonNullable<PullsGetResponseData["milestone"]>;
+
+export type RepoMilestone =
+	RestEndpointMethodTypes["issues"]["listMilestones"]["response"]["data"][number];
+
+export const listMilestonesForRepo = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.issues.listMilestones({
+		owner,
+		repo,
+		state: "open",
+		per_page: 100,
+	});
+	return response.data;
+};
+
+export const updateIssueMilestone = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	issueNumber: number,
+	milestone: number | null,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.issues.update({
+		owner,
+		repo,
+		issue_number: issueNumber,
+		milestone,
+	});
+	return response.data;
+};
+
 export type RepoLabel =
 	RestEndpointMethodTypes["issues"]["listLabelsForRepo"]["response"]["data"][number];
 

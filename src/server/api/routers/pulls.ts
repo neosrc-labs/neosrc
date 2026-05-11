@@ -9,10 +9,12 @@ import {
 	createIssueComment,
 	createPullRequestReview,
 	listLabelsForRepo,
+	listMilestonesForRepo,
 	listRepoAssignees,
 	removeAssigneesFromIssue,
 	removeLabelFromIssue,
 	updateIssueComment,
+	updateIssueMilestone,
 	updatePullRequest,
 } from "~/server/github";
 
@@ -271,6 +273,58 @@ export const pullsRouter = createTRPCRouter({
 				input.repo,
 				input.number,
 				[input.assignee],
+			);
+
+			return { success: true as const };
+		}),
+
+	listMilestones: protectedProcedure
+		.input(
+			z.object({
+				owner: z.string(),
+				repo: z.string(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const [account] = await ctx.db
+				.select({ accessToken: accounts.access_token })
+				.from(accounts)
+				.where(eq(accounts.userId, ctx.session.user.id))
+				.limit(1);
+
+			if (!account?.accessToken) {
+				throw new Error("GitHub account not connected");
+			}
+
+			return listMilestonesForRepo(account.accessToken, input.owner, input.repo);
+		}),
+
+	setMilestone: protectedProcedure
+		.input(
+			z.object({
+				owner: z.string(),
+				repo: z.string(),
+				number: z.number(),
+				milestone: z.number().nullable(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const [account] = await ctx.db
+				.select({ accessToken: accounts.access_token })
+				.from(accounts)
+				.where(eq(accounts.userId, ctx.session.user.id))
+				.limit(1);
+
+			if (!account?.accessToken) {
+				throw new Error("GitHub account not connected");
+			}
+
+			await updateIssueMilestone(
+				account.accessToken,
+				input.owner,
+				input.repo,
+				input.number,
+				input.milestone,
 			);
 
 			return { success: true as const };

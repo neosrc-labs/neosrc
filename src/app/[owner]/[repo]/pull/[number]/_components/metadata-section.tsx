@@ -7,6 +7,7 @@ import type {
 } from "~/server/github";
 import { AssigneeSection } from "./assignee-section";
 import { LabelsSection } from "./label-section";
+import { MilestoneSection } from "./milestone-section";
 
 interface MetadataSectionProps {
 	pullRequestPromise: Promise<PullsGetResponseData>;
@@ -71,22 +72,12 @@ export function MetadataSection({
 
 			{/* Milestone Section */}
 			<section>
-				<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-zinc-100">
-					Milestone
-				</h3>
-				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
-					{(pullRequest) =>
-						pullRequest.milestone ? (
-							<p className="text-gray-600 text-sm dark:text-zinc-400">
-								{pullRequest.milestone.title}
-							</p>
-						) : (
-							<p className="text-gray-500 text-sm dark:text-zinc-400">
-								No milestone
-							</p>
-						)
-					}
-				</Async>
+				<MilestoneSection
+					pullRequestPromise={pullRequestPromise}
+					owner={owner}
+					repo={repo}
+					number={number}
+				/>
 			</section>
 
 			{/* Labels Section */}
