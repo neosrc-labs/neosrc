@@ -163,6 +163,50 @@ export const markPullRequestAsDraft = async (
 	return pr;
 };
 
+export const markPullRequestAsReady = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	pullNumber: number,
+) => {
+	const octokit = createOctokit(accessToken);
+	const { data: pr } = await octokit.pulls.get({
+		owner,
+		repo,
+		pull_number: pullNumber,
+	});
+
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${accessToken}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: `
+				mutation($pullRequestId: ID!) {
+					markPullRequestReadyForReview(input: { pullRequestId: $pullRequestId }) {
+						pullRequest {
+							id
+							isDraft
+						}
+					}
+				}
+			`,
+			variables: { pullRequestId: pr.node_id },
+		}),
+	});
+
+	const result = await response.json();
+	if (result.errors) {
+		throw new Error(
+			`Failed to mark PR as ready: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
+		);
+	}
+
+	return pr;
+};
+
 export const createIssueComment = async (
 	accessToken: string,
 	owner: string,

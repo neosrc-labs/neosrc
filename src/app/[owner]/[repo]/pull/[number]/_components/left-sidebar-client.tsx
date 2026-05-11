@@ -1,7 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { use, useCallback, useMemo, useState } from "react";
+import { Async } from "~/components/async";
 import { CheckHoverCard } from "~/components/check-hover-card";
 import { NavItem, NavMenu } from "~/components/ui/nav-menu";
 import { useFiles } from "~/hooks/files";
@@ -120,26 +121,48 @@ interface SidebarActionButtonsProps {
 	owner: string;
 	repo: string;
 	number: number;
+	pullRequestPromise: Promise<PullsGetResponseData> | null;
 }
 
 export function SidebarActionButtons({
 	owner,
 	repo,
 	number,
+	pullRequestPromise,
 }: SidebarActionButtonsProps) {
+	const router = useRouter();
 	const [approved, setApproved] = useState(false);
+	const [markedReady, setMarkedReady] = useState(false);
 
 	const approveMutation = api.pulls.approve.useMutation({
 		onSuccess: () => setApproved(true),
+	});
+
+	const markReadyMutation = api.pulls.markReadyForReview.useMutation({
+		onSuccess: () => {
+			setMarkedReady(true);
+			router.refresh();
+		},
 	});
 
 	const handleApprove = useCallback(() => {
 		approveMutation.mutate({ owner, repo, number, event: "APPROVE" });
 	}, [owner, repo, number, approveMutation]);
 
-	// TODO: Disable approve button based on if the user is allowed to approve this PR
-	return (
-		<div className="sticky bottom-0 z-10 space-y-2 border-gray-200 border-t bg-white pt-6 pr-4 dark:border-zinc-800 dark:bg-zinc-950">
+	const handleMarkReady = useCallback(() => {
+		markReadyMutation.mutate({ owner, repo, number });
+	}, [owner, repo, number, markReadyMutation]);
+
+	const skeleton = (
+		<>
+			<div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+			<div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+			<div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+		</>
+	);
+
+	const buttons = (isDraft: boolean) => (
+		<>
 			<button
 				className="w-full cursor-pointer rounded-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
 				disabled={approveMutation.isPending || approved}
@@ -159,17 +182,50 @@ export function SidebarActionButtons({
 			>
 				Request Changes
 			</button>
-			<button
-				className="w-full rounded-md bg-[#8250df] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#6e40c9] disabled:opacity-50"
-				disabled
-				type="button"
-			>
-				Merge
-			</button>
+			{isDraft ? (
+				<button
+					className="w-full cursor-pointer rounded-md bg-gray-200 px-3 py-2 font-medium text-sm text-gray-800 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+					disabled={markReadyMutation.isPending}
+					onClick={handleMarkReady}
+					type="button"
+				>
+					{markReadyMutation.isPending
+						? "Marking..."
+						: "Mark as ready for review"}
+				</button>
+			) : (
+				<button
+					className="w-full rounded-md bg-[#8250df] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#6e40c9] disabled:opacity-50"
+					disabled
+					type="button"
+				>
+					Merge
+				</button>
+			)}
 			{approveMutation.isError && (
 				<p className="text-red-600 text-xs">
 					Failed to approve. Please try again.
 				</p>
+			)}
+			{markReadyMutation.isError && (
+				<p className="text-red-600 text-xs">
+					Failed to mark as ready. Please try again.
+				</p>
+			)}
+		</>
+	);
+
+	return (
+		<div className="sticky bottom-0 z-10 space-y-2 border-gray-200 border-t bg-white pt-6 pr-4 dark:border-zinc-800 dark:bg-zinc-950">
+			{pullRequestPromise ? (
+				<Async
+					fallback={skeleton}
+					promise={pullRequestPromise}
+				>
+					{(pullRequest) => buttons(!!pullRequest.draft && !markedReady)}
+				</Async>
+			) : (
+				buttons(false)
 			)}
 		</div>
 	);
