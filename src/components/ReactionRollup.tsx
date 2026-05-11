@@ -1,6 +1,7 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
+import { SmilePlus } from "lucide-react";
 import { useState } from "react";
 import {
 	HoverCard,
@@ -12,7 +13,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "~/components/ui/popover";
-import { SmilePlus } from "lucide-react";
 import { api } from "~/trpc/react";
 
 export type Reaction = components["schemas"]["reaction"];
@@ -81,8 +81,7 @@ export function ReactionRollup({
 			utils.reactions.get.setData({ owner, repo, number }, (old) => {
 				if (!old) return old;
 				const existing = reactions.find(
-					(r) =>
-						r.user?.login === resolvedUserLogin && r.content === content,
+					(r) => r.user?.login === resolvedUserLogin && r.content === content,
 				);
 				const updated = existing
 					? reactions.filter((r) => r.id !== existing.id)
@@ -113,10 +112,7 @@ export function ReactionRollup({
 		},
 		onError: (_err, _vars, ctx) => {
 			if (ctx?.prevData) {
-				utils.reactions.get.setData(
-					{ owner, repo, number },
-					ctx.prevData,
-				);
+				utils.reactions.get.setData({ owner, repo, number }, ctx.prevData);
 			}
 		},
 		onSettled: () => {
@@ -143,9 +139,7 @@ export function ReactionRollup({
 				(old) => {
 					if (!old) return old;
 					const existing = reactions.find(
-						(r) =>
-							r.user?.login === resolvedUserLogin &&
-							r.content === content,
+						(r) => r.user?.login === resolvedUserLogin && r.content === content,
 					);
 					const updatedReactions = existing
 						? reactions.filter((r) => r.id !== existing.id)
@@ -281,9 +275,7 @@ export function ReactionRollup({
 											/>
 										)}
 										<span className="font-medium">{r.user?.login}</span>
-										<span className="ml-auto">
-											{reactionEmojis[r.content]}
-										</span>
+										<span className="ml-auto">{reactionEmojis[r.content]}</span>
 									</div>
 								))}
 							</div>
@@ -340,7 +332,7 @@ function ReactionPicker({
 			<PopoverTrigger asChild>
 				<button
 					type="button"
-					className="inline-flex cursor-pointer items-center rounded-full border border-dashed border-gray-300 px-2 py-0.5 text-gray-400 text-xs transition-colors hover:border-gray-400 hover:text-gray-600 dark:border-zinc-600 dark:text-zinc-500 dark:hover:border-zinc-500 dark:hover:text-zinc-300"
+					className="inline-flex cursor-pointer items-center rounded-full border border-gray-300 border-dashed px-2 py-0.5 text-gray-400 text-xs transition-colors hover:border-gray-400 hover:text-gray-600 dark:border-zinc-600 dark:text-zinc-500 dark:hover:border-zinc-500 dark:hover:text-zinc-300"
 				>
 					<SmilePlus size={14} />
 				</button>

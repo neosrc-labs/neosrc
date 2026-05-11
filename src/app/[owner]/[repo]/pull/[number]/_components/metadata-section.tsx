@@ -43,7 +43,7 @@ export function MetadataSection({
 				<Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
 					{(pullRequest) =>
 						pullRequest.requested_reviewers &&
-							pullRequest.requested_reviewers.length > 0 ? (
+						pullRequest.requested_reviewers.length > 0 ? (
 							<ul className="space-y-2">
 								{pullRequest.requested_reviewers.map((reviewer: Reviewer) => (
 									<li
@@ -317,7 +317,7 @@ function LabelsSection({
 							<LabelComponent color={label.color}>
 								{label.name}
 								<button
-									className="-mr-0.5 ml-0.5 inline-flex h-3 w-3 items-center justify-center rounded-full text-current opacity-60 hover:opacity-100 text-lg cursor-pointer"
+									className="-mr-0.5 ml-0.5 inline-flex h-3 w-3 cursor-pointer items-center justify-center rounded-full text-current text-lg opacity-60 hover:opacity-100"
 									onClick={() => handleRemove(label.name)}
 									type="button"
 									aria-label={`Remove label ${label.name}`}

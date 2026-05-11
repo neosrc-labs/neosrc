@@ -54,6 +54,13 @@ type StateChangeEvent = components["schemas"]["state-change-issue-event"];
 type ReviewEvent = components["schemas"]["timeline-reviewed-event"];
 type EventWithDismissedReview =
 	components["schemas"]["review-dismissed-issue-event"];
+type MilestonedEvent = components["schemas"]["milestoned-issue-event"];
+type DemilestonedEvent = components["schemas"]["demilestoned-issue-event"];
+type LockedEvent = components["schemas"]["locked-issue-event"];
+type ReviewRequestedEvent =
+	components["schemas"]["review-requested-issue-event"];
+type ReviewRequestRemovedEvent =
+	components["schemas"]["review-request-removed-issue-event"];
 type ForcePushEvent = {
 	event: "head_ref_force_pushed";
 	id: number;
@@ -640,6 +647,209 @@ function EventContent({
 						{verb}
 						{" this "}
 						{timestamp}
+					</p>
+				</div>
+			);
+		}
+		case "milestoned": {
+			const e = event as MilestonedEvent;
+			const timestamp = formatRelativeTime(e.created_at);
+			return (
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+					<UserHoverCard login={e.actor.login}>
+						<a className="flex items-center gap-2" href={e.actor.html_url}>
+							<img
+								src={e.actor.avatar_url}
+								alt={e.actor.login}
+								className="h-5 w-5 rounded-full"
+							/>
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
+								{e.actor.login}
+							</span>
+						</a>
+					</UserHoverCard>
+					<p>
+						{" added the milestone "}
+						<span className="font-medium text-gray-800 dark:text-zinc-200">
+							{e.milestone.title}
+						</span>
+						{` ${timestamp}`}
+					</p>
+				</div>
+			);
+		}
+		case "demilestoned": {
+			const e = event as DemilestonedEvent;
+			const timestamp = formatRelativeTime(e.created_at);
+			return (
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+					<UserHoverCard login={e.actor.login}>
+						<a className="flex items-center gap-2" href={e.actor.html_url}>
+							<img
+								src={e.actor.avatar_url}
+								alt={e.actor.login}
+								className="h-5 w-5 rounded-full"
+							/>
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
+								{e.actor.login}
+							</span>
+						</a>
+					</UserHoverCard>
+					<p>
+						{" removed the milestone "}
+						<span className="font-medium text-gray-800 dark:text-zinc-200">
+							{e.milestone.title}
+						</span>
+						{` ${timestamp}`}
+					</p>
+				</div>
+			);
+		}
+		case "locked": {
+			const e = event as LockedEvent;
+			const timestamp = formatRelativeTime(e.created_at);
+			return (
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+					<UserHoverCard login={e.actor.login}>
+						<a className="flex items-center gap-2" href={e.actor.html_url}>
+							<img
+								src={e.actor.avatar_url}
+								alt={e.actor.login}
+								className="h-5 w-5 rounded-full"
+							/>
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
+								{e.actor.login}
+							</span>
+						</a>
+					</UserHoverCard>
+					<p>
+						{" locked this"}
+						{e.lock_reason && (
+							<>
+								{" (reason: "}
+								<span className="font-medium text-gray-800 dark:text-zinc-200">
+									{e.lock_reason}
+								</span>
+								{")"}
+							</>
+						)}
+						{` ${timestamp}`}
+					</p>
+				</div>
+			);
+		}
+		case "unlocked": {
+			const e = event as LockedEvent;
+			const timestamp = formatRelativeTime(e.created_at);
+			return (
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+					<UserHoverCard login={e.actor.login}>
+						<a className="flex items-center gap-2" href={e.actor.html_url}>
+							<img
+								src={e.actor.avatar_url}
+								alt={e.actor.login}
+								className="h-5 w-5 rounded-full"
+							/>
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
+								{e.actor.login}
+							</span>
+						</a>
+					</UserHoverCard>
+					<p>
+						{" unlocked this "}
+						{timestamp}
+					</p>
+				</div>
+			);
+		}
+		case "review_requested": {
+			const e = event as ReviewRequestedEvent;
+			const timestamp = formatRelativeTime(e.created_at);
+			const reviewer = e.requested_reviewer;
+			const team = e.requested_team;
+			return (
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+					<UserHoverCard login={e.actor.login}>
+						<a className="flex items-center gap-2" href={e.actor.html_url}>
+							<img
+								src={e.actor.avatar_url}
+								alt={e.actor.login}
+								className="h-5 w-5 rounded-full"
+							/>
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
+								{e.actor.login}
+							</span>
+						</a>
+					</UserHoverCard>
+					<p>
+						{" requested a review from "}
+						{reviewer && (
+							<UserHoverCard login={reviewer.login}>
+								<a
+									className="inline-flex items-center gap-1 font-medium text-gray-800 dark:text-zinc-200"
+									href={reviewer.html_url}
+								>
+									<img
+										src={reviewer.avatar_url}
+										alt={reviewer.login}
+										className="h-4 w-4 rounded-full"
+									/>
+									{reviewer.login}
+								</a>
+							</UserHoverCard>
+						)}
+						{team && (
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
+								{team.name ?? team.slug}
+							</span>
+						)}
+						{` ${timestamp}`}
+					</p>
+				</div>
+			);
+		}
+		case "review_request_removed": {
+			const e = event as ReviewRequestRemovedEvent;
+			const timestamp = formatRelativeTime(e.created_at);
+			const reviewer = e.requested_reviewer;
+			const team = e.requested_team;
+			return (
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+					<UserHoverCard login={e.actor.login}>
+						<a className="flex items-center gap-2" href={e.actor.html_url}>
+							<img
+								src={e.actor.avatar_url}
+								alt={e.actor.login}
+								className="h-5 w-5 rounded-full"
+							/>
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
+								{e.actor.login}
+							</span>
+						</a>
+					</UserHoverCard>
+					<p>
+						{" removed the review request for "}
+						{reviewer && (
+							<UserHoverCard login={reviewer.login}>
+								<a
+									className="inline-flex items-center gap-1 font-medium text-gray-800 dark:text-zinc-200"
+									href={reviewer.html_url}
+								>
+									<img
+										src={reviewer.avatar_url}
+										alt={reviewer.login}
+										className="h-4 w-4 rounded-full"
+									/>
+									{reviewer.login}
+								</a>
+							</UserHoverCard>
+						)}
+						{team && (
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
+								{team.name ?? team.slug}
+							</span>
+						)}
+						{` ${timestamp}`}
 					</p>
 				</div>
 			);
