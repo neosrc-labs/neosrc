@@ -658,3 +658,37 @@ export const removeAssigneesFromIssue = async (
 	});
 	return response.data;
 };
+
+export const addReviewersToPullRequest = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	reviewers: string[],
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.pulls.requestReviewers({
+		owner,
+		repo,
+		pull_number: pullNumber,
+		reviewers,
+	});
+	return response.data;
+};
+
+export const removeReviewersFromPullRequest = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	reviewers: string[],
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.pulls.removeRequestedReviewers({
+		owner,
+		repo,
+		pull_number: pullNumber,
+		reviewers,
+	});
+	return response.data;
+};

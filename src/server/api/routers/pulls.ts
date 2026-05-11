@@ -6,6 +6,7 @@ import { accounts } from "~/server/db/schema";
 import {
 	addAssigneesToIssue,
 	addLabelsToIssue,
+	addReviewersToPullRequest,
 	createIssueComment,
 	createPullRequestReview,
 	listLabelsForRepo,
@@ -13,6 +14,7 @@ import {
 	listRepoAssignees,
 	removeAssigneesFromIssue,
 	removeLabelFromIssue,
+	removeReviewersFromPullRequest,
 	updateIssueComment,
 	updateIssueMilestone,
 	updatePullRequest,
@@ -325,6 +327,68 @@ export const pullsRouter = createTRPCRouter({
 				input.repo,
 				input.number,
 				input.milestone,
+			);
+
+			return { success: true as const };
+		}),
+
+	addReviewer: protectedProcedure
+		.input(
+			z.object({
+				owner: z.string(),
+				repo: z.string(),
+				number: z.number(),
+				reviewer: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const [account] = await ctx.db
+				.select({ accessToken: accounts.access_token })
+				.from(accounts)
+				.where(eq(accounts.userId, ctx.session.user.id))
+				.limit(1);
+
+			if (!account?.accessToken) {
+				throw new Error("GitHub account not connected");
+			}
+
+			await addReviewersToPullRequest(
+				account.accessToken,
+				input.owner,
+				input.repo,
+				input.number,
+				[input.reviewer],
+			);
+
+			return { success: true as const };
+		}),
+
+	removeReviewer: protectedProcedure
+		.input(
+			z.object({
+				owner: z.string(),
+				repo: z.string(),
+				number: z.number(),
+				reviewer: z.string(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const [account] = await ctx.db
+				.select({ accessToken: accounts.access_token })
+				.from(accounts)
+				.where(eq(accounts.userId, ctx.session.user.id))
+				.limit(1);
+
+			if (!account?.accessToken) {
+				throw new Error("GitHub account not connected");
+			}
+
+			await removeReviewersFromPullRequest(
+				account.accessToken,
+				input.owner,
+				input.repo,
+				input.number,
+				[input.reviewer],
 			);
 
 			return { success: true as const };
