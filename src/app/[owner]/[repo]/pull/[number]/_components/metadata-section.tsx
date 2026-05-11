@@ -1,14 +1,12 @@
 "use client";
 
 import { Async } from "~/components/async";
-import { UserHoverCard } from "~/components/user-hover-card";
 import type {
-	Assignee,
 	PullsGetResponseData,
 	Reviewer,
 } from "~/server/github";
-import { LabelsSection } from "./label-section";
 import { AssigneeSection } from "./assignee-section";
+import { LabelsSection } from "./label-section";
 
 interface MetadataSectionProps {
 	pullRequestPromise: Promise<PullsGetResponseData>;
@@ -63,7 +61,12 @@ export function MetadataSection({
 
 			{/* Assignees Section */}
 			<section>
-				<AssigneeSection pullRequestPromise={pullRequestPromise} />
+				<AssigneeSection
+					pullRequestPromise={pullRequestPromise}
+					owner={owner}
+					repo={repo}
+					number={number}
+				/>
 			</section>
 
 			{/* Milestone Section */}

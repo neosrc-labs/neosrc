@@ -573,3 +573,51 @@ export const removeLabelFromIssue = async (
 		name: labelName,
 	});
 };
+
+export const listRepoAssignees = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.issues.listAssignees({
+		owner,
+		repo,
+		per_page: 100,
+	});
+	return response.data;
+};
+
+export const addAssigneesToIssue = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	issueNumber: number,
+	assignees: string[],
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.issues.addAssignees({
+		owner,
+		repo,
+		issue_number: issueNumber,
+		assignees,
+	});
+	return response.data;
+};
+
+export const removeAssigneesFromIssue = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	issueNumber: number,
+	assignees: string[],
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.issues.removeAssignees({
+		owner,
+		repo,
+		issue_number: issueNumber,
+		assignees,
+	});
+	return response.data;
+};
