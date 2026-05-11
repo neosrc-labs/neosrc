@@ -31,11 +31,12 @@ import { Label } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { TimelineEventData } from "~/server/github";
 import { api } from "~/trpc/react";
+import type { TimelineWrapper } from "./timeline-types";
 import { formatRelativeTime } from "~/utils";
 import { ReviewComments } from "./review-comments";
 
 interface TimelineEventProps {
-	event: TimelineEventData;
+	wrapper: TimelineWrapper;
 	owner: string;
 	repo: string;
 	number: number;
@@ -43,7 +44,6 @@ interface TimelineEventProps {
 	currentUserLogin: string;
 }
 
-type LabelEvent = components["schemas"]["labeled-issue-event"];
 type CommentEvent = components["schemas"]["timeline-comment-event"];
 type CommittedEvent = components["schemas"]["timeline-committed-event"];
 type CrossReferencedEvent =
@@ -85,27 +85,99 @@ type ReferencedEvent = {
 };
 
 export function TimelineEvent({
-	event,
+	wrapper,
 	owner,
 	repo,
 	number,
 	commentReactions,
 	currentUserLogin,
 }: TimelineEventProps) {
+	if (wrapper.type === "aggregated-label") {
+		return <AggregatedLabel wrapper={wrapper} />;
+	}
+
 	return (
 		<div className="relative mb-8 ml-12">
 			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700">
-				<TimelineIcon event={event} />
+				<TimelineIcon event={wrapper.event} />
 			</div>
 
 			<EventContent
-				event={event}
+				event={wrapper.event}
 				owner={owner}
 				repo={repo}
 				number={number}
 				commentReactions={commentReactions}
 				currentUserLogin={currentUserLogin}
 			/>
+		</div>
+	);
+}
+
+function AggregatedLabel({
+	wrapper,
+}: {
+	wrapper: Extract<TimelineWrapper, { type: "aggregated-label" }>;
+}) {
+	const { actor, changes, createdAt } = wrapper;
+	const timestamp = formatRelativeTime(createdAt);
+	const added = changes.filter((c) => c.event === "labeled");
+	const removed = changes.filter((c) => c.event === "unlabeled");
+	const total = changes.length;
+
+	return (
+		<div className="relative mb-8 ml-12">
+			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700">
+				<Tag size={14} />
+			</div>
+			<div className="flex items-center gap-1.5 text-gray-600 text-sm dark:text-zinc-400 flex-wrap">
+				<UserHoverCard login={actor.login}>
+					<a className="flex items-center gap-1.5" href={actor.html_url}>
+						<img
+							src={actor.avatar_url}
+							alt={actor.login}
+							className="h-5 w-5 rounded-full"
+						/>
+						<span className="font-medium text-gray-800 dark:text-zinc-200">
+							{actor.login}
+						</span>
+					</a>
+				</UserHoverCard>
+				{added.length > 0 && (
+					<>
+						{" added "}
+						{added.map((c, i) => (
+							<span key={c.label.name}>
+								{i > 0 && i === added.length - 1
+									? " and "
+									: i > 0
+										? ", "
+										: ""}
+								<Label color={c.label.color}>{c.label.name}</Label>
+							</span>
+						))}
+					</>
+				)}
+				{added.length > 0 && removed.length > 0 && " and "}
+				{removed.length > 0 && (
+					<>
+						{" removed "}
+						{removed.map((c, i) => (
+							<span key={c.label.name}>
+								{i > 0 && i === removed.length - 1
+									? " and "
+									: i > 0
+										? ", "
+										: ""}
+								<Label color={c.label.color}>{c.label.name}</Label>
+							</span>
+						))}
+					</>
+				)}
+				<span>
+					{` ${total === 1 ? "label" : "labels"} ${timestamp}`}
+				</span>
+			</div>
 		</div>
 	);
 }
@@ -323,25 +395,6 @@ function EventContent({
 					/>
 				</div>
 			);
-		}
-
-		case "labeled":
-		case "unlabeled": {
-			const e = event as LabelEvent;
-			const added = event.event === "labeled";
-			const timestamp = formatRelativeTime(e.created_at);
-			if (e.label) {
-				return (
-					<div className="text-gray-600 text-sm dark:text-zinc-400">
-						{added ? "Added the" : "Removed the"}
-						<Label color={e.label.color} className="mx-1">
-							{e.label.name}
-						</Label>
-						label {timestamp}
-					</div>
-				);
-			}
-			return null;
 		}
 
 		case "committed": {

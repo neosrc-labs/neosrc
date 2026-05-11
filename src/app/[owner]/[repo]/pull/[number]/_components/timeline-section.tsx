@@ -2,9 +2,105 @@
 
 import { useInView } from "react-intersection-observer";
 import type { TimelineResult } from "~/server/api/routers/timeline";
+import type { TimelineEventData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { CommentForm } from "./comment-form";
 import { TimelineEvent } from "./timeline-event";
+import type {
+	LabelChange,
+	TimelineWrapper,
+} from "./timeline-types";
+
+function deduplicateChanges(changes: LabelChange[]): LabelChange[] {
+	const seen = new Set<string>();
+	const result: LabelChange[] = [];
+
+	for (const c of changes) {
+		const key = `${c.label.name}:${c.event}`;
+		if (!seen.has(key)) {
+			seen.add(key);
+			result.push(c);
+		}
+	}
+
+	return result;
+}
+
+const MAX_LABEL_GAP_MS = 3 * 60 * 60 * 1000;
+
+function aggregateEvents(events: TimelineEventData[]): TimelineWrapper[] {
+	const result: TimelineWrapper[] = [];
+	let i = 0;
+
+	while (i < events.length) {
+		const event = events[i]!;
+
+		if (event.event === "labeled" || event.event === "unlabeled") {
+			const changes: LabelChange[] = [];
+
+			while (i < events.length) {
+				const current = events[i]!;
+				if (
+					current.event !== "labeled" &&
+					current.event !== "unlabeled"
+				) {
+					break;
+				}
+				if (changes.length > 0) {
+					const curr = current as TimelineEventData & {
+						created_at: string;
+					};
+					const gap =
+						new Date(curr.created_at).getTime() -
+						new Date(
+							changes[changes.length - 1]!.createdAt,
+						).getTime();
+					if (gap > MAX_LABEL_GAP_MS) break;
+				}
+
+				const e = current as TimelineEventData & {
+					label?: { name: string; color: string };
+					actor?: {
+						login: string;
+						avatar_url: string;
+						html_url: string;
+					};
+					created_at: string;
+				};
+				if (e.label && e.actor) {
+					changes.push({
+						label: { name: e.label.name, color: e.label.color },
+						event: e.event as "labeled" | "unlabeled",
+						actor: {
+							login: e.actor.login,
+							avatar_url: e.actor.avatar_url,
+							html_url: e.actor.html_url,
+						},
+						createdAt: e.created_at,
+					});
+				}
+				i++;
+			}
+
+			if (changes.length > 0) {
+				const deduped = deduplicateChanges(changes);
+				if (deduped.length === 0) continue;
+				const lastChange = changes[changes.length - 1]!;
+				result.push({
+					type: "aggregated-label",
+					changes: deduped,
+					actor: lastChange.actor,
+					createdAt: lastChange.createdAt,
+				});
+			}
+		} else {
+			result.push({ type: "raw", event: event });
+			i++;
+		}
+	}
+
+	return result;
+}
 
 interface TimelineSectionProps {
 	owner: string;
@@ -43,11 +139,16 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 		) ?? {};
 	const currentUserLogin = data?.pages[0]?.currentUserLogin ?? "";
 	const filteredEvents = allEvents.filter((event) => {
-		if (["mentioned", "subscribed"].includes(event.event)) {
+		if (
+			event.event &&
+			["mentioned", "subscribed"].includes(event.event)
+		) {
 			return false;
 		}
 		return true;
 	});
+
+	const wrappers = aggregateEvents(filteredEvents);
 
 	return (
 		<div className="mt-4 border-gray-200 border-t pt-6 dark:border-zinc-700">
@@ -55,7 +156,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 				Timeline
 			</h2>
 
-			{filteredEvents.length === 0 && (
+			{wrappers.length === 0 && (
 				<p className="text-gray-500 text-sm dark:text-gray-400">
 					No timeline events yet.
 				</p>
@@ -64,17 +165,17 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 			<div className="relative">
 				<div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200 dark:bg-zinc-700" />
 
-				{filteredEvents.map((event, index) => (
-					<TimelineEvent
-						event={event}
-						key={`${event.id}-${index}`}
-						number={number}
-						owner={owner}
-						repo={repo}
-						commentReactions={allCommentReactions}
-						currentUserLogin={currentUserLogin}
-					/>
-				))}
+			{wrappers.map((wrapper, index) => (
+				<TimelineEvent
+					wrapper={wrapper}
+					key={index}
+					number={number}
+					owner={owner}
+					repo={repo}
+					commentReactions={allCommentReactions}
+					currentUserLogin={currentUserLogin}
+				/>
+			))}
 			</div>
 
 			<CommentForm number={number} owner={owner} repo={repo} />
@@ -85,7 +186,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 						Loading more...
 					</p>
 				)}
-				{!hasNextPage && filteredEvents.length > 0 && (
+				{!hasNextPage && wrappers.length > 0 && (
 					<p className="text-gray-400 text-sm dark:text-gray-500">
 						No more events
 					</p>
