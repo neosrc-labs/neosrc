@@ -1,7 +1,8 @@
 "use client";
 
-import { SquarePen } from "lucide-react";
+import { FilePen, SquarePen } from "lucide-react";
 import NextLink from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
@@ -29,9 +30,11 @@ export function PullRequestDescriptionSection({
 	number,
 	pullRequestPromise,
 }: PullRequestDescriptionSectionProps) {
+	const router = useRouter();
 	const [isEditing, setIsEditing] = useState(false);
 	const [editBody, setEditBody] = useState("");
 	const [savedBody, setSavedBody] = useState<string | null>(null);
+	const [convertedToDraft, setConvertedToDraft] = useState(false);
 
 	const updateMutation = api.pulls.updateBody.useMutation({
 		onMutate: () => {
@@ -41,6 +44,13 @@ export function PullRequestDescriptionSection({
 		onError: () => {
 			setSavedBody(null);
 			setIsEditing(true);
+		},
+	});
+
+	const markAsDraftMutation = api.pulls.markAsDraft.useMutation({
+		onSuccess: () => {
+			setConvertedToDraft(true);
+			router.refresh();
 		},
 	});
 
@@ -62,34 +72,62 @@ export function PullRequestDescriptionSection({
 		<div>
 			{/* PR Header */}
 			<div className="mb-6">
-				<div className="mb-2 flex items-center gap-2">
-					<Async
-						fallback={
-							<div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
-						}
-						promise={pullRequestPromise}
-					>
-						{(pullRequest) => {
-							const state = extractPullRequestState(pullRequest);
-							return <StatusPill state={state} />;
-						}}
-					</Async>
-					<Async
-						fallback={
-							<div className="h-8 w-96 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
-						}
-						promise={pullRequestPromise}
-					>
-						{(pullRequest) => (
+			<div className="mb-2 flex items-center gap-2">
+				<Async
+					fallback={
+						<div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
+					}
+					promise={pullRequestPromise}
+				>
+					{(pullRequest) => {
+						const state = extractPullRequestState(pullRequest);
+						return <StatusPill state={state} />;
+					}}
+				</Async>
+				<Async
+					fallback={
+						<div className="h-8 w-96 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+					}
+					promise={pullRequestPromise}
+				>
+					{(pullRequest) => (
+						<>
 							<h1 className="font-bold text-2xl text-gray-900 dark:text-zinc-100">
 								{pullRequest.title}
 							</h1>
-						)}
-					</Async>
-					<h1 className="text-2xl text-gray-400 dark:text-zinc-500">
-						#{number}
-					</h1>
-				</div>
+							<h1 className="text-2xl text-gray-400 dark:text-zinc-500">
+								#{number}
+							</h1>
+							{!pullRequest.draft &&
+								!convertedToDraft &&
+								pullRequest.state === "open" && (
+									<button
+										className="ml-auto flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1 text-gray-600 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+										disabled={markAsDraftMutation.isPending}
+										onClick={() =>
+											markAsDraftMutation.mutate({
+												owner,
+												repo,
+												number,
+											})
+										}
+										type="button"
+									>
+										<FilePen size={14} />
+										{markAsDraftMutation.isPending
+											? "Converting..."
+											: "Mark as draft"}
+									</button>
+								)}
+							{markAsDraftMutation.isError && (
+								<p className="ml-auto text-red-600 text-xs">
+									Failed to mark as draft. Please try again.
+								</p>
+							)}
+						</>
+					)}
+				</Async>
+			</div>
 
 				<Async
 					fallback={
