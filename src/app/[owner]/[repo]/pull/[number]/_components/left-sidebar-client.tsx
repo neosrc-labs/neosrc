@@ -145,6 +145,9 @@ export function SidebarActionButtons({
 	const [markedReady, setMarkedReady] = useState(false);
 	const [approveBody, setApproveBody] = useState("");
 	const [popoverOpen, setPopoverOpen] = useState(false);
+	const [requestChangesBody, setRequestChangesBody] = useState("");
+	const [requestChangesPopoverOpen, setRequestChangesPopoverOpen] =
+		useState(false);
 
 	const approveMutation = api.pulls.approve.useMutation({
 		onSuccess: (_, variables) => {
@@ -154,6 +157,14 @@ export function SidebarActionButtons({
 				setApproveBody("");
 				utils.timeline.list.invalidate();
 			}
+		},
+	});
+
+	const requestChangesMutation = api.pulls.approve.useMutation({
+		onSuccess: () => {
+			setRequestChangesPopoverOpen(false);
+			setRequestChangesBody("");
+			utils.timeline.list.invalidate();
 		},
 	});
 
@@ -177,6 +188,16 @@ export function SidebarActionButtons({
 			body: approveBody,
 		});
 	}, [owner, repo, number, approveBody, approveMutation]);
+
+	const handleRequestChanges = useCallback(() => {
+		requestChangesMutation.mutate({
+			owner,
+			repo,
+			number,
+			event: "REQUEST_CHANGES",
+			body: requestChangesBody,
+		});
+	}, [owner, repo, number, requestChangesBody, requestChangesMutation]);
 
 	const handleMarkReady = useCallback(() => {
 		markReadyMutation.mutate({ owner, repo, number });
@@ -245,13 +266,42 @@ export function SidebarActionButtons({
 					</Popover>
 				)}
 			</div>
-			<button
-				className="w-full rounded-md bg-[#cf222e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#b91c23] disabled:opacity-50"
-				disabled
-				type="button"
+			<Popover
+				open={requestChangesPopoverOpen}
+				onOpenChange={setRequestChangesPopoverOpen}
 			>
-				Request Changes
-			</button>
+				<PopoverTrigger asChild>
+					<button
+						className="w-full cursor-pointer rounded-md bg-[#cf222e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#b91c23] disabled:cursor-not-allowed disabled:opacity-50"
+						disabled={isAuthor}
+						type="button"
+					>
+						Request Changes
+					</button>
+				</PopoverTrigger>
+				<PopoverContent
+					align="end"
+					className="w-[42rem] bg-white p-4 dark:bg-zinc-950"
+					side="left"
+					sideOffset={8}
+				>
+					<MarkdownEditor
+						disabled={requestChangesMutation.isPending}
+						minHeight="150px"
+						onChange={setRequestChangesBody}
+						onCancel={() => {
+							setRequestChangesPopoverOpen(false);
+							setRequestChangesBody("");
+						}}
+						onSubmit={handleRequestChanges}
+						owner={owner}
+						placeholder="Describe your requested changes"
+						repo={repo}
+						submitLabel="Request Changes"
+						value={requestChangesBody}
+					/>
+				</PopoverContent>
+			</Popover>
 			{isDraft ? (
 				<button
 					className="w-full cursor-pointer rounded-md bg-gray-200 px-3 py-2 font-medium text-sm text-gray-800 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
@@ -275,6 +325,11 @@ export function SidebarActionButtons({
 			{approveMutation.isError && (
 				<p className="text-red-600 text-xs">
 					Failed to approve. Please try again.
+				</p>
+			)}
+			{requestChangesMutation.isError && (
+				<p className="text-red-600 text-xs">
+					Failed to request changes. Please try again.
 				</p>
 			)}
 			{markReadyMutation.isError && (
