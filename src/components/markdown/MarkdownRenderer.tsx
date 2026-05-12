@@ -6,6 +6,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { IssueHoverCard } from "~/components/issue-hover-card";
+import { UserHoverCard } from "~/components/user-hover-card";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
@@ -47,21 +48,33 @@ export function MarkdownRenderer({
 			rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
 			components={{
 				a({ href, children, ...props }) {
-					const match =
+					const issueMatch =
 						href?.match(
 							/^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/issues\/(\d+)$/,
 						);
-					if (match?.[1] && match[2] && match[3]) {
+					if (issueMatch?.[1] && issueMatch[2] && issueMatch[3]) {
 						return (
 							<IssueHoverCard
-								owner={match[1]}
-								repo={match[2]}
-								issueNumber={Number.parseInt(match[3])}
+								owner={issueMatch[1]}
+								repo={issueMatch[2]}
+								issueNumber={Number.parseInt(issueMatch[3])}
 							>
 								<a href={href} {...props}>
 									{children}
 								</a>
 							</IssueHoverCard>
+						);
+					}
+					const userMatch = href?.match(
+						/^https:\/\/github\.com\/([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)$/,
+					);
+					if (userMatch?.[1]) {
+						return (
+							<UserHoverCard login={userMatch[1]}>
+								<a href={href} {...props}>
+									{children}
+								</a>
+							</UserHoverCard>
 						);
 					}
 					return (
