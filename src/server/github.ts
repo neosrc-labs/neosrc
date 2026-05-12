@@ -652,6 +652,25 @@ export const updateIssueMilestone = async (
 	return response.data;
 };
 
+export const getIssue = cache(
+	async (
+		accessToken: string,
+		owner: string,
+		repo: string,
+		issueNumber: number,
+	) => {
+		const octokit = createOctokit(accessToken);
+		const response = await octokit.issues.get({
+			owner,
+			repo,
+			issue_number: issueNumber,
+		});
+		return response.data;
+	},
+);
+
+export type IssueGetResponseData = RestEndpointMethodTypes["issues"]["get"]["response"]["data"];
+
 export type RepoLabel =
 	RestEndpointMethodTypes["issues"]["listLabelsForRepo"]["response"]["data"][number];
 
