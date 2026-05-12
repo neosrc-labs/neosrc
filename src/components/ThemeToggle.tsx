@@ -43,7 +43,7 @@ export function ThemeToggle() {
 				className="flex cursor-pointer items-center justify-center rounded-md p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
 				onClick={() => setOpen(!open)}
 				type="button"
-				title={`Theme: ${selected.label}`}
+				title={mounted ? `Theme: ${selected.label}` : undefined}
 			>
 				{mounted ? (
 					<CurrentIcon />
