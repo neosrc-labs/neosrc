@@ -6,6 +6,7 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { IssueHoverCard } from "~/components/issue-hover-card";
+import { TeamHoverCard } from "~/components/team-hover-card";
 import { UserHoverCard } from "~/components/user-hover-card";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
@@ -48,10 +49,9 @@ export function MarkdownRenderer({
 			rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
 			components={{
 				a({ href, children, ...props }) {
-					const issueMatch =
-						href?.match(
-							/^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/issues\/(\d+)$/,
-						);
+					const issueMatch = href?.match(
+						/^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/issues\/(\d+)$/,
+					);
 					if (issueMatch?.[1] && issueMatch[2] && issueMatch[3]) {
 						return (
 							<IssueHoverCard
@@ -63,6 +63,18 @@ export function MarkdownRenderer({
 									{children}
 								</a>
 							</IssueHoverCard>
+						);
+					}
+					const teamMatch = href?.match(
+						/^https:\/\/github\.com\/orgs\/([\w.-]+)\/teams\/([\w.-]+)$/,
+					);
+					if (teamMatch?.[1] && teamMatch[2]) {
+						return (
+							<TeamHoverCard org={teamMatch[1]} teamSlug={teamMatch[2]}>
+								<a href={href} {...props}>
+									{children}
+								</a>
+							</TeamHoverCard>
 						);
 					}
 					const userMatch = href?.match(

@@ -33,6 +33,9 @@ export function createOctokit(accessToken: string) {
 export type UsersGetByUsernameResponseData =
 	RestEndpointMethodTypes["users"]["getByUsername"]["response"]["data"];
 
+export type TeamGetByNameResponseData =
+	RestEndpointMethodTypes["teams"]["getByName"]["response"]["data"];
+
 export type CheckRun = {
 	name: string;
 	conclusion: string | null;
@@ -615,6 +618,17 @@ export const getGitHubUser = cache(
 	},
 );
 
+export const getGitHubTeam = cache(
+	async (accessToken: string, org: string, teamSlug: string) => {
+		const octokit = createOctokit(accessToken);
+		const response = await octokit.teams.getByName({
+			org,
+			team_slug: teamSlug,
+		});
+		return response.data;
+	},
+);
+
 export type Milestone = NonNullable<PullsGetResponseData["milestone"]>;
 
 export type RepoMilestone =
@@ -669,7 +683,8 @@ export const getIssue = cache(
 	},
 );
 
-export type IssueGetResponseData = RestEndpointMethodTypes["issues"]["get"]["response"]["data"];
+export type IssueGetResponseData =
+	RestEndpointMethodTypes["issues"]["get"]["response"]["data"];
 
 export type RepoLabel =
 	RestEndpointMethodTypes["issues"]["listLabelsForRepo"]["response"]["data"][number];
