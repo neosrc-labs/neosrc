@@ -1,6 +1,6 @@
 "use client";
 
-import { useInView } from "react-intersection-observer";
+import { useEffect } from "react";
 import type { TimelineResult } from "~/server/api/routers/timeline";
 import type { TimelineEventData } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -109,8 +109,6 @@ interface TimelineSectionProps {
 }
 
 export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
-	const { ref, inView } = useInView();
-
 	const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
 		api.timeline.list.useInfiniteQuery(
 			{ owner, repo, number, limit: 30 },
@@ -119,9 +117,11 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 			},
 		);
 
-	if (inView && hasNextPage && !isFetchingNextPage) {
-		fetchNextPage();
-	}
+	useEffect(() => {
+		if (hasNextPage && !isFetchingNextPage) {
+			fetchNextPage();
+		}
+	}, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
 	if (isLoading) {
 		return (
@@ -178,13 +178,13 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 			))}
 			</div>
 
-			<div className="py-4 text-center" ref={ref}>
-				{isFetchingNextPage && (
+			{isFetchingNextPage && (
+				<div className="py-4 text-center">
 					<p className="text-gray-500 text-sm dark:text-gray-400">
 						Loading more...
 					</p>
-				)}
-			</div>
+				</div>
+			)}
 
 			<CommentForm number={number} owner={owner} repo={repo} />
 		</div>
