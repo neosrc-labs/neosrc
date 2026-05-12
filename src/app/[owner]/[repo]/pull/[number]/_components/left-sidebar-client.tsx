@@ -129,6 +129,7 @@ interface SidebarActionButtonsProps {
 	repo: string;
 	number: number;
 	pullRequestPromise: Promise<PullsGetResponseData> | null;
+	currentUserLogin?: string;
 }
 
 export function SidebarActionButtons({
@@ -136,6 +137,7 @@ export function SidebarActionButtons({
 	repo,
 	number,
 	pullRequestPromise,
+	currentUserLogin,
 }: SidebarActionButtonsProps) {
 	const router = useRouter();
 	const utils = api.useUtils();
@@ -188,12 +190,15 @@ export function SidebarActionButtons({
 		</>
 	);
 
-	const buttons = (isDraft: boolean) => (
-		<>
+	const buttons = (pullRequest: PullsGetResponseData) => {
+		const isDraft = !!pullRequest.draft && !markedReady;
+		const isAuthor = currentUserLogin === pullRequest.user?.login;
+		return (
+			<>
 			<div className="flex gap-1">
 				<button
 					className="flex-1 cursor-pointer rounded-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
-					disabled={approveMutation.isPending || approved}
+					disabled={approveMutation.isPending || approved || isAuthor}
 					onClick={handleApprove}
 					type="button"
 				>
@@ -208,7 +213,7 @@ export function SidebarActionButtons({
 						<PopoverTrigger asChild>
 							<button
 								className="cursor-pointer rounded-md bg-[#2da44e] px-2 py-2 text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
-								disabled={approveMutation.isPending}
+								disabled={approveMutation.isPending || isAuthor}
 								type="button"
 								title="Approve with comment"
 							>
@@ -279,6 +284,7 @@ export function SidebarActionButtons({
 			)}
 		</>
 	);
+};
 
 	return (
 		<div className="sticky bottom-0 z-10 space-y-2 border-gray-200 border-t bg-white pt-6 pr-4 dark:border-zinc-800 dark:bg-zinc-950">
@@ -287,10 +293,10 @@ export function SidebarActionButtons({
 					fallback={skeleton}
 					promise={pullRequestPromise}
 				>
-					{(pullRequest) => buttons(!!pullRequest.draft && !markedReady)}
+					{(pullRequest) => buttons(pullRequest)}
 				</Async>
 			) : (
-				buttons(false)
+				skeleton
 			)}
 		</div>
 	);

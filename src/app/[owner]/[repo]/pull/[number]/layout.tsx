@@ -6,7 +6,7 @@ import { db } from "~/server/db";
 import { accounts } from "~/server/db/schema";
 import {
 	type CheckRun,
-	createOctokit,
+	getAuthenticatedUser,
 	getCheckRuns,
 	getPullRequest,
 	getPullRequestCommits,
@@ -36,6 +36,7 @@ export default async function PullRequestLayout({
 	let pullRequest: Promise<PullsGetResponseData> | null = null;
 	let commits: Promise<PullsListCommitsResponseData> | null = null;
 	let checks: Promise<Array<CheckRun>> | null = new Promise(() => {});
+	let currentUserLogin: string | undefined;
 
 	if (session?.user?.id) {
 		const [account] = await db
@@ -48,6 +49,7 @@ export default async function PullRequestLayout({
 			const accessToken = account.accessToken;
 			commits = getPullRequestCommits(accessToken, owner, repo, number);
 			pullRequest = getPullRequest(accessToken, owner, repo, number);
+			currentUserLogin = (await getAuthenticatedUser(accessToken)).login;
 
 			// Fetch check runs if we have the PR head SHA
 			checks = pullRequest.then(async (pullRequest) => {
@@ -95,6 +97,7 @@ export default async function PullRequestLayout({
 		<ResizableLayout
 			leftSidebar={
 				<LeftSidebar
+					currentUserLogin={currentUserLogin}
 					pullRequestPromise={pullRequest}
 					checksPromise={checks}
 					number={number}

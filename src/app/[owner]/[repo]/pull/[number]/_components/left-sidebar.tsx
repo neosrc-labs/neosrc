@@ -12,6 +12,7 @@ interface LeftSidebarProps {
 	number: number;
 	checksPromise: Promise<Array<CheckRun>> | null;
 	pullRequestPromise: Promise<PullsGetResponseData> | null;
+	currentUserLogin?: string;
 }
 
 export default function LeftSidebar({
@@ -20,6 +21,7 @@ export default function LeftSidebar({
 	number,
 	checksPromise,
 	pullRequestPromise,
+	currentUserLogin,
 }: LeftSidebarProps) {
 	return (
 		<aside className="flex h-full flex-col border-gray-200 border-r bg-white px-4 py-6 pr-1 dark:border-zinc-800 dark:bg-zinc-950">
@@ -39,6 +41,7 @@ export default function LeftSidebar({
 			</div>
 
 			<SidebarActionButtons
+				currentUserLogin={currentUserLogin}
 				number={number}
 				owner={owner}
 				pullRequestPromise={pullRequestPromise}
