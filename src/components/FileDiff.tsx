@@ -1,21 +1,9 @@
 "use client";
 
-import { parse } from "diff2html";
-import "diff2html/bundles/css/diff2html.min.css";
-import hljs from "highlight.js";
-import { useTheme } from "next-themes";
-import {
-	Fragment,
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReviewCommentData } from "~/server/github";
 import { api } from "~/trpc/react";
-import { InlineCommentThread } from "./InlineCommentThread";
-import { MarkdownEditor } from "./markdown/MarkdownEditor";
+import { DiffView, type ActiveComment } from "./DiffView";
 
 interface FileDiffProps {
 	file: {
@@ -30,11 +18,6 @@ interface FileDiffProps {
 	number: string;
 	comments?: ReviewCommentData[];
 	showComments?: boolean;
-}
-
-interface ActiveComment {
-	line: number;
-	side: "LEFT" | "RIGHT";
 }
 
 function getViewedKey(owner: string, repo: string, number: string): string {
@@ -72,7 +55,6 @@ export default function FileDiff({
 	);
 	const [commentBody, setCommentBody] = useState("");
 	const utils = api.useUtils();
-	const { resolvedTheme } = useTheme();
 
 	const fileId = file.filename.replace(/\//g, "-");
 
@@ -82,63 +64,6 @@ export default function FileDiff({
 		setIsViewed(wasViewed);
 		setIsCollapsed(wasViewed);
 	}, [owner, repo, number, file.filename]);
-
-	const parsed = useMemo(() => {
-		if (!file.patch) return null;
-		const normalizedDiff = file.patch.startsWith("---")
-			? file.patch
-			: `--- a/${file.filename}\n+++ b/${file.filename}\n${file.patch}`;
-		const files = parse(normalizedDiff, {
-			colorScheme: resolvedTheme,
-		});
-		return files[0] ?? null;
-	}, [file.patch, file.filename, resolvedTheme]);
-
-	const diffRef = useRef<HTMLDivElement>(null);
-
-	const language = useMemo(() => {
-		const ext = file.filename.split(".").pop()?.toLowerCase();
-		if (!ext) return null;
-		const langMap: Record<string, string> = {
-			tsx: "typescript",
-			jsx: "javascript",
-			mjs: "javascript",
-			cjs: "javascript",
-			mts: "typescript",
-			cts: "typescript",
-			vue: "html",
-			svelte: "html",
-		};
-		const lang = langMap[ext] ?? ext;
-		try {
-			return hljs.getLanguage(lang) ? lang : null;
-		} catch {
-			return null;
-		}
-	}, [file.filename]);
-
-	useEffect(() => {
-		if (!diffRef.current || !language || !parsed) return;
-		const lines =
-			diffRef.current.querySelectorAll<HTMLElement>(".d2h-code-line-ctn");
-		lines.forEach((el) => {
-			const text = el.textContent;
-			if (!text) return;
-			const result = hljs.highlight(text, { language });
-			el.innerHTML = result.value;
-		});
-	}, [language, parsed]);
-
-	const commentsByLine = useMemo(() => {
-		const map = new Map<number, ReviewCommentData[]>();
-		for (const comment of comments) {
-			const key = comment.line ?? 0;
-			const existing = map.get(key) ?? [];
-			existing.push(comment);
-			map.set(key, existing);
-		}
-		return map;
-	}, [comments]);
 
 	const createMutation = api.reviewComments.create.useMutation({
 		onSuccess: () => {
@@ -275,211 +200,34 @@ export default function FileDiff({
 			</div>
 
 			{!isCollapsed && (
-				<div className="overflow-x-auto">
-					<div
-						className={`d2h-wrapper ${resolvedTheme === "light" ? "d2h-light-color-scheme" : "d2h-dark-color-scheme"}`}
-						ref={diffRef}
-					>
-						{parsed ? (
-							<table className="d2h-diff-table">
-								<tbody className="d2h-diff-tbody">
-									{parsed.blocks.map((block) => (
-										<BlockRows
-											key={`${block.oldStartLine}-${block.newStartLine}-${block.header}`}
-											block={block}
-											commentsByLine={commentsByLine}
-											activeComment={activeComment}
-											onStartComment={setActiveComment}
-											owner={owner}
-											repo={repo}
-											pullNumber={number}
-											commentBody={commentBody}
-											onCommentBodyChange={setCommentBody}
-											onSubmitComment={handleAddComment}
-											commentPending={createMutation.isPending}
-											commentError={createMutation.isError}
-											onCancelComment={() => {
-												setActiveComment(null);
-												setCommentBody("");
-											}}
-											showComments={showComments}
-										/>
-									))}
-								</tbody>
-							</table>
-						) : (
-							<div className="px-4 py-3 text-gray-500 text-sm italic dark:text-gray-400">
-								{file.patch === null ? "Binary file not shown" : "No changes"}
-							</div>
-						)}
+				file.patch ? (
+					<DiffView
+						patch={file.patch}
+						filename={file.filename}
+						comments={showComments ? comments : undefined}
+						showComments={showComments}
+						showCommentButton={showComments}
+						activeComment={activeComment}
+						onStartComment={setActiveComment}
+						commentBody={commentBody}
+						onCommentBodyChange={setCommentBody}
+						onSubmitComment={handleAddComment}
+						commentPending={createMutation.isPending}
+						commentError={createMutation.isError}
+						onCancelComment={() => {
+							setActiveComment(null);
+							setCommentBody("");
+						}}
+						owner={owner}
+						repo={repo}
+						pullNumber={number}
+					/>
+				) : (
+					<div className="px-4 py-3 text-gray-500 text-sm italic dark:text-gray-400">
+						{file.patch === null ? "Binary file not shown" : "No changes"}
 					</div>
-				</div>
+				)
 			)}
 		</div>
-	);
-}
-
-function groupThreads(
-	comments: ReviewCommentData[],
-): Array<{ parent: ReviewCommentData; replies: ReviewCommentData[] }> {
-	const threads = new Map<number, ReviewCommentData[]>();
-	for (const comment of comments) {
-		const rootId = comment.in_reply_to_id ?? comment.id;
-		const existing = threads.get(rootId) ?? [];
-		existing.push(comment);
-		threads.set(rootId, existing);
-	}
-	return Array.from(threads.entries()).map(([, group]) => ({
-		parent: group[0] as ReviewCommentData,
-		replies: group.slice(1),
-	}));
-}
-
-interface BlockRowsProps {
-	block: NonNullable<ReturnType<typeof parse>>[number]["blocks"][number];
-	commentsByLine: Map<number, ReviewCommentData[]>;
-	activeComment: ActiveComment | null;
-	onStartComment: (ac: ActiveComment | null) => void;
-	owner: string;
-	repo: string;
-	pullNumber: string;
-	commentBody: string;
-	onCommentBodyChange: (body: string) => void;
-	onSubmitComment: () => void;
-	commentPending: boolean;
-	commentError: boolean;
-	onCancelComment: () => void;
-	showComments: boolean;
-}
-
-function BlockRows({
-	block,
-	commentsByLine,
-	activeComment,
-	onStartComment,
-	owner,
-	repo,
-	pullNumber,
-	commentBody,
-	onCommentBodyChange,
-	onSubmitComment,
-	commentPending,
-	commentError,
-	onCancelComment,
-	showComments,
-}: BlockRowsProps) {
-	return (
-		<>
-			<tr>
-				<td className="d2h-code-linenumber d2h-info" />
-				<td className="d2h-info">
-					<div className="d2h-code-line">{block.header}</div>
-				</td>
-			</tr>
-			{block.lines.map((line) => {
-				const type = line.type;
-				const typeClass =
-					type === "insert"
-						? "d2h-ins d2h-change"
-						: type === "delete"
-							? "d2h-del d2h-change"
-							: "d2h-cntx";
-
-				const oldNum =
-					"oldNumber" in line
-						? (line as { oldNumber: number }).oldNumber
-						: undefined;
-				const newNum =
-					"newNumber" in line
-						? (line as { newNumber: number }).newNumber
-						: undefined;
-
-				const commentLine = newNum ?? oldNum ?? 0;
-				const side = type === "delete" ? "LEFT" : "RIGHT";
-
-				const lineComments = commentsByLine.get(commentLine) ?? [];
-				const isActive =
-					activeComment?.line === commentLine && activeComment?.side === side;
-				const hasComments = lineComments.length > 0;
-
-				const prefix = line.content[0] ?? " ";
-				const content = line.content.slice(1);
-
-				return (
-					<Fragment key={`${oldNum ?? ""}-${newNum ?? ""}-${line.content}`}>
-						<tr>
-							<td className={`d2h-code-linenumber ${typeClass}`}>
-								<div className="line-num1">
-									{oldNum !== undefined ? oldNum : ""}
-								</div>
-								<div className="line-num2">
-									{newNum !== undefined ? newNum : ""}
-								</div>
-								<button
-									className={`comment-btn ${isActive ? "comment-btn-active" : ""}`}
-									onClick={() =>
-										onStartComment(
-											isActive ? null : { line: commentLine, side },
-										)
-									}
-									type="button"
-									title="Add a comment"
-								>
-									+
-								</button>
-							</td>
-							<td className={typeClass}>
-								<div className="d2h-code-line">
-									<span className="d2h-code-line-prefix">
-										{prefix === " " ? "\u00A0" : prefix}
-									</span>
-									<span className="d2h-code-line-ctn">{content || <br />}</span>
-								</div>
-							</td>
-						</tr>
-						{showComments &&
-							hasComments &&
-							groupThreads(lineComments).map((thread) => (
-								<tr key={`thread-${thread.parent.id}`}>
-									<td colSpan={2} className="p-0">
-										<InlineCommentThread
-											parentComment={thread.parent}
-											replies={thread.replies}
-											owner={owner}
-											repo={repo}
-											number={Number(pullNumber)}
-										/>
-									</td>
-								</tr>
-							))}
-						{isActive && (
-							<tr>
-								<td
-									colSpan={2}
-									className="border-gray-200 border-t p-2 dark:border-gray-700"
-								>
-									<MarkdownEditor
-										disabled={commentPending}
-										onChange={onCommentBodyChange}
-										onCancel={onCancelComment}
-										onSubmit={onSubmitComment}
-										placeholder="Add a comment..."
-										submitLabel="Comment"
-										value={commentBody}
-										owner={owner}
-										repo={repo}
-									/>
-									{commentError && (
-										<p className="mt-1 text-red-600 text-xs">
-											Failed to post comment. Please try again.
-										</p>
-									)}
-								</td>
-							</tr>
-						)}
-					</Fragment>
-				);
-			})}
-		</>
 	);
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, MessageSquare } from "lucide-react";
+import { DiffView } from "~/components/DiffView";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { ReviewCommentsForReviewData } from "~/server/github";
@@ -109,9 +110,9 @@ function CommentBlock({
 	return (
 		<div className="p-3">
 			{comment.diff_hunk && (
-				<pre className="mb-2 overflow-x-auto rounded bg-gray-50 p-2 text-xs dark:bg-zinc-800">
-					<code>{comment.diff_hunk}</code>
-				</pre>
+				<div className="mb-2">
+					<DiffView patch={comment.diff_hunk} filename={comment.path} />
+				</div>
 			)}
 			<div className="mb-1 flex items-center gap-2">
 				<UserHoverCard login={comment.user.login}>
