@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReviewCommentData } from "~/server/github";
 import { api } from "~/trpc/react";
+import { isGeneratedFile } from "~/utils/generated-files";
 import { DiffView, type ActiveComment } from "./DiffView";
 
 interface FileDiffProps {
@@ -50,11 +51,14 @@ export default function FileDiff({
 }: FileDiffProps) {
 	const [isViewed, setIsViewed] = useState(false);
 	const [isCollapsed, setIsCollapsed] = useState(isViewed);
+	const [showGeneratedDiff, setShowGeneratedDiff] = useState(false);
 	const [activeComment, setActiveComment] = useState<ActiveComment | null>(
 		null,
 	);
 	const [commentBody, setCommentBody] = useState("");
 	const utils = api.useUtils();
+
+	const generated = isGeneratedFile(file.filename);
 
 	const fileId = file.filename.replace(/\//g, "-");
 
@@ -200,7 +204,20 @@ export default function FileDiff({
 			</div>
 
 			{!isCollapsed && (
-				file.patch ? (
+				generated && !showGeneratedDiff ? (
+					<div className="flex flex-col items-center gap-2 border-t border-gray-200 px-4 py-6 text-gray-500 text-sm dark:border-gray-700 dark:text-gray-400">
+						<span>
+							This file is generated and hidden by default.
+						</span>
+						<button
+							className="cursor-pointer font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+							onClick={() => setShowGeneratedDiff(true)}
+							type="button"
+						>
+							Show changes
+						</button>
+					</div>
+				) : file.patch ? (
 					<DiffView
 						patch={file.patch}
 						filename={file.filename}
