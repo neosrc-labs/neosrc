@@ -178,20 +178,15 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 			))}
 			</div>
 
-			<CommentForm number={number} owner={owner} repo={repo} />
-
 			<div className="py-4 text-center" ref={ref}>
 				{isFetchingNextPage && (
 					<p className="text-gray-500 text-sm dark:text-gray-400">
 						Loading more...
 					</p>
 				)}
-				{!hasNextPage && wrappers.length > 0 && (
-					<p className="text-gray-400 text-sm dark:text-gray-500">
-						No more events
-					</p>
-				)}
 			</div>
+
+			<CommentForm number={number} owner={owner} repo={repo} />
 		</div>
 	);
 }
