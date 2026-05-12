@@ -2,8 +2,15 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { use, useCallback, useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Async } from "~/components/async";
 import { CheckHoverCard } from "~/components/check-hover-card";
+import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "~/components/ui/popover";
 import { NavItem, NavMenu } from "~/components/ui/nav-menu";
 import { useFiles } from "~/hooks/files";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
@@ -131,11 +138,21 @@ export function SidebarActionButtons({
 	pullRequestPromise,
 }: SidebarActionButtonsProps) {
 	const router = useRouter();
+	const utils = api.useUtils();
 	const [approved, setApproved] = useState(false);
 	const [markedReady, setMarkedReady] = useState(false);
+	const [approveBody, setApproveBody] = useState("");
+	const [popoverOpen, setPopoverOpen] = useState(false);
 
 	const approveMutation = api.pulls.approve.useMutation({
-		onSuccess: () => setApproved(true),
+		onSuccess: (_, variables) => {
+			setApproved(true);
+			if (variables.body) {
+				setPopoverOpen(false);
+				setApproveBody("");
+				utils.timeline.list.invalidate();
+			}
+		},
 	});
 
 	const markReadyMutation = api.pulls.markReadyForReview.useMutation({
@@ -148,6 +165,16 @@ export function SidebarActionButtons({
 	const handleApprove = useCallback(() => {
 		approveMutation.mutate({ owner, repo, number, event: "APPROVE" });
 	}, [owner, repo, number, approveMutation]);
+
+	const handleApproveWithComment = useCallback(() => {
+		approveMutation.mutate({
+			owner,
+			repo,
+			number,
+			event: "APPROVE",
+			body: approveBody,
+		});
+	}, [owner, repo, number, approveBody, approveMutation]);
 
 	const handleMarkReady = useCallback(() => {
 		markReadyMutation.mutate({ owner, repo, number });
@@ -163,18 +190,56 @@ export function SidebarActionButtons({
 
 	const buttons = (isDraft: boolean) => (
 		<>
-			<button
-				className="w-full cursor-pointer rounded-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
-				disabled={approveMutation.isPending || approved}
-				onClick={handleApprove}
-				type="button"
-			>
-				{approveMutation.isPending
-					? "Approving..."
-					: approved
-						? "Approved"
-						: "Approve"}
-			</button>
+			<div className="flex gap-1">
+				<button
+					className="flex-1 cursor-pointer rounded-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
+					disabled={approveMutation.isPending || approved}
+					onClick={handleApprove}
+					type="button"
+				>
+					{approveMutation.isPending
+						? "Approving..."
+						: approved
+							? "Approved"
+							: "Approve"}
+				</button>
+				{!approved && (
+					<Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+						<PopoverTrigger asChild>
+							<button
+								className="cursor-pointer rounded-md bg-[#2da44e] px-2 py-2 text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
+								disabled={approveMutation.isPending}
+								type="button"
+								title="Approve with comment"
+							>
+								<ChevronDown className="h-4 w-4" />
+							</button>
+						</PopoverTrigger>
+						<PopoverContent
+							align="end"
+							className="w-[42rem] bg-white p-4 dark:bg-zinc-950"
+							side="left"
+							sideOffset={8}
+						>
+							<MarkdownEditor
+								disabled={approveMutation.isPending}
+								minHeight="150px"
+								onChange={setApproveBody}
+								onCancel={() => {
+									setPopoverOpen(false);
+									setApproveBody("");
+								}}
+								onSubmit={handleApproveWithComment}
+								owner={owner}
+								placeholder="Leave a comment with your approval"
+								repo={repo}
+								submitLabel="Approve"
+								value={approveBody}
+							/>
+						</PopoverContent>
+					</Popover>
+				)}
+			</div>
 			<button
 				className="w-full rounded-md bg-[#cf222e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#b91c23] disabled:opacity-50"
 				disabled
