@@ -9,6 +9,7 @@ import {
 	createIssueComment,
 	createPullRequestReview,
 	listLabelsForRepo,
+	listMilestonesForRepo,
 	listRepoAssignees,
 	markPullRequestAsDraft,
 	markPullRequestAsReady,
