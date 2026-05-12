@@ -17,7 +17,7 @@ export function remarkMentionPlugin() {
 			) {
 				const value = node.value as string;
 				const mentionRegex =
-					/(?<!\w)@([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)\b/g;
+					/(?<!\w)@([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)(?:\/([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?))?\b/g;
 				const parts: any[] = [];
 				let cursor = 0;
 				let match: RegExpExecArray | null;
@@ -30,13 +30,19 @@ export function remarkMentionPlugin() {
 						});
 					}
 
-					const username = match[1];
-
-					parts.push({
-						type: "link",
-						url: `https://github.com/${username}`,
-						children: [{ type: "text", value: match[0] }],
-					});
+					if (match[2]) {
+						parts.push({
+							type: "link",
+							url: `https://github.com/orgs/${match[1]}/teams/${match[2]}`,
+							children: [{ type: "text", value: match[0] }],
+						});
+					} else {
+						parts.push({
+							type: "link",
+							url: `https://github.com/${match[1]}`,
+							children: [{ type: "text", value: match[0] }],
+						});
+					}
 
 					cursor = match.index + match[0].length;
 				}
