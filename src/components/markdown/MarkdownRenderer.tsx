@@ -5,6 +5,7 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+import { IssueHoverCard } from "~/components/issue-hover-card";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
@@ -45,6 +46,30 @@ export function MarkdownRenderer({
 			]}
 			rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
 			components={{
+				a({ href, children, ...props }) {
+					const match =
+						href?.match(
+							/^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/issues\/(\d+)$/,
+						);
+					if (match?.[1] && match[2] && match[3]) {
+						return (
+							<IssueHoverCard
+								owner={match[1]}
+								repo={match[2]}
+								issueNumber={Number.parseInt(match[3])}
+							>
+								<a href={href} {...props}>
+									{children}
+								</a>
+							</IssueHoverCard>
+						);
+					}
+					return (
+						<a href={href} {...props}>
+							{children}
+						</a>
+					);
+				},
 				summary({ children, ...props }) {
 					return (
 						<summary className="cursor-pointer" {...props}>
