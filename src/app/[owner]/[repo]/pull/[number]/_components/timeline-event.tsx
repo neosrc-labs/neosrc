@@ -31,9 +31,9 @@ import { Label } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { TimelineEventData } from "~/server/github";
 import { api } from "~/trpc/react";
-import type { TimelineWrapper } from "./timeline-types";
 import { formatRelativeTime } from "~/utils";
 import { ReviewComments } from "./review-comments";
+import type { TimelineWrapper } from "./timeline-types";
 
 interface TimelineEventProps {
 	wrapper: TimelineWrapper;
@@ -97,19 +97,21 @@ export function TimelineEvent({
 	}
 
 	return (
-		<div className="relative mb-8 ml-12">
-			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700">
+		<div className="relative mb-8 ml-14">
+			<div className="absolute -left-12 flex h-8 w-8 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700">
 				<TimelineIcon event={wrapper.event} />
 			</div>
 
-			<EventContent
-				event={wrapper.event}
-				owner={owner}
-				repo={repo}
-				number={number}
-				commentReactions={commentReactions}
-				currentUserLogin={currentUserLogin}
-			/>
+			<div className="pt-1.5">
+				<EventContent
+					event={wrapper.event}
+					owner={owner}
+					repo={repo}
+					number={number}
+					commentReactions={commentReactions}
+					currentUserLogin={currentUserLogin}
+				/>
+			</div>
 		</div>
 	);
 }
@@ -126,11 +128,11 @@ function AggregatedLabel({
 	const total = changes.length;
 
 	return (
-		<div className="relative mb-8 ml-12">
-			<div className="absolute -left-9 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700">
-				<Tag size={14} />
+		<div className="relative mb-8 ml-14">
+			<div className="absolute -left-12 flex h-8 w-8 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700">
+				<Tag size={18} />
 			</div>
-			<div className="flex items-center gap-1.5 text-gray-600 text-sm dark:text-zinc-400 flex-wrap">
+			<div className="flex flex-wrap items-center gap-1.5 text-gray-600 text-sm dark:text-zinc-400">
 				<UserHoverCard login={actor.login}>
 					<a className="flex items-center gap-1.5" href={actor.html_url}>
 						<img
@@ -148,11 +150,7 @@ function AggregatedLabel({
 						{" added "}
 						{added.map((c, i) => (
 							<span key={c.label.name}>
-								{i > 0 && i === added.length - 1
-									? " and "
-									: i > 0
-										? ", "
-										: ""}
+								{i > 0 && i === added.length - 1 ? " and " : i > 0 ? ", " : ""}
 								<Label color={c.label.color}>{c.label.name}</Label>
 							</span>
 						))}
@@ -174,9 +172,7 @@ function AggregatedLabel({
 						))}
 					</>
 				)}
-				<span>
-					{` ${total === 1 ? "label" : "labels"} ${timestamp}`}
-				</span>
+				<span>{` ${total === 1 ? "label" : "labels"} ${timestamp}`}</span>
 			</div>
 		</div>
 	);
@@ -184,35 +180,35 @@ function AggregatedLabel({
 
 function TimelineIcon({ event }: { event: TimelineEventData }) {
 	const iconMap: Record<string, React.ReactNode> = {
-		commented: <MessageSquare size={14} />,
-		reviewed: <Eye size={14} />,
-		closed: <Circle className="fill-red-500/20 text-red-500" size={14} />,
-		reopened: <Circle className="fill-green-500/20 text-green-500" size={14} />,
-		merged: <GitMerge className="text-purple-500" size={14} />,
-		labeled: <Tag size={14} />,
-		unlabeled: <Tag size={14} />,
-		assigned: <User size={14} />,
-		unassigned: <User size={14} />,
-		review_requested: <ClipboardList size={14} />,
-		review_request_removed: <ClipboardList size={14} />,
-		committed: <GitCommitHorizontal size={14} />,
-		renamed: <Pencil size={14} />,
-		locked: <Lock size={14} />,
-		unlocked: <LockOpen size={14} />,
-		milestoned: <Target size={14} />,
-		demilestoned: <Target size={14} />,
-		"cross-referenced": <Link size={14} />,
-		referenced: <Link size={14} />,
-		head_ref_deleted: <Trash2 size={14} />,
-		head_ref_restored: <RefreshCw size={14} />,
-		convert_to_draft: <FileText size={14} />,
-		ready_for_review: <CheckCheck size={14} />,
-		head_ref_force_pushed: <ArrowUp size={14} />,
+		commented: <MessageSquare size={18} />,
+		reviewed: <Eye size={18} />,
+		closed: <Circle className="fill-red-500/20 text-red-500" size={18} />,
+		reopened: <Circle className="fill-green-500/20 text-green-500" size={18} />,
+		merged: <GitMerge className="text-purple-500" size={18} />,
+		labeled: <Tag size={18} />,
+		unlabeled: <Tag size={18} />,
+		assigned: <User size={18} />,
+		unassigned: <User size={18} />,
+		review_requested: <ClipboardList size={18} />,
+		review_request_removed: <ClipboardList size={18} />,
+		committed: <GitCommitHorizontal size={18} />,
+		renamed: <Pencil size={18} />,
+		locked: <Lock size={18} />,
+		unlocked: <LockOpen size={18} />,
+		milestoned: <Target size={18} />,
+		demilestoned: <Target size={18} />,
+		"cross-referenced": <Link size={18} />,
+		referenced: <Link size={18} />,
+		head_ref_deleted: <Trash2 size={18} />,
+		head_ref_restored: <RefreshCw size={18} />,
+		convert_to_draft: <FileText size={18} />,
+		ready_for_review: <CheckCheck size={18} />,
+		head_ref_force_pushed: <ArrowUp size={18} />,
 	};
 
 	return (
 		<span className="flex">
-			{iconMap[event.event ?? ""] ?? <Circle size={14} />}
+			{iconMap[event.event ?? ""] ?? <Circle size={18} />}
 		</span>
 	);
 }
@@ -294,7 +290,7 @@ function EventContent({
 									}}
 									type="button"
 								>
-									<SquarePen size={14} />
+									<SquarePen size={18} />
 								</button>
 							)}
 						</div>
