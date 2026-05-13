@@ -5,14 +5,15 @@ import { useEffect, useRef, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/user-hover-card";
 import { cn } from "~/lib/utils";
-import type {
-	PullsGetResponseData,
-	Reviewer,
-} from "~/server/github";
+import type { PullsGetResponseData, Reviewer } from "~/server/github";
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";
 
-type ReviewerOperation = { id: number, op: 'add' | 'remove', reviewer: Reviewer };
+type ReviewerOperation = {
+	id: number;
+	op: "add" | "remove";
+	reviewer: Reviewer;
+};
 
 export function ReviewerSection({
 	pullRequestPromise,
@@ -29,7 +30,7 @@ export function ReviewerSection({
 
 	useEffect(() => {
 		setOperations([]);
-	}, [pullRequestPromise])
+	}, [pullRequestPromise]);
 
 	const { data: repoUsers } = api.pulls.listAssignees.useQuery({ owner, repo });
 	const addMutation = api.pulls.addReviewer.useMutation();
@@ -40,23 +41,29 @@ export function ReviewerSection({
 		const repoUser = usersData.find((u) => u.login === reviewer.login);
 		if (!repoUser) return;
 
-		const id = opId()
-		setOperations(prev => [...prev, { id, op: 'add', reviewer }])
-		addMutation.mutate({ owner, repo, number, reviewer: reviewer.login }, {
-			onError: () => {
-				setOperations(prev => prev.filter(op => op.id !== id))
-			}
-		});
+		const id = opId();
+		setOperations((prev) => [...prev, { id, op: "add", reviewer }]);
+		addMutation.mutate(
+			{ owner, repo, number, reviewer: reviewer.login },
+			{
+				onError: () => {
+					setOperations((prev) => prev.filter((op) => op.id !== id));
+				},
+			},
+		);
 	};
 
 	const handleRemove = (reviewer: Reviewer) => {
-		const id = opId()
-		setOperations(prev => [...prev, { id, op: 'remove', reviewer }])
-		removeMutation.mutate({ owner, repo, number, reviewer: reviewer.login }, {
-			onError: () => {
-				setOperations(prev => prev.filter(op => op.id !== id))
-			}
-		});
+		const id = opId();
+		setOperations((prev) => [...prev, { id, op: "remove", reviewer }]);
+		removeMutation.mutate(
+			{ owner, repo, number, reviewer: reviewer.login },
+			{
+				onError: () => {
+					setOperations((prev) => prev.filter((op) => op.id !== id));
+				},
+			},
+		);
 	};
 
 	return (
@@ -68,7 +75,9 @@ export function ReviewerSection({
 				<Async promise={pullRequestPromise} fallback={null}>
 					{(pullRequest) => (
 						<ReviewerSectionSettings
-							repoUsers={usersData.filter((u) => u.login !== pullRequest.user?.login)}
+							repoUsers={usersData.filter(
+								(u) => u.login !== pullRequest.user?.login,
+							)}
 							reviewers={pullRequest.requested_reviewers ?? []}
 							operations={operations}
 							onAddReviewer={handleAdd}
@@ -77,7 +86,14 @@ export function ReviewerSection({
 					)}
 				</Async>
 			</div>
-			<Async promise={pullRequestPromise} fallback={<div className="mt-2"><FieldSkeleton /></div>}>
+			<Async
+				promise={pullRequestPromise}
+				fallback={
+					<div className="mt-2">
+						<FieldSkeleton />
+					</div>
+				}
+			>
 				{(pullRequest) => (
 					<ReviewerSectionContent
 						reviewers={pullRequest.requested_reviewers ?? []}
@@ -90,12 +106,18 @@ export function ReviewerSection({
 	);
 }
 
-function ReviewerSectionSettings({ repoUsers, reviewers, operations, onAddReviewer, onRemoveReviewer }: {
-	repoUsers: Reviewer[],
-	reviewers: Reviewer[],
-	operations: ReviewerOperation[],
-	onAddReviewer: (reviewer: Reviewer) => void,
-	onRemoveReviewer: (reviewer: Reviewer) => void,
+function ReviewerSectionSettings({
+	repoUsers,
+	reviewers,
+	operations,
+	onAddReviewer,
+	onRemoveReviewer,
+}: {
+	repoUsers: Reviewer[];
+	reviewers: Reviewer[];
+	operations: ReviewerOperation[];
+	onAddReviewer: (reviewer: Reviewer) => void;
+	onRemoveReviewer: (reviewer: Reviewer) => void;
 }) {
 	const [open, setOpen] = useState(false);
 	const [search, setSearch] = useState("");
@@ -129,8 +151,8 @@ function ReviewerSectionSettings({ repoUsers, reviewers, operations, onAddReview
 	if (!open) {
 		sortedUsers.current = null;
 	}
-	const filteredUsers = (sortedUsers.current ?? repoUsers ?? []).filter(
-		(u) => u.login.toLowerCase().includes(search.toLowerCase()),
+	const filteredUsers = (sortedUsers.current ?? repoUsers ?? []).filter((u) =>
+		u.login.toLowerCase().includes(search.toLowerCase()),
 	);
 
 	return (
@@ -177,7 +199,11 @@ function ReviewerSectionSettings({ repoUsers, reviewers, operations, onAddReview
 										role="option"
 										aria-selected={isApplied}
 									>
-										<img src={user.avatar_url} alt="" className="h-5 w-5 shrink-0 rounded-full" />
+										<img
+											src={user.avatar_url}
+											alt=""
+											className="h-5 w-5 shrink-0 rounded-full"
+										/>
 										<span className="flex-1 truncate text-gray-700 dark:text-zinc-300">
 											{user.login}
 										</span>
@@ -202,29 +228,27 @@ function ReviewerSectionContent({
 	operations,
 	onRemoveReviewer,
 }: {
-	reviewers: Reviewer[],
-	operations: ReviewerOperation[],
-	onRemoveReviewer: (reviewer: Reviewer) => void,
+	reviewers: Reviewer[];
+	operations: ReviewerOperation[];
+	onRemoveReviewer: (reviewer: Reviewer) => void;
 }) {
 	const displayReviewers = applyOperations(reviewers, operations);
 
 	if (displayReviewers.length === 0) {
 		return (
-			<p className="text-gray-500 text-sm dark:text-zinc-400">
-				No reviewers
-			</p>
+			<p className="text-gray-500 text-sm dark:text-zinc-400">No reviewers</p>
 		);
 	}
 
 	return (
 		<ul className="space-y-2">
 			{displayReviewers.map((reviewer) => (
-				<li className="group flex items-center gap-2 text-sm" key={reviewer.login}>
+				<li
+					className="group flex items-center gap-2 text-sm"
+					key={reviewer.login}
+				>
 					<UserHoverCard login={reviewer.login}>
-						<a
-							className="flex items-center gap-2"
-							href={reviewer.html_url}
-						>
+						<a className="flex items-center gap-2" href={reviewer.html_url}>
 							<img
 								alt={reviewer.login}
 								className="h-5 w-5 rounded-full"
@@ -236,7 +260,7 @@ function ReviewerSectionContent({
 						</a>
 					</UserHoverCard>
 					<button
-						className="ml-auto inline-flex h-4 w-4 items-center justify-center rounded text-gray-400 opacity-0 hover:text-gray-600 group-hover:opacity-100 dark:hover:text-zinc-300 cursor-pointer"
+						className="ml-auto inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded text-gray-400 opacity-0 hover:text-gray-600 group-hover:opacity-100 dark:hover:text-zinc-300"
 						onClick={() => onRemoveReviewer(reviewer)}
 						type="button"
 						aria-label={`Remove ${reviewer.login}`}
@@ -249,19 +273,27 @@ function ReviewerSectionContent({
 	);
 }
 
-function applyOperations(reviewers: Reviewer[], operations: ReviewerOperation[]): Reviewer[] {
+function applyOperations(
+	reviewers: Reviewer[],
+	operations: ReviewerOperation[],
+): Reviewer[] {
 	let updatedReviewers = [...reviewers];
 
 	for (const op of operations) {
-		if (op.op === 'add' && !updatedReviewers.some(r => r.login === op.reviewer.login)) {
+		if (
+			op.op === "add" &&
+			!updatedReviewers.some((r) => r.login === op.reviewer.login)
+		) {
 			updatedReviewers.push(op.reviewer);
 		}
-		if (op.op === 'remove') {
-			updatedReviewers = updatedReviewers.filter(r => r.login !== op.reviewer.login)
+		if (op.op === "remove") {
+			updatedReviewers = updatedReviewers.filter(
+				(r) => r.login !== op.reviewer.login,
+			);
 		}
 	}
 
-	return updatedReviewers
+	return updatedReviewers;
 }
 
 function opId() {

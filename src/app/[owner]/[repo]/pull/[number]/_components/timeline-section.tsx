@@ -6,10 +6,7 @@ import type { TimelineEventData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { CommentForm } from "./comment-form";
 import { TimelineEvent } from "./timeline-event";
-import type {
-	LabelChange,
-	TimelineWrapper,
-} from "./timeline-types";
+import type { LabelChange, TimelineWrapper } from "./timeline-types";
 
 function deduplicateChanges(changes: LabelChange[]): LabelChange[] {
 	const seen = new Set<string>();
@@ -40,10 +37,7 @@ function aggregateEvents(events: TimelineEventData[]): TimelineWrapper[] {
 
 			while (i < events.length) {
 				const current = events[i]!;
-				if (
-					current.event !== "labeled" &&
-					current.event !== "unlabeled"
-				) {
+				if (current.event !== "labeled" && current.event !== "unlabeled") {
 					break;
 				}
 				if (changes.length > 0) {
@@ -52,9 +46,7 @@ function aggregateEvents(events: TimelineEventData[]): TimelineWrapper[] {
 					};
 					const gap =
 						new Date(curr.created_at).getTime() -
-						new Date(
-							changes[changes.length - 1]!.createdAt,
-						).getTime();
+						new Date(changes[changes.length - 1]!.createdAt).getTime();
 					if (gap > MAX_LABEL_GAP_MS) break;
 				}
 
@@ -139,10 +131,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 		) ?? {};
 	const currentUserLogin = data?.pages[0]?.currentUserLogin ?? "";
 	const filteredEvents = allEvents.filter((event) => {
-		if (
-			event.event &&
-			["mentioned", "subscribed"].includes(event.event)
-		) {
+		if (event.event && ["mentioned", "subscribed"].includes(event.event)) {
 			return false;
 		}
 		return true;
@@ -165,17 +154,17 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 			<div className="relative">
 				<div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200 dark:bg-zinc-700" />
 
-			{wrappers.map((wrapper, index) => (
-				<TimelineEvent
-					wrapper={wrapper}
-					key={index}
-					number={number}
-					owner={owner}
-					repo={repo}
-					commentReactions={allCommentReactions}
-					currentUserLogin={currentUserLogin}
-				/>
-			))}
+				{wrappers.map((wrapper, index) => (
+					<TimelineEvent
+						wrapper={wrapper}
+						key={index}
+						number={number}
+						owner={owner}
+						repo={repo}
+						commentReactions={allCommentReactions}
+						currentUserLogin={currentUserLogin}
+					/>
+				))}
 			</div>
 
 			{isFetchingNextPage && (

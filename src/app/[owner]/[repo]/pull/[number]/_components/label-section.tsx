@@ -3,14 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { Async } from "~/components/async";
 import { Label as LabelComponent } from "~/components/ui/label";
 import { cn } from "~/lib/utils";
-import type {
-	Label,
-	PullsGetResponseData,
-} from "~/server/github";
+import type { Label, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";
 
-type LabelOperation = { id: number, op: 'add' | 'remove', label: Label };
+type LabelOperation = { id: number; op: "add" | "remove"; label: Label };
 
 export function LabelsSection({
 	pullRequestPromise,
@@ -32,7 +29,7 @@ export function LabelsSection({
 	// If we reload the pull request we should remove all operations the user made and assume the new pull has the latest data.
 	useEffect(() => {
 		setOperations([]);
-	}, [pullRequestPromise])
+	}, [pullRequestPromise]);
 
 	const { data: repoLabels } = api.pulls.listLabels.useQuery({ owner, repo });
 	const addMutation = api.pulls.addLabel.useMutation();
@@ -43,23 +40,29 @@ export function LabelsSection({
 		const repoLabel = labelsData.find((l) => l.name === label.name);
 		if (!repoLabel) return;
 
-		const id = opId()
-		setOperations(prev => [...prev, { id, op: 'add', label }])
-		addMutation.mutate({ owner, repo, number, label: label.name }, {
-			onError: () => {
-				setOperations(prev => prev.filter(op => op.id === id))
-			}
-		});
+		const id = opId();
+		setOperations((prev) => [...prev, { id, op: "add", label }]);
+		addMutation.mutate(
+			{ owner, repo, number, label: label.name },
+			{
+				onError: () => {
+					setOperations((prev) => prev.filter((op) => op.id === id));
+				},
+			},
+		);
 	};
 
 	const handleRemove = (label: Label) => {
-		const id = opId()
-		setOperations(prev => [...prev, { id, op: 'remove', label }])
-		removeMutation.mutate({ owner, repo, number, label: label.name }, {
-			onError: () => {
-				setOperations(prev => prev.filter(op => op.id === id))
-			}
-		});
+		const id = opId();
+		setOperations((prev) => [...prev, { id, op: "remove", label }]);
+		removeMutation.mutate(
+			{ owner, repo, number, label: label.name },
+			{
+				onError: () => {
+					setOperations((prev) => prev.filter((op) => op.id === id));
+				},
+			},
+		);
 	};
 
 	return (
@@ -80,7 +83,14 @@ export function LabelsSection({
 					)}
 				</Async>
 			</div>
-			<Async promise={pullRequestPromise} fallback={<div className="mt-2"><FieldSkeleton /></div>}>
+			<Async
+				promise={pullRequestPromise}
+				fallback={
+					<div className="mt-2">
+						<FieldSkeleton />
+					</div>
+				}
+			>
 				{(pullRequest) => (
 					<LabelSectionContent
 						labels={pullRequest.labels}
@@ -93,13 +103,18 @@ export function LabelsSection({
 	);
 }
 
-function LabelSectionSettings({ repoLabels, labels, operations, onAddLabel, onRemoveLabel }: {
-	repoLabels: Label[],
-	labels: Label[],
-	operations: LabelOperation[],
-	onAddLabel: (label: Label) => void,
-	onRemoveLabel: (label: Label) => void,
-
+function LabelSectionSettings({
+	repoLabels,
+	labels,
+	operations,
+	onAddLabel,
+	onRemoveLabel,
+}: {
+	repoLabels: Label[];
+	labels: Label[];
+	operations: LabelOperation[];
+	onAddLabel: (label: Label) => void;
+	onRemoveLabel: (label: Label) => void;
 }) {
 	const [open, setOpen] = useState(false);
 	const [search, setSearch] = useState("");
@@ -208,27 +223,24 @@ function LabelSectionSettings({ repoLabels, labels, operations, onAddLabel, onRe
 			)}
 		</div>
 	);
-
 }
 
 function LabelSectionContent({
 	labels,
 	operations,
-	onRemoveLabel
+	onRemoveLabel,
 }: {
-	labels: Label[],
-	operations: LabelOperation[],
-	onRemoveLabel: (label: Label) => void
+	labels: Label[];
+	operations: LabelOperation[];
+	onRemoveLabel: (label: Label) => void;
 }) {
 	const displayLabels = applyOperations(labels, operations).sort((a, b) =>
-		a.name.localeCompare(b.name)
+		a.name.localeCompare(b.name),
 	);
 
 	if (displayLabels.length === 0) {
 		return (
-			<p className="text-gray-500 text-sm dark:text-zinc-400">
-				No labels
-			</p>
+			<p className="text-gray-500 text-sm dark:text-zinc-400">No labels</p>
 		);
 	}
 
@@ -239,7 +251,7 @@ function LabelSectionContent({
 					<LabelComponent color={label.color}>
 						{label.name}
 						<button
-							className="-mr-0.5 ml-0.5 inline-flex h-3 w-3 items-center justify-center rounded-full text-current opacity-60 hover:opacity-100 text-lg cursor-pointer"
+							className="-mr-0.5 ml-0.5 inline-flex h-3 w-3 cursor-pointer items-center justify-center rounded-full text-current text-lg opacity-60 hover:opacity-100"
 							onClick={() => onRemoveLabel(label)}
 							type="button"
 							aria-label={`Remove label ${label.name}`}
@@ -253,21 +265,26 @@ function LabelSectionContent({
 	);
 }
 
-function applyOperations(labels: Label[], operations: LabelOperation[]): Label[] {
+function applyOperations(
+	labels: Label[],
+	operations: LabelOperation[],
+): Label[] {
 	let updatedLabels = [...labels];
 
 	for (const op of operations) {
-		if (op.op === 'add' && !updatedLabels.some(l => l.name === op.label.name)) {
+		if (
+			op.op === "add" &&
+			!updatedLabels.some((l) => l.name === op.label.name)
+		) {
 			updatedLabels.push(op.label);
 		}
-		if (op.op === 'remove') {
-			updatedLabels = updatedLabels.filter(l => l.name !== op.label.name)
+		if (op.op === "remove") {
+			updatedLabels = updatedLabels.filter((l) => l.name !== op.label.name);
 		}
 	}
 
-	return updatedLabels
+	return updatedLabels;
 }
-
 
 function opId() {
 	return Math.floor(Math.random() * 10000000);

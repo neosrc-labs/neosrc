@@ -5,6 +5,7 @@ import { MarkdownRenderer } from "./markdown/MarkdownRenderer";
 
 interface InlineCommentProps {
 	comment: ReviewCommentData;
+	isPending?: boolean;
 }
 
 const formatDate = (dateStr: string) => {
@@ -22,7 +23,7 @@ const formatDate = (dateStr: string) => {
 	return date.toLocaleDateString();
 };
 
-export function InlineComment({ comment }: InlineCommentProps) {
+export function InlineComment({ comment, isPending }: InlineCommentProps) {
 	return (
 		<div className="border-gray-200 border-t bg-white dark:border-zinc-700 dark:bg-zinc-950">
 			<div className="flex items-center gap-2 bg-gray-50 px-4 py-2 dark:bg-zinc-900">
@@ -38,6 +39,11 @@ export function InlineComment({ comment }: InlineCommentProps) {
 				<span className="text-gray-500 text-xs">
 					{formatDate(comment.created_at)}
 				</span>
+				{isPending && (
+					<span className="rounded-full bg-yellow-100 px-2 py-0.5 font-medium text-xs text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+						Pending
+					</span>
+				)}
 			</div>
 			<div className="prose prose-sm dark:prose-invert max-w-none px-4 py-2">
 				<MarkdownRenderer content={comment.body} />

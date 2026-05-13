@@ -37,7 +37,7 @@ function isGeneratedLockfile(filename: string): boolean {
 		/(?:^|\/)flake\.lock$/,
 		/(?:^|\/)MODULE\.bazel\.lock$/,
 		/(?:^|\/)\.terraform\.lock\.hcl$/,
-		/(?:^|\/)mise(?:\.[^\/]+)?\.lock$/,
+		/(?:^|\/)mise(?:\.[^/]+)?\.lock$/,
 		/(?:^|\/)\w+\.esy\.lock$/,
 		/(?:^|\/)bun\.lockb?$/,
 		/(?:^|\/)\.pnp\..*$/,

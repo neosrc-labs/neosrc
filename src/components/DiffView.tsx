@@ -1,6 +1,6 @@
 "use client";
 
-import { parse, defaultDiff2HtmlConfig } from "diff2html";
+import { defaultDiff2HtmlConfig, parse } from "diff2html";
 import type { ColorSchemeType } from "diff2html/lib/types";
 import "diff2html/bundles/css/diff2html.min.css";
 import hljs from "highlight.js";
@@ -29,9 +29,11 @@ interface DiffViewProps {
 	commentPending?: boolean;
 	commentError?: boolean;
 	onCancelComment?: () => void;
+	submitLabel?: string;
 	owner?: string;
 	repo?: string;
 	pullNumber?: number | string;
+	pendingReviewId?: number | null;
 }
 
 export function DiffView({
@@ -48,9 +50,11 @@ export function DiffView({
 	commentPending = false,
 	commentError = false,
 	onCancelComment,
+	submitLabel = "Comment",
 	owner,
 	repo,
 	pullNumber,
+	pendingReviewId,
 }: DiffViewProps) {
 	const { resolvedTheme } = useTheme();
 
@@ -119,9 +123,7 @@ export function DiffView({
 	}
 
 	return (
-		<div
-			className="overflow-x-auto"
-		>
+		<div className="overflow-x-auto">
 			<div
 				className={`d2h-wrapper ${resolvedTheme === "light" ? "d2h-light-color-scheme" : "d2h-dark-color-scheme"}`}
 				ref={diffRef}
@@ -146,6 +148,8 @@ export function DiffView({
 								onCancelComment={onCancelComment}
 								showComments={showComments}
 								showCommentButton={showCommentButton}
+								pendingReviewId={pendingReviewId}
+								submitLabel={submitLabel}
 							/>
 						))}
 					</tbody>
@@ -187,6 +191,8 @@ interface BlockRowsProps {
 	onCancelComment: (() => void) | undefined;
 	showComments: boolean;
 	showCommentButton: boolean;
+	pendingReviewId?: number | null;
+	submitLabel?: string;
 }
 
 function BlockRows({
@@ -205,6 +211,8 @@ function BlockRows({
 	onCancelComment,
 	showComments,
 	showCommentButton,
+	pendingReviewId,
+	submitLabel = "Comment",
 }: BlockRowsProps) {
 	return (
 		<>
@@ -288,6 +296,7 @@ function BlockRows({
 											owner={owner ?? ""}
 											repo={repo ?? ""}
 											number={Number(pullNumber ?? 0)}
+											pendingReviewId={pendingReviewId}
 										/>
 									</td>
 								</tr>
@@ -304,7 +313,7 @@ function BlockRows({
 										onCancel={onCancelComment ?? (() => {})}
 										onSubmit={onSubmitComment ?? (() => {})}
 										placeholder="Add a comment..."
-										submitLabel="Comment"
+										submitLabel={submitLabel}
 										value={commentBody}
 										owner={owner ?? ""}
 										repo={repo ?? ""}

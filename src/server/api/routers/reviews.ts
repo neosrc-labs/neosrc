@@ -4,17 +4,16 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
 import {
-	createPullRequestReviewComment,
+	createPullRequestReview,
+	dismissPullRequestReview,
 	getAuthenticatedUser,
-	getPullRequest,
-	getPullRequestReviewComments,
 	getPullRequestReviewCommentsForReview,
 	getPullRequestReviews,
-	replyToPullRequestReviewComment,
+	submitPullRequestReview,
 } from "~/server/github";
 
-export const reviewCommentsRouter = createTRPCRouter({
-	list: protectedProcedure
+export const reviewsRouter = createTRPCRouter({
+	getPending: protectedProcedure
 		.input(
 			z.object({
 				owner: z.string(),
@@ -33,17 +32,121 @@ export const reviewCommentsRouter = createTRPCRouter({
 				throw new Error("GitHub account not connected");
 			}
 
-			const comments = await getPullRequestReviewComments(
+			const currentUser = await getAuthenticatedUser(account.accessToken);
+			const githubLogin = currentUser.login;
+
+			const reviews = await getPullRequestReviews(
 				account.accessToken,
 				input.owner,
 				input.repo,
 				input.number,
 			);
 
-			return comments;
+			const pendingReview = reviews.find(
+				(r) => r.state === "PENDING" && r.user?.login === githubLogin,
+			);
+
+			if (!pendingReview) {
+				return null;
+			}
+
+			const comments = await getPullRequestReviewCommentsForReview(
+				account.accessToken,
+				input.owner,
+				input.repo,
+				input.number,
+				pendingReview.id,
+			);
+
+			return {
+				reviewId: pendingReview.id,
+				comments,
+			};
 		}),
 
-	byReviewId: protectedProcedure
+	start: protectedProcedure
+		.input(
+			z.object({
+				owner: z.string(),
+				repo: z.string(),
+				number: z.number(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const [account] = await ctx.db
+				.select({ accessToken: accounts.access_token })
+				.from(accounts)
+				.where(eq(accounts.userId, ctx.session.user.id))
+				.limit(1);
+
+			if (!account?.accessToken) {
+				throw new Error("GitHub account not connected");
+			}
+
+			const currentUser = await getAuthenticatedUser(account.accessToken);
+			const githubLogin = currentUser.login;
+
+			const existing = await getPullRequestReviews(
+				account.accessToken,
+				input.owner,
+				input.repo,
+				input.number,
+			);
+
+			const existingPending = existing.find(
+				(r) => r.state === "PENDING" && r.user?.login === githubLogin,
+			);
+
+			if (existingPending) {
+				return { reviewId: existingPending.id };
+			}
+
+			const review = await createPullRequestReview(
+				account.accessToken,
+				input.owner,
+				input.repo,
+				input.number,
+			);
+
+			return { reviewId: review.id };
+		}),
+
+	submit: protectedProcedure
+		.input(
+			z.object({
+				owner: z.string(),
+				repo: z.string(),
+				number: z.number(),
+				reviewId: z.number(),
+				event: z.enum(["APPROVE", "COMMENT", "REQUEST_CHANGES"]),
+				body: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const [account] = await ctx.db
+				.select({ accessToken: accounts.access_token })
+				.from(accounts)
+				.where(eq(accounts.userId, ctx.session.user.id))
+				.limit(1);
+
+			if (!account?.accessToken) {
+				throw new Error("GitHub account not connected");
+			}
+
+			await submitPullRequestReview(
+				account.accessToken,
+				input.owner,
+				input.repo,
+				input.number,
+				input.reviewId,
+				input.event,
+				input.body,
+			);
+
+			return { success: true as const };
+		}),
+
+	dismiss: protectedProcedure
 		.input(
 			z.object({
 				owner: z.string(),
@@ -52,7 +155,7 @@ export const reviewCommentsRouter = createTRPCRouter({
 				reviewId: z.number(),
 			}),
 		)
-		.query(async ({ ctx, input }) => {
+		.mutation(async ({ ctx, input }) => {
 			const [account] = await ctx.db
 				.select({ accessToken: accounts.access_token })
 				.from(accounts)
@@ -63,109 +166,15 @@ export const reviewCommentsRouter = createTRPCRouter({
 				throw new Error("GitHub account not connected");
 			}
 
-			return getPullRequestReviewCommentsForReview(
+			await dismissPullRequestReview(
 				account.accessToken,
 				input.owner,
 				input.repo,
 				input.number,
 				input.reviewId,
-			);
-		}),
-
-	create: protectedProcedure
-		.input(
-			z.object({
-				owner: z.string(),
-				repo: z.string(),
-				number: z.number(),
-				filePath: z.string(),
-				lineNumber: z.number(),
-				side: z.enum(["LEFT", "RIGHT"]),
-				body: z.string().min(1),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			const [account] = await ctx.db
-				.select({ accessToken: accounts.access_token })
-				.from(accounts)
-				.where(eq(accounts.userId, ctx.session.user.id))
-				.limit(1);
-
-			if (!account?.accessToken) {
-				throw new Error("GitHub account not connected");
-			}
-
-			const pr = await getPullRequest(
-				account.accessToken,
-				input.owner,
-				input.repo,
-				input.number,
+				"Review cancelled",
 			);
 
-			const commitId = pr.head.sha;
-
-			// Check if there's a pending review to add this comment to
-			const currentUser = await getAuthenticatedUser(account.accessToken);
-			const reviews = await getPullRequestReviews(
-				account.accessToken,
-				input.owner,
-				input.repo,
-				input.number,
-			);
-			console.log('got reviews', reviews.length);
-
-			const pendingReview = reviews.find(
-				(r) => r.state === "PENDING" && r.user?.login === currentUser.login,
-			);
-
-			console.log('pending review', pendingReview)
-
-			const comment = await createPullRequestReviewComment(
-				account.accessToken,
-				input.owner,
-				input.repo,
-				input.number,
-				commitId,
-				input.filePath,
-				input.lineNumber,
-				input.side,
-				input.body,
-				pendingReview?.id,
-			);
-
-			return { success: true as const, id: comment.id };
-		}),
-
-	reply: protectedProcedure
-		.input(
-			z.object({
-				owner: z.string(),
-				repo: z.string(),
-				number: z.number(),
-				body: z.string().min(1),
-				inReplyTo: z.number(),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			const [account] = await ctx.db
-				.select({ accessToken: accounts.access_token })
-				.from(accounts)
-				.where(eq(accounts.userId, ctx.session.user.id))
-				.limit(1);
-
-			if (!account?.accessToken) {
-				throw new Error("GitHub account not connected");
-			}
-
-			const comment = await replyToPullRequestReviewComment(
-				account.accessToken,
-				input.owner,
-				input.repo,
-				input.number,
-				input.body,
-				input.inReplyTo,
-			);
-
-			return { success: true as const, id: comment.id };
+			return { success: true as const };
 		}),
 });

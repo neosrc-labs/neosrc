@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ReviewCommentData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { isGeneratedFile } from "~/utils/generated-files";
-import { DiffView, type ActiveComment } from "./DiffView";
+import { type ActiveComment, DiffView } from "./DiffView";
 
 interface FileDiffProps {
 	file: {
@@ -19,6 +19,8 @@ interface FileDiffProps {
 	number: string;
 	comments?: ReviewCommentData[];
 	showComments?: boolean;
+	pendingReviewId?: number | null;
+	reviewMode?: boolean;
 }
 
 function getViewedKey(owner: string, repo: string, number: string): string {
@@ -48,6 +50,8 @@ export default function FileDiff({
 	number,
 	comments = [],
 	showComments = true,
+	pendingReviewId,
+	reviewMode = false,
 }: FileDiffProps) {
 	const [isViewed, setIsViewed] = useState(false);
 	const [isCollapsed, setIsCollapsed] = useState(isViewed);
@@ -74,12 +78,19 @@ export default function FileDiff({
 			setCommentBody("");
 			setActiveComment(null);
 			utils.reviewComments.list.invalidate();
+			utils.reviews.getPending.invalidate();
+		},
+	});
+
+	const startReviewMutation = api.reviews.start.useMutation({
+		onSuccess: () => {
+			utils.reviews.getPending.invalidate();
 		},
 	});
 
 	const handleAddComment = useCallback(() => {
 		if (!commentBody.trim() || !activeComment) return;
-		createMutation.mutate({
+		const args = {
 			owner,
 			repo,
 			number: Number(number),
@@ -87,11 +98,27 @@ export default function FileDiff({
 			lineNumber: activeComment.line,
 			side: activeComment.side,
 			body: commentBody,
-		});
+		};
+
+		const doCreateComment = () => {
+			createMutation.mutate(args);
+		};
+
+		if (reviewMode && !pendingReviewId) {
+			startReviewMutation.mutate(
+				{ owner, repo, number: Number(number) },
+				{ onSuccess: doCreateComment },
+			);
+		} else {
+			doCreateComment();
+		}
 	}, [
 		commentBody,
 		activeComment,
 		createMutation,
+		startReviewMutation,
+		pendingReviewId,
+		reviewMode,
 		owner,
 		repo,
 		number,
@@ -203,12 +230,10 @@ export default function FileDiff({
 				</label>
 			</div>
 
-			{!isCollapsed && (
-				generated && !showGeneratedDiff ? (
-					<div className="flex flex-col items-center gap-2 border-t border-gray-200 px-4 py-6 text-gray-500 text-sm dark:border-gray-700 dark:text-gray-400">
-						<span>
-							This file is generated and hidden by default.
-						</span>
+			{!isCollapsed &&
+				(generated && !showGeneratedDiff ? (
+					<div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-gray-500 text-sm dark:border-gray-700 dark:text-gray-400">
+						<span>This file is generated and hidden by default.</span>
 						<button
 							className="cursor-pointer font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
 							onClick={() => setShowGeneratedDiff(true)}
@@ -229,12 +254,22 @@ export default function FileDiff({
 						commentBody={commentBody}
 						onCommentBodyChange={setCommentBody}
 						onSubmitComment={handleAddComment}
-						commentPending={createMutation.isPending}
-						commentError={createMutation.isError}
+						commentPending={
+							createMutation.isPending || startReviewMutation.isPending
+						}
+						commentError={createMutation.isError || startReviewMutation.isError}
 						onCancelComment={() => {
 							setActiveComment(null);
 							setCommentBody("");
 						}}
+						submitLabel={
+							pendingReviewId
+								? "Add to Review"
+								: reviewMode
+									? "Start a Review"
+									: "Comment"
+						}
+						pendingReviewId={pendingReviewId}
 						owner={owner}
 						repo={repo}
 						pullNumber={number}
@@ -243,8 +278,7 @@ export default function FileDiff({
 					<div className="px-4 py-3 text-gray-500 text-sm italic dark:text-gray-400">
 						{file.patch === null ? "Binary file not shown" : "No changes"}
 					</div>
-				)
-			)}
+				))}
 		</div>
 	);
 }
