@@ -6,6 +6,7 @@ import { accounts } from "~/server/db/schema";
 import {
 	addAssigneesToIssue,
 	addLabelsToIssue,
+	addReviewersToPullRequest,
 	createIssueComment,
 	createPullRequestReview,
 	listLabelsForRepo,
@@ -15,7 +16,9 @@ import {
 	markPullRequestAsReady,
 	removeAssigneesFromIssue,
 	removeLabelFromIssue,
+	removeReviewersFromPullRequest,
 	updateIssueComment,
+	updateIssueMilestone,
 	updatePullRequest,
 } from "~/server/github";
 
@@ -297,7 +300,11 @@ export const pullsRouter = createTRPCRouter({
 				throw new Error("GitHub account not connected");
 			}
 
-			return listMilestonesForRepo(account.accessToken, input.owner, input.repo);
+			return listMilestonesForRepo(
+				account.accessToken,
+				input.owner,
+				input.repo,
+			);
 		}),
 
 	setMilestone: protectedProcedure

@@ -2,6 +2,7 @@ import { issuesRouter } from "~/server/api/routers/issues";
 import { pullsRouter } from "~/server/api/routers/pulls";
 import { reactionsRouter } from "~/server/api/routers/reactions";
 import { reviewCommentsRouter } from "~/server/api/routers/reviewComments";
+import { reviewsRouter } from "~/server/api/routers/reviews";
 import { timelineRouter } from "~/server/api/routers/timeline";
 import { usersRouter } from "~/server/api/routers/users";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
@@ -16,6 +17,7 @@ export const appRouter = createTRPCRouter({
 	pulls: pullsRouter,
 	reactions: reactionsRouter,
 	reviewComments: reviewCommentsRouter,
+	reviews: reviewsRouter,
 	timeline: timelineRouter,
 	users: usersRouter,
 });

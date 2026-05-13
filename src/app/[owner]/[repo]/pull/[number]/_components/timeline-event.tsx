@@ -184,8 +184,12 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 	const iconMap: Record<string, React.ReactNode> = {
 		commented: <MessageSquare size={ICON_SIZE} />,
 		reviewed: <Eye size={ICON_SIZE} />, // NOTE: Reviews can be "netural (not approve or request changes)"
-		closed: <Circle className="fill-red-500/20 text-red-500" size={ICON_SIZE} />,
-		reopened: <Circle className="fill-green-500/20 text-green-500" size={ICON_SIZE} />,
+		closed: (
+			<Circle className="fill-red-500/20 text-red-500" size={ICON_SIZE} />
+		),
+		reopened: (
+			<Circle className="fill-green-500/20 text-green-500" size={ICON_SIZE} />
+		),
 		merged: <GitMerge className="text-purple-500" size={ICON_SIZE} />,
 		labeled: <Tag size={ICON_SIZE} />,
 		unlabeled: <Tag size={ICON_SIZE} />,
@@ -210,8 +214,11 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 		project_v2_item_status_changed: <RefreshCw size={ICON_SIZE} />,
 	};
 
-	const isApproved = event.event === "reviewed" && (event as ReviewEvent).state === "approved";
-	const isChangesRequested = event.event === "reviewed" && (event as ReviewEvent).state === "changes_requested";
+	const isApproved =
+		event.event === "reviewed" && (event as ReviewEvent).state === "approved";
+	const isChangesRequested =
+		event.event === "reviewed" &&
+		(event as ReviewEvent).state === "changes_requested";
 
 	const circleClass = isApproved
 		? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-green-500"
@@ -219,20 +226,19 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 			? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-red-500"
 			: "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700";
 
-
 	let icon = iconMap[event.event ?? ""] ?? <Circle size={ICON_SIZE} />;
 
 	if (event.event === "reviewed") {
 		const e = event as ReviewEvent;
-		if (e.state === "approved") icon = <Check className="text-white" size={ICON_SIZE} />;
-		if (e.state === "changes_requested") icon = <FileText className="text-white" size={ICON_SIZE} />;
+		if (e.state === "approved")
+			icon = <Check className="text-white" size={ICON_SIZE} />;
+		if (e.state === "changes_requested")
+			icon = <FileText className="text-white" size={ICON_SIZE} />;
 	}
 
 	return (
 		<div className={circleClass}>
-			<span className="flex">
-				{icon}
-			</span>
+			<span className="flex">{icon}</span>
 		</div>
 	);
 }
@@ -940,9 +946,7 @@ function EventContent({
 							</span>
 						</a>
 					</UserHoverCard>
-					<p>
-						Added this issue to a project {timestamp}
-					</p>
+					<p>Added this issue to a project {timestamp}</p>
 				</div>
 			);
 		}
@@ -963,9 +967,7 @@ function EventContent({
 							</span>
 						</a>
 					</UserHoverCard>
-					<p>
-						changed the project status {timestamp}
-					</p>
+					<p>changed the project status {timestamp}</p>
 				</div>
 			);
 		}

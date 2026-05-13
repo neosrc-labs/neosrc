@@ -12,6 +12,7 @@ interface InlineCommentThreadProps {
 	owner: string;
 	repo: string;
 	number: number;
+	pendingReviewId?: number | null;
 }
 
 export function InlineCommentThread({
@@ -20,6 +21,7 @@ export function InlineCommentThread({
 	owner,
 	repo,
 	number,
+	pendingReviewId,
 }: InlineCommentThreadProps) {
 	const [showReplyForm, setShowReplyForm] = useState(false);
 	const [replyBody, setReplyBody] = useState("");
@@ -46,9 +48,22 @@ export function InlineCommentThread({
 
 	return (
 		<div className="border border-gray-200 dark:border-gray-700">
-			<InlineComment comment={parentComment} />
+			<InlineComment
+				comment={parentComment}
+				isPending={
+					pendingReviewId != null &&
+					parentComment.pull_request_review_id === pendingReviewId
+				}
+			/>
 			{replies.map((comment) => (
-				<InlineComment comment={comment} key={comment.id} />
+				<InlineComment
+					comment={comment}
+					key={comment.id}
+					isPending={
+						pendingReviewId != null &&
+						comment.pull_request_review_id === pendingReviewId
+					}
+				/>
 			))}
 			{showReplyForm ? (
 				<div className="border-gray-200 border-t p-2 dark:border-gray-700">

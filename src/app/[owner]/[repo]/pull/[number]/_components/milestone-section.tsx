@@ -12,7 +12,7 @@ import type {
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";
 
-type MilestoneOperation = { id: number, milestone: Milestone | null };
+type MilestoneOperation = { id: number; milestone: Milestone | null };
 
 export function MilestoneSection({
 	pullRequestPromise,
@@ -29,20 +29,26 @@ export function MilestoneSection({
 
 	useEffect(() => {
 		setOperations([]);
-	}, [pullRequestPromise])
+	}, [pullRequestPromise]);
 
-	const { data: repoMilestones } = api.pulls.listMilestones.useQuery({ owner, repo });
+	const { data: repoMilestones } = api.pulls.listMilestones.useQuery({
+		owner,
+		repo,
+	});
 	const setMutation = api.pulls.setMilestone.useMutation();
 
 	const milestonesData = (repoMilestones ?? []) as Milestone[];
 	const handleSet = (milestone: Milestone | null) => {
-		const id = opId()
-		setOperations(prev => [...prev, { id, milestone }])
-		setMutation.mutate({ owner, repo, number, milestone: milestone?.number ?? null }, {
-			onError: () => {
-				setOperations(prev => prev.filter(op => op.id !== id))
-			}
-		});
+		const id = opId();
+		setOperations((prev) => [...prev, { id, milestone }]);
+		setMutation.mutate(
+			{ owner, repo, number, milestone: milestone?.number ?? null },
+			{
+				onError: () => {
+					setOperations((prev) => prev.filter((op) => op.id !== id));
+				},
+			},
+		);
 	};
 
 	return (
@@ -62,7 +68,14 @@ export function MilestoneSection({
 					)}
 				</Async>
 			</div>
-			<Async promise={pullRequestPromise} fallback={<div className="mt-2"><FieldSkeleton /></div>}>
+			<Async
+				promise={pullRequestPromise}
+				fallback={
+					<div className="mt-2">
+						<FieldSkeleton />
+					</div>
+				}
+			>
 				{(pullRequest) => (
 					<MilestoneSectionContent
 						milestone={pullRequest.milestone}
@@ -74,11 +87,16 @@ export function MilestoneSection({
 	);
 }
 
-function MilestoneSectionSettings({ repoMilestones, milestone, operations, onSetMilestone }: {
-	repoMilestones: Milestone[],
-	milestone: Milestone | null,
-	operations: MilestoneOperation[],
-	onSetMilestone: (milestone: Milestone | null) => void,
+function MilestoneSectionSettings({
+	repoMilestones,
+	milestone,
+	operations,
+	onSetMilestone,
+}: {
+	repoMilestones: Milestone[];
+	milestone: Milestone | null;
+	operations: MilestoneOperation[];
+	onSetMilestone: (milestone: Milestone | null) => void;
 }) {
 	const [open, setOpen] = useState(false);
 	const [search, setSearch] = useState("");
@@ -102,8 +120,8 @@ function MilestoneSectionSettings({ repoMilestones, milestone, operations, onSet
 	const currentMilestone = applyOperations(milestone, operations);
 	const currentNumber = currentMilestone?.number ?? null;
 
-	const filteredMilestones = repoMilestones.filter(
-		(m) => m.title.toLowerCase().includes(search.toLowerCase()),
+	const filteredMilestones = repoMilestones.filter((m) =>
+		m.title.toLowerCase().includes(search.toLowerCase()),
 	);
 
 	return (
@@ -200,16 +218,14 @@ function MilestoneSectionContent({
 	milestone,
 	operations,
 }: {
-	milestone: Milestone | null,
-	operations: MilestoneOperation[],
+	milestone: Milestone | null;
+	operations: MilestoneOperation[];
 }) {
 	const currentMilestone = applyOperations(milestone, operations);
 
 	if (!currentMilestone) {
 		return (
-			<p className="text-gray-500 text-sm dark:text-zinc-400">
-				No milestone
-			</p>
+			<p className="text-gray-500 text-sm dark:text-zinc-400">No milestone</p>
 		);
 	}
 
@@ -225,7 +241,10 @@ function MilestoneSectionContent({
 	);
 }
 
-function applyOperations(milestone: Milestone | null, operations: MilestoneOperation[]): Milestone | null {
+function applyOperations(
+	milestone: Milestone | null,
+	operations: MilestoneOperation[],
+): Milestone | null {
 	let updatedMilestone = milestone;
 	for (const op of operations) {
 		updatedMilestone = op.milestone;

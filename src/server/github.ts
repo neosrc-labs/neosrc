@@ -23,6 +23,8 @@ export type ReviewCommentData =
 	RestEndpointMethodTypes["pulls"]["listReviewComments"]["response"]["data"][number];
 export type ReviewCommentsForReviewData =
 	RestEndpointMethodTypes["pulls"]["listCommentsForReview"]["response"]["data"];
+export type PullRequestReview =
+	RestEndpointMethodTypes["pulls"]["listReviews"]["response"]["data"][number];
 
 export function createOctokit(accessToken: string) {
 	return new Octokit({
@@ -249,16 +251,82 @@ export const createPullRequestReview = async (
 	owner: string,
 	repo: string,
 	pullNumber: number,
-	event: "APPROVE" | "COMMENT" | "REQUEST_CHANGES",
+	event?: "APPROVE" | "COMMENT" | "REQUEST_CHANGES",
 	body?: string,
+	comments?: Array<{
+		path: string;
+		line: number;
+		side: string;
+		body: string;
+	}>,
 ) => {
 	const octokit = createOctokit(accessToken);
+	// biome-ignore lint/suspicious/noExplicitAny: Octokit type for createReview event doesn't allow leaving it blank, but API supports it
 	const response = await octokit.pulls.createReview({
 		owner,
 		repo,
 		pull_number: pullNumber,
 		event,
 		body,
+		comments,
+	} as any);
+	return response.data;
+};
+
+export const getPullRequestReviews = cache(
+	async (
+		accessToken: string,
+		owner: string,
+		repo: string,
+		pullNumber: number,
+	) => {
+		const octokit = createOctokit(accessToken);
+		const response = await octokit.pulls.listReviews({
+			owner,
+			repo,
+			pull_number: pullNumber,
+			per_page: 100,
+		});
+		return response.data;
+	},
+);
+
+export const submitPullRequestReview = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	reviewId: number,
+	event: "APPROVE" | "COMMENT" | "REQUEST_CHANGES",
+	body?: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.pulls.submitReview({
+		owner,
+		repo,
+		pull_number: pullNumber,
+		review_id: reviewId,
+		event,
+		body,
+	});
+	return response.data;
+};
+
+export const dismissPullRequestReview = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	reviewId: number,
+	message: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.pulls.dismissReview({
+		owner,
+		repo,
+		pull_number: pullNumber,
+		review_id: reviewId,
+		message,
 	});
 	return response.data;
 };
@@ -550,19 +618,27 @@ export const createPullRequestReviewComment = async (
 	line: number,
 	side: "LEFT" | "RIGHT",
 	body: string,
+	pullRequestReviewId?: number,
 ) => {
+	console.log('createPullRequestReviewComment', { line, side, path, pullRequestReviewId, pullNumber, commitId, body })
 	const octokit = createOctokit(accessToken);
-	const response = await octokit.pulls.createReviewComment({
-		owner,
-		repo,
-		pull_number: pullNumber,
-		commit_id: commitId,
-		path,
-		line,
-		side,
-		body,
-	});
-	return response.data;
+	try {
+		const response = await octokit.pulls.createReviewComment({
+			owner,
+			repo,
+			pull_number: pullNumber,
+			commit_id: commitId,
+			path,
+			line,
+			side,
+			body,
+		});
+		console.log('DONE: createPullRequestReviewComment', response.status)
+		return response.data;
+	} catch (e: any) {
+		console.log("ERROR: createPullRequestReviewComment", e)
+		throw e;
+	}
 };
 
 export const replyToPullRequestReviewComment = async (

@@ -2,7 +2,7 @@
 
 import { MessageSquare } from "lucide-react";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import {
 	HoverCard,
 	HoverCardContent,
@@ -37,7 +37,7 @@ function IssueHoverCardContent({
 				<div className="min-w-0 flex-1">
 					<div className="flex items-center gap-2">
 						<span
-							className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+							className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium text-xs ${
 								issue.state === "open"
 									? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
 									: issue.state === "closed"
@@ -89,7 +89,7 @@ function IssueHoverCardContent({
 							.map((label) => (
 								<span
 									key={label.name}
-									className="inline-block max-w-[120px] truncate rounded-full px-2 py-0.5 text-xs font-medium"
+									className="inline-block max-w-[120px] truncate rounded-full px-2 py-0.5 font-medium text-xs"
 									style={{
 										backgroundColor: `#${label.color}20`,
 										color: `#${label.color}`,
