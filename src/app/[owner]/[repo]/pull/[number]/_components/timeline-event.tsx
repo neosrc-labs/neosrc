@@ -98,11 +98,9 @@ export function TimelineEvent({
 
 	return (
 		<div className="relative mb-8 ml-14">
-			<div className="absolute -left-12 flex h-8 w-8 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700">
-				<TimelineIcon event={wrapper.event} />
-			</div>
+			<TimelineIcon event={wrapper.event} />
 
-			<div className="pt-1.5">
+			<div className="pt-1">
 				<EventContent
 					event={wrapper.event}
 					owner={owner}
@@ -130,7 +128,7 @@ function AggregatedLabel({
 	return (
 		<div className="relative mb-8 ml-14">
 			<div className="absolute -left-12 flex h-8 w-8 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700">
-				<Tag size={18} />
+				<Tag size={ICON_SIZE} />
 			</div>
 			<div className="flex flex-wrap items-center gap-1.5 text-gray-600 text-sm dark:text-zinc-400">
 				<UserHoverCard login={actor.login}>
@@ -178,38 +176,60 @@ function AggregatedLabel({
 	);
 }
 
+const ICON_SIZE = 16;
+
 function TimelineIcon({ event }: { event: TimelineEventData }) {
 	const iconMap: Record<string, React.ReactNode> = {
-		commented: <MessageSquare size={18} />,
-		reviewed: <Eye size={18} />,
-		closed: <Circle className="fill-red-500/20 text-red-500" size={18} />,
-		reopened: <Circle className="fill-green-500/20 text-green-500" size={18} />,
-		merged: <GitMerge className="text-purple-500" size={18} />,
-		labeled: <Tag size={18} />,
-		unlabeled: <Tag size={18} />,
-		assigned: <User size={18} />,
-		unassigned: <User size={18} />,
-		review_requested: <ClipboardList size={18} />,
-		review_request_removed: <ClipboardList size={18} />,
-		committed: <GitCommitHorizontal size={18} />,
-		renamed: <Pencil size={18} />,
-		locked: <Lock size={18} />,
-		unlocked: <LockOpen size={18} />,
-		milestoned: <Target size={18} />,
-		demilestoned: <Target size={18} />,
-		"cross-referenced": <Link size={18} />,
-		referenced: <Link size={18} />,
-		head_ref_deleted: <Trash2 size={18} />,
-		head_ref_restored: <RefreshCw size={18} />,
-		convert_to_draft: <FileText size={18} />,
-		ready_for_review: <CheckCheck size={18} />,
-		head_ref_force_pushed: <ArrowUp size={18} />,
+		commented: <MessageSquare size={ICON_SIZE} />,
+		reviewed: <Eye size={ICON_SIZE} />, // NOTE: Reviews can be "netural (not approve or request changes)"
+		closed: <Circle className="fill-red-500/20 text-red-500" size={ICON_SIZE} />,
+		reopened: <Circle className="fill-green-500/20 text-green-500" size={ICON_SIZE} />,
+		merged: <GitMerge className="text-purple-500" size={ICON_SIZE} />,
+		labeled: <Tag size={ICON_SIZE} />,
+		unlabeled: <Tag size={ICON_SIZE} />,
+		assigned: <User size={ICON_SIZE} />,
+		unassigned: <User size={ICON_SIZE} />,
+		review_requested: <ClipboardList size={ICON_SIZE} />,
+		review_request_removed: <ClipboardList size={ICON_SIZE} />,
+		committed: <GitCommitHorizontal size={ICON_SIZE} />,
+		renamed: <Pencil size={ICON_SIZE} />,
+		locked: <Lock size={ICON_SIZE} />,
+		unlocked: <LockOpen size={ICON_SIZE} />,
+		milestoned: <Target size={ICON_SIZE} />,
+		demilestoned: <Target size={ICON_SIZE} />,
+		"cross-referenced": <Link size={ICON_SIZE} />,
+		referenced: <Link size={ICON_SIZE} />,
+		head_ref_deleted: <Trash2 size={ICON_SIZE} />,
+		head_ref_restored: <RefreshCw size={ICON_SIZE} />,
+		convert_to_draft: <FileText size={ICON_SIZE} />,
+		ready_for_review: <CheckCheck size={ICON_SIZE} />,
+		head_ref_force_pushed: <ArrowUp size={ICON_SIZE} />,
 	};
 
+	const isApproved = event.event === "reviewed" && (event as ReviewEvent).state === "approved";
+	const isChangesRequested = event.event === "reviewed" && (event as ReviewEvent).state === "changes_requested";
+
+	const circleClass = isApproved
+		? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-green-500"
+		: isChangesRequested
+			? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-red-500"
+			: "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700";
+
+
+	let icon = iconMap[event.event ?? ""] ?? <Circle size={ICON_SIZE} />;
+
+	if (event.event === "reviewed") {
+		const e = event as ReviewEvent;
+		if (e.state === "approved") icon = <Check className="text-white" size={ICON_SIZE} />;
+		if (e.state === "changes_requested") icon = <FileText className="text-white" size={ICON_SIZE} />;
+	}
+
 	return (
-		<span className="flex">
-			{iconMap[event.event ?? ""] ?? <Circle size={18} />}
-		</span>
+		<div className={circleClass}>
+			<span className="flex">
+				{icon}
+			</span>
+		</div>
 	);
 }
 
@@ -290,7 +310,7 @@ function EventContent({
 									}}
 									type="button"
 								>
-									<SquarePen size={18} />
+									<SquarePen size={ICON_SIZE} />
 								</button>
 							)}
 						</div>
@@ -356,10 +376,6 @@ function EventContent({
 			return (
 				<div className="text-gray-600 text-sm dark:text-zinc-400">
 					<p className="flex items-center gap-1.5">
-						{isApproved && <Check className="text-green-500" size={16} />}
-						{isChangesRequested && (
-							<FileText className="text-red-500" size={16} />
-						)}
 						{e.user && (
 							<UserHoverCard login={e.user.login}>
 								<a className="flex items-center gap-1.5" href={e.user.html_url}>
