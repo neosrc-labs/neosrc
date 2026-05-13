@@ -376,13 +376,13 @@ function EventContent({
 			const timestamp = formatRelativeTime(
 				e.submitted_at ?? e.updated_at ?? "",
 			);
-			const isApproved = e.state === "approved";
-			const isChangesRequested = e.state === "changes_requested";
-			const stateLabel = isApproved
-				? "approved these changes"
-				: isChangesRequested
-					? "requested changes"
-					: "reviewed";
+			const STATE_LABELS: Record<string, string> = {
+				pending: "started a review",
+				approved: "approved these changes",
+				changes_requested: "requested changes",
+			};
+
+			const stateLabel = STATE_LABELS[e.state] ?? "reviewed";
 			return (
 				<div className="text-gray-600 text-sm dark:text-zinc-400">
 					<p className="flex items-center gap-1.5">
@@ -414,6 +414,7 @@ function EventContent({
 						repo={repo}
 						number={number}
 						reviewId={e.id}
+						state={e.state}
 					/>
 				</div>
 			);

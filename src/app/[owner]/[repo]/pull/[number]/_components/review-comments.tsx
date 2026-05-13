@@ -13,6 +13,7 @@ interface ReviewCommentsProps {
 	repo: string;
 	number: number;
 	reviewId: number;
+	state?: string;
 }
 
 type ReviewComment = ReviewCommentsForReviewData[number];
@@ -22,6 +23,7 @@ export function ReviewComments({
 	repo,
 	number,
 	reviewId,
+	state,
 }: ReviewCommentsProps) {
 	const { data: comments, isLoading } = api.reviewComments.byReviewId.useQuery(
 		{ owner, repo, number, reviewId },
@@ -83,6 +85,7 @@ export function ReviewComments({
 								replies={replyMap.get(comment.id) ?? []}
 								owner={owner}
 								repo={repo}
+								state={state}
 							/>
 						))}
 					</div>
@@ -97,11 +100,13 @@ function CommentBlock({
 	replies,
 	owner,
 	repo,
+	state,
 }: {
 	comment: ReviewComment;
 	replies: ReviewComment[];
 	owner: string;
 	repo: string;
+	state?: string;
 }) {
 	if (!comment.user) {
 		return null;
@@ -128,6 +133,12 @@ function CommentBlock({
 				<span className="text-gray-400 text-xs">
 					{formatRelativeTime(comment.created_at)}
 				</span>
+
+				{state === "pending" && (
+					<span className="rounded-full bg-orange-100 px-2 py-0.5 text-orange-700 text-[10px] font-medium dark:bg-orange-900/30 dark:text-orange-400">
+						Pending
+					</span>
+				)}
 			</div>
 			<div className="prose prose-sm max-w-none">
 				<MarkdownRenderer content={comment.body} owner={owner} repo={repo} />
