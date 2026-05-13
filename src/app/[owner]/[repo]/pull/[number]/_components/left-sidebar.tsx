@@ -2,9 +2,9 @@ import { Suspense } from "react";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import {
 	LeftSidebarContentSection,
-	SidebarActionButtons,
 	SidebarNavMenu,
 } from "./left-sidebar-client";
+import { ActionSection } from "./actions-section";
 
 interface LeftSidebarProps {
 	owner: string;
@@ -40,7 +40,7 @@ export default function LeftSidebar({
 				</Suspense>
 			</div>
 
-			<SidebarActionButtons
+			<ActionSection
 				currentUserLogin={currentUserLogin}
 				number={number}
 				owner={owner}
