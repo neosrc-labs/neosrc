@@ -61,6 +61,8 @@ type ReviewRequestedEvent =
 	components["schemas"]["review-requested-issue-event"];
 type ReviewRequestRemovedEvent =
 	components["schemas"]["review-request-removed-issue-event"];
+type AddedToProjectEvent =
+	components["schemas"]["added-to-project-issue-event"];
 type ForcePushEvent = {
 	event: "head_ref_force_pushed";
 	id: number;
@@ -204,6 +206,8 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
 		convert_to_draft: <FileText size={ICON_SIZE} />,
 		ready_for_review: <CheckCheck size={ICON_SIZE} />,
 		head_ref_force_pushed: <ArrowUp size={ICON_SIZE} />,
+		added_to_project_v2: <ClipboardList size={ICON_SIZE} />,
+		project_v2_item_status_changed: <RefreshCw size={ICON_SIZE} />,
 	};
 
 	const isApproved = event.event === "reviewed" && (event as ReviewEvent).state === "approved";
@@ -915,6 +919,52 @@ function EventContent({
 							</span>
 						)}
 						{` ${timestamp}`}
+					</p>
+				</div>
+			);
+		}
+		case "added_to_project_v2": {
+			const e = event as AddedToProjectEvent;
+			const timestamp = formatRelativeTime(e.created_at);
+			return (
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+					<UserHoverCard login={e.actor.login}>
+						<a className="flex items-center gap-2" href={e.actor.html_url}>
+							<img
+								src={e.actor.avatar_url}
+								alt={e.actor.login}
+								className="h-5 w-5 rounded-full"
+							/>
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
+								{e.actor.login}
+							</span>
+						</a>
+					</UserHoverCard>
+					<p>
+						Added this issue to a project {timestamp}
+					</p>
+				</div>
+			);
+		}
+		case "project_v2_item_status_changed": {
+			const e = event as AddedToProjectEvent;
+			const timestamp = formatRelativeTime(e.created_at);
+			return (
+				<div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+					<UserHoverCard login={e.actor.login}>
+						<a className="flex items-center gap-2" href={e.actor.html_url}>
+							<img
+								src={e.actor.avatar_url}
+								alt={e.actor.login}
+								className="h-5 w-5 rounded-full"
+							/>
+							<span className="font-medium text-gray-800 dark:text-zinc-200">
+								{e.actor.login}
+							</span>
+						</a>
+					</UserHoverCard>
+					<p>
+						changed the project status {timestamp}
 					</p>
 				</div>
 			);
