@@ -102,8 +102,6 @@ export const reviewCommentsRouter = createTRPCRouter({
 				input.number,
 			);
 
-			const commitId = pr.head.sha;
-
 			// Check if there's a pending review to add this comment to
 			const currentUser = await getAuthenticatedUser(account.accessToken);
 			const reviews = await getPullRequestReviews(
@@ -112,25 +110,20 @@ export const reviewCommentsRouter = createTRPCRouter({
 				input.repo,
 				input.number,
 			);
-			console.log('got reviews', reviews.length);
 
 			const pendingReview = reviews.find(
 				(r) => r.state === "PENDING" && r.user?.login === currentUser.login,
 			);
 
-			console.log('pending review', pendingReview)
-
+			// TODO: Is there way a to specify the commit the comment belongs to?
 			const comment = await createPullRequestReviewComment(
 				account.accessToken,
-				input.owner,
-				input.repo,
-				input.number,
-				commitId,
+				pr.node_id,
+				pendingReview?.node_id,
 				input.filePath,
 				input.lineNumber,
 				input.side,
 				input.body,
-				pendingReview?.id,
 			);
 
 			return { success: true as const, id: comment.id };

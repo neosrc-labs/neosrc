@@ -610,35 +610,55 @@ export const getPullRequestReviewCommentsForReview = cache(
 
 export const createPullRequestReviewComment = async (
 	accessToken: string,
-	owner: string,
-	repo: string,
-	pullNumber: number,
-	commitId: string,
+	pullRequestNodeId: number,
+	pullRequestReviewNodeId?: string,
 	path: string,
 	line: number,
 	side: "LEFT" | "RIGHT",
 	body: string,
-	pullRequestReviewId?: number,
 ) => {
-	console.log('createPullRequestReviewComment', { line, side, path, pullRequestReviewId, pullNumber, commitId, body })
-	const octokit = createOctokit(accessToken);
-	try {
-		const response = await octokit.pulls.createReviewComment({
-			owner,
-			repo,
-			pull_number: pullNumber,
-			commit_id: commitId,
-			path,
-			line,
-			side,
-			body,
-		});
-		console.log('DONE: createPullRequestReviewComment', response.status)
-		return response.data;
-	} catch (e: any) {
-		console.log("ERROR: createPullRequestReviewComment", e)
-		throw e;
+	// NOTE: Okay, I am really sad about this, but it seems that REST API just does not support adding comments to unsubmitted reviews...
+	// https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
+	const response = await fetch("https://api.github.com/graphql", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${accessToken}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			query: `
+				mutation($pullRequestId: ID!, $pullRequestReviewId: ID, $body: String!, $path: String!, $line: Int!, $side: DiffSide!) {
+					addPullRequestReviewThread(input: { pullRequestId: $pullRequestId, pullRequestReviewId: $pullRequestReviewId, body: $body, path: $path, line: $line, side: $side }) {
+						thread {
+							comments(first: 1) {
+								nodes {
+									databaseId
+								}
+							}
+						}
+					}
+				}
+			`,
+			variables: {
+				pullRequestId: pullRequestNodeId,
+				pullRequestReviewId: pullRequestReviewNodeId,
+				body,
+				path,
+				line,
+				side,
+			},
+		}),
+	});
+
+	const result = await response.json();
+	if (result.errors) {
+		throw new Error(
+			`Failed to create review comment: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
+		);
 	}
+
+	const comment = result.data.addPullRequestReviewThread.thread.comments.nodes[0];
+	return { id: comment.databaseId as number };
 };
 
 export const replyToPullRequestReviewComment = async (
