@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import FileDiff from "~/components/FileDiff";
 import { useFiles } from "~/hooks/files";
+import type { ReviewCommentData } from "~/server/github";
 import { api } from "~/trpc/react";
 
 interface FilesSectionProps {
@@ -31,6 +32,12 @@ export function FilesSection({
 		{ owner, repo, number },
 		{ staleTime: 30_000 },
 	);
+
+	const allCommentsAll = useMemo((): ReviewCommentData[] => {
+		const submitted = allComments;
+		const pending = (pendingReview?.comments ?? []) as ReviewCommentData[];
+		return [...submitted, ...pending];
+	}, [allComments, pendingReview]);
 
 	const pendingReviewId = pendingReview?.reviewId ?? null;
 
@@ -75,7 +82,7 @@ export function FilesSection({
 				</div>
 			</div>
 			{files.map((file) => {
-				const fileComments = allComments.filter(
+				const fileComments = allCommentsAll.filter(
 					(c) => c.path === file.filename,
 				);
 
