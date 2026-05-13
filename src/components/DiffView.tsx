@@ -110,7 +110,7 @@ export function DiffView({
 	const commentsByLine = useMemo(() => {
 		const map = new Map<number, ReviewCommentData[]>();
 		for (const comment of comments) {
-			const key = comment.line ?? 0;
+			const key = comment.line ?? comment.position ?? 0;
 			const existing = map.get(key) ?? [];
 			existing.push(comment);
 			map.set(key, existing);
