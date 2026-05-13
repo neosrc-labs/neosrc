@@ -34,11 +34,8 @@ export function ActionSection({
 	const [requestChangesBody, setRequestChangesBody] = useState("");
 	const [requestChangesPopoverOpen, setRequestChangesPopoverOpen] =
 		useState(false);
-	const [submitReviewBody, setSubmitReviewBody] = useState("");
-	const [submitReviewPopoverOpen, setSubmitReviewPopoverOpen] = useState(false);
-	const [submitReviewEvent, setSubmitReviewEvent] = useState<
-		"APPROVE" | "COMMENT" | "REQUEST_CHANGES"
-	>("COMMENT");
+	const [commentBody, setCommentBody] = useState("");
+	const [commentPopoverOpen, setCommentPopoverOpen] = useState(false);
 
 	const { data: pendingReview } = api.reviews.getPending.useQuery(
 		{ owner, repo, number },
@@ -66,8 +63,8 @@ export function ActionSection({
 
 	const submitReviewMutation = api.reviews.submit.useMutation({
 		onSuccess: () => {
-			setSubmitReviewPopoverOpen(false);
-			setSubmitReviewBody("");
+			setCommentBody("");
+			setCommentPopoverOpen(false);
 			utils.reviews.getPending.invalidate();
 			utils.reviewComments.list.invalidate();
 			utils.timeline.list.invalidate();
@@ -89,48 +86,82 @@ export function ActionSection({
 	});
 
 	const handleApprove = useCallback(() => {
-		approveMutation.mutate({ owner, repo, number, event: "APPROVE" });
-	}, [owner, repo, number, approveMutation]);
+		if (pendingReview) {
+			submitReviewMutation.mutate(
+				{
+					owner,
+					repo,
+					number,
+					reviewId: pendingReview.reviewId,
+					event: "APPROVE",
+				},
+				{
+					onSuccess: () => setApproved(true),
+				},
+			);
+		} else {
+			approveMutation.mutate({ owner, repo, number, event: "APPROVE" });
+		}
+	}, [owner, repo, number, pendingReview, approveMutation, submitReviewMutation]);
 
 	const handleApproveWithComment = useCallback(() => {
-		approveMutation.mutate({
-			owner,
-			repo,
-			number,
-			event: "APPROVE",
-			body: approveBody,
-		});
-	}, [owner, repo, number, approveBody, approveMutation]);
+		if (pendingReview) {
+			submitReviewMutation.mutate(
+				{
+					owner,
+					repo,
+					number,
+					reviewId: pendingReview.reviewId,
+					event: "APPROVE",
+					body: approveBody,
+				},
+				{
+					onSuccess: () => {
+						setApproved(true);
+						setPopoverOpen(false);
+						setApproveBody("");
+					},
+				},
+			);
+		} else {
+			approveMutation.mutate({
+				owner,
+				repo,
+				number,
+				event: "APPROVE",
+				body: approveBody,
+			});
+		}
+	}, [owner, repo, number, pendingReview, approveBody, approveMutation, submitReviewMutation]);
 
 	const handleRequestChanges = useCallback(() => {
-		requestChangesMutation.mutate({
-			owner,
-			repo,
-			number,
-			event: "REQUEST_CHANGES",
-			body: requestChangesBody,
-		});
-	}, [owner, repo, number, requestChangesBody, requestChangesMutation]);
-
-	const handleSubmitReview = useCallback(() => {
-		if (!pendingReview) return;
-		submitReviewMutation.mutate({
-			owner,
-			repo,
-			number,
-			reviewId: pendingReview.reviewId,
-			event: submitReviewEvent,
-			body: submitReviewBody || undefined,
-		});
-	}, [
-		owner,
-		repo,
-		number,
-		pendingReview,
-		submitReviewEvent,
-		submitReviewBody,
-		submitReviewMutation,
-	]);
+		if (pendingReview) {
+			submitReviewMutation.mutate(
+				{
+					owner,
+					repo,
+					number,
+					reviewId: pendingReview.reviewId,
+					event: "REQUEST_CHANGES",
+					body: requestChangesBody,
+				},
+				{
+					onSuccess: () => {
+						setRequestChangesPopoverOpen(false);
+						setRequestChangesBody("");
+					},
+				},
+			);
+		} else {
+			requestChangesMutation.mutate({
+				owner,
+				repo,
+				number,
+				event: "REQUEST_CHANGES",
+				body: requestChangesBody,
+			});
+		}
+	}, [owner, repo, number, pendingReview, requestChangesBody, requestChangesMutation, submitReviewMutation]);
 
 	const handleCancelReview = useCallback(() => {
 		if (!pendingReview) return;
@@ -141,6 +172,18 @@ export function ActionSection({
 			reviewId: pendingReview.reviewId,
 		});
 	}, [owner, repo, number, pendingReview, dismissReviewMutation]);
+
+	const handleSubmitComment = useCallback(() => {
+		if (!pendingReview) return;
+		submitReviewMutation.mutate({
+			owner,
+			repo,
+			number,
+			reviewId: pendingReview.reviewId,
+			event: "COMMENT",
+			body: commentBody,
+		});
+	}, [owner, repo, number, pendingReview, submitReviewMutation, commentBody]);
 
 	const handleMarkReady = useCallback(() => {
 		markReadyMutation.mutate({ owner, repo, number });
@@ -176,75 +219,6 @@ export function ActionSection({
 				{pendingCommentsCount} comment{pendingCommentsCount !== 1 ? "s" : ""}{" "}
 				pending
 			</p>
-			<Popover
-				open={submitReviewPopoverOpen}
-				onOpenChange={setSubmitReviewPopoverOpen}
-			>
-				<PopoverTrigger asChild>
-					<button
-						className="w-full cursor-pointer rounded-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
-						disabled={
-							submitReviewMutation.isPending || dismissReviewMutation.isPending
-						}
-						type="button"
-					>
-						{submitReviewMutation.isPending ? "Submitting..." : "Submit Review"}
-					</button>
-				</PopoverTrigger>
-				<PopoverContent
-					align="end"
-					className="w-[42rem] bg-white p-4 dark:bg-zinc-950"
-					side="left"
-					sideOffset={8}
-				>
-					<div className="mb-3 flex gap-2">
-						{(["COMMENT", "APPROVE", "REQUEST_CHANGES"] as const).map(
-							(event) => (
-								<button
-									key={event}
-									className={`flex-1 cursor-pointer rounded-md px-3 py-1.5 font-medium text-xs transition-colors ${submitReviewEvent === event
-										? event === "APPROVE"
-											? "bg-[#2da44e] text-white"
-											: event === "REQUEST_CHANGES"
-												? "bg-[#cf222e] text-white"
-												: "bg-gray-200 text-gray-800 dark:bg-zinc-700 dark:text-gray-200"
-										: "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-zinc-800 dark:text-gray-400 dark:hover:bg-zinc-700"
-										}`}
-									onClick={() => setSubmitReviewEvent(event)}
-									type="button"
-								>
-									{event === "APPROVE"
-										? "Approve"
-										: event === "REQUEST_CHANGES"
-											? "Request Changes"
-											: "Comment"}
-								</button>
-							),
-						)}
-					</div>
-					<MarkdownEditor
-						disabled={submitReviewMutation.isPending}
-						minHeight="150px"
-						onChange={setSubmitReviewBody}
-						onCancel={() => {
-							setSubmitReviewPopoverOpen(false);
-							setSubmitReviewBody("");
-						}}
-						onSubmit={handleSubmitReview}
-						owner={owner}
-						placeholder="Leave a comment with your review"
-						repo={repo}
-						submitLabel={
-							submitReviewEvent === "APPROVE"
-								? "Approve"
-								: submitReviewEvent === "REQUEST_CHANGES"
-									? "Request Changes"
-									: "Comment"
-						}
-						value={submitReviewBody}
-					/>
-				</PopoverContent>
-			</Popover>
 			{dismissReviewMutation.isPending && (
 				<p className="text-xs text-yellow-700 dark:text-yellow-500">
 					Cancelling review...
@@ -274,14 +248,15 @@ export function ActionSection({
 						className="flex-1 cursor-pointer rounded-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
 						disabled={
 							approveMutation.isPending ||
+							submitReviewMutation.isPending ||
 							approved ||
 							isAuthor ||
-							pendingReview != null
+							dismissReviewMutation.isPending
 						}
 						onClick={handleApprove}
 						type="button"
 					>
-						{approveMutation.isPending
+						{approveMutation.isPending || submitReviewMutation.isPending
 							? "Approving..."
 							: approved
 								? "Approved"
@@ -294,8 +269,9 @@ export function ActionSection({
 									className="cursor-pointer rounded-md bg-[#2da44e] px-2 py-2 text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
 									disabled={
 										approveMutation.isPending ||
+										submitReviewMutation.isPending ||
 										isAuthor ||
-										pendingReview != null
+										dismissReviewMutation.isPending
 									}
 									type="button"
 									title="Approve with comment"
@@ -328,42 +304,88 @@ export function ActionSection({
 						</Popover>
 					)}
 				</div>
-				<Popover
-					open={requestChangesPopoverOpen}
-					onOpenChange={setRequestChangesPopoverOpen}
-				>
-					<PopoverTrigger asChild>
-						<button
-							className="w-full cursor-pointer rounded-md bg-[#cf222e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#b91c23] disabled:cursor-not-allowed disabled:opacity-50"
-							disabled={isAuthor || pendingReview != null}
-							type="button"
-						>
-							Request Changes
-						</button>
-					</PopoverTrigger>
-					<PopoverContent
-						align="end"
-						className="w-[42rem] bg-white p-4 dark:bg-zinc-950"
-						side="left"
-						sideOffset={8}
+				<div className="flex gap-2">
+					<Popover
+						open={requestChangesPopoverOpen}
+						onOpenChange={setRequestChangesPopoverOpen}
 					>
-						<MarkdownEditor
-							disabled={requestChangesMutation.isPending}
-							minHeight="150px"
-							onChange={setRequestChangesBody}
-							onCancel={() => {
-								setRequestChangesPopoverOpen(false);
-								setRequestChangesBody("");
-							}}
-							onSubmit={handleRequestChanges}
-							owner={owner}
-							placeholder="Describe your requested changes"
-							repo={repo}
-							submitLabel="Request Changes"
-							value={requestChangesBody}
-						/>
-					</PopoverContent>
-				</Popover>
+						<PopoverTrigger asChild>
+							<button
+								className="w-full cursor-pointer rounded-md bg-[#cf222e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#b91c23] disabled:cursor-not-allowed disabled:opacity-50"
+								disabled={
+									isAuthor ||
+									submitReviewMutation.isPending ||
+									dismissReviewMutation.isPending
+								}
+								type="button"
+							>
+								Request Changes
+							</button>
+						</PopoverTrigger>
+						<PopoverContent
+							align="end"
+							className="w-[42rem] bg-white p-4 dark:bg-zinc-950"
+							side="left"
+							sideOffset={8}
+						>
+							<MarkdownEditor
+								disabled={requestChangesMutation.isPending}
+								minHeight="150px"
+								onChange={setRequestChangesBody}
+								onCancel={() => {
+									setRequestChangesPopoverOpen(false);
+									setRequestChangesBody("");
+								}}
+								onSubmit={handleRequestChanges}
+								owner={owner}
+								placeholder="Describe your requested changes"
+								repo={repo}
+								submitLabel="Request Changes"
+								value={requestChangesBody}
+							/>
+						</PopoverContent>
+					</Popover>
+					<Popover
+						open={commentPopoverOpen}
+						onOpenChange={setCommentPopoverOpen}
+					>
+						<PopoverTrigger asChild>
+							<button
+								className="w-full cursor-pointer rounded-md bg-neutral-200 px-3 py-2 font-medium text-sm text-neutral-800 transition-colors hover:bg-neutral-300 disabled:cursor-not-allowed disabled:opacity-50"
+								disabled={
+									isAuthor ||
+									submitReviewMutation.isPending ||
+									dismissReviewMutation.isPending
+								}
+								type="button"
+							>
+								Comment
+							</button>
+						</PopoverTrigger>
+						<PopoverContent
+							align="end"
+							className="w-[42rem] bg-white p-4 dark:bg-zinc-950"
+							side="left"
+							sideOffset={8}
+						>
+							<MarkdownEditor
+								disabled={submitReviewMutation.isPending}
+								minHeight="150px"
+								onChange={setCommentBody}
+								onCancel={() => {
+									setCommentPopoverOpen(false);
+									setCommentBody("");
+								}}
+								onSubmit={handleSubmitComment}
+								owner={owner}
+								placeholder="Add a comment"
+								repo={repo}
+								submitLabel="Comment"
+								value={commentBody}
+							/>
+						</PopoverContent>
+					</Popover>
+				</div>
 				{isDraft ? (
 					<button
 						className="w-full cursor-pointer rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
