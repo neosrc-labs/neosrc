@@ -23,6 +23,9 @@
 		"enabled": true,
 		"rules": {
 			"recommended": true,
+			"performance": {
+				"noImgElement": "off"
+			},
 			"nursery": {
 				"useSortedClasses": {
 					"level": "warn",

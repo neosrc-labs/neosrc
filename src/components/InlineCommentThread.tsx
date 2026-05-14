@@ -342,7 +342,6 @@ function Comment({
 		>
 			<div className="flex items-center justify-between gap-2 px-4 pt-3">
 				<div className="flex min-w-0 items-center gap-2">
-					{/* biome-ignore lint/performance/noImgElement: established pattern in codebase */}
 					<img
 						alt={comment.user?.login ?? "user"}
 						className="h-5 w-5 flex-shrink-0 rounded-full"
