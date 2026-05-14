@@ -85,11 +85,12 @@ export function InlineCommentThread({
 		},
 	});
 
-	const reactMutation = api.reactions.toggleIssueComment.useMutation({
-		onSettled: () => {
-			utils.reviewComments.list.invalidate({ owner, repo, number });
-		},
-	});
+	const reactMutation =
+		api.reactions.togglePullRequestReviewComment.useMutation({
+			onSettled: () => {
+				utils.reviewComments.list.invalidate({ owner, repo, number });
+			},
+		});
 
 	const handleReply = useCallback(() => {
 		if (!replyBody.trim()) return;

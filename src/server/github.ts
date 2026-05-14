@@ -472,6 +472,62 @@ export const deleteIssueCommentReaction = async (
 	});
 };
 
+export const getPullRequestReviewCommentReactions = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	commentId: number,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.rest.reactions.listForPullRequestReviewComment({
+		owner,
+		repo,
+		comment_id: commentId,
+	});
+	return response.data;
+};
+
+export const createPullRequestReviewCommentReaction = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	commentId: number,
+	content: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.rest.reactions.createForPullRequestReviewComment({
+		owner,
+		repo,
+		comment_id: commentId,
+		content: content as
+			| "+1"
+			| "-1"
+			| "laugh"
+			| "confused"
+			| "heart"
+			| "hooray"
+			| "rocket"
+			| "eyes",
+	});
+	return response.data;
+};
+
+export const deletePullRequestReviewCommentReaction = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	commentId: number,
+	reactionId: number,
+) => {
+	const octokit = createOctokit(accessToken);
+	await octokit.rest.reactions.deleteForPullRequestComment({
+		owner,
+		repo,
+		comment_id: commentId,
+		reaction_id: reactionId,
+	});
+};
+
 export const createIssueReaction = async (
 	accessToken: string,
 	owner: string,
