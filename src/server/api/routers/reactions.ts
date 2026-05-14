@@ -179,6 +179,47 @@ export const reactionsRouter = createTRPCRouter({
 			return { action: "added" as const };
 		}),
 
+	getForReviewComments: protectedProcedure
+		.input(
+			z.object({
+				owner: z.string(),
+				repo: z.string(),
+				commentIds: z.array(z.number()),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const [account] = await ctx.db
+				.select({ accessToken: accounts.access_token })
+				.from(accounts)
+				.where(eq(accounts.userId, ctx.session.user.id))
+				.limit(1);
+
+			if (!account?.accessToken) {
+				throw new Error("GitHub account not connected");
+			}
+
+			const token = account.accessToken;
+
+			const results = await Promise.all(
+				input.commentIds.map((commentId) =>
+					getPullRequestReviewCommentReactions(
+						token,
+						input.owner,
+						input.repo,
+						commentId,
+					).catch(() => []),
+				),
+			);
+
+			// biome-ignore lint/suspicious/noExplicitAny: type mismatch between Octokit reaction types
+			const reactionMap: Record<number, any> = {};
+			input.commentIds.forEach((id, i) => {
+				reactionMap[id] = results[i];
+			});
+
+			return reactionMap;
+		}),
+
 	toggleIssue: protectedProcedure
 		.input(
 			z.object({

@@ -1,12 +1,18 @@
 "use client";
 
 import { SmilePlus, SquarePen } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import {
+	HoverCard,
+	HoverCardContent,
+	HoverCardTrigger,
+} from "~/components/ui/hover-card";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "~/components/ui/popover";
+import type { Reaction } from "~/components/ReactionRollup";
 import type { ReviewCommentData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
@@ -44,6 +50,17 @@ const reactionEmojis: Record<string, string> = {
 	eyes: "👀",
 };
 
+const reactionOrder: (typeof allReactions[number])[] = [
+	"+1",
+	"heart",
+	"laugh",
+	"hooray",
+	"confused",
+	"rocket",
+	"eyes",
+	"-1",
+];
+
 export function InlineCommentThread({
 	parentComment,
 	replies,
@@ -61,6 +78,20 @@ export function InlineCommentThread({
 
 	const { data: currentUserData } = api.users.currentUser.useQuery();
 	const currentUserLogin = currentUserData?.login ?? "";
+
+	const allCommentIds = useMemo(
+		() => [
+			parentComment.id,
+			...replies.map((c) => c.id),
+		],
+		[parentComment.id, replies],
+	);
+
+	const { data: reactionMap = {} } =
+		api.reactions.getForReviewComments.useQuery(
+			{ owner, repo, commentIds: allCommentIds },
+			{ staleTime: 30_000 },
+		);
 
 	const replyMutation = api.reviewComments.reply.useMutation({
 		onSuccess: () => {
@@ -88,7 +119,11 @@ export function InlineCommentThread({
 	const reactMutation =
 		api.reactions.togglePullRequestReviewComment.useMutation({
 			onSettled: () => {
-				utils.reviewComments.list.invalidate({ owner, repo, number });
+				utils.reactions.getForReviewComments.invalidate({
+					owner,
+					repo,
+					commentIds: allCommentIds,
+				});
 			},
 		});
 
@@ -116,9 +151,8 @@ export function InlineCommentThread({
 	);
 
 	return (
-		<div className="font-san">
+		<div className="font-sans">
 			<Comment
-				isParent={true}
 				comment={parentComment}
 				isPending={
 					pendingReviewId != null &&
@@ -128,6 +162,8 @@ export function InlineCommentThread({
 				isEditing={editingCommentId === parentComment.id}
 				editBody={editingCommentId === parentComment.id ? editBody : ""}
 				displayBody={savedBodies[parentComment.id] ?? parentComment.body}
+				reactions={reactionMap[parentComment.id] ?? []}
+				currentUserLogin={currentUserLogin}
 				onStartEdit={() => {
 					setEditBody(parentComment.body);
 					setEditingCommentId(parentComment.id);
@@ -141,12 +177,15 @@ export function InlineCommentThread({
 				onReact={(content) => handleReact(parentComment.id, content)}
 				owner={owner}
 				repo={repo}
+				variant="parent"
 			/>
 
 			{replies.map((comment) => (
-				<div className="bg-gray-50 dark:bg-zinc-950" key={comment.id}>
+				<div
+					className="bg-gray-50 dark:bg-zinc-950"
+					key={comment.id}
+				>
 					<Comment
-						isParent={false}
 						comment={comment}
 						isPending={
 							pendingReviewId != null &&
@@ -154,8 +193,12 @@ export function InlineCommentThread({
 						}
 						isAuthor={comment.user?.login === currentUserLogin}
 						isEditing={editingCommentId === comment.id}
-						editBody={editingCommentId === comment.id ? editBody : ""}
+						editBody={
+							editingCommentId === comment.id ? editBody : ""
+						}
 						displayBody={savedBodies[comment.id] ?? comment.body}
+						reactions={reactionMap[comment.id] ?? []}
+						currentUserLogin={currentUserLogin}
 						onStartEdit={() => {
 							setEditBody(comment.body);
 							setEditingCommentId(comment.id);
@@ -166,14 +209,17 @@ export function InlineCommentThread({
 							setEditBody("");
 						}}
 						onSaveEdit={() => handleSaveEdit(comment.id)}
-						onReact={(content) => handleReact(comment.id, content)}
+						onReact={(content) =>
+							handleReact(comment.id, content)
+						}
 						owner={owner}
 						repo={repo}
+						variant="reply"
 					/>
 				</div>
 			))}
 			{showReplyForm ? (
-				<div className="p-2 bg-gray-50 dark:bg-zinc-950">
+				<div className="bg-gray-50 p-2 dark:bg-zinc-950">
 					<MarkdownEditor
 						disabled={replyMutation.isPending}
 						onChange={setReplyBody}
@@ -220,9 +266,10 @@ function Comment({
 	isPending,
 	isAuthor,
 	isEditing,
-	isParent,
 	editBody,
 	displayBody,
+	reactions,
+	currentUserLogin,
 	onStartEdit,
 	onEditBodyChange,
 	onCancelEdit,
@@ -230,14 +277,16 @@ function Comment({
 	onReact,
 	owner,
 	repo,
+	variant,
 }: {
 	comment: ReviewCommentData;
 	isPending: boolean;
 	isAuthor: boolean;
 	isEditing: boolean;
-	isParent: boolean;
 	editBody: string;
 	displayBody: string;
+	reactions: Reaction[];
+	currentUserLogin: string;
 	onStartEdit: () => void;
 	onEditBodyChange: (body: string) => void;
 	onCancelEdit: () => void;
@@ -245,11 +294,44 @@ function Comment({
 	onReact: (content: (typeof allReactions)[number]) => void;
 	owner: string;
 	repo: string;
+	variant: "parent" | "reply";
 }) {
 	const [reactionOpen, setReactionOpen] = useState(false);
 
+	const grouped = useMemo(() => {
+		const map = new Map<string, Reaction[]>();
+		for (const r of reactions) {
+			const existing = map.get(r.content) ?? [];
+			existing.push(r);
+			map.set(r.content, existing);
+		}
+		return map;
+	}, [reactions]);
+
+	const entries = reactionOrder
+		.map((content) => [content, grouped.get(content) ?? []] as const)
+		.filter(([, rs]) => rs.length > 0);
+
+	const userReacted = (content: string) =>
+		reactions.some(
+			(r) => r.user?.login === currentUserLogin && r.content === content,
+		);
+
+	const availableReactions = allReactions.filter(
+		(c) =>
+			!reactions.some(
+				(r) => r.user?.login === currentUserLogin && r.content === c,
+			),
+	);
+
 	return (
-		<div className={isParent ? "bg-white border-b-gray-200 dark:border-b-zinc-700 border-solid border-b-1 dark:bg-zinc-900" : "bg-gray-50 dark:bg-zinc-950 ml-3"}>
+		<div
+			className={
+				variant === "parent"
+					? "border-solid border-b-1 border-b-gray-200 bg-white dark:border-b-zinc-700 dark:bg-zinc-900"
+					: "bg-gray-50 dark:bg-zinc-950"
+			}
+		>
 			<div className="flex items-center justify-between gap-2 px-4 pt-3">
 				<div className="flex min-w-0 items-center gap-2">
 					{/* biome-ignore lint/performance/noImgElement: established pattern in codebase */}
@@ -272,36 +354,42 @@ function Comment({
 				</div>
 				{!isEditing && (
 					<div className="flex flex-shrink-0 items-center gap-0.5">
-						<Popover open={reactionOpen} onOpenChange={setReactionOpen}>
-							<PopoverTrigger asChild>
-								<button
-									type="button"
-									className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
-								>
-									<SmilePlus size={14} />
-								</button>
-							</PopoverTrigger>
-							<PopoverContent
-								className="w-fit bg-white p-2 dark:bg-zinc-950"
-								align="end"
+						{availableReactions.length > 0 && (
+							<Popover
+								open={reactionOpen}
+								onOpenChange={setReactionOpen}
 							>
-								<div className="flex gap-1">
-									{allReactions.map((content) => (
-										<button
-											key={content}
-											type="button"
-											onClick={() => {
-												onReact(content);
-												setReactionOpen(false);
-											}}
-											className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
-										>
-											{reactionEmojis[content] ?? content}
-										</button>
-									))}
-								</div>
-							</PopoverContent>
-						</Popover>
+								<PopoverTrigger asChild>
+									<button
+										type="button"
+										className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+									>
+										<SmilePlus size={14} />
+									</button>
+								</PopoverTrigger>
+								<PopoverContent
+									className="w-fit bg-white p-2 dark:bg-zinc-950"
+									align="end"
+								>
+									<div className="flex gap-1">
+										{availableReactions.map((content) => (
+											<button
+												key={content}
+												type="button"
+												onClick={() => {
+													onReact(content);
+													setReactionOpen(false);
+												}}
+												className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+											>
+												{reactionEmojis[content] ??
+													content}
+											</button>
+										))}
+									</div>
+								</PopoverContent>
+							</Popover>
+						)}
 						{isAuthor && (
 							<button
 								type="button"
@@ -336,6 +424,55 @@ function Comment({
 					<MarkdownRenderer content={displayBody} owner={owner} repo={repo} />
 				)}
 			</div>
+			{!isEditing && entries.length > 0 && (
+				<div className="flex flex-wrap items-center gap-1.5 px-4 pb-3 mx-6">
+					{entries.map(([content, rs]) => {
+						const isActive = userReacted(content);
+						return (
+							<HoverCard key={content} openDelay={300}>
+								<HoverCardTrigger asChild>
+									<button
+										type="button"
+										onClick={() => onReact(content)}
+										className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 font-medium text-xs transition-colors ${
+											isActive
+												? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
+												: "border-gray-200 bg-gray-100 text-gray-600 hover:bg-gray-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:bg-zinc-700"
+										}`}
+									>
+										<span>{reactionEmojis[content] ?? content}</span>
+										<span>{rs.length}</span>
+									</button>
+								</HoverCardTrigger>
+								<HoverCardContent className="w-56 bg-white p-3 dark:bg-zinc-950">
+									<div className="flex flex-col gap-2">
+										{rs.map((r) => (
+											<div
+												key={r.id}
+												className="flex items-center gap-2 text-gray-700 text-sm dark:text-gray-300"
+											>
+												{r.user && (
+													<img
+														src={r.user.avatar_url}
+														alt={r.user.login}
+														className="h-5 w-5 rounded-full"
+													/>
+												)}
+												<span className="font-medium">
+													{r.user?.login}
+												</span>
+												<span className="ml-auto">
+													{reactionEmojis[r.content]}
+												</span>
+											</div>
+										))}
+									</div>
+								</HoverCardContent>
+							</HoverCard>
+						);
+					})}
+				</div>
+			)}
 		</div>
 	);
 }
