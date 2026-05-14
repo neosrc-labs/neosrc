@@ -2,6 +2,19 @@
 
 import { keepPreviousData } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	Bold,
+	Code,
+	Code2,
+	Heading,
+	Italic,
+	Link,
+	List,
+	ListOrdered,
+	ListTodo,
+	Strikethrough,
+	TextQuote,
+} from "lucide-react";
 import { api } from "~/trpc/react";
 import { IssueAutocomplete } from "./issue-autocomplete";
 import { MarkdownRenderer } from "./MarkdownRenderer";
@@ -323,48 +336,75 @@ export function MarkdownEditor({
 	const toolbarGroups = [
 		[
 			{
-				label: "B",
+				icon: Bold,
+				key: "bold",
 				title: `Bold (${tooltipMod}+B)`,
 				onClick: handleBold,
 			},
 			{
-				label: "I",
+				icon: Italic,
+				key: "italic",
 				title: `Italic (${tooltipMod}+I)`,
 				onClick: handleItalic,
 			},
-			{ label: "H", title: "Heading", onClick: handleHeading },
 			{
-				label: "S",
+				icon: Heading,
+				key: "heading",
+				title: "Heading",
+				onClick: handleHeading,
+			},
+			{
+				icon: Strikethrough,
+				key: "strikethrough",
 				title: "Strikethrough",
 				onClick: handleStrikethrough,
 			},
 		],
 		[
-			{ label: "<>", title: "Inline code", onClick: handleCode },
 			{
-				label: "{}",
+				icon: Code,
+				key: "code",
+				title: "Inline code",
+				onClick: handleCode,
+			},
+			{
+				icon: Code2,
+				key: "codeblock",
 				title: `Code block (${tooltipMod}+Shift+K)`,
 				onClick: handleCodeBlock,
 			},
 			{
-				label: "Link",
+				icon: Link,
+				key: "link",
 				title: `Link (${tooltipMod}+K)`,
 				onClick: handleLink,
 			},
 		],
 		[
 			{
-				label: "-",
+				icon: List,
+				key: "unordered-list",
 				title: "Unordered list",
 				onClick: handleUnorderedList,
 			},
 			{
-				label: "1.",
+				icon: ListOrdered,
+				key: "ordered-list",
 				title: "Ordered list",
 				onClick: handleOrderedList,
 			},
-			{ label: "[]", title: "Task list", onClick: handleTaskList },
-			{ label: ">", title: "Blockquote", onClick: handleBlockquote },
+			{
+				icon: ListTodo,
+				key: "task-list",
+				title: "Task list",
+				onClick: handleTaskList,
+			},
+			{
+				icon: TextQuote,
+				key: "blockquote",
+				title: "Blockquote",
+				onClick: handleBlockquote,
+			},
 		],
 	];
 
@@ -409,28 +449,31 @@ export function MarkdownEditor({
 										|
 									</span>
 								)}
-								{group.map((btn) => (
-									<button
-										className="inline-flex items-center justify-center rounded-md px-1.5 py-1 font-medium text-gray-600 text-sm hover:bg-gray-200 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
-										disabled={disabled}
-										key={btn.label}
-										onMouseDown={(e) => {
-											const textarea = textareaRef.current;
-											if (textarea) {
-												savedSelectionRef.current = {
-													start: textarea.selectionStart,
-													end: textarea.selectionEnd,
-												};
-											}
-											e.preventDefault();
-										}}
-										onClick={btn.onClick}
-										title={btn.title}
-										type="button"
-									>
-										{btn.label}
-									</button>
-								))}
+								{group.map((btn) => {
+									const Icon = btn.icon;
+									return (
+										<button
+											className="inline-flex items-center justify-center rounded-md p-1.5 text-gray-600 hover:bg-gray-200 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+											disabled={disabled}
+											key={btn.key}
+											onMouseDown={(e) => {
+												const textarea = textareaRef.current;
+												if (textarea) {
+													savedSelectionRef.current = {
+														start: textarea.selectionStart,
+														end: textarea.selectionEnd,
+													};
+												}
+												e.preventDefault();
+											}}
+											onClick={btn.onClick}
+											title={btn.title}
+											type="button"
+										>
+											<Icon className="size-4" />
+										</button>
+									);
+								})}
 							</span>
 						))}
 					</div>
