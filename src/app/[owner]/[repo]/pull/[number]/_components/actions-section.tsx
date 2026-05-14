@@ -30,6 +30,7 @@ export function ActionSection({
 	const [markedReady, setMarkedReady] = useState(false);
 	const [body, setBody] = useState("");
 	const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+	const [isCancelPopoverOpen, setIsCancelPopoverOpen] = useState(false);
 
 	const { data: pendingReview } = api.reviews.getPending.useQuery(
 		{ owner, repo, number },
@@ -136,15 +137,53 @@ export function ActionSection({
 				<span className="font-medium text-sm text-yellow-800 dark:text-yellow-400">
 					Review in progress
 				</span>
-				<button
-					className="cursor-pointer text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
-					disabled={dismissReviewMutation.isPending}
-					onClick={handleCancelReview}
-					type="button"
-					title="Cancel review"
+				<Popover
+					open={isCancelPopoverOpen}
+					onOpenChange={setIsCancelPopoverOpen}
 				>
-					<X className="h-4 w-4" />
-				</button>
+					<PopoverTrigger asChild>
+						<button
+							className="cursor-pointer text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
+							disabled={dismissReviewMutation.isPending}
+							type="button"
+							title="Cancel review"
+						>
+							<X className="h-4 w-4" />
+						</button>
+					</PopoverTrigger>
+					<PopoverContent
+						align="end"
+						className="w-64 bg-white p-4 dark:bg-zinc-950"
+						side="top"
+						sideOffset={4}
+					>
+						<p className="mb-3 font-medium text-gray-900 text-sm dark:text-gray-100">
+							Delete this pending review?
+						</p>
+						<p className="mb-4 text-gray-600 text-xs dark:text-gray-400">
+							Your pending comments will be discarded.
+						</p>
+						<div className="flex justify-end gap-2">
+							<button
+								className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-xs ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+								onClick={() => setIsCancelPopoverOpen(false)}
+								type="button"
+							>
+								Keep editing
+							</button>
+							<button
+								className="cursor-pointer rounded-md bg-red-600 px-3 py-1.5 font-medium text-white text-xs transition-colors hover:bg-red-700"
+								onClick={() => {
+									setIsCancelPopoverOpen(false);
+									handleCancelReview();
+								}}
+								type="button"
+							>
+								Delete review
+							</button>
+						</div>
+					</PopoverContent>
+				</Popover>
 			</div>
 			<p className="text-xs text-yellow-700 dark:text-yellow-500">
 				{pendingCommentsCount} comment{pendingCommentsCount !== 1 ? "s" : ""}{" "}
