@@ -10,6 +10,7 @@ import type { ReviewCommentData } from "~/server/github";
 import type { FooterAction } from "./markdown/MarkdownEditor";
 import { InlineCommentThread } from "./InlineCommentThread";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
+import { Plus } from "lucide-react";
 
 export interface ActiveComment {
 	line: number;
@@ -249,35 +250,35 @@ function BlockRows({
 				return (
 					<Fragment key={`${oldNum ?? ""}-${newNum ?? ""}-${line.content}`}>
 						<tr>
-							<td className={`d2h-code-linenumber ${typeClass}`} style={{ height: '20px' }}>
-								<div className="line-num1">
-									{oldNum !== undefined ? oldNum : ""}
+							<td className={`d2h-code-linenumber ${typeClass}`}>
+								<div className="absolute group">
+									{showCommentButton && onStartComment && (
+										<Plus
+											size={24}
+											className="hidden group-hover:block absolute z-10 bg-blue-500 text-white rounded-full p-1.5 -right-5"
+											onClick={() =>
+												onStartComment(
+													isActive ? null : { line: commentLine, side },
+												)
+											}
+										/>
+									)}
+									<div className="line-num1">
+										{oldNum !== undefined ? oldNum : ""}
+									</div>
+									<div className="line-num2">
+										{newNum !== undefined ? newNum : ""}
+									</div>
 								</div>
-								<div className="line-num2">
-									{newNum !== undefined ? newNum : ""}
-								</div>
-								{showCommentButton && onStartComment && (
-									<button
-										className={`comment-btn ${isActive ? "comment-btn-active" : ""}`}
-										onClick={() =>
-											onStartComment(
-												isActive ? null : { line: commentLine, side },
-											)
-										}
-										type="button"
-										title="Add a comment"
-									>
-										+
-									</button>
-								)}
 							</td>
 							<td className={typeClass}>
-								<div className="d2h-code-line">
+								<div className="d2h-code-line" style={{ display: 'flex' }}>
 									<span className="d2h-code-line-ctn">{content || <br />}</span>
 								</div>
 							</td>
 						</tr>
-						{showComments &&
+						{
+							showComments &&
 							hasComments &&
 							groupThreads(lineComments).map((thread) => (
 								<tr key={`thread-${thread.parent.id}`}>
@@ -292,31 +293,34 @@ function BlockRows({
 										/>
 									</td>
 								</tr>
-							))}
-						{isActive && (
-							<tr>
-								<td
-									colSpan={2}
-									className="border-gray-200 border-t p-2 dark:border-gray-700"
-								>
-									<MarkdownEditor
-										disabled={commentPending}
-										onChange={onCommentBodyChange ?? (() => { })}
-										onCancel={onCancelComment ?? (() => { })}
-										placeholder="Add a comment..."
-										value={commentBody}
-										owner={owner ?? ""}
-										repo={repo ?? ""}
-										footerActions={footerActions}
-									/>
-									{commentError && (
-										<p className="mt-1 text-red-600 text-xs">
-											Failed to post comment. Please try again.
-										</p>
-									)}
-								</td>
-							</tr>
-						)}
+							))
+						}
+						{
+							isActive && (
+								<tr>
+									<td
+										colSpan={2}
+										className="border-gray-200 border-t p-2 dark:border-gray-700"
+									>
+										<MarkdownEditor
+											disabled={commentPending}
+											onChange={onCommentBodyChange ?? (() => { })}
+											onCancel={onCancelComment ?? (() => { })}
+											placeholder="Add a comment..."
+											value={commentBody}
+											owner={owner ?? ""}
+											repo={repo ?? ""}
+											footerActions={footerActions}
+										/>
+										{commentError && (
+											<p className="mt-1 text-red-600 text-xs">
+												Failed to post comment. Please try again.
+											</p>
+										)}
+									</td>
+								</tr>
+							)
+						}
 					</Fragment>
 				);
 			})}
