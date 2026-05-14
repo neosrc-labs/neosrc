@@ -370,7 +370,7 @@ export function MarkdownEditor({
 
 	return (
 		<div
-			className={`relative rounded-lg border border-gray-300 dark:border-zinc-600 ${className}`}
+			className={`relative rounded-lg border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 ${className}`}
 			ref={containerRef}
 		>
 			<div className="-mb-px flex items-center gap-6 rounded-t-lg border-gray-300 border-b bg-gray-50 px-3 dark:border-zinc-600 dark:bg-zinc-900">

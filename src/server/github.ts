@@ -246,6 +246,23 @@ export const updateIssueComment = async (
 	return response.data;
 };
 
+export const updateReviewComment = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	commentId: number,
+	body: string,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.pulls.updateReviewComment({
+		owner,
+		repo,
+		comment_id: commentId,
+		body,
+	});
+	return response.data;
+};
+
 export const createPullRequestReview = async (
 	accessToken: string,
 	owner: string,

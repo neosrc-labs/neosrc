@@ -3,9 +3,27 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
-import { getGitHubTeam, getGitHubUser } from "~/server/github";
+import {
+	getAuthenticatedUser,
+	getGitHubTeam,
+	getGitHubUser,
+} from "~/server/github";
 
 export const usersRouter = createTRPCRouter({
+	currentUser: protectedProcedure.query(async ({ ctx }) => {
+		const [account] = await ctx.db
+			.select({ accessToken: accounts.access_token })
+			.from(accounts)
+			.where(eq(accounts.userId, ctx.session.user.id))
+			.limit(1);
+
+		if (!account?.accessToken) {
+			throw new Error("GitHub account not connected");
+		}
+
+		const user = await getAuthenticatedUser(account.accessToken);
+		return { login: user.login };
+	}),
 	getByUsername: protectedProcedure
 		.input(
 			z.object({
