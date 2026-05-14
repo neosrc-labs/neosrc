@@ -48,7 +48,7 @@ export function InlineCommentThread({
 	}, [replyBody, parentComment.id, replyMutation, owner, repo, number]);
 
 	return (
-		<div className="border border-gray-200 dark:border-zinc-700 max-w-[1100px] font-sans">
+		<div className="border border-gray-200 dark:border-zinc-700 font-sans">
 			{/* Parent Comment */}
 			<div className="bg-white border-b-gray-200 dark:border-b-zinc-700 border-solid border-b-1 dark:bg-zinc-900">
 				<div className="flex items-center gap-2 px-4 pt-3">
