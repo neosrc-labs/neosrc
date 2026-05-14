@@ -1,6 +1,5 @@
 "use client";
 
-import { Suspense } from "react";
 import type {
 	PullsGetResponseData,
 	PullsListCommitsResponseData,

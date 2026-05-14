@@ -1,8 +1,6 @@
 import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Async } from "~/components/async";
-import { Reactions } from "~/components/Reactions";
 import { githubAccessToken } from "~/server/auth";
 import { getPullRequest } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";

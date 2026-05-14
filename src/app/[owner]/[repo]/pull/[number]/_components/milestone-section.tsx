@@ -7,7 +7,6 @@ import { cn } from "~/lib/utils";
 import type {
 	Milestone,
 	PullsGetResponseData,
-	RepoMilestone,
 } from "~/server/github";
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";

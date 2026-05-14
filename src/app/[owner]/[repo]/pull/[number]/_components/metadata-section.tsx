@@ -1,7 +1,6 @@
 "use client";
 
-import { Async } from "~/components/async";
-import type { PullsGetResponseData, Reviewer } from "~/server/github";
+import type { PullsGetResponseData } from "~/server/github";
 import { AssigneeSection } from "./assignee-section";
 import { LabelsSection } from "./label-section";
 import { MilestoneSection } from "./milestone-section";

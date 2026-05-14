@@ -184,24 +184,24 @@ function FileTreeNode({
 
 export function FileTreeSkeleton() {
 	const skeletonItems = [
-		{ depth: 0 },
-		{ depth: 0 },
-		{ depth: 1 },
-		{ depth: 1 },
-		{ depth: 1 },
-		{ depth: 0 },
-		{ depth: 2 },
-		{ depth: 0 },
+		{ depth: 0, id: "skel-0" },
+		{ depth: 0, id: "skel-1" },
+		{ depth: 1, id: "skel-2" },
+		{ depth: 1, id: "skel-3" },
+		{ depth: 1, id: "skel-4" },
+		{ depth: 0, id: "skel-5" },
+		{ depth: 2, id: "skel-6" },
+		{ depth: 0, id: "skel-7" },
 	];
 
 	return (
 		<div className="space-y-0.5">
-			{skeletonItems.map((item, i) => {
+			{skeletonItems.map((item) => {
 				const paddingLeft = item.depth * 12 + 16;
 				return (
 					<div
 						className="flex items-center gap-1.5 rounded px-2 py-2"
-						key={i}
+						key={item.id}
 						style={{ paddingLeft: `${paddingLeft}px` }}
 					>
 						<div className="h-4 w-4 flex-shrink-0 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />

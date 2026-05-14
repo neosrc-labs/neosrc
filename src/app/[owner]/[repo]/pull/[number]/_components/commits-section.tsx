@@ -108,8 +108,8 @@ export function CommitsSection({
 function CommitsSkeleton() {
 	return (
 		<div className="space-y-3">
-			{Array.from({ length: 3 }).map((_, i) => (
-				<div className="flex items-start gap-2" key={i}>
+			{Array.from({ length: 3 }, (_, i) => i).map((i) => (
+				<div className="flex items-start gap-2" key={`commit-skeleton-${i}`}>
 					<div className="mt-0.5 h-5 w-5 shrink-0 animate-pulse rounded-full bg-gray-200" />
 					<div className="min-w-0 flex-1">
 						<div className="h-4 w-3/4 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />

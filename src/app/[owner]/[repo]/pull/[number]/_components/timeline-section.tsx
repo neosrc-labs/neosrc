@@ -126,8 +126,8 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 	const allEvents = data?.pages.flatMap((page) => page.events) ?? [];
 	const allCommentReactions =
 		data?.pages.reduce<TimelineResult["commentReactions"]>(
-			(acc, page) => ({ ...acc, ...page.commentReactions }),
-			{},
+			(acc, page) => Object.assign(acc, page.commentReactions),
+			{} as TimelineResult["commentReactions"],
 		) ?? {};
 	const currentUserLogin = data?.pages[0]?.currentUserLogin ?? "";
 	const filteredEvents = allEvents.filter((event) => {
@@ -154,17 +154,23 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 			<div className="relative">
 				<div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200 dark:bg-zinc-700" />
 
-				{wrappers.map((wrapper, index) => (
+				{wrappers.map((wrapper, index) => {
+				const key =
+					wrapper.type === "raw"
+						? `raw-${wrapper.event.id}`
+						: `label-${wrapper.createdAt}-${index}`;
+				return (
 					<TimelineEvent
 						wrapper={wrapper}
-						key={index}
+						key={key}
 						number={number}
 						owner={owner}
 						repo={repo}
 						commentReactions={allCommentReactions}
 						currentUserLogin={currentUserLogin}
 					/>
-				))}
+				);
+			})}
 			</div>
 
 			{isFetchingNextPage && (
