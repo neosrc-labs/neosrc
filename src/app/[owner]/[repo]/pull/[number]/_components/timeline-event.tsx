@@ -342,7 +342,7 @@ function EventContent({
 													repo,
 													commentId: e.id,
 													body: editBody,
-												})
+												});
 											},
 											variant: "approve",
 											disabled: (text: string) => !text.trim(),

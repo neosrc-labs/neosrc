@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
-import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "~/components/ui/popover";
 import type { PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
-
 
 interface ActionSectionProps {
 	owner: string;
@@ -104,7 +107,16 @@ export function ActionSection({
 				);
 			}
 		},
-		[owner, repo, number, pendingReview, body, approveMutation, requestChangesMutation, submitReviewMutation],
+		[
+			owner,
+			repo,
+			number,
+			pendingReview,
+			body,
+			approveMutation,
+			requestChangesMutation,
+			submitReviewMutation,
+		],
 	);
 
 	const handleCancelReview = useCallback(() => {
@@ -219,17 +231,12 @@ export function ActionSection({
 			<>
 				{reviewInProgress}
 				<div className="flex gap-1">
-					<Popover
-						open={isPopoverOpen}
-						onOpenChange={setIsPopoverOpen}
-					>
+					<Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
 						<PopoverTrigger asChild>
 							<button
 								className="w-full cursor-pointer rounded-md bg-[#0969da] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#0860ca] disabled:cursor-not-allowed disabled:opacity-50"
 								disabled={
-									isAuthor ||
-									isPending ||
-									dismissReviewMutation.isPending
+									isAuthor || isPending || dismissReviewMutation.isPending
 								}
 								type="button"
 							>
@@ -352,4 +359,3 @@ export function ActionSection({
 		</div>
 	);
 }
-

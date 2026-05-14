@@ -2,6 +2,7 @@
 
 import { MoreVertical, SmilePlus, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import type { Reaction } from "~/components/ReactionRollup";
 import {
 	HoverCard,
 	HoverCardContent,
@@ -12,7 +13,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "~/components/ui/popover";
-import type { Reaction } from "~/components/ReactionRollup";
 import type { ReviewCommentData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
@@ -50,7 +50,7 @@ const reactionEmojis: Record<string, string> = {
 	eyes: "👀",
 };
 
-const reactionOrder: (typeof allReactions[number])[] = [
+const reactionOrder: (typeof allReactions)[number][] = [
 	"+1",
 	"heart",
 	"laugh",
@@ -80,10 +80,7 @@ export function InlineCommentThread({
 	const currentUserLogin = currentUserData?.login ?? "";
 
 	const allCommentIds = useMemo(
-		() => [
-			parentComment.id,
-			...replies.map((c) => c.id),
-		],
+		() => [parentComment.id, ...replies.map((c) => c.id)],
 		[parentComment.id, replies],
 	);
 
@@ -195,10 +192,7 @@ export function InlineCommentThread({
 			/>
 
 			{replies.map((comment) => (
-				<div
-					className="bg-gray-50 dark:bg-zinc-950"
-					key={comment.id}
-				>
+				<div className="bg-gray-50 dark:bg-zinc-950" key={comment.id}>
 					<Comment
 						comment={comment}
 						isPending={
@@ -207,9 +201,7 @@ export function InlineCommentThread({
 						}
 						isAuthor={comment.user?.login === currentUserLogin}
 						isEditing={editingCommentId === comment.id}
-						editBody={
-							editingCommentId === comment.id ? editBody : ""
-						}
+						editBody={editingCommentId === comment.id ? editBody : ""}
 						displayBody={savedBodies[comment.id] ?? comment.body}
 						reactions={reactionMap[comment.id] ?? []}
 						currentUserLogin={currentUserLogin}
@@ -223,9 +215,7 @@ export function InlineCommentThread({
 							setEditBody("");
 						}}
 						onSaveEdit={() => handleSaveEdit(comment.id)}
-						onReact={(content) =>
-							handleReact(comment.id, content)
-						}
+						onReact={(content) => handleReact(comment.id, content)}
 						onDelete={() => handleDelete(comment.id)}
 						owner={owner}
 						repo={repo}
@@ -346,7 +336,7 @@ function Comment({
 		<div
 			className={
 				variant === "parent"
-					? "border-solid border-b-1 border-b-gray-200 bg-white dark:border-b-zinc-700 dark:bg-zinc-900"
+					? "border-b-1 border-b-gray-200 border-solid bg-white dark:border-b-zinc-700 dark:bg-zinc-900"
 					: "bg-gray-50 dark:bg-zinc-950"
 			}
 		>
@@ -373,10 +363,7 @@ function Comment({
 				{!isEditing && (
 					<div className="flex flex-shrink-0 items-center gap-0.5">
 						{availableReactions.length > 0 && (
-							<Popover
-								open={reactionOpen}
-								onOpenChange={setReactionOpen}
-							>
+							<Popover open={reactionOpen} onOpenChange={setReactionOpen}>
 								<PopoverTrigger asChild>
 									<button
 										type="button"
@@ -400,8 +387,7 @@ function Comment({
 												}}
 												className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
 											>
-												{reactionEmojis[content] ??
-													content}
+												{reactionEmojis[content] ?? content}
 											</button>
 										))}
 									</div>
@@ -469,7 +455,7 @@ function Comment({
 				)}
 			</div>
 			{!isEditing && entries.length > 0 && (
-				<div className="flex flex-wrap items-center gap-1.5 px-4 pb-3 mx-6">
+				<div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
 					{entries.map(([content, rs]) => {
 						const isActive = userReacted(content);
 						return (
@@ -502,9 +488,7 @@ function Comment({
 														className="h-5 w-5 rounded-full"
 													/>
 												)}
-												<span className="font-medium">
-													{r.user?.login}
-												</span>
+												<span className="font-medium">{r.user?.login}</span>
 												<span className="ml-auto">
 													{reactionEmojis[r.content]}
 												</span>

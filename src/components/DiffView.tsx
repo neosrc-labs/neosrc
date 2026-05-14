@@ -4,13 +4,13 @@ import { defaultDiff2HtmlConfig, parse } from "diff2html";
 import type { ColorSchemeType } from "diff2html/lib/types";
 import "diff2html/bundles/css/diff2html.min.css";
 import hljs from "highlight.js";
+import { Plus } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Fragment, useEffect, useMemo, useRef } from "react";
 import type { ReviewCommentData } from "~/server/github";
-import type { FooterAction } from "./markdown/MarkdownEditor";
 import { InlineCommentThread } from "./InlineCommentThread";
+import type { FooterAction } from "./markdown/MarkdownEditor";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
-import { Plus } from "lucide-react";
 
 export interface ActiveComment {
 	line: number;
@@ -251,11 +251,11 @@ function BlockRows({
 					<Fragment key={`${oldNum ?? ""}-${newNum ?? ""}-${line.content}`}>
 						<tr>
 							<td className={`d2h-code-linenumber ${typeClass}`}>
-								<div className="absolute group">
+								<div className="group absolute">
 									{showCommentButton && onStartComment && (
 										<Plus
 											size={24}
-											className="hidden group-hover:block absolute z-10 bg-blue-500 text-white rounded-full p-1.5 -right-5"
+											className="absolute -right-5 z-10 hidden rounded-full bg-blue-500 p-1.5 text-white group-hover:block"
 											onClick={() =>
 												onStartComment(
 													isActive ? null : { line: commentLine, side },
@@ -272,13 +272,12 @@ function BlockRows({
 								</div>
 							</td>
 							<td className={typeClass}>
-								<div className="d2h-code-line" style={{ display: 'flex' }}>
+								<div className="d2h-code-line" style={{ display: "flex" }}>
 									<span className="d2h-code-line-ctn">{content || <br />}</span>
 								</div>
 							</td>
 						</tr>
-						{
-							showComments &&
+						{showComments &&
 							hasComments &&
 							groupThreads(lineComments).map((thread) => (
 								<tr key={`thread-${thread.parent.id}`}>
@@ -293,34 +292,31 @@ function BlockRows({
 										/>
 									</td>
 								</tr>
-							))
-						}
-						{
-							isActive && (
-								<tr>
-									<td
-										colSpan={2}
-										className="border-gray-200 border-t p-2 dark:border-gray-700"
-									>
-										<MarkdownEditor
-											disabled={commentPending}
-											onChange={onCommentBodyChange ?? (() => { })}
-											onCancel={onCancelComment ?? (() => { })}
-											placeholder="Add a comment..."
-											value={commentBody}
-											owner={owner ?? ""}
-											repo={repo ?? ""}
-											footerActions={footerActions}
-										/>
-										{commentError && (
-											<p className="mt-1 text-red-600 text-xs">
-												Failed to post comment. Please try again.
-											</p>
-										)}
-									</td>
-								</tr>
-							)
-						}
+							))}
+						{isActive && (
+							<tr>
+								<td
+									colSpan={2}
+									className="border-gray-200 border-t p-2 dark:border-gray-700"
+								>
+									<MarkdownEditor
+										disabled={commentPending}
+										onChange={onCommentBodyChange ?? (() => {})}
+										onCancel={onCancelComment ?? (() => {})}
+										placeholder="Add a comment..."
+										value={commentBody}
+										owner={owner ?? ""}
+										repo={repo ?? ""}
+										footerActions={footerActions}
+									/>
+									{commentError && (
+										<p className="mt-1 text-red-600 text-xs">
+											Failed to post comment. Please try again.
+										</p>
+									)}
+								</td>
+							</tr>
+						)}
 					</Fragment>
 				);
 			})}

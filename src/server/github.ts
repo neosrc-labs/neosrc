@@ -479,11 +479,13 @@ export const getPullRequestReviewCommentReactions = async (
 	commentId: number,
 ) => {
 	const octokit = createOctokit(accessToken);
-	const response = await octokit.rest.reactions.listForPullRequestReviewComment({
-		owner,
-		repo,
-		comment_id: commentId,
-	});
+	const response = await octokit.rest.reactions.listForPullRequestReviewComment(
+		{
+			owner,
+			repo,
+			comment_id: commentId,
+		},
+	);
 	return response.data;
 };
 
@@ -495,20 +497,21 @@ export const createPullRequestReviewCommentReaction = async (
 	content: string,
 ) => {
 	const octokit = createOctokit(accessToken);
-	const response = await octokit.rest.reactions.createForPullRequestReviewComment({
-		owner,
-		repo,
-		comment_id: commentId,
-		content: content as
-			| "+1"
-			| "-1"
-			| "laugh"
-			| "confused"
-			| "heart"
-			| "hooray"
-			| "rocket"
-			| "eyes",
-	});
+	const response =
+		await octokit.rest.reactions.createForPullRequestReviewComment({
+			owner,
+			repo,
+			comment_id: commentId,
+			content: content as
+				| "+1"
+				| "-1"
+				| "laugh"
+				| "confused"
+				| "heart"
+				| "hooray"
+				| "rocket"
+				| "eyes",
+		});
 	return response.data;
 };
 
@@ -727,7 +730,8 @@ export const createPullRequestReviewComment = async (
 		);
 	}
 
-	const comment = result.data.addPullRequestReviewThread.thread.comments.nodes[0];
+	const comment =
+		result.data.addPullRequestReviewThread.thread.comments.nodes[0];
 	return { id: comment.databaseId as number };
 };
 

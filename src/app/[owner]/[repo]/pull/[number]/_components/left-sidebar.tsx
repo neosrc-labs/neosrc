@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
+import { ActionSection } from "./actions-section";
 import {
 	LeftSidebarContentSection,
 	SidebarNavMenu,
 } from "./left-sidebar-client";
-import { ActionSection } from "./actions-section";
 
 interface LeftSidebarProps {
 	owner: string;

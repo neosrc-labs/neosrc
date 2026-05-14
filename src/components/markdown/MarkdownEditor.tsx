@@ -370,25 +370,27 @@ export function MarkdownEditor({
 
 	return (
 		<div
-			className={`relative rounded-lg border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 ${className}`}
+			className={`relative rounded-lg border border-gray-300 bg-white dark:border-zinc-600 dark:bg-zinc-950 ${className}`}
 			ref={containerRef}
 		>
 			<div className="-mb-px flex items-center gap-6 rounded-t-lg border-gray-300 border-b bg-gray-50 px-3 dark:border-zinc-600 dark:bg-zinc-900">
 				<button
-					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${mode === "write"
-						? "border-blue-500 text-blue-600"
-						: "border-transparent text-gray-600 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-						}`}
+					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
+						mode === "write"
+							? "border-blue-500 text-blue-600"
+							: "border-transparent text-gray-600 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+					}`}
 					onClick={() => setMode("write")}
 					type="button"
 				>
 					Write
 				</button>
 				<button
-					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${mode === "preview"
-						? "border-blue-500 text-blue-600"
-						: "border-transparent text-gray-600 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-						}`}
+					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
+						mode === "preview"
+							? "border-blue-500 text-blue-600"
+							: "border-transparent text-gray-600 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+					}`}
 					onClick={() => setMode("preview")}
 					type="button"
 				>
@@ -539,13 +541,19 @@ export function MarkdownEditor({
 						<div className="flex items-center gap-2">
 							{footerActions.map((action) => (
 								<button
-									className={`cursor-pointer rounded-md px-4 py-1.5 font-medium text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${action.variant === "approve"
-										? "bg-[#2da44e] hover:bg-[#218838] text-white"
-										: action.variant === "danger"
-											? "bg-[#cf222e] hover:bg-[#b91c23] text-white"
-											: "bg-neutral-200 hover:bg-neutral-300 text-black"
-										}`}
-									disabled={disabled || (typeof action.disabled === "function" ? action.disabled(value) : action.disabled)}
+									className={`cursor-pointer rounded-md px-4 py-1.5 font-medium text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+										action.variant === "approve"
+											? "bg-[#2da44e] text-white hover:bg-[#218838]"
+											: action.variant === "danger"
+												? "bg-[#cf222e] text-white hover:bg-[#b91c23]"
+												: "bg-neutral-200 text-black hover:bg-neutral-300"
+									}`}
+									disabled={
+										disabled ||
+										(typeof action.disabled === "function"
+											? action.disabled(value)
+											: action.disabled)
+									}
 									key={action.label}
 									onClick={action.onClick}
 									type="button"

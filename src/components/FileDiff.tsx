@@ -128,27 +128,27 @@ export default function FileDiff({
 
 	const footerActions = pendingReviewId
 		? [
-			{
-				label: "Add to Review",
-				onClick: () => handleAddComment(true),
-				variant: "approve" as const,
-				disabled: (text: string) => !text.trim(),
-			},
-		]
+				{
+					label: "Add to Review",
+					onClick: () => handleAddComment(true),
+					variant: "approve" as const,
+					disabled: (text: string) => !text.trim(),
+				},
+			]
 		: [
-			{
-				label: "Add single comment",
-				onClick: () => handleAddComment(false),
-				variant: "neutral" as const,
-				disabled: (text: string) => !text.trim(),
-			},
-			{
-				label: "Start a Review",
-				onClick: () => handleAddComment(true),
-				variant: "approve" as const,
-				disabled: (text: string) => !text.trim(),
-			},
-		];
+				{
+					label: "Add single comment",
+					onClick: () => handleAddComment(false),
+					variant: "neutral" as const,
+					disabled: (text: string) => !text.trim(),
+				},
+				{
+					label: "Start a Review",
+					onClick: () => handleAddComment(true),
+					variant: "approve" as const,
+					disabled: (text: string) => !text.trim(),
+				},
+			];
 
 	const toggleCollapsed = () => setIsCollapsed(!isCollapsed);
 
