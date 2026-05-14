@@ -497,7 +497,7 @@ export function MarkdownEditor({
 							/>
 						)}
 					<textarea
-						className="w-full resize-y rounded-b-lg border-0 px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder-zinc-500"
+						className="w-full resize-y rounded-b-lg border-0 px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder-zinc-500 disabled:dark:bg-zinc-800"
 						disabled={disabled}
 						onBlur={(e) => {
 							savedSelectionRef.current = {
