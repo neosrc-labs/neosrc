@@ -1,5 +1,6 @@
 "use client";
 
+import { createContext, useContext } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
@@ -11,6 +12,55 @@ import { UserHoverCard } from "~/components/user-hover-card";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
+
+const CodeBlockContext = createContext(false);
+
+function InlineCode({
+	children,
+	...props
+}: {
+	children: React.ReactNode;
+	[key: string]: unknown;
+}) {
+	return (
+		<code
+			className="rounded bg-gray-100 px-[5px] py-[2px] font-mono text-sm before:content-none after:content-none dark:bg-zinc-700"
+			{...props}
+		>
+			{children}
+		</code>
+	);
+}
+
+function CodeBlockCode({
+	children,
+	...props
+}: {
+	children: React.ReactNode;
+	[key: string]: unknown;
+}) {
+	return <code {...props}>{children}</code>;
+}
+
+function CodeElement({
+	children,
+	className,
+	...props
+}: {
+	children: React.ReactNode;
+	className?: string;
+	[key: string]: unknown;
+}) {
+	const inCodeBlock = useContext(CodeBlockContext);
+	if (className || inCodeBlock) {
+		return (
+			<CodeBlockCode className={className} {...props}>
+				{children}
+			</CodeBlockCode>
+		);
+	}
+	return <InlineCode {...props}>{children}</InlineCode>;
+}
 
 interface MarkdownRendererProps {
 	content: string;
@@ -93,6 +143,25 @@ export function MarkdownRenderer({
 						<a href={href} {...props}>
 							{children}
 						</a>
+					);
+				},
+				pre({ children, ...props }) {
+					return (
+						<pre
+							className="overflow-x-auto rounded-md bg-gray-100 p-4 dark:bg-zinc-800"
+							{...props}
+						>
+							<CodeBlockContext.Provider value={true}>
+								{children}
+							</CodeBlockContext.Provider>
+						</pre>
+					);
+				},
+				code({ children, className, ...props }) {
+					return (
+						<CodeElement className={className} {...props}>
+							{children}
+						</CodeElement>
 					);
 				},
 				summary({ children, ...props }) {
