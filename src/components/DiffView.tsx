@@ -309,14 +309,20 @@ function BlockRows({
 								>
 									<MarkdownEditor
 										disabled={commentPending}
-										onChange={onCommentBodyChange ?? (() => {})}
-										onCancel={onCancelComment ?? (() => {})}
-										onSubmit={onSubmitComment ?? (() => {})}
+										onChange={onCommentBodyChange ?? (() => { })}
+										onCancel={onCancelComment ?? (() => { })}
 										placeholder="Add a comment..."
-										submitLabel={submitLabel}
 										value={commentBody}
 										owner={owner ?? ""}
 										repo={repo ?? ""}
+										footerActions={[
+											{
+												label: submitLabel,
+												onClick: onSubmitComment ?? (() => { }),
+												variant: "approve",
+												disabled: (text: string) => !text.trim(),
+											},
+										]}
 									/>
 									{commentError && (
 										<p className="mt-1 text-red-600 text-xs">

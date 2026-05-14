@@ -329,19 +329,25 @@ function EventContent({
 								<MarkdownEditor
 									onCancel={() => setEditingCommentId(null)}
 									onChange={setEditBody}
-									onSubmit={() =>
-										updateCommentMutation.mutate({
-											owner,
-											repo,
-											commentId: e.id,
-											body: editBody,
-										})
-									}
-									submitLabel="Save"
 									value={editBody}
 									owner={owner}
 									repo={repo}
 									minHeight={`${Math.min(Math.max(editBody.split("\n").length * 28, 120), 400)}px`}
+									footerActions={[
+										{
+											label: "Save",
+											onClick: () => {
+												updateCommentMutation.mutate({
+													owner,
+													repo,
+													commentId: e.id,
+													body: editBody,
+												})
+											},
+											variant: "approve",
+											disabled: (text: string) => !text.trim(),
+										},
+									]}
 								/>
 							) : (
 								<div className="prose prose-sm max-w-none">

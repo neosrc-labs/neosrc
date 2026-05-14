@@ -74,12 +74,18 @@ export function InlineCommentThread({
 							setShowReplyForm(false);
 							setReplyBody("");
 						}}
-						onSubmit={handleReply}
 						placeholder="Write a reply..."
-						submitLabel="Reply"
 						value={replyBody}
 						owner={owner}
 						repo={repo}
+						footerActions={[
+							{
+								label: "Reply",
+								onClick: () => handleReply(),
+								variant: "approve",
+								disabled: (text: string) => !text.trim(),
+							},
+						]}
 					/>
 					{replyMutation.isError && (
 						<p className="mt-1 text-red-600 text-xs">
