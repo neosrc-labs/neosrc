@@ -180,7 +180,7 @@ export default function FileDiff({
 
 	return (
 		<div
-			className="mb-6 scroll-mt-[calc(var(--header-height)+8px)] rounded-lg border border-gray-200 dark:border-gray-700"
+			className="mb-6 scroll-mt-[calc(var(--header-height)+8px)] rounded-lg border border-gray-200 dark:border-zinc-700"
 			id={fileId}
 		>
 			<div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900">
@@ -247,7 +247,7 @@ export default function FileDiff({
 				<label className="flex cursor-pointer items-center gap-1 text-gray-600 text-xs hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">
 					<input
 						checked={isViewed}
-						className="cursor-pointer rounded border-gray-300 dark:border-gray-600"
+						className="cursor-pointer rounded border-gray-300 dark:border-zinc-600"
 						onChange={toggleViewed}
 						type="checkbox"
 					/>

@@ -3,8 +3,9 @@
 import { useCallback, useState } from "react";
 import type { ReviewCommentData } from "~/server/github";
 import { api } from "~/trpc/react";
-import { InlineComment } from "./InlineComment";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
+import { formatRelativeTime } from "~/utils";
+import { MarkdownRenderer } from "./markdown/MarkdownRenderer";
 
 interface InlineCommentThreadProps {
 	parentComment: ReviewCommentData;
@@ -47,26 +48,64 @@ export function InlineCommentThread({
 	}, [replyBody, parentComment.id, replyMutation, owner, repo, number]);
 
 	return (
-		<div className="border border-gray-200 dark:border-gray-700">
-			<InlineComment
-				comment={parentComment}
-				isPending={
-					pendingReviewId != null &&
-					parentComment.pull_request_review_id === pendingReviewId
-				}
-			/>
+		<div className="border border-gray-200 dark:border-zinc-700 max-w-[1100px] font-sans">
+			{/* Parent Comment */}
+			<div className="bg-white border-b-gray-200 dark:border-b-zinc-700 border-solid border-b-1 dark:bg-zinc-900">
+				<div className="flex items-center gap-2 px-4 pt-3">
+					{/* biome-ignore lint/performance/noImgElement: established pattern in codebase */}
+					<img
+						alt={parentComment.user?.login ?? "user"}
+						className="h-5 w-5 flex-shrink-0 rounded-full"
+						src={parentComment.user?.avatar_url ?? ""}
+					/>
+					<span className="font-medium text-gray-900 text-sm dark:text-gray-100">
+						{parentComment.user?.login ?? "unknown"}
+					</span>
+					<span className="text-gray-500 text-xs">
+						{formatRelativeTime(parentComment.created_at)}
+					</span>
+					{pendingReviewId != null &&
+						parentComment.pull_request_review_id === pendingReviewId && (
+							<span className="rounded-full bg-yellow-100 px-2 py-0.5 font-medium text-xs text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+								Pending
+							</span>
+						)}
+				</div>
+				<div className="prose prose-sm dark:prose-invert max-w-none px-4 py-2 mx-6">
+					<MarkdownRenderer content={parentComment.body} />
+				</div>
+			</div>
+
+
 			{replies.map((comment) => (
-				<InlineComment
-					comment={comment}
-					key={comment.id}
-					isPending={
-						pendingReviewId != null &&
-						comment.pull_request_review_id === pendingReviewId
-					}
-				/>
+				<div className="bg-gray-50 dark:bg-zinc-950 ml-3" key={comment.id}>
+					<div className="flex items-center gap-2 px-4 pt-3">
+						{/* biome-ignore lint/performance/noImgElement: established pattern in codebase */}
+						<img
+							alt={comment.user?.login ?? "user"}
+							className="h-5 w-5 flex-shrink-0 rounded-full"
+							src={comment.user?.avatar_url ?? ""}
+						/>
+						<span className="font-medium text-gray-900 text-sm dark:text-gray-100">
+							{comment.user?.login ?? "unknown"}
+						</span>
+						<span className="text-gray-500 text-xs">
+							{formatRelativeTime(comment.created_at)}
+						</span>
+						{pendingReviewId != null &&
+							comment.pull_request_review_id === pendingReviewId && (
+								<span className="rounded-full bg-yellow-100 px-2 py-0.5 font-medium text-xs text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+									Pending
+								</span>
+							)}
+					</div>
+					<div className="prose prose-sm dark:prose-invert max-w-none px-4 py-2 mx-6">
+						<MarkdownRenderer content={comment.body} />
+					</div>
+				</div>
 			))}
 			{showReplyForm ? (
-				<div className="border-gray-200 border-t p-2 dark:border-gray-700">
+				<div className="p-2 ml-3">
 					<MarkdownEditor
 						disabled={replyMutation.isPending}
 						onChange={setReplyBody}
@@ -94,27 +133,15 @@ export function InlineCommentThread({
 					)}
 				</div>
 			) : (
-				<button
-					className="flex w-full cursor-pointer items-center gap-1.5 border-gray-200 border-t px-4 py-1.5 text-gray-500 text-xs hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
-					onClick={() => setShowReplyForm(true)}
-					type="button"
-				>
-					<svg
-						className="h-3 w-3"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
+				<div className="flex w-full px-4 py-2 bg-gray-50 dark:bg-zinc-950 ml-3">
+					<button
+						className="flex w-full cursor-text items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-gray-400 text-xs hover:border-gray-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-500 dark:hover:border-zinc-400 transition-colors duration-200"
+						onClick={() => setShowReplyForm(true)}
+						type="button"
 					>
-						<title>Reply</title>
-						<path
-							d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={2}
-						/>
-					</svg>
-					Reply
-				</button>
+						Reply...
+					</button>
+				</div>
 			)}
 		</div>
 	);

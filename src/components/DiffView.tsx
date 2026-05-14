@@ -285,7 +285,7 @@ function BlockRows({
 							hasComments &&
 							groupThreads(lineComments).map((thread) => (
 								<tr key={`thread-${thread.parent.id}`}>
-									<td colSpan={2} className="p-0">
+									<td colSpan={2} className="p-0 dark:bg-zinc-950">
 										<InlineCommentThread
 											parentComment={thread.parent}
 											replies={thread.replies}
