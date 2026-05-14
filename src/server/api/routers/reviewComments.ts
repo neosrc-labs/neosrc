@@ -6,6 +6,7 @@ import { accounts } from "~/server/db/schema";
 import {
 	createPullRequestReviewComment,
 	createStandaloneReviewComment,
+	deleteReviewComment,
 	getAuthenticatedUser,
 	getPullRequest,
 	getPullRequestReviewComments,
@@ -172,6 +173,35 @@ export const reviewCommentsRouter = createTRPCRouter({
 				input.repo,
 				input.commentId,
 				input.body,
+			);
+
+			return { success: true as const };
+		}),
+
+	delete: protectedProcedure
+		.input(
+			z.object({
+				owner: z.string(),
+				repo: z.string(),
+				commentId: z.number(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const [account] = await ctx.db
+				.select({ accessToken: accounts.access_token })
+				.from(accounts)
+				.where(eq(accounts.userId, ctx.session.user.id))
+				.limit(1);
+
+			if (!account?.accessToken) {
+				throw new Error("GitHub account not connected");
+			}
+
+			await deleteReviewComment(
+				account.accessToken,
+				input.owner,
+				input.repo,
+				input.commentId,
 			);
 
 			return { success: true as const };

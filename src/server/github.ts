@@ -776,6 +776,20 @@ export const replyToPullRequestReviewComment = async (
 	return response.data;
 };
 
+export const deleteReviewComment = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	commentId: number,
+) => {
+	const octokit = createOctokit(accessToken);
+	await octokit.pulls.deleteReviewComment({
+		owner,
+		repo,
+		comment_id: commentId,
+	});
+};
+
 // TODO: Check if generators support cache() or maybe interally we can cache?
 export async function* getPullRequestFilesStream(
 	accessToken: string,

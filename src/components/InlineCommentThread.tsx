@@ -1,6 +1,6 @@
 "use client";
 
-import { SmilePlus, SquarePen } from "lucide-react";
+import { MoreVertical, SmilePlus, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import {
 	HoverCard,
@@ -150,6 +150,19 @@ export function InlineCommentThread({
 		[reactMutation, owner, repo],
 	);
 
+	const deleteMutation = api.reviewComments.delete.useMutation({
+		onSuccess: () => {
+			utils.reviewComments.list.invalidate({ owner, repo, number });
+		},
+	});
+
+	const handleDelete = useCallback(
+		(commentId: number) => {
+			deleteMutation.mutate({ owner, repo, commentId });
+		},
+		[deleteMutation, owner, repo],
+	);
+
 	return (
 		<div className="font-sans">
 			<Comment
@@ -175,6 +188,7 @@ export function InlineCommentThread({
 				}}
 				onSaveEdit={() => handleSaveEdit(parentComment.id)}
 				onReact={(content) => handleReact(parentComment.id, content)}
+				onDelete={() => handleDelete(parentComment.id)}
 				owner={owner}
 				repo={repo}
 				variant="parent"
@@ -212,6 +226,7 @@ export function InlineCommentThread({
 						onReact={(content) =>
 							handleReact(comment.id, content)
 						}
+						onDelete={() => handleDelete(comment.id)}
 						owner={owner}
 						repo={repo}
 						variant="reply"
@@ -275,6 +290,7 @@ function Comment({
 	onCancelEdit,
 	onSaveEdit,
 	onReact,
+	onDelete,
 	owner,
 	repo,
 	variant,
@@ -292,11 +308,13 @@ function Comment({
 	onCancelEdit: () => void;
 	onSaveEdit: () => void;
 	onReact: (content: (typeof allReactions)[number]) => void;
+	onDelete: () => void;
 	owner: string;
 	repo: string;
 	variant: "parent" | "reply";
 }) {
 	const [reactionOpen, setReactionOpen] = useState(false);
+	const [menuOpen, setMenuOpen] = useState(false);
 
 	const grouped = useMemo(() => {
 		const map = new Map<string, Reaction[]>();
@@ -399,6 +417,32 @@ function Comment({
 								<SquarePen size={14} />
 							</button>
 						)}
+						<Popover open={menuOpen} onOpenChange={setMenuOpen}>
+							<PopoverTrigger asChild>
+								<button
+									type="button"
+									className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+								>
+									<MoreVertical size={14} />
+								</button>
+							</PopoverTrigger>
+							<PopoverContent
+								className="w-44 bg-white p-1 dark:bg-zinc-950"
+								align="end"
+							>
+								<button
+									type="button"
+									onClick={() => {
+										onDelete();
+										setMenuOpen(false);
+									}}
+									className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-300 dark:hover:bg-red-950 dark:hover:text-red-400"
+								>
+									<Trash2 size={14} />
+									Delete comment
+								</button>
+							</PopoverContent>
+						</Popover>
 					</div>
 				)}
 			</div>
