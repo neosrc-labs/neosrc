@@ -20,7 +20,6 @@ interface FileDiffProps {
 	comments?: ReviewCommentData[];
 	showComments?: boolean;
 	pendingReviewId?: number | null;
-	reviewMode?: boolean;
 }
 
 function getViewedKey(owner: string, repo: string, number: string): string {
@@ -51,7 +50,6 @@ export default function FileDiff({
 	comments = [],
 	showComments = true,
 	pendingReviewId,
-	reviewMode = false,
 }: FileDiffProps) {
 	const [isViewed, setIsViewed] = useState(false);
 	const [isCollapsed, setIsCollapsed] = useState(isViewed);
@@ -88,42 +86,69 @@ export default function FileDiff({
 		},
 	});
 
-	const handleAddComment = useCallback(() => {
-		if (!commentBody.trim() || !activeComment) return;
-		const args = {
+	const handleAddComment = useCallback(
+		(isReview: boolean) => {
+			if (!commentBody.trim() || !activeComment) return;
+			const args = {
+				owner,
+				repo,
+				number: Number(number),
+				filePath: file.filename,
+				lineNumber: activeComment.line,
+				side: activeComment.side,
+				body: commentBody,
+				asReview: isReview,
+			};
+
+			const doCreateComment = () => {
+				createMutation.mutate(args);
+			};
+
+			if (isReview && !pendingReviewId) {
+				startReviewMutation.mutate(
+					{ owner, repo, number: Number(number) },
+					{ onSuccess: doCreateComment },
+				);
+			} else {
+				doCreateComment();
+			}
+		},
+		[
+			commentBody,
+			activeComment,
+			createMutation,
+			startReviewMutation,
+			pendingReviewId,
 			owner,
 			repo,
-			number: Number(number),
-			filePath: file.filename,
-			lineNumber: activeComment.line,
-			side: activeComment.side,
-			body: commentBody,
-		};
+			number,
+			file.filename,
+		],
+	);
 
-		const doCreateComment = () => {
-			createMutation.mutate(args);
-		};
-
-		if (reviewMode && !pendingReviewId) {
-			startReviewMutation.mutate(
-				{ owner, repo, number: Number(number) },
-				{ onSuccess: doCreateComment },
-			);
-		} else {
-			doCreateComment();
-		}
-	}, [
-		commentBody,
-		activeComment,
-		createMutation,
-		startReviewMutation,
-		pendingReviewId,
-		reviewMode,
-		owner,
-		repo,
-		number,
-		file.filename,
-	]);
+	const footerActions = pendingReviewId
+		? [
+			{
+				label: "Add to Review",
+				onClick: () => handleAddComment(true),
+				variant: "approve" as const,
+				disabled: (text: string) => !text.trim(),
+			},
+		]
+		: [
+			{
+				label: "Add single comment",
+				onClick: () => handleAddComment(false),
+				variant: "neutral" as const,
+				disabled: (text: string) => !text.trim(),
+			},
+			{
+				label: "Start a Review",
+				onClick: () => handleAddComment(true),
+				variant: "approve" as const,
+				disabled: (text: string) => !text.trim(),
+			},
+		];
 
 	const toggleCollapsed = () => setIsCollapsed(!isCollapsed);
 
@@ -253,7 +278,6 @@ export default function FileDiff({
 						onStartComment={setActiveComment}
 						commentBody={commentBody}
 						onCommentBodyChange={setCommentBody}
-						onSubmitComment={handleAddComment}
 						commentPending={
 							createMutation.isPending || startReviewMutation.isPending
 						}
@@ -262,13 +286,7 @@ export default function FileDiff({
 							setActiveComment(null);
 							setCommentBody("");
 						}}
-						submitLabel={
-							pendingReviewId
-								? "Add to Review"
-								: reviewMode
-									? "Start a Review"
-									: "Comment"
-						}
+						footerActions={footerActions}
 						pendingReviewId={pendingReviewId}
 						owner={owner}
 						repo={repo}

@@ -5,6 +5,7 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
 import {
 	createPullRequestReviewComment,
+	createStandaloneReviewComment,
 	getAuthenticatedUser,
 	getPullRequest,
 	getPullRequestReviewComments,
@@ -82,6 +83,7 @@ export const reviewCommentsRouter = createTRPCRouter({
 				lineNumber: z.number(),
 				side: z.enum(["LEFT", "RIGHT"]),
 				body: z.string().min(1),
+				asReview: z.boolean().optional().default(false),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -102,28 +104,42 @@ export const reviewCommentsRouter = createTRPCRouter({
 				input.number,
 			);
 
-			// Check if there's a pending review to add this comment to
-			const currentUser = await getAuthenticatedUser(account.accessToken);
-			const reviews = await getPullRequestReviews(
+			if (input.asReview) {
+				const currentUser = await getAuthenticatedUser(account.accessToken);
+				const reviews = await getPullRequestReviews(
+					account.accessToken,
+					input.owner,
+					input.repo,
+					input.number,
+				);
+
+				const pendingReview = reviews.find(
+					(r) => r.state === "PENDING" && r.user?.login === currentUser.login,
+				);
+
+				const comment = await createPullRequestReviewComment(
+					account.accessToken,
+					pr.node_id,
+					pendingReview?.node_id,
+					input.filePath,
+					input.lineNumber,
+					input.side,
+					input.body,
+				);
+
+				return { success: true as const, id: comment.id };
+			}
+
+			const comment = await createStandaloneReviewComment(
 				account.accessToken,
 				input.owner,
 				input.repo,
 				input.number,
-			);
-
-			const pendingReview = reviews.find(
-				(r) => r.state === "PENDING" && r.user?.login === currentUser.login,
-			);
-
-			// TODO: Is there way a to specify the commit the comment belongs to?
-			const comment = await createPullRequestReviewComment(
-				account.accessToken,
-				pr.node_id,
-				pendingReview?.node_id,
+				input.body,
+				pr.head.sha,
 				input.filePath,
 				input.lineNumber,
 				input.side,
-				input.body,
 			);
 
 			return { success: true as const, id: comment.id };

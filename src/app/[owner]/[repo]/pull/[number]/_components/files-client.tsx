@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import FileDiff from "~/components/FileDiff";
 import { useFiles } from "~/hooks/files";
 import type { ReviewCommentData } from "~/server/github";
@@ -20,7 +20,6 @@ export function FilesSection({
 	commitSha,
 }: FilesSectionProps) {
 	const [showComments, setShowComments] = useState(true);
-	const [reviewMode, setReviewMode] = useState(false);
 	const { files } = useFiles({ owner, repo, number, commitSha });
 
 	const { data: allComments = [] } = api.reviewComments.list.useQuery(
@@ -41,12 +40,6 @@ export function FilesSection({
 
 	const pendingReviewId = pendingReview?.reviewId ?? null;
 
-	useEffect(() => {
-		if (pendingReviewId) {
-			setReviewMode(true);
-		}
-	}, [pendingReviewId]);
-
 	return (
 		<div>
 			<div className="mb-4 flex items-center justify-between">
@@ -54,24 +47,6 @@ export function FilesSection({
 					Files Changed ({files.length})
 				</h2>
 				<div className="flex items-center gap-2">
-					{!pendingReviewId && (
-						<button
-							className={`cursor-pointer rounded-md px-3 py-1.5 font-medium text-sm transition-colors ${
-								reviewMode
-									? "bg-blue-600 text-white hover:bg-blue-700"
-									: "bg-white text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
-							}`}
-							onClick={() => setReviewMode(!reviewMode)}
-							type="button"
-						>
-							{reviewMode ? "Review Mode" : "Single Comment"}
-						</button>
-					)}
-					{pendingReviewId && (
-						<span className="rounded-full bg-yellow-100 px-3 py-1.5 font-medium text-xs text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-							Review in progress
-						</span>
-					)}
 					<button
 						className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
 						onClick={() => setShowComments(!showComments)}
@@ -96,7 +71,6 @@ export function FilesSection({
 						repo={repo}
 						showComments={showComments}
 						pendingReviewId={pendingReviewId}
-						reviewMode={reviewMode}
 					/>
 				);
 			})}
