@@ -244,13 +244,12 @@ function BlockRows({
 					activeComment?.line === commentLine && activeComment?.side === side;
 				const hasComments = lineComments.length > 0;
 
-				const prefix = line.content[0] ?? " ";
 				const content = line.content.slice(1);
 
 				return (
 					<Fragment key={`${oldNum ?? ""}-${newNum ?? ""}-${line.content}`}>
 						<tr>
-							<td className={`d2h-code-linenumber ${typeClass}`}>
+							<td className={`d2h-code-linenumber ${typeClass}`} style={{ height: '20px' }}>
 								<div className="line-num1">
 									{oldNum !== undefined ? oldNum : ""}
 								</div>
@@ -274,9 +273,6 @@ function BlockRows({
 							</td>
 							<td className={typeClass}>
 								<div className="d2h-code-line">
-									<span className="d2h-code-line-prefix">
-										{prefix === " " ? "\u00A0" : prefix}
-									</span>
 									<span className="d2h-code-line-ctn">{content || <br />}</span>
 								</div>
 							</td>
