@@ -312,23 +312,20 @@ export const submitPullRequestReview = async (
 	return response.data;
 };
 
-export const dismissPullRequestReview = async (
+export const deletePendingReview = async (
 	accessToken: string,
 	owner: string,
 	repo: string,
 	pullNumber: number,
 	reviewId: number,
-	message: string,
 ) => {
 	const octokit = createOctokit(accessToken);
-	const response = await octokit.pulls.dismissReview({
+	await octokit.pulls.deletePendingReview({
 		owner,
 		repo,
 		pull_number: pullNumber,
 		review_id: reviewId,
-		message,
 	});
-	return response.data;
 };
 
 export const getCheckRuns = cache(

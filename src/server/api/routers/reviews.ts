@@ -5,7 +5,7 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
 import {
 	createPullRequestReview,
-	dismissPullRequestReview,
+	deletePendingReview,
 	getAuthenticatedUser,
 	getPullRequestReviewCommentsForReview,
 	getPullRequestReviews,
@@ -166,13 +166,12 @@ export const reviewsRouter = createTRPCRouter({
 				throw new Error("GitHub account not connected");
 			}
 
-			await dismissPullRequestReview(
+			await deletePendingReview(
 				account.accessToken,
 				input.owner,
 				input.repo,
 				input.number,
 				input.reviewId,
-				"Review cancelled",
 			);
 
 			return { success: true as const };
