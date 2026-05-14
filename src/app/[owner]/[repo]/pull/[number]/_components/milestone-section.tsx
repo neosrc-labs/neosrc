@@ -4,10 +4,7 @@ import { Settings } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Async } from "~/components/async";
 import { cn } from "~/lib/utils";
-import type {
-	Milestone,
-	PullsGetResponseData,
-} from "~/server/github";
+import type { Milestone, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";
 

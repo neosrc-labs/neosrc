@@ -155,22 +155,22 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 				<div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200 dark:bg-zinc-700" />
 
 				{wrappers.map((wrapper, index) => {
-				const key =
-					wrapper.type === "raw"
-						? `raw-${wrapper.event.id}`
-						: `label-${wrapper.createdAt}-${index}`;
-				return (
-					<TimelineEvent
-						wrapper={wrapper}
-						key={key}
-						number={number}
-						owner={owner}
-						repo={repo}
-						commentReactions={allCommentReactions}
-						currentUserLogin={currentUserLogin}
-					/>
-				);
-			})}
+					const key =
+						wrapper.type === "raw"
+							? `raw-${wrapper.event.id}`
+							: `label-${wrapper.createdAt}-${index}`;
+					return (
+						<TimelineEvent
+							wrapper={wrapper}
+							key={key}
+							number={number}
+							owner={owner}
+							repo={repo}
+							commentReactions={allCommentReactions}
+							currentUserLogin={currentUserLogin}
+						/>
+					);
+				})}
 			</div>
 
 			{isFetchingNextPage && (
