@@ -203,12 +203,17 @@ export function PullRequestDescriptionSection({
 										<MarkdownEditor
 											onCancel={handleCancel}
 											onChange={setEditBody}
-											onSubmit={handleSave}
-											submitLabel="Save"
 											value={editBody}
 											owner={owner}
 											repo={repo}
 											minHeight="200px"
+											footerActions={[
+												{
+													label: "Save",
+													onClick: () => handleSave(),
+													variant: "approve",
+												},
+											]}
 										/>
 									) : (
 										<div className="prose prose-sm max-w-none">

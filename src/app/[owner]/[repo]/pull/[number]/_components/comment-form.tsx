@@ -34,11 +34,18 @@ export function CommentForm({ owner, repo, number }: CommentFormProps) {
 			<MarkdownEditor
 				disabled={addComment.isPending}
 				onChange={setBody}
-				onSubmit={handleSubmit}
 				placeholder="Leave a comment"
 				value={body}
 				owner={owner}
 				repo={repo}
+				footerActions={[
+					{
+						label: "Comment",
+						onClick: () => handleSubmit(),
+						variant: "approve",
+						disabled: (text: string) => !text.trim(),
+					},
+				]}
 			/>
 			{addComment.isError && (
 				<p className="mt-2 text-red-600 text-sm">

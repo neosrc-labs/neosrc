@@ -12,34 +12,39 @@ import {
 	findLineStart,
 } from "./markdown-utils";
 
+export interface FooterAction {
+	label: string;
+	onClick: () => void;
+	variant?: "neutral" | "approve" | "danger";
+	disabled?: boolean | ((text: string) => boolean);
+}
+
 interface MarkdownEditorProps {
 	value: string;
 	onChange: (value: string) => void;
-	onSubmit?: () => void;
 	onCancel?: () => void;
 	placeholder?: string;
-	submitLabel?: string;
 	cancelLabel?: string;
 	disabled?: boolean;
 	minHeight?: string;
 	className?: string;
 	owner?: string;
 	repo?: string;
+	footerActions?: FooterAction[];
 }
 
 export function MarkdownEditor({
 	value,
 	onChange,
-	onSubmit,
 	onCancel,
 	placeholder = "",
-	submitLabel = "Comment",
 	cancelLabel = "Cancel",
 	disabled = false,
 	minHeight = "auto",
 	className = "",
 	owner,
 	repo,
+	footerActions,
 }: MarkdownEditorProps) {
 	const [mode, setMode] = useState<"write" | "preview">("write");
 	const [autocompleteQuery, setAutocompleteQuery] = useState<string | null>(
@@ -52,7 +57,6 @@ export function MarkdownEditor({
 	const onChangeRef = useRef(onChange);
 	const disabledRef = useRef(disabled);
 	const containerRef = useRef<HTMLDivElement>(null);
-	const cursorPosRef = useRef(0);
 	const savedSelectionRef = useRef({ start: 0, end: 0 });
 	const [dropdownTop, setDropdownTop] = useState(80);
 
@@ -294,9 +298,6 @@ export function MarkdownEditor({
 			) {
 				e.preventDefault();
 				handleCodeBlock();
-			} else if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-				e.preventDefault();
-				onSubmit?.();
 			} else if (e.key === "Escape") {
 				onCancel?.();
 			}
@@ -311,7 +312,6 @@ export function MarkdownEditor({
 			handleItalic,
 			handleLink,
 			handleCodeBlock,
-			onSubmit,
 			onCancel,
 		],
 	);
@@ -375,22 +375,20 @@ export function MarkdownEditor({
 		>
 			<div className="-mb-px flex items-center gap-6 rounded-t-lg border-gray-300 border-b bg-gray-50 px-3 dark:border-zinc-600 dark:bg-zinc-900">
 				<button
-					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
-						mode === "write"
-							? "border-blue-500 text-blue-600"
-							: "border-transparent text-gray-600 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-					}`}
+					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${mode === "write"
+						? "border-blue-500 text-blue-600"
+						: "border-transparent text-gray-600 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+						}`}
 					onClick={() => setMode("write")}
 					type="button"
 				>
 					Write
 				</button>
 				<button
-					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
-						mode === "preview"
-							? "border-blue-500 text-blue-600"
-							: "border-transparent text-gray-600 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-					}`}
+					className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${mode === "preview"
+						? "border-blue-500 text-blue-600"
+						: "border-transparent text-gray-600 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+						}`}
 					onClick={() => setMode("preview")}
 					type="button"
 				>
@@ -523,9 +521,9 @@ export function MarkdownEditor({
 				</div>
 			)}
 
-			{(onSubmit || onCancel) && (
-				<div className="flex items-center justify-end gap-2 border-gray-300 border-t px-3 py-2 dark:border-zinc-600">
-					{onCancel && (
+			{(footerActions || onCancel) && (
+				<div className="flex items-center justify-between gap-2 border-gray-300 border-t px-3 py-2 dark:border-zinc-600">
+					{onCancel ? (
 						<button
 							className="cursor-pointer rounded-md border border-gray-300 px-4 py-1.5 font-medium text-gray-600 text-sm transition-colors hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
 							disabled={disabled}
@@ -534,16 +532,28 @@ export function MarkdownEditor({
 						>
 							{cancelLabel}
 						</button>
+					) : (
+						<div />
 					)}
-					{onSubmit && (
-						<button
-							className="cursor-pointer rounded-md bg-[#2da44e] px-4 py-1.5 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
-							disabled={disabled || !value.trim()}
-							onClick={onSubmit}
-							type="button"
-						>
-							{submitLabel}
-						</button>
+					{footerActions && (
+						<div className="flex items-center gap-2">
+							{footerActions.map((action) => (
+								<button
+									className={`cursor-pointer rounded-md px-4 py-1.5 font-medium text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${action.variant === "approve"
+										? "bg-[#2da44e] hover:bg-[#218838] text-white"
+										: action.variant === "danger"
+											? "bg-[#cf222e] hover:bg-[#b91c23] text-white"
+											: "bg-neutral-200 hover:bg-neutral-300 text-black"
+										}`}
+									disabled={disabled || (typeof action.disabled === "function" ? action.disabled(value) : action.disabled)}
+									key={action.label}
+									onClick={action.onClick}
+									type="button"
+								>
+									{action.label}
+								</button>
+							))}
+						</div>
 					)}
 				</div>
 			)}
