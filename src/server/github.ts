@@ -661,6 +661,31 @@ export const createPullRequestReviewComment = async (
 	return { id: comment.databaseId as number };
 };
 
+export const createStandaloneReviewComment = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	body: string,
+	commitId: string,
+	path: string,
+	line: number,
+	side: "LEFT" | "RIGHT",
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.pulls.createReviewComment({
+		owner,
+		repo,
+		pull_number: pullNumber,
+		body,
+		commit_id: commitId,
+		path,
+		line,
+		side,
+	});
+	return { id: response.data.id };
+};
+
 export const replyToPullRequestReviewComment = async (
 	accessToken: string,
 	owner: string,

@@ -7,6 +7,7 @@ import hljs from "highlight.js";
 import { useTheme } from "next-themes";
 import { Fragment, useEffect, useMemo, useRef } from "react";
 import type { ReviewCommentData } from "~/server/github";
+import type { FooterAction } from "./markdown/MarkdownEditor";
 import { InlineCommentThread } from "./InlineCommentThread";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
 
@@ -25,11 +26,10 @@ interface DiffViewProps {
 	onStartComment?: (ac: ActiveComment | null) => void;
 	commentBody?: string;
 	onCommentBodyChange?: (body: string) => void;
-	onSubmitComment?: () => void;
+	footerActions?: FooterAction[];
 	commentPending?: boolean;
 	commentError?: boolean;
 	onCancelComment?: () => void;
-	submitLabel?: string;
 	owner?: string;
 	repo?: string;
 	pullNumber?: number | string;
@@ -46,11 +46,10 @@ export function DiffView({
 	onStartComment,
 	commentBody = "",
 	onCommentBodyChange,
-	onSubmitComment,
+	footerActions,
 	commentPending = false,
 	commentError = false,
 	onCancelComment,
-	submitLabel = "Comment",
 	owner,
 	repo,
 	pullNumber,
@@ -142,14 +141,13 @@ export function DiffView({
 								pullNumber={pullNumber}
 								commentBody={commentBody}
 								onCommentBodyChange={onCommentBodyChange}
-								onSubmitComment={onSubmitComment}
+								footerActions={footerActions}
 								commentPending={commentPending}
 								commentError={commentError}
 								onCancelComment={onCancelComment}
 								showComments={showComments}
 								showCommentButton={showCommentButton}
 								pendingReviewId={pendingReviewId}
-								submitLabel={submitLabel}
 							/>
 						))}
 					</tbody>
@@ -185,14 +183,13 @@ interface BlockRowsProps {
 	pullNumber: number | string | undefined;
 	commentBody: string;
 	onCommentBodyChange: ((body: string) => void) | undefined;
-	onSubmitComment: (() => void) | undefined;
+	footerActions?: FooterAction[];
 	commentPending: boolean;
 	commentError: boolean;
 	onCancelComment: (() => void) | undefined;
 	showComments: boolean;
 	showCommentButton: boolean;
 	pendingReviewId?: number | null;
-	submitLabel?: string;
 }
 
 function BlockRows({
@@ -205,14 +202,13 @@ function BlockRows({
 	pullNumber,
 	commentBody,
 	onCommentBodyChange,
-	onSubmitComment,
+	footerActions,
 	commentPending,
 	commentError,
 	onCancelComment,
 	showComments,
 	showCommentButton,
 	pendingReviewId,
-	submitLabel = "Comment",
 }: BlockRowsProps) {
 	return (
 		<>
@@ -315,14 +311,7 @@ function BlockRows({
 										value={commentBody}
 										owner={owner ?? ""}
 										repo={repo ?? ""}
-										footerActions={[
-											{
-												label: submitLabel,
-												onClick: onSubmitComment ?? (() => { }),
-												variant: "approve",
-												disabled: (text: string) => !text.trim(),
-											},
-										]}
+										footerActions={footerActions}
 									/>
 									{commentError && (
 										<p className="mt-1 text-red-600 text-xs">
