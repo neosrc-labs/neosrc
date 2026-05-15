@@ -2,6 +2,7 @@
 
 import { MoreVertical, SmilePlus, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { CommentCard } from "~/components/CommentCard";
 import type { Reaction } from "~/components/ReactionRollup";
 import {
 	HoverCard,
@@ -15,7 +16,6 @@ import {
 } from "~/components/ui/popover";
 import type { ReviewCommentData } from "~/server/github";
 import { api } from "~/trpc/react";
-import { formatRelativeTime } from "~/utils";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
 import { MarkdownRenderer } from "./markdown/MarkdownRenderer";
 
@@ -133,8 +133,7 @@ export function InlineCommentThread({
 						const prevReactions: Reaction[] = old[commentId] ?? [];
 						const existing = prevReactions.find(
 							(r) =>
-								r.user?.login === currentUserLogin &&
-								r.content === content,
+								r.user?.login === currentUserLogin && r.content === content,
 						);
 						const updatedReactions = existing
 							? prevReactions.filter((r) => r.id !== existing.id)
@@ -323,29 +322,6 @@ export function InlineCommentThread({
 	);
 }
 
-const authorAssociationLabels: Record<string, string> = {
-	COLLABORATOR: "Collaborator",
-	CONTRIBUTOR: "Contributor",
-	FIRST_TIMER: "First Timer",
-	FIRST_TIME_CONTRIBUTOR: "First-time Contributor",
-	MANNEQUIN: "Mannequin",
-	MEMBER: "Member",
-	OWNER: "Owner",
-};
-
-const neutralBadge =
-	"bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-gray-400";
-
-const authorAssociationStyles: Record<string, string> = {
-	OWNER: neutralBadge,
-	MEMBER: neutralBadge,
-	COLLABORATOR: neutralBadge,
-	CONTRIBUTOR: neutralBadge,
-	FIRST_TIMER: neutralBadge,
-	FIRST_TIME_CONTRIBUTOR: neutralBadge,
-	MANNEQUIN: neutralBadge,
-};
-
 function Comment({
 	comment,
 	isPending,
@@ -413,185 +389,141 @@ function Comment({
 	);
 
 	return (
-		<div
-			className={
-				variant === "parent"
-					? "border-b-1 border-b-gray-200 border-solid bg-white dark:border-b-zinc-700 dark:bg-zinc-900"
-					: "bg-gray-50 dark:bg-zinc-950"
-			}
-		>
-			<div className="flex items-center justify-between gap-2 px-4 pt-3">
-				<div className="flex min-w-0 items-center gap-2">
-					<img
-						alt={comment.user?.login ?? "user"}
-						className="h-5 w-5 flex-shrink-0 rounded-full"
-						src={comment.user?.avatar_url ?? ""}
-					/>
-					<span className="truncate font-medium text-gray-900 text-sm dark:text-gray-100">
-						{comment.user?.login ?? "unknown"}
-					</span>
-					<span className="whitespace-nowrap text-gray-500 text-xs">
-						{formatRelativeTime(comment.created_at)}
-					</span>
-					{isPending && (
-						<span className="whitespace-nowrap rounded-full bg-yellow-100 px-2 py-0.5 font-medium text-xs text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-							Pending
-						</span>
-					)}
-					{comment.author_association &&
-						comment.author_association !== "NONE" && (
-							<span
-								className={`whitespace-nowrap rounded-full px-2 py-0.5 font-medium text-xs ${
-									authorAssociationStyles[
-										comment.author_association
-									] ?? authorAssociationStyles.CONTRIBUTOR
-								}`}
-							>
-								{authorAssociationLabels[comment.author_association]}
-							</span>
-						)}
-				</div>
-				{!isEditing && (
-					<div className="flex flex-shrink-0 items-center gap-0.5">
-						{availableReactions.length > 0 && (
-							<Popover open={reactionOpen} onOpenChange={setReactionOpen}>
-								<PopoverTrigger asChild>
-									<button
-										type="button"
-										className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
-									>
-										<SmilePlus size={14} />
-									</button>
-								</PopoverTrigger>
-								<PopoverContent
-									className="w-fit bg-white p-2 dark:bg-zinc-950"
-									align="end"
-								>
-									<div className="flex gap-1">
-										{availableReactions.map((content) => (
-											<button
-												key={content}
-												type="button"
-												onClick={() => {
-													onReact(content);
-													setReactionOpen(false);
-												}}
-												className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
-											>
-												{reactionEmojis[content] ?? content}
-											</button>
-										))}
-									</div>
-								</PopoverContent>
-							</Popover>
-						)}
-						{isAuthor && (
-							<button
-								type="button"
-								className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
-								onClick={onStartEdit}
-							>
-								<SquarePen size={14} />
-							</button>
-						)}
-						<Popover open={menuOpen} onOpenChange={setMenuOpen}>
+		<CommentCard
+			user={comment.user}
+			createdAt={comment.created_at}
+			authorAssociation={comment.author_association}
+			isPending={isPending}
+			isEditing={isEditing}
+			editBody={editBody}
+			onEditBodyChange={onEditBodyChange}
+			onCancelEdit={onCancelEdit}
+			onSaveEdit={onSaveEdit}
+			owner={owner}
+			repo={repo}
+			variant={variant === "parent" ? "default" : "nested"}
+			headerActions={
+				<>
+					{availableReactions.length > 0 && (
+						<Popover open={reactionOpen} onOpenChange={setReactionOpen}>
 							<PopoverTrigger asChild>
 								<button
 									type="button"
 									className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
 								>
-									<MoreVertical size={14} />
+									<SmilePlus size={14} />
 								</button>
 							</PopoverTrigger>
 							<PopoverContent
-								className="w-44 bg-white p-1 dark:bg-zinc-950"
+								className="w-fit bg-white p-2 dark:bg-zinc-950"
 								align="end"
 							>
-								<button
-									type="button"
-									onClick={() => {
-										onDelete();
-										setMenuOpen(false);
-									}}
-									className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-300 dark:hover:bg-red-950 dark:hover:text-red-400"
-								>
-									<Trash2 size={14} />
-									Delete comment
-								</button>
+								<div className="flex gap-1">
+									{availableReactions.map((content) => (
+										<button
+											key={content}
+											type="button"
+											onClick={() => {
+												onReact(content);
+												setReactionOpen(false);
+											}}
+											className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+										>
+											{reactionEmojis[content] ?? content}
+										</button>
+									))}
+								</div>
 							</PopoverContent>
 						</Popover>
+					)}
+					{isAuthor && (
+						<button
+							type="button"
+							className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+							onClick={onStartEdit}
+						>
+							<SquarePen size={14} />
+						</button>
+					)}
+					<Popover open={menuOpen} onOpenChange={setMenuOpen}>
+						<PopoverTrigger asChild>
+							<button
+								type="button"
+								className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+							>
+								<MoreVertical size={14} />
+							</button>
+						</PopoverTrigger>
+						<PopoverContent
+							className="w-44 bg-white p-1 dark:bg-zinc-950"
+							align="end"
+						>
+							<button
+								type="button"
+								onClick={() => {
+									onDelete();
+									setMenuOpen(false);
+								}}
+								className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-300 dark:hover:bg-red-950 dark:hover:text-red-400"
+							>
+								<Trash2 size={14} />
+								Delete comment
+							</button>
+						</PopoverContent>
+					</Popover>
+				</>
+			}
+			footer={
+				entries.length > 0 && (
+					<div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
+						{entries.map(([content, rs]) => {
+							const isActive = userReacted(content);
+							return (
+								<HoverCard key={content} openDelay={300}>
+									<HoverCardTrigger asChild>
+										<button
+											type="button"
+											onClick={() => onReact(content)}
+											className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 font-medium text-xs transition-colors ${
+												isActive
+													? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
+													: "border-gray-200 bg-gray-100 text-gray-600 hover:bg-gray-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:bg-zinc-700"
+											}`}
+										>
+											<span>{reactionEmojis[content] ?? content}</span>
+											<span>{rs.length}</span>
+										</button>
+									</HoverCardTrigger>
+									<HoverCardContent className="w-56 bg-white p-3 dark:bg-zinc-950">
+										<div className="flex flex-col gap-2">
+											{rs.map((r) => (
+												<div
+													key={r.id}
+													className="flex items-center gap-2 text-gray-700 text-sm dark:text-gray-300"
+												>
+													{r.user && (
+														<img
+															src={r.user.avatar_url}
+															alt={r.user.login}
+															className="h-5 w-5 rounded-full"
+														/>
+													)}
+													<span className="font-medium">{r.user?.login}</span>
+													<span className="ml-auto">
+														{reactionEmojis[r.content]}
+													</span>
+												</div>
+											))}
+										</div>
+									</HoverCardContent>
+								</HoverCard>
+							);
+						})}
 					</div>
-				)}
-			</div>
-			<div className="prose prose-sm dark:prose-invert mx-6 max-w-none px-4 py-2">
-				{isEditing ? (
-					<MarkdownEditor
-						value={editBody}
-						onChange={onEditBodyChange}
-						onCancel={onCancelEdit}
-						owner={owner}
-						repo={repo}
-						minHeight={`${Math.min(Math.max(editBody.split("\n").length * 28, 120), 400)}px`}
-						footerActions={[
-							{
-								label: "Save",
-								onClick: onSaveEdit,
-								variant: "approve",
-								disabled: (text: string) => !text.trim(),
-							},
-						]}
-					/>
-				) : (
-					<MarkdownRenderer content={displayBody} owner={owner} repo={repo} />
-				)}
-			</div>
-			{!isEditing && entries.length > 0 && (
-				<div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-					{entries.map(([content, rs]) => {
-						const isActive = userReacted(content);
-						return (
-							<HoverCard key={content} openDelay={300}>
-								<HoverCardTrigger asChild>
-									<button
-										type="button"
-										onClick={() => onReact(content)}
-										className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 font-medium text-xs transition-colors ${
-											isActive
-												? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
-												: "border-gray-200 bg-gray-100 text-gray-600 hover:bg-gray-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:bg-zinc-700"
-										}`}
-									>
-										<span>{reactionEmojis[content] ?? content}</span>
-										<span>{rs.length}</span>
-									</button>
-								</HoverCardTrigger>
-								<HoverCardContent className="w-56 bg-white p-3 dark:bg-zinc-950">
-									<div className="flex flex-col gap-2">
-										{rs.map((r) => (
-											<div
-												key={r.id}
-												className="flex items-center gap-2 text-gray-700 text-sm dark:text-gray-300"
-											>
-												{r.user && (
-													<img
-														src={r.user.avatar_url}
-														alt={r.user.login}
-														className="h-5 w-5 rounded-full"
-													/>
-												)}
-												<span className="font-medium">{r.user?.login}</span>
-												<span className="ml-auto">
-													{reactionEmojis[r.content]}
-												</span>
-											</div>
-										))}
-									</div>
-								</HoverCardContent>
-							</HoverCard>
-						);
-					})}
-				</div>
-			)}
-		</div>
+				)
+			}
+		>
+			<MarkdownRenderer content={displayBody} owner={owner} repo={repo} />
+		</CommentCard>
 	);
 }

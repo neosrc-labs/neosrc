@@ -661,25 +661,23 @@ export const getPullRequestReviewComments = cache(
 	},
 );
 
-export const getPullRequestReviewCommentsForReview = cache(
-	async (
-		accessToken: string,
-		owner: string,
-		repo: string,
-		pullNumber: number,
-		reviewId: number,
-	) => {
-		const octokit = createOctokit(accessToken);
-		const response = await octokit.pulls.listCommentsForReview({
-			owner,
-			repo,
-			pull_number: pullNumber,
-			review_id: reviewId,
-			per_page: 100,
-		});
-		return response.data;
-	},
-);
+export const getPullRequestReviewCommentsForReview = async (
+	accessToken: string,
+	owner: string,
+	repo: string,
+	pullNumber: number,
+	reviewId: number,
+) => {
+	const octokit = createOctokit(accessToken);
+	const response = await octokit.pulls.listCommentsForReview({
+		owner,
+		repo,
+		pull_number: pullNumber,
+		review_id: reviewId,
+		per_page: 100,
+	});
+	return response.data;
+};
 
 export const createPullRequestReviewComment = async (
 	accessToken: string,

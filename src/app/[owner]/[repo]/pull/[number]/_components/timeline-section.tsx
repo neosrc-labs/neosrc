@@ -115,6 +115,11 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 		}
 	}, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+	const { data: allComments = [] } = api.reviewComments.list.useQuery(
+		{ owner, repo, number },
+		{ staleTime: 30_000 },
+	);
+
 	if (isLoading) {
 		return (
 			<div className="py-4 text-gray-500 text-sm dark:text-gray-400">
@@ -168,6 +173,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 							repo={repo}
 							commentReactions={allCommentReactions}
 							currentUserLogin={currentUserLogin}
+							allComments={allComments}
 						/>
 					);
 				})}

@@ -24,7 +24,7 @@ import {
 	User,
 } from "lucide-react";
 import { useState } from "react";
-import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
+import { CommentCard } from "~/components/CommentCard";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { type Reaction, ReactionRollup } from "~/components/ReactionRollup";
 import { Label } from "~/components/ui/label";
@@ -42,6 +42,7 @@ interface TimelineEventProps {
 	number: number;
 	commentReactions: Record<number, Reaction[]>;
 	currentUserLogin: string;
+	allComments: any[];
 }
 
 type CommentEvent = components["schemas"]["timeline-comment-event"];
@@ -93,6 +94,7 @@ export function TimelineEvent({
 	number,
 	commentReactions,
 	currentUserLogin,
+	allComments,
 }: TimelineEventProps) {
 	if (wrapper.type === "aggregated-label") {
 		return <AggregatedLabel wrapper={wrapper} />;
@@ -110,6 +112,7 @@ export function TimelineEvent({
 					number={number}
 					commentReactions={commentReactions}
 					currentUserLogin={currentUserLogin}
+					allComments={allComments}
 				/>
 			</div>
 		</div>
@@ -250,6 +253,7 @@ function EventContent({
 	number,
 	commentReactions,
 	currentUserLogin,
+	allComments,
 }: {
 	event: TimelineEventData;
 	owner: string;
@@ -257,6 +261,7 @@ function EventContent({
 	number: number;
 	commentReactions: Record<number, Reaction[]>;
 	currentUserLogin: string;
+	allComments: any[];
 }) {
 	const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
 	const [editBody, setEditBody] = useState("");
@@ -282,96 +287,60 @@ function EventContent({
 			const e = event as CommentEvent;
 			if (e.body) {
 				const actor = e.actor ?? e.user;
-				const timestamp = formatRelativeTime(e.created_at);
 				const isEditing = editingCommentId === e.id;
 				const isAuthor = actor?.login === currentUserLogin;
 				const displayBody = savedBodies[e.id] ?? e.body;
 				return (
-					<div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-900">
-						<div className="flex items-center justify-between border-gray-200 border-b px-4 py-2 dark:border-zinc-700">
-							<div className="flex items-center gap-2">
-								{actor && (
-									<UserHoverCard login={actor.login}>
-										<a
-											className="flex items-center gap-2"
-											href={actor.html_url}
-										>
-											<img
-												src={actor.avatar_url}
-												alt={actor.login}
-												className="h-5 w-5 rounded-full"
-											/>
-											<span className="font-medium text-gray-800 text-sm dark:text-zinc-200">
-												{actor.login}
-											</span>
-										</a>
-									</UserHoverCard>
-								)}
-								<span className="text-gray-500 text-xs dark:text-zinc-400">
-									{timestamp}
-								</span>
-							</div>
-							{!isEditing && isAuthor && (
+					<CommentCard
+						user={actor}
+						userHref={actor?.html_url}
+						createdAt={e.created_at}
+						authorAssociation={e.author_association}
+						isEditing={isEditing}
+						editBody={editBody}
+						onEditBodyChange={setEditBody}
+						onCancelEdit={() => setEditingCommentId(null)}
+						onSaveEdit={() => {
+							updateCommentMutation.mutate({
+								owner,
+								repo,
+								commentId: e.id,
+								body: editBody,
+							});
+						}}
+						owner={owner}
+						repo={repo}
+						headerActions={
+							isAuthor && (
 								<button
-									className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+									type="button"
+									className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
 									onClick={() => {
 										setEditBody(displayBody);
 										setEditingCommentId(e.id);
 									}}
-									type="button"
 								>
-									<SquarePen size={ICON_SIZE} />
+									<SquarePen size={14} />
 								</button>
-							)}
-						</div>
-						<div className="p-4">
-							{isEditing ? (
-								<MarkdownEditor
-									onCancel={() => setEditingCommentId(null)}
-									onChange={setEditBody}
-									value={editBody}
-									owner={owner}
-									repo={repo}
-									minHeight={`${Math.min(Math.max(editBody.split("\n").length * 28, 120), 400)}px`}
-									footerActions={[
-										{
-											label: "Save",
-											onClick: () => {
-												updateCommentMutation.mutate({
-													owner,
-													repo,
-													commentId: e.id,
-													body: editBody,
-												});
-											},
-											variant: "approve",
-											disabled: (text: string) => !text.trim(),
-										},
-									]}
-								/>
-							) : (
-								<div className="prose prose-sm max-w-none">
-									<MarkdownRenderer
-										content={displayBody}
+							)
+						}
+						footer={
+							!isEditing && (
+								<div className="px-3 pb-3">
+									<ReactionRollup
+										reactions={commentReactions[e.id] ?? []}
+										currentUserLogin={currentUserLogin}
+										commentId={e.id}
 										owner={owner}
 										repo={repo}
+										number={number}
 									/>
 								</div>
-							)}
-						</div>
-						{!isEditing && (
-							<div className="px-3 pb-3">
-								<ReactionRollup
-									reactions={commentReactions[e.id] ?? []}
-									currentUserLogin={currentUserLogin}
-									commentId={e.id}
-									owner={owner}
-									repo={repo}
-									number={number}
-								/>
-							</div>
-						)}
-					</div>
+							)
+						}
+					>
+						<MarkdownRenderer content={displayBody} owner={owner} repo={repo} />
+					</CommentCard>
 				);
 			}
 			return null;
@@ -421,6 +390,7 @@ function EventContent({
 						number={number}
 						reviewId={e.id}
 						state={e.state}
+						allComments={allComments}
 					/>
 				</div>
 			);

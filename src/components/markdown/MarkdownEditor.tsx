@@ -1,7 +1,6 @@
 "use client";
 
 import { keepPreviousData } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	Bold,
 	Code,
@@ -15,6 +14,7 @@ import {
 	Strikethrough,
 	TextQuote,
 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { IssueAutocomplete } from "./issue-autocomplete";
 import { MarkdownRenderer } from "./MarkdownRenderer";

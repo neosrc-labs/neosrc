@@ -1,12 +1,15 @@
 "use client";
 
 import { Loader2, MessageSquare } from "lucide-react";
+import { useState } from "react";
+import { CommentCard } from "~/components/CommentCard";
 import { DiffView } from "~/components/DiffView";
+import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
-import { UserHoverCard } from "~/components/user-hover-card";
 import type { ReviewCommentsForReviewData } from "~/server/github";
 import { api } from "~/trpc/react";
-import { formatRelativeTime } from "~/utils";
+
+type ReviewComment = ReviewCommentsForReviewData[number];
 
 interface ReviewCommentsProps {
 	owner: string;
@@ -14,9 +17,8 @@ interface ReviewCommentsProps {
 	number: number;
 	reviewId: number;
 	state?: string;
+	allComments: any[];
 }
-
-type ReviewComment = ReviewCommentsForReviewData[number];
 
 export function ReviewComments({
 	owner,
@@ -24,11 +26,14 @@ export function ReviewComments({
 	number,
 	reviewId,
 	state,
+	allComments,
 }: ReviewCommentsProps) {
-	const { data: comments, isLoading } = api.reviewComments.byReviewId.useQuery(
-		{ owner, repo, number, reviewId },
-		{ staleTime: 30_000 },
-	);
+	const { data: comments, isLoading } = api.reviewComments.byReviewId.useQuery({
+		owner,
+		repo,
+		number,
+		reviewId,
+	});
 
 	if (isLoading) {
 		return (
@@ -46,7 +51,7 @@ export function ReviewComments({
 	const topLevel: ReviewComment[] = [];
 	const replyMap = new Map<number, ReviewComment[]>();
 
-	for (const comment of comments) {
+	for (const comment of allComments) {
 		if (comment.in_reply_to_id) {
 			const existing = replyMap.get(comment.in_reply_to_id) ?? [];
 			existing.push(comment);
@@ -85,6 +90,7 @@ export function ReviewComments({
 								replies={replyMap.get(comment.id) ?? []}
 								owner={owner}
 								repo={repo}
+								number={number}
 								state={state}
 							/>
 						))}
@@ -100,14 +106,28 @@ function CommentBlock({
 	replies,
 	owner,
 	repo,
+	number,
 	state,
 }: {
 	comment: ReviewComment;
 	replies: ReviewComment[];
 	owner: string;
 	repo: string;
+	number: number;
 	state?: string;
 }) {
+	const [showReplyForm, setShowReplyForm] = useState(false);
+	const [replyBody, setReplyBody] = useState("");
+	const utils = api.useUtils();
+
+	const replyMutation = api.reviewComments.reply.useMutation({
+		onSuccess: () => {
+			setReplyBody("");
+			setShowReplyForm(false);
+			utils.reviewComments.invalidate();
+		},
+	});
+
 	if (!comment.user) {
 		return null;
 	}
@@ -119,62 +139,85 @@ function CommentBlock({
 					<DiffView patch={comment.diff_hunk} filename={comment.path} />
 				</div>
 			)}
-			<div className="mb-1 flex items-center gap-2">
-				<UserHoverCard login={comment.user.login}>
-					<img
-						src={comment.user.avatar_url}
-						alt={comment.user.login}
-						className="h-4 w-4 rounded-full"
-					/>
-				</UserHoverCard>
-				<span className="font-medium text-gray-800 text-xs dark:text-zinc-200">
-					{comment.user.login}
-				</span>
-				<span className="text-gray-400 text-xs">
-					{formatRelativeTime(comment.created_at)}
-				</span>
-
-				{state === "pending" && (
-					<span className="rounded-full bg-orange-100 px-2 py-0.5 font-medium text-[10px] text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
-						Pending
-					</span>
-				)}
-			</div>
-			<div className="prose prose-sm max-w-none">
+			<CommentCard
+				user={comment.user}
+				createdAt={comment.created_at}
+				authorAssociation={comment.author_association}
+				isPending={state === "pending"}
+				owner={owner}
+				repo={repo}
+			>
 				<MarkdownRenderer content={comment.body} owner={owner} repo={repo} />
-			</div>
+			</CommentCard>
 			{replies.map((reply) => {
 				if (!reply.user) return null;
 				return (
-					<div
-						key={reply.id}
-						className="mt-2 ml-5 border-gray-200 border-l pl-3 dark:border-zinc-700"
-					>
-						<div className="mb-1 flex items-center gap-2">
-							<UserHoverCard login={reply.user.login}>
-								<img
-									src={reply.user.avatar_url}
-									alt={reply.user.login}
-									className="h-4 w-4 rounded-full"
-								/>
-							</UserHoverCard>
-							<span className="font-medium text-gray-800 text-xs dark:text-zinc-200">
-								{reply.user.login}
-							</span>
-							<span className="text-gray-400 text-xs">
-								{formatRelativeTime(reply.created_at)}
-							</span>
-						</div>
-						<div className="prose prose-sm max-w-none">
+					<div key={reply.id} className="mt-2 pl-3">
+						<CommentCard
+							user={reply.user}
+							createdAt={reply.created_at}
+							authorAssociation={reply.author_association}
+							owner={owner}
+							repo={repo}
+							variant="nested"
+						>
 							<MarkdownRenderer
 								content={reply.body}
 								owner={owner}
 								repo={repo}
 							/>
-						</div>
+						</CommentCard>
 					</div>
 				);
 			})}
+			{showReplyForm ? (
+				<div className="bg-gray-50 p-2 dark:bg-zinc-950">
+					<MarkdownEditor
+						disabled={replyMutation.isPending}
+						onChange={setReplyBody}
+						onCancel={() => {
+							setShowReplyForm(false);
+							setReplyBody("");
+						}}
+						placeholder="Write a reply..."
+						value={replyBody}
+						owner={owner}
+						repo={repo}
+						footerActions={[
+							{
+								label: "Reply",
+								onClick: () => {
+									if (!replyBody.trim()) return;
+									replyMutation.mutate({
+										owner,
+										repo,
+										number,
+										body: replyBody,
+										inReplyTo: comment.id,
+									});
+								},
+								variant: "approve",
+								disabled: (text: string) => !text.trim(),
+							},
+						]}
+					/>
+					{replyMutation.isError && (
+						<p className="mt-1 text-red-600 text-xs">
+							Failed to post reply. Please try again.
+						</p>
+					)}
+				</div>
+			) : (
+				<div className="flex w-full bg-gray-50 px-6 py-2 dark:bg-zinc-950">
+					<button
+						type="button"
+						className="flex w-full cursor-text items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-gray-400 text-xs transition-colors duration-200 hover:border-gray-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-500 dark:hover:border-zinc-400"
+						onClick={() => setShowReplyForm(true)}
+					>
+						Reply...
+					</button>
+				</div>
+			)}
 		</div>
 	);
 }
