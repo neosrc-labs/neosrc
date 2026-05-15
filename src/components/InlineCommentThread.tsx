@@ -323,6 +323,29 @@ export function InlineCommentThread({
 	);
 }
 
+const authorAssociationLabels: Record<string, string> = {
+	COLLABORATOR: "Collaborator",
+	CONTRIBUTOR: "Contributor",
+	FIRST_TIMER: "First Timer",
+	FIRST_TIME_CONTRIBUTOR: "First-time Contributor",
+	MANNEQUIN: "Mannequin",
+	MEMBER: "Member",
+	OWNER: "Owner",
+};
+
+const neutralBadge =
+	"bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-gray-400";
+
+const authorAssociationStyles: Record<string, string> = {
+	OWNER: neutralBadge,
+	MEMBER: neutralBadge,
+	COLLABORATOR: neutralBadge,
+	CONTRIBUTOR: neutralBadge,
+	FIRST_TIMER: neutralBadge,
+	FIRST_TIME_CONTRIBUTOR: neutralBadge,
+	MANNEQUIN: neutralBadge,
+};
+
 function Comment({
 	comment,
 	isPending,
@@ -415,6 +438,18 @@ function Comment({
 							Pending
 						</span>
 					)}
+					{comment.author_association &&
+						comment.author_association !== "NONE" && (
+							<span
+								className={`whitespace-nowrap rounded-full px-2 py-0.5 font-medium text-xs ${
+									authorAssociationStyles[
+										comment.author_association
+									] ?? authorAssociationStyles.CONTRIBUTOR
+								}`}
+							>
+								{authorAssociationLabels[comment.author_association]}
+							</span>
+						)}
 				</div>
 				{!isEditing && (
 					<div className="flex flex-shrink-0 items-center gap-0.5">
