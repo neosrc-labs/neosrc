@@ -293,6 +293,7 @@ function EventContent({
 				return (
 					<CommentCard
 						user={actor}
+						variant="standalone"
 						userHref={actor?.html_url}
 						createdAt={e.created_at}
 						authorAssociation={e.author_association}
