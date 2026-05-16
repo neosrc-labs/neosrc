@@ -280,15 +280,14 @@ export const createPullRequestReview = async (
 	}>,
 ) => {
 	const octokit = createOctokit(accessToken);
-	// biome-ignore lint/suspicious/noExplicitAny: Octokit type for createReview event doesn't allow leaving it blank, but API supports it
 	const response = await octokit.pulls.createReview({
 		owner,
 		repo,
 		pull_number: pullNumber,
 		event,
 		body,
-		comments,
-	} as any);
+		comments
+	});
 	return response.data;
 };
 
@@ -684,11 +683,11 @@ export const getPullRequestReviewCommentsForReview = async (
 export const createPullRequestReviewComment = async (
 	accessToken: string,
 	pullRequestNodeId: number,
-	pullRequestReviewNodeId?: string,
 	path: string,
 	line: number,
 	side: "LEFT" | "RIGHT",
 	body: string,
+	pullRequestReviewNodeId?: string,
 ) => {
 	// NOTE: Okay, I am really sad about this, but it seems that REST API just does not support adding comments to unsubmitted reviews...
 	// https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread

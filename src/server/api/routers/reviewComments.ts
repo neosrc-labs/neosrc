@@ -122,11 +122,11 @@ export const reviewCommentsRouter = createTRPCRouter({
 				const comment = await createPullRequestReviewComment(
 					account.accessToken,
 					pr.node_id,
-					pendingReview?.node_id,
 					input.filePath,
 					input.lineNumber,
 					input.side,
 					input.body,
+					pendingReview?.node_id,
 				);
 
 				return { success: true as const, id: comment.id };
