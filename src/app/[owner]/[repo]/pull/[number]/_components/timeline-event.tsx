@@ -29,7 +29,7 @@ import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { type Reaction, ReactionRollup } from "~/components/ReactionRollup";
 import { Label } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
-import type { TimelineEventData } from "~/server/github";
+import type { ReviewComment, TimelineEventData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 import { ReviewComments } from "./review-comments";
@@ -42,7 +42,7 @@ interface TimelineEventProps {
 	number: number;
 	commentReactions: Record<number, Reaction[]>;
 	currentUserLogin: string;
-	allComments: any[];
+	allComments: ReviewComment[];
 }
 
 type CommentEvent = components["schemas"]["timeline-comment-event"];
@@ -261,7 +261,7 @@ function EventContent({
 	number: number;
 	commentReactions: Record<number, Reaction[]>;
 	currentUserLogin: string;
-	allComments: any[];
+	allComments: ReviewComment[];
 }) {
 	const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
 	const [editBody, setEditBody] = useState("");

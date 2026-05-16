@@ -7,7 +7,7 @@ import hljs from "highlight.js";
 import { Plus } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Fragment, useEffect, useMemo, useRef } from "react";
-import type { ReviewCommentData } from "~/server/github";
+import type { ReviewComment } from "~/server/github";
 import { InlineCommentThread } from "./InlineCommentThread";
 import type { FooterAction } from "./markdown/MarkdownEditor";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
@@ -20,7 +20,7 @@ export interface ActiveComment {
 interface DiffViewProps {
 	patch: string;
 	filename: string;
-	comments?: ReviewCommentData[];
+	comments?: ReviewComment[];
 	showComments?: boolean;
 	showCommentButton?: boolean;
 	activeComment?: ActiveComment | null;
@@ -108,7 +108,7 @@ export function DiffView({
 	}, [language, parsed]);
 
 	const commentsByLine = useMemo(() => {
-		const map = new Map<number, ReviewCommentData[]>();
+		const map = new Map<number, ReviewComment[]>();
 		for (const comment of comments) {
 			const key = comment.line ?? comment.position ?? 0;
 			const existing = map.get(key) ?? [];
@@ -159,9 +159,9 @@ export function DiffView({
 }
 
 function groupThreads(
-	comments: ReviewCommentData[],
-): Array<{ parent: ReviewCommentData; replies: ReviewCommentData[] }> {
-	const threads = new Map<number, ReviewCommentData[]>();
+	comments: ReviewComment[],
+): Array<{ parent: ReviewComment; replies: ReviewComment[] }> {
+	const threads = new Map<number, ReviewComment[]>();
 	for (const comment of comments) {
 		const rootId = comment.in_reply_to_id ?? comment.id;
 		const existing = threads.get(rootId) ?? [];
@@ -169,14 +169,14 @@ function groupThreads(
 		threads.set(rootId, existing);
 	}
 	return Array.from(threads.entries()).map(([, group]) => ({
-		parent: group[0] as ReviewCommentData,
+		parent: group[0] as ReviewComment,
 		replies: group.slice(1),
 	}));
 }
 
 interface BlockRowsProps {
 	block: NonNullable<ReturnType<typeof parse>>[number]["blocks"][number];
-	commentsByLine: Map<number, ReviewCommentData[]>;
+	commentsByLine: Map<number, ReviewComment[]>;
 	activeComment: ActiveComment | null;
 	onStartComment: ((ac: ActiveComment | null) => void) | undefined;
 	owner: string | undefined;
@@ -301,8 +301,8 @@ function BlockRows({
 								>
 									<MarkdownEditor
 										disabled={commentPending}
-										onChange={onCommentBodyChange ?? (() => {})}
-										onCancel={onCancelComment ?? (() => {})}
+										onChange={onCommentBodyChange ?? (() => { })}
+										onCancel={onCancelComment ?? (() => { })}
 										placeholder="Add a comment..."
 										value={commentBody}
 										owner={owner ?? ""}

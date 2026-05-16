@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { ReviewCommentData } from "~/server/github";
+import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 import { isGeneratedFile } from "~/utils/generated-files";
 import { type ActiveComment, DiffView } from "./DiffView";
@@ -17,7 +17,7 @@ interface FileDiffProps {
 	owner: string;
 	repo: string;
 	number: string;
-	comments?: ReviewCommentData[];
+	comments?: ReviewComment[];
 	showComments?: boolean;
 	pendingReviewId?: number | null;
 }
@@ -128,27 +128,27 @@ export default function FileDiff({
 
 	const footerActions = pendingReviewId
 		? [
-				{
-					label: "Add to Review",
-					onClick: () => handleAddComment(true),
-					variant: "approve" as const,
-					disabled: (text: string) => !text.trim(),
-				},
-			]
+			{
+				label: "Add to Review",
+				onClick: () => handleAddComment(true),
+				variant: "approve" as const,
+				disabled: (text: string) => !text.trim(),
+			},
+		]
 		: [
-				{
-					label: "Add single comment",
-					onClick: () => handleAddComment(false),
-					variant: "neutral" as const,
-					disabled: (text: string) => !text.trim(),
-				},
-				{
-					label: "Start a Review",
-					onClick: () => handleAddComment(true),
-					variant: "approve" as const,
-					disabled: (text: string) => !text.trim(),
-				},
-			];
+			{
+				label: "Add single comment",
+				onClick: () => handleAddComment(false),
+				variant: "neutral" as const,
+				disabled: (text: string) => !text.trim(),
+			},
+			{
+				label: "Start a Review",
+				onClick: () => handleAddComment(true),
+				variant: "approve" as const,
+				disabled: (text: string) => !text.trim(),
+			},
+		];
 
 	const toggleCollapsed = () => setIsCollapsed(!isCollapsed);
 

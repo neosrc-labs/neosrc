@@ -19,7 +19,7 @@ export type IssueCommentData =
 	RestEndpointMethodTypes["issues"]["createComment"]["response"]["data"];
 export type PullRequestReviewData =
 	RestEndpointMethodTypes["pulls"]["createReview"]["response"]["data"];
-export type ReviewCommentData =
+export type ReviewComment =
 	RestEndpointMethodTypes["pulls"]["listReviewComments"]["response"]["data"][number];
 export type ReviewCommentsForReviewData =
 	RestEndpointMethodTypes["pulls"]["listCommentsForReview"]["response"]["data"];
@@ -650,7 +650,7 @@ export const getPullRequestReviewComments = cache(
 		owner: string,
 		repo: string,
 		pullNumber: number,
-	) => {
+	): Promise<ReviewComment[]> => {
 		const octokit = createOctokit(accessToken);
 		const response = await octokit.pulls.listReviewComments({
 			owner,

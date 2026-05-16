@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, MessageSquare } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import { DiffView } from "~/components/DiffView";
@@ -17,7 +17,7 @@ interface ReviewCommentsProps {
 	number: number;
 	reviewId: number;
 	state?: string;
-	allComments: any[];
+	allComments: ReviewComment[];
 }
 
 export function ReviewComments({

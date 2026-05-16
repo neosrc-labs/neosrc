@@ -4,7 +4,7 @@ import { MessageSquare, MessageSquareOff } from "lucide-react";
 import { useMemo, useState } from "react";
 import FileDiff from "~/components/FileDiff";
 import { useFiles } from "~/hooks/files";
-import type { ReviewCommentData } from "~/server/github";
+import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 
 interface FilesSectionProps {
@@ -33,9 +33,9 @@ export function FilesSection({
 		{ staleTime: 30_000 },
 	);
 
-	const allCommentsAll = useMemo((): ReviewCommentData[] => {
+	const allCommentsAll = useMemo((): ReviewComment[] => {
 		const submitted = allComments;
-		const pending = (pendingReview?.comments ?? []) as ReviewCommentData[];
+		const pending = (pendingReview?.comments ?? []) as ReviewComment[];
 		return [...submitted, ...pending];
 	}, [allComments, pendingReview]);
 
