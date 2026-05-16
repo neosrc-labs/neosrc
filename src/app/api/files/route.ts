@@ -3,11 +3,14 @@ import { getPullRequestFilesStream } from "~/server/github";
 
 export async function GET(request: Request) {
 	const { searchParams } = new URL(request.url);
-	// FIXME: Better null handling
-	const owner = searchParams.get("owner") ?? "";
-	const repo = searchParams.get("repo") ?? "";
-	const number = searchParams.get("number") ?? "";
+	const owner = searchParams.get("owner");
+	const repo = searchParams.get("repo");
+	const number = searchParams.get("number");
 	const commitSha = searchParams.get("commitSha") ?? undefined;
+
+	if (!owner || !repo || !number) {
+		return new Response(null, { status: 400 });
+	}
 
 	const accessToken = await githubAccessToken();
 	if (!accessToken) {
