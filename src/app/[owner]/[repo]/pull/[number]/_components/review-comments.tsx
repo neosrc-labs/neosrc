@@ -69,15 +69,11 @@ export function ReviewComments({
 	}
 
 	return (
-		<div className="mt-3 space-y-3 border-gray-200 border-t pt-3 dark:border-zinc-700">
-			<p className="flex items-center gap-1.5 font-medium text-gray-500 text-xs dark:text-zinc-400">
-				<MessageSquare size={12} />
-				Review comments ({comments.length})
-			</p>
+		<div className="space-y-3 pt-3">
 			{Object.entries(byPath).map(([path, fileComments]) => (
 				<div
 					key={path}
-					className="rounded-lg border border-gray-200 dark:border-zinc-700"
+					className="mt-3 rounded-lg border border-gray-200 dark:border-zinc-700"
 				>
 					<div className="border-gray-200 border-b bg-gray-50 px-3 py-1.5 font-mono text-gray-600 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
 						{path}
