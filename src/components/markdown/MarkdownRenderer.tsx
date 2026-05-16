@@ -107,7 +107,7 @@ export function MarkdownRenderer({
 							<IssueHoverCard
 								owner={issueMatch[1]}
 								repo={issueMatch[2]}
-								issueNumber={Number.parseInt(issueMatch[3])}
+								issueNumber={Number.parseInt(issueMatch[3], 10)}
 							>
 								<a href={href} {...props}>
 									{children}
