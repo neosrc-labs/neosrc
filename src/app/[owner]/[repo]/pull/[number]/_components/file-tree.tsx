@@ -17,9 +17,7 @@ export interface FileNode {
 	deletions?: number;
 }
 
-export function buildFileTree(
-	files: PullRequestFile[],
-): FileNode[] {
+export function buildFileTree(files: PullRequestFile[]): FileNode[] {
 	const root: FileNode[] = [];
 
 	for (const file of files) {

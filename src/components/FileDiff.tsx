@@ -128,27 +128,27 @@ export default function FileDiff({
 
 	const footerActions = pendingReviewId
 		? [
-			{
-				label: "Add to Review",
-				onClick: () => handleAddComment(true),
-				variant: "approve" as const,
-				disabled: (text: string) => !text.trim(),
-			},
-		]
+				{
+					label: "Add to Review",
+					onClick: () => handleAddComment(true),
+					variant: "approve" as const,
+					disabled: (text: string) => !text.trim(),
+				},
+			]
 		: [
-			{
-				label: "Add single comment",
-				onClick: () => handleAddComment(false),
-				variant: "neutral" as const,
-				disabled: (text: string) => !text.trim(),
-			},
-			{
-				label: "Start a Review",
-				onClick: () => handleAddComment(true),
-				variant: "approve" as const,
-				disabled: (text: string) => !text.trim(),
-			},
-		];
+				{
+					label: "Add single comment",
+					onClick: () => handleAddComment(false),
+					variant: "neutral" as const,
+					disabled: (text: string) => !text.trim(),
+				},
+				{
+					label: "Start a Review",
+					onClick: () => handleAddComment(true),
+					variant: "approve" as const,
+					disabled: (text: string) => !text.trim(),
+				},
+			];
 
 	const toggleCollapsed = () => setIsCollapsed(!isCollapsed);
 
@@ -180,7 +180,7 @@ export default function FileDiff({
 
 	return (
 		<div
-			className="mb-6 scroll-mt-[calc(var(--header-height)+8px)] rounded border border-gray-200 dark:border-zinc-700 overflow-hidden"
+			className="mb-6 scroll-mt-[calc(var(--header-height)+8px)] overflow-hidden rounded border border-gray-200 dark:border-zinc-700"
 			id={fileId}
 		>
 			<div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900">

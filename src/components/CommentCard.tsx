@@ -84,7 +84,7 @@ export function CommentCard({
 				variant === "default"
 					? "border-b-1 border-b-gray-200 border-solid bg-white dark:border-b-zinc-700 dark:bg-zinc-900"
 					: variant === "standalone"
-						? "border-1 border-gray-200 border-solid bg-white dark:border-zinc-700 dark:bg-zinc-900 rounded"
+						? "rounded border-1 border-gray-200 border-solid bg-white dark:border-zinc-700 dark:bg-zinc-900"
 						: "bg-gray-50 dark:bg-zinc-950"
 			}
 		>
@@ -109,8 +109,9 @@ export function CommentCard({
 					)}
 					{authorAssociation && authorAssociation !== "NONE" && (
 						<span
-							className={`whitespace-nowrap rounded-full px-2 py-0.5 font-medium text-xs ${authorAssociationStyles[authorAssociation] ?? neutralBadge
-								}`}
+							className={`whitespace-nowrap rounded-full px-2 py-0.5 font-medium text-xs ${
+								authorAssociationStyles[authorAssociation] ?? neutralBadge
+							}`}
 						>
 							{authorAssociationLabels[authorAssociation] ?? authorAssociation}
 						</span>
@@ -126,15 +127,15 @@ export function CommentCard({
 				{isEditing ? (
 					<MarkdownEditor
 						value={editBody}
-						onChange={onEditBodyChange ?? (() => { })}
-						onCancel={onCancelEdit ?? (() => { })}
+						onChange={onEditBodyChange ?? (() => {})}
+						onCancel={onCancelEdit ?? (() => {})}
 						owner={owner}
 						repo={repo}
 						minHeight={`${Math.min(Math.max(editBody.split("\n").length * 28, 120), 400)}px`}
 						footerActions={[
 							{
 								label: "Save",
-								onClick: onSaveEdit ?? (() => { }),
+								onClick: onSaveEdit ?? (() => {}),
 								variant: "approve",
 								disabled: (text: string) => !text.trim(),
 							},

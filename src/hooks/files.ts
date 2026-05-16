@@ -23,7 +23,7 @@ export function useFiles({ owner, repo, number, commitSha }: UseFilesParams) {
 				setIsLoading(true);
 				const res = await fetch(
 					`/api/files?owner=${owner}&repo=${repo}&number=${number}` +
-					(commitSha ? `&commitSha=${commitSha}` : ""),
+						(commitSha ? `&commitSha=${commitSha}` : ""),
 					{ signal: controller.signal },
 				);
 				const reader = res.body!.getReader();

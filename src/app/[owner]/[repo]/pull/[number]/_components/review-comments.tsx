@@ -73,7 +73,7 @@ export function ReviewComments({
 			{Object.entries(byPath).map(([path, fileComments]) => (
 				<div
 					key={path}
-					className="mt-3 rounded border border-gray-200 dark:border-zinc-700 overflow-hidden"
+					className="mt-3 overflow-hidden rounded border border-gray-200 dark:border-zinc-700"
 				>
 					<div className="border-gray-200 border-b bg-gray-50 px-3 py-1.5 font-mono text-gray-600 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
 						{path}

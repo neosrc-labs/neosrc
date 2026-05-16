@@ -301,8 +301,8 @@ function BlockRows({
 								>
 									<MarkdownEditor
 										disabled={commentPending}
-										onChange={onCommentBodyChange ?? (() => { })}
-										onCancel={onCancelComment ?? (() => { })}
+										onChange={onCommentBodyChange ?? (() => {})}
+										onCancel={onCancelComment ?? (() => {})}
 										placeholder="Add a comment..."
 										value={commentBody}
 										owner={owner ?? ""}

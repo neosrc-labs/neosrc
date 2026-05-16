@@ -286,7 +286,7 @@ export const createPullRequestReview = async (
 		pull_number: pullNumber,
 		event,
 		body,
-		comments
+		comments,
 	});
 	return response.data;
 };
