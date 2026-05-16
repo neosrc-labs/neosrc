@@ -26,7 +26,7 @@ function IssueHoverCardContent({
 	const body = issue.body ?? "";
 	const truncatedBody =
 		body.length > 200
-			? body.slice(0, 200).replace(/\s+\S*$/, "") + "\u2026"
+			? `${body.slice(0, 200).replace(/\s+\S*$/, "")}\u2026`
 			: body;
 
 	const isPR = !!issue.pull_request;

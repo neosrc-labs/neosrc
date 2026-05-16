@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 				parseInt(number, 10),
 				commitSha,
 			)) {
-				controller.enqueue(encoder.encode(JSON.stringify(page) + "\n"));
+				controller.enqueue(encoder.encode(`${JSON.stringify(page)}\n`));
 			}
 			controller.close();
 		},
