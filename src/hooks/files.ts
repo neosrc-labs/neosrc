@@ -26,7 +26,7 @@ export function useFiles({ owner, repo, number, commitSha }: UseFilesParams) {
 						(commitSha ? `&commitSha=${commitSha}` : ""),
 					{ signal: controller.signal },
 				);
-				const reader = res.body!.getReader();
+				const reader = res.body?.getReader();
 				const decoder = new TextDecoder();
 				let buffer = "";
 
