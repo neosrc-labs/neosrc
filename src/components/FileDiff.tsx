@@ -180,7 +180,7 @@ export default function FileDiff({
 
 	return (
 		<div
-			className="mb-6 scroll-mt-[calc(var(--header-height)+8px)] rounded-lg border border-gray-200 dark:border-zinc-700"
+			className="mb-6 scroll-mt-[calc(var(--header-height)+8px)] rounded border border-gray-200 dark:border-zinc-700 overflow-hidden"
 			id={fileId}
 		>
 			<div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900">
