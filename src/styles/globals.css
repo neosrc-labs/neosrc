@@ -6,31 +6,32 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-	--font-sans:
-		var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
-		"Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-	--color-surface: #ffffff;
-	--color-surface-secondary: #f9fafb;
-	--color-border: #e5e7eb;
-	--color-text-primary: #111827;
-	--color-text-secondary: #4b5563;
-	--color-text-muted: #9ca3af;
+    --font-sans:
+        var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+        "Noto Color Emoji";
+    --color-surface: #ffffff;
+    --color-surface-secondary: #f9fafb;
+    --color-border: #e5e7eb;
+    --color-text-primary: #111827;
+    --color-text-secondary: #4b5563;
+    --color-text-muted: #9ca3af;
 }
 
 html {
-	scrollbar-gutter: stable;
+    scrollbar-gutter: stable;
 }
 
 /* Prose dark mode */
 .dark .prose {
-	--tw-prose-body: #d1d5db;
-	--tw-prose-headings: #f9fafb;
-	--tw-prose-links: #60a5fa;
-	--tw-prose-bold: #f3f4f6;
-	--tw-prose-code: #f3f4f6;
-	--tw-prose-quotes: #d1d5db;
-	--tw-prose-quote-borders: #4b5563;
-	--tw-prose-hr: #374151;
-	--tw-prose-th-borders: #4b5563;
-	--tw-prose-td-borders: #374151;
+    --tw-prose-body: #d1d5db;
+    --tw-prose-headings: #f9fafb;
+    --tw-prose-links: #60a5fa;
+    --tw-prose-bold: #f3f4f6;
+    --tw-prose-code: #f3f4f6;
+    --tw-prose-quotes: #d1d5db;
+    --tw-prose-quote-borders: #4b5563;
+    --tw-prose-hr: #374151;
+    --tw-prose-th-borders: #4b5563;
+    --tw-prose-td-borders: #374151;
 }

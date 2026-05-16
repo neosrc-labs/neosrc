@@ -4,284 +4,287 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
 import {
-	createIssueCommentReaction,
-	createIssueReaction,
-	createPullRequestReviewCommentReaction,
-	deleteIssueCommentReaction,
-	deleteIssueReaction,
-	deletePullRequestReviewCommentReaction,
-	getAuthenticatedUser,
-	getIssueCommentReactions,
-	getPullRequestReactions,
-	getPullRequestReviewCommentReactions,
+    createIssueCommentReaction,
+    createIssueReaction,
+    createPullRequestReviewCommentReaction,
+    deleteIssueCommentReaction,
+    deleteIssueReaction,
+    deletePullRequestReviewCommentReaction,
+    getAuthenticatedUser,
+    getIssueCommentReactions,
+    getPullRequestReactions,
+    getPullRequestReviewCommentReactions,
 } from "~/server/github";
 
 export const reactionsRouter = createTRPCRouter({
-	get: protectedProcedure
-		.input(
-			z.object({
-				owner: z.string(),
-				repo: z.string(),
-				number: z.number(),
-			}),
-		)
-		.query(async ({ ctx, input }) => {
-			const [account] = await ctx.db
-				.select({ accessToken: accounts.access_token })
-				.from(accounts)
-				.where(eq(accounts.userId, ctx.session.user.id))
-				.limit(1);
+    get: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const [account] = await ctx.db
+                .select({ accessToken: accounts.access_token })
+                .from(accounts)
+                .where(eq(accounts.userId, ctx.session.user.id))
+                .limit(1);
 
-			if (!account?.accessToken) {
-				throw new Error("GitHub account not connected");
-			}
+            if (!account?.accessToken) {
+                throw new Error("GitHub account not connected");
+            }
 
-			const [currentUser, reactions] = await Promise.all([
-				getAuthenticatedUser(account.accessToken),
-				getPullRequestReactions(
-					account.accessToken,
-					input.owner,
-					input.repo,
-					input.number,
-				),
-			]);
+            const [currentUser, reactions] = await Promise.all([
+                getAuthenticatedUser(account.accessToken),
+                getPullRequestReactions(
+                    account.accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                ),
+            ]);
 
-			return { reactions, currentUserLogin: currentUser.login };
-		}),
+            return { reactions, currentUserLogin: currentUser.login };
+        }),
 
-	toggleIssueComment: protectedProcedure
-		.input(
-			z.object({
-				owner: z.string(),
-				repo: z.string(),
-				commentId: z.number(),
-				content: z.enum([
-					"+1",
-					"-1",
-					"laugh",
-					"confused",
-					"heart",
-					"hooray",
-					"rocket",
-					"eyes",
-				]),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			const [account] = await ctx.db
-				.select({ accessToken: accounts.access_token })
-				.from(accounts)
-				.where(eq(accounts.userId, ctx.session.user.id))
-				.limit(1);
+    toggleIssueComment: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                commentId: z.number(),
+                content: z.enum([
+                    "+1",
+                    "-1",
+                    "laugh",
+                    "confused",
+                    "heart",
+                    "hooray",
+                    "rocket",
+                    "eyes",
+                ]),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const [account] = await ctx.db
+                .select({ accessToken: accounts.access_token })
+                .from(accounts)
+                .where(eq(accounts.userId, ctx.session.user.id))
+                .limit(1);
 
-			if (!account?.accessToken) {
-				throw new Error("GitHub account not connected");
-			}
+            if (!account?.accessToken) {
+                throw new Error("GitHub account not connected");
+            }
 
-			const [currentUser, existingReactions] = await Promise.all([
-				getAuthenticatedUser(account.accessToken),
-				getIssueCommentReactions(
-					account.accessToken,
-					input.owner,
-					input.repo,
-					input.commentId,
-				),
-			]);
+            const [currentUser, existingReactions] = await Promise.all([
+                getAuthenticatedUser(account.accessToken),
+                getIssueCommentReactions(
+                    account.accessToken,
+                    input.owner,
+                    input.repo,
+                    input.commentId,
+                ),
+            ]);
 
-			const existing = existingReactions.find(
-				(r) =>
-					r.user?.login === currentUser.login && r.content === input.content,
-			);
+            const existing = existingReactions.find(
+                (r) =>
+                    r.user?.login === currentUser.login &&
+                    r.content === input.content,
+            );
 
-			if (existing) {
-				await deleteIssueCommentReaction(
-					account.accessToken,
-					input.owner,
-					input.repo,
-					input.commentId,
-					existing.id,
-				);
-				return { action: "removed" as const };
-			}
+            if (existing) {
+                await deleteIssueCommentReaction(
+                    account.accessToken,
+                    input.owner,
+                    input.repo,
+                    input.commentId,
+                    existing.id,
+                );
+                return { action: "removed" as const };
+            }
 
-			await createIssueCommentReaction(
-				account.accessToken,
-				input.owner,
-				input.repo,
-				input.commentId,
-				input.content,
-			);
-			return { action: "added" as const };
-		}),
+            await createIssueCommentReaction(
+                account.accessToken,
+                input.owner,
+                input.repo,
+                input.commentId,
+                input.content,
+            );
+            return { action: "added" as const };
+        }),
 
-	togglePullRequestReviewComment: protectedProcedure
-		.input(
-			z.object({
-				owner: z.string(),
-				repo: z.string(),
-				commentId: z.number(),
-				content: z.enum([
-					"+1",
-					"-1",
-					"laugh",
-					"confused",
-					"heart",
-					"hooray",
-					"rocket",
-					"eyes",
-				]),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			const [account] = await ctx.db
-				.select({ accessToken: accounts.access_token })
-				.from(accounts)
-				.where(eq(accounts.userId, ctx.session.user.id))
-				.limit(1);
+    togglePullRequestReviewComment: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                commentId: z.number(),
+                content: z.enum([
+                    "+1",
+                    "-1",
+                    "laugh",
+                    "confused",
+                    "heart",
+                    "hooray",
+                    "rocket",
+                    "eyes",
+                ]),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const [account] = await ctx.db
+                .select({ accessToken: accounts.access_token })
+                .from(accounts)
+                .where(eq(accounts.userId, ctx.session.user.id))
+                .limit(1);
 
-			if (!account?.accessToken) {
-				throw new Error("GitHub account not connected");
-			}
+            if (!account?.accessToken) {
+                throw new Error("GitHub account not connected");
+            }
 
-			const [currentUser, existingReactions] = await Promise.all([
-				getAuthenticatedUser(account.accessToken),
-				getPullRequestReviewCommentReactions(
-					account.accessToken,
-					input.owner,
-					input.repo,
-					input.commentId,
-				),
-			]);
+            const [currentUser, existingReactions] = await Promise.all([
+                getAuthenticatedUser(account.accessToken),
+                getPullRequestReviewCommentReactions(
+                    account.accessToken,
+                    input.owner,
+                    input.repo,
+                    input.commentId,
+                ),
+            ]);
 
-			const existing = existingReactions.find(
-				(r) =>
-					r.user?.login === currentUser.login && r.content === input.content,
-			);
+            const existing = existingReactions.find(
+                (r) =>
+                    r.user?.login === currentUser.login &&
+                    r.content === input.content,
+            );
 
-			if (existing) {
-				await deletePullRequestReviewCommentReaction(
-					account.accessToken,
-					input.owner,
-					input.repo,
-					input.commentId,
-					existing.id,
-				);
-				return { action: "removed" as const };
-			}
+            if (existing) {
+                await deletePullRequestReviewCommentReaction(
+                    account.accessToken,
+                    input.owner,
+                    input.repo,
+                    input.commentId,
+                    existing.id,
+                );
+                return { action: "removed" as const };
+            }
 
-			await createPullRequestReviewCommentReaction(
-				account.accessToken,
-				input.owner,
-				input.repo,
-				input.commentId,
-				input.content,
-			);
-			return { action: "added" as const };
-		}),
+            await createPullRequestReviewCommentReaction(
+                account.accessToken,
+                input.owner,
+                input.repo,
+                input.commentId,
+                input.content,
+            );
+            return { action: "added" as const };
+        }),
 
-	getForReviewComments: protectedProcedure
-		.input(
-			z.object({
-				owner: z.string(),
-				repo: z.string(),
-				commentIds: z.array(z.number()),
-			}),
-		)
-		.query(async ({ ctx, input }) => {
-			const [account] = await ctx.db
-				.select({ accessToken: accounts.access_token })
-				.from(accounts)
-				.where(eq(accounts.userId, ctx.session.user.id))
-				.limit(1);
+    getForReviewComments: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                commentIds: z.array(z.number()),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const [account] = await ctx.db
+                .select({ accessToken: accounts.access_token })
+                .from(accounts)
+                .where(eq(accounts.userId, ctx.session.user.id))
+                .limit(1);
 
-			if (!account?.accessToken) {
-				throw new Error("GitHub account not connected");
-			}
+            if (!account?.accessToken) {
+                throw new Error("GitHub account not connected");
+            }
 
-			const token = account.accessToken;
+            const token = account.accessToken;
 
-			const results = await Promise.all(
-				input.commentIds.map((commentId) =>
-					getPullRequestReviewCommentReactions(
-						token,
-						input.owner,
-						input.repo,
-						commentId,
-					).catch(() => []),
-				),
-			);
+            const results = await Promise.all(
+                input.commentIds.map((commentId) =>
+                    getPullRequestReviewCommentReactions(
+                        token,
+                        input.owner,
+                        input.repo,
+                        commentId,
+                    ).catch(() => []),
+                ),
+            );
 
-			// biome-ignore lint/suspicious/noExplicitAny: type mismatch between Octokit reaction types
-			const reactionMap: Record<number, any> = {};
-			input.commentIds.forEach((id, i) => {
-				reactionMap[id] = results[i];
-			});
+            // biome-ignore lint/suspicious/noExplicitAny: type mismatch between Octokit reaction types
+            const reactionMap: Record<number, any> = {};
+            input.commentIds.forEach((id, i) => {
+                reactionMap[id] = results[i];
+            });
 
-			return reactionMap;
-		}),
+            return reactionMap;
+        }),
 
-	toggleIssue: protectedProcedure
-		.input(
-			z.object({
-				owner: z.string(),
-				repo: z.string(),
-				number: z.number(),
-				content: z.enum([
-					"+1",
-					"-1",
-					"laugh",
-					"confused",
-					"heart",
-					"hooray",
-					"rocket",
-					"eyes",
-				]),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			const [account] = await ctx.db
-				.select({ accessToken: accounts.access_token })
-				.from(accounts)
-				.where(eq(accounts.userId, ctx.session.user.id))
-				.limit(1);
+    toggleIssue: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+                content: z.enum([
+                    "+1",
+                    "-1",
+                    "laugh",
+                    "confused",
+                    "heart",
+                    "hooray",
+                    "rocket",
+                    "eyes",
+                ]),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const [account] = await ctx.db
+                .select({ accessToken: accounts.access_token })
+                .from(accounts)
+                .where(eq(accounts.userId, ctx.session.user.id))
+                .limit(1);
 
-			if (!account?.accessToken) {
-				throw new Error("GitHub account not connected");
-			}
+            if (!account?.accessToken) {
+                throw new Error("GitHub account not connected");
+            }
 
-			const [currentUser, existingReactions] = await Promise.all([
-				getAuthenticatedUser(account.accessToken),
-				getPullRequestReactions(
-					account.accessToken,
-					input.owner,
-					input.repo,
-					input.number,
-				),
-			]);
+            const [currentUser, existingReactions] = await Promise.all([
+                getAuthenticatedUser(account.accessToken),
+                getPullRequestReactions(
+                    account.accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                ),
+            ]);
 
-			const existing = existingReactions.find(
-				(r) =>
-					r.user?.login === currentUser.login && r.content === input.content,
-			);
+            const existing = existingReactions.find(
+                (r) =>
+                    r.user?.login === currentUser.login &&
+                    r.content === input.content,
+            );
 
-			if (existing) {
-				await deleteIssueReaction(
-					account.accessToken,
-					input.owner,
-					input.repo,
-					input.number,
-					existing.id,
-				);
-				return { action: "removed" as const };
-			}
+            if (existing) {
+                await deleteIssueReaction(
+                    account.accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                    existing.id,
+                );
+                return { action: "removed" as const };
+            }
 
-			await createIssueReaction(
-				account.accessToken,
-				input.owner,
-				input.repo,
-				input.number,
-				input.content,
-			);
-			return { action: "added" as const };
-		}),
+            await createIssueReaction(
+                account.accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+                input.content,
+            );
+            return { action: "added" as const };
+        }),
 });

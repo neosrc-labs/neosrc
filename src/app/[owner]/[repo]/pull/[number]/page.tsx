@@ -8,80 +8,80 @@ import { PullRequestDescriptionSection } from "./_components/description";
 import { TimelineSection } from "./_components/timeline-section";
 
 type PullsGetResponseData =
-	RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
+    RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
 
 interface PageProps {
-	params: Promise<{
-		owner: string;
-		repo: string;
-		number: string;
-	}>;
+    params: Promise<{
+        owner: string;
+        repo: string;
+        number: string;
+    }>;
 }
 
 export async function generateMetadata({
-	params,
+    params,
 }: PageProps): Promise<Metadata> {
-	const { owner, repo, number } = await params;
-	return generatePRMetadata(owner, repo, number);
+    const { owner, repo, number } = await params;
+    return generatePRMetadata(owner, repo, number);
 }
 
 export default async function PullRequestPage({ params }: PageProps) {
-	const { owner, repo, number: numberAsStr } = await params;
-	const accessToken = await githubAccessToken();
-	const number = parseInt(numberAsStr, 10);
+    const { owner, repo, number: numberAsStr } = await params;
+    const accessToken = await githubAccessToken();
+    const number = parseInt(numberAsStr, 10);
 
-	if (!accessToken) {
-		return (
-			<div className="px-6 py-8">
-				<p className="text-gray-600 dark:text-gray-400">
-					Please sign in to view this pull request.
-				</p>
-			</div>
-		);
-	}
+    if (!accessToken) {
+        return (
+            <div className="px-6 py-8">
+                <p className="text-gray-600 dark:text-gray-400">
+                    Please sign in to view this pull request.
+                </p>
+            </div>
+        );
+    }
 
-	const pullRequest: Promise<PullsGetResponseData> = getPullRequest(
-		accessToken,
-		owner,
-		repo,
-		number,
-	);
+    const pullRequest: Promise<PullsGetResponseData> = getPullRequest(
+        accessToken,
+        owner,
+        repo,
+        number,
+    );
 
-	return (
-		<Suspense>
-			<PullRequestPageContent
-				number={number}
-				owner={owner}
-				pullRequestPromise={pullRequest}
-				repo={repo}
-			/>
-		</Suspense>
-	);
+    return (
+        <Suspense>
+            <PullRequestPageContent
+                number={number}
+                owner={owner}
+                pullRequestPromise={pullRequest}
+                repo={repo}
+            />
+        </Suspense>
+    );
 }
 
 interface PullRequestPageContentProps {
-	owner: string;
-	repo: string;
-	number: number;
-	pullRequestPromise: Promise<PullsGetResponseData>;
+    owner: string;
+    repo: string;
+    number: number;
+    pullRequestPromise: Promise<PullsGetResponseData>;
 }
 
 function PullRequestPageContent({
-	owner,
-	repo,
-	number,
-	pullRequestPromise,
+    owner,
+    repo,
+    number,
+    pullRequestPromise,
 }: PullRequestPageContentProps) {
-	return (
-		<div className="px-6 py-8">
-			<PullRequestDescriptionSection
-				pullRequestPromise={pullRequestPromise}
-				owner={owner}
-				repo={repo}
-				number={number}
-			/>
+    return (
+        <div className="px-6 py-8">
+            <PullRequestDescriptionSection
+                pullRequestPromise={pullRequestPromise}
+                owner={owner}
+                repo={repo}
+                number={number}
+            />
 
-			<TimelineSection number={number} owner={owner} repo={repo} />
-		</div>
-	);
+            <TimelineSection number={number} owner={owner} repo={repo} />
+        </div>
+    );
 }

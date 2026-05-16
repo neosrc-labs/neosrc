@@ -10,22 +10,22 @@ const { auth: uncachedAuth, handlers, signIn, signOut } = NextAuth(authConfig);
 const auth = cache(uncachedAuth);
 
 const githubAccessToken = cache(async () => {
-	const session = await auth();
+    const session = await auth();
 
-	if (!session?.user?.id) {
-		return null;
-	}
+    if (!session?.user?.id) {
+        return null;
+    }
 
-	const [account] = await db
-		.select({ accessToken: accounts.access_token })
-		.from(accounts)
-		.where(eq(accounts.userId, session.user.id))
-		.limit(1);
+    const [account] = await db
+        .select({ accessToken: accounts.access_token })
+        .from(accounts)
+        .where(eq(accounts.userId, session.user.id))
+        .limit(1);
 
-	if (!account?.accessToken) {
-		return null;
-	}
-	return account.accessToken;
+    if (!account?.accessToken) {
+        return null;
+    }
+    return account.accessToken;
 });
 
 export { auth, githubAccessToken, handlers, signIn, signOut };

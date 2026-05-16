@@ -4,71 +4,74 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
 import {
-	getAuthenticatedUser,
-	getGitHubTeam,
-	getGitHubUser,
+    getAuthenticatedUser,
+    getGitHubTeam,
+    getGitHubUser,
 } from "~/server/github";
 
 export const usersRouter = createTRPCRouter({
-	currentUser: protectedProcedure.query(async ({ ctx }) => {
-		const [account] = await ctx.db
-			.select({ accessToken: accounts.access_token })
-			.from(accounts)
-			.where(eq(accounts.userId, ctx.session.user.id))
-			.limit(1);
+    currentUser: protectedProcedure.query(async ({ ctx }) => {
+        const [account] = await ctx.db
+            .select({ accessToken: accounts.access_token })
+            .from(accounts)
+            .where(eq(accounts.userId, ctx.session.user.id))
+            .limit(1);
 
-		if (!account?.accessToken) {
-			throw new Error("GitHub account not connected");
-		}
+        if (!account?.accessToken) {
+            throw new Error("GitHub account not connected");
+        }
 
-		const user = await getAuthenticatedUser(account.accessToken);
-		return { login: user.login };
-	}),
-	getByUsername: protectedProcedure
-		.input(
-			z.object({
-				username: z.string(),
-			}),
-		)
-		.query(async ({ ctx, input }) => {
-			const [account] = await ctx.db
-				.select({ accessToken: accounts.access_token })
-				.from(accounts)
-				.where(eq(accounts.userId, ctx.session.user.id))
-				.limit(1);
+        const user = await getAuthenticatedUser(account.accessToken);
+        return { login: user.login };
+    }),
+    getByUsername: protectedProcedure
+        .input(
+            z.object({
+                username: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const [account] = await ctx.db
+                .select({ accessToken: accounts.access_token })
+                .from(accounts)
+                .where(eq(accounts.userId, ctx.session.user.id))
+                .limit(1);
 
-			if (!account?.accessToken) {
-				throw new Error("GitHub account not connected");
-			}
+            if (!account?.accessToken) {
+                throw new Error("GitHub account not connected");
+            }
 
-			const user = await getGitHubUser(account.accessToken, input.username);
+            const user = await getGitHubUser(
+                account.accessToken,
+                input.username,
+            );
 
-			return { user };
-		}),
-	getByTeamSlug: protectedProcedure
-		.input(
-			z.object({
-				org: z.string(),
-				teamSlug: z.string(),
-			}),
-		)
-		.query(async ({ ctx, input }) => {
-			const [account] = await ctx.db
-				.select({ accessToken: accounts.access_token })
-				.from(accounts)
-				.where(eq(accounts.userId, ctx.session.user.id))
-				.limit(1);
+            return { user };
+        }),
+    getByTeamSlug: protectedProcedure
+        .input(
+            z.object({
+                org: z.string(),
+                teamSlug: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const [account] = await ctx.db
+                .select({ accessToken: accounts.access_token })
+                .from(accounts)
+                .where(eq(accounts.userId, ctx.session.user.id))
+                .limit(1);
 
-			if (!account?.accessToken) {
-				throw new Error("GitHub account not connected");
-			}
+            if (!account?.accessToken) {
+                throw new Error("GitHub account not connected");
+            }
 
-			const team = await getGitHubTeam(
-				account.accessToken,
-				input.org,
-				input.teamSlug,
-			);
+            const team = await getGitHubTeam(
+                account.accessToken,
+                input.org,
+                input.teamSlug,
+            );
 
-			return { team };
-		}),
+            return { team };
+        }),
 });
