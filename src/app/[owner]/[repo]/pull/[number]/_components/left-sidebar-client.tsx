@@ -36,9 +36,9 @@ export function LeftSidebarContentSection({
 			pullRequestPromise={pullRequestPromise}
 			repo={repo}
 		/>
-	) : (
-		<Checks checksPromise={checksPromise!} />
-	);
+	) : checksPromise ? (
+		<Checks checksPromise={checksPromise} />
+	) : null;
 }
 
 interface SidebarFileTreeProps {
@@ -72,7 +72,7 @@ export function SidebarFileTree({
 	return (
 		<>
 			<h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-zinc-100">
-				Files Changed {filesChanged ? <span>({filesChanged})</span> : <></>}
+				Files Changed {filesChanged ? <span>({filesChanged})</span> : null}
 			</h3>
 			{isLoading ? (
 				<FileTreeSkeleton />
