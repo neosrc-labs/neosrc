@@ -172,7 +172,6 @@ function AssigneeSectionSettings({
 			{open && (
 				<div className="absolute right-0 z-20 mt-1 w-64 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
 					<input
-						autoFocus
 						className="w-full border-gray-200 border-b px-3 py-2 text-sm outline-none placeholder:text-gray-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
 						onChange={(e) => setSearch(e.target.value)}
 						placeholder="Filter users"
@@ -200,7 +199,6 @@ function AssigneeSectionSettings({
 												onAddAssignee(assignee);
 											}
 										}}
-										role="option"
 										aria-selected={isApplied}
 									>
 										<img
