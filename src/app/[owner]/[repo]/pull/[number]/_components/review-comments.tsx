@@ -56,7 +56,7 @@ export function ReviewComments({
 			const existing = replyMap.get(comment.in_reply_to_id) ?? [];
 			existing.push(comment);
 			replyMap.set(comment.in_reply_to_id, existing);
-		} else {
+		} else if (comment.pull_request_review_id === reviewId) {
 			topLevel.push(comment);
 		}
 	}
