@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { PullRequestFile } from "~/server/github";
 
 interface UseFilesParams {
 	owner: string;
@@ -10,7 +11,7 @@ interface UseFilesParams {
 // NOTE: Even if `isLoading` is `true` we may have a partially complete list of files already.
 //       Depending on the UI element, we can either wait for the full list or display a partial list.
 export function useFiles({ owner, repo, number, commitSha }: UseFilesParams) {
-	const [files, setFiles] = useState<any[]>([]); // FIXME: Add the correct type
+	const [files, setFiles] = useState<PullRequestFile[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 
 	useEffect(() => {
@@ -22,7 +23,7 @@ export function useFiles({ owner, repo, number, commitSha }: UseFilesParams) {
 				setIsLoading(true);
 				const res = await fetch(
 					`/api/files?owner=${owner}&repo=${repo}&number=${number}` +
-						(commitSha ? `&commitSha=${commitSha}` : ""),
+					(commitSha ? `&commitSha=${commitSha}` : ""),
 					{ signal: controller.signal },
 				);
 				const reader = res.body!.getReader();

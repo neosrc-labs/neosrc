@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { PullRequestFile } from "~/server/github";
 
 import iconMapData from "~/utils/iconMap.json";
 
@@ -17,12 +18,7 @@ export interface FileNode {
 }
 
 export function buildFileTree(
-	files: Array<{
-		filename: string;
-		status: string;
-		additions: number;
-		deletions: number;
-	}>,
+	files: PullRequestFile[],
 ): FileNode[] {
 	const root: FileNode[] = [];
 

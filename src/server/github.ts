@@ -25,6 +25,8 @@ export type ReviewCommentsForReviewData =
 	RestEndpointMethodTypes["pulls"]["listCommentsForReview"]["response"]["data"];
 export type PullRequestReview =
 	RestEndpointMethodTypes["pulls"]["listReviews"]["response"]["data"][number];
+export type PullRequestFile =
+	RestEndpointMethodTypes["pulls"]["listFiles"]["response"]["data"][number];
 
 export function createOctokit(accessToken: string) {
 	return new Octokit({
@@ -799,7 +801,7 @@ export async function* getPullRequestFilesStream(
 	repo: string,
 	pullNumber: number,
 	commitSha?: string,
-) {
+): AsyncGenerator<PullRequestFile[], void, undefined> {
 	if (commitSha) {
 		// Fetch files changed in a specific commit.
 		// getCommit returns all files in one response (no pagination), so we
