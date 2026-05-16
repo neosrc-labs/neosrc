@@ -46,7 +46,7 @@ function aggregateEvents(events: TimelineEventData[]): TimelineWrapper[] {
 					};
 					const gap =
 						new Date(curr.created_at).getTime() -
-						new Date(changes[changes.length - 1]!.createdAt).getTime();
+						new Date(changes[changes.length - 1]?.createdAt).getTime();
 					if (gap > MAX_LABEL_GAP_MS) break;
 				}
 

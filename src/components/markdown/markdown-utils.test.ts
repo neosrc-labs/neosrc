@@ -89,8 +89,8 @@ describe("findEnclosingCodeBlock", () => {
 	it("returns block positions when cursor is inside the code block", () => {
 		const result = findEnclosingCodeBlock(codeExample, 12);
 		expect(result).not.toBeNull();
-		expect(result!.openStart).toBe(7);
-		expect(result!.closeStart).toBe(16);
+		expect(result?.openStart).toBe(7);
+		expect(result?.closeStart).toBe(16);
 	});
 
 	it("detects code block with language identifier", () => {
@@ -107,7 +107,7 @@ describe("findEnclosingCodeBlock", () => {
 		const text = "a\n```\nfirst\n```\nb\n```\nsecond\n```\nc";
 		const result = findEnclosingCodeBlock(text, 25);
 		expect(result).not.toBeNull();
-		const content = text.slice(result!.openEnd, result!.closeStart).trim();
+		const content = text.slice(result?.openEnd, result?.closeStart).trim();
 		expect(content).toBe("second");
 	});
 });

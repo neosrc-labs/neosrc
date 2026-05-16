@@ -98,7 +98,7 @@ export function MarkdownEditor({
 	function detectAutocomplete(text: string, cursorPos: number): string | null {
 		const textBeforeCursor = text.slice(0, cursorPos);
 		const match = textBeforeCursor.match(/(?:^|\s)(#[\w-]*)$/);
-		if (!match || !match[1]) return null;
+		if (!match?.[1]) return null;
 		const query = match[1].slice(1);
 		return query;
 	}
