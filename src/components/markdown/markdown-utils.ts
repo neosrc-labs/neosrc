@@ -24,17 +24,20 @@ export function findEnclosingCodeBlock(
 	let openLine = -1;
 
 	for (let i = 0; i < lines.length; i++) {
-		if (lines[i]?.trimStart().startsWith("```")) {
+		// biome-ignore lint/style/noNonNullAssertion: guarded by bounds check
+		if (lines[i]!.trimStart().startsWith("```")) {
 			if (openLine === -1) {
 				openLine = i;
 			} else if (cursorLine > openLine && cursorLine < i) {
 				let openStart = 0;
-				for (let j = 0; j < openLine; j++) openStart += lines[j]?.length + 1;
+				// biome-ignore lint/style/noNonNullAssertion: guarded by bounds check
+				for (let j = 0; j < openLine; j++) openStart += lines[j]!.length + 1;
 				const openEndIdx = text.indexOf("\n", openStart);
 				const openEnd = openEndIdx === -1 ? text.length : openEndIdx + 1;
 
 				let closeStart = 0;
-				for (let j = 0; j < i; j++) closeStart += lines[j]?.length + 1;
+				// biome-ignore lint/style/noNonNullAssertion: guarded by bounds check
+				for (let j = 0; j < i; j++) closeStart += lines[j]!.length + 1;
 				const closeEndIdx = text.indexOf("\n", closeStart);
 				const closeEnd = closeEndIdx === -1 ? text.length : closeEndIdx + 1;
 
