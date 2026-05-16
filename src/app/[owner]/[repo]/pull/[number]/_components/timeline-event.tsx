@@ -950,7 +950,7 @@ function EventContent({
 			);
 		}
 		default:
-			console.warn("unknown event type: " + event.event, event);
+			console.warn(`unknown event type: ${event.event}`, event);
 			return null;
 	}
 }
