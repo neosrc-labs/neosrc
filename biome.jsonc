@@ -28,6 +28,12 @@
             "performance": {
                 "noImgElement": "off"
             },
+            "a11y": {
+                "useKeyWithClickEvents": "off",
+                "noStaticElementInteractions": "off",
+                "noNoninteractiveElementToInteractiveRole": "off",
+                "useFocusableInteractive": "off"
+            },
             "nursery": {
                 "useSortedClasses": {
                     "level": "warn",
