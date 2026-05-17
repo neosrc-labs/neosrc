@@ -458,9 +458,9 @@ export function MarkdownEditor({
                 <>
                     <div className="flex flex-wrap items-center gap-0.5 border-gray-300 border-b px-3 py-1.5 dark:border-zinc-600">
                         {toolbarGroups.map((group, gi) => (
-                            // biome-ignore lint/suspicious/noArrayIndexKey: toolbar groups are static
                             <span
                                 className="flex items-center gap-0.5"
+                                // biome-ignore lint/suspicious/noArrayIndexKey: toolbar groups are static
                                 key={gi}
                             >
                                 {gi > 0 && (
