@@ -28,6 +28,7 @@ export function ReviewerSection({
 }) {
     const [operations, setOperations] = useState<ReviewerOperation[]>([]);
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the operations
     useEffect(() => {
         setOperations([]);
     }, [pullRequestPromise]);
