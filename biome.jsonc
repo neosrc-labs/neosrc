@@ -36,6 +36,9 @@
                 "noAutofocus": "off",
                 "useAriaPropsSupportedByRole": "off"
             },
+            "style": {
+                "noNonNullAssertion": "off"
+            },
             "nursery": {
                 "useSortedClasses": {
                     "level": "warn",
