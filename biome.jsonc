@@ -32,7 +32,9 @@
                 "useKeyWithClickEvents": "off",
                 "noStaticElementInteractions": "off",
                 "noNoninteractiveElementToInteractiveRole": "off",
-                "useFocusableInteractive": "off"
+                "useFocusableInteractive": "off",
+                "noAutofocus": "off",
+                "useAriaPropsSupportedByRole": "off"
             },
             "nursery": {
                 "useSortedClasses": {
