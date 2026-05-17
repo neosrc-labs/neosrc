@@ -23,6 +23,7 @@ export function remarkIssuePlugin(owner?: string, repo?: string) {
                     let cursor = 0;
                     let match: RegExpExecArray | null;
 
+                    // biome-ignore lint/suspicious/noAssignInExpressions: TODO: Fix this
                     while ((match = combinedRegex.exec(value)) !== null) {
                         if (match.index > cursor) {
                             parts.push({
