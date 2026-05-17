@@ -27,6 +27,7 @@ export function LabelsSection({
     const [operations, setOperations] = useState<LabelOperation[]>([]);
 
     // If we reload the pull request we should remove all operations the user made and assume the new pull has the latest data.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the operations
     useEffect(() => {
         setOperations([]);
     }, [pullRequestPromise]);

@@ -23,6 +23,7 @@ export function MilestoneSection({
 }) {
     const [operations, setOperations] = useState<MilestoneOperation[]>([]);
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the operations
     useEffect(() => {
         setOperations([]);
     }, [pullRequestPromise]);
