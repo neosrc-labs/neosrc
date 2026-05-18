@@ -22,8 +22,8 @@ export function remarkMentionPlugin() {
                 let cursor = 0;
                 let match: RegExpExecArray | null;
 
-                // biome-ignore lint/suspicious/noAssignInExpressions: TODO: Fix this
-                while ((match = mentionRegex.exec(value)) !== null) {
+                match = mentionRegex.exec(value);
+                while (match !== null) {
                     if (match.index > cursor) {
                         parts.push({
                             type: "text",
@@ -46,6 +46,8 @@ export function remarkMentionPlugin() {
                     }
 
                     cursor = match.index + match[0].length;
+
+                    match = mentionRegex.exec(value);
                 }
 
                 if (cursor < value.length) {
