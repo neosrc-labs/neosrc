@@ -213,10 +213,14 @@ export const reactionsRouter = createTRPCRouter({
                 ),
             );
 
-            // biome-ignore lint/suspicious/noExplicitAny: type mismatch between Octokit reaction types
-            const reactionMap: Record<number, any> = {};
+            const reactionMap: Record<
+                number,
+                Awaited<ReturnType<typeof getPullRequestReviewCommentReactions>>
+            > = {};
             input.commentIds.forEach((id, i) => {
-                reactionMap[id] = results[i];
+                reactionMap[id] = results[i] as Awaited<
+                    ReturnType<typeof getPullRequestReviewCommentReactions>
+                >;
             });
 
             return reactionMap;
