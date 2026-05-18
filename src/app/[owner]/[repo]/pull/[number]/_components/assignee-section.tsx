@@ -28,10 +28,10 @@ export function AssigneeSection({
 }) {
     const [operations, setOperations] = useState<AssigneeOperation[]>([]);
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: number identifies PR navigation, resets local state
+    // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the operations
     useEffect(() => {
         setOperations([]);
-    }, [number]);
+    }, [pullRequestPromise]);
 
     const { data: repoAssignees } = api.pulls.listAssignees.useQuery({
         owner,
