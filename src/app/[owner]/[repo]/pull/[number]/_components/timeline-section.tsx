@@ -167,7 +167,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
                 {wrappers.map((wrapper, index) => {
                     const key =
                         wrapper.type === "raw"
-                            ? `raw-${wrapper.event.id}`
+                            ? `raw-${wrapper.event.id ?? wrapper.event.node_id}`
                             : `label-${wrapper.createdAt}-${index}`;
                     return (
                         <TimelineEvent
