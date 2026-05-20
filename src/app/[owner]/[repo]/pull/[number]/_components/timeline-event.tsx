@@ -30,9 +30,9 @@ import { Label } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { ReviewComment } from "~/server/github";
 import type {
-    GQLTimelineEvent,
     GQLActor,
     GQLReactionNode,
+    GQLTimelineEvent,
 } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
@@ -421,9 +421,8 @@ function EventContent({
 
         case "HeadRefForcePushedEvent": {
             const timestamp = formatRelativeTime(event.createdAt);
-            const branch = "branch-name";
-            const before = "before";
-            const after = event.afterCommit?.oid.slice(0, 7) ?? "";
+            const before = event.beforeCommit?.oid.slice(0, 7) ?? "unknown";
+            const after = event.afterCommit?.oid.slice(0, 7) ?? "unknown";
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
                     <UserHoverCard login={event.actor?.login ?? ""}>
@@ -440,11 +439,7 @@ function EventContent({
                         </a>
                     </UserHoverCard>
                     <p>
-                        {" force pushed the "}
-                        <span className="font-medium text-gray-800 dark:text-zinc-200">
-                            {branch}
-                        </span>
-                        {" branch from "}
+                        {"force pushed from "}
                         <code className="rounded bg-gray-100 px-1 text-xs dark:bg-zinc-800">
                             {before}
                         </code>
