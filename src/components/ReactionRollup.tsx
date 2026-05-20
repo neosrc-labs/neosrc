@@ -12,8 +12,8 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
-import type { GQLReactionNode } from "~/server/github-graphql";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
+import type { GQLReactionNode } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 
 export type Reaction = GQLReactionNode;
@@ -88,43 +88,38 @@ export function ReactionRollup({
                 repo,
                 number,
             });
-            utils.reactions.get.setData(
-                { owner, repo, number },
-                (old: any) => {
-                    if (!old) return old;
-                    const existing = old.reactions?.find(
-                        (r: any) =>
-                            r.user?.login === resolvedUserLogin &&
-                            r.content === content,
-                    );
-                    const updated = existing
-                        ? old.reactions.filter(
-                              (r: any) => r.id !== existing.id,
-                          )
-                        : [
-                              ...old.reactions,
-                              {
-                                  id: -Date.now(),
+            utils.reactions.get.setData({ owner, repo, number }, (old: any) => {
+                if (!old) return old;
+                const existing = old.reactions?.find(
+                    (r: any) =>
+                        r.user?.login === resolvedUserLogin &&
+                        r.content === content,
+                );
+                const updated = existing
+                    ? old.reactions.filter((r: any) => r.id !== existing.id)
+                    : [
+                          ...old.reactions,
+                          {
+                              id: -Date.now(),
+                              node_id: "",
+                              user: {
+                                  login: resolvedUserLogin ?? "",
+                                  avatar_url: "",
+                                  html_url: "",
+                                  id: 0,
                                   node_id: "",
-                                  user: {
-                                      login: resolvedUserLogin ?? "",
-                                      avatar_url: "",
-                                      html_url: "",
-                                      id: 0,
-                                      node_id: "",
-                                      gravatar_id: "",
-                                      url: "",
-                                      received_events_url: "",
-                                      type: "User",
-                                      site_admin: false,
-                                  },
-                                  content,
-                                  created_at: new Date().toISOString(),
+                                  gravatar_id: "",
+                                  url: "",
+                                  received_events_url: "",
+                                  type: "User",
+                                  site_admin: false,
                               },
-                          ];
-                    return { ...old, reactions: updated };
-                },
-            );
+                              content,
+                              created_at: new Date().toISOString(),
+                          },
+                      ];
+                return { ...old, reactions: updated };
+            });
             return { prevData };
         },
         onError: (_err: any, _vars: any, ctx: any) => {
@@ -223,9 +218,7 @@ export function ReactionRollup({
     if (reactions.length === 0 && !currentUserLogin) return null;
 
     const hasReacted = resolvedUserLogin
-        ? reactions.some(
-              (r) => r.user?.login === resolvedUserLogin,
-          )
+        ? reactions.some((r) => r.user?.login === resolvedUserLogin)
         : false;
 
     return (
@@ -234,9 +227,7 @@ export function ReactionRollup({
                 const group = grouped.get(content);
                 if (!group) return null;
                 const hasReactedToThis = resolvedUserLogin
-                    ? group.some(
-                          (r) => r.user?.login === resolvedUserLogin,
-                      )
+                    ? group.some((r) => r.user?.login === resolvedUserLogin)
                     : false;
 
                 return (
@@ -267,7 +258,7 @@ export function ReactionRollup({
                             </button>
                         </HoverCardTrigger>
                         <HoverCardContent className="w-fit bg-white p-2 dark:bg-zinc-950">
-                            <div className="text-xs text-gray-600 dark:text-zinc-400">
+                            <div className="text-gray-600 text-xs dark:text-zinc-400">
                                 {group
                                     .slice(0, 10)
                                     .map((r) => r.user?.login)
@@ -306,8 +297,7 @@ export function ReactionRollup({
                                             repo,
                                             number,
                                             commentId: commentId ?? number,
-                                            content:
-                                                content as ReactionContent,
+                                            content: content as ReactionContent,
                                         });
                                         setOpen(false);
                                     }}

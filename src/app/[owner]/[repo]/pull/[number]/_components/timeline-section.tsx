@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import type { TimelineResult } from "~/server/api/routers/timeline";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
-import type { GQLTimelineEvent, GQLReactionNode } from "~/server/github-graphql";
+import type { TimelineResult } from "~/server/api/routers/timeline";
+import type {
+    GQLReactionNode,
+    GQLTimelineEvent,
+} from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { CommentForm } from "./comment-form";
 import { TimelineEvent } from "./timeline-event";
@@ -129,9 +132,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 
     const allEvents = data?.pages.flatMap((page) => page.events) ?? [];
     const allCommentReactions =
-        data?.pages.reduce<
-            Record<number, GQLReactionNode[]>
-        >(
+        data?.pages.reduce<Record<number, GQLReactionNode[]>>(
             (acc, page) => {
                 for (const [id, reactions] of Object.entries(
                     page.commentReactions,

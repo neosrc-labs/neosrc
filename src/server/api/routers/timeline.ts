@@ -4,9 +4,9 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
 import {
-    getPullRequestTimelineGraphQL,
-    type GQLTimelineEvent,
     type GQLReactionNode,
+    type GQLTimelineEvent,
+    getPullRequestTimelineGraphQL,
 } from "~/server/github-graphql";
 
 export type TimelineResult = {

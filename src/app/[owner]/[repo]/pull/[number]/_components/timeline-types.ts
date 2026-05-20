@@ -1,4 +1,4 @@
-import type { GQLTimelineEvent, GQLActor } from "~/server/github-graphql";
+import type { GQLActor, GQLTimelineEvent } from "~/server/github-graphql";
 
 export type LabelChange = {
     label: { name: string; color: string };

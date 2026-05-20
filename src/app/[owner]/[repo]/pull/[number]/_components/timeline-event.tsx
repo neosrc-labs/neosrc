@@ -99,10 +99,7 @@ function AggregatedLabel({
             </div>
             <div className="flex flex-wrap items-center gap-1.5 text-gray-600 text-sm dark:text-zinc-400">
                 <UserHoverCard login={actor.login}>
-                    <a
-                        className="flex items-center gap-1.5"
-                        href={actor.url}
-                    >
+                    <a className="flex items-center gap-1.5" href={actor.url}>
                         <img
                             src={actor.avatarUrl}
                             alt={actor.login}
@@ -197,8 +194,7 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
     const isApproved =
         typename === "PullRequestReview" && event.state === "approved";
     const isChangesRequested =
-        typename === "PullRequestReview" &&
-        event.state === "changes_requested";
+        typename === "PullRequestReview" && event.state === "changes_requested";
 
     const circleClass = isApproved
         ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-green-500"
@@ -264,8 +260,7 @@ function EventContent({
         case "IssueComment": {
             if (event.body) {
                 const isEditing = editingCommentId === event.databaseId;
-                const isAuthor =
-                    event.author?.login === currentUserLogin;
+                const isAuthor = event.author?.login === currentUserLogin;
                 const displayBody = savedBodies[event.databaseId] ?? event.body;
                 return (
                     <CommentCard
@@ -525,9 +520,8 @@ function EventContent({
             const source = event.source;
             const repoName = source?.repository.name;
             const repoOwner = source?.repository.owner.login;
-            const repoFullName = repoOwner && repoName
-                ? `${repoOwner}/${repoName}`
-                : null;
+            const repoFullName =
+                repoOwner && repoName ? `${repoOwner}/${repoName}` : null;
             const sourceNumber = source?.number;
             const sourceTitle = source?.title;
             const sourceUrl = source?.url;
@@ -582,10 +576,8 @@ function EventContent({
         case "AssignedEvent":
         case "UnassignedEvent": {
             const timestamp = formatRelativeTime(event.createdAt);
-            const isSelfAssigned =
-                event.actor?.login === event.assignee?.login;
-            const isAssigned =
-                event.__typename === "AssignedEvent";
+            const isSelfAssigned = event.actor?.login === event.assignee?.login;
+            const isAssigned = event.__typename === "AssignedEvent";
 
             if (isSelfAssigned && event.assignee) {
                 return (
@@ -995,10 +987,7 @@ function EventContent({
         }
 
         default:
-            console.warn(
-                `unknown event type: ${event.__typename}`,
-                event,
-            );
+            console.warn(`unknown event type: ${event.__typename}`, event);
             return null;
     }
 }
