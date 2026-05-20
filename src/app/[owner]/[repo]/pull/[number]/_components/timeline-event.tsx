@@ -276,7 +276,10 @@ function EventContent({
                                     <span className="font-medium text-gray-700 dark:text-zinc-300">
                                         {event.author?.login ?? "unknown"}
                                     </span>{" "}
-                                    was minimized
+                                    was minimized as{" "}
+                                    <span className="font-medium text-gray-700 dark:text-zinc-300">
+                                        {event.minimizedReason ?? "outdated"}
+                                    </span>
                                 </p>
                                 <button
                                     type="button"
@@ -324,18 +327,34 @@ function EventContent({
                         owner={owner}
                         repo={repo}
                         headerActions={
-                            isAuthor && (
-                                <button
-                                    type="button"
-                                    className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
-                                    onClick={() => {
-                                        setEditBody(displayBody);
-                                        setEditingCommentId(event.databaseId);
-                                    }}
-                                >
-                                    <SquarePen size={14} />
-                                </button>
-                            )
+                            <>
+                                {event.isMinimized && (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setExpandedMinimized((prev) => ({
+                                                ...prev,
+                                                [event.databaseId]: false,
+                                            }))
+                                        }
+                                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-gray-400 text-xs transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                    >
+                                        Hide comment
+                                    </button>
+                                )}
+                                {isAuthor && (
+                                    <button
+                                        type="button"
+                                        className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                        onClick={() => {
+                                            setEditBody(displayBody);
+                                            setEditingCommentId(event.databaseId);
+                                        }}
+                                    >
+                                        <SquarePen size={14} />
+                                    </button>
+                                )}
+                            </>
                         }
                         footer={
                             !isEditing && (
