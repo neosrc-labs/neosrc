@@ -6,6 +6,7 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
+import { remarkAlert } from "remark-github-blockquote-alert";
 import { IssueHoverCard } from "~/components/issue-hover-card";
 import { TeamHoverCard } from "~/components/team-hover-card";
 import { UserHoverCard } from "~/components/user-hover-card";
@@ -70,7 +71,20 @@ interface MarkdownRendererProps {
 
 const schema = {
     ...defaultSchema,
-    tagNames: [...(defaultSchema.tagNames ?? []), "details", "summary"],
+    tagNames: [
+        ...(defaultSchema.tagNames ?? []),
+        "details",
+        "summary",
+        "svg",
+        "path",
+    ],
+    attributes: {
+        ...defaultSchema.attributes,
+        div: [...(defaultSchema.attributes?.div ?? []), "className"],
+        p: [...(defaultSchema.attributes?.p ?? []), "className"],
+        svg: ["className", "viewBox", "width", "height", "ariaHidden"],
+        path: ["d"],
+    },
 };
 
 export function MarkdownRenderer({
@@ -95,6 +109,7 @@ export function MarkdownRenderer({
                 remarkIssuePlugin(owner, repo),
                 remarkMentionPlugin,
                 remarkEmojiPlugin,
+                remarkAlert,
             ]}
             rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
             components={{
