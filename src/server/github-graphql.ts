@@ -57,6 +57,7 @@ query PullRequestTimeline(
 						author { ...SimpleUser }
 						createdAt
 						authorAssociation
+						isMinimized
 						reactions(first: 10) {
 							nodes {
 								databaseId
@@ -282,6 +283,7 @@ export type GQLIssueComment = {
     author: GQLActor | null;
     createdAt: string;
     authorAssociation: string;
+    isMinimized: boolean;
     reactions: { nodes: (GQLReactionNode | null)[] };
 };
 
@@ -625,7 +627,7 @@ export async function getPullRequestTimelineGraphQL(
         }[]
     > = {};
 
-    for (const node of rawNodes) {
+    for (const node of events) {
         if (node.__typename === "IssueComment") {
             const { reactions, databaseId } = node;
             if (databaseId && reactions?.nodes) {

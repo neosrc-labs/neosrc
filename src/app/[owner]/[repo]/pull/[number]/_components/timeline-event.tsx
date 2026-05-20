@@ -4,6 +4,7 @@ import {
     ArrowUp,
     Check,
     CheckCheck,
+    ChevronDown,
     Circle,
     ClipboardList,
     Eye,
@@ -240,6 +241,7 @@ function EventContent({
     );
     const [editBody, setEditBody] = useState("");
     const [savedBodies, setSavedBodies] = useState<Record<number, string>>({});
+    const [expandedMinimized, setExpandedMinimized] = useState<Record<number, boolean>>({});
 
     const updateCommentMutation = api.pulls.updateComment.useMutation({
         onMutate: ({ commentId, body }) => {
@@ -256,12 +258,43 @@ function EventContent({
         },
     });
 
+    const minimizedExpanded = (id: number) => expandedMinimized[id] ?? false;
+
     switch (event.__typename) {
         case "IssueComment": {
             if (event.body) {
                 const isEditing = editingCommentId === event.databaseId;
                 const isAuthor = event.author?.login === currentUserLogin;
                 const displayBody = savedBodies[event.databaseId] ?? event.body;
+                const isMinimized = event.isMinimized && !minimizedExpanded(event.databaseId);
+                if (isMinimized) {
+                    return (
+                        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-900/50">
+                            <div className="flex items-center justify-between">
+                                <p className="text-gray-500 text-sm dark:text-zinc-400">
+                                    A comment by{" "}
+                                    <span className="font-medium text-gray-700 dark:text-zinc-300">
+                                        {event.author?.login ?? "unknown"}
+                                    </span>{" "}
+                                    was minimized
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setExpandedMinimized((prev) => ({
+                                            ...prev,
+                                            [event.databaseId]: true,
+                                        }))
+                                    }
+                                    className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-gray-500 text-xs transition-colors hover:bg-gray-200 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
+                                >
+                                    <ChevronDown size={14} />
+                                    Show comment
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
                 return (
                     <CommentCard
                         user={
