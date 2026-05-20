@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import type { TimelineResult } from "~/server/api/routers/timeline";
-import type { TimelineEventData } from "~/server/github";
+import type { GQLTimelineEvent, GQLReactionNode } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { CommentForm } from "./comment-form";
 import { TimelineEvent } from "./timeline-event";
@@ -25,55 +25,48 @@ function deduplicateChanges(changes: LabelChange[]): LabelChange[] {
 
 const MAX_LABEL_GAP_MS = 3 * 60 * 60 * 1000;
 
-function aggregateEvents(events: TimelineEventData[]): TimelineWrapper[] {
+function aggregateEvents(events: GQLTimelineEvent[]): TimelineWrapper[] {
     const result: TimelineWrapper[] = [];
     let i = 0;
 
     while (i < events.length) {
         const event = events[i]!;
 
-        if (event.event === "labeled" || event.event === "unlabeled") {
+        if (
+            event.__typename === "LabeledEvent" ||
+            event.__typename === "UnlabeledEvent"
+        ) {
             const changes: LabelChange[] = [];
 
             while (i < events.length) {
                 const current = events[i]!;
                 if (
-                    current.event !== "labeled" &&
-                    current.event !== "unlabeled"
+                    current.__typename !== "LabeledEvent" &&
+                    current.__typename !== "UnlabeledEvent"
                 ) {
                     break;
                 }
                 if (changes.length > 0) {
-                    const curr = current as TimelineEventData & {
-                        created_at: string;
-                    };
                     const gap =
-                        new Date(curr.created_at).getTime() -
+                        new Date(current.createdAt).getTime() -
                         new Date(
                             changes[changes.length - 1]!.createdAt,
                         ).getTime();
                     if (gap > MAX_LABEL_GAP_MS) break;
                 }
 
-                const e = current as TimelineEventData & {
-                    label?: { name: string; color: string };
-                    actor?: {
-                        login: string;
-                        avatar_url: string;
-                        html_url: string;
-                    };
-                    created_at: string;
-                };
-                if (e.label && e.actor) {
+                if (current.label && current.actor) {
                     changes.push({
-                        label: { name: e.label.name, color: e.label.color },
-                        event: e.event as "labeled" | "unlabeled",
-                        actor: {
-                            login: e.actor.login,
-                            avatar_url: e.actor.avatar_url,
-                            html_url: e.actor.html_url,
+                        label: {
+                            name: current.label.name,
+                            color: current.label.color,
                         },
-                        createdAt: e.created_at,
+                        event:
+                            current.__typename === "LabeledEvent"
+                                ? "labeled"
+                                : "unlabeled",
+                        actor: current.actor,
+                        createdAt: current.createdAt,
                     });
                 }
                 i++;
@@ -108,7 +101,7 @@ interface TimelineSectionProps {
 export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
         api.timeline.list.useInfiniteQuery(
-            { owner, repo, number, limit: 30 },
+            { owner, repo, number, limit: 100 },
             {
                 getNextPageParam: (lastPage) => lastPage.nextCursor,
             },
@@ -135,13 +128,25 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
 
     const allEvents = data?.pages.flatMap((page) => page.events) ?? [];
     const allCommentReactions =
-        data?.pages.reduce<TimelineResult["commentReactions"]>(
-            (acc, page) => Object.assign(acc, page.commentReactions),
-            {} as TimelineResult["commentReactions"],
+        data?.pages.reduce<
+            Record<number, GQLReactionNode[]>
+        >(
+            (acc, page) => {
+                for (const [id, reactions] of Object.entries(
+                    page.commentReactions,
+                )) {
+                    acc[Number(id)] = reactions;
+                }
+                return acc;
+            },
+            {} as Record<number, GQLReactionNode[]>,
         ) ?? {};
     const currentUserLogin = data?.pages[0]?.currentUserLogin ?? "";
     const filteredEvents = allEvents.filter((event) => {
-        if (event.event && ["mentioned", "subscribed"].includes(event.event)) {
+        if (
+            event.__typename === "MentionedEvent" ||
+            event.__typename === "SubscribedEvent"
+        ) {
             return false;
         }
         return true;
@@ -167,7 +172,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
                 {wrappers.map((wrapper, index) => {
                     const key =
                         wrapper.type === "raw"
-                            ? `raw-${wrapper.event.id ?? wrapper.event.node_id}`
+                            ? `raw-${wrapper.event.id}-${index}`
                             : `label-${wrapper.createdAt}-${index}`;
                     return (
                         <TimelineEvent

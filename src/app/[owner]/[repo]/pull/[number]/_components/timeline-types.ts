@@ -1,22 +1,22 @@
-import type { TimelineEventData } from "~/server/github";
+import type { GQLTimelineEvent, GQLActor } from "~/server/github-graphql";
 
 export type LabelChange = {
     label: { name: string; color: string };
     event: "labeled" | "unlabeled";
-    actor: { login: string; avatar_url: string; html_url: string };
+    actor: GQLActor;
     createdAt: string;
 };
 
 export type AggregatedLabelEvent = {
     type: "aggregated-label";
     changes: LabelChange[];
-    actor: { login: string; avatar_url: string; html_url: string };
+    actor: GQLActor;
     createdAt: string;
 };
 
 export type RawEventWrapper = {
     type: "raw";
-    event: TimelineEventData;
+    event: GQLTimelineEvent;
 };
 
 export type TimelineWrapper = RawEventWrapper | AggregatedLabelEvent;

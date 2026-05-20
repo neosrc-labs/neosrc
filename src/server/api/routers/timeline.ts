@@ -1,18 +1,26 @@
-import type { components } from "@octokit/openapi-types";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
-import { getPullRequestTimelineGraphQL } from "~/server/github-graphql";
-import type { TimelineEventData } from "~/server/github";
-
-type ReactionData = components["schemas"]["reaction"];
+import {
+    getPullRequestTimelineGraphQL,
+    type GQLTimelineEvent,
+    type GQLReactionNode,
+} from "~/server/github-graphql";
 
 export type TimelineResult = {
-    events: TimelineEventData[];
+    events: GQLTimelineEvent[];
     nextCursor: string | undefined;
-    commentReactions: Record<number, ReactionData[]>;
+    commentReactions: Record<
+        number,
+        {
+            databaseId: number;
+            content: string;
+            createdAt: string;
+            user: { login: string } | null;
+        }[]
+    >;
     currentUserLogin: string;
 };
 
@@ -50,10 +58,7 @@ export const timelineRouter = createTRPCRouter({
             return {
                 events: result.events,
                 nextCursor: result.hasMore ? result.endCursor : undefined,
-                commentReactions: result.commentReactions as Record<
-                    number,
-                    ReactionData[]
-                >,
+                commentReactions: result.commentReactions,
                 currentUserLogin: result.currentUserLogin,
             } satisfies TimelineResult;
         }),

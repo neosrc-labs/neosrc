@@ -1,5 +1,8 @@
 import { graphql as octokitGraphql } from "@octokit/graphql";
-import type { TimelineEventData } from "./github";
+
+// NOTE: The itemType filter is an explict whitelist because of https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/about-oauth-app-access-restrictions
+// Some event types ADDED_TO_PROJECT_V2_EVENT and PROJECT_V2_ITEM_STATUS_CHANGED_EVENT (and maybe others) will 
+// result in the entire API call failing.
 
 const TIMELINE_QUERY = `
 fragment SimpleUser on Actor {
@@ -17,10 +20,38 @@ query PullRequestTimeline(
 ) {
 	repository(owner: $owner, name: $repo) {
 		pullRequest(number: $number) {
-			timelineItems(first: $first, after: $after) {
+			timelineItems(first: $first, after: $after, itemTypes: [
+				ISSUE_COMMENT,
+				PULL_REQUEST_REVIEW,
+				HEAD_REF_FORCE_PUSHED_EVENT,
+				HEAD_REF_DELETED_EVENT,
+				HEAD_REF_RESTORED_EVENT,
+				CROSS_REFERENCED_EVENT,
+				ASSIGNED_EVENT,
+				UNASSIGNED_EVENT,
+				CLOSED_EVENT,
+				REOPENED_EVENT,
+				MERGED_EVENT,
+				LABELED_EVENT,
+				UNLABELED_EVENT,
+				RENAMED_TITLE_EVENT,
+				LOCKED_EVENT,
+				UNLOCKED_EVENT,
+				MILESTONED_EVENT,
+				DEMILESTONED_EVENT,
+				REVIEW_REQUESTED_EVENT,
+				REVIEW_REQUEST_REMOVED_EVENT,
+				CONVERT_TO_DRAFT_EVENT,
+				READY_FOR_REVIEW_EVENT,
+				REFERENCED_EVENT,
+				COMMENT_DELETED_EVENT,
+				PULL_REQUEST_COMMIT,
+				REVIEW_DISMISSED_EVENT
+			]) {
 				nodes {
 					__typename
 					... on IssueComment {
+						id
 						databaseId
 						body
 						author { ...SimpleUser }
@@ -36,11 +67,13 @@ query PullRequestTimeline(
 						}
 					}
 					... on PullRequestReview {
+						id
 						databaseId
-						state
+						author { login avatarUrl url }
 						body
-						author { ...SimpleUser }
+						state
 						submittedAt
+						createdAt
 					}
 					... on HeadRefForcePushedEvent {
 						id
@@ -205,6 +238,7 @@ query PullRequestTimeline(
 						deletedCommentAuthor { ...SimpleUser }
 					}
 					... on PullRequestCommit {
+						id
 						commit { oid message committedDate }
 					}
 					... on ReviewDismissedEvent {
@@ -225,513 +259,323 @@ query PullRequestTimeline(
 }
 `;
 
-type SimpleUser = {
+
+export type GQLActor = {
 	login: string;
 	avatarUrl: string;
 	url: string;
 };
 
-function mapUser(
-	user: SimpleUser | null | undefined,
-): Record<string, unknown> | null {
-	if (!user) return null;
-	return {
-		login: user.login,
-		id: 0,
-		node_id: "",
-		avatar_url: user.avatarUrl,
-		gravatar_id: "",
-		url: user.url,
-		html_url: user.url,
-		followers_url: "",
-		following_url: "",
-		gists_url: "",
-		starred_url: "",
-		subscriptions_url: "",
-		organizations_url: "",
-		repos_url: "",
-		events_url: "",
-		received_events_url: "",
-		type: "User",
-		site_admin: false,
-	};
-}
-
-function mapReactionContent(content: string): string {
-	if (content === "THUMBS_UP") return "+1";
-	if (content === "THUMBS_DOWN") return "-1";
-	return content.toLowerCase();
-}
-
-function transformNode(node: Record<string, unknown>): TimelineEventData {
-	const typename = node.__typename as string;
-
-	switch (typename) {
-		case "IssueComment": {
-			const author = node.author as SimpleUser | null | undefined;
-			const user = mapUser(author);
-			return {
-				event: "commented",
-				id: (node.databaseId as number) ?? 0,
-				node_id: node.id as string,
-				url: "",
-				body: (node.body as string) ?? "",
-				actor: user,
-				user,
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				author_association: (node.authorAssociation as string) ?? "NONE",
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "PullRequestReview": {
-			const author = node.author as SimpleUser | null | undefined;
-			const state = (node.state as string) ?? "";
-			const stateMap: Record<string, string> = {
-				APPROVED: "approved",
-				CHANGES_REQUESTED: "changes_requested",
-				COMMENTED: "commented",
-				PENDING: "pending",
-				DISMISSED: "dismissed",
-			};
-			return {
-				event: "reviewed",
-				id: (node.databaseId as number) ?? 0,
-				node_id: node.id as string,
-				url: "",
-				user: mapUser(author),
-				body: (node.body as string) ?? "",
-				state: stateMap[state] ?? state.toLowerCase(),
-				submitted_at: node.submittedAt as string,
-				updated_at: node.submittedAt as string,
-				commit_id: null,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "HeadRefForcePushedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "head_ref_force_pushed",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				commit_id:
-					((node.afterCommit as { oid?: string } | null)?.oid as string) ?? "",
-				commit_url: null,
-				created_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "HeadRefDeletedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "head_ref_deleted",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				created_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "HeadRefRestoredEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "head_ref_restored",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				created_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "CrossReferencedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			const source = node.source as Record<string, unknown> | null;
-			return {
-				event: "cross-referenced",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				source: source
-					? {
-							type: (source.__typename as string)?.toLowerCase() ?? "",
-							issue: {
-								number: source.number as number,
-								title: source.title as string,
-								state: source.state as string,
-								locked: false,
-								html_url: source.url as string,
-								pull_request:
-									(source.__typename as string) === "PullRequest"
-										? {}
-										: undefined,
-								repository: {
-									name: ((source.repository as Record<string, unknown>)
-										?.name as string),
-									owner: {
-										login: (
-											(source.repository as Record<string, unknown>)
-												?.owner as Record<string, unknown>
-										)?.login as string,
-									},
-									full_name: "",
-									html_url: "",
-								},
-							},
-						}
-					: null,
-			} as TimelineEventData;
-		}
-
-		case "AssignedEvent":
-		case "UnassignedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			const assignee = node.assignee as SimpleUser | null | undefined;
-			return {
-				event: typename === "AssignedEvent" ? "assigned" : "unassigned",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				assignee: mapUser(assignee ?? actor),
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "ClosedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "closed",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "ReopenedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "reopened",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "MergedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "merged",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-			} as TimelineEventData;
-		}
-
-		case "LabeledEvent":
-		case "UnlabeledEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			const label = node.label as { name?: string; color?: string } | null;
-			return {
-				event: typename === "LabeledEvent" ? "labeled" : "unlabeled",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				label: label
-					? { name: label.name ?? "", color: label.color ?? "" }
-					: undefined,
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "RenamedTitleEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "renamed",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				rename: {
-					from: (node.previousTitle as string) ?? "",
-					to: (node.currentTitle as string) ?? "",
-				},
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "LockedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "locked",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				lock_reason: (node.lockReason as string) ?? null,
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "UnlockedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "unlocked",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				lock_reason: null,
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "MilestonedEvent":
-		case "DemilestonedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			const milestoneTitle = node.milestoneTitle as string | null | undefined;
-			return {
-				event: typename === "MilestonedEvent" ? "milestoned" : "demilestoned",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				milestone: milestoneTitle
-					? { title: milestoneTitle }
-					: undefined,
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "ReviewRequestedEvent":
-		case "ReviewRequestRemovedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			const requestedReviewer = node.requestedReviewer as Record<
-				string,
-				unknown
-			> | null;
-			const isUser =
-				requestedReviewer?.__typename === "User";
-			const isTeam =
-				requestedReviewer?.__typename === "Team";
-			return {
-				event:
-					typename === "ReviewRequestedEvent"
-						? "review_requested"
-						: "review_request_removed",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				requested_reviewer: isUser
-					? mapUser(requestedReviewer as unknown as SimpleUser)
-					: null,
-				requested_team: isTeam
-					? {
-							name: (requestedReviewer?.name as string) ?? undefined,
-							slug: (requestedReviewer?.slug as string) ?? "",
-						}
-					: undefined,
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "ConvertToDraftEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "convert_to_draft",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "ReadyForReviewEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "ready_for_review",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "ReferencedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			const commit = node.commit as Record<string, unknown> | null;
-			const commitRepo = node.commitRepository as Record<
-				string,
-				unknown
-			> | null;
-			return {
-				event: "referenced",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				commit_id: (commit?.oid as string) ?? "",
-				commit_url: (commit?.commitUrl as string) ?? null,
-				created_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "PullRequestCommit": {
-			const commit = node.commit as Record<string, unknown> | null;
-			return {
-				event: "committed",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				sha: (commit?.oid as string) ?? "",
-				message: (commit?.message as string) ?? "",
-			} as TimelineEventData;
-		}
-
-		case "AddedToProjectV2Event": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "added_to_project_v2",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "ProjectV2ItemStatusChangedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "project_v2_item_status_changed",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "CommentDeletedEvent": {
-			const deletedAuthor = node.deletedCommentAuthor as SimpleUser | null | undefined;
-			return {
-				event: "commented",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				body: null,
-				actor: mapUser(deletedAuthor ?? (node.actor as SimpleUser | null | undefined)),
-				user: mapUser(deletedAuthor ?? (node.actor as SimpleUser | null | undefined)),
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				author_association: "NONE",
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "ReviewDismissedEvent": {
-			const actor = node.actor as SimpleUser | null | undefined;
-			return {
-				event: "review_dismissed",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(actor),
-				dismissed_review: {
-					dismissal_message: (node.dismissalMessage as string) ?? "",
-				},
-				created_at: node.createdAt as string,
-				updated_at: node.createdAt as string,
-				performed_via_github_app: null,
-			} as TimelineEventData;
-		}
-
-		case "MentionedEvent":
-			return {
-				event: "mentioned",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(node.actor as SimpleUser | null | undefined),
-				created_at: (node.createdAt as string) ?? "",
-			} as TimelineEventData;
-
-		case "SubscribedEvent":
-			return {
-				event: "subscribed",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(node.actor as SimpleUser | null | undefined),
-				created_at: (node.createdAt as string) ?? "",
-			} as TimelineEventData;
-
-		default:
-			return {
-				event: typename ?? "unknown",
-				id: 0,
-				node_id: node.id as string,
-				url: "",
-				actor: mapUser(node.actor as SimpleUser | null | undefined),
-				created_at: (node.createdAt as string) ?? "",
-			} as TimelineEventData;
-	}
-}
-
-type ReactionNode = {
+export type GQLReactionNode = {
 	databaseId: number;
 	content: string;
 	createdAt: string;
 	user: { login: string } | null;
+};
+
+export type GQLLabel = { name: string; color: string };
+
+export type GQLIssueComment = {
+	__typename: "IssueComment";
+	id: string;
+	databaseId: number;
+	body: string;
+	author: GQLActor | null;
+	createdAt: string;
+	authorAssociation: string;
+	reactions: { nodes: (GQLReactionNode | null)[] };
+};
+
+export type GQLPullRequestReview = {
+	__typename: "PullRequestReview";
+	id: string;
+	databaseId: number;
+	state: string;
+	body: string;
+	author: GQLActor | null;
+	submittedAt: string | null;
+	createdAt: string;
+};
+
+export type GQLHeadRefForcePushedEvent = {
+	__typename: "HeadRefForcePushedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	ref?: { name: string } | null;
+	beforeCommit?: { oid: string } | null;
+	afterCommit?: { oid: string } | null;
+};
+
+export type GQLHeadRefDeletedEvent = {
+	__typename: "HeadRefDeletedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+};
+
+export type GQLHeadRefRestoredEvent = {
+	__typename: "HeadRefRestoredEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+};
+
+export type GQLCrossReferencedEvent = {
+	__typename: "CrossReferencedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	source:
+	| {
+		__typename: "Issue" | "PullRequest";
+		number: number;
+		title: string;
+		url: string;
+		state: string;
+		repository: { name: string; owner: { login: string } };
+	}
+	| null;
+};
+
+export type GQLAssignedEvent = {
+	__typename: "AssignedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	assignee: GQLActor | null;
+};
+
+export type GQLUnassignedEvent = {
+	__typename: "UnassignedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	assignee: GQLActor | null;
+};
+
+export type GQLClosedEvent = {
+	__typename: "ClosedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+};
+
+export type GQLReopenedEvent = {
+	__typename: "ReopenedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+};
+
+export type GQLMergedEvent = {
+	__typename: "MergedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+};
+
+export type GQLLabeledEvent = {
+	__typename: "LabeledEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	label: GQLLabel | null;
+};
+
+export type GQLUnlabeledEvent = {
+	__typename: "UnlabeledEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	label: GQLLabel | null;
+};
+
+export type GQLRenamedTitleEvent = {
+	__typename: "RenamedTitleEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	previousTitle: string;
+	currentTitle: string;
+};
+
+export type GQLLockedEvent = {
+	__typename: "LockedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	lockReason: string | null;
+};
+
+export type GQLUnlockedEvent = {
+	__typename: "UnlockedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+};
+
+export type GQLMilestonedEvent = {
+	__typename: "MilestonedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	milestoneTitle: string | null;
+};
+
+export type GQLDemilestonedEvent = {
+	__typename: "DemilestonedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	milestoneTitle: string | null;
+};
+
+export type GQLReviewRequestedEvent = {
+	__typename: "ReviewRequestedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	requestedReviewer:
+	| { __typename: "User"; login: string; avatarUrl: string; url: string }
+	| { __typename: "Team"; name?: string; slug: string }
+	| null;
+};
+
+export type GQLReviewRequestRemovedEvent = {
+	__typename: "ReviewRequestRemovedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	requestedReviewer:
+	| { __typename: "User"; login: string; avatarUrl: string; url: string }
+	| { __typename: "Team"; name?: string; slug: string }
+	| null;
+};
+
+export type GQLConvertToDraftEvent = {
+	__typename: "ConvertToDraftEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+};
+
+export type GQLReadyForReviewEvent = {
+	__typename: "ReadyForReviewEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+};
+
+export type GQLReferencedEvent = {
+	__typename: "ReferencedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	commit: {
+		oid: string;
+		committedDate?: string;
+		messageHeadline?: string;
+		commitUrl?: string;
+	} | null;
+	commitRepository?: { name: string; owner: { login: string } } | null;
+};
+
+export type GQLAddedToProjectV2Event = {
+	__typename: "AddedToProjectV2Event";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+};
+
+export type GQLProjectV2ItemStatusChangedEvent = {
+	__typename: "ProjectV2ItemStatusChangedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+};
+
+export type GQLCommentDeletedEvent = {
+	__typename: "CommentDeletedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	deletedCommentAuthor: GQLActor | null;
+};
+
+export type GQLPullRequestCommit = {
+	__typename: "PullRequestCommit";
+	id: string;
+	commit: {
+		oid: string;
+		message: string;
+		committedDate?: string;
+	} | null;
+};
+
+export type GQLReviewDismissedEvent = {
+	__typename: "ReviewDismissedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+	dismissalMessage: string | null;
+};
+
+export type GQLMentionedEvent = {
+	__typename: "MentionedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+};
+
+export type GQLSubscribedEvent = {
+	__typename: "SubscribedEvent";
+	id: string;
+	actor: GQLActor | null;
+	createdAt: string;
+};
+
+export type GQLTimelineEvent =
+	| GQLIssueComment
+	| GQLPullRequestReview
+	| GQLHeadRefForcePushedEvent
+	| GQLHeadRefDeletedEvent
+	| GQLHeadRefRestoredEvent
+	| GQLCrossReferencedEvent
+	| GQLAssignedEvent
+	| GQLUnassignedEvent
+	| GQLClosedEvent
+	| GQLReopenedEvent
+	| GQLMergedEvent
+	| GQLLabeledEvent
+	| GQLUnlabeledEvent
+	| GQLRenamedTitleEvent
+	| GQLLockedEvent
+	| GQLUnlockedEvent
+	| GQLMilestonedEvent
+	| GQLDemilestonedEvent
+	| GQLReviewRequestedEvent
+	| GQLReviewRequestRemovedEvent
+	| GQLConvertToDraftEvent
+	| GQLReadyForReviewEvent
+	| GQLReferencedEvent
+	| GQLAddedToProjectV2Event
+	| GQLProjectV2ItemStatusChangedEvent
+	| GQLCommentDeletedEvent
+	| GQLPullRequestCommit
+	| GQLReviewDismissedEvent
+	| GQLMentionedEvent
+	| GQLSubscribedEvent;
+
+const CONTENT_MAP: Record<string, string> = {
+	THUMBS_UP: "+1",
+	THUMBS_DOWN: "-1",
+	LAUGH: "laugh",
+	HOORAY: "hooray",
+	CONFUSED: "confused",
+	HEART: "heart",
+	ROCKET: "rocket",
+	EYES: "eyes",
 };
 
 export async function getPullRequestTimelineGraphQL(
@@ -743,9 +587,7 @@ export async function getPullRequestTimelineGraphQL(
 	after?: string,
 ) {
 	const graphql = octokitGraphql.defaults({
-		headers: {
-			authorization: `bearer ${accessToken}`,
-		},
+		headers: { authorization: `bearer ${accessToken}` },
 	});
 
 	const result = await graphql<{
@@ -768,49 +610,36 @@ export async function getPullRequestTimelineGraphQL(
 
 	const rawNodes = result.repository.pullRequest.timelineItems.nodes.filter(
 		Boolean,
-	);
+	) as GQLTimelineEvent[];
 
-	const events: TimelineEventData[] = [];
-	const commentReactions: Record<number, { id: number; node_id: string; user: { login: string; avatar_url: string; html_url: string; id: number; node_id: string; gravatar_id: string; url: string; received_events_url: string; type: string; site_admin: boolean } | null; content: string; created_at: string }[]> = {};
+	const events = rawNodes;
+	const pageInfo = result.repository.pullRequest.timelineItems.pageInfo;
+
+	const commentReactions: Record<
+		number,
+		{
+			databaseId: number;
+			content: string;
+			createdAt: string;
+			user: { login: string } | null;
+		}[]
+	> = {};
 
 	for (const node of rawNodes) {
-		const event = transformNode(node);
-		events.push(event);
-
 		if (node.__typename === "IssueComment") {
-			const commentId = (node as Record<string, unknown>).databaseId as number;
-			const reactions = (node as Record<string, unknown>)
-				.reactions as unknown as {
-				nodes: ReactionNode[];
-			} | null;
-			if (commentId && reactions?.nodes) {
-				commentReactions[commentId] = reactions.nodes
-					.filter(Boolean)
+			const { reactions, databaseId } = node;
+			if (databaseId && reactions?.nodes) {
+				commentReactions[databaseId] = reactions.nodes
+					.filter((r): r is GQLReactionNode => r !== null)
 					.map((r) => ({
-						id: r.databaseId,
-						node_id: "",
-						user: r.user
-							? {
-									login: r.user.login,
-									avatar_url: "",
-									html_url: "",
-									id: 0,
-									node_id: "",
-									gravatar_id: "",
-									url: "",
-									received_events_url: "",
-									type: "User",
-									site_admin: false,
-								}
-							: null,
-						content: mapReactionContent(r.content),
-						created_at: r.createdAt,
+						databaseId: r.databaseId,
+						content: CONTENT_MAP[r.content] ?? r.content.toLowerCase(),
+						createdAt: r.createdAt,
+						user: r.user,
 					}));
 			}
 		}
 	}
-
-	const pageInfo = result.repository.pullRequest.timelineItems.pageInfo;
 
 	return {
 		events,

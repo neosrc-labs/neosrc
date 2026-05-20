@@ -1,6 +1,5 @@
 "use client";
 
-import type { components } from "@octokit/openapi-types";
 import {
     ArrowUp,
     Check,
@@ -29,7 +28,12 @@ import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { type Reaction, ReactionRollup } from "~/components/ReactionRollup";
 import { Label } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
-import type { ReviewComment, TimelineEventData } from "~/server/github";
+import type { ReviewComment } from "~/server/github";
+import type {
+    GQLTimelineEvent,
+    GQLActor,
+    GQLReactionNode,
+} from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 import { ReviewComments } from "./review-comments";
@@ -40,52 +44,10 @@ interface TimelineEventProps {
     owner: string;
     repo: string;
     number: number;
-    commentReactions: Record<number, Reaction[]>;
+    commentReactions: Record<number, GQLReactionNode[]>;
     currentUserLogin: string;
     allComments: ReviewComment[];
 }
-
-type CommentEvent = components["schemas"]["timeline-comment-event"];
-type CommittedEvent = components["schemas"]["timeline-committed-event"];
-type CrossReferencedEvent =
-    components["schemas"]["timeline-cross-referenced-event"];
-type AssignedEvent = components["schemas"]["timeline-assigned-issue-event"];
-type RenamedEvent = components["schemas"]["renamed-issue-event"];
-type StateChangeEvent = components["schemas"]["state-change-issue-event"];
-type ReviewEvent = components["schemas"]["timeline-reviewed-event"];
-type EventWithDismissedReview =
-    components["schemas"]["review-dismissed-issue-event"];
-type MilestonedEvent = components["schemas"]["milestoned-issue-event"];
-type DemilestonedEvent = components["schemas"]["demilestoned-issue-event"];
-type LockedEvent = components["schemas"]["locked-issue-event"];
-type ReviewRequestedEvent =
-    components["schemas"]["review-requested-issue-event"];
-type ReviewRequestRemovedEvent =
-    components["schemas"]["review-request-removed-issue-event"];
-type AddedToProjectEvent =
-    components["schemas"]["added-to-project-issue-event"];
-type ForcePushEvent = {
-    event: "head_ref_force_pushed";
-    id: number;
-    node_id: string;
-    url: string;
-    actor: components["schemas"]["simple-user"];
-    commit_id: string;
-    commit_url: string | null;
-    created_at: string;
-    performed_via_github_app: components["schemas"]["nullable-integration"];
-};
-type ReferencedEvent = {
-    event: "referenced";
-    id: number;
-    node_id: string;
-    url: string;
-    actor: components["schemas"]["simple-user"];
-    commit_id: string;
-    commit_url: string | null;
-    created_at: string;
-    performed_via_github_app: components["schemas"]["nullable-integration"];
-};
 
 export function TimelineEvent({
     wrapper,
@@ -139,10 +101,10 @@ function AggregatedLabel({
                 <UserHoverCard login={actor.login}>
                     <a
                         className="flex items-center gap-1.5"
-                        href={actor.html_url}
+                        href={actor.url}
                     >
                         <img
-                            src={actor.avatar_url}
+                            src={actor.avatarUrl}
                             alt={actor.login}
                             className="h-5 w-5 rounded-full"
                         />
@@ -194,49 +156,49 @@ function AggregatedLabel({
 
 const ICON_SIZE = 16;
 
-function TimelineIcon({ event }: { event: TimelineEventData }) {
+function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
     const iconMap: Record<string, React.ReactNode> = {
-        commented: <MessageSquare size={ICON_SIZE} />,
-        reviewed: <Eye size={ICON_SIZE} />, // NOTE: Reviews can be "netural (not approve or request changes)"
-        closed: (
+        IssueComment: <MessageSquare size={ICON_SIZE} />,
+        PullRequestReview: <Eye size={ICON_SIZE} />,
+        ClosedEvent: (
             <Circle className="fill-red-500/20 text-red-500" size={ICON_SIZE} />
         ),
-        reopened: (
+        ReopenedEvent: (
             <Circle
                 className="fill-green-500/20 text-green-500"
                 size={ICON_SIZE}
             />
         ),
-        merged: <GitMerge className="text-purple-500" size={ICON_SIZE} />,
-        labeled: <Tag size={ICON_SIZE} />,
-        unlabeled: <Tag size={ICON_SIZE} />,
-        assigned: <User size={ICON_SIZE} />,
-        unassigned: <User size={ICON_SIZE} />,
-        review_requested: <ClipboardList size={ICON_SIZE} />,
-        review_request_removed: <ClipboardList size={ICON_SIZE} />,
-        committed: <GitCommitHorizontal size={ICON_SIZE} />,
-        renamed: <Pencil size={ICON_SIZE} />,
-        locked: <Lock size={ICON_SIZE} />,
-        unlocked: <LockOpen size={ICON_SIZE} />,
-        milestoned: <Target size={ICON_SIZE} />,
-        demilestoned: <Target size={ICON_SIZE} />,
-        "cross-referenced": <Link size={ICON_SIZE} />,
-        referenced: <Link size={ICON_SIZE} />,
-        head_ref_deleted: <Trash2 size={ICON_SIZE} />,
-        head_ref_restored: <RefreshCw size={ICON_SIZE} />,
-        convert_to_draft: <FileText size={ICON_SIZE} />,
-        ready_for_review: <CheckCheck size={ICON_SIZE} />,
-        head_ref_force_pushed: <ArrowUp size={ICON_SIZE} />,
-        added_to_project_v2: <ClipboardList size={ICON_SIZE} />,
-        project_v2_item_status_changed: <RefreshCw size={ICON_SIZE} />,
+        MergedEvent: <GitMerge className="text-purple-500" size={ICON_SIZE} />,
+        LabeledEvent: <Tag size={ICON_SIZE} />,
+        UnlabeledEvent: <Tag size={ICON_SIZE} />,
+        AssignedEvent: <User size={ICON_SIZE} />,
+        UnassignedEvent: <User size={ICON_SIZE} />,
+        ReviewRequestedEvent: <ClipboardList size={ICON_SIZE} />,
+        ReviewRequestRemovedEvent: <ClipboardList size={ICON_SIZE} />,
+        PullRequestCommit: <GitCommitHorizontal size={ICON_SIZE} />,
+        RenamedTitleEvent: <Pencil size={ICON_SIZE} />,
+        LockedEvent: <Lock size={ICON_SIZE} />,
+        UnlockedEvent: <LockOpen size={ICON_SIZE} />,
+        MilestonedEvent: <Target size={ICON_SIZE} />,
+        DemilestonedEvent: <Target size={ICON_SIZE} />,
+        CrossReferencedEvent: <Link size={ICON_SIZE} />,
+        ReferencedEvent: <Link size={ICON_SIZE} />,
+        HeadRefDeletedEvent: <Trash2 size={ICON_SIZE} />,
+        HeadRefRestoredEvent: <RefreshCw size={ICON_SIZE} />,
+        ConvertToDraftEvent: <FileText size={ICON_SIZE} />,
+        ReadyForReviewEvent: <CheckCheck size={ICON_SIZE} />,
+        HeadRefForcePushedEvent: <ArrowUp size={ICON_SIZE} />,
+        AddedToProjectV2Event: <ClipboardList size={ICON_SIZE} />,
+        ProjectV2ItemStatusChangedEvent: <RefreshCw size={ICON_SIZE} />,
     };
 
+    const typename = event.__typename;
     const isApproved =
-        event.event === "reviewed" &&
-        (event as ReviewEvent).state === "approved";
+        typename === "PullRequestReview" && event.state === "approved";
     const isChangesRequested =
-        event.event === "reviewed" &&
-        (event as ReviewEvent).state === "changes_requested";
+        typename === "PullRequestReview" &&
+        event.state === "changes_requested";
 
     const circleClass = isApproved
         ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-green-500"
@@ -244,13 +206,12 @@ function TimelineIcon({ event }: { event: TimelineEventData }) {
           ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-red-500"
           : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700";
 
-    let icon = iconMap[event.event ?? ""] ?? <Circle size={ICON_SIZE} />;
+    let icon = iconMap[typename] ?? <Circle size={ICON_SIZE} />;
 
-    if (event.event === "reviewed") {
-        const e = event as ReviewEvent;
-        if (e.state === "approved")
+    if (typename === "PullRequestReview") {
+        if (event.state === "approved")
             icon = <Check className="text-white" size={ICON_SIZE} />;
-        if (e.state === "changes_requested")
+        if (event.state === "changes_requested")
             icon = <FileText className="text-white" size={ICON_SIZE} />;
     }
 
@@ -270,11 +231,11 @@ function EventContent({
     currentUserLogin,
     allComments,
 }: {
-    event: TimelineEventData;
+    event: GQLTimelineEvent;
     owner: string;
     repo: string;
     number: number;
-    commentReactions: Record<number, Reaction[]>;
+    commentReactions: Record<number, GQLReactionNode[]>;
     currentUserLogin: string;
     allComments: ReviewComment[];
 }) {
@@ -299,21 +260,27 @@ function EventContent({
         },
     });
 
-    switch (event.event) {
-        case "commented": {
-            const e = event as CommentEvent;
-            if (e.body) {
-                const actor = e.actor ?? e.user;
-                const isEditing = editingCommentId === e.id;
-                const isAuthor = actor?.login === currentUserLogin;
-                const displayBody = savedBodies[e.id] ?? e.body;
+    switch (event.__typename) {
+        case "IssueComment": {
+            if (event.body) {
+                const isEditing = editingCommentId === event.databaseId;
+                const isAuthor =
+                    event.author?.login === currentUserLogin;
+                const displayBody = savedBodies[event.databaseId] ?? event.body;
                 return (
                     <CommentCard
-                        user={actor}
+                        user={
+                            event.author
+                                ? {
+                                      login: event.author.login,
+                                      avatar_url: event.author.avatarUrl,
+                                  }
+                                : null
+                        }
                         variant="standalone"
-                        userHref={actor?.html_url}
-                        createdAt={e.created_at}
-                        authorAssociation={e.author_association}
+                        userHref={event.author?.url}
+                        createdAt={event.createdAt}
+                        authorAssociation={event.authorAssociation}
                         isEditing={isEditing}
                         editBody={editBody}
                         onEditBodyChange={setEditBody}
@@ -322,7 +289,7 @@ function EventContent({
                             updateCommentMutation.mutate({
                                 owner,
                                 repo,
-                                commentId: e.id,
+                                commentId: event.databaseId,
                                 body: editBody,
                             });
                         }}
@@ -335,7 +302,7 @@ function EventContent({
                                     className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
                                     onClick={() => {
                                         setEditBody(displayBody);
-                                        setEditingCommentId(e.id);
+                                        setEditingCommentId(event.databaseId);
                                     }}
                                 >
                                     <SquarePen size={14} />
@@ -346,9 +313,13 @@ function EventContent({
                             !isEditing && (
                                 <div className="px-3 pb-3">
                                     <ReactionRollup
-                                        reactions={commentReactions[e.id] ?? []}
+                                        reactions={
+                                            commentReactions[
+                                                event.databaseId
+                                            ] ?? []
+                                        }
                                         currentUserLogin={currentUserLogin}
-                                        commentId={e.id}
+                                        commentId={event.databaseId}
                                         owner={owner}
                                         repo={repo}
                                         number={number}
@@ -368,45 +339,45 @@ function EventContent({
             return null;
         }
 
-        case "reviewed": {
-            const e = event as ReviewEvent;
+        case "PullRequestReview": {
             const timestamp = formatRelativeTime(
-                e.submitted_at ?? e.updated_at ?? "",
+                event.submittedAt ?? event.createdAt,
             );
+            const state = event.state.toLowerCase();
             const STATE_LABELS: Record<string, string> = {
                 pending: "started a review",
                 approved: "approved these changes",
                 changes_requested: "requested changes",
             };
 
-            const stateLabel = STATE_LABELS[e.state] ?? "reviewed";
+            const stateLabel = STATE_LABELS[state] ?? "reviewed";
             return (
                 <div className="text-gray-600 text-sm dark:text-zinc-400">
                     <p className="flex items-center gap-1.5">
-                        {e.user && (
-                            <UserHoverCard login={e.user.login}>
+                        {event.author && (
+                            <UserHoverCard login={event.author.login}>
                                 <a
                                     className="flex items-center gap-1.5"
-                                    href={e.user.html_url}
+                                    href={event.author.url}
                                 >
                                     <img
-                                        src={e.user.avatar_url}
-                                        alt={e.user.login}
+                                        src={event.author.avatarUrl}
+                                        alt={event.author.login}
                                         className="h-5 w-5 rounded-full"
                                     />
                                     <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                        {e.user.login}
+                                        {event.author.login}
                                     </span>
                                 </a>
                             </UserHoverCard>
                         )}
                         {` ${stateLabel} ${timestamp}`}
                     </p>
-                    {e.body && (
+                    {event.body && (
                         <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
                             <div className="prose prose-sm max-w-none">
                                 <MarkdownRenderer
-                                    content={e.body}
+                                    content={event.body}
                                     owner={owner}
                                     repo={repo}
                                 />
@@ -417,59 +388,55 @@ function EventContent({
                         owner={owner}
                         repo={repo}
                         number={number}
-                        reviewId={e.id}
-                        state={e.state}
+                        reviewId={event.databaseId}
+                        state={state}
                         allComments={allComments}
                     />
                 </div>
             );
         }
 
-        case "committed": {
-            const e = event as CommittedEvent;
-            // TODO: Add author / committer profile pictures here.
-            //       We could probably pass in the `commits` which we already load for the commit section in the sidebar
+        case "PullRequestCommit": {
+            const commit = event.commit;
             return (
                 <div className="item-center flex justify-between text-gray-600 text-sm dark:text-zinc-400">
                     <div>
-                        <p>{e.message.split("\n")[0]}</p>
+                        <p>{commit?.message.split("\n")[0]}</p>
                     </div>
-                    <code className="text-xs">{e.sha.slice(0, 7)}</code>
+                    <code className="text-xs">{commit?.oid.slice(0, 7)}</code>
                 </div>
             );
         }
 
-        case "review_dismissed": {
-            const e = event as EventWithDismissedReview;
-            if (e.dismissed_review?.dismissal_message) {
+        case "ReviewDismissedEvent": {
+            if (event.dismissalMessage) {
                 return (
                     <p className="text-gray-600 text-sm dark:text-zinc-400">
-                        {e.dismissed_review.dismissal_message}
+                        {event.dismissalMessage}
                     </p>
                 );
             }
             return null;
         }
-        case "head_ref_force_pushed": {
-            const e = event as ForcePushEvent;
-            const timestamp = formatRelativeTime(e.created_at);
-            const branch = "branch-name"; // FIXME: Get the branch name somehow
-            const before = "before"; // FIXME: Get the previous commit somehow
-            const after = e.commit_id.slice(0, 7);
-            // TODO: Add links for the commits, branch, and author
+
+        case "HeadRefForcePushedEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
+            const branch = "branch-name";
+            const before = "before";
+            const after = event.afterCommit?.oid.slice(0, 7) ?? "";
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={e.actor.login}>
+                    <UserHoverCard login={event.actor?.login ?? ""}>
                         <a
                             className="flex items-center gap-2"
-                            href={e.actor.html_url}
+                            href={event.actor?.url ?? ""}
                         >
                             <img
-                                src={e.actor.avatar_url}
-                                alt={e.actor.login}
+                                src={event.actor?.avatarUrl ?? ""}
+                                alt={event.actor?.login ?? ""}
                                 className="h-5 w-5 rounded-full"
                             />
-                            {e.actor?.login}
+                            {event.actor?.login}
                         </a>
                     </UserHoverCard>
                     <p>
@@ -490,24 +457,24 @@ function EventContent({
                 </div>
             );
         }
-        case "referenced": {
-            const e = event as ReferencedEvent;
-            const timestamp = formatRelativeTime(e.created_at);
-            const sha = e.commit_id?.slice(0, 7);
+
+        case "ReferencedEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
+            const sha = event.commit?.oid?.slice(0, 7);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={e.actor.login}>
+                    <UserHoverCard login={event.actor?.login ?? ""}>
                         <a
                             className="flex items-center gap-2"
-                            href={e.actor.html_url}
+                            href={event.actor?.url ?? ""}
                         >
                             <img
-                                src={e.actor.avatar_url}
-                                alt={e.actor.login}
+                                src={event.actor?.avatarUrl ?? ""}
+                                alt={event.actor?.login ?? ""}
                                 className="h-5 w-5 rounded-full"
                             />
                             <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {e.actor.login}
+                                {event.actor?.login}
                             </span>
                         </a>
                     </UserHoverCard>
@@ -517,7 +484,7 @@ function EventContent({
                     </p>
                     {sha && (
                         <a
-                            href={e.commit_url ?? undefined}
+                            href={event.commit?.commitUrl ?? undefined}
                             target="_blank"
                             rel="noreferrer"
                             className="font-mono text-xs hover:underline"
@@ -528,49 +495,24 @@ function EventContent({
                 </div>
             );
         }
-        case "renamed": {
-            const e = event as RenamedEvent;
-            const timestamp = formatRelativeTime(e.created_at);
-            return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <img
-                        src={e.actor?.avatar_url}
-                        alt={e.actor?.login ?? ""}
-                        className="h-5 w-5 rounded-full"
-                    />
-                    <p>
-                        <span className="font-medium text-gray-800 dark:text-zinc-200">
-                            {e.actor?.login}
-                        </span>
-                        {" renamed this "}
-                        <span className="font-medium text-gray-800 line-through dark:text-zinc-200">
-                            {e.rename.from}
-                        </span>
-                        {" → "}
-                        <span className="font-medium text-gray-800 dark:text-zinc-200">
-                            {e.rename.to}
-                        </span>{" "}
-                        {timestamp}
-                    </p>
-                </div>
-            );
-        }
-        case "head_ref_deleted":
-        case "head_ref_restored": {
-            const e = event as any;
-            const timestamp = formatRelativeTime(e.created_at);
+
+        case "HeadRefDeletedEvent":
+        case "HeadRefRestoredEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
             const verb =
-                event.event === "head_ref_deleted" ? "deleted" : "restored";
+                event.__typename === "HeadRefDeletedEvent"
+                    ? "deleted"
+                    : "restored";
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
                     <img
-                        src={e.actor.avatar_url}
-                        alt={e.actor.login}
+                        src={event.actor?.avatarUrl ?? ""}
+                        alt={event.actor?.login ?? ""}
                         className="h-5 w-5 rounded-full"
                     />
                     <p>
                         <span className="font-medium text-gray-800 dark:text-zinc-200">
-                            {e.actor.login}
+                            {event.actor?.login}
                         </span>
                         {` ${verb} the `}
                         <span className="font-medium text-gray-800 dark:text-zinc-200">
@@ -581,21 +523,21 @@ function EventContent({
                 </div>
             );
         }
-        case "cross-referenced": {
-            const e = event as CrossReferencedEvent;
-            const actor = e.actor;
-            const timestamp = formatRelativeTime(e.created_at);
-            const source = e.source?.issue;
-            const repo = source?.repository;
-            const repoFullName = repo
-                ? `${repo.owner.login}/${repo.name}`
+
+        case "CrossReferencedEvent": {
+            const actor = event.actor;
+            const timestamp = formatRelativeTime(event.createdAt);
+            const source = event.source;
+            const repoName = source?.repository.name;
+            const repoOwner = source?.repository.owner.login;
+            const repoFullName = repoOwner && repoName
+                ? `${repoOwner}/${repoName}`
                 : null;
             const sourceNumber = source?.number;
             const sourceTitle = source?.title;
-            const sourceUrl = source?.html_url;
-            const isPR = source?.pull_request !== undefined;
+            const sourceUrl = source?.url;
+            const isPR = source?.__typename === "PullRequest";
 
-            // TODO: Add the source status
             return (
                 <div className="text-gray-600 text-sm dark:text-zinc-400">
                     <div className="flex items-center gap-2">
@@ -603,15 +545,15 @@ function EventContent({
                             <UserHoverCard login={actor.login}>
                                 <a
                                     className="flex items-center gap-2"
-                                    href={actor.html_url}
+                                    href={actor.url}
                                 >
                                     <img
-                                        src={actor.avatar_url}
+                                        src={actor.avatarUrl}
                                         alt={actor.login}
                                         className="h-5 w-5 rounded-full"
                                     />
                                     <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                        {actor?.login}
+                                        {actor.login}
                                     </span>
                                 </a>
                             </UserHoverCard>
@@ -641,28 +583,30 @@ function EventContent({
                 </div>
             );
         }
-        case "assigned":
-        case "unassigned": {
-            const e = event as AssignedEvent;
-            const timestamp = formatRelativeTime(e.created_at);
-            const isSelfAssigned = e.actor?.login === e.assignee?.login;
-            const isAssigned = event.event === "assigned";
 
-            if (isSelfAssigned) {
+        case "AssignedEvent":
+        case "UnassignedEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
+            const isSelfAssigned =
+                event.actor?.login === event.assignee?.login;
+            const isAssigned =
+                event.__typename === "AssignedEvent";
+
+            if (isSelfAssigned && event.assignee) {
                 return (
                     <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                        <UserHoverCard login={e.assignee.login}>
+                        <UserHoverCard login={event.assignee.login}>
                             <a
                                 className="flex items-center gap-2"
-                                href={e.assignee.html_url}
+                                href={event.assignee.url}
                             >
                                 <img
-                                    src={e.assignee.avatar_url}
-                                    alt={e.assignee.login}
+                                    src={event.assignee.avatarUrl}
+                                    alt={event.assignee.login}
                                     className="h-5 w-5 rounded-full"
                                 />
                                 <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                    {e.assignee.login}
+                                    {event.assignee.login}
                                 </span>
                             </a>
                         </UserHoverCard>
@@ -677,35 +621,35 @@ function EventContent({
             }
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={e.actor.login}>
+                    <UserHoverCard login={event.actor?.login ?? ""}>
                         <a
                             className="flex items-center gap-2"
-                            href={e.actor.html_url}
+                            href={event.actor?.url ?? ""}
                         >
                             <img
-                                src={e.actor.avatar_url}
-                                alt={e.actor.login}
+                                src={event.actor?.avatarUrl ?? ""}
+                                alt={event.actor?.login ?? ""}
                                 className="h-5 w-5 rounded-full"
                             />
                             <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {e.actor.login}
+                                {event.actor?.login}
                             </span>
                         </a>
                     </UserHoverCard>
                     <div className="flex gap-1">
                         {isAssigned ? " assigned " : " unassigned "}
-                        <UserHoverCard login={e.assignee.login}>
+                        <UserHoverCard login={event.assignee?.login ?? ""}>
                             <a
                                 className="flex items-center gap-2"
-                                href={e.assignee.html_url}
+                                href={event.assignee?.url ?? ""}
                             >
                                 <img
-                                    src={e.assignee.avatar_url}
-                                    alt={e.assignee.login}
+                                    src={event.assignee?.avatarUrl ?? ""}
+                                    alt={event.assignee?.login ?? ""}
                                     className="h-5 w-5 rounded-full"
                                 />
                                 <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                    {e.assignee.login}
+                                    {event.assignee?.login}
                                 </span>
                             </a>
                         </UserHoverCard>{" "}
@@ -714,37 +658,37 @@ function EventContent({
                 </div>
             );
         }
-        case "closed":
-        case "merged":
-        case "reopened":
-        case "convert_to_draft":
-        case "ready_for_review": {
-            const e = event as StateChangeEvent;
-            const timestamp = formatRelativeTime(e.created_at);
+
+        case "ClosedEvent":
+        case "MergedEvent":
+        case "ReopenedEvent":
+        case "ConvertToDraftEvent":
+        case "ReadyForReviewEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
             const verb =
-                event.event === "closed"
+                event.__typename === "ClosedEvent"
                     ? "closed"
-                    : event.event === "merged"
+                    : event.__typename === "MergedEvent"
                       ? "merged"
-                      : event.event === "reopened"
+                      : event.__typename === "ReopenedEvent"
                         ? "reopened"
-                        : event.event === "convert_to_draft"
+                        : event.__typename === "ConvertToDraftEvent"
                           ? "converted to draft"
                           : "marked ready for review";
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={e.actor.login}>
+                    <UserHoverCard login={event.actor?.login ?? ""}>
                         <a
                             className="flex items-center gap-2"
-                            href={e.actor.html_url}
+                            href={event.actor?.url ?? ""}
                         >
                             <img
-                                src={e.actor?.avatar_url}
-                                alt={e.actor?.login ?? ""}
+                                src={event.actor?.avatarUrl ?? ""}
+                                alt={event.actor?.login ?? ""}
                                 className="h-5 w-5 rounded-full"
                             />
                             <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {e.actor?.login}
+                                {event.actor?.login}
                             </span>{" "}
                         </a>
                     </UserHoverCard>
@@ -756,93 +700,120 @@ function EventContent({
                 </div>
             );
         }
-        case "milestoned": {
-            const e = event as MilestonedEvent;
-            const timestamp = formatRelativeTime(e.created_at);
+
+        case "RenamedTitleEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={e.actor.login}>
+                    <img
+                        src={event.actor?.avatarUrl ?? ""}
+                        alt={event.actor?.login ?? ""}
+                        className="h-5 w-5 rounded-full"
+                    />
+                    <p>
+                        <span className="font-medium text-gray-800 dark:text-zinc-200">
+                            {event.actor?.login}
+                        </span>
+                        {" renamed this "}
+                        <span className="font-medium text-gray-800 line-through dark:text-zinc-200">
+                            {event.previousTitle}
+                        </span>
+                        {" → "}
+                        <span className="font-medium text-gray-800 dark:text-zinc-200">
+                            {event.currentTitle}
+                        </span>{" "}
+                        {timestamp}
+                    </p>
+                </div>
+            );
+        }
+
+        case "MilestonedEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
+            return (
+                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                    <UserHoverCard login={event.actor?.login ?? ""}>
                         <a
                             className="flex items-center gap-2"
-                            href={e.actor.html_url}
+                            href={event.actor?.url ?? ""}
                         >
                             <img
-                                src={e.actor.avatar_url}
-                                alt={e.actor.login}
+                                src={event.actor?.avatarUrl ?? ""}
+                                alt={event.actor?.login ?? ""}
                                 className="h-5 w-5 rounded-full"
                             />
                             <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {e.actor.login}
+                                {event.actor?.login}
                             </span>
                         </a>
                     </UserHoverCard>
                     <p>
                         {" added the milestone "}
                         <span className="font-medium text-gray-800 dark:text-zinc-200">
-                            {e.milestone.title}
+                            {event.milestoneTitle ?? ""}
                         </span>
                         {` ${timestamp}`}
                     </p>
                 </div>
             );
         }
-        case "demilestoned": {
-            const e = event as DemilestonedEvent;
-            const timestamp = formatRelativeTime(e.created_at);
+
+        case "DemilestonedEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={e.actor.login}>
+                    <UserHoverCard login={event.actor?.login ?? ""}>
                         <a
                             className="flex items-center gap-2"
-                            href={e.actor.html_url}
+                            href={event.actor?.url ?? ""}
                         >
                             <img
-                                src={e.actor.avatar_url}
-                                alt={e.actor.login}
+                                src={event.actor?.avatarUrl ?? ""}
+                                alt={event.actor?.login ?? ""}
                                 className="h-5 w-5 rounded-full"
                             />
                             <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {e.actor.login}
+                                {event.actor?.login}
                             </span>
                         </a>
                     </UserHoverCard>
                     <p>
                         {" removed the milestone "}
                         <span className="font-medium text-gray-800 dark:text-zinc-200">
-                            {e.milestone.title}
+                            {event.milestoneTitle ?? ""}
                         </span>
                         {` ${timestamp}`}
                     </p>
                 </div>
             );
         }
-        case "locked": {
-            const e = event as LockedEvent;
-            const timestamp = formatRelativeTime(e.created_at);
+
+        case "LockedEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={e.actor.login}>
+                    <UserHoverCard login={event.actor?.login ?? ""}>
                         <a
                             className="flex items-center gap-2"
-                            href={e.actor.html_url}
+                            href={event.actor?.url ?? ""}
                         >
                             <img
-                                src={e.actor.avatar_url}
-                                alt={e.actor.login}
+                                src={event.actor?.avatarUrl ?? ""}
+                                alt={event.actor?.login ?? ""}
                                 className="h-5 w-5 rounded-full"
                             />
                             <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {e.actor.login}
+                                {event.actor?.login}
                             </span>
                         </a>
                     </UserHoverCard>
                     <p>
                         {" locked this"}
-                        {e.lock_reason && (
+                        {event.lockReason && (
                             <>
                                 {" (reason: "}
                                 <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                    {e.lock_reason}
+                                    {event.lockReason}
                                 </span>
                                 {")"}
                             </>
@@ -852,23 +823,23 @@ function EventContent({
                 </div>
             );
         }
-        case "unlocked": {
-            const e = event as LockedEvent;
-            const timestamp = formatRelativeTime(e.created_at);
+
+        case "UnlockedEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={e.actor.login}>
+                    <UserHoverCard login={event.actor?.login ?? ""}>
                         <a
                             className="flex items-center gap-2"
-                            href={e.actor.html_url}
+                            href={event.actor?.url ?? ""}
                         >
                             <img
-                                src={e.actor.avatar_url}
-                                alt={e.actor.login}
+                                src={event.actor?.avatarUrl ?? ""}
+                                alt={event.actor?.login ?? ""}
                                 className="h-5 w-5 rounded-full"
                             />
                             <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {e.actor.login}
+                                {event.actor?.login}
                             </span>
                         </a>
                     </UserHoverCard>
@@ -879,38 +850,39 @@ function EventContent({
                 </div>
             );
         }
-        case "review_requested": {
-            const e = event as ReviewRequestedEvent;
-            const timestamp = formatRelativeTime(e.created_at);
-            const reviewer = e.requested_reviewer;
-            const team = e.requested_team;
+
+        case "ReviewRequestedEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
+            const reviewer = event.requestedReviewer;
+            const isUser = reviewer?.__typename === "User";
+            const isTeam = reviewer?.__typename === "Team";
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={e.actor.login}>
+                    <UserHoverCard login={event.actor?.login ?? ""}>
                         <a
                             className="flex items-center gap-2"
-                            href={e.actor.html_url}
+                            href={event.actor?.url ?? ""}
                         >
                             <img
-                                src={e.actor.avatar_url}
-                                alt={e.actor.login}
+                                src={event.actor?.avatarUrl ?? ""}
+                                alt={event.actor?.login ?? ""}
                                 className="h-5 w-5 rounded-full"
                             />
                             <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {e.actor.login}
+                                {event.actor?.login}
                             </span>
                         </a>
                     </UserHoverCard>
                     <p>
                         {" requested a review from "}
-                        {reviewer && (
+                        {isUser && reviewer && (
                             <UserHoverCard login={reviewer.login}>
                                 <a
                                     className="inline-flex items-center gap-1 font-medium text-gray-800 dark:text-zinc-200"
-                                    href={reviewer.html_url}
+                                    href={reviewer.url}
                                 >
                                     <img
-                                        src={reviewer.avatar_url}
+                                        src={reviewer.avatarUrl}
                                         alt={reviewer.login}
                                         className="h-4 w-4 rounded-full"
                                     />
@@ -918,9 +890,9 @@ function EventContent({
                                 </a>
                             </UserHoverCard>
                         )}
-                        {team && (
+                        {isTeam && reviewer && (
                             <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {team.name ?? team.slug}
+                                {reviewer.name ?? reviewer.slug}
                             </span>
                         )}
                         {` ${timestamp}`}
@@ -928,38 +900,39 @@ function EventContent({
                 </div>
             );
         }
-        case "review_request_removed": {
-            const e = event as ReviewRequestRemovedEvent;
-            const timestamp = formatRelativeTime(e.created_at);
-            const reviewer = e.requested_reviewer;
-            const team = e.requested_team;
+
+        case "ReviewRequestRemovedEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
+            const reviewer = event.requestedReviewer;
+            const isUser = reviewer?.__typename === "User";
+            const isTeam = reviewer?.__typename === "Team";
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={e.actor.login}>
+                    <UserHoverCard login={event.actor?.login ?? ""}>
                         <a
                             className="flex items-center gap-2"
-                            href={e.actor.html_url}
+                            href={event.actor?.url ?? ""}
                         >
                             <img
-                                src={e.actor.avatar_url}
-                                alt={e.actor.login}
+                                src={event.actor?.avatarUrl ?? ""}
+                                alt={event.actor?.login ?? ""}
                                 className="h-5 w-5 rounded-full"
                             />
                             <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {e.actor.login}
+                                {event.actor?.login}
                             </span>
                         </a>
                     </UserHoverCard>
                     <p>
                         {" removed the review request for "}
-                        {reviewer && (
+                        {isUser && reviewer && (
                             <UserHoverCard login={reviewer.login}>
                                 <a
                                     className="inline-flex items-center gap-1 font-medium text-gray-800 dark:text-zinc-200"
-                                    href={reviewer.html_url}
+                                    href={reviewer.url}
                                 >
                                     <img
-                                        src={reviewer.avatar_url}
+                                        src={reviewer.avatarUrl}
                                         alt={reviewer.login}
                                         className="h-4 w-4 rounded-full"
                                     />
@@ -967,9 +940,9 @@ function EventContent({
                                 </a>
                             </UserHoverCard>
                         )}
-                        {team && (
+                        {isTeam && reviewer && (
                             <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {team.name ?? team.slug}
+                                {reviewer.name ?? reviewer.slug}
                             </span>
                         )}
                         {` ${timestamp}`}
@@ -977,23 +950,23 @@ function EventContent({
                 </div>
             );
         }
-        case "added_to_project_v2": {
-            const e = event as AddedToProjectEvent;
-            const timestamp = formatRelativeTime(e.created_at);
+
+        case "AddedToProjectV2Event": {
+            const timestamp = formatRelativeTime(event.createdAt);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={e.actor.login}>
+                    <UserHoverCard login={event.actor?.login ?? ""}>
                         <a
                             className="flex items-center gap-2"
-                            href={e.actor.html_url}
+                            href={event.actor?.url ?? ""}
                         >
                             <img
-                                src={e.actor.avatar_url}
-                                alt={e.actor.login}
+                                src={event.actor?.avatarUrl ?? ""}
+                                alt={event.actor?.login ?? ""}
                                 className="h-5 w-5 rounded-full"
                             />
                             <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {e.actor.login}
+                                {event.actor?.login}
                             </span>
                         </a>
                     </UserHoverCard>
@@ -1001,23 +974,23 @@ function EventContent({
                 </div>
             );
         }
-        case "project_v2_item_status_changed": {
-            const e = event as AddedToProjectEvent;
-            const timestamp = formatRelativeTime(e.created_at);
+
+        case "ProjectV2ItemStatusChangedEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={e.actor.login}>
+                    <UserHoverCard login={event.actor?.login ?? ""}>
                         <a
                             className="flex items-center gap-2"
-                            href={e.actor.html_url}
+                            href={event.actor?.url ?? ""}
                         >
                             <img
-                                src={e.actor.avatar_url}
-                                alt={e.actor.login}
+                                src={event.actor?.avatarUrl ?? ""}
+                                alt={event.actor?.login ?? ""}
                                 className="h-5 w-5 rounded-full"
                             />
                             <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {e.actor.login}
+                                {event.actor?.login}
                             </span>
                         </a>
                     </UserHoverCard>
@@ -1025,8 +998,12 @@ function EventContent({
                 </div>
             );
         }
+
         default:
-            console.warn(`unknown event type: ${event.event}`, event);
+            console.warn(
+                `unknown event type: ${event.__typename}`,
+                event,
+            );
             return null;
     }
 }
