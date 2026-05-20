@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { TimelineResult } from "~/server/api/routers/timeline";
+import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { GQLTimelineEvent, GQLReactionNode } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { CommentForm } from "./comment-form";

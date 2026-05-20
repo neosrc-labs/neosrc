@@ -13,6 +13,7 @@ import {
     PopoverTrigger,
 } from "~/components/ui/popover";
 import type { GQLReactionNode } from "~/server/github-graphql";
+import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import { api } from "~/trpc/react";
 
 export type Reaction = GQLReactionNode;
@@ -145,16 +146,16 @@ export function ReactionRollup({
                 owner,
                 repo,
                 number,
-                limit: 30,
+                limit: TIMELINE_PAGE_SIZE,
             });
             const prevData = utils.timeline.list.getInfiniteData({
                 owner,
                 repo,
                 number,
-                limit: 30,
+                limit: TIMELINE_PAGE_SIZE,
             });
             utils.timeline.list.setInfiniteData(
-                { owner, repo, number, limit: 30 },
+                { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
                 (old) => {
                     if (!old) return old;
                     const existing = reactions.find(
@@ -192,7 +193,7 @@ export function ReactionRollup({
         onError: (_err, _vars, ctx) => {
             if (ctx?.prevData) {
                 utils.timeline.list.setInfiniteData(
-                    { owner, repo, number, limit: 30 },
+                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
                     ctx.prevData,
                 );
             }
@@ -202,7 +203,7 @@ export function ReactionRollup({
                 owner,
                 repo,
                 number,
-                limit: 30,
+                limit: TIMELINE_PAGE_SIZE,
             });
         },
     });
