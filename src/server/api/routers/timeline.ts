@@ -4,18 +4,14 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { accounts } from "~/server/db/schema";
-import {
-    getAuthenticatedUser,
-    getIssueCommentReactions,
-    getPullRequestTimeline,
-    type TimelineEventData,
-} from "~/server/github";
+import { getPullRequestTimelineGraphQL } from "~/server/github-graphql";
+import type { TimelineEventData } from "~/server/github";
 
 type ReactionData = components["schemas"]["reaction"];
 
 export type TimelineResult = {
     events: TimelineEventData[];
-    nextCursor: number | undefined;
+    nextCursor: string | undefined;
     commentReactions: Record<number, ReactionData[]>;
     currentUserLogin: string;
 };
@@ -28,7 +24,7 @@ export const timelineRouter = createTRPCRouter({
                 repo: z.string(),
                 number: z.number(),
                 limit: z.number().min(1).max(100).default(30),
-                cursor: z.number().optional(),
+                cursor: z.string().optional(),
             }),
         )
         .query(async ({ ctx, input }) => {
@@ -42,51 +38,23 @@ export const timelineRouter = createTRPCRouter({
                 throw new Error("GitHub account not connected");
             }
 
-            const page = input.cursor ?? 1;
-            const result = await getPullRequestTimeline(
+            const result = await getPullRequestTimelineGraphQL(
                 account.accessToken,
                 input.owner,
                 input.repo,
                 input.number,
-                page,
                 input.limit,
+                input.cursor,
             );
 
-            const commentEvents = result.events.filter(
-                (
-                    e,
-                ): e is TimelineEventData & {
-                    event: "commented";
-                    id: number;
-                } => e.event === "commented" && "id" in e,
-            );
-
-            const reactionEntries = await Promise.all(
-                commentEvents.map(async (e) => {
-                    const reactions = await getIssueCommentReactions(
-                        account.accessToken!,
-                        input.owner,
-                        input.repo,
-                        e.id,
-                    );
-                    return [e.id, reactions] as const;
-                }),
-            );
-
-            const commentReactions: Record<number, ReactionData[]> =
-                Object.fromEntries(reactionEntries);
-
-            const currentUser = await getAuthenticatedUser(
-                account.accessToken!,
-            );
-
-            const response: TimelineResult = {
+            return {
                 events: result.events,
-                nextCursor: result.hasMore ? result.nextPage : undefined,
-                commentReactions,
-                currentUserLogin: currentUser.login,
-            };
-
-            return response;
+                nextCursor: result.hasMore ? result.endCursor : undefined,
+                commentReactions: result.commentReactions as Record<
+                    number,
+                    ReactionData[]
+                >,
+                currentUserLogin: result.currentUserLogin,
+            } satisfies TimelineResult;
         }),
 });

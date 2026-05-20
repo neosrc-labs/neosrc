@@ -11,6 +11,9 @@ importers:
       '@auth/drizzle-adapter':
         specifier: ^1.7.2
         version: 1.11.2
+      '@octokit/graphql':
+        specifier: ^9.0.3
+        version: 9.0.3
       '@octokit/openapi-types':
         specifier: ^27.0.0
         version: 27.0.0
