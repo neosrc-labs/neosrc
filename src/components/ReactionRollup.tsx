@@ -1,6 +1,5 @@
 "use client";
 
-import type { components } from "@octokit/openapi-types";
 import { SmilePlus } from "lucide-react";
 import { useState } from "react";
 import {
@@ -13,9 +12,10 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
+import type { GQLReactionNode } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 
-export type Reaction = components["schemas"]["reaction"];
+export type Reaction = GQLReactionNode;
 
 const reactionEmojis: Record<string, string> = {
     "+1": "👍",
@@ -28,7 +28,7 @@ const reactionEmojis: Record<string, string> = {
     eyes: "👀",
 };
 
-const reactionOrder: (
+type ReactionContent =
     | "+1"
     | "-1"
     | "laugh"
@@ -36,8 +36,18 @@ const reactionOrder: (
     | "heart"
     | "hooray"
     | "rocket"
-    | "eyes"
-)[] = ["+1", "heart", "laugh", "hooray", "confused", "rocket", "eyes", "-1"];
+    | "eyes";
+
+const reactionOrder: ReactionContent[] = [
+    "+1",
+    "heart",
+    "laugh",
+    "hooray",
+    "confused",
+    "rocket",
+    "eyes",
+    "-1",
+];
 
 interface ReactionRollupProps {
     reactions?: Reaction[];
@@ -49,26 +59,25 @@ interface ReactionRollupProps {
     isIssue?: boolean;
 }
 
+function ContentType({ reaction }: { reaction: Reaction }) {
+    const emoji = reactionEmojis[reaction.content] ?? reaction.content;
+
+    return <span className="text-base leading-none">{emoji}</span>;
+}
+
 export function ReactionRollup({
-    reactions: initialReactions = [],
-    currentUserLogin: propUserLogin = "",
+    reactions = [],
+    currentUserLogin,
     commentId,
     owner,
     repo,
     number,
     isIssue,
 }: ReactionRollupProps) {
+    const [open, setOpen] = useState(false);
     const utils = api.useUtils();
 
-    const { data: issueData } = api.reactions.get.useQuery(
-        { owner, repo, number },
-        { staleTime: 5 * 60 * 1000, enabled: isIssue },
-    );
-
-    const reactions = isIssue ? (issueData?.reactions ?? []) : initialReactions;
-    const resolvedUserLogin = isIssue
-        ? (issueData?.currentUserLogin ?? propUserLogin)
-        : propUserLogin;
+    const resolvedUserLogin = currentUserLogin;
 
     const issueMutation = api.reactions.toggleIssue.useMutation({
         onMutate: async ({ content }) => {
@@ -78,44 +87,46 @@ export function ReactionRollup({
                 repo,
                 number,
             });
-            utils.reactions.get.setData({ owner, repo, number }, (old) => {
-                if (!old) return old;
-                const existing = reactions.find(
-                    (r) =>
-                        r.user?.login === resolvedUserLogin &&
-                        r.content === content,
-                );
-                const updated = existing
-                    ? reactions.filter((r) => r.id !== existing.id)
-                    : [
-                          ...reactions,
-                          {
-                              id: -Date.now(),
-                              node_id: "",
-                              user: {
-                                  login: resolvedUserLogin,
-                                  avatar_url: "",
-                                  html_url: "",
-                                  id: 0,
+            utils.reactions.get.setData(
+                { owner, repo, number },
+                (old: any) => {
+                    if (!old) return old;
+                    const existing = old.reactions?.find(
+                        (r: any) =>
+                            r.user?.login === resolvedUserLogin &&
+                            r.content === content,
+                    );
+                    const updated = existing
+                        ? old.reactions.filter(
+                              (r: any) => r.id !== existing.id,
+                          )
+                        : [
+                              ...old.reactions,
+                              {
+                                  id: -Date.now(),
                                   node_id: "",
-                                  gravatar_id: "",
-                                  url: "",
-                                  received_events_url: "",
-                                  type: "User",
-                                  site_admin: false,
+                                  user: {
+                                      login: resolvedUserLogin ?? "",
+                                      avatar_url: "",
+                                      html_url: "",
+                                      id: 0,
+                                      node_id: "",
+                                      gravatar_id: "",
+                                      url: "",
+                                      received_events_url: "",
+                                      type: "User",
+                                      site_admin: false,
+                                  },
+                                  content,
+                                  created_at: new Date().toISOString(),
                               },
-                              content,
-                              created_at: new Date().toISOString(),
-                          } as Reaction,
-                      ];
-                return {
-                    reactions: updated,
-                    currentUserLogin: resolvedUserLogin,
-                };
-            });
+                          ];
+                    return { ...old, reactions: updated };
+                },
+            );
             return { prevData };
         },
-        onError: (_err, _vars, ctx) => {
+        onError: (_err: any, _vars: any, ctx: any) => {
             if (ctx?.prevData) {
                 utils.reactions.get.setData(
                     { owner, repo, number },
@@ -152,27 +163,17 @@ export function ReactionRollup({
                             r.content === content,
                     );
                     const updatedReactions = existing
-                        ? reactions.filter((r) => r.id !== existing.id)
+                        ? reactions.filter(
+                              (r) => r.databaseId !== existing.databaseId,
+                          )
                         : [
                               ...reactions,
                               {
-                                  id: -Date.now(),
-                                  node_id: "",
-                                  user: {
-                                      login: resolvedUserLogin,
-                                      avatar_url: "",
-                                      html_url: "",
-                                      id: 0,
-                                      node_id: "",
-                                      gravatar_id: "",
-                                      url: "",
-                                      received_events_url: "",
-                                      type: "User",
-                                      site_admin: false,
-                                  },
+                                  databaseId: -Date.now(),
                                   content,
-                                  created_at: new Date().toISOString(),
-                              } as Reaction,
+                                  createdAt: new Date().toISOString(),
+                                  user: { login: resolvedUserLogin ?? "" },
+                              },
                           ];
                     return {
                         ...old,
@@ -207,169 +208,117 @@ export function ReactionRollup({
     });
 
     const grouped = new Map<string, Reaction[]>();
-    for (const r of reactions) {
-        const existing = grouped.get(r.content) ?? [];
-        existing.push(r);
-        grouped.set(r.content, existing);
+
+    for (const reaction of reactions) {
+        const current = grouped.get(reaction.content) ?? [];
+        current.push(reaction);
+        grouped.set(reaction.content, current);
     }
 
-    const entries = reactionOrder
-        .map((content) => [content, grouped.get(content) ?? []] as const)
-        .filter(([, rs]) => rs.length > 0);
+    const available = reactionOrder.filter(
+        (content) => !reactions.some((r) => r.content === content),
+    );
 
-    const userReacted = (content: string) =>
-        reactions.some(
-            (r) => r.user?.login === resolvedUserLogin && r.content === content,
-        );
+    if (reactions.length === 0 && !currentUserLogin) return null;
 
-    const handleToggle = (
-        content:
-            | "+1"
-            | "-1"
-            | "laugh"
-            | "confused"
-            | "heart"
-            | "hooray"
-            | "rocket"
-            | "eyes",
-    ) => {
-        if (isIssue) {
-            issueMutation.mutate({ owner, repo, number, content });
-        } else {
-            commentMutation.mutate({
-                owner,
-                repo,
-                commentId: commentId!,
-                content,
-            });
-        }
-    };
+    const hasReacted = resolvedUserLogin
+        ? reactions.some(
+              (r) => r.user?.login === resolvedUserLogin,
+          )
+        : false;
 
     return (
-        <div className="flex flex-wrap items-center gap-1.5">
-            <ReactionPicker
-                resolvedUserLogin={resolvedUserLogin}
-                handleToggle={handleToggle}
-                reactions={reactions}
-            />
-            {entries.map(([content, rs]) => {
-                const isActive = userReacted(content);
+        <div className="flex flex-wrap items-center gap-1">
+            {reactionOrder.map((content) => {
+                const group = grouped.get(content);
+                if (!group) return null;
+                const hasReactedToThis = resolvedUserLogin
+                    ? group.some(
+                          (r) => r.user?.login === resolvedUserLogin,
+                      )
+                    : false;
+
                 return (
-                    <HoverCard key={content} openDelay={300}>
+                    <HoverCard key={content} openDelay={200}>
                         <HoverCardTrigger asChild>
                             <button
                                 type="button"
-                                onClick={() => handleToggle(content)}
-                                className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 font-medium text-xs transition-colors ${
-                                    isActive
-                                        ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
-                                        : "border-gray-200 bg-gray-100 text-gray-600 hover:bg-gray-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:bg-zinc-700"
+                                onClick={() => {
+                                    const mutation = isIssue
+                                        ? issueMutation
+                                        : commentMutation;
+                                    mutation.mutate({
+                                        owner,
+                                        repo,
+                                        number,
+                                        commentId: commentId ?? number,
+                                        content: content as ReactionContent,
+                                    });
+                                }}
+                                className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${
+                                    hasReactedToThis
+                                        ? "border-blue-300 bg-blue-50 text-blue-600 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-400"
+                                        : "border-gray-300 bg-transparent text-gray-500 hover:border-gray-400 hover:text-gray-700 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-zinc-500 dark:hover:text-zinc-300"
                                 }`}
                             >
-                                <span>
-                                    {reactionEmojis[content] ?? content}
-                                </span>
-                                <span>{rs.length}</span>
+                                <ContentType reaction={group[0]!} />
+                                <span>{group.length}</span>
                             </button>
                         </HoverCardTrigger>
-                        <HoverCardContent className="w-56 bg-white p-3 dark:bg-zinc-950">
-                            <div className="flex flex-col gap-2">
-                                {rs.map((r) => (
-                                    <div
-                                        key={r.id}
-                                        className="flex items-center gap-2 text-gray-700 text-sm dark:text-gray-300"
-                                    >
-                                        {r.user && (
-                                            <img
-                                                src={r.user.avatar_url}
-                                                alt={r.user.login}
-                                                className="h-5 w-5 rounded-full"
-                                            />
-                                        )}
-                                        <span className="font-medium">
-                                            {r.user?.login}
-                                        </span>
-                                        <span className="ml-auto">
-                                            {reactionEmojis[r.content]}
-                                        </span>
-                                    </div>
-                                ))}
+                        <HoverCardContent className="w-fit bg-white p-2 dark:bg-zinc-950">
+                            <div className="text-xs text-gray-600 dark:text-zinc-400">
+                                {group
+                                    .slice(0, 10)
+                                    .map((r) => r.user?.login)
+                                    .filter(Boolean)
+                                    .join(", ")}
+                                {group.length > 10 &&
+                                    ` and ${group.length - 10} more`}
                             </div>
                         </HoverCardContent>
                     </HoverCard>
                 );
             })}
-        </div>
-    );
-}
 
-const allReactions: (
-    | "+1"
-    | "-1"
-    | "laugh"
-    | "confused"
-    | "heart"
-    | "hooray"
-    | "rocket"
-    | "eyes"
-)[] = ["+1", "-1", "laugh", "confused", "heart", "hooray", "rocket", "eyes"];
-
-function ReactionPicker({
-    resolvedUserLogin,
-    handleToggle,
-    reactions,
-}: {
-    resolvedUserLogin: string;
-    handleToggle: (
-        content:
-            | "+1"
-            | "-1"
-            | "laugh"
-            | "confused"
-            | "heart"
-            | "hooray"
-            | "rocket"
-            | "eyes",
-    ) => void;
-    reactions: Reaction[];
-}) {
-    const [open, setOpen] = useState(false);
-    const available = allReactions.filter(
-        (c) =>
-            !reactions.some(
-                (r) => r.user?.login === resolvedUserLogin && r.content === c,
-            ),
-    );
-
-    if (available.length === 0) return null;
-
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <button
-                    type="button"
-                    className="inline-flex cursor-pointer items-center rounded-full border border-gray-300 border-dashed px-2 py-0.5 text-gray-400 text-xs transition-colors hover:border-gray-400 hover:text-gray-600 dark:border-zinc-600 dark:text-zinc-500 dark:hover:border-zinc-500 dark:hover:text-zinc-300"
-                >
-                    <SmilePlus size={14} />
-                </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-fit bg-white p-2 dark:bg-zinc-950">
-                <div className="flex gap-1">
-                    {available.map((content) => (
+            {currentUserLogin && (
+                <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
                         <button
-                            key={content}
                             type="button"
-                            onClick={() => {
-                                handleToggle(content);
-                                setOpen(false);
-                            }}
-                            className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+                            className="inline-flex cursor-pointer items-center rounded-full border border-gray-300 border-dashed px-2 py-0.5 text-gray-400 text-xs transition-colors hover:border-gray-400 hover:text-gray-600 dark:border-zinc-600 dark:text-zinc-500 dark:hover:border-zinc-500 dark:hover:text-zinc-300"
                         >
-                            {reactionEmojis[content] ?? content}
+                            <SmilePlus size={14} />
                         </button>
-                    ))}
-                </div>
-            </PopoverContent>
-        </Popover>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-fit bg-white p-2 dark:bg-zinc-950">
+                        <div className="flex gap-1">
+                            {available.map((content) => (
+                                <button
+                                    key={content}
+                                    type="button"
+                                    onClick={() => {
+                                        const mutation = isIssue
+                                            ? issueMutation
+                                            : commentMutation;
+                                        mutation.mutate({
+                                            owner,
+                                            repo,
+                                            number,
+                                            commentId: commentId ?? number,
+                                            content:
+                                                content as ReactionContent,
+                                        });
+                                        setOpen(false);
+                                    }}
+                                    className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                >
+                                    {reactionEmojis[content] ?? content}
+                                </button>
+                            ))}
+                        </div>
+                    </PopoverContent>
+                </Popover>
+            )}
+        </div>
     );
 }

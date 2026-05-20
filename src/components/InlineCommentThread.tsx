@@ -3,7 +3,8 @@
 import { MoreVertical, SmilePlus, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
-import type { Reaction } from "~/components/ReactionRollup";
+import type { components } from "@octokit/openapi-types";
+type Reaction = components["schemas"]["reaction"];
 import {
     HoverCard,
     HoverCardContent,
