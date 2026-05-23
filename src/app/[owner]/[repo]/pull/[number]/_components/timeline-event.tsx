@@ -241,7 +241,9 @@ function EventContent({
     );
     const [editBody, setEditBody] = useState("");
     const [savedBodies, setSavedBodies] = useState<Record<number, string>>({});
-    const [expandedMinimized, setExpandedMinimized] = useState<Record<number, boolean>>({});
+    const [expandedMinimized, setExpandedMinimized] = useState<
+        Record<number, boolean>
+    >({});
 
     const updateCommentMutation = api.pulls.updateComment.useMutation({
         onMutate: ({ commentId, body }) => {
@@ -266,7 +268,8 @@ function EventContent({
                 const isEditing = editingCommentId === event.databaseId;
                 const isAuthor = event.author?.login === currentUserLogin;
                 const displayBody = savedBodies[event.databaseId] ?? event.body;
-                const isMinimized = event.isMinimized && !minimizedExpanded(event.databaseId);
+                const isMinimized =
+                    event.isMinimized && !minimizedExpanded(event.databaseId);
                 if (isMinimized) {
                     return (
                         <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-900/50">
@@ -348,7 +351,9 @@ function EventContent({
                                         className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
                                         onClick={() => {
                                             setEditBody(displayBody);
-                                            setEditingCommentId(event.databaseId);
+                                            setEditingCommentId(
+                                                event.databaseId,
+                                            );
                                         }}
                                     >
                                         <SquarePen size={14} />
