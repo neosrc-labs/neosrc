@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { useRightSidebar } from "./right-sidebar-context";
 
 const STORAGE_KEY = "neosrc-sidebar-width";
 const DEFAULT_WIDTH = 250;
@@ -19,6 +20,7 @@ export function ResizableLayout({
     children,
     rightSidebar,
 }: ResizableLayoutProps) {
+    const { isOpen: isRightSidebarOpen } = useRightSidebar();
     const [leftWidth, setLeftWidth] = useState(DEFAULT_WIDTH);
     const isDraggingRef = useRef(false);
     const startXRef = useRef(0);
@@ -75,7 +77,11 @@ export function ResizableLayout({
     return (
         <div
             className="grid"
-            style={{ gridTemplateColumns: `${leftWidth}px 1fr 300px` }}
+            style={{
+                gridTemplateColumns: isRightSidebarOpen
+                    ? `${leftWidth}px 1fr 300px`
+                    : `${leftWidth}px 1fr`,
+            }}
         >
             {/* Left Sidebar - Sticky */}
             <div className="relative sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto">
@@ -93,9 +99,11 @@ export function ResizableLayout({
             </main>
 
             {/* Right Sidebar - Sticky */}
-            <div className="sticky sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto">
-                {rightSidebar}
-            </div>
+            {isRightSidebarOpen && (
+                <div className="sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto">
+                    {rightSidebar}
+                </div>
+            )}
         </div>
     );
 }

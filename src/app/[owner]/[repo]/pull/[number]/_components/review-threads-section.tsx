@@ -54,7 +54,7 @@ function ThreadCard({ thread }: ThreadCardProps) {
         <button
             type="button"
             onClick={handleClick}
-            className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800"
+            className="flex w-full cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800"
         >
             <img
                 alt={`${root.author?.login ?? "unknown"}'s avatar`}
