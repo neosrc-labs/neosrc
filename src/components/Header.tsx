@@ -52,7 +52,7 @@ export function Header() {
                         <ThemeToggle />
                         {prMatch && (
                             <button
-                                className="flex size-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
+                                className="flex size-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200 cursor-pointer disabled:cursor-not-allowed"
                                 onClick={toggleRightSidebar}
                                 title={
                                     isRightSidebarOpen
