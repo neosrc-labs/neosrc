@@ -99,7 +99,6 @@ export default async function PullRequestLayout({
                 <LeftSidebar
                     currentUserLogin={currentUserLogin}
                     pullRequestPromise={pullRequest}
-                    checksPromise={checks}
                     number={number}
                     owner={owner}
                     repo={repo}
@@ -107,6 +106,7 @@ export default async function PullRequestLayout({
             }
             rightSidebar={
                 <RightSidebar
+                    checksPromise={checks}
                     commitsPromise={commits}
                     pullRequestPromise={pullRequest}
                     owner={owner}
