@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle, Circle, MessageSquare } from "lucide-react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import type { ReviewThreadData } from "~/server/github";
 import { api } from "~/trpc/react";
 
@@ -17,14 +17,43 @@ function truncateBody(body: string, maxLen = 80): string {
     return `${firstLine.slice(0, maxLen).trim()}…`;
 }
 
-function ThreadCard({ thread }: { thread: ReviewThreadData }) {
+function scrollToComment(commentId: number) {
+    const id = `review-thread-${commentId}`;
+    const el = document.getElementById(id);
+    if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+    }
+
+    const observer = new MutationObserver(() => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            observer.disconnect();
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => observer.disconnect(), 15000);
+}
+
+interface ThreadCardProps {
+    thread: ReviewThreadData;
+}
+
+function ThreadCard({ thread }: ThreadCardProps) {
     const { root } = useMemo(() => groupThread(thread), [thread]);
+
+    const handleClick = useCallback(() => {
+        if (!root) return;
+        scrollToComment(root.id);
+    }, [root]);
 
     if (!root) return null;
 
     return (
         <button
             type="button"
+            onClick={handleClick}
             className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800"
         >
             <img
