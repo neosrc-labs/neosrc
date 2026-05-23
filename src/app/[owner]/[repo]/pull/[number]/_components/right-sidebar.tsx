@@ -116,15 +116,11 @@ function ChecksSection({ checksPromise }: ChecksSectionProps) {
                     >
                         <span className="text-sm">
                             {check.conclusion === "success" ? (
-                                <span className="text-green-600">
-                                    ✓
-                                </span>
+                                <span className="text-green-600">✓</span>
                             ) : check.conclusion === "failure" ? (
                                 <span className="text-red-600">✗</span>
                             ) : check.status === "in_progress" ? (
-                                <span className="text-gray-400">
-                                    ⏳
-                                </span>
+                                <span className="text-gray-400">⏳</span>
                             ) : (
                                 <span className="text-gray-400">○</span>
                             )}

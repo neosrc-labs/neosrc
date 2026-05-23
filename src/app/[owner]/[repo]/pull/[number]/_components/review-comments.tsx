@@ -130,7 +130,7 @@ function CommentBlock({
     }
 
     return (
-        <div>
+        <div id={`review-thread-${comment.id}`}>
             {comment.diff_hunk && (
                 <div>
                     <DiffView

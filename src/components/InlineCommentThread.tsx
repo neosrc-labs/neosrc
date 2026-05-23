@@ -223,7 +223,7 @@ export function InlineCommentThread({
     );
 
     return (
-        <div className="font-sans">
+        <div className="font-sans" id={`review-thread-${parentComment.id}`}>
             <Comment
                 comment={parentComment}
                 isPending={

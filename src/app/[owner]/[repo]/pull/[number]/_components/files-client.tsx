@@ -1,7 +1,7 @@
 "use client";
 
 import { MessageSquare, MessageSquareOff } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import FileDiff from "~/components/FileDiff";
 import { useFiles } from "~/hooks/files";
 import type { ReviewComment } from "~/server/github";
@@ -40,6 +40,18 @@ export function FilesSection({
     }, [allComments, pendingReview]);
 
     const pendingReviewId = pendingReview?.reviewId ?? null;
+
+    useEffect(() => {
+        if (allCommentsAll.length === 0) return;
+        const hash = window.location.hash;
+        if (hash.startsWith("#review-thread-")) {
+            const id = hash.slice(1);
+            const el = document.getElementById(id);
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+        }
+    }, [allCommentsAll]);
 
     return (
         <div>
