@@ -1,0 +1,112 @@
+"use client";
+
+import { CheckCircle, Circle, MessageSquare } from "lucide-react";
+import { useMemo } from "react";
+import type { ReviewThreadData } from "~/server/github";
+import { api } from "~/trpc/react";
+
+function groupThread(thread: ReviewThreadData) {
+    const root =
+        thread.comments.find((c) => c.replyToId === null) ?? thread.comments[0];
+    return { root };
+}
+
+function truncateBody(body: string, maxLen = 80): string {
+    const firstLine = body.split("\n")[0] ?? "";
+    if (firstLine.length <= maxLen) return firstLine;
+    return `${firstLine.slice(0, maxLen).trim()}…`;
+}
+
+function ThreadCard({ thread }: { thread: ReviewThreadData }) {
+    const { root } = useMemo(() => groupThread(thread), [thread]);
+
+    if (!root) return null;
+
+    return (
+        <button
+            type="button"
+            className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800"
+        >
+            <img
+                alt={`${root.author?.login ?? "unknown"}'s avatar`}
+                className="mt-0.5 size-5 shrink-0 rounded-full"
+                src={root.author?.avatarUrl ?? ""}
+            />
+
+            <div className="min-w-0 flex-1">
+                <p className="truncate text-gray-700 text-sm dark:text-zinc-300">
+                    {truncateBody(root.body)}
+                </p>
+                <div className="mt-0.5 flex items-center gap-2">
+                    {thread.isResolved ? (
+                        <CheckCircle className="size-3 text-green-500" />
+                    ) : (
+                        <Circle className="size-3 text-gray-400" />
+                    )}
+                    <span className="flex items-center gap-1 text-gray-400 text-xs">
+                        <MessageSquare className="size-3" />
+                        {thread.comments.length}
+                    </span>
+                </div>
+            </div>
+        </button>
+    );
+}
+
+function ThreadSkeleton() {
+    return (
+        <div className="flex items-start gap-2 rounded-md px-2 py-1.5">
+            <div className="mt-0.5 size-5 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
+            <div className="min-w-0 flex-1">
+                <div className="h-4 w-full animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+                <div className="mt-2 h-3 w-16 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+            </div>
+        </div>
+    );
+}
+
+interface ReviewThreadsSectionProps {
+    owner: string;
+    repo: string;
+    number: number;
+}
+
+export function ReviewThreadsSection({
+    owner,
+    repo,
+    number,
+}: ReviewThreadsSectionProps) {
+    const { data: threads, isLoading } = api.reviewComments.threads.useQuery(
+        { owner, repo, number },
+        { staleTime: 30_000 },
+    );
+
+    if (isLoading) {
+        return (
+            <div className="space-y-1">
+                <ThreadSkeleton />
+                <ThreadSkeleton />
+                <ThreadSkeleton />
+            </div>
+        );
+    }
+
+    if (!threads || threads.length === 0) {
+        return (
+            <p className="text-gray-500 text-sm dark:text-zinc-400">
+                No review threads
+            </p>
+        );
+    }
+
+    return (
+        <div className="space-y-0.5">
+            {threads.map((thread, idx) => (
+                <ThreadCard
+                    key={thread.comments[0]?.id ?? idx}
+                    thread={thread}
+                />
+            ))}
+        </div>
+    );
+}

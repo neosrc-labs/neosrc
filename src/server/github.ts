@@ -681,7 +681,7 @@ export const getPullRequestReviewCommentsForReview = async (
 
 export const createPullRequestReviewComment = async (
     accessToken: string,
-    pullRequestNodeId: number,
+    pullRequestNodeId: string,
     path: string,
     line: number,
     side: "LEFT" | "RIGHT",
@@ -1022,4 +1022,104 @@ export const removeReviewersFromPullRequest = async (
         reviewers,
     });
     return response.data;
+};
+
+export type ReviewThreadData = {
+    isResolved: boolean;
+    isOutdated: boolean;
+    path: string | null;
+    comments: Array<{
+        id: number;
+        body: string;
+        author: {
+            login: string;
+            avatarUrl: string;
+            url: string;
+        } | null;
+        createdAt: string;
+        replyToId: number | null;
+    }>;
+};
+
+export const getReviewThreads = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+): Promise<ReviewThreadData[]> => {
+    const response = await fetch("https://api.github.com/graphql", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            query: `
+                query($owner: String!, $repo: String!, $number: Int!) {
+                    repository(owner: $owner, name: $repo) {
+                        pullRequest(number: $number) {
+                            reviewThreads(first: 100) {
+                                nodes {
+                                    isResolved
+                                    isOutdated
+                                    path
+                                    comments(first: 100) {
+                                        nodes {
+                                            databaseId
+                                            body
+                                            author {
+                                                login
+                                                avatarUrl
+                                                url
+                                            }
+                                            createdAt
+                                            replyTo {
+                                                databaseId
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            `,
+            variables: {
+                owner,
+                repo,
+                number: pullNumber,
+            },
+        }),
+    });
+
+    const result = await response.json();
+    if (result.errors) {
+        throw new Error(
+            `Failed to fetch review threads: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
+        );
+    }
+
+    const threadNodes =
+        result.data?.repository?.pullRequest?.reviewThreads?.nodes ?? [];
+
+    return threadNodes
+        .filter((thread: unknown) => thread != null)
+        .map((thread: any) => {
+            const comments = (thread.comments?.nodes ?? [])
+                .filter((c: unknown) => c != null)
+                .map((c: any) => ({
+                    id: c.databaseId,
+                    body: c.body,
+                    author: c.author,
+                    createdAt: c.createdAt,
+                    replyToId: c.replyTo?.databaseId ?? null,
+                }));
+
+            return {
+                isResolved: thread.isResolved,
+                isOutdated: thread.isOutdated,
+                path: thread.path,
+                comments,
+            };
+        });
 };

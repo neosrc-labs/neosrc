@@ -1,12 +1,13 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { use, useMemo } from "react";
+import { use, useMemo, useState } from "react";
 import { CheckHoverCard } from "~/components/check-hover-card";
 import { NavItem, NavMenu } from "~/components/ui/nav-menu";
 import { useFiles } from "~/hooks/files";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { buildFileTree, FileTree, FileTreeSkeleton } from "./file-tree";
+import { ReviewThreadsSection } from "./review-threads-section";
 
 interface LeftSidebarContentSectionProps {
     owner: string;
@@ -28,17 +29,57 @@ export function LeftSidebarContentSection({
     const isFilesActive =
         pathname === `${basePath}/changes` ||
         pathname.startsWith(`${basePath}/changes/`);
+    const [conversationTab, setConversationTab] = useState<
+        "checks" | "threads"
+    >(checksPromise ? "checks" : "threads");
 
-    return isFilesActive ? (
-        <SidebarFileTree
-            number={number}
-            owner={owner}
-            pullRequestPromise={pullRequestPromise}
-            repo={repo}
-        />
-    ) : checksPromise ? (
-        <Checks checksPromise={checksPromise} />
-    ) : null;
+    if (isFilesActive) {
+        return (
+            <SidebarFileTree
+                number={number}
+                owner={owner}
+                pullRequestPromise={pullRequestPromise}
+                repo={repo}
+            />
+        );
+    }
+
+    const tabs = [
+        ...(checksPromise ? [["checks", "Checks"] as const] : []),
+        ["threads", "Review Threads"] as const,
+    ];
+
+    return (
+        <div className="space-y-4">
+            <div className="flex gap-1 border-gray-200 border-b pb-2 dark:border-zinc-800">
+                {tabs.map(([key, label]) => (
+                    <button
+                        key={key}
+                        type="button"
+                        onClick={() => setConversationTab(key)}
+                        className={`rounded-md px-2.5 py-1 font-medium text-sm transition-colors ${
+                            conversationTab === key
+                                ? "bg-gray-100 text-gray-900 dark:bg-zinc-800 dark:text-zinc-100"
+                                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                        }`}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+
+            {conversationTab === "checks" && checksPromise ? (
+                <Checks checksPromise={checksPromise} />
+            ) : null}
+            {conversationTab === "threads" ? (
+                <ReviewThreadsSection
+                    number={number}
+                    owner={owner}
+                    repo={repo}
+                />
+            ) : null}
+        </div>
+    );
 }
 
 interface SidebarFileTreeProps {
