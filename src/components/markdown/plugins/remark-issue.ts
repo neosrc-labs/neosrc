@@ -19,7 +19,7 @@ export function remarkIssuePlugin(owner?: string, repo?: string) {
                     const value = node.value as string;
                     const combinedRegex =
                         /(\b[\w.-]+\/[\w.-]+#\d+\b)|(?<!\w)(#\d+)\b/g;
-                    const parts: any[] = [];
+                    const parts: Part[] = [];
                     let cursor = 0;
                     let match: RegExpExecArray | null;
 
@@ -83,3 +83,7 @@ export function remarkIssuePlugin(owner?: string, repo?: string) {
         };
     };
 }
+
+type Part =
+    | { type: "text"; value: string }
+    | { type: "link"; url: string; children: Part[] };

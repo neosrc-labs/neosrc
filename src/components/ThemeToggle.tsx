@@ -35,10 +35,10 @@ export function ThemeToggle() {
     }, [open]);
 
     const selected = themes.find((t) => t.key === theme) ?? themes[0];
+    const tryFindTheme = (theme: string) =>
+        themes.find((t) => t.key === theme) ?? themes[0];
     const resolved =
-        resolvedTheme === "dark"
-            ? themes.find((t) => t.key === "dark")!
-            : themes.find((t) => t.key === "light")!;
+        resolvedTheme === "dark" ? tryFindTheme("dark") : tryFindTheme("light");
     const CurrentIcon = theme === "system" ? resolved.icon : selected.icon;
 
     return (

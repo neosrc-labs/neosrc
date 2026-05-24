@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
-import type { TimelineResult } from "~/server/api/routers/timeline";
 import type {
     GQLReactionNode,
     GQLTimelineEvent,

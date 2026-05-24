@@ -88,7 +88,7 @@ export function ReactionRollup({
                 repo,
                 number,
             });
-            utils.reactions.get.setData({ owner, repo, number }, (old: any) => {
+            utils.reactions.get.setData({ owner, repo, number }, (old) => {
                 if (!old) return old;
                 const existing = old.reactions?.find(
                     (r: any) =>
@@ -96,7 +96,7 @@ export function ReactionRollup({
                         r.content === content,
                 );
                 const updated = existing
-                    ? old.reactions.filter((r: any) => r.id !== existing.id)
+                    ? old.reactions.filter((r) => r.id !== existing.id)
                     : [
                           ...old.reactions,
                           {
