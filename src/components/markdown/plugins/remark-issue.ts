@@ -1,6 +1,8 @@
 export function remarkIssuePlugin(owner?: string, repo?: string) {
     return function attacher() {
+        // biome-ignore lint/suspicious/noExplicitAny: FIXME: Should create a dedicated remark node type
         return function transformer(tree: any) {
+            // biome-ignore lint/suspicious/noExplicitAny: FIXME: Should create a dedicated remark node type
             function walk(node: any, parent: any) {
                 if (!node) return;
                 if (node.children) {

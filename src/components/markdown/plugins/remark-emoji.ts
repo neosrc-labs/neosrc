@@ -1,7 +1,9 @@
 import { emojify } from "node-emoji";
 
 export function remarkEmojiPlugin() {
+    // biome-ignore lint/suspicious/noExplicitAny: FIXME: Should create a dedicated remark node type
     return function transformer(tree: any) {
+        // biome-ignore lint/suspicious/noExplicitAny: FIXME: Should create a dedicated remark node type
         function walk(node: any, parent: any) {
             if (!node) return;
             if (node.children) {
