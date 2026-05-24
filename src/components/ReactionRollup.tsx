@@ -1,5 +1,6 @@
 "use client";
 
+import type { components } from "@octokit/openapi-types";
 import { SmilePlus } from "lucide-react";
 import { useState } from "react";
 import {
@@ -17,6 +18,7 @@ import type { GQLReactionNode } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 
 export type Reaction = GQLReactionNode;
+type SimpleUser = components["schemas"]["nullable-simple-user"];
 
 const reactionEmojis: Record<string, string> = {
     "+1": "👍",
@@ -91,7 +93,7 @@ export function ReactionRollup({
             utils.reactions.get.setData({ owner, repo, number }, (old) => {
                 if (!old) return old;
                 const existing = old.reactions?.find(
-                    (r: any) =>
+                    (r) =>
                         r.user?.login === resolvedUserLogin &&
                         r.content === content,
                 );
@@ -99,30 +101,16 @@ export function ReactionRollup({
                     ? old.reactions.filter((r) => r.id !== existing.id)
                     : [
                           ...old.reactions,
-                          {
-                              id: -Date.now(),
-                              node_id: "",
-                              user: {
-                                  login: resolvedUserLogin ?? "",
-                                  avatar_url: "",
-                                  html_url: "",
-                                  id: 0,
-                                  node_id: "",
-                                  gravatar_id: "",
-                                  url: "",
-                                  received_events_url: "",
-                                  type: "User",
-                                  site_admin: false,
-                              },
+                          createOptimisticUpdateReaction(
+                              resolvedUserLogin ?? "",
                               content,
-                              created_at: new Date().toISOString(),
-                          },
+                          ),
                       ];
                 return { ...old, reactions: updated };
             });
             return { prevData };
         },
-        onError: (_err: any, _vars: any, ctx: any) => {
+        onError: (_err, _vars, ctx) => {
             if (ctx?.prevData) {
                 utils.reactions.get.setData(
                     { owner, repo, number },
@@ -217,10 +205,6 @@ export function ReactionRollup({
 
     if (reactions.length === 0 && !currentUserLogin) return null;
 
-    const hasReacted = resolvedUserLogin
-        ? reactions.some((r) => r.user?.login === resolvedUserLogin)
-        : false;
-
     return (
         <div className="flex flex-wrap items-center gap-1">
             {reactionOrder.map((content) => {
@@ -312,4 +296,38 @@ export function ReactionRollup({
             )}
         </div>
     );
+}
+
+function createOptimisticUpdateReaction(
+    userLogin: string,
+    content: ReactionContent,
+) {
+    return {
+        id: -Date.now(),
+        node_id: "",
+        user: {
+            login: userLogin,
+            name: "",
+            email: "",
+            id: 0,
+            node_id: "",
+            avatar_url: "",
+            gravatar_id: "",
+            url: "",
+            html_url: "",
+            followers_url: "",
+            following_url: "",
+            gists_url: "",
+            starred_url: "",
+            subscriptions_url: "",
+            organizations_url: "",
+            repos_url: "",
+            events_url: "",
+            received_events_url: "",
+            type: "",
+            site_admin: false,
+        } satisfies SimpleUser,
+        content,
+        created_at: new Date().toISOString(),
+    };
 }

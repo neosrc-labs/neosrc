@@ -18,7 +18,7 @@ export function remarkMentionPlugin() {
                 const value = node.value as string;
                 const mentionRegex =
                     /(?<!\w)@([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)(?:\/([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?))?\b/g;
-                const parts: any[] = [];
+                const parts: Part[] = [];
                 let cursor = 0;
                 let match: RegExpExecArray | null;
 
@@ -66,3 +66,7 @@ export function remarkMentionPlugin() {
         walk(tree, null);
     };
 }
+
+type Part =
+    | { type: "text"; value: string }
+    | { type: "link"; url: string; children: Part[] };

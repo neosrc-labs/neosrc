@@ -31,7 +31,6 @@ export function findEnclosingCodeBlock(
                 openLine = i;
             } else if (cursorLine > openLine && cursorLine < i) {
                 let openStart = 0;
-                // biome-ignore lint/style/noNonNullAssertion: guarded by bounds check
                 for (let j = 0; j < openLine; j++)
                     openStart += lines[j]!.length + 1;
                 const openEndIdx = text.indexOf("\n", openStart);
