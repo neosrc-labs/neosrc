@@ -230,6 +230,22 @@ export const closePullRequest = async (
     return response.data;
 };
 
+export const reopenPullRequest = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+) => {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.pulls.update({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        state: "open",
+    });
+    return response.data;
+};
+
 export const createIssueComment = async (
     accessToken: string,
     owner: string,

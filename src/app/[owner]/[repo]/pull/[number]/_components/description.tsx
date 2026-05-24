@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleX, FilePen, SquarePen } from "lucide-react";
+import { CircleX, FilePen, GitPullRequest, SquarePen } from "lucide-react";
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -55,6 +55,12 @@ export function PullRequestDescriptionSection({
     });
 
     const closeMutation = api.pulls.close.useMutation({
+        onSuccess: () => {
+            router.refresh();
+        },
+    });
+
+    const reopenMutation = api.pulls.reopen.useMutation({
         onSuccess: () => {
             router.refresh();
         },
@@ -127,7 +133,7 @@ export function PullRequestDescriptionSection({
                                                 : "Mark as draft"}
                                         </button>
                                     )}
-                                {pullRequest.state === "open" && (
+                                {pullRequest.state === "open" ? (
                                     <button
                                         className="flex cursor-pointer items-center gap-1.5 rounded-md border border-red-300 px-3 py-1 text-red-600 text-sm transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
                                         disabled={closeMutation.isPending}
@@ -145,7 +151,26 @@ export function PullRequestDescriptionSection({
                                             ? "Closing..."
                                             : "Close"}
                                     </button>
-                                )}
+                                ) : pullRequest.state === "closed" &&
+                                    !pullRequest.merged ? (
+                                    <button
+                                        className="ml-auto flex cursor-pointer items-center gap-1.5 rounded-md border border-green-300 px-3 py-1 text-green-600 text-sm transition-colors hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950"
+                                        disabled={reopenMutation.isPending}
+                                        onClick={() =>
+                                            reopenMutation.mutate({
+                                                owner,
+                                                repo,
+                                                number,
+                                            })
+                                        }
+                                        type="button"
+                                    >
+                                        <GitPullRequest size={14} />
+                                        {reopenMutation.isPending
+                                            ? "Reopening..."
+                                            : "Reopen"}
+                                    </button>
+                                ) : null}
                                 {markAsDraftMutation.isError && (
                                     <p className="ml-auto text-red-600 text-xs">
                                         Failed to mark as draft. Please try
