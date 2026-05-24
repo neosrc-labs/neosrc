@@ -6,10 +6,8 @@ import { CommentCard } from "~/components/CommentCard";
 import { DiffView } from "~/components/DiffView";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
-import type { ReviewCommentsForReviewData } from "~/server/github";
+import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
-
-type ReviewComment = ReviewCommentsForReviewData[number];
 
 interface ReviewCommentsProps {
     owner: string;

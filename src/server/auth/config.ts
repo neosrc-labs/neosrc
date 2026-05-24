@@ -82,6 +82,7 @@ export const authConfig = {
     ],
     adapter: DrizzleAdapter(db, {
         usersTable: users,
+        // @ts-expect-error: The expires at for GitHub is a unix timestamp so it must be a bigint in postgres
         accountsTable: accounts,
         sessionsTable: sessions,
         verificationTokensTable: verificationTokens,

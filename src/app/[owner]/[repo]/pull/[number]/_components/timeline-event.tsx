@@ -26,12 +26,11 @@ import {
 import { useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
-import { type Reaction, ReactionRollup } from "~/components/ReactionRollup";
+import { ReactionRollup } from "~/components/ReactionRollup";
 import { Label } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { ReviewComment } from "~/server/github";
 import type {
-    GQLActor,
     GQLReactionNode,
     GQLTimelineEvent,
 } from "~/server/github-graphql";

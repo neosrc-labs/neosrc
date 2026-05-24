@@ -27,6 +27,9 @@ export function useFiles({ owner, repo, number, commitSha }: UseFilesParams) {
                     { signal: controller.signal },
                 );
                 const reader = res.body?.getReader();
+                if (!reader) {
+                    throw Error("body reader was null when loading files");
+                }
                 const decoder = new TextDecoder();
                 let buffer = "";
 

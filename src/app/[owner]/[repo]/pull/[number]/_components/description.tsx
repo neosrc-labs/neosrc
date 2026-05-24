@@ -152,7 +152,7 @@ export function PullRequestDescriptionSection({
                                             : "Close"}
                                     </button>
                                 ) : pullRequest.state === "closed" &&
-                                    !pullRequest.merged ? (
+                                  !pullRequest.merged ? (
                                     <button
                                         className="ml-auto flex cursor-pointer items-center gap-1.5 rounded-md border border-green-300 px-3 py-1 text-green-600 text-sm transition-colors hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950"
                                         disabled={reopenMutation.isPending}
