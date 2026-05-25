@@ -76,7 +76,7 @@ export const authConfig = {
             clientId: process.env.GITHUB_ID,
             clientSecret: process.env.GITHUB_SECRET,
             authorization: {
-                params: { scope: "read:user user:email repo public_repo" },
+                params: { scope: "read:user user:email repo public_repo read:project read:org read:discussion" },
             },
         }),
     ],
