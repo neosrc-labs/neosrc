@@ -7,24 +7,24 @@ export function StatusPill({ state }: { state: PullRequestState }) {
     switch (state) {
         case "merged":
             statusText = "Merged";
-            statusColor = "bg-purple-100 text-purple-800";
+            statusColor = "bg-purple-600 text-white";
             break;
         case "open":
             statusText = "Open";
-            statusColor = "bg-green-100 text-green-800";
+            statusColor = "bg-green-600 text-white";
             break;
         case "draft":
             statusText = "Draft";
-            statusColor = "bg-zinc-100 text-zinc-800";
+            statusColor = "bg-zinc-200 text-zinc-700";
             break;
         case "closed":
             statusText = "Closed";
-            statusColor = "bg-red-100 text-red-800";
+            statusColor = "bg-red-600 text-white";
             break;
     }
     return (
         <span
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-xs ${statusColor}`}
+            className={`inline-flex items-center rounded-full px-3 py-1 font-medium text-sm ${statusColor}`}
         >
             {statusText}
         </span>
