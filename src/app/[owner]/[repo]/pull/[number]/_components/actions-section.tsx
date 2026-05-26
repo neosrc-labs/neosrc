@@ -353,12 +353,12 @@ export function ActionSection({
                         )}
                     {pullRequest.state === "open" ? (
                         <button
-                            className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-red-300 px-3 py-2 text-red-600 text-sm transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+                            className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-gray-600 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
                             disabled={closeMutation.isPending}
                             onClick={() => handleClose()}
                             type="button"
                         >
-                            <CircleX size={14} />
+                            <CircleX className="text-red-500" size={14} />
                             {closeMutation.isPending ? "Closing..." : "Close"}
                         </button>
                     ) : pullRequest.state === "closed" &&
