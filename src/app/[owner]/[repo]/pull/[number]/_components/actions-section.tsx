@@ -10,7 +10,8 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
-import type { PullsGetResponseData } from "~/server/github";
+import { useLocalStorage } from "~/hooks/use-local-storage";
+import type { MergeMethod, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 
 interface ActionSectionProps {
@@ -35,6 +36,11 @@ export function ActionSection({
     const [body, setBody] = useState("");
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [isCancelPopoverOpen, setIsCancelPopoverOpen] = useState(false);
+    const [isMergeOptionsOpen, setIsMergeOptionsOpen] = useState(false);
+    const [mergeMode, setMergeMode] = useLocalStorage<MergeMethod>(
+        "neosrc-merge-mode",
+        "merge",
+    );
 
     const { data: pendingReview } = api.reviews.getPending.useQuery(
         { owner, repo, number },
@@ -91,6 +97,13 @@ export function ActionSection({
         onSuccess: () => {
             setMarkedReady(true);
             router.refresh();
+        },
+    });
+
+    const mergeMutation = api.pulls.merge.useMutation({
+        onSuccess: () => {
+            router.refresh();
+            utils.timeline.list.invalidate();
         },
     });
 
@@ -164,6 +177,10 @@ export function ActionSection({
     const handleMarkReady = useCallback(() => {
         markReadyMutation.mutate({ owner, repo, number });
     }, [owner, repo, number, markReadyMutation]);
+
+    const handleMerge = useCallback(() => {
+        mergeMutation.mutate({ owner, repo, number, mergeMethod: mergeMode });
+    }, [owner, repo, number, mergeMode, mergeMutation]);
 
     const skeleton = (
         <>
@@ -383,50 +400,138 @@ export function ActionSection({
                         </PopoverContent>
                     </Popover>
                 </div>
-                <div className="flex gap-2">
-                    {isDraft ? (
-                        <button
-                            className="w-full cursor-pointer rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
-                            disabled={markReadyMutation.isPending}
-                            onClick={handleMarkReady}
-                            type="button"
-                        >
-                            {markReadyMutation.isPending
-                                ? "Marking..."
-                                : "Mark as ready for review"}
-                        </button>
-                    ) : (
-                        <button
-                            className="flex-1 cursor-not-allowed rounded-md bg-[#8250df] px-3 py-2 font-medium text-sm text-white opacity-50"
-                            disabled
-                            type="button"
-                        >
-                            Merge
-                        </button>
-                    )}
-                    <Popover>
-                        <PopoverTrigger asChild>
+                {pullRequest.state === "open" && (
+                    <div className="flex gap-2">
+                        {isDraft ? (
                             <button
-                                className="cursor-pointer rounded-md bg-neutral-200 px-2 py-2 text-black transition-colors hover:bg-neutral-300 disabled:cursor-not-allowed disabled:opacity-50"
-                                disabled
+                                className="w-full cursor-pointer rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={markReadyMutation.isPending}
+                                onClick={handleMarkReady}
                                 type="button"
-                                title="Merge options"
                             >
-                                <ChevronDown className="h-4 w-4" />
+                                {markReadyMutation.isPending
+                                    ? "Marking..."
+                                    : "Mark as ready for review"}
                             </button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                            align="end"
-                            className="w-48 bg-white p-2 dark:bg-zinc-950"
-                            side="left"
-                            sideOffset={8}
-                        >
-                            <p className="px-2 py-1 text-gray-500 text-xs">
-                                Merge options coming soon
-                            </p>
-                        </PopoverContent>
-                    </Popover>
-                </div>
+                        ) : (
+                            <>
+                                <button
+                                    className="flex-1 cursor-pointer rounded-md bg-[#8250df] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#713fcb] disabled:cursor-not-allowed disabled:opacity-50"
+                                    disabled={mergeMutation.isPending}
+                                    onClick={handleMerge}
+                                    type="button"
+                                >
+                                    {mergeMutation.isPending
+                                        ? "Merging..."
+                                        : mergeMode === "squash"
+                                          ? "Squash and merge"
+                                          : mergeMode === "rebase"
+                                            ? "Rebase and merge"
+                                            : "Merge pull request"}
+                                </button>
+                                <Popover
+                                    open={isMergeOptionsOpen}
+                                    onOpenChange={setIsMergeOptionsOpen}
+                                >
+                                    <PopoverTrigger asChild>
+                                        <button
+                                            className="cursor-pointer rounded-md bg-[#8250df] px-2 py-2 text-white transition-colors hover:bg-[#713fcb] disabled:cursor-not-allowed disabled:opacity-50"
+                                            disabled={mergeMutation.isPending}
+                                            type="button"
+                                            title="Merge options"
+                                        >
+                                            <ChevronDown className="h-4 w-4" />
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                        align="end"
+                                        className="w-72 bg-white p-2 dark:bg-zinc-950"
+                                        side="left"
+                                        sideOffset={8}
+                                    >
+                                        <div className="space-y-1">
+                                            {(
+                                                [
+                                                    {
+                                                        value: "merge" as const,
+                                                        label: "Create a merge commit",
+                                                        description:
+                                                            "All commits will be added to the base branch via a merge commit.",
+                                                    },
+                                                    {
+                                                        value: "squash" as const,
+                                                        label: "Squash and merge",
+                                                        description:
+                                                            "All commits will be squashed into a single commit.",
+                                                    },
+                                                    {
+                                                        value: "rebase" as const,
+                                                        label: "Rebase and merge",
+                                                        description:
+                                                            "All commits will be added to the base branch individually.",
+                                                    },
+                                                ] as const
+                                            ).map((option) => (
+                                                <button
+                                                    key={option.value}
+                                                    className={`flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                                                        mergeMode ===
+                                                        option.value
+                                                            ? "bg-gray-100 dark:bg-zinc-800"
+                                                            : "hover:bg-gray-50 dark:hover:bg-zinc-900"
+                                                    }`}
+                                                    onClick={() => {
+                                                        setMergeMode(
+                                                            option.value,
+                                                        );
+                                                        setIsMergeOptionsOpen(
+                                                            false,
+                                                        );
+                                                    }}
+                                                    type="button"
+                                                >
+                                                    <span
+                                                        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                                                            mergeMode ===
+                                                            option.value
+                                                                ? "border-[#8250df]"
+                                                                : "border-gray-300 dark:border-zinc-600"
+                                                        }`}
+                                                    >
+                                                        {mergeMode ===
+                                                            option.value && (
+                                                            <span className="flex h-2 w-2 rounded-full bg-[#8250df]" />
+                                                        )}
+                                                    </span>
+                                                    <div>
+                                                        <div
+                                                            className={
+                                                                mergeMode ===
+                                                                option.value
+                                                                    ? "font-medium text-gray-900 dark:text-gray-100"
+                                                                    : "text-gray-700 dark:text-gray-300"
+                                                            }
+                                                        >
+                                                            {option.label}
+                                                        </div>
+                                                        <div className="text-gray-500 text-xs dark:text-gray-400">
+                                                            {option.description}
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                            </>
+                        )}
+                    </div>
+                )}
+                {mergeMutation.isError && (
+                    <p className="text-red-600 text-xs">
+                        Failed to merge. Please try again.
+                    </p>
+                )}
                 {approveMutation.isError && (
                     <p className="text-red-600 text-xs">
                         Failed to approve. Please try again.

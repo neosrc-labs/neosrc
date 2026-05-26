@@ -214,6 +214,29 @@ export const markPullRequestAsReady = async (
     return pr;
 };
 
+export type MergeMethod = "merge" | "squash" | "rebase";
+
+export const mergePullRequest = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    mergeMethod: MergeMethod,
+    commitTitle?: string,
+    commitMessage?: string,
+) => {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.pulls.merge({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        merge_method: mergeMethod,
+        commit_title: commitTitle,
+        commit_message: commitMessage,
+    });
+    return response.data;
+};
+
 export const closePullRequest = async (
     accessToken: string,
     owner: string,
