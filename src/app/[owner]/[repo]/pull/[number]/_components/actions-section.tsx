@@ -48,6 +48,7 @@ export function ActionSection({
     const [body, setBody] = useState("");
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [isCancelPopoverOpen, setIsCancelPopoverOpen] = useState(false);
+    const [isClosePopoverOpen, setIsClosePopoverOpen] = useState(false);
     const [isMergeOptionsOpen, setIsMergeOptionsOpen] = useState(false);
     const [mergeMode, setMergeMode] = useLocalStorage<MergeMethod>(
         "neosrc-merge-mode",
@@ -352,15 +353,53 @@ export function ActionSection({
                             </button>
                         )}
                     {pullRequest.state === "open" ? (
-                        <button
-                            className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-gray-600 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                            disabled={closeMutation.isPending}
-                            onClick={() => handleClose()}
-                            type="button"
+                        <Popover
+                            open={isClosePopoverOpen}
+                            onOpenChange={setIsClosePopoverOpen}
                         >
-                            <CircleX className="text-red-500" size={14} />
-                            {closeMutation.isPending ? "Closing..." : "Close"}
-                        </button>
+                            <PopoverTrigger asChild>
+                                <button
+                                    className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-gray-600 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                    disabled={closeMutation.isPending}
+                                    type="button"
+                                >
+                                    <CircleX className="text-red-500" size={14} />
+                                    {closeMutation.isPending ? "Closing..." : "Close"}
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                align="end"
+                                className="w-64 bg-white p-4 dark:bg-zinc-950"
+                                side="top"
+                                sideOffset={4}
+                            >
+                                <p className="mb-3 font-medium text-gray-900 text-sm dark:text-gray-100">
+                                    Close this pull request?
+                                </p>
+                                <p className="mb-4 text-gray-600 text-xs dark:text-gray-400">
+                                    This can be undone by reopening it later.
+                                </p>
+                                <div className="flex justify-end gap-2">
+                                    <button
+                                        className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-xs ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                                        onClick={() => setIsClosePopoverOpen(false)}
+                                        type="button"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="cursor-pointer rounded-md bg-red-600 px-3 py-1.5 font-medium text-white text-xs transition-colors hover:bg-red-700"
+                                        onClick={() => {
+                                            setIsClosePopoverOpen(false);
+                                            handleClose();
+                                        }}
+                                        type="button"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     ) : pullRequest.state === "closed" &&
                       !pullRequest.merged ? (
                         <button
