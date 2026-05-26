@@ -1,8 +1,7 @@
 "use client";
 
-import { CircleX, FilePen, GitPullRequest, SquarePen } from "lucide-react";
+import { SquarePen } from "lucide-react";
 import NextLink from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
@@ -30,12 +29,9 @@ export function PullRequestDescriptionSection({
     number,
     pullRequestPromise,
 }: PullRequestDescriptionSectionProps) {
-    const router = useRouter();
     const [isEditing, setIsEditing] = useState(false);
     const [editBody, setEditBody] = useState("");
     const [savedBody, setSavedBody] = useState<string | null>(null);
-    const [convertedToDraft, setConvertedToDraft] = useState(false);
-
     const updateMutation = api.pulls.updateBody.useMutation({
         onMutate: () => {
             setSavedBody(editBody);
@@ -44,25 +40,6 @@ export function PullRequestDescriptionSection({
         onError: () => {
             setSavedBody(null);
             setIsEditing(true);
-        },
-    });
-
-    const markAsDraftMutation = api.pulls.markAsDraft.useMutation({
-        onSuccess: () => {
-            setConvertedToDraft(true);
-            router.refresh();
-        },
-    });
-
-    const closeMutation = api.pulls.close.useMutation({
-        onSuccess: () => {
-            router.refresh();
-        },
-    });
-
-    const reopenMutation = api.pulls.reopen.useMutation({
-        onSuccess: () => {
-            router.refresh();
         },
     });
 
@@ -110,73 +87,6 @@ export function PullRequestDescriptionSection({
                                 <h1 className="text-2xl text-gray-400 dark:text-zinc-500">
                                     #{number}
                                 </h1>
-                                {!pullRequest.draft &&
-                                    !convertedToDraft &&
-                                    pullRequest.state === "open" && (
-                                        <button
-                                            className="ml-auto flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1 text-gray-600 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                                            disabled={
-                                                markAsDraftMutation.isPending
-                                            }
-                                            onClick={() =>
-                                                markAsDraftMutation.mutate({
-                                                    owner,
-                                                    repo,
-                                                    number,
-                                                })
-                                            }
-                                            type="button"
-                                        >
-                                            <FilePen size={14} />
-                                            {markAsDraftMutation.isPending
-                                                ? "Converting..."
-                                                : "Mark as draft"}
-                                        </button>
-                                    )}
-                                {pullRequest.state === "open" ? (
-                                    <button
-                                        className="flex cursor-pointer items-center gap-1.5 rounded-md border border-red-300 px-3 py-1 text-red-600 text-sm transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
-                                        disabled={closeMutation.isPending}
-                                        onClick={() =>
-                                            closeMutation.mutate({
-                                                owner,
-                                                repo,
-                                                number,
-                                            })
-                                        }
-                                        type="button"
-                                    >
-                                        <CircleX size={14} />
-                                        {closeMutation.isPending
-                                            ? "Closing..."
-                                            : "Close"}
-                                    </button>
-                                ) : pullRequest.state === "closed" &&
-                                  !pullRequest.merged ? (
-                                    <button
-                                        className="ml-auto flex cursor-pointer items-center gap-1.5 rounded-md border border-green-300 px-3 py-1 text-green-600 text-sm transition-colors hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950"
-                                        disabled={reopenMutation.isPending}
-                                        onClick={() =>
-                                            reopenMutation.mutate({
-                                                owner,
-                                                repo,
-                                                number,
-                                            })
-                                        }
-                                        type="button"
-                                    >
-                                        <GitPullRequest size={14} />
-                                        {reopenMutation.isPending
-                                            ? "Reopening..."
-                                            : "Reopen"}
-                                    </button>
-                                ) : null}
-                                {markAsDraftMutation.isError && (
-                                    <p className="ml-auto text-red-600 text-xs">
-                                        Failed to mark as draft. Please try
-                                        again.
-                                    </p>
-                                )}
                             </>
                         )}
                     </Async>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, CircleX, FilePen, GitPullRequest, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
@@ -31,6 +31,7 @@ export function ActionSection({
     const router = useRouter();
     const utils = api.useUtils();
     const [markedReady, setMarkedReady] = useState(false);
+    const [convertedToDraft, setConvertedToDraft] = useState(false);
     const [body, setBody] = useState("");
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [isCancelPopoverOpen, setIsCancelPopoverOpen] = useState(false);
@@ -64,6 +65,25 @@ export function ActionSection({
         onSuccess: () => {
             utils.reviews.getPending.invalidate();
             utils.reviewComments.list.invalidate();
+        },
+    });
+
+    const markAsDraftMutation = api.pulls.markAsDraft.useMutation({
+        onSuccess: () => {
+            setConvertedToDraft(true);
+            router.refresh();
+        },
+    });
+
+    const closeMutation = api.pulls.close.useMutation({
+        onSuccess: () => {
+            router.refresh();
+        },
+    });
+
+    const reopenMutation = api.pulls.reopen.useMutation({
+        onSuccess: () => {
+            router.refresh();
         },
     });
 
@@ -128,6 +148,18 @@ export function ActionSection({
             reviewId: pendingReview.reviewId,
         });
     }, [owner, repo, number, pendingReview, dismissReviewMutation]);
+
+    const handleMarkAsDraft = useCallback(() => {
+        markAsDraftMutation.mutate({ owner, repo, number });
+    }, [owner, repo, number, markAsDraftMutation]);
+
+    const handleClose = useCallback(() => {
+        closeMutation.mutate({ owner, repo, number });
+    }, [owner, repo, number, closeMutation]);
+
+    const handleReopen = useCallback(() => {
+        reopenMutation.mutate({ owner, repo, number });
+    }, [owner, repo, number, reopenMutation]);
 
     const handleMarkReady = useCallback(() => {
         markReadyMutation.mutate({ owner, repo, number });
@@ -230,6 +262,62 @@ export function ActionSection({
         return (
             <>
                 {reviewInProgress}
+                <div className="flex gap-1">
+                    {!pullRequest.draft &&
+                        !convertedToDraft &&
+                        pullRequest.state === "open" && (
+                            <button
+                                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-gray-600 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                disabled={markAsDraftMutation.isPending}
+                                onClick={() => handleMarkAsDraft()}
+                                type="button"
+                            >
+                                <FilePen size={14} />
+                                {markAsDraftMutation.isPending
+                                    ? "Converting..."
+                                    : "Mark as draft"}
+                            </button>
+                        )}
+                    {pullRequest.state === "open" ? (
+                        <button
+                            className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-red-300 px-3 py-2 text-red-600 text-sm transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+                            disabled={closeMutation.isPending}
+                            onClick={() => handleClose()}
+                            type="button"
+                        >
+                            <CircleX size={14} />
+                            {closeMutation.isPending ? "Closing..." : "Close"}
+                        </button>
+                    ) : pullRequest.state === "closed" &&
+                      !pullRequest.merged ? (
+                        <button
+                            className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-green-300 px-3 py-2 text-green-600 text-sm transition-colors hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950"
+                            disabled={reopenMutation.isPending}
+                            onClick={() => handleReopen()}
+                            type="button"
+                        >
+                            <GitPullRequest size={14} />
+                            {reopenMutation.isPending
+                                ? "Reopening..."
+                                : "Reopen"}
+                        </button>
+                    ) : null}
+                </div>
+                {markAsDraftMutation.isError && (
+                    <p className="text-red-600 text-xs">
+                        Failed to mark as draft. Please try again.
+                    </p>
+                )}
+                {closeMutation.isError && (
+                    <p className="text-red-600 text-xs">
+                        Failed to close. Please try again.
+                    </p>
+                )}
+                {reopenMutation.isError && (
+                    <p className="text-red-600 text-xs">
+                        Failed to reopen. Please try again.
+                    </p>
+                )}
                 <div className="flex gap-1">
                     <Popover
                         open={isPopoverOpen}
