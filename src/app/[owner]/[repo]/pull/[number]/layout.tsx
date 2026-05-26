@@ -11,6 +11,7 @@ import {
     getConflictedFiles,
     getPullRequest,
     getPullRequestCommits,
+    getUserRepoPermission,
     type PullsGetResponseData,
     type PullsListCommitsResponseData,
 } from "~/server/github";
@@ -38,6 +39,7 @@ export default async function PullRequestLayout({
     let commits: Promise<PullsListCommitsResponseData> | null = null;
     let checks: Promise<Array<CheckRun>> | null = new Promise(() => {});
     let conflictedFiles: Promise<string[]> | null = new Promise(() => {});
+    let userPermission: Promise<string | null> | null = new Promise(() => {});
     let currentUserLogin: string | undefined;
 
     if (session?.user?.id) {
@@ -52,6 +54,13 @@ export default async function PullRequestLayout({
             commits = getPullRequestCommits(accessToken, owner, repo, number);
             pullRequest = getPullRequest(accessToken, owner, repo, number);
             currentUserLogin = (await getAuthenticatedUser(accessToken)).login;
+
+            userPermission = getUserRepoPermission(
+                accessToken,
+                owner,
+                repo,
+                currentUserLogin,
+            ).catch(() => null);
 
             // Fetch conflicted files if there are merge conflicts
             conflictedFiles = pullRequest.then(async (pr) => {
@@ -114,6 +123,7 @@ export default async function PullRequestLayout({
             leftSidebar={
                 <LeftSidebar
                     currentUserLogin={currentUserLogin}
+                    userPermissionPromise={userPermission}
                     pullRequestPromise={pullRequest}
                     conflictedFilesPromise={conflictedFiles}
                     number={number}

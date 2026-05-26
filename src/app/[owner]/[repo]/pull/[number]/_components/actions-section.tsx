@@ -28,6 +28,7 @@ interface ActionSectionProps {
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData> | null;
     conflictedFilesPromise?: Promise<string[]> | null;
+    userPermissionPromise?: Promise<string | null> | null;
     currentUserLogin?: string;
 }
 
@@ -37,6 +38,7 @@ export function ActionSection({
     number,
     pullRequestPromise,
     conflictedFilesPromise,
+    userPermissionPromise,
     currentUserLogin,
 }: ActionSectionProps) {
     const router = useRouter();
@@ -281,6 +283,7 @@ export function ActionSection({
     const buttons = (
         pullRequest: PullsGetResponseData,
         conflictedFiles: string[],
+        userPermission: string | null,
     ) => {
         const isDraft = !!pullRequest.draft && !markedReady;
         const isAuthor = currentUserLogin === pullRequest.user?.login;
@@ -288,6 +291,11 @@ export function ActionSection({
             submitReviewMutation.isPending ||
             approveMutation.isPending ||
             requestChangesMutation.isPending;
+
+        const canMerge =
+            userPermission === "admin" || userPermission === "write";
+        const isMergeBlocked = pullRequest.mergeable_state === "blocked";
+        const isMergeStateUnknown = pullRequest.mergeable_state === "unknown";
 
         const conflictedFilesSection =
             conflictedFiles.length > 0 ? (
@@ -383,68 +391,74 @@ export function ActionSection({
                         Failed to reopen. Please try again.
                     </p>
                 )}
-                {!isAuthor && !isPending && !dismissReviewMutation.isPending && (
-                    <div className="flex gap-1">
-                        <Popover
-                            open={isPopoverOpen}
-                            onOpenChange={setIsPopoverOpen}
-                        >
-                            <PopoverTrigger asChild>
-                                <button
-                                    className="w-full cursor-pointer rounded-md bg-[#0969da] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#0860ca]"
-                                    type="button"
-                                >
-                                    Submit Review
-                                </button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                                align="end"
-                                className="w-[42rem] bg-white p-4 dark:bg-zinc-950"
-                                side="top"
-                                sideOffset={8}
+                {!isAuthor &&
+                    !isPending &&
+                    !dismissReviewMutation.isPending && (
+                        <div className="flex gap-1">
+                            <Popover
+                                open={isPopoverOpen}
+                                onOpenChange={setIsPopoverOpen}
                             >
-                                <MarkdownEditor
-                                    disabled={isPending}
-                                    minHeight="150px"
-                                    onChange={setBody}
-                                    onCancel={() => {
-                                        setIsPopoverOpen(false);
-                                        setBody("");
-                                    }}
-                                    owner={owner}
-                                    placeholder="Leave a review comment"
-                                    repo={repo}
-                                    cancelLabel="Cancel"
-                                    value={body}
-                                    footerActions={[
-                                        {
-                                            label: "Comment",
-                                            onClick: () =>
-                                                handleSubmitAction("COMMENT"),
-                                            variant: "neutral",
-                                            disabled: (text: string) =>
-                                                !text.trim(),
-                                        },
-                                        {
-                                            label: "Approve",
-                                            onClick: () =>
-                                                handleSubmitAction("APPROVE"),
-                                            variant: "approve",
-                                        },
-                                        {
-                                            label: "Request Changes",
-                                            onClick: () =>
-                                                handleSubmitAction(
-                                                    "REQUEST_CHANGES",
-                                                ),
-                                            variant: "danger",
-                                        },
-                                    ]}
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                )}
+                                <PopoverTrigger asChild>
+                                    <button
+                                        className="w-full cursor-pointer rounded-md bg-[#0969da] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#0860ca]"
+                                        type="button"
+                                    >
+                                        Submit Review
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    align="end"
+                                    className="w-[42rem] bg-white p-4 dark:bg-zinc-950"
+                                    side="top"
+                                    sideOffset={8}
+                                >
+                                    <MarkdownEditor
+                                        disabled={isPending}
+                                        minHeight="150px"
+                                        onChange={setBody}
+                                        onCancel={() => {
+                                            setIsPopoverOpen(false);
+                                            setBody("");
+                                        }}
+                                        owner={owner}
+                                        placeholder="Leave a review comment"
+                                        repo={repo}
+                                        cancelLabel="Cancel"
+                                        value={body}
+                                        footerActions={[
+                                            {
+                                                label: "Comment",
+                                                onClick: () =>
+                                                    handleSubmitAction(
+                                                        "COMMENT",
+                                                    ),
+                                                variant: "neutral",
+                                                disabled: (text: string) =>
+                                                    !text.trim(),
+                                            },
+                                            {
+                                                label: "Approve",
+                                                onClick: () =>
+                                                    handleSubmitAction(
+                                                        "APPROVE",
+                                                    ),
+                                                variant: "approve",
+                                            },
+                                            {
+                                                label: "Request Changes",
+                                                onClick: () =>
+                                                    handleSubmitAction(
+                                                        "REQUEST_CHANGES",
+                                                    ),
+                                                variant: "danger",
+                                            },
+                                        ]}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                    )}
                 {pullRequest.state === "open" && (
                     <div className="flex gap-2">
                         {isDraft ? (
@@ -463,6 +477,27 @@ export function ActionSection({
                                 <GitMerge size={14} className="text-red-500" />
                                 <span className="font-medium text-gray-600 text-sm dark:text-zinc-400">
                                     Conflicts
+                                </span>
+                            </div>
+                        ) : isMergeBlocked ? (
+                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
+                                <GitMerge size={14} className="text-gray-400" />
+                                <span className="font-medium text-gray-400 text-sm dark:text-zinc-500">
+                                    Merging is blocked
+                                </span>
+                            </div>
+                        ) : isMergeStateUnknown ? (
+                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
+                                <GitMerge size={14} className="text-gray-400" />
+                                <span className="font-medium text-gray-400 text-sm dark:text-zinc-500">
+                                    Checking mergeability...
+                                </span>
+                            </div>
+                        ) : !canMerge ? (
+                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
+                                <GitMerge size={14} className="text-gray-400" />
+                                <span className="font-medium text-gray-400 text-sm dark:text-zinc-500">
+                                    You don&apos;t have permission to merge
                                 </span>
                             </div>
                         ) : (
@@ -615,7 +650,23 @@ export function ActionSection({
                                 conflictedFilesPromise ?? Promise.resolve([])
                             }
                         >
-                            {(files) => buttons(pullRequest, files)}
+                            {(files) => (
+                                <Async
+                                    fallback={null}
+                                    promise={
+                                        userPermissionPromise ??
+                                        Promise.resolve(null)
+                                    }
+                                >
+                                    {(userPermission) =>
+                                        buttons(
+                                            pullRequest,
+                                            files,
+                                            userPermission,
+                                        )
+                                    }
+                                </Async>
+                            )}
                         </Async>
                     )}
                 </Async>

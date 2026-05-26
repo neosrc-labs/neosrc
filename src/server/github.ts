@@ -679,6 +679,24 @@ export const getAuthenticatedUser = async (accessToken: string) => {
     return response.data;
 };
 
+export const getUserRepoPermission = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        username: string,
+    ) => {
+        const octokit = createOctokit(accessToken);
+        const response =
+            await octokit.rest.repos.getCollaboratorPermissionLevel({
+                owner,
+                repo,
+                username,
+            });
+        return response.data.permission as "admin" | "write" | "read" | "none";
+    },
+);
+
 export const getPullRequestTimeline = cache(
     async (
         accessToken: string,

@@ -12,6 +12,7 @@ interface LeftSidebarProps {
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData> | null;
     conflictedFilesPromise?: Promise<string[]> | null;
+    userPermissionPromise?: Promise<string | null> | null;
     currentUserLogin?: string;
 }
 
@@ -21,6 +22,7 @@ export default function LeftSidebar({
     number,
     pullRequestPromise,
     conflictedFilesPromise,
+    userPermissionPromise,
     currentUserLogin,
 }: LeftSidebarProps) {
     return (
@@ -40,6 +42,7 @@ export default function LeftSidebar({
 
             <ActionSection
                 currentUserLogin={currentUserLogin}
+                userPermissionPromise={userPermissionPromise}
                 number={number}
                 owner={owner}
                 pullRequestPromise={pullRequestPromise}
