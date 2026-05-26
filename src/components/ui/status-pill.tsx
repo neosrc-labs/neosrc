@@ -40,12 +40,15 @@ export type PullRequestLike = {
 export function extractPullRequestState(
     pullRequest: PullRequestLike,
 ): PullRequestState {
-    if (pullRequest.draft) {
-        return "draft";
-    }
     if (pullRequest.merged) {
         return "merged";
     }
+    if (pullRequest.state === "closed") {
+        return "closed";
+    }
+    if (pullRequest.draft) {
+        return "draft";
+    }
 
-    return (pullRequest.state as PullRequestState) ?? "closed";
+    return "open";
 }
