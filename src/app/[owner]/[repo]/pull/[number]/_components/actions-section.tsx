@@ -1,6 +1,13 @@
 "use client";
 
-import { ChevronDown, CircleX, FilePen, GitPullRequest, X } from "lucide-react";
+import {
+    ChevronDown,
+    CircleX,
+    FilePen,
+    GitMerge,
+    GitPullRequest,
+    X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
@@ -414,13 +421,14 @@ export function ActionSection({
                                     : "Mark as ready for review"}
                             </button>
                         ) : (
-                            <>
+                            <div className="flex flex-1">
                                 <button
-                                    className="flex-1 cursor-pointer rounded-md bg-[#8250df] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#713fcb] disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-l-md bg-[#8250df] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#713fcb] disabled:cursor-not-allowed disabled:opacity-50"
                                     disabled={mergeMutation.isPending}
                                     onClick={handleMerge}
                                     type="button"
                                 >
+                                    <GitMerge size={14} />
                                     {mergeMutation.isPending
                                         ? "Merging..."
                                         : mergeMode === "squash"
@@ -435,7 +443,7 @@ export function ActionSection({
                                 >
                                     <PopoverTrigger asChild>
                                         <button
-                                            className="cursor-pointer rounded-md bg-[#8250df] px-2 py-2 text-white transition-colors hover:bg-[#713fcb] disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="cursor-pointer rounded-r-md border-[#6f3dbd] border-l bg-[#8250df] px-2 py-2 text-white transition-colors hover:bg-[#713fcb] disabled:cursor-not-allowed disabled:opacity-50"
                                             disabled={mergeMutation.isPending}
                                             type="button"
                                             title="Merge options"
@@ -523,7 +531,7 @@ export function ActionSection({
                                         </div>
                                     </PopoverContent>
                                 </Popover>
-                            </>
+                            </div>
                         )}
                     </div>
                 )}
