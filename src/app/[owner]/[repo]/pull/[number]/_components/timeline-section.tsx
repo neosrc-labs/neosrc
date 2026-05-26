@@ -142,11 +142,21 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
             {} as Record<number, GQLReactionNode[]>,
         ) ?? {};
     const currentUserLogin = data?.pages[0]?.currentUserLogin ?? "";
+    let hasSeenMerge = false;
     const filteredEvents = allEvents.filter((event) => {
         if (
             event.__typename === "MentionedEvent" ||
             event.__typename === "SubscribedEvent"
         ) {
+            return false;
+        }
+        if (event.__typename === "MergedEvent") {
+            hasSeenMerge = true;
+            return true;
+        }
+        // GitHub emits both a MergedEvent and a ClosedEvent when a PR is merged.
+        // The CloseEvent is redundant, so skip it when it follows a merge.
+        if (event.__typename === "ClosedEvent" && hasSeenMerge) {
             return false;
         }
         return true;
