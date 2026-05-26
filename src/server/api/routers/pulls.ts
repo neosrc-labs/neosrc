@@ -15,6 +15,7 @@ import {
     listRepoAssignees,
     markPullRequestAsDraft,
     markPullRequestAsReady,
+    mergePullRequest,
     removeAssigneesFromIssue,
     removeLabelFromIssue,
     removeReviewersFromPullRequest,
@@ -499,6 +500,45 @@ export const pullsRouter = createTRPCRouter({
             );
 
             return { success: true as const };
+        }),
+
+    merge: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+                mergeMethod: z.enum(["merge", "squash", "rebase"]),
+                commitTitle: z.string().optional(),
+                commitMessage: z.string().optional(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const [account] = await ctx.db
+                .select({ accessToken: accounts.access_token })
+                .from(accounts)
+                .where(eq(accounts.userId, ctx.session.user.id))
+                .limit(1);
+
+            if (!account?.accessToken) {
+                throw new Error("GitHub account not connected");
+            }
+
+            const result = await mergePullRequest(
+                account.accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+                input.mergeMethod,
+                input.commitTitle,
+                input.commitMessage,
+            );
+
+            return {
+                success: true as const,
+                sha: result.sha,
+                merged: result.merged,
+            };
         }),
 
     close: protectedProcedure
