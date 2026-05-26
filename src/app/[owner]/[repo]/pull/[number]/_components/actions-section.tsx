@@ -3,6 +3,7 @@
 import {
     ChevronDown,
     CircleX,
+    File,
     FilePen,
     GitMerge,
     GitPullRequest,
@@ -26,6 +27,7 @@ interface ActionSectionProps {
     repo: string;
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData> | null;
+    conflictedFilesPromise?: Promise<string[]> | null;
     currentUserLogin?: string;
 }
 
@@ -34,6 +36,7 @@ export function ActionSection({
     repo,
     number,
     pullRequestPromise,
+    conflictedFilesPromise,
     currentUserLogin,
 }: ActionSectionProps) {
     const router = useRouter();
@@ -275,7 +278,10 @@ export function ActionSection({
         </div>
     );
 
-    const buttons = (pullRequest: PullsGetResponseData) => {
+    const buttons = (
+        pullRequest: PullsGetResponseData,
+        conflictedFiles: string[],
+    ) => {
         const isDraft = !!pullRequest.draft && !markedReady;
         const isAuthor = currentUserLogin === pullRequest.user?.login;
         const isPending =
@@ -283,8 +289,43 @@ export function ActionSection({
             approveMutation.isPending ||
             requestChangesMutation.isPending;
 
+        const conflictedFilesSection =
+            conflictedFiles.length > 0 ? (
+                <div className="space-y-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-900/50 dark:bg-yellow-900/10">
+                    <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm text-yellow-800 dark:text-yellow-400">
+                            Conflicting files
+                        </span>
+                    </div>
+                    <ul className="space-y-1">
+                        {conflictedFiles.map((file) => (
+                            <li
+                                key={file}
+                                className="flex items-center gap-1.5 font-mono text-xs text-yellow-700 dark:text-yellow-500"
+                            >
+                                <File size={12} className="shrink-0" />
+                                {file}
+                            </li>
+                        ))}
+                    </ul>
+                    {pullRequest.head.repo?.full_name ===
+                        pullRequest.base.repo?.full_name && (
+                        <a
+                            href={`https://github.com/${owner}/${repo}/pull/${number}/conflicts`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-yellow-300 bg-yellow-100 px-3 py-1.5 font-medium text-xs text-yellow-800 transition-colors hover:bg-yellow-200 dark:border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50"
+                        >
+                            <FilePen size={12} />
+                            Resolve
+                        </a>
+                    )}
+                </div>
+            ) : null;
+
         return (
             <>
+                {conflictedFilesSection}
                 {reviewInProgress}
                 <div className="flex gap-1">
                     {!pullRequest.draft &&
@@ -421,28 +462,11 @@ export function ActionSection({
                                     : "Mark as ready for review"}
                             </button>
                         ) : pullRequest.mergeable_state === "dirty" ? (
-                            <div className="flex w-full gap-1">
-                                <div className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
-                                    <GitMerge
-                                        size={14}
-                                        className="text-red-500"
-                                    />
-                                    <span className="font-medium text-gray-600 text-sm dark:text-zinc-400">
-                                        Conflicts
-                                    </span>
-                                </div>
-                                {pullRequest.head.repo?.full_name ===
-                                    pullRequest.base.repo?.full_name && (
-                                    <a
-                                        href={`https://github.com/${owner}/${repo}/pull/${number}/conflicts`}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-gray-600 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                                    >
-                                        <FilePen size={14} />
-                                        Resolve
-                                    </a>
-                                )}
+                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
+                                <GitMerge size={14} className="text-red-500" />
+                                <span className="font-medium text-gray-600 text-sm dark:text-zinc-400">
+                                    Conflicts
+                                </span>
                             </div>
                         ) : (
                             <div className="flex flex-1">
@@ -587,7 +611,16 @@ export function ActionSection({
         <div className="sticky bottom-0 z-10 space-y-2 border-gray-200 border-t bg-white pt-6 pr-4 dark:border-zinc-800 dark:bg-zinc-950">
             {pullRequestPromise ? (
                 <Async fallback={skeleton} promise={pullRequestPromise}>
-                    {(pullRequest) => buttons(pullRequest)}
+                    {(pullRequest) => (
+                        <Async
+                            fallback={null}
+                            promise={
+                                conflictedFilesPromise ?? Promise.resolve([])
+                            }
+                        >
+                            {(files) => buttons(pullRequest, files)}
+                        </Async>
+                    )}
                 </Async>
             ) : (
                 skeleton

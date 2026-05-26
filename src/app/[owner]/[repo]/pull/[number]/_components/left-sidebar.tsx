@@ -11,6 +11,7 @@ interface LeftSidebarProps {
     repo: string;
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData> | null;
+    conflictedFilesPromise?: Promise<string[]> | null;
     currentUserLogin?: string;
 }
 
@@ -19,6 +20,7 @@ export default function LeftSidebar({
     repo,
     number,
     pullRequestPromise,
+    conflictedFilesPromise,
     currentUserLogin,
 }: LeftSidebarProps) {
     return (
@@ -41,6 +43,7 @@ export default function LeftSidebar({
                 number={number}
                 owner={owner}
                 pullRequestPromise={pullRequestPromise}
+                conflictedFilesPromise={conflictedFilesPromise}
                 repo={repo}
             />
         </aside>

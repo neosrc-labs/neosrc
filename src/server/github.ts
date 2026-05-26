@@ -401,6 +401,52 @@ export const deletePendingReview = async (
     });
 };
 
+export const getConflictedFiles = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        baseSha: string,
+        headSha: string,
+    ): Promise<string[]> => {
+        const octokit = createOctokit(accessToken);
+
+        const comparison = await octokit.request(
+            "GET /repos/{owner}/{repo}/compare/{basehead}",
+            {
+                owner,
+                repo,
+                basehead: `${baseSha}...${headSha}`,
+            },
+        );
+
+        const mergeBaseSha = comparison.data.merge_base_commit.sha;
+
+        const baseComparison = await octokit.request(
+            "GET /repos/{owner}/{repo}/compare/{basehead}",
+            {
+                owner,
+                repo,
+                basehead: `${mergeBaseSha}...${baseSha}`,
+            },
+        );
+
+        const baseChangedFiles = new Set(
+            (baseComparison.data.files ?? []).map(
+                (f: { filename: string }) => f.filename,
+            ),
+        );
+
+        const prChangedFiles = comparison.data.files ?? [];
+
+        return prChangedFiles
+            .filter((f: { filename: string }) =>
+                baseChangedFiles.has(f.filename),
+            )
+            .map((f: { filename: string }) => f.filename);
+    },
+);
+
 export const getCheckRuns = cache(
     async (
         accessToken: string,

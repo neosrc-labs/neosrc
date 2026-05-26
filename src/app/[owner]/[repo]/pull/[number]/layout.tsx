@@ -8,6 +8,7 @@ import {
     type CheckRun,
     getAuthenticatedUser,
     getCheckRuns,
+    getConflictedFiles,
     getPullRequest,
     getPullRequestCommits,
     type PullsGetResponseData,
@@ -36,6 +37,7 @@ export default async function PullRequestLayout({
     let pullRequest: Promise<PullsGetResponseData> | null = null;
     let commits: Promise<PullsListCommitsResponseData> | null = null;
     let checks: Promise<Array<CheckRun>> | null = new Promise(() => {});
+    let conflictedFiles: Promise<string[]> | null = new Promise(() => {});
     let currentUserLogin: string | undefined;
 
     if (session?.user?.id) {
@@ -50,6 +52,20 @@ export default async function PullRequestLayout({
             commits = getPullRequestCommits(accessToken, owner, repo, number);
             pullRequest = getPullRequest(accessToken, owner, repo, number);
             currentUserLogin = (await getAuthenticatedUser(accessToken)).login;
+
+            // Fetch conflicted files if there are merge conflicts
+            conflictedFiles = pullRequest.then(async (pr) => {
+                if (pr.mergeable_state === "dirty") {
+                    return getConflictedFiles(
+                        accessToken,
+                        owner,
+                        repo,
+                        pr.base.sha,
+                        pr.head.sha,
+                    );
+                }
+                return [];
+            });
 
             // Fetch check runs if we have the PR head SHA
             checks = pullRequest.then(async (pullRequest) => {
@@ -99,6 +115,7 @@ export default async function PullRequestLayout({
                 <LeftSidebar
                     currentUserLogin={currentUserLogin}
                     pullRequestPromise={pullRequest}
+                    conflictedFilesPromise={conflictedFiles}
                     number={number}
                     owner={owner}
                     repo={repo}
