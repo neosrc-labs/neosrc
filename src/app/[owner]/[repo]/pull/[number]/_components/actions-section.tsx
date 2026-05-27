@@ -363,8 +363,13 @@ export function ActionSection({
                                     disabled={closeMutation.isPending}
                                     type="button"
                                 >
-                                    <CircleX className="text-red-500" size={14} />
-                                    {closeMutation.isPending ? "Closing..." : "Close"}
+                                    <CircleX
+                                        className="text-red-500"
+                                        size={14}
+                                    />
+                                    {closeMutation.isPending
+                                        ? "Closing..."
+                                        : "Close"}
                                 </button>
                             </PopoverTrigger>
                             <PopoverContent
@@ -382,7 +387,9 @@ export function ActionSection({
                                 <div className="flex justify-end gap-2">
                                     <button
                                         className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-xs ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
-                                        onClick={() => setIsClosePopoverOpen(false)}
+                                        onClick={() =>
+                                            setIsClosePopoverOpen(false)
+                                        }
                                         type="button"
                                     >
                                         Cancel
