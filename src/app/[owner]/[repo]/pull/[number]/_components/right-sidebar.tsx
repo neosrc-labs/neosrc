@@ -1,5 +1,6 @@
 "use client";
 
+import { CheckCircle, Circle, Loader2, XCircle } from "lucide-react";
 import { use, useState } from "react";
 import { CheckHoverCard } from "~/components/check-hover-card";
 import type {
@@ -116,13 +117,13 @@ function ChecksSection({ checksPromise }: ChecksSectionProps) {
                     >
                         <span className="text-sm">
                             {check.conclusion === "success" ? (
-                                <span className="text-green-600">✓</span>
+                                <CheckCircle className="h-3.5 w-3.5 text-green-600" />
                             ) : check.conclusion === "failure" ? (
-                                <span className="text-red-600">✗</span>
+                                <XCircle className="h-3.5 w-3.5 text-red-600" />
                             ) : check.status === "in_progress" ? (
-                                <span className="text-gray-400">⏳</span>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-yellow-500" />
                             ) : (
-                                <span className="text-gray-400">○</span>
+                                <Circle className="h-3.5 w-3.5 text-gray-400" />
                             )}
                         </span>
                         <span className="truncate text-gray-700 text-sm dark:text-zinc-300">
