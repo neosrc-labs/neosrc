@@ -442,6 +442,7 @@ function EventContent({
                         reviewId={event.databaseId}
                         state={state}
                         allComments={allComments}
+                        currentUserLogin={currentUserLogin}
                     />
                 </div>
             );
