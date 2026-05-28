@@ -15,7 +15,11 @@ import {
     getPullRequestReactions,
     getPullRequestReviewCommentReactions,
 } from "~/server/github";
-import { addReaction, removeReaction } from "~/server/github-graphql";
+import {
+    addReaction,
+    getSubjectReactions,
+    removeReaction,
+} from "~/server/github-graphql";
 
 export const reactionsRouter = createTRPCRouter({
     get: protectedProcedure
@@ -196,6 +200,7 @@ export const reactionsRouter = createTRPCRouter({
                     "rocket",
                     "eyes",
                 ]),
+                databaseId: z.number().optional(),
             }),
         )
         .mutation(async ({ ctx, input }) => {
@@ -209,14 +214,18 @@ export const reactionsRouter = createTRPCRouter({
                 throw new Error("GitHub account not connected");
             }
 
-            try {
-                await addReaction(
-                    account.accessToken,
-                    input.subjectId,
-                    input.content,
-                );
-                return { action: "added" as const };
-            } catch {
+            const [currentUser, existingReactions] = await Promise.all([
+                getAuthenticatedUser(account.accessToken),
+                getSubjectReactions(account.accessToken, input.subjectId),
+            ]);
+
+            const existing = existingReactions.find(
+                (r) =>
+                    r.user?.login === currentUser.login &&
+                    r.content === input.content,
+            );
+
+            if (existing) {
                 await removeReaction(
                     account.accessToken,
                     input.subjectId,
@@ -224,6 +233,13 @@ export const reactionsRouter = createTRPCRouter({
                 );
                 return { action: "removed" as const };
             }
+
+            await addReaction(
+                account.accessToken,
+                input.subjectId,
+                input.content,
+            );
+            return { action: "added" as const };
         }),
 
     getForReviewComments: protectedProcedure

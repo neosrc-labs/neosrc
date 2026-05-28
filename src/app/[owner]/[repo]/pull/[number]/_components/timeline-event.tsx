@@ -27,7 +27,6 @@ import {
 import { useMemo, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
-import { ReactionRollup } from "~/components/ReactionRollup";
 import {
     HoverCard,
     HoverCardContent,
@@ -351,6 +350,80 @@ function EventContent({
         commentReactionMutation.mutate({ owner, repo, commentId, content });
     };
 
+    const reviewReactionMutation =
+        api.reactions.togglePullRequestReview.useMutation({
+            onMutate: async ({ content, databaseId }) => {
+                await utils.timeline.list.cancel({
+                    owner,
+                    repo,
+                    number,
+                    limit: TIMELINE_PAGE_SIZE,
+                });
+
+                const prevData = utils.timeline.list.getInfiniteData({
+                    owner,
+                    repo,
+                    number,
+                    limit: TIMELINE_PAGE_SIZE,
+                });
+
+                utils.timeline.list.setInfiniteData(
+                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
+                    (old) => {
+                        if (!old || !databaseId) return old;
+                        const currentReactions =
+                            commentReactions[databaseId] ?? [];
+                        const existing = currentReactions.find(
+                            (r) =>
+                                r.user?.login === currentUserLogin &&
+                                r.content === content,
+                        );
+                        const updatedReactions = existing
+                            ? currentReactions.filter(
+                                  (r) => r.databaseId !== existing.databaseId,
+                              )
+                            : [
+                                  ...currentReactions,
+                                  {
+                                      databaseId: -Date.now(),
+                                      content,
+                                      createdAt: new Date().toISOString(),
+                                      user: { login: currentUserLogin ?? "" },
+                                  },
+                              ];
+                        return {
+                            ...old,
+                            pages: old.pages.map((page) => ({
+                                ...page,
+                                commentReactions: {
+                                    ...page.commentReactions,
+                                    [databaseId]: updatedReactions,
+                                },
+                            })),
+                        };
+                    },
+                );
+
+                return { prevData };
+            },
+            onError: (_err, _vars, ctx) => {
+                if (ctx?.prevData) {
+                    utils.timeline.list.setInfiniteData(
+                        { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
+                        ctx.prevData,
+                    );
+                }
+            },
+            onSettled: () => {
+                utils.timeline.list.invalidate({
+                    owner,
+                    repo,
+                    number,
+                    limit: TIMELINE_PAGE_SIZE,
+                });
+            },
+        });
+
     const minimizedExpanded = (id: number) => expandedMinimized[id] ?? false;
 
     switch (event.__typename) {
@@ -492,6 +565,18 @@ function EventContent({
             const isEditing = editingCommentId === event.databaseId;
             const isAuthor = event.author?.login === currentUserLogin;
             const displayBody = savedBodies[event.databaseId] ?? event.body;
+            const reviewReactionsArr = commentReactions[event.databaseId] ?? [];
+
+            const handleReviewReaction = (
+                _commentId: number,
+                content: (typeof allReactions)[number],
+            ) => {
+                reviewReactionMutation.mutate({
+                    subjectId: event.id,
+                    content,
+                    databaseId: event.databaseId,
+                });
+            };
 
             const timestamp = formatRelativeTime(
                 event.submittedAt ?? event.createdAt,
@@ -558,39 +643,44 @@ function EventContent({
                                 owner={owner}
                                 repo={repo}
                                 headerActions={
-                                    isAuthor && (
-                                        <button
-                                            type="button"
-                                            className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
-                                            onClick={() => {
-                                                setEditBody(displayBody);
-                                                setEditingCommentId(
-                                                    event.databaseId,
-                                                );
-                                            }}
-                                        >
-                                            <SquarePen size={14} />
-                                        </button>
-                                    )
-                                }
-                                footer={
-                                    !isEditing && (
-                                        <div className="px-3 pb-3">
-                                            <ReactionRollup
-                                                reactions={
-                                                    commentReactions[
-                                                        event.databaseId
-                                                    ] ?? []
-                                                }
+                                    <div className="flex items-center gap-1">
+                                        {!isEditing && currentUserLogin && (
+                                            <PopupReactionButton
+                                                commentId={event.databaseId}
+                                                reactions={reviewReactionsArr}
                                                 currentUserLogin={
                                                     currentUserLogin
                                                 }
+                                                onReact={handleReviewReaction}
+                                            />
+                                        )}
+                                        {isAuthor && (
+                                            <button
+                                                type="button"
+                                                className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                                onClick={() => {
+                                                    setEditBody(displayBody);
+                                                    setEditingCommentId(
+                                                        event.databaseId,
+                                                    );
+                                                }}
+                                            >
+                                                <SquarePen size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                }
+                                footer={
+                                    !isEditing &&
+                                    reviewReactionsArr.length > 0 && (
+                                        <div className="px-3 pb-3">
+                                            <CommentReactionBar
                                                 commentId={event.databaseId}
-                                                subjectId={event.id}
-                                                owner={owner}
-                                                repo={repo}
-                                                number={number}
-                                                isReview
+                                                reactions={reviewReactionsArr}
+                                                currentUserLogin={
+                                                    currentUserLogin
+                                                }
+                                                onReact={handleReviewReaction}
                                             />
                                         </div>
                                     )
