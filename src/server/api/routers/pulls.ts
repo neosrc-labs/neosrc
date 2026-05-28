@@ -23,6 +23,7 @@ import {
     updateIssueComment,
     updateIssueMilestone,
     updatePullRequest,
+    updatePullRequestReview,
 } from "~/server/github";
 
 export const pullsRouter = createTRPCRouter({
@@ -117,6 +118,39 @@ export const pullsRouter = createTRPCRouter({
             );
 
             return { success: true as const, body: comment.body };
+        }),
+
+    updateReview: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+                reviewId: z.number(),
+                body: z.string(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const [account] = await ctx.db
+                .select({ accessToken: accounts.access_token })
+                .from(accounts)
+                .where(eq(accounts.userId, ctx.session.user.id))
+                .limit(1);
+
+            if (!account?.accessToken) {
+                throw new Error("GitHub account not connected");
+            }
+
+            const review = await updatePullRequestReview(
+                account.accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+                input.reviewId,
+                input.body,
+            );
+
+            return { success: true as const, body: review.body };
         }),
 
     listLabels: protectedProcedure

@@ -320,6 +320,25 @@ export const updateReviewComment = async (
     return response.data;
 };
 
+export const updatePullRequestReview = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    reviewId: number,
+    body: string,
+) => {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.pulls.updateReview({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        review_id: reviewId,
+        body,
+    });
+    return response.data;
+};
+
 export const createPullRequestReview = async (
     accessToken: string,
     owner: string,

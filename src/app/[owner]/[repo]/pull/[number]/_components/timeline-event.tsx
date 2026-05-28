@@ -213,7 +213,10 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
 
     return (
         <div className={circleClass}>
-            <span className="flex">{icon}</span>
+            <span className="flex">
+                {/* {event.__typename} */}
+                {icon}
+            </span>
         </div>
     );
 }
@@ -256,6 +259,21 @@ function EventContent({
                 return next;
             });
             setEditingCommentId(commentId);
+        },
+    });
+
+    const updateReviewMutation = api.pulls.updateReview.useMutation({
+        onMutate: ({ reviewId, body }) => {
+            setSavedBodies((prev) => ({ ...prev, [reviewId]: body }));
+            setEditingCommentId(null);
+        },
+        onError: (_, { reviewId }) => {
+            setSavedBodies((prev) => {
+                const next = { ...prev };
+                delete next[reviewId];
+                return next;
+            });
+            setEditingCommentId(reviewId);
         },
     });
 
@@ -391,6 +409,10 @@ function EventContent({
         }
 
         case "PullRequestReview": {
+            const isEditing = editingCommentId === event.databaseId;
+            const isAuthor = event.author?.login === currentUserLogin;
+            const displayBody = savedBodies[event.databaseId] ?? event.body;
+
             const timestamp = formatRelativeTime(
                 event.submittedAt ?? event.createdAt,
             );
@@ -400,11 +422,11 @@ function EventContent({
                 approved: "approved these changes",
                 changes_requested: "requested changes",
             };
-
             const stateLabel = STATE_LABELS[state] ?? "reviewed";
+
             return (
-                <div className="text-gray-600 text-sm dark:text-zinc-400">
-                    <p className="flex items-center gap-1.5">
+                <>
+                    <p className="flex items-center gap-1.5 text-gray-600 text-sm dark:text-zinc-400">
                         {event.author && (
                             <UserHoverCard login={event.author.login}>
                                 <a
@@ -425,14 +447,81 @@ function EventContent({
                         {` ${stateLabel} ${timestamp}`}
                     </p>
                     {event.body && (
-                        <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
-                            <div className="prose prose-sm max-w-none">
+                        <div className="mt-2">
+                            <CommentCard
+                                user={
+                                    event.author
+                                        ? {
+                                              login: event.author.login,
+                                              avatar_url:
+                                                  event.author.avatarUrl,
+                                          }
+                                        : null
+                                }
+                                variant="standalone"
+                                userHref={event.author?.url}
+                                createdAt={event.submittedAt ?? event.createdAt}
+                                authorAssociation={event.authorAssociation}
+                                isEditing={isEditing}
+                                editBody={editBody}
+                                onEditBodyChange={setEditBody}
+                                onCancelEdit={() => setEditingCommentId(null)}
+                                onSaveEdit={() => {
+                                    updateReviewMutation.mutate({
+                                        owner,
+                                        repo,
+                                        number,
+                                        reviewId: event.databaseId,
+                                        body: editBody,
+                                    });
+                                }}
+                                owner={owner}
+                                repo={repo}
+                                headerActions={
+                                    isAuthor && (
+                                        <button
+                                            type="button"
+                                            className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                            onClick={() => {
+                                                setEditBody(displayBody);
+                                                setEditingCommentId(
+                                                    event.databaseId,
+                                                );
+                                            }}
+                                        >
+                                            <SquarePen size={14} />
+                                        </button>
+                                    )
+                                }
+                                footer={
+                                    !isEditing && (
+                                        <div className="px-3 pb-3">
+                                            <ReactionRollup
+                                                reactions={
+                                                    commentReactions[
+                                                        event.databaseId
+                                                    ] ?? []
+                                                }
+                                                currentUserLogin={
+                                                    currentUserLogin
+                                                }
+                                                commentId={event.databaseId}
+                                                subjectId={event.id}
+                                                owner={owner}
+                                                repo={repo}
+                                                number={number}
+                                                isReview
+                                            />
+                                        </div>
+                                    )
+                                }
+                            >
                                 <MarkdownRenderer
-                                    content={event.body}
+                                    content={displayBody}
                                     owner={owner}
                                     repo={repo}
                                 />
-                            </div>
+                            </CommentCard>
                         </div>
                     )}
                     <ReviewComments
@@ -444,7 +533,7 @@ function EventContent({
                         allComments={allComments}
                         currentUserLogin={currentUserLogin}
                     />
-                </div>
+                </>
             );
         }
 

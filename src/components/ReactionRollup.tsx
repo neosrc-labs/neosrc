@@ -56,10 +56,12 @@ interface ReactionRollupProps {
     reactions?: Reaction[];
     currentUserLogin?: string;
     commentId?: number;
+    subjectId?: string;
     owner: string;
     repo: string;
     number: number;
     isIssue?: boolean;
+    isReview?: boolean;
 }
 
 function ContentType({ reaction }: { reaction: Reaction }) {
@@ -72,10 +74,12 @@ export function ReactionRollup({
     reactions = [],
     currentUserLogin,
     commentId,
+    subjectId,
     owner,
     repo,
     number,
     isIssue,
+    isReview,
 }: ReactionRollupProps) {
     const [open, setOpen] = useState(false);
     const utils = api.useUtils();
@@ -120,6 +124,74 @@ export function ReactionRollup({
         },
         onSettled: () => {
             utils.reactions.get.invalidate({ owner, repo, number });
+        },
+    });
+
+    const reviewMutation = api.reactions.togglePullRequestReview.useMutation({
+        onMutate: async ({ content }) => {
+            await utils.timeline.list.cancel({
+                owner,
+                repo,
+                number,
+                limit: TIMELINE_PAGE_SIZE,
+            });
+            const prevData = utils.timeline.list.getInfiniteData({
+                owner,
+                repo,
+                number,
+                limit: TIMELINE_PAGE_SIZE,
+            });
+            utils.timeline.list.setInfiniteData(
+                { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
+                (old) => {
+                    if (!old) return old;
+                    const existing = reactions.find(
+                        (r) =>
+                            r.user?.login === resolvedUserLogin &&
+                            r.content === content,
+                    );
+                    const updatedReactions = existing
+                        ? reactions.filter(
+                              (r) => r.databaseId !== existing.databaseId,
+                          )
+                        : [
+                              ...reactions,
+                              {
+                                  databaseId: -Date.now(),
+                                  content,
+                                  createdAt: new Date().toISOString(),
+                                  user: { login: resolvedUserLogin ?? "" },
+                              },
+                          ];
+                    return {
+                        ...old,
+                        pages: old.pages.map((page) => ({
+                            ...page,
+                            commentReactions: {
+                                ...page.commentReactions,
+                                [commentId!]: updatedReactions,
+                            },
+                        })),
+                    };
+                },
+            );
+            return { prevData };
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prevData) {
+                utils.timeline.list.setInfiniteData(
+                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
+                    ctx.prevData,
+                );
+            }
+        },
+        onSettled: () => {
+            utils.timeline.list.invalidate({
+                owner,
+                repo,
+                number,
+                limit: TIMELINE_PAGE_SIZE,
+            });
         },
     });
 
@@ -220,16 +292,26 @@ export function ReactionRollup({
                             <button
                                 type="button"
                                 onClick={() => {
-                                    const mutation = isIssue
-                                        ? issueMutation
-                                        : commentMutation;
-                                    mutation.mutate({
-                                        owner,
-                                        repo,
-                                        number,
-                                        commentId: commentId ?? number,
-                                        content: content as ReactionContent,
-                                    });
+                                    if (isReview) {
+                                        reviewMutation.mutate({
+                                            subjectId: subjectId ?? "",
+                                            content: content as ReactionContent,
+                                        });
+                                    } else if (isIssue) {
+                                        issueMutation.mutate({
+                                            owner,
+                                            repo,
+                                            number,
+                                            content: content as ReactionContent,
+                                        });
+                                    } else {
+                                        commentMutation.mutate({
+                                            owner,
+                                            repo,
+                                            commentId: commentId ?? number,
+                                            content: content as ReactionContent,
+                                        });
+                                    }
                                 }}
                                 className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${
                                     hasReactedToThis
@@ -273,16 +355,29 @@ export function ReactionRollup({
                                     key={content}
                                     type="button"
                                     onClick={() => {
-                                        const mutation = isIssue
-                                            ? issueMutation
-                                            : commentMutation;
-                                        mutation.mutate({
-                                            owner,
-                                            repo,
-                                            number,
-                                            commentId: commentId ?? number,
-                                            content: content as ReactionContent,
-                                        });
+                                        if (isReview) {
+                                            reviewMutation.mutate({
+                                                subjectId: subjectId ?? "",
+                                                content:
+                                                    content as ReactionContent,
+                                            });
+                                        } else if (isIssue) {
+                                            issueMutation.mutate({
+                                                owner,
+                                                repo,
+                                                number,
+                                                content:
+                                                    content as ReactionContent,
+                                            });
+                                        } else {
+                                            commentMutation.mutate({
+                                                owner,
+                                                repo,
+                                                commentId: commentId ?? number,
+                                                content:
+                                                    content as ReactionContent,
+                                            });
+                                        }
                                         setOpen(false);
                                     }}
                                     className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"

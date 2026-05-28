@@ -15,6 +15,7 @@ import {
     getPullRequestReactions,
     getPullRequestReviewCommentReactions,
 } from "~/server/github";
+import { addReaction, removeReaction } from "~/server/github-graphql";
 
 export const reactionsRouter = createTRPCRouter({
     get: protectedProcedure
@@ -179,6 +180,50 @@ export const reactionsRouter = createTRPCRouter({
                 input.content,
             );
             return { action: "added" as const };
+        }),
+
+    togglePullRequestReview: protectedProcedure
+        .input(
+            z.object({
+                subjectId: z.string(),
+                content: z.enum([
+                    "+1",
+                    "-1",
+                    "laugh",
+                    "confused",
+                    "heart",
+                    "hooray",
+                    "rocket",
+                    "eyes",
+                ]),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const [account] = await ctx.db
+                .select({ accessToken: accounts.access_token })
+                .from(accounts)
+                .where(eq(accounts.userId, ctx.session.user.id))
+                .limit(1);
+
+            if (!account?.accessToken) {
+                throw new Error("GitHub account not connected");
+            }
+
+            try {
+                await addReaction(
+                    account.accessToken,
+                    input.subjectId,
+                    input.content,
+                );
+                return { action: "added" as const };
+            } catch {
+                await removeReaction(
+                    account.accessToken,
+                    input.subjectId,
+                    input.content,
+                );
+                return { action: "removed" as const };
+            }
         }),
 
     getForReviewComments: protectedProcedure
