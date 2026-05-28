@@ -72,10 +72,19 @@ query PullRequestTimeline(
 						id
 						databaseId
 						author { login avatarUrl url }
+						authorAssociation
 						body
 						state
 						submittedAt
 						createdAt
+						reactions(first: 10) {
+							nodes {
+								databaseId
+								content
+								createdAt
+								user { login }
+							}
+						}
 					}
 					... on HeadRefForcePushedEvent {
 						id
@@ -296,8 +305,10 @@ export type GQLPullRequestReview = {
     state: string;
     body: string;
     author: GQLActor | null;
+    authorAssociation: string;
     submittedAt: string | null;
     createdAt: string;
+    reactions: { nodes: (GQLReactionNode | null)[] };
 };
 
 export type GQLHeadRefForcePushedEvent = {
@@ -630,7 +641,10 @@ export async function getPullRequestTimelineGraphQL(
     > = {};
 
     for (const node of events) {
-        if (node.__typename === "IssueComment") {
+        if (
+            node.__typename === "IssueComment" ||
+            node.__typename === "PullRequestReview"
+        ) {
             const { reactions, databaseId } = node;
             if (databaseId && reactions?.nodes) {
                 commentReactions[databaseId] = reactions.nodes
@@ -653,4 +667,75 @@ export async function getPullRequestTimelineGraphQL(
         commentReactions,
         currentUserLogin: result.viewer.login,
     };
+}
+
+const GRAPHQL_CONTENT_MAP: Record<string, string> = {
+    "+1": "THUMBS_UP",
+    "-1": "THUMBS_DOWN",
+    laugh: "LAUGH",
+    hooray: "HOORAY",
+    confused: "CONFUSED",
+    heart: "HEART",
+    rocket: "ROCKET",
+    eyes: "EYES",
+};
+
+export async function addReaction(
+    accessToken: string,
+    subjectId: string,
+    content: string,
+) {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const gqlContent = GRAPHQL_CONTENT_MAP[content] ?? content;
+
+    const result = await graphql<{
+        addReaction: {
+            reaction: {
+                id: string;
+                content: string;
+                user: { login: string } | null;
+            } | null;
+        };
+    }>(
+        `
+		mutation($subjectId: ID!, $content: ReactionContent!) {
+			addReaction(input: {subjectId: $subjectId, content: $content}) {
+				reaction {
+					id
+					content
+					user { login }
+				}
+			}
+		}
+	`,
+        { subjectId, content: gqlContent },
+    );
+
+    return result.addReaction.reaction;
+}
+
+export async function removeReaction(
+    accessToken: string,
+    subjectId: string,
+    content: string,
+) {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const gqlContent = GRAPHQL_CONTENT_MAP[content] ?? content;
+
+    await graphql(
+        `
+		mutation($subjectId: ID!, $content: ReactionContent!) {
+			removeReaction(input: {subjectId: $subjectId, content: $content}) {
+				subject { id }
+			}
+		}
+	`,
+        { subjectId, content: gqlContent },
+    );
 }
