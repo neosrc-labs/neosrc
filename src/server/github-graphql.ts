@@ -669,6 +669,62 @@ export async function getPullRequestTimelineGraphQL(
     };
 }
 
+export async function getSubjectReactions(
+    accessToken: string,
+    subjectId: string,
+): Promise<
+    { databaseId: number; content: string; user: { login: string } | null }[]
+> {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const result = await graphql<{
+        node: {
+            reactions: {
+                nodes: ({
+                    databaseId: number;
+                    content: string;
+                    user: { login: string } | null;
+                } | null)[];
+            } | null;
+        } | null;
+    }>(
+        `
+		query($subjectId: ID!) {
+			node(id: $subjectId) {
+				... on Reactable {
+					reactions(first: 10) {
+						nodes {
+							databaseId
+							content
+							user { login }
+						}
+					}
+				}
+			}
+		}
+	`,
+        { subjectId },
+    );
+
+    return (
+        result.node?.reactions?.nodes
+            ?.filter(
+                (
+                    r,
+                ): r is NonNullable<
+                    (typeof result.node.reactions.nodes)[number]
+                > => r !== null,
+            )
+            .map((r) => ({
+                databaseId: r.databaseId,
+                content: CONTENT_MAP[r.content] ?? r.content.toLowerCase(),
+                user: r.user,
+            })) ?? []
+    );
+}
+
 const GRAPHQL_CONTENT_MAP: Record<string, string> = {
     "+1": "THUMBS_UP",
     "-1": "THUMBS_DOWN",
