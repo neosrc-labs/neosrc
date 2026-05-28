@@ -64,7 +64,7 @@ query PullRequestTimeline(
 								databaseId
 								content
 								createdAt
-								user { login }
+								user { login avatarUrl }
 							}
 						}
 					}
@@ -82,7 +82,7 @@ query PullRequestTimeline(
 								databaseId
 								content
 								createdAt
-								user { login }
+								user { login avatarUrl }
 							}
 						}
 					}
@@ -280,7 +280,7 @@ export type GQLReactionNode = {
     databaseId: number;
     content: string;
     createdAt: string;
-    user: { login: string } | null;
+    user: { login: string; avatarUrl?: string } | null;
 };
 
 export type GQLLabel = { name: string; color: string };
@@ -636,7 +636,7 @@ export async function getPullRequestTimelineGraphQL(
             databaseId: number;
             content: string;
             createdAt: string;
-            user: { login: string } | null;
+            user: { login: string; avatarUrl?: string } | null;
         }[]
     > = {};
 
