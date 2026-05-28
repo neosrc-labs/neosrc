@@ -17,18 +17,30 @@ import {
     MessageSquare,
     Pencil,
     RefreshCw,
+    SmilePlus,
     SquarePen,
     Tag,
     Target,
     Trash2,
     User,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { ReactionRollup } from "~/components/ReactionRollup";
+import {
+    HoverCard,
+    HoverCardContent,
+    HoverCardTrigger,
+} from "~/components/ui/hover-card";
 import { Label } from "~/components/ui/label";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "~/components/ui/popover";
 import { UserHoverCard } from "~/components/user-hover-card";
+import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewComment } from "~/server/github";
 import type {
     GQLReactionNode,
@@ -247,6 +259,8 @@ function EventContent({
         Record<number, boolean>
     >({});
 
+    const utils = api.useUtils();
+
     const updateCommentMutation = api.pulls.updateComment.useMutation({
         onMutate: ({ commentId, body }) => {
             setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
@@ -276,6 +290,66 @@ function EventContent({
             setEditingCommentId(reviewId);
         },
     });
+
+    const commentReactionMutation =
+        api.reactions.toggleIssueComment.useMutation({
+            onMutate: async ({ commentId, content }) => {
+                await utils.timeline.list.cancel();
+
+                const prevData = utils.timeline.list.getInfiniteData({
+                    owner,
+                    repo,
+                    number,
+                    limit: TIMELINE_PAGE_SIZE,
+                });
+
+                utils.timeline.list.setInfiniteData(
+                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
+                    (old) => {
+                        if (!old) return old;
+                        return {
+                            ...old,
+                            pages: old.pages.map((page) => ({
+                                ...page,
+                                commentReactions: {
+                                    ...page.commentReactions,
+                                    [commentId]: toggleReactionInList(
+                                        page.commentReactions[commentId] ?? [],
+                                        currentUserLogin,
+                                        content,
+                                    ),
+                                },
+                            })),
+                        };
+                    },
+                );
+
+                return { prevData };
+            },
+            onError: (_err, _vars, ctx) => {
+                if (ctx?.prevData) {
+                    utils.timeline.list.setInfiniteData(
+                        { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
+                        ctx.prevData,
+                    );
+                }
+            },
+            onSettled: () => {
+                utils.timeline.list.invalidate({
+                    owner,
+                    repo,
+                    number,
+                    limit: TIMELINE_PAGE_SIZE,
+                });
+            },
+        });
+
+    const handleCommentReaction = (
+        commentId: number,
+        content: (typeof allReactions)[number],
+    ) => {
+        commentReactionMutation.mutate({ owner, repo, commentId, content });
+    };
 
     const minimizedExpanded = (id: number) => expandedMinimized[id] ?? false;
 
@@ -318,6 +392,9 @@ function EventContent({
                         </div>
                     );
                 }
+                const commentReactionsArr =
+                    commentReactions[event.databaseId] ?? [];
+
                 return (
                     <CommentCard
                         user={
@@ -348,6 +425,14 @@ function EventContent({
                         repo={repo}
                         headerActions={
                             <>
+                                {!isEditing && currentUserLogin && (
+                                    <PopupReactionButton
+                                        commentId={event.databaseId}
+                                        reactions={commentReactionsArr}
+                                        currentUserLogin={currentUserLogin}
+                                        onReact={handleCommentReaction}
+                                    />
+                                )}
                                 {event.isMinimized && (
                                     <button
                                         type="button"
@@ -379,19 +464,14 @@ function EventContent({
                             </>
                         }
                         footer={
-                            !isEditing && (
-                                <div className="px-3 pb-3">
-                                    <ReactionRollup
-                                        reactions={
-                                            commentReactions[
-                                                event.databaseId
-                                            ] ?? []
-                                        }
-                                        currentUserLogin={currentUserLogin}
+                            !isEditing &&
+                            commentReactionsArr.length > 0 && (
+                                <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                                    <CommentReactionBar
                                         commentId={event.databaseId}
-                                        owner={owner}
-                                        repo={repo}
-                                        number={number}
+                                        reactions={commentReactionsArr}
+                                        currentUserLogin={currentUserLogin}
+                                        onReact={handleCommentReaction}
                                     />
                                 </div>
                             )
@@ -1136,4 +1216,199 @@ function EventContent({
             console.warn(`unknown event type: ${event.__typename}`, event);
             return null;
     }
+}
+
+function toggleReactionInList(
+    reactions: GQLReactionNode[],
+    login: string,
+    content: string,
+): GQLReactionNode[] {
+    const existing = reactions.find(
+        (r) => r.user?.login === login && r.content === content,
+    );
+    if (existing) {
+        return reactions.filter((r) => r.databaseId !== existing.databaseId);
+    }
+    return [
+        ...reactions,
+        {
+            databaseId: -Date.now(),
+            content,
+            createdAt: new Date().toISOString(),
+            user: { login },
+        },
+    ];
+}
+
+const reactionEmojis: Record<string, string> = {
+    "+1": "👍",
+    "-1": "👎",
+    laugh: "😄",
+    confused: "😕",
+    heart: "❤️",
+    hooray: "🎉",
+    rocket: "🚀",
+    eyes: "👀",
+};
+
+const reactionOrder = [
+    "+1",
+    "heart",
+    "laugh",
+    "hooray",
+    "confused",
+    "rocket",
+    "eyes",
+    "-1",
+] as const;
+
+const allReactions = [
+    "+1",
+    "-1",
+    "laugh",
+    "confused",
+    "heart",
+    "hooray",
+    "rocket",
+    "eyes",
+] as const;
+
+function PopupReactionButton({
+    commentId,
+    reactions,
+    currentUserLogin,
+    onReact,
+}: {
+    commentId: number;
+    reactions: GQLReactionNode[];
+    currentUserLogin: string;
+    onReact: (
+        commentId: number,
+        content: (typeof allReactions)[number],
+    ) => void;
+}) {
+    const [open, setOpen] = useState(false);
+
+    const availableReactions = allReactions.filter(
+        (c) =>
+            !reactions.some(
+                (r) => r.user?.login === currentUserLogin && r.content === c,
+            ),
+    );
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    type="button"
+                    className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                >
+                    <SmilePlus size={14} />
+                </button>
+            </PopoverTrigger>
+            <PopoverContent
+                className="w-fit bg-white p-2 dark:bg-zinc-950"
+                align="end"
+            >
+                <div className="flex gap-1">
+                    {availableReactions.map((content) => (
+                        <button
+                            key={content}
+                            type="button"
+                            onClick={() => {
+                                onReact(commentId, content);
+                                setOpen(false);
+                            }}
+                            className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+                        >
+                            {reactionEmojis[content] ?? content}
+                        </button>
+                    ))}
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
+function CommentReactionBar({
+    commentId,
+    reactions,
+    currentUserLogin,
+    onReact,
+}: {
+    commentId: number;
+    reactions: GQLReactionNode[];
+    currentUserLogin: string;
+    onReact: (
+        commentId: number,
+        content: (typeof allReactions)[number],
+    ) => void;
+}) {
+    const grouped = useMemo(() => {
+        const map = new Map<string, GQLReactionNode[]>();
+        for (const r of reactions) {
+            const existing = map.get(r.content) ?? [];
+            existing.push(r);
+            map.set(r.content, existing);
+        }
+        return map;
+    }, [reactions]);
+
+    const entries = reactionOrder
+        .map((content) => [content, grouped.get(content) ?? []] as const)
+        .filter(([, rs]) => rs.length > 0);
+
+    return (
+        <div className="flex flex-wrap items-center gap-1.5">
+            {entries.map(([content, rs]) => {
+                const isActive = rs.some(
+                    (r) => r.user?.login === currentUserLogin,
+                );
+                return (
+                    <HoverCard key={content} openDelay={300}>
+                        <HoverCardTrigger asChild>
+                            <button
+                                type="button"
+                                onClick={() => onReact(commentId, content)}
+                                className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 font-medium text-xs transition-colors ${
+                                    isActive
+                                        ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
+                                        : "border-gray-200 bg-gray-100 text-gray-600 hover:bg-gray-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:bg-zinc-700"
+                                }`}
+                            >
+                                <span>
+                                    {reactionEmojis[content] ?? content}
+                                </span>
+                                <span>{rs.length}</span>
+                            </button>
+                        </HoverCardTrigger>
+                        <HoverCardContent className="w-56 bg-white p-3 dark:bg-zinc-950">
+                            <div className="flex flex-col gap-2">
+                                {rs.map((r) => (
+                                    <div
+                                        key={r.databaseId}
+                                        className="flex items-center gap-2 text-gray-700 text-sm dark:text-gray-300"
+                                    >
+                                        {r.user?.avatarUrl && (
+                                            <img
+                                                src={r.user.avatarUrl}
+                                                alt={r.user.login}
+                                                className="h-5 w-5 rounded-full"
+                                            />
+                                        )}
+                                        <span className="font-medium">
+                                            {r.user?.login}
+                                        </span>
+                                        <span className="ml-auto">
+                                            {reactionEmojis[r.content]}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </HoverCardContent>
+                    </HoverCard>
+                );
+            })}
+        </div>
+    );
 }
