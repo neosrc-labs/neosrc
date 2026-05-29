@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { Label as LabelComponent } from "~/components/ui/label";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
-import { cn, opId } from "~/lib/utils";
+import { applyArrayOperations, cn, opId } from "~/lib/utils";
 import type { Label, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";
@@ -201,22 +201,11 @@ function applyOperations(
     labels: Label[],
     operations: LabelOperation[],
 ): Label[] {
-    let updatedLabels = [...labels];
-
-    for (const op of operations) {
-        if (
-            op.op === "add" &&
-            !updatedLabels.some((l) => l.name === op.label.name)
-        ) {
-            updatedLabels.push(op.label);
-        }
-        if (op.op === "remove") {
-            updatedLabels = updatedLabels.filter(
-                (l) => l.name !== op.label.name,
-            );
-        }
-    }
-
-    return updatedLabels;
+    return applyArrayOperations(
+        labels,
+        operations,
+        (op) => op.label,
+        (l) => l.name,
+    );
 }
 

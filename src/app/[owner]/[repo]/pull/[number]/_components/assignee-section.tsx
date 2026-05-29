@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/user-hover-card";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
-import { cn, opId } from "~/lib/utils";
+import { applyArrayOperations, cn, opId } from "~/lib/utils";
 import type { Assignee, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";
@@ -220,22 +220,11 @@ function applyOperations(
     assignees: Assignee[],
     operations: AssigneeOperation[],
 ): Assignee[] {
-    let updatedAssignees = [...assignees];
-
-    for (const op of operations) {
-        if (
-            op.op === "add" &&
-            !updatedAssignees.some((a) => a.login === op.assignee.login)
-        ) {
-            updatedAssignees.push(op.assignee);
-        }
-        if (op.op === "remove") {
-            updatedAssignees = updatedAssignees.filter(
-                (a) => a.login !== op.assignee.login,
-            );
-        }
-    }
-
-    return updatedAssignees;
+    return applyArrayOperations(
+        assignees,
+        operations,
+        (op) => op.assignee,
+        (a) => a.login,
+    );
 }
 
