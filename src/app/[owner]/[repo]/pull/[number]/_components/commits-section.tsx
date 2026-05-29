@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { Async, AsyncLink } from "~/components/async";
-import { CommitHoverCard } from "~/components/commit-hover-card";
+import { CommitHoverCard } from "~/components/hovercards/commit-hover-card";
 import type {
     Commit,
     PullsGetResponseData,

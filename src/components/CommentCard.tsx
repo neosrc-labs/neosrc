@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
-import { UserHoverCard } from "~/components/user-hover-card";
+import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { formatRelativeTime } from "~/utils";
 
 const authorAssociationLabels: Record<string, string> = {

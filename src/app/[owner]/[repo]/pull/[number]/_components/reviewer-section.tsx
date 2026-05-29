@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
-import { UserHoverCard } from "~/components/user-hover-card";
+import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { applyArrayOperations, cn, opId } from "~/lib/utils";
 import type { PullsGetResponseData, Reviewer } from "~/server/github";

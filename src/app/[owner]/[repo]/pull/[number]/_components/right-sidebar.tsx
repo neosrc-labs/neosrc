@@ -2,7 +2,7 @@
 
 import { CheckCircle, Circle, Loader2, XCircle } from "lucide-react";
 import { use, useState } from "react";
-import { CheckHoverCard } from "~/components/check-hover-card";
+import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
 import type {
     CheckRun,
     PullsGetResponseData,

@@ -29,7 +29,7 @@ import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { ReactionBar } from "~/components/ReactionBar";
 import { ReactionPicker } from "~/components/ReactionPicker";
 import { Label } from "~/components/ui/label";
-import { UserHoverCard } from "~/components/user-hover-card";
+import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import type { ReactionContent } from "~/lib/reactions";
 import { toggleReactionInList } from "~/lib/reactions";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";

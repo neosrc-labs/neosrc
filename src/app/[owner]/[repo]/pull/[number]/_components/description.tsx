@@ -12,7 +12,7 @@ import {
     extractPullRequestState,
     StatusPill,
 } from "~/components/ui/status-pill";
-import { UserHoverCard } from "~/components/user-hover-card";
+import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import type { PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
