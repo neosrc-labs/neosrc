@@ -9,6 +9,10 @@ frontend:
     build:
       commands:
         - pnpm run build
+        # https://docs.aws.amazon.com/amplify/latest/userguide/ssr-environment-variables.html
+        - touch .env.production
+        - env | grep -e AUTH_ >> .env.production
+        - env | grep -e DATABASE_ >> .env.production
   artifacts:
     baseDirectory: .next # or dist, out, etc.
     files:
