@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import type * as React from "react";
+import { useState, useEffect } from "react";
 import { cn } from "~/lib/utils";
 
 interface LabelProps extends React.HTMLAttributes<HTMLElement> {
@@ -32,7 +32,17 @@ function getBgColor(hex: string, darkMode: boolean): string {
 
 export function Label({ color, className, children }: LabelProps) {
     const { resolvedTheme } = useTheme();
-    const darkMode = resolvedTheme === "dark";
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+
+    // Before mount, render without theme-dependent styles so SSR and
+    // initial client render match. next-themes recommends this pattern.
+    // FIXME: Could we hack around this by setting a theme cookie?
+    const darkMode = mounted ? resolvedTheme === "dark" : true;
 
     return (
         <span
