@@ -863,8 +863,7 @@ function EventContent({
                     <UserLink actor={event.actor} />
                     <div className="flex gap-1">
                         {isAssigned ? " assigned " : " unassigned "}
-                        <UserLink actor={event.assignee} />{" "}
-                        {timestamp}
+                        <UserLink actor={event.assignee} /> {timestamp}
                     </div>
                 </EventRow>
             );
