@@ -4,7 +4,7 @@ import { Settings } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/user-hover-card";
-import { cn } from "~/lib/utils";
+import { cn, opId } from "~/lib/utils";
 import type { PullsGetResponseData, Reviewer } from "~/server/github";
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";
@@ -306,6 +306,3 @@ function applyOperations(
     return updatedReviewers;
 }
 
-function opId() {
-    return Math.floor(Math.random() * 10000000);
-}
