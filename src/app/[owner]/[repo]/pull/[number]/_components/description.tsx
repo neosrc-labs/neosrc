@@ -43,6 +43,8 @@ export function PullRequestDescriptionSection({
         },
     });
 
+    const { data: currentUserData } = api.users.currentUser.useQuery();
+
     const handleStartEdit = useCallback((currentBody: string) => {
         setEditBody(currentBody);
         setIsEditing(true);
@@ -205,6 +207,9 @@ export function PullRequestDescriptionSection({
                                             number={number}
                                             owner={owner}
                                             repo={repo}
+                                            currentUserLogin={
+                                                currentUserData?.login
+                                            }
                                             isIssue
                                         />
                                     </div>

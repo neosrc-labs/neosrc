@@ -13,44 +13,17 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
+import {
+    REACTION_EMOJIS,
+    REACTION_ORDER,
+    type ReactionContent,
+} from "~/lib/reactions";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { GQLReactionNode } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 
 export type Reaction = GQLReactionNode;
 type SimpleUser = components["schemas"]["nullable-simple-user"];
-
-const reactionEmojis: Record<string, string> = {
-    "+1": "👍",
-    "-1": "👎",
-    laugh: "😄",
-    confused: "😕",
-    heart: "❤️",
-    hooray: "🎉",
-    rocket: "🚀",
-    eyes: "👀",
-};
-
-type ReactionContent =
-    | "+1"
-    | "-1"
-    | "laugh"
-    | "confused"
-    | "heart"
-    | "hooray"
-    | "rocket"
-    | "eyes";
-
-const reactionOrder: ReactionContent[] = [
-    "+1",
-    "heart",
-    "laugh",
-    "hooray",
-    "confused",
-    "rocket",
-    "eyes",
-    "-1",
-];
 
 interface ReactionRollupProps {
     reactions?: Reaction[];
@@ -65,7 +38,7 @@ interface ReactionRollupProps {
 }
 
 function ContentType({ reaction }: { reaction: Reaction }) {
-    const emoji = reactionEmojis[reaction.content] ?? reaction.content;
+    const emoji = REACTION_EMOJIS[reaction.content] ?? reaction.content;
 
     return <span className="text-base leading-none">{emoji}</span>;
 }
@@ -271,7 +244,7 @@ export function ReactionRollup({
         grouped.set(reaction.content, current);
     }
 
-    const available = reactionOrder.filter(
+    const available = REACTION_ORDER.filter(
         (content) => !reactions.some((r) => r.content === content),
     );
 
@@ -279,7 +252,7 @@ export function ReactionRollup({
 
     return (
         <div className="flex flex-wrap items-center gap-1">
-            {reactionOrder.map((content) => {
+            {REACTION_ORDER.map((content) => {
                 const group = grouped.get(content);
                 if (!group) return null;
                 const hasReactedToThis = resolvedUserLogin
@@ -382,7 +355,7 @@ export function ReactionRollup({
                                     }}
                                     className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
                                 >
-                                    {reactionEmojis[content] ?? content}
+                                    {REACTION_EMOJIS[content] ?? content}
                                 </button>
                             ))}
                         </div>
