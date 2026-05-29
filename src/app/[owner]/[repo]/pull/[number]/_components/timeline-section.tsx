@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { GQLReactionNode } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { CommentForm } from "./comment-form";
@@ -33,6 +33,25 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
         { staleTime: 30_000 },
     );
 
+    const allEvents = useMemo(
+        () => data?.pages.flatMap((page) => page.events) ?? [],
+        [data],
+    );
+    const allCommentReactions = useMemo(
+        () =>
+            data?.pages.reduce<Record<number, GQLReactionNode[]>>(
+                (acc, page) => {
+                    for (const [id, reactions] of Object.entries(
+                        page.commentReactions,
+                    )) {
+                        acc[Number(id)] = reactions;
+                    }
+                    return acc;
+                },
+                {} as Record<number, GQLReactionNode[]>,
+            ) ?? {},
+        [data],
+    );
     if (isLoading) {
         return (
             <div className="py-4 text-gray-500 text-sm dark:text-gray-400">
@@ -41,19 +60,6 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
         );
     }
 
-    const allEvents = data?.pages.flatMap((page) => page.events) ?? [];
-    const allCommentReactions =
-        data?.pages.reduce<Record<number, GQLReactionNode[]>>(
-            (acc, page) => {
-                for (const [id, reactions] of Object.entries(
-                    page.commentReactions,
-                )) {
-                    acc[Number(id)] = reactions;
-                }
-                return acc;
-            },
-            {} as Record<number, GQLReactionNode[]>,
-        ) ?? {};
     const currentUserLogin = data?.pages[0]?.currentUserLogin ?? "";
     const filteredEvents = filterTimelineEvents(allEvents);
 
