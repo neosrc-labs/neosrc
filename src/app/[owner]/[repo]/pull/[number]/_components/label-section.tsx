@@ -2,7 +2,7 @@ import { Settings } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Async } from "~/components/async";
 import { Label as LabelComponent } from "~/components/ui/label";
-import { cn } from "~/lib/utils";
+import { cn, opId } from "~/lib/utils";
 import type { Label, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";
@@ -294,6 +294,3 @@ function applyOperations(
     return updatedLabels;
 }
 
-function opId() {
-    return Math.floor(Math.random() * 10000000);
-}
