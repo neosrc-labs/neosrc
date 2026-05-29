@@ -12,6 +12,7 @@ frontend:
         - touch .env.production
         - env | grep -e AUTH_ >> .env.production
         - env | grep -e DATABASE_ >> .env.production
+        - echo "AUTH_TRUST_HOST=true" >> .env.production
         - pnpm run build
   artifacts:
     baseDirectory: .next # or dist, out, etc.
