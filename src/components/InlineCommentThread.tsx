@@ -1,22 +1,20 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { MoreVertical, SmilePlus, SquarePen, Trash2 } from "lucide-react";
+import { MoreVertical, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 
 type Reaction = components["schemas"]["reaction"];
 
-import {
-    HoverCard,
-    HoverCardContent,
-    HoverCardTrigger,
-} from "~/components/ui/hover-card";
+import { ReactionBar } from "~/components/ReactionBar";
+import { ReactionPicker } from "~/components/ReactionPicker";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
+import type { ReactionContent } from "~/lib/reactions";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
@@ -30,39 +28,6 @@ interface InlineCommentThreadProps {
     number: number;
     pendingReviewId?: number | null;
 }
-
-const allReactions = [
-    "+1",
-    "-1",
-    "laugh",
-    "confused",
-    "heart",
-    "hooray",
-    "rocket",
-    "eyes",
-] as const;
-
-const reactionEmojis: Record<string, string> = {
-    "+1": "👍",
-    "-1": "👎",
-    laugh: "😄",
-    confused: "😕",
-    heart: "❤️",
-    hooray: "🎉",
-    rocket: "🚀",
-    eyes: "👀",
-};
-
-const reactionOrder: (typeof allReactions)[number][] = [
-    "+1",
-    "heart",
-    "laugh",
-    "hooray",
-    "confused",
-    "rocket",
-    "eyes",
-    "-1",
-];
 
 export function InlineCommentThread({
     parentComment,
@@ -169,7 +134,8 @@ export function InlineCommentThread({
                 );
                 return { prevData };
             },
-            onError: (_err, _vars, ctx) => {
+            onError: (err, _vars, ctx) => {
+                console.error("Failed to toggle reaction:", err);
                 if (ctx?.prevData) {
                     utils.reactions.getForReviewComments.setData(
                         { owner, repo, commentIds: allCommentIds },
@@ -203,7 +169,7 @@ export function InlineCommentThread({
     };
 
     const handleReact = useCallback(
-        (commentId: number, content: (typeof allReactions)[number]) => {
+        (commentId: number, content: ReactionContent) => {
             reactMutation.mutate({ owner, repo, commentId, content });
         },
         [reactMutation, owner, repo],
@@ -363,40 +329,13 @@ function Comment({
     onEditBodyChange: (body: string) => void;
     onCancelEdit: () => void;
     onSaveEdit: () => void;
-    onReact: (content: (typeof allReactions)[number]) => void;
+    onReact: (content: ReactionContent) => void;
     onDelete: () => void;
     owner: string;
     repo: string;
     variant: "parent" | "reply";
 }) {
-    const [reactionOpen, setReactionOpen] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
-
-    const grouped = useMemo(() => {
-        const map = new Map<string, Reaction[]>();
-        for (const r of reactions) {
-            const existing = map.get(r.content) ?? [];
-            existing.push(r);
-            map.set(r.content, existing);
-        }
-        return map;
-    }, [reactions]);
-
-    const entries = reactionOrder
-        .map((content) => [content, grouped.get(content) ?? []] as const)
-        .filter(([, rs]) => rs.length > 0);
-
-    const userReacted = (content: string) =>
-        reactions.some(
-            (r) => r.user?.login === currentUserLogin && r.content === content,
-        );
-
-    const availableReactions = allReactions.filter(
-        (c) =>
-            !reactions.some(
-                (r) => r.user?.login === currentUserLogin && r.content === c,
-            ),
-    );
 
     return (
         <CommentCard
@@ -414,41 +353,11 @@ function Comment({
             variant={variant === "parent" ? "default" : "nested"}
             headerActions={
                 <>
-                    {availableReactions.length > 0 && (
-                        <Popover
-                            open={reactionOpen}
-                            onOpenChange={setReactionOpen}
-                        >
-                            <PopoverTrigger asChild>
-                                <button
-                                    type="button"
-                                    className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
-                                >
-                                    <SmilePlus size={14} />
-                                </button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                                className="w-fit bg-white p-2 dark:bg-zinc-950"
-                                align="end"
-                            >
-                                <div className="flex gap-1">
-                                    {availableReactions.map((content) => (
-                                        <button
-                                            key={content}
-                                            type="button"
-                                            onClick={() => {
-                                                onReact(content);
-                                                setReactionOpen(false);
-                                            }}
-                                            className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
-                                        >
-                                            {reactionEmojis[content] ?? content}
-                                        </button>
-                                    ))}
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                    )}
+                    <ReactionPicker
+                        reactions={reactions}
+                        currentUserLogin={currentUserLogin}
+                        onReact={onReact}
+                    />
                     {isAuthor && (
                         <button
                             type="button"
@@ -487,65 +396,13 @@ function Comment({
                 </>
             }
             footer={
-                entries.length > 0 && (
-                    <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                        {entries.map(([content, rs]) => {
-                            const isActive = userReacted(content);
-                            return (
-                                <HoverCard key={content} openDelay={300}>
-                                    <HoverCardTrigger asChild>
-                                        <button
-                                            type="button"
-                                            onClick={() => onReact(content)}
-                                            className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 font-medium text-xs transition-colors ${
-                                                isActive
-                                                    ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
-                                                    : "border-gray-200 bg-gray-100 text-gray-600 hover:bg-gray-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:bg-zinc-700"
-                                            }`}
-                                        >
-                                            <span>
-                                                {reactionEmojis[content] ??
-                                                    content}
-                                            </span>
-                                            <span>{rs.length}</span>
-                                        </button>
-                                    </HoverCardTrigger>
-                                    <HoverCardContent className="w-56 bg-white p-3 dark:bg-zinc-950">
-                                        <div className="flex flex-col gap-2">
-                                            {rs.map((r) => (
-                                                <div
-                                                    key={r.id}
-                                                    className="flex items-center gap-2 text-gray-700 text-sm dark:text-gray-300"
-                                                >
-                                                    {r.user && (
-                                                        <img
-                                                            src={
-                                                                r.user
-                                                                    .avatar_url
-                                                            }
-                                                            alt={r.user.login}
-                                                            className="h-5 w-5 rounded-full"
-                                                        />
-                                                    )}
-                                                    <span className="font-medium">
-                                                        {r.user?.login}
-                                                    </span>
-                                                    <span className="ml-auto">
-                                                        {
-                                                            reactionEmojis[
-                                                                r.content
-                                                            ]
-                                                        }
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </HoverCardContent>
-                                </HoverCard>
-                            );
-                        })}
-                    </div>
-                )
+                <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                    <ReactionBar
+                        reactions={reactions}
+                        currentUserLogin={currentUserLogin}
+                        onReact={onReact}
+                    />
+                </div>
             }
         >
             <MarkdownRenderer content={displayBody} owner={owner} repo={repo} />

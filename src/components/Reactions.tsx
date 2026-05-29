@@ -1,17 +1,7 @@
 "use client";
 
+import { REACTION_EMOJIS } from "~/lib/reactions";
 import { api } from "~/trpc/react";
-
-const reactionEmojis: Record<string, string> = {
-    "+1": "👍",
-    "-1": "👎",
-    laugh: "😄",
-    confused: "😕",
-    heart: "❤️",
-    hooray: "🎉",
-    rocket: "🚀",
-    eyes: "👀",
-};
 
 interface ReactionsProps {
     owner: string;
@@ -52,7 +42,7 @@ export function Reactions({ owner, repo, number }: ReactionsProps) {
                     className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 font-medium text-gray-700 text-sm dark:bg-zinc-800 dark:text-gray-300"
                     key={content}
                 >
-                    <span>{reactionEmojis[content] ?? content}</span>
+                    <span>{REACTION_EMOJIS[content] ?? content}</span>
                     <span>{count}</span>
                 </span>
             ))}

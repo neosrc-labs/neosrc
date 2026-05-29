@@ -1,59 +1,19 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { Loader2, SmilePlus, SquarePen } from "lucide-react";
+import { SquarePen } from "lucide-react";
 import { useMemo, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import { DiffView } from "~/components/DiffView";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
-import {
-    HoverCard,
-    HoverCardContent,
-    HoverCardTrigger,
-} from "~/components/ui/hover-card";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "~/components/ui/popover";
+import { ReactionBar } from "~/components/ReactionBar";
+import { ReactionPicker } from "~/components/ReactionPicker";
+import type { ReactionContent } from "~/lib/reactions";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 
 type Reaction = components["schemas"]["reaction"];
-
-const allReactions = [
-    "+1",
-    "-1",
-    "laugh",
-    "confused",
-    "heart",
-    "hooray",
-    "rocket",
-    "eyes",
-] as const;
-
-const reactionEmojis: Record<string, string> = {
-    "+1": "👍",
-    "-1": "👎",
-    laugh: "😄",
-    confused: "😕",
-    heart: "❤️",
-    hooray: "🎉",
-    rocket: "🚀",
-    eyes: "👀",
-};
-
-const reactionOrder: (typeof allReactions)[number][] = [
-    "+1",
-    "heart",
-    "laugh",
-    "hooray",
-    "confused",
-    "rocket",
-    "eyes",
-    "-1",
-];
 
 interface ReviewCommentsProps {
     owner: string;
@@ -74,14 +34,6 @@ export function ReviewComments({
     allComments,
     currentUserLogin,
 }: ReviewCommentsProps) {
-    const { data: comments, isLoading } =
-        api.reviewComments.byReviewId.useQuery({
-            owner,
-            repo,
-            number,
-            reviewId,
-        });
-
     const [editingCommentId, setEditingCommentId] = useState<number | null>(
         null,
     );
@@ -89,10 +41,22 @@ export function ReviewComments({
     const [savedBodies, setSavedBodies] = useState<Record<number, string>>({});
     const utils = api.useUtils();
 
-    const allCommentIds = useMemo(
-        () => (comments ?? []).map((c) => c.id),
-        [comments],
-    );
+    const allCommentIds = useMemo(() => {
+        const topLevelIds = new Set<number>();
+        const ids: number[] = [];
+        for (const c of allComments) {
+            if (!c.in_reply_to_id && c.pull_request_review_id === reviewId) {
+                topLevelIds.add(c.id);
+                ids.push(c.id);
+            }
+        }
+        for (const c of allComments) {
+            if (c.in_reply_to_id && topLevelIds.has(c.in_reply_to_id)) {
+                ids.push(c.id);
+            }
+        }
+        return ids;
+    }, [allComments, reviewId]);
 
     const { data: reactionMap = {} } =
         api.reactions.getForReviewComments.useQuery(
@@ -166,7 +130,8 @@ export function ReviewComments({
                 );
                 return { prevData };
             },
-            onError: (_err, _vars, ctx) => {
+            onError: (err, _vars, ctx) => {
+                console.error("Failed to toggle reaction:", err);
                 if (ctx?.prevData) {
                     utils.reactions.getForReviewComments.setData(
                         { owner, repo, commentIds: allCommentIds },
@@ -183,10 +148,7 @@ export function ReviewComments({
             },
         });
 
-    const handleReact = (
-        commentId: number,
-        content: (typeof allReactions)[number],
-    ) => {
+    const handleReact = (commentId: number, content: ReactionContent) => {
         reactMutation.mutate({ owner, repo, commentId, content });
     };
 
@@ -195,30 +157,28 @@ export function ReviewComments({
         updateMutation.mutate({ owner, repo, commentId, body: editBody });
     };
 
-    if (isLoading) {
-        return (
-            <div className="mt-2 flex items-center gap-2 text-gray-400 text-xs">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Loading review comments...
-            </div>
-        );
-    }
+    const replyMap = useMemo(() => {
+        const map = new Map<number, ReviewComment[]>();
+        for (const comment of allComments) {
+            if (comment.in_reply_to_id) {
+                const existing = map.get(comment.in_reply_to_id) ?? [];
+                existing.push(comment);
+                map.set(comment.in_reply_to_id, existing);
+            }
+        }
+        return map;
+    }, [allComments]);
 
-    if (!comments || comments.length === 0) {
+    if (allComments.length === 0) {
         return null;
     }
 
-    const topLevel: ReviewComment[] = [];
-    const replyMap = new Map<number, ReviewComment[]>();
+    const topLevel = allComments.filter(
+        (c) => !c.in_reply_to_id && c.pull_request_review_id === reviewId,
+    );
 
-    for (const comment of allComments) {
-        if (comment.in_reply_to_id) {
-            const existing = replyMap.get(comment.in_reply_to_id) ?? [];
-            existing.push(comment);
-            replyMap.set(comment.in_reply_to_id, existing);
-        } else if (comment.pull_request_review_id === reviewId) {
-            topLevel.push(comment);
-        }
+    if (topLevel.length === 0) {
+        return null;
     }
 
     const byPath: Record<string, ReviewComment[]> = {};
@@ -306,10 +266,7 @@ function CommentBlock({
     onEditBodyChange: (body: string) => void;
     onCancelEdit: () => void;
     onSaveEdit: (commentId: number) => void;
-    onReact: (
-        commentId: number,
-        content: (typeof allReactions)[number],
-    ) => void;
+    onReact: (commentId: number, content: ReactionContent) => void;
 }) {
     const [showReplyForm, setShowReplyForm] = useState(false);
     const [replyBody, setReplyBody] = useState("");
@@ -353,11 +310,10 @@ function CommentBlock({
                 onSaveEdit={() => onSaveEdit(comment.id)}
                 headerActions={
                     <>
-                        <ReactionButton
-                            commentId={comment.id}
+                        <ReactionPicker
                             reactions={parentReactions}
                             currentUserLogin={currentUserLogin}
-                            onReact={onReact}
+                            onReact={(content) => onReact(comment.id, content)}
                         />
                         {comment.user?.login === currentUserLogin && (
                             <button
@@ -416,11 +372,12 @@ function CommentBlock({
                             onSaveEdit={() => onSaveEdit(reply.id)}
                             headerActions={
                                 <>
-                                    <ReactionButton
-                                        commentId={reply.id}
+                                    <ReactionPicker
                                         reactions={replyReactions}
                                         currentUserLogin={currentUserLogin}
-                                        onReact={onReact}
+                                        onReact={(content) =>
+                                            onReact(reply.id, content)
+                                        }
                                     />
                                     {reply.user?.login === currentUserLogin && (
                                         <button
@@ -510,145 +467,6 @@ function CommentBlock({
                     </button>
                 </div>
             )}
-        </div>
-    );
-}
-
-function ReactionButton({
-    commentId: _commentId,
-    reactions,
-    currentUserLogin,
-    onReact,
-}: {
-    commentId: number;
-    reactions: Reaction[];
-    currentUserLogin: string;
-    onReact: (
-        commentId: number,
-        content: (typeof allReactions)[number],
-    ) => void;
-}) {
-    const [open, setOpen] = useState(false);
-
-    const hasNoUser = !currentUserLogin;
-
-    const availableReactions = allReactions.filter(
-        (c) =>
-            !reactions.some(
-                (r) => r.user?.login === currentUserLogin && r.content === c,
-            ),
-    );
-
-    if (hasNoUser || availableReactions.length === 0) return null;
-
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <button
-                    type="button"
-                    className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
-                >
-                    <SmilePlus size={14} />
-                </button>
-            </PopoverTrigger>
-            <PopoverContent
-                className="w-fit bg-white p-2 dark:bg-zinc-950"
-                align="end"
-            >
-                <div className="flex gap-1">
-                    {availableReactions.map((content) => (
-                        <button
-                            key={content}
-                            type="button"
-                            onClick={() => {
-                                onReact(_commentId, content);
-                                setOpen(false);
-                            }}
-                            className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
-                        >
-                            {reactionEmojis[content] ?? content}
-                        </button>
-                    ))}
-                </div>
-            </PopoverContent>
-        </Popover>
-    );
-}
-
-function ReactionBar({
-    reactions,
-    currentUserLogin,
-    onReact,
-}: {
-    reactions: Reaction[];
-    currentUserLogin: string;
-    onReact: (content: (typeof allReactions)[number]) => void;
-}) {
-    const grouped = useMemo(() => {
-        const map = new Map<string, Reaction[]>();
-        for (const r of reactions) {
-            const existing = map.get(r.content) ?? [];
-            existing.push(r);
-            map.set(r.content, existing);
-        }
-        return map;
-    }, [reactions]);
-
-    const entries = reactionOrder
-        .map((content) => [content, grouped.get(content) ?? []] as const)
-        .filter(([, rs]) => rs.length > 0);
-
-    return (
-        <div className="flex flex-wrap items-center gap-1.5">
-            {entries.map(([content, rs]) => {
-                const isActive = rs.some(
-                    (r) => r.user?.login === currentUserLogin,
-                );
-                return (
-                    <HoverCard key={content} openDelay={300}>
-                        <HoverCardTrigger asChild>
-                            <button
-                                type="button"
-                                onClick={() => onReact(content)}
-                                className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 font-medium text-xs transition-colors ${
-                                    isActive
-                                        ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
-                                        : "border-gray-200 bg-gray-100 text-gray-600 hover:bg-gray-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-400 dark:hover:bg-zinc-700"
-                                }`}
-                            >
-                                <span>
-                                    {reactionEmojis[content] ?? content}
-                                </span>
-                                <span>{rs.length}</span>
-                            </button>
-                        </HoverCardTrigger>
-                        <HoverCardContent className="w-56 bg-white p-3 dark:bg-zinc-950">
-                            <div className="flex flex-col gap-2">
-                                {rs.map((r) => (
-                                    <div
-                                        key={r.id}
-                                        className="flex items-center gap-2 text-gray-700 text-sm dark:text-gray-300"
-                                    >
-                                        {r.user && (
-                                            <img
-                                                src={r.user.avatar_url}
-                                                alt={r.user.login}
-                                                className="h-5 w-5 rounded-full"
-                                            />
-                                        )}
-                                        <span className="font-medium">
-                                            {r.user?.login}
-                                        </span>
-                                        <span className="ml-auto">
-                                            {reactionEmojis[r.content]}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </HoverCardContent>
-                    </HoverCard>
-                );
-            })}
         </div>
     );
 }
