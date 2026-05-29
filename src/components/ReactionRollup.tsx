@@ -16,6 +16,7 @@ import {
 import {
     REACTION_EMOJIS,
     REACTION_ORDER,
+    toggleReactionInList,
     type ReactionContent,
 } from "~/lib/reactions";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
@@ -118,24 +119,11 @@ export function ReactionRollup({
                 { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
                 (old) => {
                     if (!old) return old;
-                    const existing = reactions.find(
-                        (r) =>
-                            r.user?.login === resolvedUserLogin &&
-                            r.content === content,
+                    const updatedReactions = toggleReactionInList(
+                        reactions,
+                        resolvedUserLogin ?? "",
+                        content,
                     );
-                    const updatedReactions = existing
-                        ? reactions.filter(
-                              (r) => r.databaseId !== existing.databaseId,
-                          )
-                        : [
-                              ...reactions,
-                              {
-                                  databaseId: -Date.now(),
-                                  content,
-                                  createdAt: new Date().toISOString(),
-                                  user: { login: resolvedUserLogin ?? "" },
-                              },
-                          ];
                     return {
                         ...old,
                         pages: old.pages.map((page) => ({
@@ -168,6 +156,8 @@ export function ReactionRollup({
         },
     });
 
+
+
     const commentMutation = api.reactions.toggleIssueComment.useMutation({
         onMutate: async ({ content }) => {
             await utils.timeline.list.cancel({
@@ -186,24 +176,11 @@ export function ReactionRollup({
                 { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
                 (old) => {
                     if (!old) return old;
-                    const existing = reactions.find(
-                        (r) =>
-                            r.user?.login === resolvedUserLogin &&
-                            r.content === content,
+                    const updatedReactions = toggleReactionInList(
+                        reactions,
+                        resolvedUserLogin ?? "",
+                        content,
                     );
-                    const updatedReactions = existing
-                        ? reactions.filter(
-                              (r) => r.databaseId !== existing.databaseId,
-                          )
-                        : [
-                              ...reactions,
-                              {
-                                  databaseId: -Date.now(),
-                                  content,
-                                  createdAt: new Date().toISOString(),
-                                  user: { login: resolvedUserLogin ?? "" },
-                              },
-                          ];
                     return {
                         ...old,
                         pages: old.pages.map((page) => ({

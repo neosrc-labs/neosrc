@@ -14,6 +14,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
+import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
 import type { ReactionContent } from "~/lib/reactions";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -84,73 +85,12 @@ export function InlineCommentThread({
     });
 
     const reactMutation =
-        api.reactions.togglePullRequestReviewComment.useMutation({
-            onMutate: async ({ commentId, content }) => {
-                await utils.reactions.getForReviewComments.cancel({
-                    owner,
-                    repo,
-                    commentIds: allCommentIds,
-                });
-                const prevData = utils.reactions.getForReviewComments.getData({
-                    owner,
-                    repo,
-                    commentIds: allCommentIds,
-                });
-                utils.reactions.getForReviewComments.setData(
-                    { owner, repo, commentIds: allCommentIds },
-                    (old) => {
-                        if (!old) return old;
-                        const prevReactions: Reaction[] = old[commentId] ?? [];
-                        const existing = prevReactions.find(
-                            (r) =>
-                                r.user?.login === currentUserLogin &&
-                                r.content === content,
-                        );
-                        const updatedReactions = existing
-                            ? prevReactions.filter((r) => r.id !== existing.id)
-                            : [
-                                  ...prevReactions,
-                                  {
-                                      id: -Date.now(),
-                                      node_id: "",
-                                      user: {
-                                          login: currentUserLogin,
-                                          avatar_url: "",
-                                          html_url: "",
-                                          id: 0,
-                                          node_id: "",
-                                          gravatar_id: "",
-                                          url: "",
-                                          received_events_url: "",
-                                          type: "User",
-                                          site_admin: false,
-                                      },
-                                      content,
-                                      created_at: new Date().toISOString(),
-                                  } as Reaction,
-                              ];
-                        return { ...old, [commentId]: updatedReactions };
-                    },
-                );
-                return { prevData };
-            },
-            onError: (err, _vars, ctx) => {
-                console.error("Failed to toggle reaction:", err);
-                if (ctx?.prevData) {
-                    utils.reactions.getForReviewComments.setData(
-                        { owner, repo, commentIds: allCommentIds },
-                        ctx.prevData,
-                    );
-                }
-            },
-            onSettled: () => {
-                utils.reactions.getForReviewComments.invalidate({
-                    owner,
-                    repo,
-                    commentIds: allCommentIds,
-                });
-            },
-        });
+        useTogglePullRequestReviewCommentReaction(
+            owner,
+            repo,
+            allCommentIds,
+            currentUserLogin,
+        );
 
     const handleReply = useCallback(() => {
         if (!replyBody.trim()) return;
