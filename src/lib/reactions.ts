@@ -32,3 +32,27 @@ export const REACTION_ORDER: ReactionContent[] = [
     "eyes",
     "-1",
 ];
+
+import type { GQLReactionNode } from "~/server/github-graphql";
+
+export function toggleReactionInList(
+    items: GQLReactionNode[],
+    login: string,
+    content: string,
+): GQLReactionNode[] {
+    const existing = items.find(
+        (r) => r.user?.login === login && r.content === content,
+    );
+    if (existing) {
+        return items.filter((r) => r.databaseId !== existing.databaseId);
+    }
+    return [
+        ...items,
+        {
+            databaseId: -Date.now(),
+            content,
+            createdAt: new Date().toISOString(),
+            user: { login },
+        },
+    ];
+}

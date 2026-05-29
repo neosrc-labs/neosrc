@@ -31,6 +31,7 @@ import { ReactionPicker } from "~/components/ReactionPicker";
 import { Label } from "~/components/ui/label";
 import { UserHoverCard } from "~/components/user-hover-card";
 import type { ReactionContent } from "~/lib/reactions";
+import { toggleReactionInList } from "~/lib/reactions";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewComment } from "~/server/github";
 import type {
@@ -363,26 +364,11 @@ function EventContent({
                     { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
                     (old) => {
                         if (!old || !databaseId) return old;
-                        const currentReactions =
-                            commentReactions[databaseId] ?? [];
-                        const existing = currentReactions.find(
-                            (r) =>
-                                r.user?.login === currentUserLogin &&
-                                r.content === content,
+                        const updatedReactions = toggleReactionInList(
+                            commentReactions[databaseId] ?? [],
+                            currentUserLogin,
+                            content,
                         );
-                        const updatedReactions = existing
-                            ? currentReactions.filter(
-                                  (r) => r.databaseId !== existing.databaseId,
-                              )
-                            : [
-                                  ...currentReactions,
-                                  {
-                                      databaseId: -Date.now(),
-                                      content,
-                                      createdAt: new Date().toISOString(),
-                                      user: { login: currentUserLogin ?? "" },
-                                  },
-                              ];
                         return {
                             ...old,
                             pages: old.pages.map((page) => ({
@@ -1316,24 +1302,4 @@ function EventContent({
     }
 }
 
-function toggleReactionInList(
-    reactions: GQLReactionNode[],
-    login: string,
-    content: string,
-): GQLReactionNode[] {
-    const existing = reactions.find(
-        (r) => r.user?.login === login && r.content === content,
-    );
-    if (existing) {
-        return reactions.filter((r) => r.databaseId !== existing.databaseId);
-    }
-    return [
-        ...reactions,
-        {
-            databaseId: -Date.now(),
-            content,
-            createdAt: new Date().toISOString(),
-            user: { login },
-        },
-    ];
-}
+
