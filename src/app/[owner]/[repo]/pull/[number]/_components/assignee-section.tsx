@@ -1,9 +1,9 @@
 "use client";
 
-import { Settings } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/user-hover-card";
+import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn, opId } from "~/lib/utils";
 import type { Assignee, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -123,110 +123,41 @@ function AssigneeSectionSettings({
     onAddAssignee: (assignee: Assignee) => void;
     onRemoveAssignee: (assignee: Assignee) => void;
 }) {
-    const [open, setOpen] = useState(false);
-    const [search, setSearch] = useState("");
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!open) return;
-        const handler = (e: MouseEvent) => {
-            if (
-                dropdownRef.current &&
-                !dropdownRef.current.contains(e.target as Node)
-            ) {
-                setOpen(false);
-                setSearch("");
-            }
-        };
-        document.addEventListener("mousedown", handler);
-        return () => document.removeEventListener("mousedown", handler);
-    }, [open]);
-
     const displayAssignees = applyOperations(assignees, operations);
     const currentLogins = new Set(displayAssignees.map((a) => a.login));
-    const sortedAssignees = useRef<typeof repoAssignees>(null);
-    if (open && repoAssignees && !sortedAssignees.current) {
-        sortedAssignees.current = [...repoAssignees].sort((a, b) => {
-            const aApplied = currentLogins.has(a.login) ? 0 : 1;
-            const bApplied = currentLogins.has(b.login) ? 0 : 1;
-            return aApplied - bApplied;
-        });
-    }
-    if (!open) {
-        sortedAssignees.current = null;
-    }
-    const filteredAssignees = (
-        sortedAssignees.current ??
-        repoAssignees ??
-        []
-    ).filter((a) => a.login.toLowerCase().includes(search.toLowerCase()));
 
     return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                className="cursor-pointer rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300"
-                onClick={() => setOpen(!open)}
-                type="button"
-                aria-label="Manage assignees"
-            >
-                <Settings size={14} />
-            </button>
-            {open && (
-                <div className="absolute right-0 z-20 mt-1 w-64 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                    <input
-                        className="w-full border-gray-200 border-b px-3 py-2 text-sm outline-none placeholder:text-gray-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Filter users"
-                        value={search}
+        <SearchableDropdown
+            items={repoAssignees}
+            isSelected={(a) => currentLogins.has(a.login)}
+            onSelect={(a) =>
+                currentLogins.has(a.login)
+                    ? onRemoveAssignee(a)
+                    : onAddAssignee(a)
+            }
+            keyFn={(a) => a.login}
+            searchFn={(a, q) => a.login.toLowerCase().includes(q)}
+            renderItem={(a, selected) => (
+                <>
+                    <img
+                        src={a.avatar_url}
+                        alt=""
+                        className="h-5 w-5 shrink-0 rounded-full"
                     />
-                    <ul className="max-h-60 overflow-y-auto py-1">
-                        {filteredAssignees.length === 0 ? (
-                            <li className="px-3 py-2 text-gray-400 text-xs">
-                                No users found
-                            </li>
-                        ) : (
-                            filteredAssignees.map((assignee) => {
-                                const isApplied = currentLogins.has(
-                                    assignee.login,
-                                );
-                                return (
-                                    <li
-                                        className={cn(
-                                            "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800",
-                                            isApplied &&
-                                                "bg-blue-50 dark:bg-blue-950/30",
-                                        )}
-                                        key={assignee.login}
-                                        onClick={() => {
-                                            if (isApplied) {
-                                                onRemoveAssignee(assignee);
-                                            } else {
-                                                onAddAssignee(assignee);
-                                            }
-                                        }}
-                                        aria-selected={isApplied}
-                                    >
-                                        <img
-                                            src={assignee.avatar_url}
-                                            alt=""
-                                            className="h-5 w-5 shrink-0 rounded-full"
-                                        />
-                                        <span className="flex-1 truncate text-gray-700 dark:text-zinc-300">
-                                            {assignee.login}
-                                        </span>
-                                        {isApplied && (
-                                            <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
-                                                &#10003;
-                                            </span>
-                                        )}
-                                    </li>
-                                );
-                            })
-                        )}
-                    </ul>
-                </div>
+                    <span className="flex-1 truncate text-gray-700 dark:text-zinc-300">
+                        {a.login}
+                    </span>
+                    {selected && (
+                        <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                            &#10003;
+                        </span>
+                    )}
+                </>
             )}
-        </div>
+            placeholder="Filter users"
+            emptyText="No users found"
+            ariaLabel="Manage assignees"
+        />
     );
 }
 

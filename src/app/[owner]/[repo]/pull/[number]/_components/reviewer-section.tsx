@@ -1,9 +1,9 @@
 "use client";
 
-import { Settings } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/user-hover-card";
+import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn, opId } from "~/lib/utils";
 import type { PullsGetResponseData, Reviewer } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -123,108 +123,41 @@ function ReviewerSectionSettings({
     onAddReviewer: (reviewer: Reviewer) => void;
     onRemoveReviewer: (reviewer: Reviewer) => void;
 }) {
-    const [open, setOpen] = useState(false);
-    const [search, setSearch] = useState("");
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!open) return;
-        const handler = (e: MouseEvent) => {
-            if (
-                dropdownRef.current &&
-                !dropdownRef.current.contains(e.target as Node)
-            ) {
-                setOpen(false);
-                setSearch("");
-            }
-        };
-        document.addEventListener("mousedown", handler);
-        return () => document.removeEventListener("mousedown", handler);
-    }, [open]);
-
     const displayReviewers = applyOperations(reviewers, operations);
     const currentLogins = new Set(displayReviewers.map((r) => r.login));
-    const sortedUsers = useRef<typeof repoUsers>(null);
-    if (open && repoUsers && !sortedUsers.current) {
-        sortedUsers.current = [...repoUsers].sort((a, b) => {
-            const aApplied = currentLogins.has(a.login) ? 0 : 1;
-            const bApplied = currentLogins.has(b.login) ? 0 : 1;
-            return aApplied - bApplied;
-        });
-    }
-    if (!open) {
-        sortedUsers.current = null;
-    }
-    const filteredUsers = (sortedUsers.current ?? repoUsers ?? []).filter((u) =>
-        u.login.toLowerCase().includes(search.toLowerCase()),
-    );
 
     return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                className="cursor-pointer rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300"
-                onClick={() => setOpen(!open)}
-                type="button"
-                aria-label="Manage reviewers"
-            >
-                <Settings size={14} />
-            </button>
-            {open && (
-                <div className="absolute right-0 z-20 mt-1 w-64 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                    <input
-                        autoFocus
-                        className="w-full border-gray-200 border-b px-3 py-2 text-sm outline-none placeholder:text-gray-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Filter users"
-                        value={search}
+        <SearchableDropdown
+            items={repoUsers}
+            isSelected={(r) => currentLogins.has(r.login)}
+            onSelect={(r) =>
+                currentLogins.has(r.login)
+                    ? onRemoveReviewer(r)
+                    : onAddReviewer(r)
+            }
+            keyFn={(r) => r.login}
+            searchFn={(r, q) => r.login.toLowerCase().includes(q)}
+            renderItem={(r, selected) => (
+                <>
+                    <img
+                        src={r.avatar_url}
+                        alt=""
+                        className="h-5 w-5 shrink-0 rounded-full"
                     />
-                    <ul className="max-h-60 overflow-y-auto py-1">
-                        {filteredUsers.length === 0 ? (
-                            <li className="px-3 py-2 text-gray-400 text-xs">
-                                No users found
-                            </li>
-                        ) : (
-                            filteredUsers.map((user) => {
-                                const isApplied = currentLogins.has(user.login);
-                                return (
-                                    <li
-                                        className={cn(
-                                            "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800",
-                                            isApplied &&
-                                                "bg-blue-50 dark:bg-blue-950/30",
-                                        )}
-                                        key={user.login}
-                                        onClick={() => {
-                                            if (isApplied) {
-                                                onRemoveReviewer(user);
-                                            } else {
-                                                onAddReviewer(user);
-                                            }
-                                        }}
-                                        role="option"
-                                        aria-selected={isApplied}
-                                    >
-                                        <img
-                                            src={user.avatar_url}
-                                            alt=""
-                                            className="h-5 w-5 shrink-0 rounded-full"
-                                        />
-                                        <span className="flex-1 truncate text-gray-700 dark:text-zinc-300">
-                                            {user.login}
-                                        </span>
-                                        {isApplied && (
-                                            <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
-                                                &#10003;
-                                            </span>
-                                        )}
-                                    </li>
-                                );
-                            })
-                        )}
-                    </ul>
-                </div>
+                    <span className="flex-1 truncate text-gray-700 dark:text-zinc-300">
+                        {r.login}
+                    </span>
+                    {selected && (
+                        <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                            &#10003;
+                        </span>
+                    )}
+                </>
             )}
-        </div>
+            placeholder="Filter users"
+            emptyText="No users found"
+            ariaLabel="Manage reviewers"
+        />
     );
 }
 
