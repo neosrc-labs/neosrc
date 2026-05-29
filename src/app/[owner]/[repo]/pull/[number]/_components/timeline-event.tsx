@@ -218,7 +218,6 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
     return (
         <div className={circleClass}>
             <span className="flex">
-                {/* {event.__typename} */}
                 {icon}
             </span>
         </div>
@@ -554,7 +553,6 @@ function EventContent({
             const reviewReactionsArr = commentReactions[event.databaseId] ?? [];
 
             const handleReviewReaction = (
-                _commentId: number,
                 content: ReactionContent,
             ) => {
                 reviewReactionMutation.mutate({
@@ -637,10 +635,7 @@ function EventContent({
                                                     currentUserLogin
                                                 }
                                                 onReact={(content) =>
-                                                    handleReviewReaction(
-                                                        event.databaseId,
-                                                        content,
-                                                    )
+                                                    handleReviewReaction(content)
                                                 }
                                             />
                                         )}
@@ -670,10 +665,7 @@ function EventContent({
                                                     currentUserLogin
                                                 }
                                                 onReact={(content) =>
-                                                    handleReviewReaction(
-                                                        event.databaseId,
-                                                        content,
-                                                    )
+                                                    handleReviewReaction(content)
                                                 }
                                             />
                                         </div>
