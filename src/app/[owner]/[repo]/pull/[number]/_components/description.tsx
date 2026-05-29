@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
+import type { Reaction as GQLReaction } from "~/components/ReactionRollup";
 import { ReactionRollup } from "~/components/ReactionRollup";
 import {
     extractPullRequestState,
@@ -44,6 +45,11 @@ export function PullRequestDescriptionSection({
     });
 
     const { data: currentUserData } = api.users.currentUser.useQuery();
+
+    const { data: reactionsData } = api.reactions.get.useQuery(
+        { owner, repo, number },
+        { staleTime: 30_000 },
+    );
 
     const handleStartEdit = useCallback((currentBody: string) => {
         setEditBody(currentBody);
@@ -207,6 +213,9 @@ export function PullRequestDescriptionSection({
                                             number={number}
                                             owner={owner}
                                             repo={repo}
+                                            reactions={
+                                                reactionsData?.reactions as unknown as GQLReaction[]
+                                            }
                                             currentUserLogin={
                                                 currentUserData?.login
                                             }
