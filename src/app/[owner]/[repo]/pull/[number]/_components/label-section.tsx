@@ -1,7 +1,7 @@
-import { Settings } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { Label as LabelComponent } from "~/components/ui/label";
+import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn, opId } from "~/lib/utils";
 import type { Label, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -117,115 +117,41 @@ function LabelSectionSettings({
     onAddLabel: (label: Label) => void;
     onRemoveLabel: (label: Label) => void;
 }) {
-    const [open, setOpen] = useState(false);
-    const [search, setSearch] = useState("");
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    // FIXME: ESC should close the popover
-    useEffect(() => {
-        if (!open) return;
-        const handler = (e: MouseEvent) => {
-            if (
-                dropdownRef.current &&
-                !dropdownRef.current.contains(e.target as Node)
-            ) {
-                setOpen(false);
-                setSearch("");
-            }
-        };
-        document.addEventListener("mousedown", handler);
-        return () => document.removeEventListener("mousedown", handler);
-    }, [open]);
-
     const displayLabels = applyOperations(labels, operations);
     const currentNames = new Set(displayLabels.map((l) => l.name));
-    const sortedLabels = useRef<typeof repoLabels>(null);
-    if (open && repoLabels && !sortedLabels.current) {
-        sortedLabels.current = [...repoLabels].sort((a, b) => {
-            const aApplied = currentNames.has(a.name) ? 0 : 1;
-            const bApplied = currentNames.has(b.name) ? 0 : 1;
-            return aApplied - bApplied;
-        });
-    }
-    if (!open) {
-        sortedLabels.current = null;
-    }
-    const filteredLabels = (sortedLabels.current ?? repoLabels ?? []).filter(
-        (l) => l.name.toLowerCase().includes(search.toLowerCase()),
-    );
 
     return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                className="cursor-pointer rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300"
-                onClick={() => setOpen(!open)}
-                type="button"
-                aria-label="Manage labels"
-            >
-                <Settings size={14} />
-            </button>
-            {open && (
-                <div className="absolute right-0 z-20 mt-1 w-64 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                    <input
-                        autoFocus
-                        className="w-full border-gray-200 border-b px-3 py-2 text-sm outline-none placeholder:text-gray-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Filter labels"
-                        value={search}
-                    />
-                    <ul className="max-h-60 overflow-y-auto py-1">
-                        {filteredLabels.length === 0 ? (
-                            <li className="px-3 py-2 text-gray-400 text-xs">
-                                No labels found
-                            </li>
-                        ) : (
-                            filteredLabels.map((label) => {
-                                const isApplied = currentNames.has(label.name);
-                                return (
-                                    <li
-                                        className={cn(
-                                            "flex cursor-pointer items-start gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800",
-                                            isApplied &&
-                                                "bg-blue-50 dark:bg-blue-950/30",
-                                        )}
-                                        key={label.name}
-                                        onClick={() => {
-                                            if (isApplied) {
-                                                onRemoveLabel(label);
-                                            } else {
-                                                onAddLabel(label);
-                                            }
-                                        }}
-                                        role="option"
-                                        aria-selected={isApplied}
-                                    >
-                                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                                            <div className="flex items-center gap-2">
-                                                <LabelComponent
-                                                    color={label.color}
-                                                >
-                                                    {label.name}
-                                                </LabelComponent>
-                                                {isApplied && (
-                                                    <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
-                                                        &#10003;
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {label.description && (
-                                                <span className="truncate text-gray-400 text-xs">
-                                                    {label.description}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </li>
-                                );
-                            })
+        <SearchableDropdown
+            items={repoLabels}
+            isSelected={(l) => currentNames.has(l.name)}
+            onSelect={(l) =>
+                currentNames.has(l.name) ? onRemoveLabel(l) : onAddLabel(l)
+            }
+            keyFn={(l) => l.name}
+            searchFn={(l, q) => l.name.toLowerCase().includes(q)}
+            renderItem={(l, selected) => (
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                        <LabelComponent color={l.color}>
+                            {l.name}
+                        </LabelComponent>
+                        {selected && (
+                            <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                                &#10003;
+                            </span>
                         )}
-                    </ul>
+                    </div>
+                    {l.description && (
+                        <span className="truncate text-gray-400 text-xs">
+                            {l.description}
+                        </span>
+                    )}
                 </div>
             )}
-        </div>
+            placeholder="Filter labels"
+            emptyText="No labels found"
+            ariaLabel="Manage labels"
+        />
     );
 }
 

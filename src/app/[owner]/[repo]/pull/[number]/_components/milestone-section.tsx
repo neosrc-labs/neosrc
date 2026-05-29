@@ -1,8 +1,8 @@
 "use client";
 
-import { Settings } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
+import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn, opId } from "~/lib/utils";
 import type { Milestone, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -95,121 +95,66 @@ function MilestoneSectionSettings({
     operations: MilestoneOperation[];
     onSetMilestone: (milestone: Milestone | null) => void;
 }) {
-    const [open, setOpen] = useState(false);
-    const [search, setSearch] = useState("");
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!open) return;
-        const handler = (e: MouseEvent) => {
-            if (
-                dropdownRef.current &&
-                !dropdownRef.current.contains(e.target as Node)
-            ) {
-                setOpen(false);
-                setSearch("");
-            }
-        };
-        document.addEventListener("mousedown", handler);
-        return () => document.removeEventListener("mousedown", handler);
-    }, [open]);
-
     const currentMilestone = applyOperations(milestone, operations);
     const currentNumber = currentMilestone?.number ?? null;
 
-    const filteredMilestones = repoMilestones.filter((m) =>
-        m.title.toLowerCase().includes(search.toLowerCase()),
-    );
-
     return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                className="cursor-pointer rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300"
-                onClick={() => setOpen(!open)}
-                type="button"
-                aria-label="Manage milestone"
-            >
-                <Settings size={14} />
-            </button>
-            {open && (
-                <div className="absolute right-0 z-20 mt-1 w-64 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                    <input
-                        autoFocus
-                        className="w-full border-gray-200 border-b px-3 py-2 text-sm outline-none placeholder:text-gray-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Filter milestones"
-                        value={search}
-                    />
-                    <ul className="max-h-60 overflow-y-auto py-1">
-                        <li
-                            className={cn(
-                                "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800",
-                                currentNumber === null &&
-                                    "bg-blue-50 dark:bg-blue-950/30",
-                            )}
-                            onClick={() => {
-                                if (currentNumber !== null) {
-                                    onSetMilestone(null);
-                                }
-                            }}
-                            role="option"
-                            aria-selected={currentNumber === null}
-                        >
-                            <span className="flex-1 text-gray-500 italic dark:text-zinc-400">
-                                No milestone
-                            </span>
-                            {currentNumber === null && (
-                                <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
-                                    &#10003;
-                                </span>
-                            )}
-                        </li>
-                        {filteredMilestones.length === 0 ? (
-                            <li className="px-3 py-2 text-gray-400 text-xs">
-                                No milestones found
-                            </li>
-                        ) : (
-                            filteredMilestones.map((m) => {
-                                const isSelected = currentNumber === m.number;
-                                return (
-                                    <li
-                                        className={cn(
-                                            "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800",
-                                            isSelected &&
-                                                "bg-blue-50 dark:bg-blue-950/30",
-                                        )}
-                                        key={m.number}
-                                        onClick={() => {
-                                            if (!isSelected) {
-                                                onSetMilestone(m);
-                                            }
-                                        }}
-                                        role="option"
-                                        aria-selected={isSelected}
-                                    >
-                                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                                            <span className="truncate text-gray-700 dark:text-zinc-300">
-                                                {m.title}
-                                            </span>
-                                            {m.description && (
-                                                <span className="truncate text-gray-400 text-xs">
-                                                    {m.description}
-                                                </span>
-                                            )}
-                                        </div>
-                                        {isSelected && (
-                                            <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
-                                                &#10003;
-                                            </span>
-                                        )}
-                                    </li>
-                                );
-                            })
-                        )}
-                    </ul>
+        <SearchableDropdown
+            items={repoMilestones}
+            isSelected={(m) => m.number === currentNumber}
+            onSelect={(m) => {
+                if (m.number !== currentNumber) {
+                    onSetMilestone(m);
+                }
+            }}
+            keyFn={(m) => m.number}
+            searchFn={(m, q) => m.title.toLowerCase().includes(q)}
+            renderItem={(m, selected) => (
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="truncate text-gray-700 dark:text-zinc-300">
+                        {m.title}
+                    </span>
+                    {m.description && (
+                        <span className="truncate text-gray-400 text-xs">
+                            {m.description}
+                        </span>
+                    )}
+                    {selected && (
+                        <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                            &#10003;
+                        </span>
+                    )}
                 </div>
             )}
-        </div>
+            placeholder="Filter milestones"
+            emptyText="No milestones found"
+            ariaLabel="Manage milestone"
+            beforeItems={
+                <li
+                    className={cn(
+                        "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800",
+                        currentNumber === null &&
+                            "bg-blue-50 dark:bg-blue-950/30",
+                    )}
+                    onClick={() => {
+                        if (currentNumber !== null) {
+                            onSetMilestone(null);
+                        }
+                    }}
+                    role="option"
+                    aria-selected={currentNumber === null}
+                >
+                    <span className="flex-1 text-gray-500 italic dark:text-zinc-400">
+                        No milestone
+                    </span>
+                    {currentNumber === null && (
+                        <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                            &#10003;
+                        </span>
+                    )}
+                </li>
+            }
+        />
     );
 }
 
