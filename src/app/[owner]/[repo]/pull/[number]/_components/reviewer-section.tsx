@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/user-hover-card";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
-import { cn, opId } from "~/lib/utils";
+import { applyArrayOperations, cn, opId } from "~/lib/utils";
 import type { PullsGetResponseData, Reviewer } from "~/server/github";
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";
@@ -220,22 +220,11 @@ function applyOperations(
     reviewers: Reviewer[],
     operations: ReviewerOperation[],
 ): Reviewer[] {
-    let updatedReviewers = [...reviewers];
-
-    for (const op of operations) {
-        if (
-            op.op === "add" &&
-            !updatedReviewers.some((r) => r.login === op.reviewer.login)
-        ) {
-            updatedReviewers.push(op.reviewer);
-        }
-        if (op.op === "remove") {
-            updatedReviewers = updatedReviewers.filter(
-                (r) => r.login !== op.reviewer.login,
-            );
-        }
-    }
-
-    return updatedReviewers;
+    return applyArrayOperations(
+        reviewers,
+        operations,
+        (op) => op.reviewer,
+        (r) => r.login,
+    );
 }
 
