@@ -9,7 +9,10 @@ export function opId() {
     return Math.floor(Math.random() * 10000000);
 }
 
-export function applyArrayOperations<TItem, TOp extends { id: number; op: "add" | "remove" }>(
+export function applyArrayOperations<
+    TItem,
+    TOp extends { id: number; op: "add" | "remove" },
+>(
     items: TItem[],
     operations: ReadonlyArray<TOp>,
     getValue: (op: TOp) => TItem,
@@ -18,7 +21,10 @@ export function applyArrayOperations<TItem, TOp extends { id: number; op: "add" 
     let updated = [...items];
     for (const op of operations) {
         const value = getValue(op);
-        if (op.op === "add" && !updated.some((i) => keyFn(i) === keyFn(value))) {
+        if (
+            op.op === "add" &&
+            !updated.some((i) => keyFn(i) === keyFn(value))
+        ) {
             updated.push(value);
         }
         if (op.op === "remove") {

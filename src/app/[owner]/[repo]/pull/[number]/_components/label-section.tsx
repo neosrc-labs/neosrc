@@ -208,4 +208,3 @@ function applyOperations(
         (l) => l.name,
     );
 }
-

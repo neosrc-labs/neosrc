@@ -80,13 +80,12 @@ export function ReviewComments({
         },
     });
 
-    const reactMutation =
-        useTogglePullRequestReviewCommentReaction(
-            owner,
-            repo,
-            allCommentIds,
-            currentUserLogin,
-        );
+    const reactMutation = useTogglePullRequestReviewCommentReaction(
+        owner,
+        repo,
+        allCommentIds,
+        currentUserLogin,
+    );
 
     const handleReact = (commentId: number, content: ReactionContent) => {
         reactMutation.mutate({ owner, repo, commentId, content });

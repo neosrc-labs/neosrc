@@ -4,6 +4,7 @@ import { SquarePen } from "lucide-react";
 import NextLink from "next/link";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
+import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import type { Reaction as GQLReaction } from "~/components/ReactionRollup";
@@ -12,7 +13,6 @@ import {
     extractPullRequestState,
     StatusPill,
 } from "~/components/ui/status-pill";
-import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import type { PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";

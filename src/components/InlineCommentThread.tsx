@@ -84,13 +84,12 @@ export function InlineCommentThread({
         },
     });
 
-    const reactMutation =
-        useTogglePullRequestReviewCommentReaction(
-            owner,
-            repo,
-            allCommentIds,
-            currentUserLogin,
-        );
+    const reactMutation = useTogglePullRequestReviewCommentReaction(
+        owner,
+        repo,
+        allCommentIds,
+        currentUserLogin,
+    );
 
     const handleReply = useCallback(() => {
         if (!replyBody.trim()) return;

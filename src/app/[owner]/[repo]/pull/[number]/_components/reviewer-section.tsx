@@ -227,4 +227,3 @@ function applyOperations(
         (r) => r.login,
     );
 }
-

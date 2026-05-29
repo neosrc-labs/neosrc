@@ -16,8 +16,8 @@ import {
 import {
     REACTION_EMOJIS,
     REACTION_ORDER,
-    toggleReactionInList,
     type ReactionContent,
+    toggleReactionInList,
 } from "~/lib/reactions";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { GQLReactionNode } from "~/server/github-graphql";
@@ -155,8 +155,6 @@ export function ReactionRollup({
             });
         },
     });
-
-
 
     const commentMutation = api.reactions.toggleIssueComment.useMutation({
         onMutate: async ({ content }) => {

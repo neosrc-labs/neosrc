@@ -25,11 +25,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
+import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { ReactionBar } from "~/components/ReactionBar";
 import { ReactionPicker } from "~/components/ReactionPicker";
 import { Label } from "~/components/ui/label";
-import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import type { ReactionContent } from "~/lib/reactions";
 import { toggleReactionInList } from "~/lib/reactions";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
@@ -102,18 +102,7 @@ function AggregatedLabel({
                 <Tag size={ICON_SIZE} />
             </div>
             <div className="flex flex-wrap items-center gap-1.5 text-gray-600 text-sm dark:text-zinc-400">
-                <UserHoverCard login={actor.login}>
-                    <a className="flex items-center gap-1.5" href={actor.url}>
-                        <img
-                            src={actor.avatarUrl}
-                            alt={actor.login}
-                            className="h-5 w-5 rounded-full"
-                        />
-                        <span className="font-medium text-gray-800 dark:text-zinc-200">
-                            {actor.login}
-                        </span>
-                    </a>
-                </UserHoverCard>
+                <UserLink actor={actor} />
                 {added.length > 0 && (
                     <>
                         {" added "}
@@ -156,6 +145,31 @@ function AggregatedLabel({
 }
 
 const ICON_SIZE = 16;
+
+function UserLink({
+    actor,
+}: {
+    actor:
+        | { login: string; avatarUrl: string; url?: string }
+        | null
+        | undefined;
+}) {
+    if (!actor) return null;
+    return (
+        <UserHoverCard login={actor.login}>
+            <a className="flex items-center gap-2" href={actor.url}>
+                <img
+                    src={actor.avatarUrl}
+                    alt={actor.login}
+                    className="h-5 w-5 rounded-full"
+                />
+                <span className="font-medium text-gray-800 dark:text-zinc-200">
+                    {actor.login}
+                </span>
+            </a>
+        </UserHoverCard>
+    );
+}
 
 function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
     const iconMap: Record<string, React.ReactNode> = {
@@ -217,9 +231,7 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
 
     return (
         <div className={circleClass}>
-            <span className="flex">
-                {icon}
-            </span>
+            <span className="flex">{icon}</span>
         </div>
     );
 }
@@ -552,9 +564,7 @@ function EventContent({
             const displayBody = savedBodies[event.databaseId] ?? event.body;
             const reviewReactionsArr = commentReactions[event.databaseId] ?? [];
 
-            const handleReviewReaction = (
-                content: ReactionContent,
-            ) => {
+            const handleReviewReaction = (content: ReactionContent) => {
                 reviewReactionMutation.mutate({
                     subjectId: event.id,
                     content,
@@ -576,23 +586,7 @@ function EventContent({
             return (
                 <>
                     <p className="flex items-center gap-1.5 text-gray-600 text-sm dark:text-zinc-400">
-                        {event.author && (
-                            <UserHoverCard login={event.author.login}>
-                                <a
-                                    className="flex items-center gap-1.5"
-                                    href={event.author.url}
-                                >
-                                    <img
-                                        src={event.author.avatarUrl}
-                                        alt={event.author.login}
-                                        className="h-5 w-5 rounded-full"
-                                    />
-                                    <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                        {event.author.login}
-                                    </span>
-                                </a>
-                            </UserHoverCard>
-                        )}
+                        <UserLink actor={event.author} />
                         {` ${stateLabel} ${timestamp}`}
                     </p>
                     {event.body && (
@@ -635,7 +629,9 @@ function EventContent({
                                                     currentUserLogin
                                                 }
                                                 onReact={(content) =>
-                                                    handleReviewReaction(content)
+                                                    handleReviewReaction(
+                                                        content,
+                                                    )
                                                 }
                                             />
                                         )}
@@ -665,7 +661,9 @@ function EventContent({
                                                     currentUserLogin
                                                 }
                                                 onReact={(content) =>
-                                                    handleReviewReaction(content)
+                                                    handleReviewReaction(
+                                                        content,
+                                                    )
                                                 }
                                             />
                                         </div>
@@ -722,19 +720,7 @@ function EventContent({
             const after = event.afterCommit?.oid.slice(0, 7) ?? "unknown";
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={event.actor?.login ?? ""}>
-                        <a
-                            className="flex items-center gap-2"
-                            href={event.actor?.url ?? ""}
-                        >
-                            <img
-                                src={event.actor?.avatarUrl ?? ""}
-                                alt={event.actor?.login ?? ""}
-                                className="h-5 w-5 rounded-full"
-                            />
-                            {event.actor?.login}
-                        </a>
-                    </UserHoverCard>
+                    <UserLink actor={event.actor} />
                     <p>
                         {"force pushed from "}
                         <code className="rounded bg-gray-100 px-1 text-xs dark:bg-zinc-800">
@@ -755,21 +741,7 @@ function EventContent({
             const sha = event.commit?.oid?.slice(0, 7);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={event.actor?.login ?? ""}>
-                        <a
-                            className="flex items-center gap-2"
-                            href={event.actor?.url ?? ""}
-                        >
-                            <img
-                                src={event.actor?.avatarUrl ?? ""}
-                                alt={event.actor?.login ?? ""}
-                                className="h-5 w-5 rounded-full"
-                            />
-                            <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {event.actor?.login}
-                            </span>
-                        </a>
-                    </UserHoverCard>
+                    <UserLink actor={event.actor} />
                     <p>
                         {" referenced this "}
                         {timestamp}
@@ -832,23 +804,7 @@ function EventContent({
             return (
                 <div className="text-gray-600 text-sm dark:text-zinc-400">
                     <div className="flex items-center gap-2">
-                        {actor && (
-                            <UserHoverCard login={actor.login}>
-                                <a
-                                    className="flex items-center gap-2"
-                                    href={actor.url}
-                                >
-                                    <img
-                                        src={actor.avatarUrl}
-                                        alt={actor.login}
-                                        className="h-5 w-5 rounded-full"
-                                    />
-                                    <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                        {actor.login}
-                                    </span>
-                                </a>
-                            </UserHoverCard>
-                        )}
+                        <UserLink actor={actor} />
                         <span>
                             {` mentioned this ${isPR ? "pull request" : "issue"} `}
                             {timestamp}
@@ -884,21 +840,7 @@ function EventContent({
             if (isSelfAssigned && event.assignee) {
                 return (
                     <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                        <UserHoverCard login={event.assignee.login}>
-                            <a
-                                className="flex items-center gap-2"
-                                href={event.assignee.url}
-                            >
-                                <img
-                                    src={event.assignee.avatarUrl}
-                                    alt={event.assignee.login}
-                                    className="h-5 w-5 rounded-full"
-                                />
-                                <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                    {event.assignee.login}
-                                </span>
-                            </a>
-                        </UserHoverCard>
+                        <UserLink actor={event.assignee} />
                         <span>
                             {isAssigned
                                 ? " self-assigned this "
@@ -910,39 +852,10 @@ function EventContent({
             }
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={event.actor?.login ?? ""}>
-                        <a
-                            className="flex items-center gap-2"
-                            href={event.actor?.url ?? ""}
-                        >
-                            <img
-                                src={event.actor?.avatarUrl ?? ""}
-                                alt={event.actor?.login ?? ""}
-                                className="h-5 w-5 rounded-full"
-                            />
-                            <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {event.actor?.login}
-                            </span>
-                        </a>
-                    </UserHoverCard>
+                    <UserLink actor={event.actor} />
                     <div className="flex gap-1">
                         {isAssigned ? " assigned " : " unassigned "}
-                        <UserHoverCard login={event.assignee?.login ?? ""}>
-                            <a
-                                className="flex items-center gap-2"
-                                href={event.assignee?.url ?? ""}
-                            >
-                                <img
-                                    src={event.assignee?.avatarUrl ?? ""}
-                                    alt={event.assignee?.login ?? ""}
-                                    className="h-5 w-5 rounded-full"
-                                />
-                                <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                    {event.assignee?.login}
-                                </span>
-                            </a>
-                        </UserHoverCard>{" "}
-                        {timestamp}
+                        <UserLink actor={event.assignee} /> {timestamp}
                     </div>
                 </div>
             );
@@ -966,21 +879,7 @@ function EventContent({
                           : "marked ready for review";
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={event.actor?.login ?? ""}>
-                        <a
-                            className="flex items-center gap-2"
-                            href={event.actor?.url ?? ""}
-                        >
-                            <img
-                                src={event.actor?.avatarUrl ?? ""}
-                                alt={event.actor?.login ?? ""}
-                                className="h-5 w-5 rounded-full"
-                            />
-                            <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {event.actor?.login}
-                            </span>{" "}
-                        </a>
-                    </UserHoverCard>
+                    <UserLink actor={event.actor} />
                     <p>
                         {verb}
                         {" this "}
@@ -1021,21 +920,7 @@ function EventContent({
             const timestamp = formatRelativeTime(event.createdAt);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={event.actor?.login ?? ""}>
-                        <a
-                            className="flex items-center gap-2"
-                            href={event.actor?.url ?? ""}
-                        >
-                            <img
-                                src={event.actor?.avatarUrl ?? ""}
-                                alt={event.actor?.login ?? ""}
-                                className="h-5 w-5 rounded-full"
-                            />
-                            <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {event.actor?.login}
-                            </span>
-                        </a>
-                    </UserHoverCard>
+                    <UserLink actor={event.actor} />
                     <p>
                         {" added the milestone "}
                         <span className="font-medium text-gray-800 dark:text-zinc-200">
@@ -1051,21 +936,7 @@ function EventContent({
             const timestamp = formatRelativeTime(event.createdAt);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={event.actor?.login ?? ""}>
-                        <a
-                            className="flex items-center gap-2"
-                            href={event.actor?.url ?? ""}
-                        >
-                            <img
-                                src={event.actor?.avatarUrl ?? ""}
-                                alt={event.actor?.login ?? ""}
-                                className="h-5 w-5 rounded-full"
-                            />
-                            <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {event.actor?.login}
-                            </span>
-                        </a>
-                    </UserHoverCard>
+                    <UserLink actor={event.actor} />
                     <p>
                         {" removed the milestone "}
                         <span className="font-medium text-gray-800 dark:text-zinc-200">
@@ -1081,21 +952,7 @@ function EventContent({
             const timestamp = formatRelativeTime(event.createdAt);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={event.actor?.login ?? ""}>
-                        <a
-                            className="flex items-center gap-2"
-                            href={event.actor?.url ?? ""}
-                        >
-                            <img
-                                src={event.actor?.avatarUrl ?? ""}
-                                alt={event.actor?.login ?? ""}
-                                className="h-5 w-5 rounded-full"
-                            />
-                            <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {event.actor?.login}
-                            </span>
-                        </a>
-                    </UserHoverCard>
+                    <UserLink actor={event.actor} />
                     <p>
                         {" locked this"}
                         {event.lockReason && (
@@ -1117,21 +974,7 @@ function EventContent({
             const timestamp = formatRelativeTime(event.createdAt);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={event.actor?.login ?? ""}>
-                        <a
-                            className="flex items-center gap-2"
-                            href={event.actor?.url ?? ""}
-                        >
-                            <img
-                                src={event.actor?.avatarUrl ?? ""}
-                                alt={event.actor?.login ?? ""}
-                                className="h-5 w-5 rounded-full"
-                            />
-                            <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {event.actor?.login}
-                            </span>
-                        </a>
-                    </UserHoverCard>
+                    <UserLink actor={event.actor} />
                     <p>
                         {" unlocked this "}
                         {timestamp}
@@ -1147,21 +990,7 @@ function EventContent({
             const isTeam = reviewer?.__typename === "Team";
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={event.actor?.login ?? ""}>
-                        <a
-                            className="flex items-center gap-2"
-                            href={event.actor?.url ?? ""}
-                        >
-                            <img
-                                src={event.actor?.avatarUrl ?? ""}
-                                alt={event.actor?.login ?? ""}
-                                className="h-5 w-5 rounded-full"
-                            />
-                            <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {event.actor?.login}
-                            </span>
-                        </a>
-                    </UserHoverCard>
+                    <UserLink actor={event.actor} />
                     <p>
                         {" requested a review from "}
                         {isUser && reviewer && (
@@ -1197,21 +1026,7 @@ function EventContent({
             const isTeam = reviewer?.__typename === "Team";
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={event.actor?.login ?? ""}>
-                        <a
-                            className="flex items-center gap-2"
-                            href={event.actor?.url ?? ""}
-                        >
-                            <img
-                                src={event.actor?.avatarUrl ?? ""}
-                                alt={event.actor?.login ?? ""}
-                                className="h-5 w-5 rounded-full"
-                            />
-                            <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {event.actor?.login}
-                            </span>
-                        </a>
-                    </UserHoverCard>
+                    <UserLink actor={event.actor} />
                     <p>
                         {" removed the review request for "}
                         {isUser && reviewer && (
@@ -1244,21 +1059,7 @@ function EventContent({
             const timestamp = formatRelativeTime(event.createdAt);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={event.actor?.login ?? ""}>
-                        <a
-                            className="flex items-center gap-2"
-                            href={event.actor?.url ?? ""}
-                        >
-                            <img
-                                src={event.actor?.avatarUrl ?? ""}
-                                alt={event.actor?.login ?? ""}
-                                className="h-5 w-5 rounded-full"
-                            />
-                            <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {event.actor?.login}
-                            </span>
-                        </a>
-                    </UserHoverCard>
+                    <UserLink actor={event.actor} />
                     <p>Added this issue to a project {timestamp}</p>
                 </div>
             );
@@ -1268,21 +1069,7 @@ function EventContent({
             const timestamp = formatRelativeTime(event.createdAt);
             return (
                 <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
-                    <UserHoverCard login={event.actor?.login ?? ""}>
-                        <a
-                            className="flex items-center gap-2"
-                            href={event.actor?.url ?? ""}
-                        >
-                            <img
-                                src={event.actor?.avatarUrl ?? ""}
-                                alt={event.actor?.login ?? ""}
-                                className="h-5 w-5 rounded-full"
-                            />
-                            <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                {event.actor?.login}
-                            </span>
-                        </a>
-                    </UserHoverCard>
+                    <UserLink actor={event.actor} />
                     <p>changed the project status {timestamp}</p>
                 </div>
             );
@@ -1293,5 +1080,3 @@ function EventContent({
             return null;
     }
 }
-
-

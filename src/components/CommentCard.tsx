@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { formatRelativeTime } from "~/utils";
 
 const authorAssociationLabels: Record<string, string> = {

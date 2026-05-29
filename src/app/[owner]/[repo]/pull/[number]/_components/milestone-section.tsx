@@ -197,4 +197,3 @@ function applyOperations(
     }
     return updatedMilestone;
 }
-
