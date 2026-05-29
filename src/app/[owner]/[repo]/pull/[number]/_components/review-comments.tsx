@@ -40,7 +40,6 @@ export function ReviewComments({
     );
     const [editBody, setEditBody] = useState("");
     const [savedBodies, setSavedBodies] = useState<Record<number, string>>({});
-    const utils = api.useUtils();
 
     const allCommentIds = useMemo(() => {
         const topLevelIds = new Set<number>();

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
-import { applyArrayOperations, cn, opId } from "~/lib/utils";
+import { applyArrayOperations, opId } from "~/lib/utils";
 import type { Assignee, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";

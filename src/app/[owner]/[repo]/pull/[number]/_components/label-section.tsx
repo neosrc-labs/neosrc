@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { Label as LabelComponent } from "~/components/ui/label";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
-import { applyArrayOperations, cn, opId } from "~/lib/utils";
+import { applyArrayOperations, opId } from "~/lib/utils";
 import type { Label, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";
