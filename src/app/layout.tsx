@@ -1,5 +1,6 @@
 import "~/styles/globals.css";
 import "~/styles/github-alert.css";
+import "highlight.js/styles/github.min.css";
 
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
@@ -30,12 +31,6 @@ export default function RootLayout({
             lang="en"
             suppressHydrationWarning
         >
-            <head>
-                <link
-                    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css"
-                    rel="stylesheet"
-                />
-            </head>
             <body>
                 <ThemeProvider
                     attribute="class"

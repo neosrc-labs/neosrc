@@ -3,8 +3,7 @@
 import { useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
 
-const DARK_HIGHLIGHT_HREF =
-    "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css";
+const DARK_HIGHLIGHT_HREF = "/highlight-dark.css";
 
 export function ThemeStylesheets() {
     const { resolvedTheme } = useTheme();
