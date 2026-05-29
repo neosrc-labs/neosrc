@@ -171,6 +171,14 @@ function UserLink({
     );
 }
 
+function EventRow({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+            {children}
+        </div>
+    );
+}
+
 function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
     const iconMap: Record<string, React.ReactNode> = {
         IssueComment: <MessageSquare size={ICON_SIZE} />,
@@ -719,7 +727,7 @@ function EventContent({
             const before = event.beforeCommit?.oid.slice(0, 7) ?? "unknown";
             const after = event.afterCommit?.oid.slice(0, 7) ?? "unknown";
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <UserLink actor={event.actor} />
                     <p>
                         {"force pushed from "}
@@ -732,7 +740,7 @@ function EventContent({
                         </code>
                     </p>
                     {timestamp}
-                </div>
+                </EventRow>
             );
         }
 
@@ -740,7 +748,7 @@ function EventContent({
             const timestamp = formatRelativeTime(event.createdAt);
             const sha = event.commit?.oid?.slice(0, 7);
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <UserLink actor={event.actor} />
                     <p>
                         {" referenced this "}
@@ -756,7 +764,7 @@ function EventContent({
                             {sha}
                         </a>
                     )}
-                </div>
+                </EventRow>
             );
         }
 
@@ -768,7 +776,7 @@ function EventContent({
                     ? "deleted"
                     : "restored";
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <img
                         src={event.actor?.avatarUrl ?? ""}
                         alt={event.actor?.login ?? ""}
@@ -784,7 +792,7 @@ function EventContent({
                         </span>
                         {` ${timestamp}`}
                     </p>
-                </div>
+                </EventRow>
             );
         }
 
@@ -839,7 +847,7 @@ function EventContent({
 
             if (isSelfAssigned && event.assignee) {
                 return (
-                    <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                    <EventRow>
                         <UserLink actor={event.assignee} />
                         <span>
                             {isAssigned
@@ -847,17 +855,18 @@ function EventContent({
                                 : " removed their assignment "}
                             {timestamp}
                         </span>
-                    </div>
+                    </EventRow>
                 );
             }
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <UserLink actor={event.actor} />
                     <div className="flex gap-1">
                         {isAssigned ? " assigned " : " unassigned "}
-                        <UserLink actor={event.assignee} /> {timestamp}
+                        <UserLink actor={event.assignee} />{" "}
+                        {timestamp}
                     </div>
-                </div>
+                </EventRow>
             );
         }
 
@@ -878,21 +887,21 @@ function EventContent({
                           ? "converted to draft"
                           : "marked ready for review";
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <UserLink actor={event.actor} />
                     <p>
                         {verb}
                         {" this "}
                         {timestamp}
                     </p>
-                </div>
+                </EventRow>
             );
         }
 
         case "RenamedTitleEvent": {
             const timestamp = formatRelativeTime(event.createdAt);
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <img
                         src={event.actor?.avatarUrl ?? ""}
                         alt={event.actor?.login ?? ""}
@@ -912,14 +921,14 @@ function EventContent({
                         </span>{" "}
                         {timestamp}
                     </p>
-                </div>
+                </EventRow>
             );
         }
 
         case "MilestonedEvent": {
             const timestamp = formatRelativeTime(event.createdAt);
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <UserLink actor={event.actor} />
                     <p>
                         {" added the milestone "}
@@ -928,14 +937,14 @@ function EventContent({
                         </span>
                         {` ${timestamp}`}
                     </p>
-                </div>
+                </EventRow>
             );
         }
 
         case "DemilestonedEvent": {
             const timestamp = formatRelativeTime(event.createdAt);
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <UserLink actor={event.actor} />
                     <p>
                         {" removed the milestone "}
@@ -944,14 +953,14 @@ function EventContent({
                         </span>
                         {` ${timestamp}`}
                     </p>
-                </div>
+                </EventRow>
             );
         }
 
         case "LockedEvent": {
             const timestamp = formatRelativeTime(event.createdAt);
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <UserLink actor={event.actor} />
                     <p>
                         {" locked this"}
@@ -966,20 +975,20 @@ function EventContent({
                         )}
                         {` ${timestamp}`}
                     </p>
-                </div>
+                </EventRow>
             );
         }
 
         case "UnlockedEvent": {
             const timestamp = formatRelativeTime(event.createdAt);
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <UserLink actor={event.actor} />
                     <p>
                         {" unlocked this "}
                         {timestamp}
                     </p>
-                </div>
+                </EventRow>
             );
         }
 
@@ -989,7 +998,7 @@ function EventContent({
             const isUser = reviewer?.__typename === "User";
             const isTeam = reviewer?.__typename === "Team";
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <UserLink actor={event.actor} />
                     <p>
                         {" requested a review from "}
@@ -1015,7 +1024,7 @@ function EventContent({
                         )}
                         {` ${timestamp}`}
                     </p>
-                </div>
+                </EventRow>
             );
         }
 
@@ -1025,7 +1034,7 @@ function EventContent({
             const isUser = reviewer?.__typename === "User";
             const isTeam = reviewer?.__typename === "Team";
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <UserLink actor={event.actor} />
                     <p>
                         {" removed the review request for "}
@@ -1051,27 +1060,27 @@ function EventContent({
                         )}
                         {` ${timestamp}`}
                     </p>
-                </div>
+                </EventRow>
             );
         }
 
         case "AddedToProjectV2Event": {
             const timestamp = formatRelativeTime(event.createdAt);
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <UserLink actor={event.actor} />
                     <p>Added this issue to a project {timestamp}</p>
-                </div>
+                </EventRow>
             );
         }
 
         case "ProjectV2ItemStatusChangedEvent": {
             const timestamp = formatRelativeTime(event.createdAt);
             return (
-                <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                <EventRow>
                     <UserLink actor={event.actor} />
                     <p>changed the project status {timestamp}</p>
-                </div>
+                </EventRow>
             );
         }
 
