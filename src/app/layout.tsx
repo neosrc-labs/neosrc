@@ -35,11 +35,6 @@ export default function RootLayout({
                     href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css"
                     rel="stylesheet"
                 />
-
-                <script
-                    src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"
-                    type="text/javascript"
-                ></script>
             </head>
             <body>
                 <ThemeProvider
