@@ -5,6 +5,7 @@ import { SquarePen } from "lucide-react";
 import { useMemo, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import { DiffView } from "~/components/DiffView";
+import { ReplyTextboxButton } from "~/components/InlineCommentThread";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { ReactionBar } from "~/components/ReactionBar";
@@ -225,7 +226,10 @@ function CommentBlock({
     const parentReactions = reactionMap[comment.id] ?? [];
 
     return (
-        <div id={`review-thread-${comment.id}`}>
+        <div
+            id={`review-thread-${comment.id}`}
+            className="bg-gray-50 dark:bg-zinc-950"
+        >
             {comment.diff_hunk && (
                 <div>
                     <DiffView
@@ -396,13 +400,9 @@ function CommentBlock({
                 </div>
             ) : (
                 <div className="flex w-full bg-gray-50 px-6 py-2 dark:bg-zinc-950">
-                    <button
-                        type="button"
-                        className="flex w-full cursor-text items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-gray-400 text-xs transition-colors duration-200 hover:border-gray-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-500 dark:hover:border-zinc-400"
+                    <ReplyTextboxButton
                         onClick={() => setShowReplyForm(true)}
-                    >
-                        Reply...
-                    </button>
+                    />
                 </div>
             )}
         </div>

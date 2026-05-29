@@ -224,13 +224,9 @@ export function InlineCommentThread({
                 </div>
             ) : (
                 <div className="flex w-full bg-gray-50 px-6 py-2 dark:bg-zinc-950">
-                    <button
-                        className="flex w-full cursor-text items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-gray-400 text-xs transition-colors duration-200 hover:border-gray-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-500 dark:hover:border-zinc-400"
+                    <ReplyTextboxButton
                         onClick={() => setShowReplyForm(true)}
-                        type="button"
-                    >
-                        Reply...
-                    </button>
+                    />
                 </div>
             )}
         </div>
@@ -346,5 +342,17 @@ function Comment({
         >
             <MarkdownRenderer content={displayBody} owner={owner} repo={repo} />
         </CommentCard>
+    );
+}
+
+export function ReplyTextboxButton({ onClick }: { onClick: () => void }) {
+    return (
+        <button
+            type="button"
+            className="flex w-full cursor-text items-center rounded-md border border-gray-200 bg-white px-3 py-1.5 text-gray-400 text-xs transition-colors duration-200 hover:border-gray-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-500 dark:hover:border-zinc-400"
+            onClick={onClick}
+        >
+            Reply...
+        </button>
     );
 }

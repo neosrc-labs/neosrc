@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "~/lib/utils";
 
 interface LabelProps extends React.HTMLAttributes<HTMLElement> {
@@ -37,7 +37,6 @@ export function Label({ color, className, children }: LabelProps) {
     useEffect(() => {
         setMounted(true);
     }, []);
-
 
     // Before mount, render without theme-dependent styles so SSR and
     // initial client render match. next-themes recommends this pattern.
