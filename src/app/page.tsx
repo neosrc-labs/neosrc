@@ -1,6 +1,7 @@
-import Link from "next/link";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
-import { getSession } from "~/server/auth";
+import { auth, getSession } from "~/server/auth";
 import { HydrateClient } from "~/trpc/server";
 
 export default async function Home() {
@@ -22,12 +23,43 @@ export default async function Home() {
                                     </span>
                                 )}
                             </p>
-                            <Link
-                                className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
-                                href={session ? "/signout" : "/signin"}
-                            >
-                                {session ? "Sign out" : "Sign in"}
-                            </Link>
+                            {!session ? (
+                                <form>
+                                    <button
+                                        className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
+                                        formAction={async () => {
+                                            "use server";
+                                            const res = await auth.api.signInSocial({
+                                                body: {
+                                                    provider: "github",
+                                                    callbackURL: "/",
+                                                },
+                                            });
+                                            if (!res.url) {
+                                                throw new Error("No URL returned from signInSocial");
+                                            }
+                                            redirect(res.url);
+                                        }}
+                                    >
+                                        Sign in with Github
+                                    </button>
+                                </form>
+                            ) : (
+                                <form>
+                                    <button
+                                        className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
+                                        formAction={async () => {
+                                            "use server";
+                                            await auth.api.signOut({
+                                                headers: await headers(),
+                                            });
+                                            redirect("/");
+                                        }}
+                                    >
+                                        Sign out
+                                    </button>
+                                </form>
+                            )}
                         </div>
                     </div>
                 </div>
