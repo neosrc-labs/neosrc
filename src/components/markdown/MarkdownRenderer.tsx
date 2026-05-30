@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, type CSSProperties } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
@@ -13,6 +13,10 @@ import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
+import SyntaxHighlighter from "react-syntax-highlighter";
+import lightTheme from "react-syntax-highlighter/dist/esm/styles/hljs/docco";
+import darkTheme from "react-syntax-highlighter/dist/esm/styles/hljs/atom-one-dark";
+import { useTheme } from "next-themes";
 
 const CodeBlockContext = createContext(false);
 
@@ -25,22 +29,12 @@ function InlineCode({
 }) {
     return (
         <code
-            className="rounded bg-gray-100 px-[5px] py-[2px] font-mono text-sm before:content-none after:content-none dark:bg-zinc-700"
+            className="rounded bg-gray-100 px-1.25 py-0.5 font-mono text-sm before:content-none after:content-none dark:bg-zinc-700"
             {...props}
         >
             {children}
         </code>
     );
-}
-
-function CodeBlockCode({
-    children,
-    ...props
-}: {
-    children: React.ReactNode;
-    [key: string]: unknown;
-}) {
-    return <code {...props}>{children}</code>;
 }
 
 function CodeElement({
@@ -52,12 +46,29 @@ function CodeElement({
     className?: string;
     [key: string]: unknown;
 }) {
+    const { resolvedTheme } = useTheme();
     const inCodeBlock = useContext(CodeBlockContext);
     if (className || inCodeBlock) {
+        const style = resolvedTheme === "dark" ? darkTheme : lightTheme;
+        const extraStyles: CSSProperties = resolvedTheme === "dark" ? {} : { background: '#f0f0f0' };
+
+        let language = "";
+        switch (className) {
+            case "language-rust": {
+                language = "rust"
+                break;
+            }
+            case "language-js": {
+                language = "javascript"
+                break;
+            }
+            // TODO: Add other languages
+        }
+
         return (
-            <CodeBlockCode className={className} {...props}>
+            <SyntaxHighlighter language={language} style={style} customStyle={extraStyles} {...props}>
                 {children}
-            </CodeBlockCode>
+            </SyntaxHighlighter>
         );
     }
     return <InlineCode {...props}>{children}</InlineCode>;
@@ -163,16 +174,11 @@ export function MarkdownRenderer({
                         </a>
                     );
                 },
-                pre({ children, ...props }) {
+                pre({ children }) {
                     return (
-                        <pre
-                            className="overflow-x-auto rounded-md bg-gray-100 p-4 dark:bg-zinc-800"
-                            {...props}
-                        >
-                            <CodeBlockContext.Provider value={true}>
-                                {children}
-                            </CodeBlockContext.Provider>
-                        </pre>
+                        <CodeBlockContext.Provider value={true}>
+                            {children}
+                        </CodeBlockContext.Provider>
                     );
                 },
                 code({ children, className, ...props }) {
