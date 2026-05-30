@@ -1,31 +1,116 @@
-import { eq } from "drizzle-orm/pg-core/expressions";
-import NextAuth from "next-auth";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { eq } from "drizzle-orm";
 import { cache } from "react";
-import { db } from "../db";
-import { accounts } from "../db/schema";
-import { authConfig } from "./config";
+import { env } from "~/env";
+import { db } from "~/server/db";
+import {
+    betterAuthAccount,
+    betterAuthSession,
+    betterAuthUser,
+    betterAuthVerification,
+} from "~/server/db/schema";
 
-const { auth: uncachedAuth, handlers, signIn, signOut } = NextAuth(authConfig);
+const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
 
-const auth = cache(uncachedAuth);
+async function refreshGitHubToken(refreshToken: string) {
+    const res = await fetch(GITHUB_TOKEN_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+        },
+        body: JSON.stringify({
+            client_id: env.GITHUB_CLIENT_ID,
+            client_secret: env.GITHUB_CLIENT_SECRET,
+            grant_type: "refresh_token",
+            refresh_token: refreshToken,
+        }),
+    });
 
-const githubAccessToken = cache(async () => {
-    const session = await auth();
+    const refreshed = await res.json();
 
-    if (!session?.user?.id) {
-        return null;
+    if (!res.ok || refreshed.error) {
+        throw new Error(
+            refreshed.error_description ?? "Failed to refresh token",
+        );
     }
 
-    const [account] = await db
-        .select({ accessToken: accounts.access_token })
-        .from(accounts)
-        .where(eq(accounts.userId, session.user.id))
-        .limit(1);
+    return refreshed as {
+        access_token: string;
+        expires_in: number;
+        refresh_token: string;
+        refresh_token_expires_in: number;
+    };
+}
 
-    if (!account?.accessToken) {
-        return null;
-    }
-    return account.accessToken;
+export const auth = betterAuth({
+    database: drizzleAdapter(db, {
+        provider: "pg",
+        schema: {
+            user: betterAuthUser,
+            session: betterAuthSession,
+            account: betterAuthAccount,
+            verification: betterAuthVerification,
+        },
+    }),
+    socialProviders: {
+        github: {
+            clientId: env.GITHUB_CLIENT_ID,
+            clientSecret: env.GITHUB_CLIENT_SECRET,
+            scope: [
+                "read:user",
+                "user:email",
+                "repo",
+                "public_repo",
+                "read:project",
+                "read:org",
+                "read:discussion",
+            ],
+            redirectURI: "http://localhost:3000/api/auth/callback/github",
+        },
+    },
 });
 
-export { auth, githubAccessToken, handlers, signIn, signOut };
+export const getSession = cache(async (headers: Headers) =>
+    auth.api.getSession({ headers }),
+);
+
+export const githubAccessToken = async (headers: Headers) => {
+    const session = await getSession(headers);
+    if (!session?.user?.id) return null;
+
+    const [account] = await db
+        .select()
+        .from(betterAuthAccount)
+        .where(eq(betterAuthAccount.userId, session.user.id))
+        .limit(1);
+
+    if (!account) return null;
+
+    const now = Date.now();
+    const expiresAt = account.accessTokenExpiresAt?.getTime() ?? Infinity;
+
+    if (expiresAt < now && account.refreshToken) {
+        const refreshed = await refreshGitHubToken(account.refreshToken);
+        await db
+            .update(betterAuthAccount)
+            .set({
+                accessToken: refreshed.access_token,
+                refreshToken: refreshed.refresh_token,
+                accessTokenExpiresAt: new Date(
+                    Date.now() + refreshed.expires_in * 1000,
+                ),
+                refreshTokenExpiresAt: refreshed.refresh_token_expires_in
+                    ? new Date(
+                        Date.now() +
+                        refreshed.refresh_token_expires_in * 1000,
+                    )
+                    : undefined,
+            })
+            .where(eq(betterAuthAccount.id, account.id));
+        return refreshed.access_token;
+    }
+
+    return account.accessToken;
+};

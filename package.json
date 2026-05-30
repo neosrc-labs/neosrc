@@ -20,7 +20,6 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "@auth/drizzle-adapter": "^1.7.2",
         "@octokit/graphql": "^9.0.3",
         "@octokit/openapi-types": "^27.0.0",
         "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
@@ -30,13 +29,13 @@
         "@trpc/client": "^11.0.0",
         "@trpc/react-query": "^11.0.0",
         "@trpc/server": "^11.0.0",
+        "better-auth": "^1.6.11",
         "clsx": "^2.1.1",
         "diff2html": "^3.4.56",
         "drizzle-orm": "^0.41.0",
         "highlight.js": "^11.11.1",
         "lucide-react": "^1.14.0",
         "next": "^15.2.3",
-        "next-auth": "5.0.0-beta.25",
         "next-themes": "^0.4.6",
         "node-emoji": "^2.2.0",
         "postgres": "^3.4.4",
