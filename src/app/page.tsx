@@ -27,16 +27,20 @@ export default async function Home() {
                                 <form>
                                     <button
                                         className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
+                                        type="submit"
                                         formAction={async () => {
                                             "use server";
-                                            const res = await auth.api.signInSocial({
-                                                body: {
-                                                    provider: "github",
-                                                    callbackURL: "/",
-                                                },
-                                            });
+                                            const res =
+                                                await auth.api.signInSocial({
+                                                    body: {
+                                                        provider: "github",
+                                                        callbackURL: "/",
+                                                    },
+                                                });
                                             if (!res.url) {
-                                                throw new Error("No URL returned from signInSocial");
+                                                throw new Error(
+                                                    "No URL returned from signInSocial",
+                                                );
                                             }
                                             redirect(res.url);
                                         }}
@@ -48,6 +52,7 @@ export default async function Home() {
                                 <form>
                                     <button
                                         className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
+                                        type="submit"
                                         formAction={async () => {
                                             "use server";
                                             await auth.api.signOut({

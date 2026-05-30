@@ -7,10 +7,7 @@ export const env = createEnv({
      * isn't built with invalid env vars.
      */
     server: {
-        BETTER_AUTH_SECRET:
-            process.env.NODE_ENV === "production"
-                ? z.string()
-                : z.string().optional(),
+        BETTER_AUTH_SECRET: z.string(),
         BETTER_AUTH_URL: z.string().url(),
         GITHUB_CLIENT_ID: z.string(),
         GITHUB_CLIENT_SECRET: z.string(),
