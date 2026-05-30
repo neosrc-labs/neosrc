@@ -69,7 +69,7 @@ export const auth = betterAuth({
                 "read:org",
                 "read:discussion",
             ],
-            redirectURI: "http://localhost:3000/api/auth/callback/github",
+            redirectURI: `${env.BETTER_AUTH_URL}/api/auth/callback/github`,
         },
     },
     plugins: [nextCookies()],
