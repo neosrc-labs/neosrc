@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { cache } from "react";
 import { env } from "~/env";
 import { db } from "~/server/db";
@@ -72,12 +73,12 @@ export const auth = betterAuth({
     },
 });
 
-export const getSession = cache(async (headers: Headers) =>
-    auth.api.getSession({ headers }),
+export const getSession = cache(async () =>
+    auth.api.getSession({ headers: await headers() }),
 );
 
-export const githubAccessToken = async (headers: Headers) => {
-    const session = await getSession(headers);
+export const githubAccessToken = async () => {
+    const session = await getSession();
     if (!session?.user?.id) return null;
 
     const [account] = await db
@@ -103,9 +104,9 @@ export const githubAccessToken = async (headers: Headers) => {
                 ),
                 refreshTokenExpiresAt: refreshed.refresh_token_expires_in
                     ? new Date(
-                        Date.now() +
-                        refreshed.refresh_token_expires_in * 1000,
-                    )
+                          Date.now() +
+                              refreshed.refresh_token_expires_in * 1000,
+                      )
                     : undefined,
             })
             .where(eq(betterAuthAccount.id, account.id));
