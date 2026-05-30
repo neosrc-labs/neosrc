@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Suspense } from "react";
 import { githubAccessToken } from "~/server/auth";
 import {
@@ -31,7 +32,7 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
     const number = parseInt(numberStr, 10);
     const commitSha = sha && sha.length > 0 ? sha[0] : null;
 
-    const accessToken = await githubAccessToken();
+    const accessToken = await githubAccessToken(await headers());
 
     if (!accessToken) {
         return (

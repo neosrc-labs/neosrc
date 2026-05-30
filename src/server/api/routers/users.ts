@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { accounts } from "~/server/db/schema";
+import { betterAuthAccount } from "~/server/db/schema";
 import {
     getAuthenticatedUser,
     getGitHubTeam,
@@ -12,9 +12,9 @@ import {
 export const usersRouter = createTRPCRouter({
     currentUser: protectedProcedure.query(async ({ ctx }) => {
         const [account] = await ctx.db
-            .select({ accessToken: accounts.access_token })
-            .from(accounts)
-            .where(eq(accounts.userId, ctx.session.user.id))
+            .select({ accessToken: betterAuthAccount.accessToken })
+            .from(betterAuthAccount)
+            .where(eq(betterAuthAccount.userId, ctx.session.user.id))
             .limit(1);
 
         if (!account?.accessToken) {
@@ -32,9 +32,9 @@ export const usersRouter = createTRPCRouter({
         )
         .query(async ({ ctx, input }) => {
             const [account] = await ctx.db
-                .select({ accessToken: accounts.access_token })
-                .from(accounts)
-                .where(eq(accounts.userId, ctx.session.user.id))
+                .select({ accessToken: betterAuthAccount.accessToken })
+                .from(betterAuthAccount)
+                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
                 .limit(1);
 
             if (!account?.accessToken) {
@@ -57,9 +57,9 @@ export const usersRouter = createTRPCRouter({
         )
         .query(async ({ ctx, input }) => {
             const [account] = await ctx.db
-                .select({ accessToken: accounts.access_token })
-                .from(accounts)
-                .where(eq(accounts.userId, ctx.session.user.id))
+                .select({ accessToken: betterAuthAccount.accessToken })
+                .from(betterAuthAccount)
+                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
                 .limit(1);
 
             if (!account?.accessToken) {

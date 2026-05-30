@@ -1,5 +1,6 @@
 import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Suspense } from "react";
 import { githubAccessToken } from "~/server/auth";
 import { getPullRequest } from "~/server/github";
@@ -27,7 +28,7 @@ export async function generateMetadata({
 
 export default async function PullRequestPage({ params }: PageProps) {
     const { owner, repo, number: numberAsStr } = await params;
-    const accessToken = await githubAccessToken();
+    const accessToken = await githubAccessToken(await headers());
     const number = parseInt(numberAsStr, 10);
 
     if (!accessToken) {

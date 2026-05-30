@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import { ResizableLayout } from "~/components/ResizableLayout";
-import { auth } from "~/server/auth";
+import { getSession } from "~/server/auth";
 import { db } from "~/server/db";
-import { accounts } from "~/server/db/schema";
+import { betterAuthAccount } from "~/server/db/schema";
 import {
     type CheckRun,
     getAuthenticatedUser,
@@ -33,7 +34,7 @@ export default async function PullRequestLayout({
 }: LayoutProps) {
     const { owner, repo, number: numberStr } = await params;
     const number = parseInt(numberStr, 10);
-    const session = await auth();
+    const session = await getSession(await headers());
 
     let pullRequest: Promise<PullsGetResponseData> | null = null;
     let commits: Promise<PullsListCommitsResponseData> | null = null;
@@ -44,9 +45,9 @@ export default async function PullRequestLayout({
 
     if (session?.user?.id) {
         const [account] = await db
-            .select({ accessToken: accounts.access_token })
-            .from(accounts)
-            .where(eq(accounts.userId, session.user.id))
+            .select({ accessToken: betterAuthAccount.accessToken })
+            .from(betterAuthAccount)
+            .where(eq(betterAuthAccount.userId, session.user.id))
             .limit(1);
 
         if (account?.accessToken) {
