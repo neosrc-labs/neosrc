@@ -1,5 +1,6 @@
 "use client";
 
+import type { components } from "@octokit/openapi-types";
 import { SquarePen } from "lucide-react";
 import NextLink from "next/link";
 import { useCallback, useState } from "react";
@@ -7,13 +8,17 @@ import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
-import type { Reaction as GQLReaction } from "~/components/ReactionRollup";
-import { ReactionRollup } from "~/components/ReactionRollup";
+import { ReactionBar } from "~/components/ReactionBar";
+import { ReactionPicker } from "~/components/ReactionPicker";
 import {
     extractPullRequestState,
     StatusPill,
 } from "~/components/ui/status-pill";
+import type { ReactionContent } from "~/lib/reactions";
 import type { PullsGetResponseData } from "~/server/github";
+
+type SimpleUser = components["schemas"]["nullable-simple-user"];
+
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 
@@ -49,6 +54,87 @@ export function PullRequestDescriptionSection({
     const { data: reactionsData } = api.reactions.get.useQuery(
         { owner, repo, number },
         { staleTime: 30_000 },
+    );
+
+    const utils = api.useUtils();
+
+    const toggleIssueMutation = api.reactions.toggleIssue.useMutation({
+        onMutate: async ({ content }) => {
+            await utils.reactions.get.cancel({ owner, repo, number });
+            const prevData = utils.reactions.get.getData({
+                owner,
+                repo,
+                number,
+            });
+            utils.reactions.get.setData({ owner, repo, number }, (old) => {
+                if (!old) return old;
+                const userLogin = currentUserData?.login;
+                if (!userLogin) return old;
+                const existing = old.reactions?.find(
+                    (r) => r.user?.login === userLogin && r.content === content,
+                );
+                return {
+                    ...old,
+                    reactions: existing
+                        ? old.reactions.filter((r) => r.id !== existing.id)
+                        : [
+                              ...old.reactions,
+                              {
+                                  id: -Date.now(),
+                                  node_id: "",
+                                  content,
+                                  created_at: new Date().toISOString(),
+                                  user: {
+                                      login: userLogin,
+                                      id: 0,
+                                      node_id: "",
+                                      avatar_url: "",
+                                      gravatar_id: null,
+                                      url: "",
+                                      html_url: "",
+                                      followers_url: "",
+                                      following_url: "",
+                                      gists_url: "",
+                                      starred_url: "",
+                                      subscriptions_url: "",
+                                      organizations_url: "",
+                                      repos_url: "",
+                                      events_url: "",
+                                      received_events_url: "",
+                                      type: "",
+                                      site_admin: false,
+                                      name: null,
+                                      email: null,
+                                  } satisfies SimpleUser,
+                              },
+                          ],
+                };
+            });
+            return { prevData };
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prevData) {
+                utils.reactions.get.setData(
+                    { owner, repo, number },
+                    ctx.prevData,
+                );
+            }
+        },
+        onSettled: () => {
+            utils.reactions.get.invalidate({ owner, repo, number });
+        },
+    });
+
+    const handleReact = useCallback(
+        (content: ReactionContent) => {
+            toggleIssueMutation.mutate({
+                owner,
+                repo,
+                number,
+                content,
+            });
+        },
+        [owner, repo, number, toggleIssueMutation],
     );
 
     const handleStartEdit = useCallback((currentBody: string) => {
@@ -208,18 +294,28 @@ export function PullRequestDescriptionSection({
                                 </div>
 
                                 {!isEditing && (
-                                    <div className="p-3">
-                                        <ReactionRollup
-                                            number={number}
-                                            owner={owner}
-                                            repo={repo}
+                                    <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                                        {reactionsData &&
+                                            reactionsData.reactions.length >
+                                                0 && (
+                                                <ReactionBar
+                                                    reactions={
+                                                        reactionsData.reactions
+                                                    }
+                                                    currentUserLogin={
+                                                        currentUserData?.login
+                                                    }
+                                                    onReact={handleReact}
+                                                />
+                                            )}
+                                        <ReactionPicker
                                             reactions={
-                                                reactionsData?.reactions as unknown as GQLReaction[]
+                                                reactionsData?.reactions ?? []
                                             }
                                             currentUserLogin={
                                                 currentUserData?.login
                                             }
-                                            isIssue
+                                            onReact={handleReact}
                                         />
                                     </div>
                                 )}
