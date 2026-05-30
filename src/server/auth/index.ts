@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { nextCookies } from "better-auth/next-js";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { cache } from "react";
@@ -71,6 +72,7 @@ export const auth = betterAuth({
             redirectURI: "http://localhost:3000/api/auth/callback/github",
         },
     },
+    plugins: [nextCookies()],
 });
 
 export const getSession = cache(async () =>
