@@ -1,8 +1,7 @@
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { betterAuthAccount } from "~/server/db/schema";
+import { getGitHubToken } from "~/server/auth";
 import {
     createIssueCommentReaction,
     createIssueReaction,
@@ -31,20 +30,15 @@ export const reactionsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             const [currentUser, reactions] = await Promise.all([
-                getAuthenticatedUser(account.accessToken),
+                getAuthenticatedUser(accessToken),
                 getPullRequestReactions(
-                    account.accessToken,
+                    accessToken,
                     input.owner,
                     input.repo,
                     input.number,
@@ -73,20 +67,15 @@ export const reactionsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             const [currentUser, existingReactions] = await Promise.all([
-                getAuthenticatedUser(account.accessToken),
+                getAuthenticatedUser(accessToken),
                 getIssueCommentReactions(
-                    account.accessToken,
+                    accessToken,
                     input.owner,
                     input.repo,
                     input.commentId,
@@ -101,7 +90,7 @@ export const reactionsRouter = createTRPCRouter({
 
             if (existing) {
                 await deleteIssueCommentReaction(
-                    account.accessToken,
+                    accessToken,
                     input.owner,
                     input.repo,
                     input.commentId,
@@ -111,7 +100,7 @@ export const reactionsRouter = createTRPCRouter({
             }
 
             await createIssueCommentReaction(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.commentId,
@@ -139,20 +128,15 @@ export const reactionsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             const [currentUser, existingReactions] = await Promise.all([
-                getAuthenticatedUser(account.accessToken),
+                getAuthenticatedUser(accessToken),
                 getPullRequestReviewCommentReactions(
-                    account.accessToken,
+                    accessToken,
                     input.owner,
                     input.repo,
                     input.commentId,
@@ -167,7 +151,7 @@ export const reactionsRouter = createTRPCRouter({
 
             if (existing) {
                 await deletePullRequestReviewCommentReaction(
-                    account.accessToken,
+                    accessToken,
                     input.owner,
                     input.repo,
                     input.commentId,
@@ -177,7 +161,7 @@ export const reactionsRouter = createTRPCRouter({
             }
 
             await createPullRequestReviewCommentReaction(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.commentId,
@@ -204,19 +188,14 @@ export const reactionsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             const [currentUser, existingReactions] = await Promise.all([
-                getAuthenticatedUser(account.accessToken),
-                getSubjectReactions(account.accessToken, input.subjectId),
+                getAuthenticatedUser(accessToken),
+                getSubjectReactions(accessToken, input.subjectId),
             ]);
 
             const existing = existingReactions.find(
@@ -227,18 +206,14 @@ export const reactionsRouter = createTRPCRouter({
 
             if (existing) {
                 await removeReaction(
-                    account.accessToken,
+                    accessToken,
                     input.subjectId,
                     input.content,
                 );
                 return { action: "removed" as const };
             }
 
-            await addReaction(
-                account.accessToken,
-                input.subjectId,
-                input.content,
-            );
+            await addReaction(accessToken, input.subjectId, input.content);
             return { action: "added" as const };
         }),
 
@@ -251,17 +226,12 @@ export const reactionsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
-
-            const token = account.accessToken;
+            const token = accessToken;
 
             const results = await Promise.all(
                 input.commentIds.map((commentId) =>
@@ -306,20 +276,15 @@ export const reactionsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             const [currentUser, existingReactions] = await Promise.all([
-                getAuthenticatedUser(account.accessToken),
+                getAuthenticatedUser(accessToken),
                 getPullRequestReactions(
-                    account.accessToken,
+                    accessToken,
                     input.owner,
                     input.repo,
                     input.number,
@@ -334,7 +299,7 @@ export const reactionsRouter = createTRPCRouter({
 
             if (existing) {
                 await deleteIssueReaction(
-                    account.accessToken,
+                    accessToken,
                     input.owner,
                     input.repo,
                     input.number,
@@ -344,7 +309,7 @@ export const reactionsRouter = createTRPCRouter({
             }
 
             await createIssueReaction(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,

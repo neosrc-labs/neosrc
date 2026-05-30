@@ -79,15 +79,46 @@ export const getSession = cache(async () =>
     auth.api.getSession({ headers: await headers() }),
 );
 
-export const githubAccessToken = async () => {
+const getUserId = async (userId?: string) => {
+    if (userId) return userId;
     const session = await getSession();
-    if (!session?.user?.id) return null;
+    return session?.user?.id ?? null;
+};
 
-    const [account] = await db
+export const getAccount = async (opts?: {
+    db?: typeof db;
+    userId?: string;
+}) => {
+    const uid = await getUserId(opts?.userId);
+    if (!uid) return null;
+
+    const database = opts?.db ?? db;
+
+    const [account] = await database
         .select()
         .from(betterAuthAccount)
-        .where(eq(betterAuthAccount.userId, session.user.id))
+        .where(eq(betterAuthAccount.userId, uid))
         .limit(1);
+
+    return account ?? null;
+};
+
+export const getGitHubToken = async (database: typeof db, userId: string) => {
+    const [account] = await database
+        .select({ accessToken: betterAuthAccount.accessToken })
+        .from(betterAuthAccount)
+        .where(eq(betterAuthAccount.userId, userId))
+        .limit(1);
+
+    if (!account?.accessToken) {
+        throw new Error("GitHub account not connected");
+    }
+
+    return account.accessToken;
+};
+
+export const githubAccessToken = async () => {
+    const account = await getAccount();
 
     if (!account) return null;
 

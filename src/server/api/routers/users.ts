@@ -1,8 +1,7 @@
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { betterAuthAccount } from "~/server/db/schema";
+import { getGitHubToken } from "~/server/auth";
 import {
     getAuthenticatedUser,
     getGitHubTeam,
@@ -11,17 +10,9 @@ import {
 
 export const usersRouter = createTRPCRouter({
     currentUser: protectedProcedure.query(async ({ ctx }) => {
-        const [account] = await ctx.db
-            .select({ accessToken: betterAuthAccount.accessToken })
-            .from(betterAuthAccount)
-            .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-            .limit(1);
+        const accessToken = await getGitHubToken(ctx.db, ctx.session.user.id);
 
-        if (!account?.accessToken) {
-            throw new Error("GitHub account not connected");
-        }
-
-        const user = await getAuthenticatedUser(account.accessToken);
+        const user = await getAuthenticatedUser(accessToken);
         return { login: user.login };
     }),
     getByUsername: protectedProcedure
@@ -31,20 +22,12 @@ export const usersRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
-
-            const user = await getGitHubUser(
-                account.accessToken,
-                input.username,
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
             );
+
+            const user = await getGitHubUser(accessToken, input.username);
 
             return { user };
         }),
@@ -56,18 +39,13 @@ export const usersRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             const team = await getGitHubTeam(
-                account.accessToken,
+                accessToken,
                 input.org,
                 input.teamSlug,
             );

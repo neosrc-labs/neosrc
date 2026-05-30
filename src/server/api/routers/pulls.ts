@@ -1,8 +1,7 @@
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { betterAuthAccount } from "~/server/db/schema";
+import { getGitHubToken } from "~/server/auth";
 import {
     addAssigneesToIssue,
     addLabelsToIssue,
@@ -37,18 +36,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             const result = await updatePullRequest(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -68,18 +62,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             const comment = await createIssueComment(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -99,18 +88,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             const comment = await updateIssueComment(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.commentId,
@@ -131,18 +115,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             const review = await updatePullRequestReview(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -161,21 +140,12 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
-
-            return listLabelsForRepo(
-                account.accessToken,
-                input.owner,
-                input.repo,
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
             );
+
+            return listLabelsForRepo(accessToken, input.owner, input.repo);
         }),
 
     addLabel: protectedProcedure
@@ -188,18 +158,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             await addLabelsToIssue(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -219,18 +184,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             await removeLabelFromIssue(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -248,21 +208,12 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
-
-            return listRepoAssignees(
-                account.accessToken,
-                input.owner,
-                input.repo,
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
             );
+
+            return listRepoAssignees(accessToken, input.owner, input.repo);
         }),
 
     addAssignee: protectedProcedure
@@ -275,18 +226,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             await addAssigneesToIssue(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -306,18 +252,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             await removeAssigneesFromIssue(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -335,21 +276,12 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
-
-            return listMilestonesForRepo(
-                account.accessToken,
-                input.owner,
-                input.repo,
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
             );
+
+            return listMilestonesForRepo(accessToken, input.owner, input.repo);
         }),
 
     setMilestone: protectedProcedure
@@ -362,18 +294,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             await updateIssueMilestone(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -393,18 +320,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             await addReviewersToPullRequest(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -424,18 +346,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             await removeReviewersFromPullRequest(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -456,18 +373,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             const review = await createPullRequestReview(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -487,18 +399,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             await markPullRequestAsDraft(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -516,18 +423,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             await markPullRequestAsReady(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -548,18 +450,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             const result = await mergePullRequest(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -584,18 +481,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             await closePullRequest(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
@@ -613,18 +505,13 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             await reopenPullRequest(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,

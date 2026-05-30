@@ -1,8 +1,7 @@
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { betterAuthAccount } from "~/server/db/schema";
+import { getGitHubToken } from "~/server/auth";
 import {
     type GQLTimelineEvent,
     getPullRequestTimelineGraphQL,
@@ -35,18 +34,13 @@ export const timelineRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const [account] = await ctx.db
-                .select({ accessToken: betterAuthAccount.accessToken })
-                .from(betterAuthAccount)
-                .where(eq(betterAuthAccount.userId, ctx.session.user.id))
-                .limit(1);
-
-            if (!account?.accessToken) {
-                throw new Error("GitHub account not connected");
-            }
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
 
             const result = await getPullRequestTimelineGraphQL(
-                account.accessToken,
+                accessToken,
                 input.owner,
                 input.repo,
                 input.number,
