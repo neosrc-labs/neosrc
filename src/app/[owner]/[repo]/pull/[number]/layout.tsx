@@ -1,5 +1,4 @@
 import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import { ResizableLayout } from "~/components/ResizableLayout";
 import { getSession } from "~/server/auth";
@@ -34,7 +33,7 @@ export default async function PullRequestLayout({
 }: LayoutProps) {
     const { owner, repo, number: numberStr } = await params;
     const number = parseInt(numberStr, 10);
-    const session = await getSession(await headers());
+    const session = await getSession();
 
     let pullRequest: Promise<PullsGetResponseData> | null = null;
     let commits: Promise<PullsListCommitsResponseData> | null = null;

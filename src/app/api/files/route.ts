@@ -12,7 +12,7 @@ export async function GET(request: Request) {
         return new Response(null, { status: 400 });
     }
 
-    const accessToken = await githubAccessToken(request.headers);
+    const accessToken = await githubAccessToken();
     if (!accessToken) {
         return new Response(null, { status: 401 });
     }

@@ -1,9 +1,8 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSession } from "~/server/auth";
 
 export default async function SignInPage() {
-    const session = await getSession(await headers());
+    const session = await getSession();
     if (session) redirect("/");
 
     return (
