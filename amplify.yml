@@ -10,7 +10,8 @@ frontend:
       commands:
         # https://docs.aws.amazon.com/amplify/latest/userguide/ssr-environment-variables.html
         - touch .env.production
-        - env | grep -e AUTH_ >> .env.production
+        - env | grep -e BETTER_AUTH >> .env.production
+        - env | grep -e GITHUB >> .env.production
         - env | grep -e DATABASE_ >> .env.production
         - echo "AUTH_TRUST_HOST=true" >> .env.production
         - pnpm run build
