@@ -14,7 +14,7 @@ async function loadSettings() {
     enabled = result.enabled === true;
 }
 
-async function autoRedirect() {
+async function autoRedirect({ isManualToggle = false } = {}) {
     console.log("[Neosrc] autoRedirect check");
 
     if (!enabled) {
@@ -29,6 +29,22 @@ async function autoRedirect() {
     if (!match) {
         console.log(
             "[Neosrc] autoRedirect: path does not match PR pattern, skipping",
+        );
+        return;
+    }
+
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("neosrc_exit")) {
+        url.searchParams.delete("neosrc_exit");
+        window.history.replaceState({}, "", url);
+        sessionStorage.setItem("neosrc_exit_session", "true");
+        console.log("[Neosrc] autoRedirect: neosrc_exit param found, skipping");
+        return;
+    }
+
+    if (!isManualToggle && sessionStorage.getItem("neosrc_exit_session")) {
+        console.log(
+            "[Neosrc] autoRedirect: active neosrc_exit session, skipping",
         );
         return;
     }
@@ -196,7 +212,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
         enabled = changes.enabled.newValue === true;
         console.log("[Neosrc] storage: enabled changed to", enabled);
         if (enabled) {
-            autoRedirect();
+            sessionStorage.removeItem("neosrc_exit_session");
+            autoRedirect({ isManualToggle: true });
         }
     }
 });

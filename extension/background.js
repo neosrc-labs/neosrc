@@ -26,6 +26,7 @@ function buildDnrRule(neosrcUrl) {
             condition: {
                 urlFilter: "https://github.com/*/pull/*",
                 resourceTypes: ["main_frame"],
+                excludedRegexFilter: "[?&]neosrc_exit",
             },
         };
     }
@@ -43,6 +44,7 @@ function buildDnrRule(neosrcUrl) {
         condition: {
             regexFilter: "^https://github\\.com(/[^/]+/[^/]+/pull/\\d+)(/.*)?$",
             resourceTypes: ["main_frame"],
+            excludedRegexFilter: "[?&]neosrc_exit",
         },
     };
 }

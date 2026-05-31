@@ -41,9 +41,7 @@ export function Header() {
                     {prMatch && (
                         <a
                             className="font-medium text-gray-700 text-sm hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
-                            href={`https://github.com/${prMatch[1]}/${prMatch[2]}/pull/${prMatch[3]}`}
-                            rel="noopener noreferrer"
-                            target="_blank"
+                            href={`https://github.com/${prMatch[1]}/${prMatch[2]}/pull/${prMatch[3]}?neosrc_exit=1`}
                         >
                             ← Back to GitHub
                         </a>
