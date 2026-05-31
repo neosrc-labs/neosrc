@@ -1,6 +1,7 @@
 const DEFAULT_NEOSRC_URL = "http://localhost:3000";
 
 let neosrcUrl = DEFAULT_NEOSRC_URL;
+let enabled = false;
 
 console.log("[Neosrc] content script loaded on:", window.location.href);
 console.log("[Neosrc] note: primary redirect handled by DNR at network level; content script is fallback for toggle-while-on-page");
@@ -8,20 +9,12 @@ console.log("[Neosrc] note: primary redirect handled by DNR at network level; co
 async function loadSettings() {
 	const result = await chrome.storage.sync.get(["enabled", "neosrcUrl"]);
 	neosrcUrl = result.neosrcUrl || DEFAULT_NEOSRC_URL;
-	return result.enabled !== false;
-}
-
-async function isEnabled() {
-	const result = await chrome.storage.sync.get("enabled");
-	const enabled = result.enabled !== false;
-	console.log("[Neosrc] isEnabled =>", enabled);
-	return enabled;
+	enabled = result.enabled === true;
 }
 
 async function autoRedirect() {
 	console.log("[Neosrc] autoRedirect check");
 
-	const enabled = await isEnabled();
 	if (!enabled) {
 		console.log("[Neosrc] autoRedirect: disabled, skipping");
 		return;
@@ -182,8 +175,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
 		console.log("[Neosrc] storage: neosrcUrl updated to", neosrcUrl);
 	}
 	if (changes.enabled) {
-		console.log("[Neosrc] storage: enabled changed to", changes.enabled.newValue);
-		if (changes.enabled.newValue === true) {
+		enabled = changes.enabled.newValue === true;
+		console.log("[Neosrc] storage: enabled changed to", enabled);
+		if (enabled) {
 			autoRedirect();
 		}
 	}
