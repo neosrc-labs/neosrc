@@ -47,6 +47,15 @@ function buildDnrRule(neosrcUrl) {
 	};
 }
 
+function setBadge(enabled) {
+	if (enabled) {
+		chrome.action.setBadgeText({ text: "ON" });
+		chrome.action.setBadgeBackgroundColor({ color: "#0969da" });
+	} else {
+		chrome.action.setBadgeText({ text: "" });
+	}
+}
+
 async function updateRules(enabled, neosrcUrl) {
 	try {
 		await chrome.declarativeNetRequest.updateDynamicRules({
@@ -55,6 +64,7 @@ async function updateRules(enabled, neosrcUrl) {
 
 		if (!enabled) {
 			console.log("[Neosrc BG] DNR rule removed (disabled)");
+			setBadge(false);
 			return;
 		}
 
@@ -63,6 +73,7 @@ async function updateRules(enabled, neosrcUrl) {
 			addRules: [rule],
 		});
 		console.log("[Neosrc BG] DNR rule added (enabled) — redirecting github.com PRs to", neosrcUrl);
+		setBadge(true);
 	} catch (err) {
 		console.error("[Neosrc BG] failed to update DNR rules:", err);
 	}
