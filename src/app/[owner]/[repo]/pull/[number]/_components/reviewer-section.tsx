@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
@@ -89,6 +90,18 @@ export function ReviewerSection({
         });
     }
 
+    function buildReviewStateMap(
+        reviews: Array<{ user: { login: string } | null; state: string }>,
+    ): Map<string, string> {
+        const map = new Map<string, string>();
+        for (const review of reviews) {
+            if (review.user && !map.has(review.user.login)) {
+                map.set(review.user.login, review.state);
+            }
+        }
+        return map;
+    }
+
     return (
         <>
             <div className="flex items-start justify-between">
@@ -115,16 +128,23 @@ export function ReviewerSection({
             <Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
                 {(pullRequest) => {
                     if (reviewsQuery.isPending) {
-                        return <FieldSkeleton />;
+                        return (
+                            <div className="mt-2">
+                                <FieldSkeleton />
+                            </div>
+                        );
                     }
+                    const reviewStateMap = buildReviewStateMap(
+                        reviewsQuery.data ?? [],
+                    );
                     return (
                         <ReviewerSectionContent
                             reviewers={mergeReviewers(
                                 pullRequest.requested_reviewers ?? [],
                                 reviewsQuery.data ?? [],
                             )}
+                            reviewStateMap={reviewStateMap}
                             operations={operations}
-                            onRemoveReviewer={handleRemove}
                         />
                     );
                 }}
@@ -186,12 +206,12 @@ function ReviewerSectionSettings({
 
 function ReviewerSectionContent({
     reviewers,
+    reviewStateMap,
     operations,
-    onRemoveReviewer,
 }: {
     reviewers: Reviewer[];
+    reviewStateMap: Map<string, string>;
     operations: ReviewerOperation[];
-    onRemoveReviewer: (reviewer: Reviewer) => void;
 }) {
     const displayReviewers = applyOperations(reviewers, operations);
 
@@ -205,36 +225,38 @@ function ReviewerSectionContent({
 
     return (
         <ul className="space-y-2">
-            {displayReviewers.map((reviewer) => (
-                <li
-                    className="group flex items-center gap-2 text-sm"
-                    key={reviewer.login}
-                >
-                    <UserHoverCard login={reviewer.login}>
-                        <a
-                            className="flex items-center gap-2"
-                            href={reviewer.html_url}
-                        >
-                            <img
-                                alt={reviewer.login}
-                                className="h-5 w-5 rounded-full"
-                                src={reviewer.avatar_url}
-                            />
-                            <span className="text-gray-600 dark:text-zinc-400">
-                                {reviewer.login}
-                            </span>
-                        </a>
-                    </UserHoverCard>
-                    <button
-                        className="ml-auto inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded text-gray-400 opacity-0 hover:text-gray-600 group-hover:opacity-100 dark:hover:text-zinc-300"
-                        onClick={() => onRemoveReviewer(reviewer)}
-                        type="button"
-                        aria-label={`Remove ${reviewer.login}`}
+            {displayReviewers.map((reviewer) => {
+                const state = reviewStateMap.get(reviewer.login) ?? "PENDING";
+                return (
+                    <li
+                        className="group flex items-center gap-2 text-sm"
+                        key={reviewer.login}
                     >
-                        &times;
-                    </button>
-                </li>
-            ))}
+                        <UserHoverCard login={reviewer.login}>
+                            <a
+                                className="flex items-center gap-2"
+                                href={reviewer.html_url}
+                            >
+                                <img
+                                    alt={reviewer.login}
+                                    className="h-5 w-5 rounded-full"
+                                    src={reviewer.avatar_url}
+                                />
+                                <span className="text-gray-600 dark:text-zinc-400">
+                                    {reviewer.login}
+                                </span>
+                            </a>
+                        </UserHoverCard>
+                        {/* FIXME:  Handle other states. Also I think that the state is not fully correct, e.g. Re-Review requested */}
+                        {state === "APPROVED" && (
+                            <Check
+                                className="ml-auto text-green-600"
+                                size={16}
+                            />
+                        )}
+                    </li>
+                );
+            })}
         </ul>
     );
 }
