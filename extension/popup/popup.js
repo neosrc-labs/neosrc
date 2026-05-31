@@ -11,7 +11,7 @@ let previousUrl = DEFAULT_NEOSRC_URL;
 async function updateUI() {
 	console.log("[Neosrc Popup] updateUI: reading settings from storage");
 	const result = await chrome.storage.sync.get(["enabled", "neosrcUrl"]);
-	const enabled = result.enabled !== false;
+	const enabled = result.enabled === true;
 	const neosrcUrl = result.neosrcUrl || DEFAULT_NEOSRC_URL;
 	previousUrl = neosrcUrl;
 	console.log("[Neosrc Popup] updateUI: enabled =", enabled, "neosrcUrl =", neosrcUrl);

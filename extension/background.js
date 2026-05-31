@@ -70,7 +70,7 @@ async function updateRules(enabled, neosrcUrl) {
 
 async function init() {
 	const result = await chrome.storage.sync.get(["enabled", "neosrcUrl"]);
-	const enabled = result.enabled !== false;
+	const enabled = result.enabled === true;
 	const neosrcUrl = result.neosrcUrl || DEFAULT_NEOSRC_URL;
 	console.log("[Neosrc BG] init: enabled =", enabled, "neosrcUrl =", neosrcUrl);
 	await updateRules(enabled, neosrcUrl);
@@ -83,7 +83,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 	if (area !== "sync") return;
 
 	const result = await chrome.storage.sync.get(["enabled", "neosrcUrl"]);
-	const enabled = result.enabled !== false;
+	const enabled = result.enabled === true;
 	const neosrcUrl = result.neosrcUrl || DEFAULT_NEOSRC_URL;
 
 	if (changes.enabled || changes.neosrcUrl) {
