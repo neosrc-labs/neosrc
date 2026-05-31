@@ -1272,7 +1272,6 @@ export const getReviewThreads = async (
 
 export const resolveReviewThread = async (
     accessToken: string,
-    pullRequestId: string,
     threadId: string,
 ): Promise<void> => {
     const response = await fetch("https://api.github.com/graphql", {
@@ -1283,8 +1282,8 @@ export const resolveReviewThread = async (
         },
         body: JSON.stringify({
             query: `
-                mutation($pullRequestId: ID!, $threadId: ID!) {
-                    resolveReviewThread(input: { pullRequestId: $pullRequestId, threadId: $threadId }) {
+                mutation($threadId: ID!) {
+                    resolveReviewThread(input: { threadId: $threadId }) {
                         thread {
                             id
                             isResolved
@@ -1292,7 +1291,7 @@ export const resolveReviewThread = async (
                     }
                 }
             `,
-            variables: { pullRequestId, threadId },
+            variables: { threadId },
         }),
     });
 
@@ -1306,7 +1305,6 @@ export const resolveReviewThread = async (
 
 export const unresolveReviewThread = async (
     accessToken: string,
-    pullRequestId: string,
     threadId: string,
 ): Promise<void> => {
     const response = await fetch("https://api.github.com/graphql", {
@@ -1317,8 +1315,8 @@ export const unresolveReviewThread = async (
         },
         body: JSON.stringify({
             query: `
-                mutation($pullRequestId: ID!, $threadId: ID!) {
-                    unresolveReviewThread(input: { pullRequestId: $pullRequestId, threadId: $threadId }) {
+                mutation($threadId: ID!) {
+                    unresolveReviewThread(input: { threadId: $threadId }) {
                         thread {
                             id
                             isResolved
@@ -1326,7 +1324,7 @@ export const unresolveReviewThread = async (
                     }
                 }
             `,
-            variables: { pullRequestId, threadId },
+            variables: { threadId },
         }),
     });
 
