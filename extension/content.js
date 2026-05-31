@@ -18,8 +18,6 @@ async function isEnabled() {
 	return enabled;
 }
 
-window.alreadyMap = {};
-
 async function autoRedirect() {
 	console.log("[Neosrc] autoRedirect check");
 
@@ -39,13 +37,15 @@ async function autoRedirect() {
 	}
 
 	const key = `neosrc_redirected:${path}`;
-	const already = alreadyMap[key];
-	if (already) {
-		console.log("[Neosrc] autoRedirect: already redirected this PR (sessionStorage), skipping");
-		return;
+	try {
+		if (sessionStorage.getItem(key)) {
+			console.log("[Neosrc] autoRedirect: already redirected this PR (sessionStorage), skipping");
+			return;
+		}
+		sessionStorage.setItem(key, "true");
+	} catch {
+		console.log("[Neosrc] autoRedirect: sessionStorage unavailable, proceeding");
 	}
-
-	alreadyMap[key] = true;
 
 	const target = `${neosrcUrl}${path}`;
 	console.log("[Neosrc] autoRedirect: redirecting to", target);
