@@ -1,7 +1,11 @@
 "use client";
 
-import { createContext, useContext, type CSSProperties } from "react";
+import { useTheme } from "next-themes";
+import { type CSSProperties, createContext, useContext } from "react";
 import ReactMarkdown from "react-markdown";
+import SyntaxHighlighter from "react-syntax-highlighter";
+import darkTheme from "react-syntax-highlighter/dist/esm/styles/hljs/atom-one-dark";
+import lightTheme from "react-syntax-highlighter/dist/esm/styles/hljs/docco";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
@@ -13,10 +17,6 @@ import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
-import SyntaxHighlighter from "react-syntax-highlighter";
-import lightTheme from "react-syntax-highlighter/dist/esm/styles/hljs/docco";
-import darkTheme from "react-syntax-highlighter/dist/esm/styles/hljs/atom-one-dark";
-import { useTheme } from "next-themes";
 
 const CodeBlockContext = createContext(false);
 
@@ -50,23 +50,29 @@ function CodeElement({
     const inCodeBlock = useContext(CodeBlockContext);
     if (className || inCodeBlock) {
         const style = resolvedTheme === "dark" ? darkTheme : lightTheme;
-        const extraStyles: CSSProperties = resolvedTheme === "dark" ? {} : { background: '#f0f0f0' };
+        const extraStyles: CSSProperties =
+            resolvedTheme === "dark" ? {} : { background: "#f0f0f0" };
 
         let language = "";
         switch (className) {
             case "language-rust": {
-                language = "rust"
+                language = "rust";
                 break;
             }
             case "language-js": {
-                language = "javascript"
+                language = "javascript";
                 break;
             }
             // TODO: Add other languages
         }
 
         return (
-            <SyntaxHighlighter language={language} style={style} customStyle={extraStyles} {...props}>
+            <SyntaxHighlighter
+                language={language}
+                style={style}
+                customStyle={extraStyles}
+                {...props}
+            >
                 {children}
             </SyntaxHighlighter>
         );

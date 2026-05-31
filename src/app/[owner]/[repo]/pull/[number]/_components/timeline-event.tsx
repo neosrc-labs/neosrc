@@ -173,7 +173,7 @@ function UserLink({
 
 function EventRow({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+        <div className="flex items-center gap-1 text-gray-600 text-sm dark:text-zinc-400">
             {children}
         </div>
     );
@@ -593,7 +593,7 @@ function EventContent({
 
             return (
                 <>
-                    <p className="flex items-center gap-1.5 text-gray-600 text-sm dark:text-zinc-400">
+                    <p className="flex items-center gap-1 text-gray-600 text-sm dark:text-zinc-400">
                         <UserLink actor={event.author} />
                         {` ${stateLabel} ${timestamp}`}
                     </p>
