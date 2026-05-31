@@ -1,8 +1,8 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { SquarePen } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ChevronDown, SquarePen } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import { DiffView } from "~/components/DiffView";
 import { ReplyTextboxButton } from "~/components/InlineCommentThread";
@@ -10,6 +10,7 @@ import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { ReactionBar } from "~/components/ReactionBar";
 import { ReactionPicker } from "~/components/ReactionPicker";
+import { ResolveButton } from "~/components/ResolvedThreadBanner";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
 import type { ReactionContent } from "~/lib/reactions";
 import type { ReviewComment } from "~/server/github";
@@ -41,6 +42,53 @@ export function ReviewComments({
     );
     const [editBody, setEditBody] = useState("");
     const [savedBodies, setSavedBodies] = useState<Record<number, string>>({});
+    const [expandedResolvedIds, setExpandedResolvedIds] = useState<Set<number>>(
+        new Set(),
+    );
+    const utils = api.useUtils();
+
+    const { data: threads } = api.reviewComments.threads.useQuery(
+        { owner, repo, number },
+        { staleTime: 30_000 },
+    );
+
+    const threadByCommentId = useMemo(() => {
+        const map = new Map<number, NonNullable<typeof threads>[number]>();
+        if (!threads) return map;
+        for (const thread of threads) {
+            for (const c of thread.comments) {
+                map.set(c.id, thread);
+            }
+        }
+        return map;
+    }, [threads]);
+
+    const resolveMutation = api.reviewComments.resolveThread.useMutation({
+        onSuccess: () => {
+            utils.reviewComments.threads.invalidate();
+            utils.reviewComments.list.invalidate({ owner, repo, number });
+        },
+    });
+
+    const handleResolve = useCallback(
+        (commentId: number) => {
+            const thread = threadByCommentId.get(commentId);
+            if (!thread) return;
+            setExpandedResolvedIds((prev) => {
+                const next = new Set(prev);
+                next.delete(commentId);
+                return next;
+            });
+            resolveMutation.mutate({
+                owner,
+                repo,
+                number,
+                commentId,
+                resolve: !thread.isResolved,
+            });
+        },
+        [threadByCommentId, resolveMutation, owner, repo, number],
+    );
 
     const allCommentIds = useMemo(() => {
         const topLevelIds = new Set<number>();
@@ -129,45 +177,109 @@ export function ReviewComments({
 
     return (
         <div className="space-y-3 pt-3">
-            {Object.entries(byPath).map(([path, fileComments]) => (
-                <div
-                    key={path}
-                    className="mt-3 overflow-hidden rounded border border-gray-200 dark:border-zinc-700"
-                >
-                    <div className="border-gray-200 border-b bg-gray-50 px-3 py-1.5 font-mono text-gray-600 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
-                        {path}
+            {Object.entries(byPath).map(([path, fileComments]) => {
+                const resolvedInFile = fileComments.filter(
+                    (c) => threadByCommentId.get(c.id)?.isResolved,
+                );
+
+                return (
+                    <div
+                        key={path}
+                        className="mt-3 overflow-hidden rounded border border-gray-200 dark:border-zinc-700"
+                    >
+                        <div className="flex items-center justify-between border-gray-200 border-b bg-gray-50 px-3 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800">
+                            <div className="flex items-center gap-2 font-mono text-gray-600 dark:text-zinc-400">
+                                <span>{path}</span>
+                                {resolvedInFile.length > 0 && (
+                                    <span className="font-sans text-gray-500 dark:text-zinc-400">
+                                        Resolved
+                                    </span>
+                                )}
+                            </div>
+                            {resolvedInFile.length > 0 && (
+                                <div className="flex gap-1">
+                                    {resolvedInFile.map((c) => (
+                                        <button
+                                            key={c.id}
+                                            type="button"
+                                            onClick={() =>
+                                                setExpandedResolvedIds(
+                                                    (prev) => {
+                                                        const next = new Set(
+                                                            prev,
+                                                        );
+                                                        if (next.has(c.id)) {
+                                                            next.delete(c.id);
+                                                        } else {
+                                                            next.add(c.id);
+                                                        }
+                                                        return next;
+                                                    },
+                                                )
+                                            }
+                                            className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-gray-500 text-xs transition-colors hover:bg-gray-200 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
+                                        >
+                                            <ChevronDown
+                                                size={14}
+                                                className={
+                                                    expandedResolvedIds.has(
+                                                        c.id,
+                                                    )
+                                                        ? "rotate-180"
+                                                        : ""
+                                                }
+                                            />
+                                            Show thread
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div className="divide-y divide-gray-200 dark:divide-zinc-700">
+                            {fileComments.map((comment) => {
+                                const thread = threadByCommentId.get(
+                                    comment.id,
+                                );
+                                const isResolved = thread?.isResolved ?? false;
+                                const isExpanded = expandedResolvedIds.has(
+                                    comment.id,
+                                );
+
+                                return (
+                                    <CommentBlock
+                                        key={comment.id}
+                                        comment={comment}
+                                        replies={replyMap.get(comment.id) ?? []}
+                                        owner={owner}
+                                        repo={repo}
+                                        number={number}
+                                        state={state}
+                                        currentUserLogin={currentUserLogin}
+                                        reactionMap={reactionMap}
+                                        editingCommentId={editingCommentId}
+                                        editBody={editBody}
+                                        savedBodies={savedBodies}
+                                        isResolved={isResolved}
+                                        isExpanded={isExpanded}
+                                        onStartEdit={(id, body) => {
+                                            setEditBody(body);
+                                            setEditingCommentId(id);
+                                        }}
+                                        onEditBodyChange={setEditBody}
+                                        onCancelEdit={() => {
+                                            setEditingCommentId(null);
+                                            setEditBody("");
+                                        }}
+                                        onSaveEdit={handleSaveEdit}
+                                        onReact={handleReact}
+                                        onResolve={handleResolve}
+                                    />
+                                );
+                            })}
+                        </div>
                     </div>
-                    <div className="divide-y divide-gray-200 dark:divide-zinc-700">
-                        {fileComments.map((comment) => (
-                            <CommentBlock
-                                key={comment.id}
-                                comment={comment}
-                                replies={replyMap.get(comment.id) ?? []}
-                                owner={owner}
-                                repo={repo}
-                                number={number}
-                                state={state}
-                                currentUserLogin={currentUserLogin}
-                                reactionMap={reactionMap}
-                                editingCommentId={editingCommentId}
-                                editBody={editBody}
-                                savedBodies={savedBodies}
-                                onStartEdit={(id, body) => {
-                                    setEditBody(body);
-                                    setEditingCommentId(id);
-                                }}
-                                onEditBodyChange={setEditBody}
-                                onCancelEdit={() => {
-                                    setEditingCommentId(null);
-                                    setEditBody("");
-                                }}
-                                onSaveEdit={handleSaveEdit}
-                                onReact={handleReact}
-                            />
-                        ))}
-                    </div>
-                </div>
-            ))}
+                );
+            })}
         </div>
     );
 }
@@ -184,11 +296,14 @@ function CommentBlock({
     editingCommentId,
     editBody,
     savedBodies,
+    isResolved,
+    isExpanded,
     onStartEdit,
     onEditBodyChange,
     onCancelEdit,
     onSaveEdit,
     onReact,
+    onResolve,
 }: {
     comment: ReviewComment;
     replies: ReviewComment[];
@@ -201,11 +316,14 @@ function CommentBlock({
     editingCommentId: number | null;
     editBody: string;
     savedBodies: Record<number, string>;
+    isResolved: boolean;
+    isExpanded: boolean;
     onStartEdit: (commentId: number, body: string) => void;
     onEditBodyChange: (body: string) => void;
     onCancelEdit: () => void;
     onSaveEdit: (commentId: number) => void;
     onReact: (commentId: number, content: ReactionContent) => void;
+    onResolve: (commentId: number) => void;
 }) {
     const [showReplyForm, setShowReplyForm] = useState(false);
     const [replyBody, setReplyBody] = useState("");
@@ -220,6 +338,10 @@ function CommentBlock({
     });
 
     if (!comment.user) {
+        return null;
+    }
+
+    if (isResolved && !isExpanded) {
         return null;
     }
 
@@ -399,9 +521,16 @@ function CommentBlock({
                     )}
                 </div>
             ) : (
-                <div className="flex w-full bg-gray-50 px-6 py-2 dark:bg-zinc-950">
-                    <ReplyTextboxButton
-                        onClick={() => setShowReplyForm(true)}
+                <div className="flex w-full items-center gap-2 bg-gray-50 px-6 py-2 dark:bg-zinc-950">
+                    <div className="min-w-0 flex-1">
+                        <ReplyTextboxButton
+                            onClick={() => setShowReplyForm(true)}
+                        />
+                    </div>
+                    <ResolveButton
+                        onClick={() => onResolve(comment.id)}
+                        isPending={false}
+                        isUnresolve={isResolved}
                     />
                 </div>
             )}

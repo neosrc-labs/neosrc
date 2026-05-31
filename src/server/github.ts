@@ -1163,9 +1163,11 @@ export const removeReviewersFromPullRequest = async (
 };
 
 export type ReviewThreadData = {
+    id: string;
     isResolved: boolean;
     isOutdated: boolean;
     path: string | null;
+    pullRequestId: string;
     comments: Array<{
         id: number;
         body: string;
@@ -1196,8 +1198,10 @@ export const getReviewThreads = async (
                 query($owner: String!, $repo: String!, $number: Int!) {
                     repository(owner: $owner, name: $repo) {
                         pullRequest(number: $number) {
+                            id
                             reviewThreads(first: 100) {
                                 nodes {
+                                    id
                                     isResolved
                                     isOutdated
                                     path
@@ -1240,6 +1244,8 @@ export const getReviewThreads = async (
     const threadNodes =
         result.data?.repository?.pullRequest?.reviewThreads?.nodes ?? [];
 
+    const pullRequestId = result.data?.repository?.pullRequest?.id ?? "";
+
     return threadNodes
         .filter((thread: unknown) => thread != null)
         .map((thread: any) => {
@@ -1254,10 +1260,80 @@ export const getReviewThreads = async (
                 }));
 
             return {
+                id: thread.id,
                 isResolved: thread.isResolved,
                 isOutdated: thread.isOutdated,
                 path: thread.path,
+                pullRequestId,
                 comments,
             };
         });
+};
+
+export const resolveReviewThread = async (
+    accessToken: string,
+    pullRequestId: string,
+    threadId: string,
+): Promise<void> => {
+    const response = await fetch("https://api.github.com/graphql", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            query: `
+                mutation($pullRequestId: ID!, $threadId: ID!) {
+                    resolveReviewThread(input: { pullRequestId: $pullRequestId, threadId: $threadId }) {
+                        thread {
+                            id
+                            isResolved
+                        }
+                    }
+                }
+            `,
+            variables: { pullRequestId, threadId },
+        }),
+    });
+
+    const result = await response.json();
+    if (result.errors) {
+        throw new Error(
+            `Failed to resolve review thread: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
+        );
+    }
+};
+
+export const unresolveReviewThread = async (
+    accessToken: string,
+    pullRequestId: string,
+    threadId: string,
+): Promise<void> => {
+    const response = await fetch("https://api.github.com/graphql", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            query: `
+                mutation($pullRequestId: ID!, $threadId: ID!) {
+                    unresolveReviewThread(input: { pullRequestId: $pullRequestId, threadId: $threadId }) {
+                        thread {
+                            id
+                            isResolved
+                        }
+                    }
+                }
+            `,
+            variables: { pullRequestId, threadId },
+        }),
+    });
+
+    const result = await response.json();
+    if (result.errors) {
+        throw new Error(
+            `Failed to unresolve review thread: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
+        );
+    }
 };
