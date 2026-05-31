@@ -9,6 +9,7 @@ import {
     closePullRequest,
     createIssueComment,
     createPullRequestReview,
+    getPullRequestReviews,
     listLabelsForRepo,
     listMilestonesForRepo,
     listRepoAssignees,
@@ -518,5 +519,27 @@ export const pullsRouter = createTRPCRouter({
             );
 
             return { success: true as const };
+        }),
+
+    listReviews: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            return getPullRequestReviews(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+            );
         }),
 });

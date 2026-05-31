@@ -39,6 +39,10 @@ export function ReviewerSection({
     });
     const addMutation = api.pulls.addReviewer.useMutation();
     const removeMutation = api.pulls.removeReviewer.useMutation();
+    const reviewsQuery = api.pulls.listReviews.useQuery(
+        { owner, repo, number },
+        { staleTime: 30_000 },
+    );
 
     const usersData = repoUsers ?? [];
     const handleAdd = (reviewer: Reviewer) => {
@@ -70,6 +74,21 @@ export function ReviewerSection({
         );
     };
 
+    function mergeReviewers(
+        requested: Reviewer[],
+        reviews: Array<{ user: Reviewer | null }>,
+    ): Reviewer[] {
+        const reviewerUsers = reviews
+            .map((r) => r.user)
+            .filter((u): u is NonNullable<typeof u> => u != null);
+        const seen = new Set<string>();
+        return [...requested, ...reviewerUsers].filter((u) => {
+            if (seen.has(u.login)) return false;
+            seen.add(u.login);
+            return true;
+        });
+    }
+
     return (
         <>
             <div className="flex items-start justify-between">
@@ -82,7 +101,10 @@ export function ReviewerSection({
                             repoUsers={usersData.filter(
                                 (u) => u.login !== pullRequest.user?.login,
                             )}
-                            reviewers={pullRequest.requested_reviewers ?? []}
+                            reviewers={mergeReviewers(
+                                pullRequest.requested_reviewers ?? [],
+                                reviewsQuery.data ?? [],
+                            )}
                             operations={operations}
                             onAddReviewer={handleAdd}
                             onRemoveReviewer={handleRemove}
@@ -90,21 +112,22 @@ export function ReviewerSection({
                     )}
                 </Async>
             </div>
-            <Async
-                promise={pullRequestPromise}
-                fallback={
-                    <div className="mt-2">
-                        <FieldSkeleton />
-                    </div>
-                }
-            >
-                {(pullRequest) => (
-                    <ReviewerSectionContent
-                        reviewers={pullRequest.requested_reviewers ?? []}
-                        operations={operations}
-                        onRemoveReviewer={handleRemove}
-                    />
-                )}
+            <Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
+                {(pullRequest) => {
+                    if (reviewsQuery.isPending) {
+                        return <FieldSkeleton />;
+                    }
+                    return (
+                        <ReviewerSectionContent
+                            reviewers={mergeReviewers(
+                                pullRequest.requested_reviewers ?? [],
+                                reviewsQuery.data ?? [],
+                            )}
+                            operations={operations}
+                            onRemoveReviewer={handleRemove}
+                        />
+                    );
+                }}
             </Async>
         </>
     );
