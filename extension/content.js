@@ -146,11 +146,20 @@ async function onPageChange(source) {
 	injectButton();
 }
 
-loadSettings().then(() => onPageChange("initial load"));
+loadSettings().then(() => {
+	setupObserver();
+	onPageChange("initial load");
+});
 
-const observer = new MutationObserver(() => onPageChange("MutationObserver"));
-observer.observe(document.body, { childList: true, subtree: true });
-console.log("[Neosrc] MutationObserver registered on document.body");
+let observer = null;
+
+function setupObserver() {
+	if (observer) observer.disconnect();
+	const target = document.querySelector('[role="main"]') || document.querySelector("main") || document.body;
+	observer = new MutationObserver(() => onPageChange("MutationObserver"));
+	observer.observe(target, { childList: true, subtree: true });
+	console.log("[Neosrc] MutationObserver registered on", target.tagName.toLowerCase() + (target !== document.body ? `[role="main"]` : ""));
+}
 
 window.addEventListener("popstate", () => {
 	console.log("[Neosrc] popstate event — URL is now:", location.href);
@@ -160,6 +169,7 @@ console.log("[Neosrc] popstate listener registered");
 
 document.addEventListener("turbo:load", () => {
 	console.log("[Neosrc] turbo:load event — URL is now:", location.href);
+	setupObserver();
 	onPageChange("turbo:load");
 });
 console.log("[Neosrc] turbo:load listener registered");
