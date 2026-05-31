@@ -1,7 +1,15 @@
-const NEOSRC_DOMAIN = "http://localhost:3000";
+const DEFAULT_NEOSRC_URL = "http://localhost:3000";
+
+let neosrcUrl = DEFAULT_NEOSRC_URL;
 
 console.log("[Neosrc] content script loaded on:", window.location.href);
 console.log("[Neosrc] note: primary redirect handled by DNR at network level; content script is fallback for toggle-while-on-page");
+
+async function loadSettings() {
+	const result = await chrome.storage.sync.get(["enabled", "neosrcUrl"]);
+	neosrcUrl = result.neosrcUrl || DEFAULT_NEOSRC_URL;
+	return result.enabled !== false;
+}
 
 async function isEnabled() {
 	const result = await chrome.storage.sync.get("enabled");
@@ -39,7 +47,7 @@ async function autoRedirect() {
 
 	alreadyMap[key] = true;
 
-	const target = `${NEOSRC_DOMAIN}${path}`;
+	const target = `${neosrcUrl}${path}`;
 	console.log("[Neosrc] autoRedirect: redirecting to", target);
 	window.location.href = target;
 }
@@ -93,7 +101,7 @@ function injectButton() {
 	console.log("[Neosrc] injectButton: injecting button for", path);
 	const btn = document.createElement("a");
 	btn.setAttribute("data-neosrc-btn", "");
-	btn.href = `${NEOSRC_DOMAIN}${path}`;
+	btn.href = `${neosrcUrl}${path}`;
 	btn.textContent = "Neosrc";
 
 	Object.assign(btn.style, {
@@ -131,13 +139,14 @@ function injectButton() {
 	console.log("[Neosrc] injectButton: button appended to title");
 }
 
-function onPageChange(source) {
+async function onPageChange(source) {
 	console.log("[Neosrc] onPageChange triggered by:", source);
+	await loadSettings();
 	autoRedirect();
 	injectButton();
 }
 
-onPageChange("initial load");
+loadSettings().then(() => onPageChange("initial load"));
 
 const observer = new MutationObserver(() => onPageChange("MutationObserver"));
 observer.observe(document.body, { childList: true, subtree: true });
@@ -171,7 +180,12 @@ console.log("[Neosrc] URL poll interval registered (every 1s)");
 
 chrome.storage.onChanged.addListener((changes, area) => {
 	console.log("[Neosrc] storage changed: area =", area, "changes =", changes);
-	if (area === "sync" && changes.enabled) {
+	if (area !== "sync") return;
+	if (changes.neosrcUrl) {
+		neosrcUrl = changes.neosrcUrl.newValue || DEFAULT_NEOSRC_URL;
+		console.log("[Neosrc] storage: neosrcUrl updated to", neosrcUrl);
+	}
+	if (changes.enabled) {
 		console.log("[Neosrc] storage: enabled changed to", changes.enabled.newValue);
 		if (changes.enabled.newValue === true) {
 			autoRedirect();

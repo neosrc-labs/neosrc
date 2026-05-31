@@ -5,8 +5,7 @@
 	"description": "Neosrc GitHub integration",
 	"host_permissions": [
 		"https://github.com/*",
-		"https://www.github.com/*",
-		"http://localhost:3000/*"
+		"https://www.github.com/*"
 	],
 	"permissions": [
 		"declarativeNetRequest",
