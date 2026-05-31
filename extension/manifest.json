@@ -27,7 +27,8 @@
 		{
 			"matches": [
 				"https://github.com/*/*/pull/*",
-				"https://github.com/*/*/pull/*/*"
+				"https://github.com/*/*/pull/*/*",
+				"https://github.com/*/*/pull/*/*/*"
 			],
 			"js": [
 				"content.js"
