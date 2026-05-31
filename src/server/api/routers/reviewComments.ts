@@ -239,10 +239,7 @@ export const reviewCommentsRouter = createTRPCRouter({
     resolveThread: protectedProcedure
         .input(
             z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                commentId: z.number(),
+                threadId: z.string(),
                 resolve: z.boolean(),
             }),
         )
@@ -252,27 +249,10 @@ export const reviewCommentsRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
 
-            const threads = await getReviewThreads(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-            );
-
-            const thread = threads.find((t) =>
-                t.comments.some((c) => c.id === input.commentId),
-            );
-
-            if (!thread) {
-                throw new Error(
-                    `No thread found for comment ${input.commentId}`,
-                );
-            }
-
             if (input.resolve) {
-                await resolveReviewThread(accessToken, thread.id);
+                await resolveReviewThread(accessToken, input.threadId);
             } else {
-                await unresolveReviewThread(accessToken, thread.id);
+                await unresolveReviewThread(accessToken, input.threadId);
             }
 
             return { success: true as const, isResolved: input.resolve };

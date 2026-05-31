@@ -150,13 +150,10 @@ export function InlineCommentThread({
     const handleResolve = useCallback(() => {
         if (!threadInfo) return;
         resolveMutation.mutate({
-            owner,
-            repo,
-            number,
-            commentId: parentComment.id,
+            threadId: threadInfo.id,
             resolve: !threadInfo.isResolved,
         });
-    }, [threadInfo, resolveMutation, owner, repo, number, parentComment.id]);
+    }, [threadInfo, resolveMutation]);
 
     const handleDelete = useCallback(
         (commentId: number) => {

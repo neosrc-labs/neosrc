@@ -71,23 +71,18 @@ export function ReviewComments({
     });
 
     const handleResolve = useCallback(
-        (commentId: number) => {
-            const thread = threadByCommentId.get(commentId);
-            if (!thread) return;
+        (commentId: number, threadId: string, resolve: boolean) => {
             setExpandedResolvedIds((prev) => {
                 const next = new Set(prev);
                 next.delete(commentId);
                 return next;
             });
             resolveMutation.mutate({
-                owner,
-                repo,
-                number,
-                commentId,
-                resolve: !thread.isResolved,
+                threadId,
+                resolve,
             });
         },
-        [threadByCommentId, resolveMutation, owner, repo, number],
+        [resolveMutation],
     );
 
     const allCommentIds = useMemo(() => {
@@ -261,6 +256,7 @@ export function ReviewComments({
                                         savedBodies={savedBodies}
                                         isResolved={isResolved}
                                         isExpanded={isExpanded}
+                                        threadId={thread?.id ?? ""}
                                         onStartEdit={(id, body) => {
                                             setEditBody(body);
                                             setEditingCommentId(id);
@@ -298,6 +294,7 @@ function CommentBlock({
     savedBodies,
     isResolved,
     isExpanded,
+    threadId,
     onStartEdit,
     onEditBodyChange,
     onCancelEdit,
@@ -318,12 +315,13 @@ function CommentBlock({
     savedBodies: Record<number, string>;
     isResolved: boolean;
     isExpanded: boolean;
+    threadId: string;
     onStartEdit: (commentId: number, body: string) => void;
     onEditBodyChange: (body: string) => void;
     onCancelEdit: () => void;
     onSaveEdit: (commentId: number) => void;
     onReact: (commentId: number, content: ReactionContent) => void;
-    onResolve: (commentId: number) => void;
+    onResolve: (commentId: number, threadId: string, resolve: boolean) => void;
 }) {
     const [showReplyForm, setShowReplyForm] = useState(false);
     const [replyBody, setReplyBody] = useState("");
@@ -528,7 +526,7 @@ function CommentBlock({
                         />
                     </div>
                     <ResolveButton
-                        onClick={() => onResolve(comment.id)}
+                        onClick={() => onResolve(comment.id, threadId, !isResolved)}
                         isPending={false}
                         isUnresolve={isResolved}
                     />
