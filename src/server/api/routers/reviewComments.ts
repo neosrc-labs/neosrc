@@ -270,17 +270,9 @@ export const reviewCommentsRouter = createTRPCRouter({
             }
 
             if (input.resolve) {
-                await resolveReviewThread(
-                    accessToken,
-                    thread.pullRequestId,
-                    thread.id,
-                );
+                await resolveReviewThread(accessToken, thread.id);
             } else {
-                await unresolveReviewThread(
-                    accessToken,
-                    thread.pullRequestId,
-                    thread.id,
-                );
+                await unresolveReviewThread(accessToken, thread.id);
             }
 
             return { success: true as const, isResolved: input.resolve };
