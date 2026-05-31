@@ -526,7 +526,9 @@ function CommentBlock({
                         />
                     </div>
                     <ResolveButton
-                        onClick={() => onResolve(comment.id, threadId, !isResolved)}
+                        onClick={() =>
+                            onResolve(comment.id, threadId, !isResolved)
+                        }
                         isPending={false}
                         isUnresolve={isResolved}
                     />
