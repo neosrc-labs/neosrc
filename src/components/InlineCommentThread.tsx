@@ -4,6 +4,10 @@ import type { components } from "@octokit/openapi-types";
 import { MoreVertical, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
+import {
+    ResolveButton,
+    ResolvedThreadBanner,
+} from "~/components/ResolvedThreadBanner";
 
 type Reaction = components["schemas"]["reaction"];
 
@@ -40,6 +44,7 @@ export function InlineCommentThread({
 }: InlineCommentThreadProps) {
     const [showReplyForm, setShowReplyForm] = useState(false);
     const [replyBody, setReplyBody] = useState("");
+    const [expandedResolved, setExpandedResolved] = useState(false);
     const [editingCommentId, setEditingCommentId] = useState<number | null>(
         null,
     );
@@ -120,12 +125,55 @@ export function InlineCommentThread({
         },
     });
 
+    const { data: threads } = api.reviewComments.threads.useQuery(
+        { owner, repo, number },
+        { staleTime: 30_000 },
+    );
+
+    const threadInfo = useMemo(() => {
+        if (!threads) return null;
+        return (
+            threads.find((t) =>
+                t.comments.some((c) => c.id === parentComment.id),
+            ) ?? null
+        );
+    }, [threads, parentComment.id]);
+
+    const resolveMutation = api.reviewComments.resolveThread.useMutation({
+        onSuccess: () => {
+            setExpandedResolved(false);
+            utils.reviewComments.threads.invalidate();
+            utils.reviewComments.list.invalidate({ owner, repo, number });
+        },
+    });
+
+    const handleResolve = useCallback(() => {
+        if (!threadInfo) return;
+        resolveMutation.mutate({
+            owner,
+            repo,
+            number,
+            commentId: parentComment.id,
+            resolve: !threadInfo.isResolved,
+        });
+    }, [threadInfo, resolveMutation, owner, repo, number, parentComment.id]);
+
     const handleDelete = useCallback(
         (commentId: number) => {
             deleteMutation.mutate({ owner, repo, commentId });
         },
         [deleteMutation, owner, repo],
     );
+
+    if (threadInfo?.isResolved && !expandedResolved) {
+        return (
+            <div className="font-sans" id={`review-thread-${parentComment.id}`}>
+                <ResolvedThreadBanner
+                    onShow={() => setExpandedResolved(true)}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="font-sans" id={`review-thread-${parentComment.id}`}>
@@ -223,9 +271,16 @@ export function InlineCommentThread({
                     )}
                 </div>
             ) : (
-                <div className="flex w-full bg-gray-50 px-6 py-2 dark:bg-zinc-950">
-                    <ReplyTextboxButton
-                        onClick={() => setShowReplyForm(true)}
+                <div className="flex w-full items-center gap-2 bg-gray-50 px-6 py-2 dark:bg-zinc-950">
+                    <div className="min-w-0 flex-1">
+                        <ReplyTextboxButton
+                            onClick={() => setShowReplyForm(true)}
+                        />
+                    </div>
+                    <ResolveButton
+                        onClick={handleResolve}
+                        isPending={resolveMutation.isPending}
+                        isUnresolve={threadInfo?.isResolved ?? false}
                     />
                 </div>
             )}

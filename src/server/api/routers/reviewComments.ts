@@ -13,6 +13,8 @@ import {
     getPullRequestReviews,
     getReviewThreads,
     replyToPullRequestReviewComment,
+    resolveReviewThread,
+    unresolveReviewThread,
     updateReviewComment,
 } from "~/server/github";
 
@@ -232,5 +234,55 @@ export const reviewCommentsRouter = createTRPCRouter({
                 input.repo,
                 input.number,
             );
+        }),
+
+    resolveThread: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+                commentId: z.number(),
+                resolve: z.boolean(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            const threads = await getReviewThreads(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+            );
+
+            const thread = threads.find((t) =>
+                t.comments.some((c) => c.id === input.commentId),
+            );
+
+            if (!thread) {
+                throw new Error(
+                    `No thread found for comment ${input.commentId}`,
+                );
+            }
+
+            if (input.resolve) {
+                await resolveReviewThread(
+                    accessToken,
+                    thread.pullRequestId,
+                    thread.id,
+                );
+            } else {
+                await unresolveReviewThread(
+                    accessToken,
+                    thread.pullRequestId,
+                    thread.id,
+                );
+            }
+
+            return { success: true as const, isResolved: input.resolve };
         }),
 });
