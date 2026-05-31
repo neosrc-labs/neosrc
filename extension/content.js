@@ -164,20 +164,6 @@ document.addEventListener("turbo:load", () => {
 });
 console.log("[Neosrc] turbo:load listener registered");
 
-let lastUrl = location.href;
-setInterval(() => {
-	if (location.href !== lastUrl) {
-		console.log("[Neosrc] URL poll detected change:", lastUrl, "=>", location.href);
-		lastUrl = location.href;
-		onPageChange("URL poll");
-		return;
-	}
-	if (!document.querySelector("[data-neosrc-btn]")) {
-		injectButton();
-	}
-}, 1000);
-console.log("[Neosrc] URL poll interval registered (every 1s)");
-
 chrome.storage.onChanged.addListener((changes, area) => {
 	console.log("[Neosrc] storage changed: area =", area, "changes =", changes);
 	if (area !== "sync") return;
