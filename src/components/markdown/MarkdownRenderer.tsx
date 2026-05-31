@@ -66,6 +66,10 @@ function CodeElement({
             // TODO: Add other languages
         }
 
+        const codeString = Array.isArray(children)
+            ? children.join("")
+            : String(children ?? "");
+
         return (
             <SyntaxHighlighter
                 language={language}
@@ -73,7 +77,7 @@ function CodeElement({
                 customStyle={extraStyles}
                 {...props}
             >
-                {children}
+                {codeString}
             </SyntaxHighlighter>
         );
     }
