@@ -38,7 +38,7 @@ export function useFiles({ owner, repo, number, commitSha }: UseFilesParams) {
                     if (done) break;
                     buffer += decoder.decode(value, { stream: true });
                     const lines = buffer.split("\n");
-                    buffer = lines.pop()!;
+                    buffer = lines.pop() ?? "";
                     for (const line of lines.filter(Boolean)) {
                         const data = JSON.parse(line);
                         setFiles((prev) => [...prev, ...data]);

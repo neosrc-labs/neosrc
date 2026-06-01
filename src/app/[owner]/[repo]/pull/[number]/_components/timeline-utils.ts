@@ -23,7 +23,7 @@ function aggregateEvents(events: GQLTimelineEvent[]): TimelineWrapper[] {
     let i = 0;
 
     while (i < events.length) {
-        const event = events[i]!;
+        const event = events[i] as GQLTimelineEvent;
 
         if (
             event.__typename === "LabeledEvent" ||
@@ -32,7 +32,7 @@ function aggregateEvents(events: GQLTimelineEvent[]): TimelineWrapper[] {
             const changes: LabelChange[] = [];
 
             while (i < events.length) {
-                const current = events[i]!;
+                const current = events[i] as GQLTimelineEvent;
                 if (
                     current.__typename !== "LabeledEvent" &&
                     current.__typename !== "UnlabeledEvent"
@@ -43,7 +43,8 @@ function aggregateEvents(events: GQLTimelineEvent[]): TimelineWrapper[] {
                     const gap =
                         new Date(current.createdAt).getTime() -
                         new Date(
-                            changes[changes.length - 1]!.createdAt,
+                            (changes[changes.length - 1] as LabelChange)
+                                .createdAt,
                         ).getTime();
                     if (gap > MAX_LABEL_GAP_MS) break;
                 }
@@ -69,7 +70,7 @@ function aggregateEvents(events: GQLTimelineEvent[]): TimelineWrapper[] {
             if (changes.length > 0) {
                 const deduped = deduplicateChanges(changes);
                 if (deduped.length === 0) continue;
-                const lastChange = changes[changes.length - 1]!;
+                const lastChange = changes[changes.length - 1] as LabelChange;
                 result.push({
                     type: "aggregated-label",
                     changes: deduped,

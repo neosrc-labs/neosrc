@@ -119,7 +119,8 @@ export function MarkdownEditor({
             const textBeforeCursor = valueRef.current.slice(0, cursorPos);
             const match = textBeforeCursor.match(/(?:^|\s)(#[\w-]*)$/);
             if (!match) return;
-            const hashStart = match.index! + (match[0].startsWith("#") ? 0 : 1);
+            const hashStart =
+                (match.index as number) + (match[0].startsWith("#") ? 0 : 1);
             const replaceEnd = cursorPos;
             const replacement = `#${issueNumber}`;
             const newText =
