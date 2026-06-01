@@ -8,6 +8,7 @@ import { ReviewerSection } from "./reviewer-section";
 
 interface MetadataSectionProps {
     pullRequestPromise: Promise<PullsGetResponseData>;
+    userPermission: Promise<string | null>;
     owner: string;
     repo: string;
     number: number;
@@ -15,6 +16,7 @@ interface MetadataSectionProps {
 
 export function MetadataSection({
     pullRequestPromise,
+    userPermission,
     owner,
     repo,
     number,
@@ -24,6 +26,7 @@ export function MetadataSection({
             {/* Reviewers Section */}
             <section>
                 <ReviewerSection
+                    userPermission={userPermission}
                     pullRequestPromise={pullRequestPromise}
                     owner={owner}
                     repo={repo}
@@ -34,6 +37,7 @@ export function MetadataSection({
             {/* Assignees Section */}
             <section>
                 <AssigneeSection
+                    userPermission={userPermission}
                     pullRequestPromise={pullRequestPromise}
                     owner={owner}
                     repo={repo}
@@ -44,6 +48,7 @@ export function MetadataSection({
             {/* Milestone Section */}
             <section>
                 <MilestoneSection
+                    userPermission={userPermission}
                     pullRequestPromise={pullRequestPromise}
                     owner={owner}
                     repo={repo}
@@ -54,6 +59,7 @@ export function MetadataSection({
             {/* Labels Section */}
             <section className="min-h-30">
                 <LabelsSection
+                    userPermission={userPermission}
                     pullRequestPromise={pullRequestPromise}
                     owner={owner}
                     repo={repo}

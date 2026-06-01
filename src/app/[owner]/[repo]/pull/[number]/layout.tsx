@@ -122,6 +122,7 @@ export default async function PullRequestLayout({
             }
             rightSidebar={
                 <RightSidebar
+                    userPermission={userPermission}
                     checksPromise={checks}
                     commitsPromise={commits}
                     pullRequestPromise={pullRequest}

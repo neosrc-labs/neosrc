@@ -15,6 +15,7 @@ interface SearchableDropdownProps<T> {
     emptyText: string;
     ariaLabel: string;
     beforeItems?: React.ReactNode;
+    disabled?: boolean;
 }
 
 export function SearchableDropdown<T>({
@@ -28,6 +29,7 @@ export function SearchableDropdown<T>({
     emptyText,
     ariaLabel,
     beforeItems,
+    disabled,
 }: SearchableDropdownProps<T>) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
@@ -62,6 +64,10 @@ export function SearchableDropdown<T>({
 
     const sourceItems = sortedCache.current ?? items;
     const filteredItems = sourceItems.filter((item) => searchFn(item, search));
+
+    if (disabled) {
+        return null;
+    }
 
     return (
         <div className="relative" ref={dropdownRef}>

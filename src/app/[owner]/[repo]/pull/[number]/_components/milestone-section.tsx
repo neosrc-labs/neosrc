@@ -12,11 +12,13 @@ type MilestoneOperation = { id: number; milestone: Milestone | null };
 
 export function MilestoneSection({
     pullRequestPromise,
+    userPermission,
     owner,
     repo,
     number,
 }: {
     pullRequestPromise: Promise<PullsGetResponseData>;
+    userPermission: Promise<string | null>;
     owner: string;
     repo: string;
     number: number;
@@ -56,12 +58,20 @@ export function MilestoneSection({
                 </h3>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
-                        <MilestoneSectionSettings
-                            repoMilestones={milestonesData}
-                            milestone={pullRequest.milestone}
-                            operations={operations}
-                            onSetMilestone={handleSet}
-                        />
+                        <Async promise={userPermission} fallback={null}>
+                            {(permission) => (
+                                <MilestoneSectionSettings
+                                    repoMilestones={milestonesData}
+                                    milestone={pullRequest.milestone}
+                                    operations={operations}
+                                    onSetMilestone={handleSet}
+                                    disabled={
+                                        permission !== "admin" &&
+                                        permission !== "write"
+                                    }
+                                />
+                            )}
+                        </Async>
                     )}
                 </Async>
             </div>
@@ -89,11 +99,13 @@ function MilestoneSectionSettings({
     milestone,
     operations,
     onSetMilestone,
+    disabled,
 }: {
     repoMilestones: Milestone[];
     milestone: Milestone | null;
     operations: MilestoneOperation[];
     onSetMilestone: (milestone: Milestone | null) => void;
+    disabled?: boolean;
 }) {
     const currentMilestone = applyOperations(milestone, operations);
     const currentNumber = currentMilestone?.number ?? null;
@@ -129,6 +141,7 @@ function MilestoneSectionSettings({
             placeholder="Filter milestones"
             emptyText="No milestones found"
             ariaLabel="Manage milestone"
+            disabled={disabled}
             beforeItems={
                 <li
                     className={cn(

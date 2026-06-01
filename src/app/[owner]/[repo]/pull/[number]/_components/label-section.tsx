@@ -11,11 +11,13 @@ type LabelOperation = { id: number; op: "add" | "remove"; label: Label };
 
 export function LabelsSection({
     pullRequestPromise,
+    userPermission,
     owner,
     repo,
     number,
 }: {
     pullRequestPromise: Promise<PullsGetResponseData>;
+    userPermission: Promise<string | null>;
     owner: string;
     repo: string;
     number: number;
@@ -74,13 +76,21 @@ export function LabelsSection({
                 </h3>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
-                        <LabelSectionSettings
-                            repoLabels={labelsData}
-                            labels={pullRequest.labels}
-                            operations={operations}
-                            onAddLabel={handleAdd}
-                            onRemoveLabel={handleRemove}
-                        />
+                        <Async promise={userPermission} fallback={null}>
+                            {(permission) => (
+                                <LabelSectionSettings
+                                    repoLabels={labelsData}
+                                    labels={pullRequest.labels}
+                                    operations={operations}
+                                    onAddLabel={handleAdd}
+                                    onRemoveLabel={handleRemove}
+                                    disabled={
+                                        permission !== "admin" &&
+                                        permission !== "write"
+                                    }
+                                />
+                            )}
+                        </Async>
                     )}
                 </Async>
             </div>
@@ -93,11 +103,19 @@ export function LabelsSection({
                 }
             >
                 {(pullRequest) => (
-                    <LabelSectionContent
-                        labels={pullRequest.labels}
-                        operations={operations}
-                        onRemoveLabel={handleRemove}
-                    />
+                    <Async promise={userPermission} fallback={null}>
+                        {(permission) => (
+                            <LabelSectionContent
+                                labels={pullRequest.labels}
+                                operations={operations}
+                                onRemoveLabel={handleRemove}
+                                canEdit={
+                                    permission === "admin" ||
+                                    permission === "write"
+                                }
+                            />
+                        )}
+                    </Async>
                 )}
             </Async>
         </>
@@ -110,12 +128,14 @@ function LabelSectionSettings({
     operations,
     onAddLabel,
     onRemoveLabel,
+    disabled,
 }: {
     repoLabels: Label[];
     labels: Label[];
     operations: LabelOperation[];
     onAddLabel: (label: Label) => void;
     onRemoveLabel: (label: Label) => void;
+    disabled?: boolean;
 }) {
     const displayLabels = applyOperations(labels, operations);
     const currentNames = new Set(displayLabels.map((l) => l.name));
@@ -151,6 +171,7 @@ function LabelSectionSettings({
             placeholder="Filter labels"
             emptyText="No labels found"
             ariaLabel="Manage labels"
+            disabled={disabled}
         />
     );
 }
@@ -159,10 +180,12 @@ function LabelSectionContent({
     labels,
     operations,
     onRemoveLabel,
+    canEdit,
 }: {
     labels: Label[];
     operations: LabelOperation[];
     onRemoveLabel: (label: Label) => void;
+    canEdit: boolean;
 }) {
     const displayLabels = applyOperations(labels, operations).sort((a, b) =>
         a.name.localeCompare(b.name),
@@ -182,14 +205,16 @@ function LabelSectionContent({
                 <div key={label.name}>
                     <LabelComponent color={label.color}>
                         {label.name}
-                        <button
-                            className="-mr-0.5 ml-0.5 inline-flex h-3 w-3 cursor-pointer items-center justify-center rounded-full text-current text-lg opacity-60 hover:opacity-100"
-                            onClick={() => onRemoveLabel(label)}
-                            type="button"
-                            aria-label={`Remove label ${label.name}`}
-                        >
-                            &times;
-                        </button>
+                        {canEdit && (
+                            <button
+                                className="-mr-0.5 ml-0.5 inline-flex h-3 w-3 cursor-pointer items-center justify-center rounded-full text-current text-lg opacity-60 hover:opacity-100"
+                                onClick={() => onRemoveLabel(label)}
+                                type="button"
+                                aria-label={`Remove label ${label.name}`}
+                            >
+                                &times;
+                            </button>
+                        )}
                     </LabelComponent>
                 </div>
             ))}

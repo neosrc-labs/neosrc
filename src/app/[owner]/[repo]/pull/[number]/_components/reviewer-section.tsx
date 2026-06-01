@@ -18,11 +18,13 @@ type ReviewerOperation = {
 
 export function ReviewerSection({
     pullRequestPromise,
+    userPermission,
     owner,
     repo,
     number,
 }: {
     pullRequestPromise: Promise<PullsGetResponseData>;
+    userPermission: Promise<string | null>;
     owner: string;
     repo: string;
     number: number;
@@ -110,18 +112,27 @@ export function ReviewerSection({
                 </h3>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
-                        <ReviewerSectionSettings
-                            repoUsers={usersData.filter(
-                                (u) => u.login !== pullRequest.user?.login,
+                        <Async promise={userPermission} fallback={null}>
+                            {(permission) => (
+                                <ReviewerSectionSettings
+                                    repoUsers={usersData.filter(
+                                        (u) =>
+                                            u.login !== pullRequest.user?.login,
+                                    )}
+                                    reviewers={mergeReviewers(
+                                        pullRequest.requested_reviewers ?? [],
+                                        reviewsQuery.data ?? [],
+                                    )}
+                                    operations={operations}
+                                    onAddReviewer={handleAdd}
+                                    onRemoveReviewer={handleRemove}
+                                    disabled={
+                                        permission !== "admin" &&
+                                        permission !== "write"
+                                    }
+                                />
                             )}
-                            reviewers={mergeReviewers(
-                                pullRequest.requested_reviewers ?? [],
-                                reviewsQuery.data ?? [],
-                            )}
-                            operations={operations}
-                            onAddReviewer={handleAdd}
-                            onRemoveReviewer={handleRemove}
-                        />
+                        </Async>
                     )}
                 </Async>
             </div>
@@ -159,12 +170,14 @@ function ReviewerSectionSettings({
     operations,
     onAddReviewer,
     onRemoveReviewer,
+    disabled,
 }: {
     repoUsers: Reviewer[];
     reviewers: Reviewer[];
     operations: ReviewerOperation[];
     onAddReviewer: (reviewer: Reviewer) => void;
     onRemoveReviewer: (reviewer: Reviewer) => void;
+    disabled?: boolean;
 }) {
     const displayReviewers = applyOperations(reviewers, operations);
     const currentLogins = new Set(displayReviewers.map((r) => r.login));
@@ -200,6 +213,7 @@ function ReviewerSectionSettings({
             placeholder="Filter users"
             emptyText="No users found"
             ariaLabel="Manage reviewers"
+            disabled={disabled}
         />
     );
 }

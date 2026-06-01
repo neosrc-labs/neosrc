@@ -293,8 +293,10 @@ export function ActionSection({
             approveMutation.isPending ||
             requestChangesMutation.isPending;
 
-        const canMerge =
+        const canWrite =
             userPermission === "admin" || userPermission === "write";
+        const canManagePR = isAuthor || canWrite;
+        const canMerge = canWrite;
         const isMergeBlocked = pullRequest.mergeable_state === "blocked";
         const isMergeStateUnknown = pullRequest.mergeable_state === "unknown";
 
@@ -337,7 +339,8 @@ export function ActionSection({
                 {conflictedFilesSection}
                 {reviewInProgress}
                 <div className="flex gap-1">
-                    {!pullRequest.draft &&
+                    {canManagePR &&
+                        !pullRequest.draft &&
                         !convertedToDraft &&
                         pullRequest.state === "open" && (
                             <button
@@ -352,7 +355,7 @@ export function ActionSection({
                                     : "Mark as draft"}
                             </button>
                         )}
-                    {pullRequest.state === "open" ? (
+                    {pullRequest.state === "open" && canManagePR ? (
                         <Popover
                             open={isClosePopoverOpen}
                             onOpenChange={setIsClosePopoverOpen}
@@ -408,7 +411,8 @@ export function ActionSection({
                             </PopoverContent>
                         </Popover>
                     ) : pullRequest.state === "closed" &&
-                      !pullRequest.merged ? (
+                      !pullRequest.merged &&
+                      canManagePR ? (
                         <button
                             className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-green-300 px-3 py-2 text-green-600 text-sm transition-colors hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950"
                             disabled={reopenMutation.isPending}
@@ -507,7 +511,7 @@ export function ActionSection({
                     )}
                 {pullRequest.state === "open" && (
                     <div className="flex gap-2">
-                        {isDraft ? (
+                        {isDraft && canManagePR ? (
                             <button
                                 className="w-full cursor-pointer rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
                                 disabled={markReadyMutation.isPending}

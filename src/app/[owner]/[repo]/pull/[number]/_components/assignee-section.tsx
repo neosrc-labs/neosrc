@@ -17,11 +17,13 @@ type AssigneeOperation = {
 
 export function AssigneeSection({
     pullRequestPromise,
+    userPermission,
     owner,
     repo,
     number,
 }: {
     pullRequestPromise: Promise<PullsGetResponseData>;
+    userPermission: Promise<string | null>;
     owner: string;
     repo: string;
     number: number;
@@ -80,13 +82,21 @@ export function AssigneeSection({
                 </h3>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
-                        <AssigneeSectionSettings
-                            repoAssignees={assigneesData}
-                            assignees={pullRequest.assignees ?? []}
-                            operations={operations}
-                            onAddAssignee={handleAdd}
-                            onRemoveAssignee={handleRemove}
-                        />
+                        <Async promise={userPermission} fallback={null}>
+                            {(permission) => (
+                                <AssigneeSectionSettings
+                                    repoAssignees={assigneesData}
+                                    assignees={pullRequest.assignees ?? []}
+                                    operations={operations}
+                                    onAddAssignee={handleAdd}
+                                    onRemoveAssignee={handleRemove}
+                                    disabled={
+                                        permission !== "admin" &&
+                                        permission !== "write"
+                                    }
+                                />
+                            )}
+                        </Async>
                     )}
                 </Async>
             </div>
@@ -99,11 +109,19 @@ export function AssigneeSection({
                 }
             >
                 {(pullRequest) => (
-                    <AssigneeSectionContent
-                        assignees={pullRequest.assignees ?? []}
-                        operations={operations}
-                        onRemoveAssignee={handleRemove}
-                    />
+                    <Async promise={userPermission} fallback={null}>
+                        {(permission) => (
+                            <AssigneeSectionContent
+                                assignees={pullRequest.assignees ?? []}
+                                operations={operations}
+                                onRemoveAssignee={handleRemove}
+                                canEdit={
+                                    permission === "admin" ||
+                                    permission === "write"
+                                }
+                            />
+                        )}
+                    </Async>
                 )}
             </Async>
         </>
@@ -116,12 +134,14 @@ function AssigneeSectionSettings({
     operations,
     onAddAssignee,
     onRemoveAssignee,
+    disabled,
 }: {
     repoAssignees: Assignee[];
     assignees: Assignee[];
     operations: AssigneeOperation[];
     onAddAssignee: (assignee: Assignee) => void;
     onRemoveAssignee: (assignee: Assignee) => void;
+    disabled?: boolean;
 }) {
     const displayAssignees = applyOperations(assignees, operations);
     const currentLogins = new Set(displayAssignees.map((a) => a.login));
@@ -157,6 +177,7 @@ function AssigneeSectionSettings({
             placeholder="Filter users"
             emptyText="No users found"
             ariaLabel="Manage assignees"
+            disabled={disabled}
         />
     );
 }
@@ -165,10 +186,12 @@ function AssigneeSectionContent({
     assignees,
     operations,
     onRemoveAssignee,
+    canEdit,
 }: {
     assignees: Assignee[];
     operations: AssigneeOperation[];
     onRemoveAssignee: (assignee: Assignee) => void;
+    canEdit: boolean;
 }) {
     const displayAssignees = applyOperations(assignees, operations);
 
@@ -202,14 +225,16 @@ function AssigneeSectionContent({
                             </span>
                         </a>
                     </UserHoverCard>
-                    <button
-                        className="ml-auto inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded text-gray-400 opacity-0 hover:text-gray-600 group-hover:opacity-100 dark:hover:text-zinc-300"
-                        onClick={() => onRemoveAssignee(assignee)}
-                        type="button"
-                        aria-label={`Remove ${assignee.login}`}
-                    >
-                        &times;
-                    </button>
+                    {canEdit && (
+                        <button
+                            className="ml-auto inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded text-gray-400 opacity-0 hover:text-gray-600 group-hover:opacity-100 dark:hover:text-zinc-300"
+                            onClick={() => onRemoveAssignee(assignee)}
+                            type="button"
+                            aria-label={`Remove ${assignee.login}`}
+                        >
+                            &times;
+                        </button>
+                    )}
                 </li>
             ))}
         </ul>

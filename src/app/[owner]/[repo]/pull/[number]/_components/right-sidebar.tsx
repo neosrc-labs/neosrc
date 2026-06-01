@@ -15,6 +15,7 @@ interface RightSidebarProps {
     pullRequestPromise: Promise<PullsGetResponseData> | null;
     commitsPromise: Promise<PullsListCommitsResponseData> | null;
     checksPromise: Promise<Array<CheckRun>> | null;
+    userPermission: Promise<string | null>;
     owner: string;
     repo: string;
     number: number;
@@ -24,6 +25,7 @@ export default function RightSidebar({
     pullRequestPromise,
     commitsPromise,
     checksPromise,
+    userPermission,
     owner,
     repo,
     number,
@@ -49,6 +51,7 @@ export default function RightSidebar({
         <aside className="flex h-full flex-col border-gray-200 border-l bg-white px-4 py-6 dark:border-zinc-800 dark:bg-zinc-950">
             <div className="sticky top-0 z-10 space-y-4 bg-white pb-4 dark:bg-zinc-950">
                 <MetadataSection
+                    userPermission={userPermission}
                     pullRequestPromise={pullRequestPromise}
                     owner={owner}
                     repo={repo}
