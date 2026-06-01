@@ -207,13 +207,19 @@ export function PullRequestDescriptionSection({
                     {(pullRequest) => (
                         <div className="mt-2 flex items-center gap-2">
                             <div className="text-gray-600 text-sm dark:text-zinc-400">
-                                <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs dark:bg-zinc-700">
+                                <a
+                                    href={`https://github.com/${owner}/${repo}/tree/${pullRequest.base.ref}`}
+                                    className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs hover:bg-gray-200 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+                                >
                                     {pullRequest.base.ref}
-                                </span>
+                                </a>
                                 <span className="mx-2">←</span>
-                                <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs dark:bg-zinc-700">
+                                <a
+                                    href={`https://github.com/${owner}/${repo}/tree/${pullRequest.head.ref}`}
+                                    className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs hover:bg-gray-200 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+                                >
                                     {pullRequest.head.ref}
-                                </span>
+                                </a>
                             </div>
                             <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
                                 opened by{" "}
