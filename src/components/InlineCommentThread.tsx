@@ -221,9 +221,7 @@ export function InlineCommentThread({
                         editBody={
                             editingCommentId === comment.id ? editBody : ""
                         }
-                        displayBody={
-                            savedBodies[comment.id] ?? comment.body
-                        }
+                        displayBody={savedBodies[comment.id] ?? comment.body}
                         reactions={reactionMap[comment.id] ?? []}
                         currentUserLogin={currentUserLogin}
                         canInteract={canInteract}

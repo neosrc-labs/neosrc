@@ -283,7 +283,11 @@ export type GQLReactionNode = {
     user: { login: string; avatarUrl?: string } | null;
 };
 
-export type GQLLabel = { name: string; color: string; description: string | null };
+export type GQLLabel = {
+    name: string;
+    color: string;
+    description: string | null;
+};
 
 export type GQLIssueComment = {
     __typename: "IssueComment";

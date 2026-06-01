@@ -459,9 +459,8 @@ function CommentBlock({
                                                 onClick={() =>
                                                     onStartEdit(
                                                         reply.id,
-                                                        savedBodies[
-                                                            reply.id
-                                                        ] ?? reply.body,
+                                                        savedBodies[reply.id] ??
+                                                            reply.body,
                                                     )
                                                 }
                                             >
