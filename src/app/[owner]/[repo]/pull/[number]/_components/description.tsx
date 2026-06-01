@@ -1,7 +1,7 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { SquarePen } from "lucide-react";
+import { Lock, SquarePen } from "lucide-react";
 import NextLink from "next/link";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
@@ -27,6 +27,7 @@ interface PullRequestDescriptionSectionProps {
     repo: string;
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData>;
+    canInteract: boolean;
 }
 
 export function PullRequestDescriptionSection({
@@ -34,6 +35,7 @@ export function PullRequestDescriptionSection({
     repo,
     number,
     pullRequestPromise,
+    canInteract,
 }: PullRequestDescriptionSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editBody, setEditBody] = useState("");
@@ -164,7 +166,17 @@ export function PullRequestDescriptionSection({
                     >
                         {(pullRequest) => {
                             const state = extractPullRequestState(pullRequest);
-                            return <StatusPill state={state} />;
+                            return (
+                                <>
+                                    <StatusPill state={state} />
+                                    {pullRequest.locked && (
+                                        <span className="flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-gray-500 text-xs dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+                                            <Lock size={12} />
+                                            Locked
+                                        </span>
+                                    )}
+                                </>
+                            );
                         }}
                     </Async>
                     <Async
@@ -243,7 +255,7 @@ export function PullRequestDescriptionSection({
                                     <h3 className="font-semibold text-gray-700 text-sm dark:text-zinc-300">
                                         Description
                                     </h3>
-                                    {!isEditing && (
+                                    {!isEditing && canInteract && (
                                         <button
                                             className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                             onClick={() =>
@@ -299,6 +311,7 @@ export function PullRequestDescriptionSection({
                                             reactionsData.reactions.length >
                                                 0 && (
                                                 <ReactionBar
+                                                    disabled={!canInteract}
                                                     reactions={
                                                         reactionsData.reactions
                                                     }
@@ -309,6 +322,7 @@ export function PullRequestDescriptionSection({
                                                 />
                                             )}
                                         <ReactionPicker
+                                            disabled={!canInteract}
                                             reactions={
                                                 reactionsData?.reactions ?? []
                                             }

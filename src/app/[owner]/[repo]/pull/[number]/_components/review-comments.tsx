@@ -26,6 +26,7 @@ interface ReviewCommentsProps {
     state?: string;
     allComments: ReviewComment[];
     currentUserLogin: string;
+    canInteract: boolean;
 }
 
 export function ReviewComments({
@@ -36,6 +37,7 @@ export function ReviewComments({
     state,
     allComments,
     currentUserLogin,
+    canInteract,
 }: ReviewCommentsProps) {
     const [editingCommentId, setEditingCommentId] = useState<number | null>(
         null,
@@ -249,6 +251,7 @@ export function ReviewComments({
                                         repo={repo}
                                         number={number}
                                         state={state}
+                                        canInteract={canInteract}
                                         currentUserLogin={currentUserLogin}
                                         reactionMap={reactionMap}
                                         editingCommentId={editingCommentId}
@@ -287,6 +290,7 @@ function CommentBlock({
     repo,
     number,
     state,
+    canInteract,
     currentUserLogin,
     reactionMap,
     editingCommentId,
@@ -308,6 +312,7 @@ function CommentBlock({
     repo: string;
     number: number;
     state?: string;
+    canInteract: boolean;
     currentUserLogin: string;
     reactionMap: Record<number, Reaction[]>;
     editingCommentId: number | null;
@@ -373,30 +378,34 @@ function CommentBlock({
                 headerActions={
                     <>
                         <ReactionPicker
+                            disabled={!canInteract}
                             reactions={parentReactions}
                             currentUserLogin={currentUserLogin}
                             onReact={(content) => onReact(comment.id, content)}
                         />
-                        {comment.user?.login === currentUserLogin && (
-                            <button
-                                type="button"
-                                className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
-                                onClick={() =>
-                                    onStartEdit(
-                                        comment.id,
-                                        savedBodies[comment.id] ?? comment.body,
-                                    )
-                                }
-                            >
-                                <SquarePen size={14} />
-                            </button>
-                        )}
+                        {comment.user?.login === currentUserLogin &&
+                            canInteract && (
+                                <button
+                                    type="button"
+                                    className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                    onClick={() =>
+                                        onStartEdit(
+                                            comment.id,
+                                            savedBodies[comment.id] ??
+                                                comment.body,
+                                        )
+                                    }
+                                >
+                                    <SquarePen size={14} />
+                                </button>
+                            )}
                     </>
                 }
                 footer={
                     parentReactions.length > 0 && (
                         <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
                             <ReactionBar
+                                disabled={!canInteract}
                                 reactions={parentReactions}
                                 currentUserLogin={currentUserLogin}
                                 onReact={(content) =>
@@ -435,33 +444,37 @@ function CommentBlock({
                             headerActions={
                                 <>
                                     <ReactionPicker
+                                        disabled={!canInteract}
                                         reactions={replyReactions}
                                         currentUserLogin={currentUserLogin}
                                         onReact={(content) =>
                                             onReact(reply.id, content)
                                         }
                                     />
-                                    {reply.user?.login === currentUserLogin && (
-                                        <button
-                                            type="button"
-                                            className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
-                                            onClick={() =>
-                                                onStartEdit(
-                                                    reply.id,
-                                                    savedBodies[reply.id] ??
-                                                        reply.body,
-                                                )
-                                            }
-                                        >
-                                            <SquarePen size={14} />
-                                        </button>
-                                    )}
+                                    {reply.user?.login === currentUserLogin &&
+                                        canInteract && (
+                                            <button
+                                                type="button"
+                                                className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                                onClick={() =>
+                                                    onStartEdit(
+                                                        reply.id,
+                                                        savedBodies[
+                                                            reply.id
+                                                        ] ?? reply.body,
+                                                    )
+                                                }
+                                            >
+                                                <SquarePen size={14} />
+                                            </button>
+                                        )}
                                 </>
                             }
                             footer={
                                 replyReactions.length > 0 && (
                                     <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
                                         <ReactionBar
+                                            disabled={!canInteract}
                                             reactions={replyReactions}
                                             currentUserLogin={currentUserLogin}
                                             onReact={(content) =>
@@ -481,59 +494,61 @@ function CommentBlock({
                     </div>
                 );
             })}
-            {showReplyForm ? (
-                <div className="bg-gray-50 p-2 dark:bg-zinc-950">
-                    <MarkdownEditor
-                        disabled={replyMutation.isPending}
-                        onChange={setReplyBody}
-                        onCancel={() => {
-                            setShowReplyForm(false);
-                            setReplyBody("");
-                        }}
-                        placeholder="Write a reply..."
-                        value={replyBody}
-                        owner={owner}
-                        repo={repo}
-                        footerActions={[
-                            {
-                                label: "Reply",
-                                onClick: () => {
-                                    if (!replyBody.trim()) return;
-                                    replyMutation.mutate({
-                                        owner,
-                                        repo,
-                                        number,
-                                        body: replyBody,
-                                        inReplyTo: comment.id,
-                                    });
+            {canInteract ? (
+                showReplyForm ? (
+                    <div className="bg-gray-50 p-2 dark:bg-zinc-950">
+                        <MarkdownEditor
+                            disabled={replyMutation.isPending}
+                            onChange={setReplyBody}
+                            onCancel={() => {
+                                setShowReplyForm(false);
+                                setReplyBody("");
+                            }}
+                            placeholder="Write a reply..."
+                            value={replyBody}
+                            owner={owner}
+                            repo={repo}
+                            footerActions={[
+                                {
+                                    label: "Reply",
+                                    onClick: () => {
+                                        if (!replyBody.trim()) return;
+                                        replyMutation.mutate({
+                                            owner,
+                                            repo,
+                                            number,
+                                            body: replyBody,
+                                            inReplyTo: comment.id,
+                                        });
+                                    },
+                                    variant: "approve",
+                                    disabled: (text: string) => !text.trim(),
                                 },
-                                variant: "approve",
-                                disabled: (text: string) => !text.trim(),
-                            },
-                        ]}
-                    />
-                    {replyMutation.isError && (
-                        <p className="mt-1 text-red-600 text-xs">
-                            Failed to post reply. Please try again.
-                        </p>
-                    )}
-                </div>
-            ) : (
-                <div className="flex w-full items-center gap-2 bg-gray-50 px-6 py-2 dark:bg-zinc-950">
-                    <div className="min-w-0 flex-1">
-                        <ReplyTextboxButton
-                            onClick={() => setShowReplyForm(true)}
+                            ]}
+                        />
+                        {replyMutation.isError && (
+                            <p className="mt-1 text-red-600 text-xs">
+                                Failed to post reply. Please try again.
+                            </p>
+                        )}
+                    </div>
+                ) : (
+                    <div className="flex w-full items-center gap-2 bg-gray-50 px-6 py-2 dark:bg-zinc-950">
+                        <div className="min-w-0 flex-1">
+                            <ReplyTextboxButton
+                                onClick={() => setShowReplyForm(true)}
+                            />
+                        </div>
+                        <ResolveButton
+                            onClick={() =>
+                                onResolve(comment.id, threadId, !isResolved)
+                            }
+                            isPending={false}
+                            isUnresolve={isResolved}
                         />
                     </div>
-                    <ResolveButton
-                        onClick={() =>
-                            onResolve(comment.id, threadId, !isResolved)
-                        }
-                        isPending={false}
-                        isUnresolve={isResolved}
-                    />
-                </div>
-            )}
+                )
+            ) : null}
         </div>
     );
 }

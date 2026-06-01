@@ -11,9 +11,15 @@ interface TimelineSectionProps {
     owner: string;
     repo: string;
     number: number;
+    canInteract: boolean;
 }
 
-export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
+export function TimelineSection({
+    owner,
+    repo,
+    number,
+    canInteract,
+}: TimelineSectionProps) {
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
         api.timeline.list.useInfiniteQuery(
             { owner, repo, number, limit: 100 },
@@ -95,6 +101,7 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
                             commentReactions={allCommentReactions}
                             currentUserLogin={currentUserLogin}
                             allComments={allComments}
+                            canInteract={canInteract}
                         />
                     );
                 })}
@@ -108,7 +115,12 @@ export function TimelineSection({ owner, repo, number }: TimelineSectionProps) {
                 </div>
             )}
 
-            <CommentForm number={number} owner={owner} repo={repo} />
+            <CommentForm
+                disabled={!canInteract}
+                number={number}
+                owner={owner}
+                repo={repo}
+            />
         </div>
     );
 }

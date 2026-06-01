@@ -297,6 +297,7 @@ export function ActionSection({
             userPermission === "admin" || userPermission === "write";
         const canManagePR = isAuthor || canWrite;
         const canMerge = canWrite;
+        const canInteract = !pullRequest.locked || canWrite || isAuthor;
         const isMergeBlocked = pullRequest.mergeable_state === "blocked";
         const isMergeStateUnknown = pullRequest.mergeable_state === "unknown";
 
@@ -441,7 +442,8 @@ export function ActionSection({
                         Failed to reopen. Please try again.
                     </p>
                 )}
-                {!isAuthor &&
+                {canInteract &&
+                    !isAuthor &&
                     !isPending &&
                     !dismissReviewMutation.isPending && (
                         <div className="flex gap-1">

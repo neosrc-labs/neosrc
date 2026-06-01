@@ -2,7 +2,11 @@ import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-meth
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { githubAccessToken } from "~/server/auth";
-import { getPullRequest } from "~/server/github";
+import {
+    getAuthenticatedUser,
+    getPullRequest,
+    getUserRepoPermission,
+} from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
 import { PullRequestDescriptionSection } from "./_components/description";
 import { TimelineSection } from "./_components/timeline-section";
@@ -47,9 +51,24 @@ export default async function PullRequestPage({ params }: PageProps) {
         number,
     );
 
+    const currentUserLogin = (await getAuthenticatedUser(accessToken)).login;
+    const userPermission = await getUserRepoPermission(
+        accessToken,
+        owner,
+        repo,
+        currentUserLogin,
+    ).catch(() => null);
+    const pr = await pullRequest;
+    const canInteract =
+        !pr.locked ||
+        userPermission === "admin" ||
+        userPermission === "write" ||
+        currentUserLogin === pr.user?.login;
+
     return (
         <Suspense>
             <PullRequestPageContent
+                canInteract={canInteract}
                 number={number}
                 owner={owner}
                 pullRequestPromise={pullRequest}
@@ -64,6 +83,7 @@ interface PullRequestPageContentProps {
     repo: string;
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData>;
+    canInteract: boolean;
 }
 
 function PullRequestPageContent({
@@ -71,17 +91,24 @@ function PullRequestPageContent({
     repo,
     number,
     pullRequestPromise,
+    canInteract,
 }: PullRequestPageContentProps) {
     return (
         <div className="px-6 py-8">
             <PullRequestDescriptionSection
+                canInteract={canInteract}
                 pullRequestPromise={pullRequestPromise}
                 owner={owner}
                 repo={repo}
                 number={number}
             />
 
-            <TimelineSection number={number} owner={owner} repo={repo} />
+            <TimelineSection
+                canInteract={canInteract}
+                number={number}
+                owner={owner}
+                repo={repo}
+            />
         </div>
     );
 }

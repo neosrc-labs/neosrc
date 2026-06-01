@@ -51,6 +51,7 @@ interface TimelineEventProps {
     commentReactions: Record<number, GQLReactionNode[]>;
     currentUserLogin: string;
     allComments: ReviewComment[];
+    canInteract: boolean;
 }
 
 export function TimelineEvent({
@@ -61,6 +62,7 @@ export function TimelineEvent({
     commentReactions,
     currentUserLogin,
     allComments,
+    canInteract,
 }: TimelineEventProps) {
     if (wrapper.type === "aggregated-label") {
         return <AggregatedLabel wrapper={wrapper} />;
@@ -79,6 +81,7 @@ export function TimelineEvent({
                     commentReactions={commentReactions}
                     currentUserLogin={currentUserLogin}
                     allComments={allComments}
+                    canInteract={canInteract}
                 />
             </div>
         </div>
@@ -252,6 +255,7 @@ function EventContent({
     commentReactions,
     currentUserLogin,
     allComments,
+    canInteract,
 }: {
     event: GQLTimelineEvent;
     owner: string;
@@ -260,6 +264,7 @@ function EventContent({
     commentReactions: Record<number, GQLReactionNode[]>;
     currentUserLogin: string;
     allComments: ReviewComment[];
+    canInteract: boolean;
 }) {
     const [editingCommentId, setEditingCommentId] = useState<number | null>(
         null,
@@ -497,6 +502,7 @@ function EventContent({
                             <>
                                 {!isEditing && currentUserLogin && (
                                     <ReactionPicker
+                                        disabled={!canInteract}
                                         reactions={commentReactionsArr}
                                         currentUserLogin={currentUserLogin}
                                         onReact={(content) =>
@@ -521,7 +527,7 @@ function EventContent({
                                         Hide comment
                                     </button>
                                 )}
-                                {isAuthor && (
+                                {isAuthor && canInteract && (
                                     <button
                                         type="button"
                                         className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
@@ -542,6 +548,7 @@ function EventContent({
                             commentReactionsArr.length > 0 && (
                                 <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
                                     <ReactionBar
+                                        disabled={!canInteract}
                                         reactions={commentReactionsArr}
                                         currentUserLogin={currentUserLogin}
                                         onReact={(content) =>
@@ -632,6 +639,7 @@ function EventContent({
                                     <div className="flex items-center gap-1">
                                         {!isEditing && currentUserLogin && (
                                             <ReactionPicker
+                                                disabled={!canInteract}
                                                 reactions={reviewReactionsArr}
                                                 currentUserLogin={
                                                     currentUserLogin
@@ -643,7 +651,7 @@ function EventContent({
                                                 }
                                             />
                                         )}
-                                        {isAuthor && (
+                                        {isAuthor && canInteract && (
                                             <button
                                                 type="button"
                                                 className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
@@ -664,6 +672,7 @@ function EventContent({
                                     reviewReactionsArr.length > 0 && (
                                         <div className="px-3 pb-3">
                                             <ReactionBar
+                                                disabled={!canInteract}
                                                 reactions={reviewReactionsArr}
                                                 currentUserLogin={
                                                     currentUserLogin
@@ -694,6 +703,7 @@ function EventContent({
                         state={state}
                         allComments={allComments}
                         currentUserLogin={currentUserLogin}
+                        canInteract={canInteract}
                     />
                 </>
             );

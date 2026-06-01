@@ -32,6 +32,7 @@ interface InlineCommentThreadProps {
     repo: string;
     number: number;
     pendingReviewId?: number | null;
+    canInteract?: boolean;
 }
 
 export function InlineCommentThread({
@@ -41,6 +42,7 @@ export function InlineCommentThread({
     repo,
     number,
     pendingReviewId,
+    canInteract = true,
 }: InlineCommentThreadProps) {
     const [showReplyForm, setShowReplyForm] = useState(false);
     const [replyBody, setReplyBody] = useState("");
@@ -188,6 +190,7 @@ export function InlineCommentThread({
                 }
                 reactions={reactionMap[parentComment.id] ?? []}
                 currentUserLogin={currentUserLogin}
+                canInteract={canInteract}
                 onStartEdit={() => {
                     setEditBody(parentComment.body);
                     setEditingCommentId(parentComment.id);
@@ -218,9 +221,12 @@ export function InlineCommentThread({
                         editBody={
                             editingCommentId === comment.id ? editBody : ""
                         }
-                        displayBody={savedBodies[comment.id] ?? comment.body}
+                        displayBody={
+                            savedBodies[comment.id] ?? comment.body
+                        }
                         reactions={reactionMap[comment.id] ?? []}
                         currentUserLogin={currentUserLogin}
+                        canInteract={canInteract}
                         onStartEdit={() => {
                             setEditBody(comment.body);
                             setEditingCommentId(comment.id);
@@ -239,48 +245,50 @@ export function InlineCommentThread({
                     />
                 </div>
             ))}
-            {showReplyForm ? (
-                <div className="bg-gray-50 p-2 dark:bg-zinc-950">
-                    <MarkdownEditor
-                        disabled={replyMutation.isPending}
-                        onChange={setReplyBody}
-                        onCancel={() => {
-                            setShowReplyForm(false);
-                            setReplyBody("");
-                        }}
-                        placeholder="Write a reply..."
-                        value={replyBody}
-                        owner={owner}
-                        repo={repo}
-                        footerActions={[
-                            {
-                                label: "Reply",
-                                onClick: () => handleReply(),
-                                variant: "approve",
-                                disabled: (text: string) => !text.trim(),
-                            },
-                        ]}
-                    />
-                    {replyMutation.isError && (
-                        <p className="mt-1 text-red-600 text-xs">
-                            Failed to post reply. Please try again.
-                        </p>
-                    )}
-                </div>
-            ) : (
-                <div className="flex w-full items-center gap-2 bg-gray-50 px-6 py-2 dark:bg-zinc-950">
-                    <div className="min-w-0 flex-1">
-                        <ReplyTextboxButton
-                            onClick={() => setShowReplyForm(true)}
+            {canInteract ? (
+                showReplyForm ? (
+                    <div className="bg-gray-50 p-2 dark:bg-zinc-950">
+                        <MarkdownEditor
+                            disabled={replyMutation.isPending}
+                            onChange={setReplyBody}
+                            onCancel={() => {
+                                setShowReplyForm(false);
+                                setReplyBody("");
+                            }}
+                            placeholder="Write a reply..."
+                            value={replyBody}
+                            owner={owner}
+                            repo={repo}
+                            footerActions={[
+                                {
+                                    label: "Reply",
+                                    onClick: () => handleReply(),
+                                    variant: "approve",
+                                    disabled: (text: string) => !text.trim(),
+                                },
+                            ]}
+                        />
+                        {replyMutation.isError && (
+                            <p className="mt-1 text-red-600 text-xs">
+                                Failed to post reply. Please try again.
+                            </p>
+                        )}
+                    </div>
+                ) : (
+                    <div className="flex w-full items-center gap-2 bg-gray-50 px-6 py-2 dark:bg-zinc-950">
+                        <div className="min-w-0 flex-1">
+                            <ReplyTextboxButton
+                                onClick={() => setShowReplyForm(true)}
+                            />
+                        </div>
+                        <ResolveButton
+                            onClick={handleResolve}
+                            isPending={resolveMutation.isPending}
+                            isUnresolve={threadInfo?.isResolved ?? false}
                         />
                     </div>
-                    <ResolveButton
-                        onClick={handleResolve}
-                        isPending={resolveMutation.isPending}
-                        isUnresolve={threadInfo?.isResolved ?? false}
-                    />
-                </div>
-            )}
+                )
+            ) : null}
         </div>
     );
 }
@@ -294,6 +302,7 @@ function Comment({
     displayBody,
     reactions,
     currentUserLogin,
+    canInteract,
     onStartEdit,
     onEditBodyChange,
     onCancelEdit,
@@ -312,6 +321,7 @@ function Comment({
     displayBody: string;
     reactions: Reaction[];
     currentUserLogin: string;
+    canInteract: boolean;
     onStartEdit: () => void;
     onEditBodyChange: (body: string) => void;
     onCancelEdit: () => void;
@@ -341,11 +351,12 @@ function Comment({
             headerActions={
                 <>
                     <ReactionPicker
+                        disabled={!canInteract}
                         reactions={reactions}
                         currentUserLogin={currentUserLogin}
                         onReact={onReact}
                     />
-                    {isAuthor && (
+                    {isAuthor && canInteract && (
                         <button
                             type="button"
                             className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
@@ -354,37 +365,40 @@ function Comment({
                             <SquarePen size={14} />
                         </button>
                     )}
-                    <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-                        <PopoverTrigger asChild>
-                            <button
-                                type="button"
-                                className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                    {canInteract && (
+                        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+                            <PopoverTrigger asChild>
+                                <button
+                                    type="button"
+                                    className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                >
+                                    <MoreVertical size={14} />
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                className="w-44 bg-white p-1 dark:bg-zinc-950"
+                                align="end"
                             >
-                                <MoreVertical size={14} />
-                            </button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                            className="w-44 bg-white p-1 dark:bg-zinc-950"
-                            align="end"
-                        >
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    onDelete();
-                                    setMenuOpen(false);
-                                }}
-                                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-300 dark:hover:bg-red-950 dark:hover:text-red-400"
-                            >
-                                <Trash2 size={14} />
-                                Delete comment
-                            </button>
-                        </PopoverContent>
-                    </Popover>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        onDelete();
+                                        setMenuOpen(false);
+                                    }}
+                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-300 dark:hover:bg-red-950 dark:hover:text-red-400"
+                                >
+                                    <Trash2 size={14} />
+                                    Delete comment
+                                </button>
+                            </PopoverContent>
+                        </Popover>
+                    )}
                 </>
             }
             footer={
                 <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
                     <ReactionBar
+                        disabled={!canInteract}
                         reactions={reactions}
                         currentUserLogin={currentUserLogin}
                         onReact={onReact}

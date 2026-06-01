@@ -19,16 +19,18 @@ interface ReactionPickerProps {
     reactions: ReactionItem[];
     currentUserLogin?: string | null;
     onReact: (content: ReactionContent) => void;
+    disabled?: boolean;
 }
 
 export function ReactionPicker({
     reactions,
     currentUserLogin,
     onReact,
+    disabled,
 }: ReactionPickerProps) {
     const [open, setOpen] = useState(false);
 
-    if (!currentUserLogin) return null;
+    if (!currentUserLogin || disabled) return null;
 
     const availableReactions = ALL_REACTIONS.filter(
         (c) =>

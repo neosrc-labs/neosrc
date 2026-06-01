@@ -1,5 +1,6 @@
 "use client";
 
+import { Lock } from "lucide-react";
 import { useCallback, useState } from "react";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { api } from "~/trpc/react";
@@ -8,9 +9,15 @@ interface CommentFormProps {
     owner: string;
     repo: string;
     number: number;
+    disabled?: boolean;
 }
 
-export function CommentForm({ owner, repo, number }: CommentFormProps) {
+export function CommentForm({
+    owner,
+    repo,
+    number,
+    disabled,
+}: CommentFormProps) {
     const [body, setBody] = useState("");
     const utils = api.useUtils();
 
@@ -25,6 +32,20 @@ export function CommentForm({ owner, repo, number }: CommentFormProps) {
         if (!body.trim()) return;
         addComment.mutate({ owner, repo, number, body });
     }, [body, owner, repo, number, addComment]);
+
+    if (disabled) {
+        return (
+            <div className="mt-6 border-gray-200 border-t pt-6">
+                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+                    <Lock size={14} />
+                    <span>
+                        This pull request is locked. Only collaborators can
+                        comment.
+                    </span>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="mt-6 border-gray-200 border-t pt-6">
