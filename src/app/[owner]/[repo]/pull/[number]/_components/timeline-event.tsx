@@ -23,6 +23,7 @@ import {
     Trash2,
     User,
 } from "lucide-react";
+import NextLink from "next/link";
 import { useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
@@ -736,7 +737,12 @@ function EventContent({
                     <div>
                         <p>{commit?.message.split("\n")[0]}</p>
                     </div>
-                    <code className="text-xs">{commit?.oid.slice(0, 7)}</code>
+                    <NextLink
+                        href={`/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
+                        className="font-mono text-gray-600 text-xs hover:text-blue-600 hover:underline dark:text-zinc-400 dark:hover:text-blue-400"
+                    >
+                        {commit?.oid.slice(0, 7)}
+                    </NextLink>
                 </div>
             );
         }
@@ -754,20 +760,45 @@ function EventContent({
 
         case "HeadRefForcePushedEvent": {
             const timestamp = formatRelativeTime(event.createdAt);
-            const before = event.beforeCommit?.oid.slice(0, 7) ?? "unknown";
-            const after = event.afterCommit?.oid.slice(0, 7) ?? "unknown";
+            const beforeShort =
+                event.beforeCommit?.oid.slice(0, 7) ?? "unknown";
+            const afterShort = event.afterCommit?.oid.slice(0, 7) ?? "unknown";
+            const beforeHref = event.beforeCommit?.oid
+                ? `/${owner}/${repo}/pull/${number}/changes/${event.beforeCommit.oid}`
+                : null;
+            const afterHref = event.afterCommit?.oid
+                ? `/${owner}/${repo}/pull/${number}/changes/${event.afterCommit.oid}`
+                : null;
             return (
                 <EventRow>
                     <UserLink actor={event.actor} />
                     <p>
                         {"force pushed from "}
-                        <code className="rounded bg-gray-100 px-1 text-xs dark:bg-zinc-800">
-                            {before}
-                        </code>
+                        {beforeHref ? (
+                            <NextLink
+                                href={beforeHref}
+                                className="rounded bg-gray-100 px-1 text-xs hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                            >
+                                {beforeShort}
+                            </NextLink>
+                        ) : (
+                            <code className="rounded bg-gray-100 px-1 text-xs dark:bg-zinc-800">
+                                {beforeShort}
+                            </code>
+                        )}
                         {" to "}
-                        <code className="rounded bg-gray-100 px-1 text-xs dark:bg-zinc-800">
-                            {after}
-                        </code>
+                        {afterHref ? (
+                            <NextLink
+                                href={afterHref}
+                                className="rounded bg-gray-100 px-1 text-xs hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                            >
+                                {afterShort}
+                            </NextLink>
+                        ) : (
+                            <code className="rounded bg-gray-100 px-1 text-xs dark:bg-zinc-800">
+                                {afterShort}
+                            </code>
+                        )}
                     </p>
                     {timestamp}
                 </EventRow>
