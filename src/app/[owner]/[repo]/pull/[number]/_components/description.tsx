@@ -211,7 +211,7 @@ export function PullRequestDescriptionSection({
                                     {pullRequest.base.ref}
                                 </span>
                                 <span className="mx-2">←</span>
-                                <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs">
+                                <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs dark:bg-zinc-700">
                                     {pullRequest.head.ref}
                                 </span>
                             </div>
