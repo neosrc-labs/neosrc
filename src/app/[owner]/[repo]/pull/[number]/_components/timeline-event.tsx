@@ -43,6 +43,12 @@ import { formatRelativeTime } from "~/utils";
 import { ReviewComments } from "./review-comments";
 import type { TimelineWrapper } from "./timeline-types";
 
+const formatReason = (reason: string) =>
+    reason
+        .toLowerCase()
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+
 interface TimelineEventProps {
     wrapper: TimelineWrapper;
     owner: string;
@@ -457,7 +463,11 @@ function EventContent({
                                     </span>{" "}
                                     was minimized as{" "}
                                     <span className="font-medium text-gray-700 dark:text-zinc-300">
-                                        {event.minimizedReason ?? "outdated"}
+                                        {event.minimizedReason
+                                            ? formatReason(
+                                                  event.minimizedReason,
+                                              )
+                                            : "outdated"}
                                     </span>
                                 </p>
                                 <button
@@ -978,11 +988,6 @@ function EventContent({
 
         case "LockedEvent": {
             const timestamp = formatRelativeTime(event.createdAt);
-            const formatLockReason = (reason: string) =>
-                reason
-                    .toLowerCase()
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, (c) => c.toUpperCase());
             return (
                 <EventRow>
                     <UserLink actor={event.actor} />
@@ -992,7 +997,7 @@ function EventContent({
                             <>
                                 {" (reason: "}
                                 <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                    {formatLockReason(event.lockReason)}
+                                    {formatReason(event.lockReason)}
                                 </span>
                                 {")"}
                             </>
