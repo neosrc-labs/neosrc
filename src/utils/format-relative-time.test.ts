@@ -165,14 +165,14 @@ describe("formatRelativeTime", () => {
             );
         });
 
-        it("handles boundary: 60 minutes → 1 hour", () => {
+        it("handles boundary: 60 minutes -> 1 hour", () => {
             const now = new Date("2025-01-15T13:00:00Z");
             expect(formatRelativeTime("2025-01-15T12:00:00Z", now)).toBe(
                 "1 hour ago",
             );
         });
 
-        it("handles boundary: 24 hours → 1 day", () => {
+        it("handles boundary: 24 hours -> 1 day", () => {
             const now = new Date("2025-01-16T12:00:00Z");
             expect(formatRelativeTime("2025-01-15T12:00:00Z", now)).toBe(
                 "1 day ago",

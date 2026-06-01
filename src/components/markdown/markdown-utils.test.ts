@@ -8,8 +8,6 @@ import {
     getListPrefixLength,
 } from "./markdown-utils";
 
-// ── findLineStart ──────────────────────────────────────────────────────────
-
 describe("findLineStart", () => {
     it("returns 0 for position 0 in a single line", () => {
         expect(findLineStart("hello world", 0)).toBe(0);
@@ -27,8 +25,6 @@ describe("findLineStart", () => {
         expect(findLineStart("a\nb\nc", 2)).toBe(2);
     });
 });
-
-// ── getListPrefixLength ────────────────────────────────────────────────────
 
 describe("getListPrefixLength", () => {
     it("returns 6 for unchecked task list items", () => {
@@ -61,8 +57,6 @@ describe("getListPrefixLength", () => {
         expect(getListPrefixLength("> quote")).toBe(0);
     });
 });
-
-// ── findEnclosingCodeBlock ─────────────────────────────────────────────────
 
 describe("findEnclosingCodeBlock", () => {
     const codeExample = "before\n```\ncode\n```\nafter";
@@ -111,8 +105,6 @@ describe("findEnclosingCodeBlock", () => {
         expect(content).toBe("second");
     });
 });
-
-// ── applyInlineFormat (bold, italic, strikethrough, code) ──────────────────
 
 describe("applyInlineFormat", () => {
     describe("with selected text", () => {
@@ -195,8 +187,6 @@ describe("applyInlineFormat", () => {
     });
 });
 
-// ── applyListFormat ────────────────────────────────────────────────────────
-
 describe("applyListFormat", () => {
     describe("toggle off - same prefix exists", () => {
         it("removes unordered list prefix", () => {
@@ -264,8 +254,6 @@ describe("applyListFormat", () => {
         });
     });
 });
-
-// ── applyCodeBlockFormat ───────────────────────────────────────────────────
 
 describe("applyCodeBlockFormat", () => {
     describe("toggle off - inside a code block", () => {
