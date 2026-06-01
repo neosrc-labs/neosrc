@@ -978,6 +978,11 @@ function EventContent({
 
         case "LockedEvent": {
             const timestamp = formatRelativeTime(event.createdAt);
+            const formatLockReason = (reason: string) =>
+                reason
+                    .toLowerCase()
+                    .replace(/_/g, " ")
+                    .replace(/\b\w/g, (c) => c.toUpperCase());
             return (
                 <EventRow>
                     <UserLink actor={event.actor} />
@@ -987,7 +992,7 @@ function EventContent({
                             <>
                                 {" (reason: "}
                                 <span className="font-medium text-gray-800 dark:text-zinc-200">
-                                    {event.lockReason}
+                                    {formatLockReason(event.lockReason)}
                                 </span>
                                 {")"}
                             </>
