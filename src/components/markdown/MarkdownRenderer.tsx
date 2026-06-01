@@ -1,7 +1,13 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { type CSSProperties, createContext, useContext } from "react";
+import {
+    type CSSProperties,
+    createContext,
+    useContext,
+    useEffect,
+    useState,
+} from "react";
 import ReactMarkdown from "react-markdown";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import darkTheme from "react-syntax-highlighter/dist/esm/styles/hljs/atom-one-dark";
@@ -48,7 +54,21 @@ function CodeElement({
 }) {
     const { resolvedTheme } = useTheme();
     const inCodeBlock = useContext(CodeBlockContext);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     if (className || inCodeBlock) {
+        if (!mounted) {
+            return (
+                <pre className="overflow-x-auto rounded-lg bg-zinc-100 p-2 text-sm dark:bg-zinc-800">
+                    <code className={className}>{children}</code>
+                </pre>
+            );
+        }
+
         const style = resolvedTheme === "dark" ? darkTheme : lightTheme;
         const extraStyles: CSSProperties =
             resolvedTheme === "dark" ? {} : { background: "#f0f0f0" };
