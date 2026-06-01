@@ -32,8 +32,8 @@
     --color-success-emphasis: #238636;
 }
 
-.markdown-alert > :last-child {
-    margin-bottom: 0 !important;
+.markdown-alert > :last-child:not(#\#) {
+    margin-bottom: 0;
 }
 
 .markdown-alert .markdown-alert-title {
@@ -44,8 +44,8 @@
     line-height: 1;
 }
 
-.markdown-alert .markdown-alert-title svg.octicon {
-    margin-right: 8px !important;
+.markdown-alert .markdown-alert-title svg.octicon.octicon {
+    margin-right: 8px;
     fill: currentColor;
 }
 

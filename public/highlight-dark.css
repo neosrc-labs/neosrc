@@ -3,6 +3,7 @@ pre code.hljs {
     overflow-x: auto;
     padding: 1em;
 }
+/* biome-ignore lint/style/noDescendingSpecificity: vendored highlight.js theme */
 code.hljs {
     padding: 3px 5px;
 } /*!
@@ -48,7 +49,8 @@ code.hljs {
 }
 .hljs-meta .hljs-string,
 .hljs-regexp,
-.hljs-string {
+/* biome-ignore lint/style/noDescendingSpecificity: vendored highlight.js theme */
+    .hljs-string {
     color: #a5d6ff;
 }
 .hljs-built_in,

@@ -1,6 +1,6 @@
 import { Octokit, type RestEndpointMethodTypes } from "@octokit/rest";
 import { cache } from "react";
-
+import type { GQLActor } from "~/server/github-graphql";
 export type PullsGetResponseData =
     RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
 export type PullsListCommitsResponseData =
@@ -1162,6 +1162,22 @@ export const removeReviewersFromPullRequest = async (
     return response.data;
 };
 
+type RawReviewThreadComment = {
+    databaseId: number;
+    body: string;
+    author: GQLActor | null;
+    createdAt: string;
+    replyTo: { databaseId: number } | null;
+};
+
+type RawReviewThreadNode = {
+    id: string;
+    isResolved: boolean;
+    isOutdated: boolean;
+    path: string | null;
+    comments: { nodes: (RawReviewThreadComment | null)[] };
+};
+
 export type ReviewThreadData = {
     id: string;
     isResolved: boolean;
@@ -1248,10 +1264,10 @@ export const getReviewThreads = async (
 
     return threadNodes
         .filter((thread: unknown) => thread != null)
-        .map((thread: any) => {
+        .map((thread: RawReviewThreadNode) => {
             const comments = (thread.comments?.nodes ?? [])
-                .filter((c: unknown) => c != null)
-                .map((c: any) => ({
+                .filter((c): c is RawReviewThreadComment => c != null)
+                .map((c) => ({
                     id: c.databaseId,
                     body: c.body,
                     author: c.author,
