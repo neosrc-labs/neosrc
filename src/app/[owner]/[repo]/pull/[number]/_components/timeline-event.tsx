@@ -116,7 +116,10 @@ function AggregatedLabel({
                                     : i > 0
                                       ? ", "
                                       : ""}
-                                <Label color={c.label.color}>
+                                <Label
+                                    color={c.label.color}
+                                    description={c.label.description ?? undefined}
+                                >
                                     {c.label.name}
                                 </Label>
                             </span>
@@ -134,7 +137,10 @@ function AggregatedLabel({
                                     : i > 0
                                       ? ", "
                                       : ""}
-                                <Label color={c.label.color}>
+                                <Label
+                                    color={c.label.color}
+                                    description={c.label.description ?? undefined}
+                                >
                                     {c.label.name}
                                 </Label>
                             </span>

@@ -1,7 +1,7 @@
 import type { GQLActor, GQLTimelineEvent } from "~/server/github-graphql";
 
 export type LabelChange = {
-    label: { name: string; color: string };
+    label: { name: string; color: string; description: string | null };
     event: "labeled" | "unlabeled";
     actor: GQLActor;
     createdAt: string;

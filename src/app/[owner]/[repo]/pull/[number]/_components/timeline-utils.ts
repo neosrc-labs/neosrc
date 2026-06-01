@@ -53,6 +53,7 @@ function aggregateEvents(events: GQLTimelineEvent[]): TimelineWrapper[] {
                         label: {
                             name: current.label.name,
                             color: current.label.color,
+                            description: current.label.description,
                         },
                         event:
                             current.__typename === "LabeledEvent"

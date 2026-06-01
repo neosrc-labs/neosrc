@@ -152,7 +152,10 @@ function LabelSectionSettings({
             renderItem={(l, selected) => (
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <div className="flex items-center gap-2">
-                        <LabelComponent color={l.color}>
+                        <LabelComponent
+                            color={l.color}
+                            description={l.description ?? undefined}
+                        >
                             {l.name}
                         </LabelComponent>
                         {selected && (
@@ -203,7 +206,10 @@ function LabelSectionContent({
         <div className="flex flex-wrap gap-1.5">
             {displayLabels.map((label) => (
                 <div key={label.name}>
-                    <LabelComponent color={label.color}>
+                    <LabelComponent
+                        color={label.color}
+                        description={label.description ?? undefined}
+                    >
                         {label.name}
                         {canEdit && (
                             <button

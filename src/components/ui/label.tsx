@@ -6,6 +6,7 @@ import { cn } from "~/lib/utils";
 
 interface LabelProps extends React.HTMLAttributes<HTMLElement> {
     color: string;
+    description?: string;
 }
 
 function luminance(hex: string): number {
@@ -30,7 +31,7 @@ function getBgColor(hex: string, darkMode: boolean): string {
     return `#${hex}`;
 }
 
-export function Label({ color, className, children }: LabelProps) {
+export function Label({ color, description, className, children }: LabelProps) {
     const { resolvedTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
 
@@ -53,6 +54,7 @@ export function Label({ color, className, children }: LabelProps) {
                 backgroundColor: getBgColor(color, darkMode),
                 color: getTextColor(color, darkMode),
             }}
+            title={description}
         >
             {children}
         </span>

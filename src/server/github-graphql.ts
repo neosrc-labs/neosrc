@@ -157,13 +157,13 @@ query PullRequestTimeline(
 						id
 						actor { ...SimpleUser }
 						createdAt
-						label { name color }
+						label { name color description }
 					}
 					... on UnlabeledEvent {
 						id
 						actor { ...SimpleUser }
 						createdAt
-						label { name color }
+						label { name color description }
 					}
 					... on RenamedTitleEvent {
 						id
@@ -283,7 +283,7 @@ export type GQLReactionNode = {
     user: { login: string; avatarUrl?: string } | null;
 };
 
-export type GQLLabel = { name: string; color: string };
+export type GQLLabel = { name: string; color: string; description: string | null };
 
 export type GQLIssueComment = {
     __typename: "IssueComment";
