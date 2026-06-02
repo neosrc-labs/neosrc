@@ -13,7 +13,7 @@ export const usersRouter = createTRPCRouter({
         const accessToken = await getGitHubToken(ctx.db, ctx.session.user.id);
 
         const user = await getAuthenticatedUser(accessToken);
-        return { login: user.login };
+        return { login: user.login, avatarUrl: user.avatar_url };
     }),
     getByUsername: protectedProcedure
         .input(
