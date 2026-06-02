@@ -1,16 +1,20 @@
 "use client";
 
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import {
+    PanelLeftClose,
+    PanelLeftOpen,
+    PanelRightClose,
+    PanelRightOpen,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { useRightSidebar } from "./right-sidebar-context";
+import { useSidebar } from "./sidebar-context";
 import { ThemeToggle } from "./ThemeToggle";
 
 export function Header() {
     const pathname = usePathname();
     const prMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
-    const { isOpen: isRightSidebarOpen, toggle: toggleRightSidebar } =
-        useRightSidebar();
+    const { isLeftOpen, isRightOpen, toggleLeft, toggleRight } = useSidebar();
 
     const headerRef = useRef(null);
 
@@ -37,29 +41,47 @@ export function Header() {
             ref={headerRef}
         >
             <div className="px-4 sm:px-6 lg:px-8">
-                <div className="flex h-16 items-center">
+                <div className="flex h-16 items-center gap-1">
                     {prMatch && (
-                        <a
-                            className="font-medium text-gray-700 text-sm hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
-                            href={`https://github.com/${prMatch[1]}/${prMatch[2]}/pull/${prMatch[3]}?neosrc_exit=1`}
-                        >
-                            ← Back to GitHub
-                        </a>
+                        <>
+                            <a
+                                className="font-medium text-gray-700 text-sm hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
+                                href={`https://github.com/${prMatch[1]}/${prMatch[2]}/pull/${prMatch[3]}?neosrc_exit=1`}
+                            >
+                                ← Back to GitHub
+                            </a>
+                            <button
+                                className="flex size-8 cursor-pointer items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
+                                onClick={toggleLeft}
+                                title={
+                                    isLeftOpen
+                                        ? "Close left sidebar"
+                                        : "Open left sidebar"
+                                }
+                                type="button"
+                            >
+                                {isLeftOpen ? (
+                                    <PanelLeftClose size={18} />
+                                ) : (
+                                    <PanelLeftOpen size={18} />
+                                )}
+                            </button>
+                        </>
                     )}
                     <div className="ml-auto flex items-center gap-1">
                         <ThemeToggle />
                         {prMatch && (
                             <button
                                 className="flex size-8 cursor-pointer items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
-                                onClick={toggleRightSidebar}
+                                onClick={toggleRight}
                                 title={
-                                    isRightSidebarOpen
-                                        ? "Close sidebar"
-                                        : "Open sidebar"
+                                    isRightOpen
+                                        ? "Close right sidebar"
+                                        : "Open right sidebar"
                                 }
                                 type="button"
                             >
-                                {isRightSidebarOpen ? (
+                                {isRightOpen ? (
                                     <PanelRightClose size={18} />
                                 ) : (
                                     <PanelRightOpen size={18} />

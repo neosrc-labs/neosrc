@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 
 import { Header } from "~/components/Header";
-import { RightSidebarProvider } from "~/components/right-sidebar-context";
+import { SidebarProvider } from "~/components/sidebar-context";
 import { ThemeProvider } from "~/components/ThemeProvider";
 import { ThemeStylesheets } from "~/components/ThemeStylesheets";
 import { TRPCReactProvider } from "~/trpc/react";
@@ -37,11 +37,11 @@ export default function RootLayout({
                     defaultTheme="system"
                     enableSystem
                 >
-                    <RightSidebarProvider>
+                    <SidebarProvider>
                         <Header />
                         <ThemeStylesheets />
                         <TRPCReactProvider>{children}</TRPCReactProvider>
-                    </RightSidebarProvider>
+                    </SidebarProvider>
                 </ThemeProvider>
             </body>
         </html>
