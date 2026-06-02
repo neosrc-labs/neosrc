@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle, Circle, Loader2, XCircle } from "lucide-react";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
 import type {
     CheckRun,
@@ -30,7 +30,18 @@ export default function RightSidebar({
     repo,
     number,
 }: RightSidebarProps) {
-    const [tab, setTab] = useState<"checks" | "commits">("checks");
+    const [tab, setTab] = useState<"checks" | "commits">(
+        checksPromise ? "checks" : "commits",
+    );
+
+    useEffect(() => {
+        if (!checksPromise) return;
+        checksPromise.then((checks) => {
+            if (!checks || checks.length === 0) {
+                setTab("commits");
+            }
+        });
+    }, [checksPromise]);
 
     if (!pullRequestPromise) {
         return (
