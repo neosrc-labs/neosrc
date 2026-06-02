@@ -10,6 +10,8 @@ const DEFAULT_LEFT_WIDTH = 250;
 const DEFAULT_RIGHT_WIDTH = 300;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 500;
+const DRAG_MIN = 50;
+const COLLAPSE_THRESHOLD = 100;
 
 interface ResizableLayoutProps {
     leftSidebar: ReactNode;
@@ -22,13 +24,14 @@ export function ResizableLayout({
     children,
     rightSidebar,
 }: ResizableLayoutProps) {
-    const { isLeftOpen, isRightOpen } = useSidebar();
+    const { isLeftOpen, isRightOpen, toggleLeft, toggleRight } = useSidebar();
     const [leftWidth, setLeftWidth] = useState(DEFAULT_LEFT_WIDTH);
     const [rightWidth, setRightWidth] = useState(DEFAULT_RIGHT_WIDTH);
     const isDraggingRef = useRef(false);
     const dragSideRef = useRef<"left" | "right">("left");
     const startXRef = useRef(0);
     const startWidthRef = useRef(DEFAULT_LEFT_WIDTH);
+    const currentWidthRef = useRef(DEFAULT_LEFT_WIDTH);
 
     // Load saved widths from localStorage on mount
     useEffect(() => {
@@ -62,7 +65,9 @@ export function ResizableLayout({
             isDraggingRef.current = true;
             dragSideRef.current = side;
             startXRef.current = e.clientX;
-            startWidthRef.current = side === "left" ? leftWidth : rightWidth;
+            const initialWidth = side === "left" ? leftWidth : rightWidth;
+            startWidthRef.current = initialWidth;
+            currentWidthRef.current = initialWidth;
 
             document.body.style.cursor = "col-resize";
             document.body.style.userSelect = "none";
@@ -76,16 +81,17 @@ export function ResizableLayout({
                 if (dragSideRef.current === "left") {
                     newWidth = Math.min(
                         MAX_WIDTH,
-                        Math.max(MIN_WIDTH, startWidthRef.current + delta),
+                        Math.max(DRAG_MIN, startWidthRef.current + delta),
                     );
                     setLeftWidth(newWidth);
                 } else {
                     newWidth = Math.min(
                         MAX_WIDTH,
-                        Math.max(MIN_WIDTH, startWidthRef.current - delta),
+                        Math.max(DRAG_MIN, startWidthRef.current - delta),
                     );
                     setRightWidth(newWidth);
                 }
+                currentWidthRef.current = newWidth;
             };
 
             const handleMouseUp = () => {
@@ -93,13 +99,31 @@ export function ResizableLayout({
                 document.body.style.cursor = "";
                 document.body.style.userSelect = "";
 
-                const key =
-                    dragSideRef.current === "left"
-                        ? LEFT_STORAGE_KEY
-                        : RIGHT_STORAGE_KEY;
-                const finalWidth =
-                    dragSideRef.current === "left" ? leftWidth : rightWidth;
-                localStorage.setItem(key, finalWidth.toString());
+                const side = dragSideRef.current;
+                const finalWidth = currentWidthRef.current;
+
+                if (finalWidth < COLLAPSE_THRESHOLD) {
+                    if (side === "left") {
+                        toggleLeft();
+                        setLeftWidth(DEFAULT_LEFT_WIDTH);
+                    } else {
+                        toggleRight();
+                        setRightWidth(DEFAULT_RIGHT_WIDTH);
+                    }
+                } else {
+                    const clamped = Math.min(
+                        MAX_WIDTH,
+                        Math.max(MIN_WIDTH, finalWidth),
+                    );
+                    if (side === "left") {
+                        setLeftWidth(clamped);
+                    } else {
+                        setRightWidth(clamped);
+                    }
+                    const key =
+                        side === "left" ? LEFT_STORAGE_KEY : RIGHT_STORAGE_KEY;
+                    localStorage.setItem(key, clamped.toString());
+                }
 
                 document.removeEventListener("mousemove", handleMouseMove);
                 document.removeEventListener("mouseup", handleMouseUp);
