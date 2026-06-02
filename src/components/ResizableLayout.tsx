@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useSidebar } from "./sidebar-context";
 
 const LEFT_STORAGE_KEY = "neosrc-sidebar-width";
@@ -32,33 +32,6 @@ export function ResizableLayout({
     const startXRef = useRef(0);
     const startWidthRef = useRef(DEFAULT_LEFT_WIDTH);
     const currentWidthRef = useRef(DEFAULT_LEFT_WIDTH);
-
-    // Load saved widths from localStorage on mount
-    useEffect(() => {
-        const savedLeft = localStorage.getItem(LEFT_STORAGE_KEY);
-        if (savedLeft) {
-            const parsed = parseInt(savedLeft, 10);
-            if (
-                !Number.isNaN(parsed) &&
-                parsed >= MIN_WIDTH &&
-                parsed <= MAX_WIDTH
-            ) {
-                setLeftWidth(parsed);
-            }
-        }
-
-        const savedRight = localStorage.getItem(RIGHT_STORAGE_KEY);
-        if (savedRight) {
-            const parsed = parseInt(savedRight, 10);
-            if (
-                !Number.isNaN(parsed) &&
-                parsed >= MIN_WIDTH &&
-                parsed <= MAX_WIDTH
-            ) {
-                setRightWidth(parsed);
-            }
-        }
-    }, []);
 
     const handleMouseDown =
         (side: "left" | "right") => (e: React.MouseEvent) => {
