@@ -139,11 +139,7 @@ export function ReviewerSection({
             <Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
                 {(pullRequest) => {
                     if (reviewsQuery.isPending) {
-                        return (
-                            <div className="mt-2">
-                                <FieldSkeleton />
-                            </div>
-                        );
+                        return <FieldSkeleton />;
                     }
                     const reviewStateMap = buildReviewStateMap(
                         reviewsQuery.data ?? [],
