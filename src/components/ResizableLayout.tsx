@@ -2,10 +2,12 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { useRightSidebar } from "./right-sidebar-context";
+import { useSidebar } from "./sidebar-context";
 
-const STORAGE_KEY = "neosrc-sidebar-width";
-const DEFAULT_WIDTH = 250;
+const LEFT_STORAGE_KEY = "neosrc-sidebar-width";
+const RIGHT_STORAGE_KEY = "neosrc-right-sidebar-width";
+const DEFAULT_LEFT_WIDTH = 250;
+const DEFAULT_RIGHT_WIDTH = 300;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 500;
 
@@ -20,17 +22,19 @@ export function ResizableLayout({
     children,
     rightSidebar,
 }: ResizableLayoutProps) {
-    const { isOpen: isRightSidebarOpen } = useRightSidebar();
-    const [leftWidth, setLeftWidth] = useState(DEFAULT_WIDTH);
+    const { isLeftOpen, isRightOpen } = useSidebar();
+    const [leftWidth, setLeftWidth] = useState(DEFAULT_LEFT_WIDTH);
+    const [rightWidth, setRightWidth] = useState(DEFAULT_RIGHT_WIDTH);
     const isDraggingRef = useRef(false);
+    const dragSideRef = useRef<"left" | "right">("left");
     const startXRef = useRef(0);
-    const startWidthRef = useRef(DEFAULT_WIDTH);
+    const startWidthRef = useRef(DEFAULT_LEFT_WIDTH);
 
-    // Load saved width from localStorage on mount
+    // Load saved widths from localStorage on mount
     useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            const parsed = parseInt(saved, 10);
+        const savedLeft = localStorage.getItem(LEFT_STORAGE_KEY);
+        if (savedLeft) {
+            const parsed = parseInt(savedLeft, 10);
             if (
                 !Number.isNaN(parsed) &&
                 parsed >= MIN_WIDTH &&
@@ -39,59 +43,96 @@ export function ResizableLayout({
                 setLeftWidth(parsed);
             }
         }
+
+        const savedRight = localStorage.getItem(RIGHT_STORAGE_KEY);
+        if (savedRight) {
+            const parsed = parseInt(savedRight, 10);
+            if (
+                !Number.isNaN(parsed) &&
+                parsed >= MIN_WIDTH &&
+                parsed <= MAX_WIDTH
+            ) {
+                setRightWidth(parsed);
+            }
+        }
     }, []);
 
-    const handleMouseDown = (e: React.MouseEvent) => {
-        isDraggingRef.current = true;
-        startXRef.current = e.clientX;
-        startWidthRef.current = leftWidth;
+    const handleMouseDown =
+        (side: "left" | "right") => (e: React.MouseEvent) => {
+            isDraggingRef.current = true;
+            dragSideRef.current = side;
+            startXRef.current = e.clientX;
+            startWidthRef.current = side === "left" ? leftWidth : rightWidth;
 
-        document.body.style.cursor = "col-resize";
-        document.body.style.userSelect = "none";
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
 
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!isDraggingRef.current) return;
+            const handleMouseMove = (e: MouseEvent) => {
+                if (!isDraggingRef.current) return;
 
-            const delta = e.clientX - startXRef.current;
-            const newWidth = Math.min(
-                MAX_WIDTH,
-                Math.max(MIN_WIDTH, startWidthRef.current + delta),
-            );
-            setLeftWidth(newWidth);
+                const delta = e.clientX - startXRef.current;
+                let newWidth: number;
+
+                if (dragSideRef.current === "left") {
+                    newWidth = Math.min(
+                        MAX_WIDTH,
+                        Math.max(MIN_WIDTH, startWidthRef.current + delta),
+                    );
+                    setLeftWidth(newWidth);
+                } else {
+                    newWidth = Math.min(
+                        MAX_WIDTH,
+                        Math.max(MIN_WIDTH, startWidthRef.current - delta),
+                    );
+                    setRightWidth(newWidth);
+                }
+            };
+
+            const handleMouseUp = () => {
+                isDraggingRef.current = false;
+                document.body.style.cursor = "";
+                document.body.style.userSelect = "";
+
+                const key =
+                    dragSideRef.current === "left"
+                        ? LEFT_STORAGE_KEY
+                        : RIGHT_STORAGE_KEY;
+                const finalWidth =
+                    dragSideRef.current === "left" ? leftWidth : rightWidth;
+                localStorage.setItem(key, finalWidth.toString());
+
+                document.removeEventListener("mousemove", handleMouseMove);
+                document.removeEventListener("mouseup", handleMouseUp);
+            };
+
+            document.addEventListener("mousemove", handleMouseMove);
+            document.addEventListener("mouseup", handleMouseUp);
         };
 
-        const handleMouseUp = () => {
-            isDraggingRef.current = false;
-            document.body.style.cursor = "";
-            document.body.style.userSelect = "";
-            localStorage.setItem(STORAGE_KEY, leftWidth.toString());
-
-            document.removeEventListener("mousemove", handleMouseMove);
-            document.removeEventListener("mouseup", handleMouseUp);
-        };
-
-        document.addEventListener("mousemove", handleMouseMove);
-        document.addEventListener("mouseup", handleMouseUp);
+    const getGridTemplateColumns = () => {
+        const cols: string[] = [];
+        if (isLeftOpen) cols.push(`${leftWidth}px`);
+        cols.push("1fr");
+        if (isRightOpen) cols.push(`${rightWidth}px`);
+        return cols.join(" ");
     };
 
     return (
         <div
             className="grid"
-            style={{
-                gridTemplateColumns: isRightSidebarOpen
-                    ? `${leftWidth}px 1fr 300px`
-                    : `${leftWidth}px 1fr`,
-            }}
+            style={{ gridTemplateColumns: getGridTemplateColumns() }}
         >
             {/* Left Sidebar - Sticky */}
-            <div className="relative sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto">
-                {leftSidebar}
-                {/* Drag Handle */}
-                <div
-                    className="absolute top-0 right-0 h-full w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600 dark:bg-zinc-700"
-                    onMouseDown={handleMouseDown}
-                />
-            </div>
+            {isLeftOpen && (
+                <div className="relative sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto">
+                    {leftSidebar}
+                    {/* Drag Handle */}
+                    <div
+                        className="absolute top-0 right-0 z-10 h-full w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600 dark:bg-zinc-700"
+                        onMouseDown={handleMouseDown("left")}
+                    />
+                </div>
+            )}
 
             {/* Middle Section - PR Content */}
             <main className="min-w-0 border-gray-200 border-r bg-white dark:border-zinc-800 dark:bg-zinc-950">
@@ -99,8 +140,13 @@ export function ResizableLayout({
             </main>
 
             {/* Right Sidebar - Sticky */}
-            {isRightSidebarOpen && (
-                <div className="sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto">
+            {isRightOpen && (
+                <div className="relative sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto">
+                    {/* Drag Handle */}
+                    <div
+                        className="absolute top-0 left-0 z-10 h-full w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600 dark:bg-zinc-700"
+                        onMouseDown={handleMouseDown("right")}
+                    />
                     {rightSidebar}
                 </div>
             )}
