@@ -735,7 +735,12 @@ function EventContent({
             return (
                 <div className="item-center flex justify-between text-gray-600 text-sm dark:text-zinc-400">
                     <div>
-                        <p>{commit?.message.split("\n")[0]}</p>
+                        <NextLink
+                            href={`/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
+                            className="hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                        >
+                            {commit?.message.split("\n")[0]}
+                        </NextLink>
                     </div>
                     <NextLink
                         href={`/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
