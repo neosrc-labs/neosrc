@@ -134,11 +134,9 @@ export function ResizableLayout({
         };
 
     const getGridTemplateColumns = () => {
-        const cols: string[] = [];
-        if (isLeftOpen) cols.push(`${leftWidth}px`);
-        cols.push("1fr");
-        if (isRightOpen) cols.push(`${rightWidth}px`);
-        return cols.join(" ");
+        const leftCol = isLeftOpen ? `${leftWidth}px` : "0px";
+        const rightCol = isRightOpen ? `${rightWidth}px` : "0px";
+        return `${leftCol} 1fr ${rightCol}`;
     };
 
     return (
@@ -147,16 +145,17 @@ export function ResizableLayout({
             style={{ gridTemplateColumns: getGridTemplateColumns() }}
         >
             {/* Left Sidebar - Sticky */}
-            {isLeftOpen && (
-                <div className="relative sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto">
-                    {leftSidebar}
-                    {/* Drag Handle */}
+            <div
+                className={`relative sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto ${!isLeftOpen ? "overflow-hidden" : ""}`}
+            >
+                {isLeftOpen && (
                     <div
                         className="absolute top-0 right-0 z-10 h-full w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600 dark:bg-zinc-700"
                         onMouseDown={handleMouseDown("left")}
                     />
-                </div>
-            )}
+                )}
+                {leftSidebar}
+            </div>
 
             {/* Middle Section - PR Content */}
             <main className="min-w-0 border-gray-200 border-r bg-white dark:border-zinc-800 dark:bg-zinc-950">
@@ -164,16 +163,17 @@ export function ResizableLayout({
             </main>
 
             {/* Right Sidebar - Sticky */}
-            {isRightOpen && (
-                <div className="relative sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto">
-                    {/* Drag Handle */}
+            <div
+                className={`relative sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto ${!isRightOpen ? "overflow-hidden" : ""}`}
+            >
+                {isRightOpen && (
                     <div
                         className="absolute top-0 left-0 z-10 h-full w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600 dark:bg-zinc-700"
                         onMouseDown={handleMouseDown("right")}
                     />
-                    {rightSidebar}
-                </div>
-            )}
+                )}
+                {rightSidebar}
+            </div>
         </div>
     );
 }
