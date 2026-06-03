@@ -39,10 +39,8 @@ export default function RootLayout({
                 >
                     <SidebarProvider>
                         <ThemeStylesheets />
-                        <TRPCReactProvider>
-                            <Header />
-                            {children}
-                        </TRPCReactProvider>
+                        <Header />
+                        <TRPCReactProvider>{children}</TRPCReactProvider>
                     </SidebarProvider>
                 </ThemeProvider>
             </body>
