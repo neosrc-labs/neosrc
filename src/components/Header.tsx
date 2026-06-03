@@ -1,12 +1,20 @@
 "use client";
 
 import {
+    BookOpen,
+    CircleDot,
+    CirclePlay,
+    Code2,
+    GitPullRequest,
     PanelLeftOpen,
     PanelRightClose,
     PanelRightOpen,
+    Settings,
+    Table2,
     User,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
+import type { ElementType } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
@@ -18,6 +26,7 @@ interface Tab {
     path: string;
     show: boolean;
     isActive: boolean;
+    icon: ElementType;
 }
 
 export function Header() {
@@ -65,42 +74,49 @@ export function Header() {
                 path: `https://github.com/${owner}/${repo}`,
                 show: true,
                 isActive: !isPR,
+                icon: Code2,
             },
             {
                 label: "Issues",
                 path: `https://github.com/${owner}/${repo}/issues`,
                 show: repoData.hasIssues ?? true,
                 isActive: false,
+                icon: CircleDot,
             },
             {
                 label: "Pull Requests",
                 path: `https://github.com/${owner}/${repo}/pulls`,
                 show: true,
                 isActive: isPR,
+                icon: GitPullRequest,
             },
             {
                 label: "Actions",
                 path: `https://github.com/${owner}/${repo}/actions`,
                 show: true,
                 isActive: false,
+                icon: CirclePlay,
             },
             {
                 label: "Projects",
                 path: `https://github.com/${owner}/${repo}/projects`,
                 show: repoData.hasProjects ?? false,
                 isActive: false,
+                icon: Table2,
             },
             {
                 label: "Wiki",
                 path: `https://github.com/${owner}/${repo}/wiki`,
                 show: repoData.hasWiki ?? false,
                 isActive: false,
+                icon: BookOpen,
             },
             {
                 label: "Settings",
                 path: `https://github.com/${owner}/${repo}/settings`,
                 show: repoData.permissions.admin ?? false,
                 isActive: false,
+                icon: Settings,
             },
         ];
 
@@ -218,20 +234,22 @@ export function Header() {
                                         key={tab.path}
                                         href={tab.path}
                                         className={cn(
-                                            "whitespace-nowrap border-b-2 px-3 py-2 font-medium text-sm transition-colors",
+                                            "flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 font-medium text-sm transition-colors",
                                             tab.isActive
-                                                ? "border-orange-500 text-gray-900 dark:text-gray-100"
+                                                ? "border-blue-500 text-gray-900 dark:text-gray-100"
                                                 : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900 dark:text-gray-400 dark:hover:border-zinc-600 dark:hover:text-gray-100",
                                         )}
                                     >
+                                        <tab.icon className="size-4" />
                                         {tab.label}
                                     </a>
                                 ))
                             ) : (
                                 <span
                                     aria-hidden
-                                    className="invisible whitespace-nowrap border-transparent border-b-2 px-3 py-2 font-medium text-sm"
+                                    className="invisible flex items-center gap-1.5 whitespace-nowrap border-transparent border-b-2 px-3 py-2 font-medium text-sm"
                                 >
+                                    <Code2 className="size-4" />
                                     Code
                                 </span>
                             )}
