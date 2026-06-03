@@ -6,7 +6,7 @@ import { useSidebar } from "./sidebar-context";
 
 const LEFT_STORAGE_KEY = "neosrc-sidebar-width";
 const RIGHT_STORAGE_KEY = "neosrc-right-sidebar-width";
-const DEFAULT_LEFT_WIDTH = 250;
+const DEFAULT_LEFT_WIDTH = 325;
 const DEFAULT_RIGHT_WIDTH = 300;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 500;
