@@ -7,10 +7,18 @@ import {
     User,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { useSidebar } from "./sidebar-context";
 import { ThemeToggle } from "./ThemeToggle";
+
+interface Tab {
+    label: string;
+    path: string;
+    show: boolean;
+    isActive: boolean;
+}
 
 export function Header() {
     const pathname = usePathname();
@@ -22,9 +30,9 @@ export function Header() {
     const { data: currentUser } = api.users.currentUser.useQuery(undefined, {
         retry: false,
     });
-    const { data: ownerData } = api.users.getByUsername.useQuery(
-        { username: owner ?? "" },
-        { enabled: !!owner, retry: false },
+    const { data: repoData } = api.repos.getByOwnerAndRepo.useQuery(
+        { owner: owner ?? "", repo: repo ?? "" },
+        { enabled: !!owner && !!repo, retry: false, staleTime: 5 * 60 * 1000 },
     );
 
     const headerRef = useRef<HTMLDivElement>(null);
@@ -46,6 +54,59 @@ export function Header() {
         return () => observer.disconnect();
     }, []);
 
+    const tabs = useMemo((): Tab[] => {
+        if (!repoData || !owner || !repo) return [];
+
+        const isPR = !!prMatch;
+
+        const allTabs: Tab[] = [
+            {
+                label: "Code",
+                path: `https://github.com/${owner}/${repo}`,
+                show: true,
+                isActive: !isPR,
+            },
+            {
+                label: "Issues",
+                path: `https://github.com/${owner}/${repo}/issues`,
+                show: repoData.hasIssues ?? true,
+                isActive: false,
+            },
+            {
+                label: "Pull Requests",
+                path: `https://github.com/${owner}/${repo}/pulls`,
+                show: true,
+                isActive: isPR,
+            },
+            {
+                label: "Actions",
+                path: `https://github.com/${owner}/${repo}/actions`,
+                show: true,
+                isActive: false,
+            },
+            {
+                label: "Projects",
+                path: `https://github.com/${owner}/${repo}/projects`,
+                show: repoData.hasProjects ?? false,
+                isActive: false,
+            },
+            {
+                label: "Wiki",
+                path: `https://github.com/${owner}/${repo}/wiki`,
+                show: repoData.hasWiki ?? false,
+                isActive: false,
+            },
+            {
+                label: "Settings",
+                path: `https://github.com/${owner}/${repo}/settings`,
+                show: repoData.permissions.admin ?? false,
+                isActive: false,
+            },
+        ];
+
+        return allTabs.filter((t) => t.show);
+    }, [repoData, owner, repo, prMatch]);
+
     return (
         <>
             <header
@@ -53,7 +114,7 @@ export function Header() {
                 ref={headerRef}
             >
                 <div className="px-4 sm:px-6 lg:px-8">
-                    <div className="flex h-16 items-center justify-between">
+                    <div className="flex h-12 items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="flex size-8 items-center justify-center rounded-md bg-gray-100 font-bold text-gray-700 text-sm dark:bg-zinc-800 dark:text-gray-300">
                                 N
@@ -66,9 +127,9 @@ export function Header() {
                                         target="_blank"
                                         rel="noopener noreferrer"
                                     >
-                                        {ownerData?.user.avatar_url ? (
+                                        {repoData?.ownerAvatarUrl ? (
                                             <img
-                                                src={ownerData.user.avatar_url}
+                                                src={repoData.ownerAvatarUrl}
                                                 alt={owner}
                                                 className="size-5 rounded-full"
                                             />
@@ -147,6 +208,27 @@ export function Header() {
                         </div>
                     </div>
                 </div>
+
+                {repoMatch && tabs.length > 0 && (
+                    <nav aria-label="Repository navigation">
+                        <div className="flex gap-0 overflow-x-auto px-4 sm:px-6 lg:px-8">
+                            {tabs.map((tab) => (
+                                <a
+                                    key={tab.path}
+                                    href={tab.path}
+                                    className={cn(
+                                        "whitespace-nowrap border-b-2 px-3 py-2 font-medium text-sm transition-colors",
+                                        tab.isActive
+                                            ? "border-orange-500 text-gray-900 dark:text-gray-100"
+                                            : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900 dark:text-gray-400 dark:hover:border-zinc-600 dark:hover:text-gray-100",
+                                    )}
+                                >
+                                    {tab.label}
+                                </a>
+                            ))}
+                        </div>
+                    </nav>
+                )}
             </header>
 
             {prMatch && !isLeftOpen && (
