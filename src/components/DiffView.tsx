@@ -108,9 +108,11 @@ export function DiffView({
     }, [language, parsed]);
 
     const commentsByLine = useMemo(() => {
-        const map = new Map<number, ReviewComment[]>();
+        const map = new Map<string, ReviewComment[]>();
         for (const comment of comments) {
-            const key = comment.line ?? comment.position ?? 0;
+            const line = comment.line ?? comment.position ?? 0;
+            const side = comment.side ?? "RIGHT";
+            const key = `${line}-${side}`;
             const existing = map.get(key) ?? [];
             existing.push(comment);
             map.set(key, existing);
@@ -176,7 +178,7 @@ function groupThreads(
 
 interface BlockRowsProps {
     block: NonNullable<ReturnType<typeof parse>>[number]["blocks"][number];
-    commentsByLine: Map<number, ReviewComment[]>;
+    commentsByLine: Map<string, ReviewComment[]>;
     activeComment: ActiveComment | null;
     onStartComment: ((ac: ActiveComment | null) => void) | undefined;
     owner: string | undefined;
@@ -240,7 +242,8 @@ function BlockRows({
                 const commentLine = newNum ?? oldNum ?? 0;
                 const side = type === "delete" ? "LEFT" : "RIGHT";
 
-                const lineComments = commentsByLine.get(commentLine) ?? [];
+                const lineComments =
+                    commentsByLine.get(`${commentLine}-${side}`) ?? [];
                 const isActive =
                     activeComment?.line === commentLine &&
                     activeComment?.side === side;
