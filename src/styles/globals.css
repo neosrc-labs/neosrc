@@ -20,7 +20,7 @@
 
 html {
     scrollbar-gutter: stable;
-    --header-height: 64px;
+    --header-height: 86px;
 }
 
 /* Prose dark mode */
