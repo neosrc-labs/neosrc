@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { env } from "~/env";
+import { decrypt, encrypt } from "~/server/auth/encryption";
 import { db } from "~/server/db";
 import {
     betterAuthAccount,
@@ -73,6 +74,48 @@ export const auth = betterAuth({
         },
     },
     plugins: [nextCookies()],
+    databaseHooks: {
+        account: {
+            create: {
+                before: async (data) => ({
+                    data: {
+                        ...data,
+                        accessToken: data.accessToken
+                            ? encrypt(data.accessToken)
+                            : data.accessToken,
+                        refreshToken: data.refreshToken
+                            ? encrypt(data.refreshToken)
+                            : data.refreshToken,
+                        idToken: data.idToken
+                            ? encrypt(data.idToken)
+                            : data.idToken,
+                    },
+                }),
+            },
+            update: {
+                before: async (data) => {
+                    const encrypted: Record<string, string | null | undefined> =
+                        {};
+                    if (data.accessToken !== undefined) {
+                        encrypted.accessToken = data.accessToken
+                            ? encrypt(data.accessToken)
+                            : data.accessToken;
+                    }
+                    if (data.refreshToken !== undefined) {
+                        encrypted.refreshToken = data.refreshToken
+                            ? encrypt(data.refreshToken)
+                            : data.refreshToken;
+                    }
+                    if (data.idToken !== undefined) {
+                        encrypted.idToken = data.idToken
+                            ? encrypt(data.idToken)
+                            : data.idToken;
+                    }
+                    return { data: { ...data, ...encrypted } };
+                },
+            },
+        },
+    },
 });
 
 export const getSession = cache(async () =>
@@ -100,7 +143,18 @@ export const getAccount = async (opts?: {
         .where(eq(betterAuthAccount.userId, uid))
         .limit(1);
 
-    return account ?? null;
+    if (!account) return null;
+
+    return {
+        ...account,
+        accessToken: account.accessToken
+            ? decrypt(account.accessToken)
+            : account.accessToken,
+        refreshToken: account.refreshToken
+            ? decrypt(account.refreshToken)
+            : account.refreshToken,
+        idToken: account.idToken ? decrypt(account.idToken) : account.idToken,
+    };
 };
 
 export const getGitHubToken = async (database: typeof db, userId: string) => {
@@ -114,7 +168,7 @@ export const getGitHubToken = async (database: typeof db, userId: string) => {
         throw new Error("GitHub account not connected");
     }
 
-    return account.accessToken;
+    return decrypt(account.accessToken);
 };
 
 export const githubAccessToken = async () => {
@@ -130,8 +184,8 @@ export const githubAccessToken = async () => {
         await db
             .update(betterAuthAccount)
             .set({
-                accessToken: refreshed.access_token,
-                refreshToken: refreshed.refresh_token,
+                accessToken: encrypt(refreshed.access_token),
+                refreshToken: encrypt(refreshed.refresh_token),
                 accessTokenExpiresAt: new Date(
                     Date.now() + refreshed.expires_in * 1000,
                 ),
