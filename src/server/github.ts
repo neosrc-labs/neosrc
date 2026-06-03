@@ -974,6 +974,17 @@ export const getGitHubTeam = cache(
     },
 );
 
+export type RepoGetResponseData =
+    RestEndpointMethodTypes["repos"]["get"]["response"]["data"];
+
+export const getRepo = cache(
+    async (accessToken: string, owner: string, repo: string) => {
+        const octokit = createOctokit(accessToken);
+        const response = await octokit.rest.repos.get({ owner, repo });
+        return response.data;
+    },
+);
+
 export type Milestone = NonNullable<PullsGetResponseData["milestone"]>;
 
 export type RepoMilestone =
