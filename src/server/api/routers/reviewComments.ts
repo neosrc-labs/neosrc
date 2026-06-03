@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getGitHubToken } from "~/server/auth";
 import {
+    applySuggestion,
     createPullRequestReviewComment,
     createStandaloneReviewComment,
     deleteReviewComment,
@@ -12,6 +13,7 @@ import {
     getPullRequestReviewCommentsForReview,
     getPullRequestReviews,
     getReviewThreads,
+    getSuggestionPatch,
     replyToPullRequestReviewComment,
     resolveReviewThread,
     unresolveReviewThread,
@@ -256,5 +258,69 @@ export const reviewCommentsRouter = createTRPCRouter({
             }
 
             return { success: true as const, isResolved: input.resolve };
+        }),
+
+    applySuggestion: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+                path: z.string(),
+                suggestionCode: z.string(),
+                line: z.number().nullable().optional(),
+                startLine: z.number().nullable().optional(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            await applySuggestion(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+                input.path,
+                input.suggestionCode,
+                input.line,
+                input.startLine,
+            );
+
+            return { success: true as const };
+        }),
+
+    suggestionPatch: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+                path: z.string(),
+                suggestionCode: z.string(),
+                line: z.number(),
+                startLine: z.number().nullable().optional(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            const patch = await getSuggestionPatch(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+                input.path,
+                input.suggestionCode,
+                input.line,
+                input.startLine,
+            );
+
+            return { patch };
         }),
 });

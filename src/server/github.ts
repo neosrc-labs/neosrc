@@ -1351,3 +1351,131 @@ export const unresolveReviewThread = async (
         );
     }
 };
+
+export const getFileContentFromBranch = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    path: string,
+    ref: string,
+): Promise<{ content: string; sha: string }> => {
+    const octokit = createOctokit(accessToken);
+    const { data: fileData } = await octokit.repos.getContent({
+        owner,
+        repo,
+        path,
+        ref,
+    });
+
+    if (Array.isArray(fileData) || !("content" in fileData)) {
+        throw new Error(
+            "Expected a single file, got a directory or unexpected response",
+        );
+    }
+
+    return {
+        content: Buffer.from(fileData.content, "base64").toString("utf-8"),
+        sha: fileData.sha,
+    };
+};
+
+export const getSuggestionPatch = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    path: string,
+    suggestionCode: string,
+    line: number,
+    startLine?: number | null,
+    contextLines: number = 3,
+): Promise<string> => {
+    const pr = await getPullRequest(accessToken, owner, repo, pullNumber);
+    const headRef = pr.head.ref;
+
+    const { content: currentContent } = await getFileContentFromBranch(
+        accessToken,
+        owner,
+        repo,
+        path,
+        headRef,
+    );
+
+    const allLines = currentContent.split("\n");
+    const replaceStart = (startLine ?? line) - 1;
+    const replaceEnd = line - 1;
+
+    const contextStart = Math.max(0, replaceStart - contextLines);
+    const contextEnd = Math.min(allLines.length - 1, replaceEnd + contextLines);
+
+    const patchLines: string[] = [];
+
+    for (let i = contextStart; i < replaceStart; i++) {
+        patchLines.push(` ${allLines[i] as string}`);
+    }
+
+    for (let i = replaceStart; i <= replaceEnd; i++) {
+        patchLines.push(`-${allLines[i] as string}`);
+    }
+
+    const suggestionLines = suggestionCode.replace(/\n$/, "").split("\n");
+    for (const l of suggestionLines) {
+        patchLines.push(`+${l}`);
+    }
+
+    for (let i = replaceEnd + 1; i <= contextEnd; i++) {
+        patchLines.push(` ${allLines[i] as string}`);
+    }
+
+    const contextCount =
+        replaceStart - contextStart + (contextEnd - replaceEnd);
+    const removedCount = replaceEnd - replaceStart + 1;
+    const addedCount = suggestionLines.length;
+
+    const oldStart = contextStart + 1;
+    const newStart = contextStart + 1;
+    const oldCount = contextCount + removedCount;
+    const newCount = contextCount + addedCount;
+
+    return `@@ -${oldStart},${oldCount} +${newStart},${newCount} @@\n${patchLines.join("\n")}`;
+};
+
+export const applySuggestion = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    path: string,
+    suggestionCode: string,
+    line?: number | null,
+    startLine?: number | null,
+): Promise<void> => {
+    const octokit = createOctokit(accessToken);
+
+    const pr = await getPullRequest(accessToken, owner, repo, pullNumber);
+    const headRef = pr.head.ref;
+
+    const { content: currentContent, sha: fileSha } =
+        await getFileContentFromBranch(accessToken, owner, repo, path, headRef);
+
+    const lines = currentContent.split("\n");
+    const startIdx = (startLine ?? line ?? 1) - 1;
+    const endIdx = (line ?? startLine ?? 1) - 1;
+    const suggestionLines = suggestionCode.split("\n");
+
+    const before = lines.slice(0, startIdx);
+    const after = lines.slice(endIdx + 1);
+    const newContent = [...before, ...suggestionLines, ...after].join("\n");
+
+    const base64Content = Buffer.from(newContent, "utf-8").toString("base64");
+
+    await octokit.repos.createOrUpdateFileContents({
+        owner,
+        repo,
+        path,
+        message: `Apply suggestion to ${path}`,
+        content: base64Content,
+        sha: fileSha,
+        branch: headRef,
+    });
+};
