@@ -26,6 +26,7 @@ import { remarkCommitPlugin } from "./plugins/remark-commit";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
+import { SuggestionBlock } from "./SuggestionBlock";
 
 const CodeBlockContext = createContext(false);
 
@@ -111,6 +112,11 @@ interface MarkdownRendererProps {
     content: string;
     owner?: string;
     repo?: string;
+    pullNumber?: number;
+    commentPath?: string;
+    commentLine?: number | null;
+    commentStartLine?: number | null;
+    commentThreadId?: string;
 }
 
 const schema = {
@@ -140,8 +146,13 @@ function getPlainText(children: ReactNode): string {
 
 export function MarkdownRenderer({
     content,
-    owner,
-    repo,
+    owner = "",
+    repo = "",
+    pullNumber,
+    commentPath,
+    commentLine,
+    commentStartLine,
+    commentThreadId,
 }: MarkdownRendererProps) {
     if (!content) {
         return (
@@ -250,6 +261,23 @@ export function MarkdownRenderer({
                     );
                 },
                 code({ children, className, ...props }) {
+                    if (className?.startsWith("language-suggestion")) {
+                        const codeString = Array.isArray(children)
+                            ? children.join("")
+                            : String(children ?? "");
+                        return (
+                            <SuggestionBlock
+                                code={codeString}
+                                owner={owner}
+                                repo={repo}
+                                pullNumber={pullNumber}
+                                path={commentPath}
+                                line={commentLine}
+                                startLine={commentStartLine}
+                                resolveThreadId={commentThreadId}
+                            />
+                        );
+                    }
                     return (
                         <CodeElement className={className} {...props}>
                             {children}

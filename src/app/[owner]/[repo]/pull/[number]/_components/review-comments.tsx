@@ -420,6 +420,11 @@ function CommentBlock({
                     content={savedBodies[comment.id] ?? comment.body}
                     owner={owner}
                     repo={repo}
+                    pullNumber={number}
+                    commentPath={comment.path}
+                    commentLine={comment.line}
+                    commentStartLine={comment.start_line}
+                    commentThreadId={threadId}
                 />
             </CommentCard>
             {replies.map((reply) => {
@@ -488,6 +493,11 @@ function CommentBlock({
                                 content={savedBodies[reply.id] ?? reply.body}
                                 owner={owner}
                                 repo={repo}
+                                pullNumber={number}
+                                commentPath={comment.path}
+                                commentLine={comment.line}
+                                commentStartLine={comment.start_line}
+                                commentThreadId={threadId}
                             />
                         </CommentCard>
                     </div>

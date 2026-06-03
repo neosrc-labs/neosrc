@@ -205,6 +205,8 @@ export function InlineCommentThread({
                 onDelete={() => handleDelete(parentComment.id)}
                 owner={owner}
                 repo={repo}
+                number={number}
+                threadId={threadInfo?.id ?? ""}
                 variant="parent"
             />
 
@@ -239,6 +241,8 @@ export function InlineCommentThread({
                         onDelete={() => handleDelete(comment.id)}
                         owner={owner}
                         repo={repo}
+                        number={number}
+                        threadId={threadInfo?.id ?? ""}
                         variant="reply"
                     />
                 </div>
@@ -309,6 +313,8 @@ function Comment({
     onDelete,
     owner,
     repo,
+    number,
+    threadId,
     variant,
 }: {
     comment: ReviewComment;
@@ -328,6 +334,8 @@ function Comment({
     onDelete: () => void;
     owner: string;
     repo: string;
+    number: number;
+    threadId: string;
     variant: "parent" | "reply";
 }) {
     const [menuOpen, setMenuOpen] = useState(false);
@@ -404,7 +412,16 @@ function Comment({
                 </div>
             }
         >
-            <MarkdownRenderer content={displayBody} owner={owner} repo={repo} />
+            <MarkdownRenderer
+                content={displayBody}
+                owner={owner}
+                repo={repo}
+                pullNumber={number}
+                commentPath={comment.path}
+                commentLine={comment.line}
+                commentStartLine={comment.start_line}
+                commentThreadId={threadId}
+            />
         </CommentCard>
     );
 }
