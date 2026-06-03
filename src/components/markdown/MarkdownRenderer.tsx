@@ -4,6 +4,7 @@ import { useTheme } from "next-themes";
 import {
     type CSSProperties,
     createContext,
+    type ReactNode,
     useContext,
     useEffect,
     useState,
@@ -130,6 +131,13 @@ const schema = {
     },
 };
 
+function getPlainText(children: ReactNode): string {
+    if (typeof children === "string") return children;
+    if (typeof children === "number") return String(children);
+    if (Array.isArray(children)) return children.map(getPlainText).join("");
+    return "";
+}
+
 export function MarkdownRenderer({
     content,
     owner,
@@ -159,17 +167,28 @@ export function MarkdownRenderer({
             components={{
                 a({ href, children, ...props }) {
                     const issueMatch = href?.match(
-                        /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/issues\/(\d+)$/,
+                        /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/(?:issues|pull)\/(\d+)$/,
                     );
                     if (issueMatch?.[1] && issueMatch[2] && issueMatch[3]) {
+                        const matchedOwner = issueMatch[1];
+                        const matchedRepo = issueMatch[2];
+                        const issueNumber = Number.parseInt(issueMatch[3], 10);
+                        const isSameRepo =
+                            matchedOwner === owner && matchedRepo === repo;
+                        const shortRef = isSameRepo
+                            ? `#${issueNumber}`
+                            : `${matchedOwner}/${matchedRepo}#${issueNumber}`;
+                        const childrenText = getPlainText(children);
+                        const displayChildren =
+                            childrenText === href ? shortRef : children;
                         return (
                             <IssueHoverCard
-                                owner={issueMatch[1]}
-                                repo={issueMatch[2]}
-                                issueNumber={Number.parseInt(issueMatch[3], 10)}
+                                owner={matchedOwner}
+                                repo={matchedRepo}
+                                issueNumber={issueNumber}
                             >
                                 <a href={href} {...props}>
-                                    {children}
+                                    {displayChildren}
                                 </a>
                             </IssueHoverCard>
                         );
