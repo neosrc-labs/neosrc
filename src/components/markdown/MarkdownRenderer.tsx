@@ -17,9 +17,11 @@ import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { remarkAlert } from "remark-github-blockquote-alert";
+import { MarkdownCommitHoverCard } from "~/components/hovercards/commit-hover-card";
 import { IssueHoverCard } from "~/components/hovercards/issue-hover-card";
 import { TeamHoverCard } from "~/components/hovercards/team-hover-card";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import { remarkCommitPlugin } from "./plugins/remark-commit";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
@@ -148,6 +150,7 @@ export function MarkdownRenderer({
                 remarkBreaks,
                 remarkGfm,
                 remarkIssuePlugin(owner, repo),
+                remarkCommitPlugin(owner, repo),
                 remarkMentionPlugin,
                 remarkEmojiPlugin,
                 remarkAlert,
@@ -184,6 +187,22 @@ export function MarkdownRenderer({
                                     {children}
                                 </a>
                             </TeamHoverCard>
+                        );
+                    }
+                    const commitMatch = href?.match(
+                        /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/commit\/([a-f0-9]{7,40})$/i,
+                    );
+                    if (commitMatch?.[1] && commitMatch[2] && commitMatch[3]) {
+                        return (
+                            <MarkdownCommitHoverCard
+                                owner={commitMatch[1]}
+                                repo={commitMatch[2]}
+                                sha={commitMatch[3].toLowerCase()}
+                            >
+                                <a href={href} {...props}>
+                                    {children}
+                                </a>
+                            </MarkdownCommitHoverCard>
                         );
                     }
                     const userMatch = href?.match(

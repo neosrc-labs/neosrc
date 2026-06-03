@@ -2,16 +2,17 @@
 
 import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import {
     HoverCard,
     HoverCardContent,
     HoverCardTrigger,
 } from "~/components/ui/hover-card";
 import type { Commit } from "~/server/github";
+import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 
-function CommitHoverCardContent({
+export function CommitHoverCardContent({
     commit,
     baseUrl,
 }: {
@@ -93,6 +94,55 @@ export function CommitHoverCard({
             <HoverCardTrigger asChild>{children}</HoverCardTrigger>
             <HoverCardContent className="w-80 bg-white p-0 dark:bg-zinc-950">
                 <CommitHoverCardContent commit={commit} baseUrl={baseUrl} />
+            </HoverCardContent>
+        </HoverCard>
+    );
+}
+
+interface MarkdownCommitHoverCardProps {
+    owner: string;
+    repo: string;
+    sha: string;
+    children: ReactNode;
+}
+
+export function MarkdownCommitHoverCard({
+    owner,
+    repo,
+    sha,
+    children,
+}: MarkdownCommitHoverCardProps) {
+    const [open, setOpen] = useState(false);
+    const [hasBeenHovered, setHasBeenHovered] = useState(false);
+
+    const { data } = api.commits.getBySha.useQuery(
+        { owner, repo, sha },
+        {
+            staleTime: 5 * 60 * 1000,
+            enabled: hasBeenHovered,
+        },
+    );
+
+    const showCard = open && !!data;
+
+    return (
+        <HoverCard
+            open={showCard}
+            onOpenChange={(isOpen) => {
+                setOpen(isOpen);
+                if (isOpen) {
+                    setHasBeenHovered(true);
+                }
+            }}
+        >
+            <HoverCardTrigger asChild>{children}</HoverCardTrigger>
+            <HoverCardContent className="w-80 bg-white p-0 dark:bg-zinc-950">
+                {data && (
+                    <CommitHoverCardContent
+                        commit={data.commit as Commit}
+                        baseUrl={`https://github.com/${owner}/${repo}/commit`}
+                    />
+                )}
             </HoverCardContent>
         </HoverCard>
     );
