@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 import { isGeneratedFile } from "~/utils/generated-files";
@@ -20,6 +20,8 @@ interface FileDiffProps {
     comments?: ReviewComment[];
     showComments?: boolean;
     pendingReviewId?: number | null;
+    showGeneratedDiff?: boolean;
+    onToggleGeneratedDiff?: () => void;
 }
 
 function getViewedKey(owner: string, repo: string, number: string): string {
@@ -50,10 +52,16 @@ export default function FileDiff({
     comments = [],
     showComments = true,
     pendingReviewId,
+    showGeneratedDiff = false,
+    onToggleGeneratedDiff,
 }: FileDiffProps) {
-    const [isViewed, setIsViewed] = useState(false);
+    const [isViewed, setIsViewed] = useState(() => {
+        if (typeof window === "undefined") return false;
+        return getStoredSet(getViewedKey(owner, repo, number)).has(
+            file.filename,
+        );
+    });
     const [isCollapsed, setIsCollapsed] = useState(isViewed);
-    const [showGeneratedDiff, setShowGeneratedDiff] = useState(false);
     const [activeComment, setActiveComment] = useState<ActiveComment | null>(
         null,
     );
@@ -61,15 +69,6 @@ export default function FileDiff({
     const utils = api.useUtils();
 
     const generated = isGeneratedFile(file.filename);
-
-    const fileId = file.filename.replace(/\//g, "-");
-
-    useEffect(() => {
-        const viewed = getStoredSet(getViewedKey(owner, repo, number));
-        const wasViewed = viewed.has(file.filename);
-        setIsViewed(wasViewed);
-        setIsCollapsed(wasViewed);
-    }, [owner, repo, number, file.filename]);
 
     const createMutation = api.reviewComments.create.useMutation({
         onSuccess: () => {
@@ -179,10 +178,7 @@ export default function FileDiff({
                 : "text-yellow-600";
 
     return (
-        <div
-            className="mb-6 scroll-mt-[calc(var(--header-height)+8px)] overflow-hidden rounded border border-gray-200 dark:border-zinc-700"
-            id={fileId}
-        >
+        <div className="overflow-hidden rounded border border-gray-200 dark:border-zinc-700">
             <div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900">
                 <button
                     className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -263,7 +259,7 @@ export default function FileDiff({
                         </span>
                         <button
                             className="cursor-pointer font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            onClick={() => setShowGeneratedDiff(true)}
+                            onClick={() => onToggleGeneratedDiff?.()}
                             type="button"
                         >
                             Show changes
