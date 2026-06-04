@@ -1,6 +1,6 @@
 import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import type { Metadata } from "next";
-import { Suspense } from "react";
+import { Suspense, use } from "react";
 import { githubAccessToken } from "~/server/auth";
 import {
     getAuthenticatedUser,
@@ -44,71 +44,79 @@ export default async function PullRequestPage({ params }: PageProps) {
         );
     }
 
-    const pullRequest: Promise<PullsGetResponseData> = getPullRequest(
+    const pullRequestPromise = getPullRequest(accessToken, owner, repo, number);
+    const canInteractPromise = computeCanInteract(
         accessToken,
         owner,
         repo,
-        number,
+        pullRequestPromise,
     );
 
-    const currentUserLogin = (await getAuthenticatedUser(accessToken)).login;
-    const userPermission = await getUserRepoPermission(
-        accessToken,
-        owner,
-        repo,
-        currentUserLogin,
-    ).catch(() => null);
-    const pr = await pullRequest;
-    const canInteract =
-        !pr.locked ||
-        userPermission === "admin" ||
-        userPermission === "write" ||
-        currentUserLogin === pr.user?.login;
-
-    return (
-        <Suspense>
-            <PullRequestPageContent
-                canInteract={canInteract}
-                number={number}
-                owner={owner}
-                pullRequestPromise={pullRequest}
-                repo={repo}
-            />
-        </Suspense>
-    );
-}
-
-interface PullRequestPageContentProps {
-    owner: string;
-    repo: string;
-    number: number;
-    pullRequestPromise: Promise<PullsGetResponseData>;
-    canInteract: boolean;
-}
-
-function PullRequestPageContent({
-    owner,
-    repo,
-    number,
-    pullRequestPromise,
-    canInteract,
-}: PullRequestPageContentProps) {
     return (
         <div className="px-6 py-8">
             <PullRequestDescriptionSection
-                canInteract={canInteract}
+                canInteractPromise={canInteractPromise}
                 pullRequestPromise={pullRequestPromise}
                 owner={owner}
                 repo={repo}
                 number={number}
             />
 
-            <TimelineSection
-                canInteract={canInteract}
-                number={number}
-                owner={owner}
-                repo={repo}
-            />
+            <Suspense fallback={null}>
+                <TimelineSectionWithCanInteract
+                    canInteractPromise={canInteractPromise}
+                    number={number}
+                    owner={owner}
+                    repo={repo}
+                />
+            </Suspense>
         </div>
+    );
+}
+
+async function computeCanInteract(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullRequestPromise: Promise<PullsGetResponseData>,
+) {
+    const [user, pr] = await Promise.all([
+        getAuthenticatedUser(accessToken),
+        pullRequestPromise,
+    ]);
+    const userPermission = await getUserRepoPermission(
+        accessToken,
+        owner,
+        repo,
+        user.login,
+    ).catch(() => null);
+
+    return (
+        !pr.locked ||
+        userPermission === "admin" ||
+        userPermission === "write" ||
+        user.login === pr.user?.login
+    );
+}
+
+function TimelineSectionWithCanInteract({
+    canInteractPromise,
+    owner,
+    repo,
+    number,
+}: {
+    canInteractPromise: Promise<boolean>;
+    owner: string;
+    repo: string;
+    number: number;
+}) {
+    const canInteract = use(canInteractPromise);
+    return (
+        <TimelineSection
+            canInteract={canInteract}
+            number={number}
+            owner={owner}
+            repo={repo}
+        />
     );
 }

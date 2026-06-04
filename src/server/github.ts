@@ -692,11 +692,11 @@ export const deleteIssueReaction = async (
     });
 };
 
-export const getAuthenticatedUser = async (accessToken: string) => {
+export const getAuthenticatedUser = cache(async (accessToken: string) => {
     const octokit = createOctokit(accessToken);
     const response = await octokit.rest.users.getAuthenticated();
     return response.data;
-};
+});
 
 export const getUserRepoPermission = cache(
     async (
