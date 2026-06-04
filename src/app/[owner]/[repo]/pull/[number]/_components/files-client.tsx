@@ -43,7 +43,14 @@ export function FilesSection({
         () => new Set<string>(),
     );
     const heightMapRef = useRef(new Map<string, number>());
-    const { files, isLoading } = useFiles({ owner, repo, number, commitSha });
+    const { files: allFiles, isLoading } = useFiles({
+        owner,
+        repo,
+        number,
+        commitSha,
+    });
+    const files = allFiles.slice(0, 500);
+    const truncated = allFiles.length > 500;
 
     const { data: allComments = [] } = api.reviewComments.list.useQuery(
         { owner, repo, number },
@@ -91,7 +98,7 @@ export function FilesSection({
         <div>
             <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
-                    Files Changed{!isLoading && ` (${files.length})`}
+                    Files Changed{!isLoading && ` (${allFiles.length})`}
                 </h2>
                 <div className="flex items-center gap-2">
                     <button
@@ -149,6 +156,11 @@ export function FilesSection({
                     );
                 })}
             </div>
+            {truncated && (
+                <p className="mt-6 text-gray-500 text-sm dark:text-gray-400">
+                    Showing first 500 of {allFiles.length} changed files.
+                </p>
+            )}
         </div>
     );
 }
