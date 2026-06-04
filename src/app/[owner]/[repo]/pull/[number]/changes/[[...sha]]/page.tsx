@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { githubAccessToken } from "~/server/auth";
+import { getSession, githubAccessToken } from "~/server/auth";
 import {
     type CommitData,
-    getAuthenticatedUser,
     getCachedCommit,
     getPullRequestCommits,
     type PullsListCommitsResponseData,
@@ -44,12 +43,8 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
         );
     }
 
-    let username: string | undefined;
-    try {
-        username = (await getAuthenticatedUser(accessToken)).login;
-    } catch {
-        // Proceed without username — no caching
-    }
+    const session = await getSession();
+    const userId = session?.user?.id;
 
     let commit: Promise<CommitData> | null = null;
     let commits: Promise<PullsListCommitsResponseData> | null = null;
@@ -61,7 +56,7 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
                 owner,
                 repo,
                 commitSha,
-                username,
+                userId,
             );
             commits = getPullRequestCommits(accessToken, owner, repo, number);
         }

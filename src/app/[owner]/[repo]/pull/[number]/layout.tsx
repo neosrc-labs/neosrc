@@ -41,21 +41,24 @@ export default async function PullRequestLayout({
 
     if (account?.accessToken) {
         const accessToken = account.accessToken;
-        currentUserLogin = (await getAuthenticatedUser(accessToken)).login;
+        const userId = account.userId;
         commits = getPullRequestCommits(accessToken, owner, repo, number);
         pullRequest = getCachedPullRequest(
             accessToken,
             owner,
             repo,
             number,
-            currentUserLogin,
+            userId,
         );
+
+        currentUserLogin = (await getAuthenticatedUser(accessToken)).login;
 
         userPermission = getUserRepoPermission(
             accessToken,
             owner,
             repo,
             currentUserLogin,
+            userId,
         ).catch(() => null);
 
         // Fetch conflicted files if there are merge conflicts

@@ -79,10 +79,10 @@ export async function getCachedPullRequest(
     owner: string,
     repo: string,
     pullNumber: number,
-    username?: string | null,
+    userId?: string | null,
 ): Promise<PullsGetResponseData> {
-    const permission = username
-        ? await readCache<string>(`permission:${owner}:${repo}:${username}`)
+    const permission = userId
+        ? await readCache<string>(`permission:${owner}:${repo}:${userId}`)
         : null;
 
     if (!permission || permission === "none") {
@@ -534,10 +534,10 @@ export async function getCachedCommit(
     owner: string,
     repo: string,
     commitSha: string,
-    username?: string | null,
+    userId?: string | null,
 ): Promise<CommitData> {
-    const permission = username
-        ? await readCache<string>(`permission:${owner}:${repo}:${username}`)
+    const permission = userId
+        ? await readCache<string>(`permission:${owner}:${repo}:${userId}`)
         : null;
 
     if (!permission || permission === "none") {
@@ -738,9 +738,10 @@ export const getUserRepoPermission = cache(
         owner: string,
         repo: string,
         username: string,
+        userId: string,
     ) => {
         return withStaleWhileRevalidate(
-            `permission:${owner}:${repo}:${username}`,
+            `permission:${owner}:${repo}:${userId}`,
             async () => {
                 const octokit = createOctokit(accessToken);
                 const response =
@@ -981,17 +982,11 @@ export async function* getPullRequestFilesStream(
     repo: string,
     pullNumber: number,
     commitSha?: string,
-    username?: string,
+    userId?: string,
 ): AsyncGenerator<PullRequestFile[], void, undefined> {
     if (commitSha) {
-        const commit = username
-            ? await getCachedCommit(
-                  accessToken,
-                  owner,
-                  repo,
-                  commitSha,
-                  username,
-              )
+        const commit = userId
+            ? await getCachedCommit(accessToken, owner, repo, commitSha, userId)
             : await getCommit(accessToken, owner, repo, commitSha);
         yield commit.files ?? [];
     } else {

@@ -1,7 +1,7 @@
 import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import type { Metadata } from "next";
 import { Suspense, use } from "react";
-import { githubAccessToken } from "~/server/auth";
+import { getSession, githubAccessToken } from "~/server/auth";
 import {
     getAuthenticatedUser,
     getCachedPullRequest,
@@ -47,20 +47,21 @@ export default async function PullRequestPage({ params }: PageProps) {
         );
     }
 
-    const currentUser = await getAuthenticatedUser(accessToken);
+    const session = await getSession();
+    const userId = session?.user?.id;
     const pullRequestPromise = getCachedPullRequest(
         accessToken,
         owner,
         repo,
         number,
-        currentUser.login,
+        userId,
     );
     const canInteractPromise = computeCanInteract(
         accessToken,
         owner,
         repo,
         pullRequestPromise,
-        currentUser.login,
+        userId,
     );
 
     return (
@@ -99,20 +100,30 @@ async function computeCanInteract(
     owner: string,
     repo: string,
     pullRequestPromise: Promise<PullsGetResponseData>,
-    username: string,
+    userId: string | undefined,
 ) {
+    if (!userId) {
+        const pr = await pullRequestPromise;
+        return !pr.locked;
+    }
+
+    const currentUser = await getAuthenticatedUser(accessToken);
     const [pr, userPermission] = await Promise.all([
         pullRequestPromise,
-        getUserRepoPermission(accessToken, owner, repo, username).catch(
-            () => null,
-        ),
+        getUserRepoPermission(
+            accessToken,
+            owner,
+            repo,
+            currentUser.login,
+            userId,
+        ).catch(() => null),
     ]);
 
     return (
         !pr.locked ||
         userPermission === "admin" ||
         userPermission === "write" ||
-        username === pr.user?.login
+        currentUser.login === pr.user?.login
     );
 }
 

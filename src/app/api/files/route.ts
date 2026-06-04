@@ -1,8 +1,5 @@
-import { githubAccessToken } from "~/server/auth";
-import {
-    getAuthenticatedUser,
-    getPullRequestFilesStream,
-} from "~/server/github";
+import { getAccount } from "~/server/auth";
+import { getPullRequestFilesStream } from "~/server/github";
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -15,18 +12,12 @@ export async function GET(request: Request) {
         return new Response(null, { status: 400 });
     }
 
-    const accessToken = await githubAccessToken();
-    if (!accessToken) {
+    const account = await getAccount();
+    if (!account?.accessToken) {
         return new Response(null, { status: 401 });
     }
 
-    let username: string | undefined;
-    try {
-        username = (await getAuthenticatedUser(accessToken)).login;
-    } catch {
-        // Not authenticated — proceed without username (no cache)
-    }
-
+    const { accessToken, userId } = account;
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
         async start(controller) {
@@ -36,7 +27,7 @@ export async function GET(request: Request) {
                 repo,
                 parseInt(number, 10),
                 commitSha,
-                username,
+                userId ?? undefined,
             )) {
                 controller.enqueue(encoder.encode(`${JSON.stringify(page)}\n`));
             }
