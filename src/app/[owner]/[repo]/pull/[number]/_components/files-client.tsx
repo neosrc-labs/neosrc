@@ -1,8 +1,9 @@
 "use client";
 
 import { MessageSquare, MessageSquareOff } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FileDiff from "~/components/FileDiff";
+import { LazyRenderItem } from "~/components/LazyRenderItem";
 import { useFiles } from "~/hooks/files";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -38,6 +39,10 @@ export function FilesSection({
     commitSha,
 }: FilesSectionProps) {
     const [showComments, setShowComments] = useState(true);
+    const [expandedGeneratedFiles, setExpandedGeneratedFiles] = useState(
+        () => new Set<string>(),
+    );
+    const heightMapRef = useRef(new Map<string, number>());
     const { files, isLoading } = useFiles({ owner, repo, number, commitSha });
 
     const { data: allComments = [] } = api.reviewComments.list.useQuery(
@@ -57,6 +62,18 @@ export function FilesSection({
     }, [allComments, pendingReview]);
 
     const pendingReviewId = pendingReview?.reviewId ?? null;
+
+    const toggleGeneratedFile = useCallback((filename: string) => {
+        setExpandedGeneratedFiles((prev) => {
+            const next = new Set(prev);
+            if (next.has(filename)) {
+                next.delete(filename);
+            } else {
+                next.add(filename);
+            }
+            return next;
+        });
+    }, []);
 
     useEffect(() => {
         if (allCommentsAll.length === 0) return;
@@ -98,24 +115,40 @@ export function FilesSection({
                     <FileDiffSkeleton />
                 </>
             )}
-            {files.map((file) => {
-                const fileComments = allCommentsAll.filter(
-                    (c) => c.path === file.filename,
-                );
+            <div className="flex flex-col gap-6">
+                {files.map((file) => {
+                    const fileComments = allCommentsAll.filter(
+                        (c) => c.path === file.filename,
+                    );
+                    const fileId = file.filename.replace(/\//g, "-");
 
-                return (
-                    <FileDiff
-                        comments={fileComments}
-                        file={file}
-                        key={file.filename}
-                        number={number.toString()}
-                        owner={owner}
-                        repo={repo}
-                        showComments={showComments}
-                        pendingReviewId={pendingReviewId}
-                    />
-                );
-            })}
+                    return (
+                        <LazyRenderItem
+                            className="scroll-mt-[calc(var(--header-height)+8px)]"
+                            heightMap={heightMapRef.current}
+                            id={fileId}
+                            itemKey={file.filename}
+                            key={file.filename}
+                        >
+                            <FileDiff
+                                comments={fileComments}
+                                file={file}
+                                number={number.toString()}
+                                onToggleGeneratedDiff={() =>
+                                    toggleGeneratedFile(file.filename)
+                                }
+                                owner={owner}
+                                pendingReviewId={pendingReviewId}
+                                repo={repo}
+                                showComments={showComments}
+                                showGeneratedDiff={expandedGeneratedFiles.has(
+                                    file.filename,
+                                )}
+                            />
+                        </LazyRenderItem>
+                    );
+                })}
+            </div>
         </div>
     );
 }
