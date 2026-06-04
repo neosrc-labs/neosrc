@@ -7,6 +7,40 @@ import { CommentForm } from "./comment-form";
 import { TimelineEvent } from "./timeline-event";
 import { aggregateEvents, filterTimelineEvents } from "./timeline-utils";
 
+export function TimelineSkeleton() {
+    const items = [
+        { key: "w-24", text: "w-48", body: true },
+        { key: "w-20", text: "w-36", body: false },
+        { key: "w-28", text: "w-56", body: true },
+    ];
+    return (
+        <div className="relative">
+            <div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200 dark:bg-zinc-700" />
+            <div className="space-y-6 pl-14">
+                {items.map((item) => (
+                    <div key={item.key}>
+                        <div className="flex items-center gap-2">
+                            <div
+                                className="h-2.5 animate-pulse rounded bg-gray-200 dark:bg-zinc-700"
+                                style={{ width: "40px" }}
+                            />
+                            <div
+                                className={`h-4 animate-pulse rounded bg-gray-200 dark:bg-zinc-700 ${item.text}`}
+                            />
+                        </div>
+                        {item.body && (
+                            <div className="mt-2 space-y-1.5">
+                                <div className="h-3.5 w-full animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
+                                <div className="h-3.5 w-3/4 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 interface TimelineSectionProps {
     owner: string;
     repo: string;
@@ -60,8 +94,11 @@ export function TimelineSection({
     );
     if (isLoading) {
         return (
-            <div className="py-4 text-gray-500 text-sm dark:text-gray-400">
-                Loading timeline...
+            <div className="mt-4 border-gray-200 border-t pt-6 dark:border-zinc-700">
+                <h2 className="mb-4 font-semibold text-gray-900 text-lg dark:text-gray-100">
+                    Timeline
+                </h2>
+                <TimelineSkeleton />
             </div>
         );
     }
