@@ -21,7 +21,7 @@ export function FilesSection({
     commitSha,
 }: FilesSectionProps) {
     const [showComments, setShowComments] = useState(true);
-    const { files } = useFiles({ owner, repo, number, commitSha });
+    const { files, isLoading } = useFiles({ owner, repo, number, commitSha });
 
     const { data: allComments = [] } = api.reviewComments.list.useQuery(
         { owner, repo, number },
@@ -57,7 +57,7 @@ export function FilesSection({
         <div>
             <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
-                    Files Changed ({files.length})
+                    Files Changed{!isLoading && ` (${files.length})`}
                 </h2>
                 <div className="flex items-center gap-2">
                     <button
