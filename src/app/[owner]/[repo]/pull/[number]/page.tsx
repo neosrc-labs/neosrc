@@ -9,7 +9,10 @@ import {
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
 import { PullRequestDescriptionSection } from "./_components/description";
-import { TimelineSection } from "./_components/timeline-section";
+import {
+    TimelineSection,
+    TimelineSkeleton,
+} from "./_components/timeline-section";
 
 type PullsGetResponseData =
     RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
@@ -62,7 +65,16 @@ export default async function PullRequestPage({ params }: PageProps) {
                 number={number}
             />
 
-            <Suspense fallback={null}>
+            <Suspense
+                fallback={
+                    <div className="mt-4 border-gray-200 border-t pt-6 dark:border-zinc-700">
+                        <h2 className="mb-4 font-semibold text-gray-900 text-lg dark:text-gray-100">
+                            Timeline
+                        </h2>
+                        <TimelineSkeleton />
+                    </div>
+                }
+            >
                 <TimelineSectionWithCanInteract
                     canInteractPromise={canInteractPromise}
                     number={number}
