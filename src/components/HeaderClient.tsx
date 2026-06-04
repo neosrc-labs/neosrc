@@ -284,7 +284,7 @@ export function HeaderClient({
 
             {prMatch && !isLeftOpen && (
                 <button
-                    className="fixed left-0 z-40 flex h-9 w-9 cursor-pointer items-center justify-center rounded-r-md bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-700 dark:bg-zinc-950 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
+                    className="fixed left-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-r-md bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-700 dark:bg-zinc-950 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
                     style={{ top: "var(--header-height)" }}
                     onClick={toggleLeft}
                     title="Open left sidebar"
@@ -296,7 +296,7 @@ export function HeaderClient({
 
             {prMatch && (
                 <button
-                    className="fixed right-0 z-40 flex h-9 w-9 cursor-pointer items-center justify-center rounded-l-md bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-700 dark:bg-zinc-950 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
+                    className="fixed right-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-l-md bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-700 dark:bg-zinc-950 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
                     style={{ top: "var(--header-height)" }}
                     onClick={toggleRight}
                     title={
