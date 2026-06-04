@@ -3,7 +3,8 @@ import { Suspense } from "react";
 import { githubAccessToken } from "~/server/auth";
 import {
     type CommitData,
-    getCommit,
+    getAuthenticatedUser,
+    getCachedCommit,
     getPullRequestCommits,
     type PullsListCommitsResponseData,
 } from "~/server/github";
@@ -42,12 +43,26 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
             </div>
         );
     }
+
+    let username: string | undefined;
+    try {
+        username = (await getAuthenticatedUser(accessToken)).login;
+    } catch {
+        // Proceed without username — no caching
+    }
+
     let commit: Promise<CommitData> | null = null;
     let commits: Promise<PullsListCommitsResponseData> | null = null;
     try {
         if (commitSha) {
             // Fetch commit details and all PR commits in parallel and don't block the main page render
-            commit = getCommit(accessToken, owner, repo, commitSha);
+            commit = getCachedCommit(
+                accessToken,
+                owner,
+                repo,
+                commitSha,
+                username,
+            );
             commits = getPullRequestCommits(accessToken, owner, repo, number);
         }
     } catch {

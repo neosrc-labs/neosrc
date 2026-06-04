@@ -69,6 +69,23 @@ async function persistCache<T>(
         });
 }
 
+export async function readCache<T>(key: string): Promise<T | null> {
+    try {
+        const [cached] = await db
+            .select()
+            .from(cacheTable)
+            .where(eq(cacheTable.key, key))
+            .limit(1);
+
+        if (cached && (!cached.deleteAt || new Date() < cached.deleteAt)) {
+            return cached.value as T;
+        }
+    } catch {
+        // DB error — return null
+    }
+    return null;
+}
+
 async function revalidate<T>(
     key: string,
     fetcher: () => Promise<T>,

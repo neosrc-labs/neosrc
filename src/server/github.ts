@@ -1,6 +1,6 @@
 import { Octokit, type RestEndpointMethodTypes } from "@octokit/rest";
 import { cache } from "react";
-import { withStaleWhileRevalidate } from "~/server/cache";
+import { readCache, withStaleWhileRevalidate } from "~/server/cache";
 import type { GQLActor } from "~/server/github-graphql";
 export type PullsGetResponseData =
     RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
@@ -487,23 +487,6 @@ export const getCheckRuns = cache(
     },
 );
 
-export const getCommitFiles = cache(
-    async (
-        accessToken: string,
-        owner: string,
-        repo: string,
-        commitSha: string,
-    ) => {
-        const octokit = createOctokit(accessToken);
-        const response = await octokit.repos.getCommit({
-            owner,
-            repo,
-            ref: commitSha,
-        });
-        return response.data.files || [];
-    },
-);
-
 export const getCommit = cache(
     async (
         accessToken: string,
@@ -520,6 +503,31 @@ export const getCommit = cache(
         return response.data;
     },
 );
+
+export async function getCachedCommit(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    commitSha: string,
+    username?: string | null,
+): Promise<CommitData> {
+    const permission = username
+        ? await readCache<string>(`permission:${owner}:${repo}:${username}`)
+        : null;
+
+    if (!permission || permission === "none") {
+        return getCommit(accessToken, owner, repo, commitSha);
+    }
+
+    return withStaleWhileRevalidate(
+        `commit:${owner}:${repo}:${commitSha}`,
+        () => getCommit(accessToken, owner, repo, commitSha),
+        {
+            staleAfter: 6 * 60 * 60 * 1000,
+            deleteAfter: 7 * 24 * 60 * 60 * 1000,
+        },
+    );
+}
 
 export const getPullRequestReactions = cache(
     async (
@@ -948,13 +956,19 @@ export async function* getPullRequestFilesStream(
     repo: string,
     pullNumber: number,
     commitSha?: string,
+    username?: string,
 ): AsyncGenerator<PullRequestFile[], void, undefined> {
     if (commitSha) {
-        // Fetch files changed in a specific commit.
-        // getCommit returns all files in one response (no pagination), so we
-        // yield a single page to keep the shape consistent with the PR path.
-        const { files } = await getCommit(accessToken, owner, repo, commitSha);
-        yield files ?? [];
+        const commit = username
+            ? await getCachedCommit(
+                  accessToken,
+                  owner,
+                  repo,
+                  commitSha,
+                  username,
+              )
+            : await getCommit(accessToken, owner, repo, commitSha);
+        yield commit.files ?? [];
     } else {
         const octokit = createOctokit(accessToken);
         for await (const page of octokit.paginate.iterator(
