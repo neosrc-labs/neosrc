@@ -254,106 +254,105 @@ export function PullRequestDescriptionSection({
                 {(pullRequest) => {
                     const displayBody = savedBody ?? pullRequest.body;
                     return (
-                        <>
-                            {/* PR Description */}
-                            <Async fallback={null} promise={canInteractPromise}>
-                                {(canInteract) => (
-                                    <div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-900">
-                                        <div className="flex items-center justify-between border-gray-200 border-b px-4 py-1 dark:border-zinc-700">
-                                            <h3 className="font-semibold text-gray-700 text-sm dark:text-zinc-300">
-                                                Description
-                                            </h3>
-                                            {!isEditing && canInteract && (
-                                                <button
-                                                    className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                                                    onClick={() =>
-                                                        handleStartEdit(
-                                                            savedBody ??
-                                                                pullRequest.body ??
-                                                                "",
-                                                        )
-                                                    }
-                                                    type="button"
-                                                >
-                                                    <SquarePen size={16} />
-                                                </button>
-                                            )}
-                                        </div>
-                                        <div className="p-4">
-                                            {isEditing ? (
-                                                <MarkdownEditor
-                                                    onCancel={handleCancel}
-                                                    onChange={setEditBody}
-                                                    value={editBody}
-                                                    owner={owner}
-                                                    repo={repo}
-                                                    minHeight="200px"
-                                                    footerActions={[
-                                                        {
-                                                            label: "Save",
-                                                            onClick: () =>
-                                                                handleSave(),
-                                                            variant: "approve",
-                                                        },
-                                                    ]}
-                                                />
-                                            ) : (
-                                                <div className="prose prose-sm max-w-none">
-                                                    {displayBody ? (
-                                                        <MarkdownRenderer
-                                                            content={
-                                                                displayBody
-                                                            }
-                                                            owner={owner}
-                                                            repo={repo}
-                                                        />
-                                                    ) : (
-                                                        <p className="text-gray-500 italic dark:text-zinc-400">
-                                                            No description
-                                                            provided.
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {!isEditing && (
-                                            <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                                                {reactionsData &&
-                                                    reactionsData.reactions
-                                                        .length > 0 && (
-                                                        <ReactionBar
-                                                            disabled={
-                                                                !canInteract
-                                                            }
-                                                            reactions={
-                                                                reactionsData.reactions
-                                                            }
-                                                            currentUserLogin={
-                                                                currentUserData?.login
-                                                            }
-                                                            onReact={
-                                                                handleReact
-                                                            }
-                                                        />
-                                                    )}
-                                                <ReactionPicker
-                                                    disabled={!canInteract}
-                                                    reactions={
-                                                        reactionsData?.reactions ??
-                                                        []
-                                                    }
-                                                    currentUserLogin={
-                                                        currentUserData?.login
-                                                    }
-                                                    onReact={handleReact}
-                                                />
-                                            </div>
+                        <div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-900">
+                            <div className="flex items-center justify-between border-gray-200 border-b px-4 py-1 dark:border-zinc-700">
+                                <h3 className="font-semibold text-gray-700 text-sm dark:text-zinc-300">
+                                    Description
+                                </h3>
+                                <Async
+                                    fallback={null}
+                                    promise={canInteractPromise}
+                                >
+                                    {(canInteract) =>
+                                        !isEditing && canInteract ? (
+                                            <button
+                                                className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                                onClick={() =>
+                                                    handleStartEdit(
+                                                        savedBody ??
+                                                            pullRequest.body ??
+                                                            "",
+                                                    )
+                                                }
+                                                type="button"
+                                            >
+                                                <SquarePen size={16} />
+                                            </button>
+                                        ) : null
+                                    }
+                                </Async>
+                            </div>
+                            <div className="p-4">
+                                {isEditing ? (
+                                    <MarkdownEditor
+                                        onCancel={handleCancel}
+                                        onChange={setEditBody}
+                                        value={editBody}
+                                        owner={owner}
+                                        repo={repo}
+                                        minHeight="200px"
+                                        footerActions={[
+                                            {
+                                                label: "Save",
+                                                onClick: () => handleSave(),
+                                                variant: "approve",
+                                            },
+                                        ]}
+                                    />
+                                ) : (
+                                    <div className="prose prose-sm max-w-none">
+                                        {displayBody ? (
+                                            <MarkdownRenderer
+                                                content={displayBody}
+                                                owner={owner}
+                                                repo={repo}
+                                            />
+                                        ) : (
+                                            <p className="text-gray-500 italic dark:text-zinc-400">
+                                                No description provided.
+                                            </p>
                                         )}
                                     </div>
                                 )}
-                            </Async>
-                        </>
+                            </div>
+
+                            {!isEditing && (
+                                <Async
+                                    fallback={null}
+                                    promise={canInteractPromise}
+                                >
+                                    {(canInteract) => (
+                                        <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                                            {reactionsData &&
+                                                reactionsData.reactions.length >
+                                                    0 && (
+                                                    <ReactionBar
+                                                        disabled={!canInteract}
+                                                        reactions={
+                                                            reactionsData.reactions
+                                                        }
+                                                        currentUserLogin={
+                                                            currentUserData?.login
+                                                        }
+                                                        onReact={handleReact}
+                                                    />
+                                                )}
+                                            <ReactionPicker
+                                                disabled={!canInteract}
+                                                reactions={
+                                                    reactionsData?.reactions ??
+                                                    []
+                                                }
+                                                currentUserLogin={
+                                                    currentUserData?.login
+                                                }
+                                                onReact={handleReact}
+                                            />
+                                        </div>
+                                    )}
+                                </Async>
+                            )}
+                        </div>
                     );
                 }}
             </Async>
