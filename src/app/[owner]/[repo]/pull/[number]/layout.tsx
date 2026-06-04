@@ -4,9 +4,9 @@ import { getAccount } from "~/server/auth";
 import {
     type CheckRun,
     getAuthenticatedUser,
+    getCachedPullRequest,
     getCheckRuns,
     getConflictedFiles,
-    getPullRequest,
     getPullRequestCommits,
     getUserRepoPermission,
     type PullsGetResponseData,
@@ -41,9 +41,15 @@ export default async function PullRequestLayout({
 
     if (account?.accessToken) {
         const accessToken = account.accessToken;
-        commits = getPullRequestCommits(accessToken, owner, repo, number);
-        pullRequest = getPullRequest(accessToken, owner, repo, number);
         currentUserLogin = (await getAuthenticatedUser(accessToken)).login;
+        commits = getPullRequestCommits(accessToken, owner, repo, number);
+        pullRequest = getCachedPullRequest(
+            accessToken,
+            owner,
+            repo,
+            number,
+            currentUserLogin,
+        );
 
         userPermission = getUserRepoPermission(
             accessToken,

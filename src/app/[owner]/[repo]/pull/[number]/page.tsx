@@ -4,7 +4,7 @@ import { Suspense, use } from "react";
 import { githubAccessToken } from "~/server/auth";
 import {
     getAuthenticatedUser,
-    getPullRequest,
+    getCachedPullRequest,
     getUserRepoPermission,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
@@ -47,12 +47,20 @@ export default async function PullRequestPage({ params }: PageProps) {
         );
     }
 
-    const pullRequestPromise = getPullRequest(accessToken, owner, repo, number);
+    const currentUser = await getAuthenticatedUser(accessToken);
+    const pullRequestPromise = getCachedPullRequest(
+        accessToken,
+        owner,
+        repo,
+        number,
+        currentUser.login,
+    );
     const canInteractPromise = computeCanInteract(
         accessToken,
         owner,
         repo,
         pullRequestPromise,
+        currentUser.login,
     );
 
     return (
@@ -91,23 +99,20 @@ async function computeCanInteract(
     owner: string,
     repo: string,
     pullRequestPromise: Promise<PullsGetResponseData>,
+    username: string,
 ) {
-    const [user, pr] = await Promise.all([
-        getAuthenticatedUser(accessToken),
+    const [pr, userPermission] = await Promise.all([
         pullRequestPromise,
+        getUserRepoPermission(accessToken, owner, repo, username).catch(
+            () => null,
+        ),
     ]);
-    const userPermission = await getUserRepoPermission(
-        accessToken,
-        owner,
-        repo,
-        user.login,
-    ).catch(() => null);
 
     return (
         !pr.locked ||
         userPermission === "admin" ||
         userPermission === "write" ||
-        user.login === pr.user?.login
+        username === pr.user?.login
     );
 }
 

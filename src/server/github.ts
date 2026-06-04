@@ -74,6 +74,31 @@ export const getPullRequest = cache(
     },
 );
 
+export async function getCachedPullRequest(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    username?: string | null,
+): Promise<PullsGetResponseData> {
+    const permission = username
+        ? await readCache<string>(`permission:${owner}:${repo}:${username}`)
+        : null;
+
+    if (!permission || permission === "none") {
+        return getPullRequest(accessToken, owner, repo, pullNumber);
+    }
+
+    return withStaleWhileRevalidate(
+        `pr:${owner}:${repo}:${pullNumber}`,
+        () => getPullRequest(accessToken, owner, repo, pullNumber),
+        {
+            staleAfter: 5 * 1000,
+            deleteAfter: 3 * 60 * 1000,
+        },
+    );
+}
+
 export const getPullRequestCommits = cache(
     async (
         accessToken: string,
