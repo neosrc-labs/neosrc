@@ -1,5 +1,6 @@
 import { Octokit, type RestEndpointMethodTypes } from "@octokit/rest";
 import { cache } from "react";
+import { withStaleWhileRevalidate } from "~/server/cache";
 import type { GQLActor } from "~/server/github-graphql";
 export type PullsGetResponseData =
     RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
@@ -705,14 +706,24 @@ export const getUserRepoPermission = cache(
         repo: string,
         username: string,
     ) => {
-        const octokit = createOctokit(accessToken);
-        const response =
-            await octokit.rest.repos.getCollaboratorPermissionLevel({
-                owner,
-                repo,
-                username,
-            });
-        return response.data.permission as "admin" | "write" | "read" | "none";
+        return withStaleWhileRevalidate(
+            `permission:${owner}:${repo}:${username}`,
+            async () => {
+                const octokit = createOctokit(accessToken);
+                const response =
+                    await octokit.rest.repos.getCollaboratorPermissionLevel({
+                        owner,
+                        repo,
+                        username,
+                    });
+                return response.data.permission as
+                    | "admin"
+                    | "write"
+                    | "read"
+                    | "none";
+            },
+            { staleAfter: 5 * 60 * 1000, deleteAfter: 6 * 60 * 60 * 1000 },
+        );
     },
 );
 

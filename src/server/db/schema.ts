@@ -53,3 +53,18 @@ export const betterAuthVerification = createTable("ba_verification", (d) => ({
     createdAt: d.timestamp({ withTimezone: true, mode: "date" }).notNull(),
     updatedAt: d.timestamp({ withTimezone: true, mode: "date" }).notNull(),
 }));
+
+export const cache = createTable("cache", (d) => ({
+    key: d.text().notNull().primaryKey(),
+    value: d.jsonb().$type<unknown>().notNull(),
+    staleAt: d.timestamp({ withTimezone: true, mode: "date" }).notNull(),
+    deleteAt: d.timestamp({ withTimezone: true, mode: "date" }),
+    createdAt: d
+        .timestamp({ withTimezone: true, mode: "date" })
+        .defaultNow()
+        .notNull(),
+    updatedAt: d
+        .timestamp({ withTimezone: true, mode: "date" })
+        .defaultNow()
+        .notNull(),
+}));
