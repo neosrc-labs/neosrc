@@ -14,7 +14,7 @@ interface LazyRenderItemProps {
 export function LazyRenderItem({
     itemKey,
     heightMap,
-    rootMargin = "1500px",
+    rootMargin = "2500px",
     id,
     className,
     children,
