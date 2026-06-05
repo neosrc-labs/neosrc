@@ -46,13 +46,6 @@ export function CommitsSection({
 
     return (
         <>
-            <h3 className="mb-3 font-semibold text-gray-900 text-sm dark:text-gray-100">
-                Commits
-                <Async fallback={null} promise={pullRequestPromise}>
-                    {(pullRequest) => <span> ({pullRequest.commits})</span>}
-                </Async>
-            </h3>
-
             {isLoading ? (
                 <CommitsSkeleton />
             ) : commits.length === 0 ? (

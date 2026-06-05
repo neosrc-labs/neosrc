@@ -49,9 +49,12 @@ export default function RightSidebar({
         );
     }
 
+    const pullRequest = use(pullRequestPromise);
+    const commitCount = pullRequest.commits;
+
     const tabs = [
         ...(checksPromise ? [["checks", "Checks"] as const] : []),
-        ["commits", "Commits"] as const,
+        ["commits", `Commits (${commitCount})`] as const,
     ];
 
     return (
@@ -82,10 +85,7 @@ export default function RightSidebar({
                 </div>
             </div>
 
-            <div
-                ref={scrollRef}
-                className="min-h-0 flex-1 overflow-y-auto pt-4"
-            >
+            <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
                 {tab === "checks" && checksPromise ? (
                     <ChecksSection checksPromise={checksPromise} />
                 ) : null}
