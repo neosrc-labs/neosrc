@@ -63,12 +63,14 @@ export function ActionSection({
     const approveMutation = api.pulls.approve.useMutation({
         onSuccess: () => {
             utils.timeline.list.invalidate();
+            utils.reviews.getPending.invalidate();
         },
     });
 
     const requestChangesMutation = api.pulls.approve.useMutation({
         onSuccess: () => {
             utils.timeline.list.invalidate();
+            utils.reviews.getPending.invalidate();
         },
     });
 
@@ -90,18 +92,24 @@ export function ActionSection({
     const markAsDraftMutation = api.pulls.markAsDraft.useMutation({
         onSuccess: () => {
             setConvertedToDraft(true);
+            utils.timeline.list.invalidate();
+            utils.reviews.getPending.invalidate();
             router.refresh();
         },
     });
 
     const closeMutation = api.pulls.close.useMutation({
         onSuccess: () => {
+            utils.timeline.list.invalidate();
+            utils.reviews.getPending.invalidate();
             router.refresh();
         },
     });
 
     const reopenMutation = api.pulls.reopen.useMutation({
         onSuccess: () => {
+            utils.timeline.list.invalidate();
+            utils.reviews.getPending.invalidate();
             router.refresh();
         },
     });
@@ -109,14 +117,17 @@ export function ActionSection({
     const markReadyMutation = api.pulls.markReadyForReview.useMutation({
         onSuccess: () => {
             setMarkedReady(true);
+            utils.timeline.list.invalidate();
+            utils.reviews.getPending.invalidate();
             router.refresh();
         },
     });
 
     const mergeMutation = api.pulls.merge.useMutation({
         onSuccess: () => {
-            router.refresh();
             utils.timeline.list.invalidate();
+            utils.reviews.getPending.invalidate();
+            router.refresh();
         },
     });
 

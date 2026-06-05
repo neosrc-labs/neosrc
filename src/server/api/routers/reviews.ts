@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getGitHubToken } from "~/server/auth";
+import { deleteCache, prCacheKey } from "~/server/cache";
 import {
     createPullRequestReview,
     deletePendingReview,
@@ -127,6 +128,10 @@ export const reviewsRouter = createTRPCRouter({
                 input.body,
             );
 
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
             return { success: true as const };
         }),
 
@@ -151,6 +156,10 @@ export const reviewsRouter = createTRPCRouter({
                 input.repo,
                 input.number,
                 input.reviewId,
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
             );
 
             return { success: true as const };

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getGitHubToken } from "~/server/auth";
+import { deleteCache, prCacheKey } from "~/server/cache";
 import {
     applySuggestion,
     createPullRequestReviewComment,
@@ -120,6 +121,10 @@ export const reviewCommentsRouter = createTRPCRouter({
                     pendingReview?.node_id,
                 );
 
+                await deleteCache(
+                    prCacheKey(input.owner, input.repo, input.number),
+                );
+
                 return { success: true as const, id: comment.id };
             }
 
@@ -133,6 +138,10 @@ export const reviewCommentsRouter = createTRPCRouter({
                 input.filePath,
                 input.lineNumber,
                 input.side,
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
             );
 
             return { success: true as const, id: comment.id };
@@ -213,6 +222,10 @@ export const reviewCommentsRouter = createTRPCRouter({
                 input.inReplyTo,
             );
 
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
             return { success: true as const, id: comment.id };
         }),
 
@@ -287,6 +300,10 @@ export const reviewCommentsRouter = createTRPCRouter({
                 input.suggestionCode,
                 input.line,
                 input.startLine,
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
             );
 
             return { success: true as const };
