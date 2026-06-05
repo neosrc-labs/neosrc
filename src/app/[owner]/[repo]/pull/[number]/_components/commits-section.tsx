@@ -1,6 +1,8 @@
 "use client";
 
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { usePathname } from "next/navigation";
+import type React from "react";
 import { useMemo } from "react";
 import { Async, AsyncLink } from "~/components/async";
 import { CommitHoverCard } from "~/components/hovercards/commit-hover-card";
@@ -11,14 +13,18 @@ import type {
 } from "~/server/github";
 import { formatRelativeTime } from "~/utils";
 
+const COMMIT_ITEM_HEIGHT = 52;
+
 interface CommitsSectionProps {
     pullRequestPromise: Promise<PullsGetResponseData>;
     commitsPromise: Promise<PullsListCommitsResponseData> | null;
+    scrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function CommitsSection({
     pullRequestPromise,
     commitsPromise,
+    scrollRef,
 }: CommitsSectionProps) {
     const pathname = usePathname();
     const currentSha =
@@ -53,70 +59,104 @@ export function CommitsSection({
                         );
                     }
 
-                    const baseUrl = `/${pullRequest.base.repo.owner.login}/${pullRequest.base.repo.name}/pull/${pullRequest.number}/changes`;
-
                     return (
-                        <div className="space-y-3">
-                            {commits.map((commit: Commit) => {
-                                const isCurrent = currentSha
-                                    ? commit.sha.startsWith(currentSha)
-                                    : false;
-                                return (
-                                    <CommitHoverCard
-                                        baseUrl={baseUrl}
-                                        commit={commit}
-                                        key={commit.sha}
-                                    >
-                                        <AsyncLink
-                                            className={`flex items-start gap-2 rounded-md px-2 py-1 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800 ${
-                                                isCurrent
-                                                    ? "border-blue-500 border-l-2 bg-blue-50 dark:bg-blue-950"
-                                                    : ""
-                                            }`}
-                                            href={`${baseUrl}/${commit.sha}`}
-                                        >
-                                            {commit.author && (
-                                                <img
-                                                    alt={commit.author.login}
-                                                    className="mt-0.5 h-5 w-5 shrink-0 rounded-full"
-                                                    src={
-                                                        commit.author.avatar_url
-                                                    }
-                                                />
-                                            )}
-                                            <div className="min-w-0">
-                                                <p className="truncate font-medium text-gray-900 text-sm dark:text-gray-100">
-                                                    {
-                                                        commit.commit.message.split(
-                                                            "\n",
-                                                        )[0]
-                                                    }
-                                                </p>
-                                                {commit.author &&
-                                                    commit.commit.committer && (
-                                                        <p className="mt-0.5 text-gray-500 text-xs dark:text-gray-400">
-                                                            {
-                                                                commit.author
-                                                                    .login
-                                                            }{" "}
-                                                            committed{" "}
-                                                            {formatRelativeTime(
-                                                                commit.commit
-                                                                    .committer
-                                                                    .date ?? "",
-                                                            )}
-                                                        </p>
-                                                    )}
-                                            </div>
-                                        </AsyncLink>
-                                    </CommitHoverCard>
-                                );
-                            })}
-                        </div>
+                        <CommitsList
+                            commits={commits}
+                            currentSha={currentSha}
+                            pullRequest={pullRequest}
+                            scrollRef={scrollRef}
+                        />
                     );
                 }}
             </Async>
         </>
+    );
+}
+
+interface CommitsListProps {
+    commits: Commit[];
+    pullRequest: PullsGetResponseData;
+    currentSha: string | null;
+    scrollRef: React.RefObject<HTMLDivElement | null>;
+}
+
+function CommitsList({
+    commits,
+    pullRequest,
+    currentSha,
+    scrollRef,
+}: CommitsListProps) {
+    const virtualizer = useVirtualizer({
+        count: commits.length,
+        getScrollElement: () => scrollRef.current,
+        estimateSize: () => COMMIT_ITEM_HEIGHT,
+        overscan: 5,
+    });
+
+    const baseUrl = `/${pullRequest.base.repo.owner.login}/${pullRequest.base.repo.name}/pull/${pullRequest.number}/changes`;
+
+    return (
+        <div
+            style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                position: "relative",
+            }}
+        >
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+                const commit = commits[virtualItem.index];
+                if (!commit) return null;
+                const isCurrent = currentSha
+                    ? commit.sha.startsWith(currentSha)
+                    : false;
+                return (
+                    <div
+                        key={virtualItem.key}
+                        style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: `${virtualItem.size}px`,
+                            transform: `translateY(${virtualItem.start}px)`,
+                        }}
+                    >
+                        <CommitHoverCard baseUrl={baseUrl} commit={commit}>
+                            <AsyncLink
+                                className={`flex items-start gap-2 rounded-md px-2 py-1 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800 ${
+                                    isCurrent
+                                        ? "border-blue-500 border-l-2 bg-blue-50 dark:bg-blue-950"
+                                        : ""
+                                }`}
+                                href={`${baseUrl}/${commit.sha}`}
+                            >
+                                {commit.author && (
+                                    <img
+                                        alt={commit.author.login}
+                                        className="mt-0.5 h-5 w-5 shrink-0 rounded-full"
+                                        src={commit.author.avatar_url}
+                                    />
+                                )}
+                                <div className="min-w-0">
+                                    <p className="truncate font-medium text-gray-900 text-sm dark:text-gray-100">
+                                        {commit.commit.message.split("\n")[0]}
+                                    </p>
+                                    {commit.author &&
+                                        commit.commit.committer && (
+                                            <p className="mt-0.5 text-gray-500 text-xs dark:text-gray-400">
+                                                {commit.author.login} committed{" "}
+                                                {formatRelativeTime(
+                                                    commit.commit.committer
+                                                        .date ?? "",
+                                                )}
+                                            </p>
+                                        )}
+                                </div>
+                            </AsyncLink>
+                        </CommitHoverCard>
+                    </div>
+                );
+            })}
+        </div>
     );
 }
 

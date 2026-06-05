@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle, Circle, Loader2, XCircle } from "lucide-react";
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
 import type {
     CheckRun,
@@ -33,6 +33,8 @@ export default function RightSidebar({
     const [tab, setTab] = useState<"checks" | "commits">(
         checksPromise ? "checks" : "commits",
     );
+
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (!checksPromise) return;
@@ -86,7 +88,10 @@ export default function RightSidebar({
                 </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto pt-4">
+            <div
+                ref={scrollRef}
+                className="min-h-0 flex-1 overflow-y-auto pt-4"
+            >
                 {tab === "checks" && checksPromise ? (
                     <ChecksSection checksPromise={checksPromise} />
                 ) : null}
@@ -94,6 +99,7 @@ export default function RightSidebar({
                     <CommitsSection
                         commitsPromise={commitsPromise}
                         pullRequestPromise={pullRequestPromise}
+                        scrollRef={scrollRef}
                     />
                 ) : null}
             </div>
