@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { LazyRenderItem } from "~/components/LazyRenderItem";
 import type { GQLReactionNode } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { CommentForm } from "./comment-form";
@@ -92,6 +93,8 @@ export function TimelineSection({
             ) ?? {},
         [data],
     );
+
+    const heightMapRef = useRef(new Map<string, number>());
     if (isLoading) {
         return (
             <div className="mt-4 border-gray-200 border-t pt-6 dark:border-zinc-700">
@@ -129,17 +132,23 @@ export function TimelineSection({
                             ? `raw-${wrapper.event.id}-${index}`
                             : `label-${wrapper.createdAt}-${index}`;
                     return (
-                        <TimelineEvent
-                            wrapper={wrapper}
+                        <LazyRenderItem
+                            itemKey={key}
+                            heightMap={heightMapRef.current}
                             key={key}
-                            number={number}
-                            owner={owner}
-                            repo={repo}
-                            commentReactions={allCommentReactions}
-                            currentUserLogin={currentUserLogin}
-                            allComments={allComments}
-                            canInteract={canInteract}
-                        />
+                            extraHeight={32}
+                        >
+                            <TimelineEvent
+                                wrapper={wrapper}
+                                number={number}
+                                owner={owner}
+                                repo={repo}
+                                commentReactions={allCommentReactions}
+                                currentUserLogin={currentUserLogin}
+                                allComments={allComments}
+                                canInteract={canInteract}
+                            />
+                        </LazyRenderItem>
                     );
                 })}
             </div>

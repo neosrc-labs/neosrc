@@ -8,6 +8,7 @@ interface LazyRenderItemProps {
     rootMargin?: string;
     id?: string;
     className?: string;
+    extraHeight?: number;
     children: React.ReactNode;
 }
 
@@ -17,6 +18,7 @@ export function LazyRenderItem({
     rootMargin = "2500px",
     id,
     className,
+    extraHeight = 0,
     children,
 }: LazyRenderItemProps) {
     const [isVisible, setIsVisible] = useState(true);
@@ -56,7 +58,12 @@ export function LazyRenderItem({
 
     if (!isVisible && height !== undefined) {
         return (
-            <div className={className} id={id} ref={ref} style={{ height }} />
+            <div
+                className={className}
+                id={id}
+                ref={ref}
+                style={{ height: height + extraHeight }}
+            />
         );
     }
 
