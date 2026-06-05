@@ -7,7 +7,7 @@ export function StatusPill({ state }: { state: PullRequestState }) {
     switch (state) {
         case "merged":
             statusText = "Merged";
-            statusColor = "bg-purple-600 text-white";
+            statusColor = "bg-violet-600 text-white";
             break;
         case "open":
             statusText = "Open";
