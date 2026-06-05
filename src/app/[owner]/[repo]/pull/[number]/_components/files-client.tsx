@@ -33,6 +33,8 @@ interface FilesSectionProps {
     repo: string;
     number: number;
     commitSha?: string;
+    baseSha?: string;
+    headSha?: string;
 }
 
 export function FilesSection({
@@ -40,6 +42,8 @@ export function FilesSection({
     repo,
     number,
     commitSha,
+    baseSha,
+    headSha,
 }: FilesSectionProps) {
     const [showComments, setShowComments] = useState(true);
     const [expandedGeneratedFiles, setExpandedGeneratedFiles] = useState(
@@ -178,6 +182,8 @@ export function FilesSection({
                             ]}
                         >
                             <FileDiff
+                                baseSha={baseSha}
+                                headSha={headSha}
                                 comments={fileComments}
                                 file={file}
                                 number={number.toString()}
