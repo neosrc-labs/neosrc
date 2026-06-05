@@ -250,6 +250,20 @@ export function PullRequestDescriptionSection({
                                 </UserHoverCard>
                                 {formatRelativeTime(pullRequest.created_at)}
                             </div>
+                            <div className="ml-auto flex items-center gap-1.5 text-sm">
+                                {pullRequest.additions > 0 && (
+                                    <span className="font-medium text-green-600 dark:text-green-500">
+                                        +
+                                        {pullRequest.additions.toLocaleString()}
+                                    </span>
+                                )}
+                                {pullRequest.deletions > 0 && (
+                                    <span className="font-medium text-red-600 dark:text-red-500">
+                                        -
+                                        {pullRequest.deletions.toLocaleString()}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     )}
                 </Async>
