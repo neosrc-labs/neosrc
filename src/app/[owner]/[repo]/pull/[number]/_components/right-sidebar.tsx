@@ -3,17 +3,12 @@
 import { CheckCircle, Circle, Loader2, XCircle } from "lucide-react";
 import { use, useEffect, useRef, useState } from "react";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
-import type {
-    CheckRun,
-    PullsGetResponseData,
-    PullsListCommitsResponseData,
-} from "~/server/github";
+import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { CommitsSection } from "./commits-section";
 import { MetadataSection } from "./metadata-section";
 
 interface RightSidebarProps {
     pullRequestPromise: Promise<PullsGetResponseData> | null;
-    commitsPromise: Promise<PullsListCommitsResponseData> | null;
     checksPromise: Promise<Array<CheckRun>> | null;
     userPermission: Promise<string | null>;
     owner: string;
@@ -23,7 +18,6 @@ interface RightSidebarProps {
 
 export default function RightSidebar({
     pullRequestPromise,
-    commitsPromise,
     checksPromise,
     userPermission,
     owner,
@@ -97,9 +91,11 @@ export default function RightSidebar({
                 ) : null}
                 {tab === "commits" ? (
                     <CommitsSection
-                        commitsPromise={commitsPromise}
                         pullRequestPromise={pullRequestPromise}
                         scrollRef={scrollRef}
+                        owner={owner}
+                        repo={repo}
+                        number={number}
                     />
                 ) : null}
             </div>
