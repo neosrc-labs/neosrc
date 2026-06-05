@@ -13,6 +13,7 @@ interface SidebarContextValue {
     isRightOpen: boolean;
     toggleLeft: () => void;
     toggleRight: () => void;
+    setRightOpen: (open: boolean) => void;
 }
 
 const SidebarContext = createContext<SidebarContextValue>({
@@ -20,6 +21,7 @@ const SidebarContext = createContext<SidebarContextValue>({
     isRightOpen: true,
     toggleLeft: () => {},
     toggleRight: () => {},
+    setRightOpen: () => {},
 });
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
@@ -34,9 +36,19 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
         setIsRightOpen((prev) => !prev);
     }, []);
 
+    const setRightOpen = useCallback((open: boolean) => {
+        setIsRightOpen(open);
+    }, []);
+
     return (
         <SidebarContext.Provider
-            value={{ isLeftOpen, isRightOpen, toggleLeft, toggleRight }}
+            value={{
+                isLeftOpen,
+                isRightOpen,
+                toggleLeft,
+                toggleRight,
+                setRightOpen,
+            }}
         >
             {children}
         </SidebarContext.Provider>

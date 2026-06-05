@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { use, useMemo } from "react";
+import { use, useEffect, useMemo } from "react";
 import { Async } from "~/components/async";
+import { useSidebar } from "~/components/sidebar-context";
 import { NavItem, NavMenu } from "~/components/ui/nav-menu";
 import { useFiles } from "~/hooks/files";
 import type { PullsGetResponseData } from "~/server/github";
@@ -27,6 +28,12 @@ export function LeftSidebarContentSection({
     const isFilesActive =
         pathname === `${basePath}/changes` ||
         pathname.startsWith(`${basePath}/changes/`);
+
+    const { setRightOpen } = useSidebar();
+
+    useEffect(() => {
+        setRightOpen(!isFilesActive);
+    }, [isFilesActive, setRightOpen]);
 
     if (isFilesActive) {
         return (
