@@ -255,8 +255,6 @@ export function PullRequestDescriptionSection({
                 </Async>
             </div>
 
-            <div className="mt-4 border-gray-200 border-t pt-4 dark:border-zinc-700" />
-
             <Async
                 fallback={
                     <div className="h-48 w-fill animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />

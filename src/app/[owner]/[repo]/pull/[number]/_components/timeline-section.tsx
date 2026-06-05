@@ -111,10 +111,7 @@ export function TimelineSection({
 
     if (isLoading) {
         return (
-            <div className="mt-4 border-gray-200 border-t pt-6 dark:border-zinc-700">
-                <h2 className="mb-4 font-semibold text-gray-900 text-lg dark:text-gray-100">
-                    Timeline
-                </h2>
+            <div className="mt-5">
                 <TimelineSkeleton />
             </div>
         );
@@ -126,11 +123,7 @@ export function TimelineSection({
     const wrappers = aggregateEvents(filteredEvents);
 
     return (
-        <div className="mt-4 border-gray-200 border-t pt-6 dark:border-zinc-700">
-            <h2 className="mb-4 font-semibold text-gray-900 text-lg dark:text-gray-100">
-                Timeline
-            </h2>
-
+        <div className="mt-5">
             {wrappers.length === 0 && (
                 <p className="text-gray-500 text-sm dark:text-gray-400">
                     No timeline events yet.
