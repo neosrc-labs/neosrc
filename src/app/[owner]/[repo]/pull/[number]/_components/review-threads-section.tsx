@@ -129,7 +129,7 @@ export function ReviewThreadsSection({
     }
 
     return (
-        <div className="space-y-0.5">
+        <div className="max-h-full space-y-0.5 overflow-y-auto">
             {threads.map((thread, idx) => (
                 <ThreadCard
                     key={thread.comments[0]?.id ?? idx}
