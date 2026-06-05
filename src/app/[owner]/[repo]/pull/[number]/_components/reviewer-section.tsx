@@ -80,10 +80,14 @@ export function ReviewerSection({
     function mergeReviewers(
         requested: Reviewer[],
         reviews: Array<{ user: Reviewer | null }>,
+        author?: string,
     ): Reviewer[] {
         const reviewerUsers = reviews
             .map((r) => r.user)
-            .filter((u): u is NonNullable<typeof u> => u != null);
+            .filter(
+                (u): u is NonNullable<typeof u> =>
+                    u != null && u.login !== author,
+            );
         const seen = new Set<string>();
         return [...requested, ...reviewerUsers].filter((u) => {
             if (seen.has(u.login)) return false;
@@ -122,6 +126,7 @@ export function ReviewerSection({
                                     reviewers={mergeReviewers(
                                         pullRequest.requested_reviewers ?? [],
                                         reviewsQuery.data ?? [],
+                                        pullRequest.user.login,
                                     )}
                                     operations={operations}
                                     onAddReviewer={handleAdd}
@@ -149,6 +154,7 @@ export function ReviewerSection({
                             reviewers={mergeReviewers(
                                 pullRequest.requested_reviewers ?? [],
                                 reviewsQuery.data ?? [],
+                                pullRequest.user.login,
                             )}
                             reviewStateMap={reviewStateMap}
                             operations={operations}
