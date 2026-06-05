@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getGitHubToken } from "~/server/auth";
+import { deleteCache, prCacheKey } from "~/server/cache";
 import {
     addAssigneesToIssue,
     addLabelsToIssue,
@@ -50,6 +51,10 @@ export const pullsRouter = createTRPCRouter({
                 input.body,
             );
 
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
             return { success: true as const, body: result.body };
         }),
 
@@ -74,6 +79,10 @@ export const pullsRouter = createTRPCRouter({
                 input.repo,
                 input.number,
                 input.body,
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
             );
 
             return { success: true as const, id: comment.id };
@@ -130,6 +139,10 @@ export const pullsRouter = createTRPCRouter({
                 input.body,
             );
 
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
             return { success: true as const, body: review.body };
         }),
 
@@ -172,6 +185,10 @@ export const pullsRouter = createTRPCRouter({
                 [input.label],
             );
 
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
             return { success: true as const };
         }),
 
@@ -196,6 +213,10 @@ export const pullsRouter = createTRPCRouter({
                 input.repo,
                 input.number,
                 input.label,
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
             );
 
             return { success: true as const };
@@ -240,6 +261,10 @@ export const pullsRouter = createTRPCRouter({
                 [input.assignee],
             );
 
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
             return { success: true as const };
         }),
 
@@ -264,6 +289,10 @@ export const pullsRouter = createTRPCRouter({
                 input.repo,
                 input.number,
                 [input.assignee],
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
             );
 
             return { success: true as const };
@@ -308,6 +337,10 @@ export const pullsRouter = createTRPCRouter({
                 input.milestone,
             );
 
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
             return { success: true as const };
         }),
 
@@ -334,6 +367,10 @@ export const pullsRouter = createTRPCRouter({
                 [input.reviewer],
             );
 
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
             return { success: true as const };
         }),
 
@@ -358,6 +395,10 @@ export const pullsRouter = createTRPCRouter({
                 input.repo,
                 input.number,
                 [input.reviewer],
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
             );
 
             return { success: true as const };
@@ -388,6 +429,10 @@ export const pullsRouter = createTRPCRouter({
                 input.body,
             );
 
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
             return { success: true as const, id: review.id };
         }),
 
@@ -412,6 +457,10 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
             );
 
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
             return { success: true as const };
         }),
 
@@ -434,6 +483,10 @@ export const pullsRouter = createTRPCRouter({
                 input.owner,
                 input.repo,
                 input.number,
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
             );
 
             return { success: true as const };
@@ -466,6 +519,10 @@ export const pullsRouter = createTRPCRouter({
                 input.commitMessage,
             );
 
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
             return {
                 success: true as const,
                 sha: result.sha,
@@ -494,6 +551,10 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
             );
 
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
             return { success: true as const };
         }),
 
@@ -516,6 +577,10 @@ export const pullsRouter = createTRPCRouter({
                 input.owner,
                 input.repo,
                 input.number,
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
             );
 
             return { success: true as const };

@@ -1,6 +1,10 @@
 import { Octokit, type RestEndpointMethodTypes } from "@octokit/rest";
 import { cache } from "react";
-import { readCache, withStaleWhileRevalidate } from "~/server/cache";
+import {
+    prCacheKey,
+    readCache,
+    withStaleWhileRevalidate,
+} from "~/server/cache";
 import type { GQLActor } from "~/server/github-graphql";
 export type PullsGetResponseData =
     RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
@@ -90,7 +94,7 @@ export async function getCachedPullRequest(
     }
 
     return withStaleWhileRevalidate(
-        `pr:${owner}:${repo}:${pullNumber}`,
+        prCacheKey(owner, repo, pullNumber),
         () => getPullRequest(accessToken, owner, repo, pullNumber),
         {
             staleAfter: 5 * 1000,

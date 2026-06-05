@@ -98,3 +98,19 @@ async function revalidate<T>(
         // Background revalidation failed — stale data remains, try again next time
     }
 }
+
+export function prCacheKey(
+    owner: string,
+    repo: string,
+    number: number,
+): string {
+    return `pr:${owner}:${repo}:${number}`;
+}
+
+export async function deleteCache(key: string): Promise<void> {
+    try {
+        await db.delete(cacheTable).where(eq(cacheTable.key, key));
+    } catch {
+        // Swallow — cache delete failure shouldn't break the request
+    }
+}
