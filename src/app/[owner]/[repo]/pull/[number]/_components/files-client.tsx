@@ -100,6 +100,34 @@ export function FilesSection({
         }
     }, [allCommentsAll]);
 
+    useEffect(() => {
+        if (isLoading || allFiles.length === 0) return;
+        const hash = window.location.hash;
+        if (!hash || hash.startsWith("#review-thread-")) return;
+
+        const id = hash.slice(1);
+
+        window.dispatchEvent(
+            new CustomEvent(SCROLL_TARGET_EVENT, { detail: id }),
+        );
+
+        const el = document.getElementById(id);
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            return;
+        }
+
+        const observer = new MutationObserver(() => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        setTimeout(() => observer.disconnect(), 15000);
+    }, [allFiles, isLoading]);
+
     return (
         <div>
             <div className="mb-4 flex items-center justify-between">
@@ -142,9 +170,12 @@ export function FilesSection({
                             id={fileId}
                             itemKey={file.filename}
                             key={file.filename}
-                            renderOnIds={fileComments.map(
-                                (c) => `review-thread-${c.id}`,
-                            )}
+                            renderOnIds={[
+                                ...fileComments.map(
+                                    (c) => `review-thread-${c.id}`,
+                                ),
+                                fileId,
+                            ]}
                         >
                             <FileDiff
                                 comments={fileComments}
