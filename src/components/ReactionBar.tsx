@@ -25,6 +25,7 @@ interface ReactionBarProps {
     currentUserLogin?: string | null;
     onReact: (content: ReactionContent) => void;
     disabled?: boolean;
+    counts?: Record<string, number>;
 }
 
 export function ReactionBar({
@@ -32,6 +33,7 @@ export function ReactionBar({
     currentUserLogin,
     onReact,
     disabled,
+    counts,
 }: ReactionBarProps) {
     const grouped = useMemo(() => {
         const map = new Map<string, ReactionBarItem[]>();
@@ -45,7 +47,9 @@ export function ReactionBar({
 
     const entries = REACTION_ORDER.map(
         (content) => [content, grouped.get(content) ?? []] as const,
-    ).filter(([, rs]) => rs.length > 0);
+    ).filter(([content, rs]) =>
+        counts ? (counts[content] ?? 0) > 0 : rs.length > 0,
+    );
 
     if (entries.length === 0) return null;
 
@@ -71,7 +75,7 @@ export function ReactionBar({
                                 <span>
                                     {REACTION_EMOJIS[content] ?? content}
                                 </span>
-                                <span>{rs.length}</span>
+                                <span>{counts?.[content] ?? rs.length}</span>
                             </button>
                         </HoverCardTrigger>
                         <HoverCardContent className="w-56 bg-white p-3 dark:bg-zinc-950">
