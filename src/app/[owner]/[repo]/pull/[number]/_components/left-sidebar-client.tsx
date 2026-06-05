@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { use, useMemo } from "react";
+import { Async } from "~/components/async";
 import { NavItem, NavMenu } from "~/components/ui/nav-menu";
 import { useFiles } from "~/hooks/files";
 import type { PullsGetResponseData } from "~/server/github";
@@ -93,9 +94,15 @@ interface SidebarNavMenuProps {
     owner: string;
     repo: string;
     number: number;
+    commentCountPromise?: Promise<number | null> | null;
 }
 
-export function SidebarNavMenu({ owner, repo, number }: SidebarNavMenuProps) {
+export function SidebarNavMenu({
+    owner,
+    repo,
+    number,
+    commentCountPromise,
+}: SidebarNavMenuProps) {
     const pathname = usePathname();
     const basePath = `/${owner}/${repo}/pull/${number}`;
     const isFilesActive =
@@ -107,6 +114,13 @@ export function SidebarNavMenu({ owner, repo, number }: SidebarNavMenuProps) {
                 href={basePath}
                 isActive={!isFilesActive}
                 label="Conversation"
+                count={
+                    commentCountPromise ? (
+                        <Async promise={commentCountPromise}>
+                            {(c) => c ?? undefined}
+                        </Async>
+                    ) : undefined
+                }
             />
             <NavItem
                 href={`${basePath}/changes`}

@@ -21,9 +21,10 @@ interface NavItemProps {
     href: string;
     label: string;
     isActive?: boolean;
+    count?: React.ReactNode;
 }
 
-export function NavItem({ href, label, isActive }: NavItemProps) {
+export function NavItem({ href, label, isActive, count }: NavItemProps) {
     return (
         <Link
             className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${
@@ -34,6 +35,11 @@ export function NavItem({ href, label, isActive }: NavItemProps) {
             href={href}
         >
             {label}
+            {count != null && (
+                <span className="ml-1 text-gray-400 dark:text-zinc-500">
+                    ({count})
+                </span>
+            )}
         </Link>
     );
 }
