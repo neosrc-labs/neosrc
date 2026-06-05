@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { LazyRenderItem } from "~/components/LazyRenderItem";
+import type { ReviewComment } from "~/server/github";
 import type { GQLReactionNode } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { CommentForm } from "./comment-form";
@@ -95,6 +96,19 @@ export function TimelineSection({
     );
 
     const heightMapRef = useRef(new Map<string, number>());
+
+    const reviewThreadIds = useMemo(() => {
+        const map = new Map<number, string[]>();
+        for (const c of allComments as ReviewComment[]) {
+            const reviewId = c.pull_request_review_id;
+            if (!reviewId) continue;
+            const list = map.get(reviewId) ?? [];
+            list.push(`review-thread-${c.id}`);
+            map.set(reviewId, list);
+        }
+        return map;
+    }, [allComments]);
+
     if (isLoading) {
         return (
             <div className="mt-4 border-gray-200 border-t pt-6 dark:border-zinc-700">
@@ -131,12 +145,24 @@ export function TimelineSection({
                         wrapper.type === "raw"
                             ? `raw-${wrapper.event.id}-${index}`
                             : `label-${wrapper.createdAt}-${index}`;
+
+                    let renderOnIds: string[] | undefined;
+                    if (
+                        wrapper.type === "raw" &&
+                        wrapper.event.__typename === "PullRequestReview"
+                    ) {
+                        renderOnIds = reviewThreadIds.get(
+                            wrapper.event.databaseId,
+                        );
+                    }
+
                     return (
                         <LazyRenderItem
                             itemKey={key}
                             heightMap={heightMapRef.current}
                             key={key}
                             extraHeight={32}
+                            renderOnIds={renderOnIds}
                         >
                             <TimelineEvent
                                 wrapper={wrapper}

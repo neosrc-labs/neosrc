@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+export const SCROLL_TARGET_EVENT = "scroll-target";
+
 interface LazyRenderItemProps {
     itemKey: string;
     heightMap: Map<string, number>;
@@ -9,6 +11,7 @@ interface LazyRenderItemProps {
     id?: string;
     className?: string;
     extraHeight?: number;
+    renderOnIds?: string[];
     children: React.ReactNode;
 }
 
@@ -19,6 +22,7 @@ export function LazyRenderItem({
     id,
     className,
     extraHeight = 0,
+    renderOnIds,
     children,
 }: LazyRenderItemProps) {
     const [isVisible, setIsVisible] = useState(true);
@@ -39,6 +43,19 @@ export function LazyRenderItem({
         observer.observe(el);
         return () => observer.disconnect();
     }, [rootMargin]);
+
+    useEffect(() => {
+        if (!renderOnIds || renderOnIds.length === 0) return;
+
+        const handler = (e: Event) => {
+            const targetId = (e as CustomEvent<string>).detail;
+            if (renderOnIds.includes(targetId)) {
+                setIsVisible(true);
+            }
+        };
+        window.addEventListener(SCROLL_TARGET_EVENT, handler);
+        return () => window.removeEventListener(SCROLL_TARGET_EVENT, handler);
+    }, [renderOnIds]);
 
     useEffect(() => {
         const el = ref.current;

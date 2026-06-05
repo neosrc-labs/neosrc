@@ -3,6 +3,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CheckCircle, Circle, MessageSquare } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { SCROLL_TARGET_EVENT } from "~/components/LazyRenderItem";
 import type { ReviewThreadData } from "~/server/github";
 import { api } from "~/trpc/react";
 
@@ -22,6 +23,8 @@ function truncateBody(body: string, maxLen = 80): string {
 
 function scrollToComment(commentId: number) {
     const id = `review-thread-${commentId}`;
+    window.dispatchEvent(new CustomEvent(SCROLL_TARGET_EVENT, { detail: id }));
+
     const el = document.getElementById(id);
     if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });

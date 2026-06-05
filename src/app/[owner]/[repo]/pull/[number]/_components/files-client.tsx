@@ -3,7 +3,10 @@
 import { MessageSquare, MessageSquareOff } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FileDiff from "~/components/FileDiff";
-import { LazyRenderItem } from "~/components/LazyRenderItem";
+import {
+    LazyRenderItem,
+    SCROLL_TARGET_EVENT,
+} from "~/components/LazyRenderItem";
 import { useFiles } from "~/hooks/files";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -87,6 +90,9 @@ export function FilesSection({
         const hash = window.location.hash;
         if (hash.startsWith("#review-thread-")) {
             const id = hash.slice(1);
+            window.dispatchEvent(
+                new CustomEvent(SCROLL_TARGET_EVENT, { detail: id }),
+            );
             const el = document.getElementById(id);
             if (el) {
                 el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -136,6 +142,9 @@ export function FilesSection({
                             id={fileId}
                             itemKey={file.filename}
                             key={file.filename}
+                            renderOnIds={fileComments.map(
+                                (c) => `review-thread-${c.id}`,
+                            )}
                         >
                             <FileDiff
                                 comments={fileComments}
