@@ -1,7 +1,9 @@
 const DEFAULT_NEOSRC_URL = "http://localhost:3000";
+const DEFAULT_EXCLUDED_OWNERS = [];
 
 let neosrcUrl = DEFAULT_NEOSRC_URL;
 let enabled = false;
+let excludedOwners = DEFAULT_EXCLUDED_OWNERS;
 
 console.log("[Neosrc] content script loaded on:", window.location.href);
 console.log(
@@ -9,9 +11,14 @@ console.log(
 );
 
 async function loadSettings() {
-    const result = await chrome.storage.sync.get(["enabled", "neosrcUrl"]);
+    const result = await chrome.storage.sync.get([
+        "enabled",
+        "neosrcUrl",
+        "excludedOwners",
+    ]);
     neosrcUrl = result.neosrcUrl || DEFAULT_NEOSRC_URL;
     enabled = result.enabled === true;
+    excludedOwners = result.excludedOwners || DEFAULT_EXCLUDED_OWNERS;
 }
 
 async function autoRedirect({ isManualToggle = false } = {}) {
@@ -29,6 +36,16 @@ async function autoRedirect({ isManualToggle = false } = {}) {
     if (!match) {
         console.log(
             "[Neosrc] autoRedirect: path does not match PR pattern, skipping",
+        );
+        return;
+    }
+
+    const owner = path.split("/")[1];
+    if (excludedOwners.includes(owner)) {
+        console.log(
+            "[Neosrc] autoRedirect: owner",
+            owner,
+            "is excluded, skipping redirect",
         );
         return;
     }
@@ -207,6 +224,14 @@ chrome.storage.onChanged.addListener((changes, area) => {
     if (changes.neosrcUrl) {
         neosrcUrl = changes.neosrcUrl.newValue || DEFAULT_NEOSRC_URL;
         console.log("[Neosrc] storage: neosrcUrl updated to", neosrcUrl);
+    }
+    if (changes.excludedOwners) {
+        excludedOwners =
+            changes.excludedOwners.newValue || DEFAULT_EXCLUDED_OWNERS;
+        console.log(
+            "[Neosrc] storage: excludedOwners updated to",
+            excludedOwners,
+        );
     }
     if (changes.enabled) {
         enabled = changes.enabled.newValue === true;
