@@ -52,8 +52,13 @@ export default function RightSidebar({
     const pullRequest = use(pullRequestPromise);
     const commitCount = pullRequest.commits;
 
+    const checks = checksPromise ? use(checksPromise) : null;
+    const checkCount = checks?.length ?? 0;
+
     const tabs = [
-        ...(checksPromise ? [["checks", "Checks"] as const] : []),
+        ...(checksPromise
+            ? [["checks", `Checks (${checkCount})`] as const]
+            : []),
         ["commits", `Commits (${commitCount})`] as const,
     ];
 
