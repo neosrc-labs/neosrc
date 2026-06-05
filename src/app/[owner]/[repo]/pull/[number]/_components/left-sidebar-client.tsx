@@ -95,6 +95,7 @@ interface SidebarNavMenuProps {
     repo: string;
     number: number;
     commentCountPromise?: Promise<number | null> | null;
+    fileCountPromise?: Promise<number | null> | null;
 }
 
 export function SidebarNavMenu({
@@ -102,6 +103,7 @@ export function SidebarNavMenu({
     repo,
     number,
     commentCountPromise,
+    fileCountPromise,
 }: SidebarNavMenuProps) {
     const pathname = usePathname();
     const basePath = `/${owner}/${repo}/pull/${number}`;
@@ -126,6 +128,13 @@ export function SidebarNavMenu({
                 href={`${basePath}/changes`}
                 isActive={isFilesActive}
                 label="Files Changed"
+                count={
+                    fileCountPromise ? (
+                        <Async promise={fileCountPromise}>
+                            {(c) => c ?? undefined}
+                        </Async>
+                    ) : undefined
+                }
             />
         </NavMenu>
     );
