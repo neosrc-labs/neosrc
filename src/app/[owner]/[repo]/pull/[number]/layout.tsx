@@ -7,10 +7,8 @@ import {
     getCachedPullRequest,
     getCheckRuns,
     getConflictedFiles,
-    getPullRequestCommits,
     getUserRepoPermission,
     type PullsGetResponseData,
-    type PullsListCommitsResponseData,
 } from "~/server/github";
 import LeftSidebar from "./_components/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
@@ -31,7 +29,6 @@ export default async function PullRequestLayout({
     const { owner, repo, number: numberStr } = await params;
     const number = parseInt(numberStr, 10);
     let pullRequest: Promise<PullsGetResponseData> | null = null;
-    let commits: Promise<PullsListCommitsResponseData> | null = null;
     let checks: Promise<Array<CheckRun>> | null = new Promise(() => {});
     let conflictedFiles: Promise<string[]> | null = new Promise(() => {});
     let userPermission: Promise<string | null> | null = new Promise(() => {});
@@ -42,7 +39,6 @@ export default async function PullRequestLayout({
     if (account?.accessToken) {
         const accessToken = account.accessToken;
         const userId = account.userId;
-        commits = getPullRequestCommits(accessToken, owner, repo, number);
         pullRequest = getCachedPullRequest(
             accessToken,
             owner,
@@ -133,7 +129,6 @@ export default async function PullRequestLayout({
                 <RightSidebar
                     userPermission={userPermission}
                     checksPromise={checks}
-                    commitsPromise={commits}
                     pullRequestPromise={pullRequest}
                     owner={owner}
                     repo={repo}
