@@ -31,6 +31,7 @@ import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { ReactionBar } from "~/components/ReactionBar";
 import { ReactionPicker } from "~/components/ReactionPicker";
 import { Label } from "~/components/ui/label";
+import { VerifiedBadge } from "~/components/verified-badge";
 import type { ReactionContent } from "~/lib/reactions";
 import { toggleReactionInList } from "~/lib/reactions";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
@@ -734,20 +735,23 @@ function EventContent({
             const commit = event.commit;
             return (
                 <div className="item-center flex justify-between text-gray-600 text-sm dark:text-zinc-400">
-                    <div>
-                        <NextLink
-                            href={`/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
-                            className="hover:text-blue-600 hover:underline dark:hover:text-blue-400"
-                        >
-                            {commit?.message.split("\n")[0]}
-                        </NextLink>
-                    </div>
                     <NextLink
                         href={`/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
-                        className="font-mono text-gray-600 text-xs hover:text-blue-600 hover:underline dark:text-zinc-400 dark:hover:text-blue-400"
+                        className="hover:text-blue-600 hover:underline dark:hover:text-blue-400"
                     >
-                        {commit?.oid.slice(0, 7)}
+                        {commit?.message.split("\n")[0]}
                     </NextLink>
+                    <div className="flex shrink-0 items-center gap-2">
+                        {commit?.signature?.isValid && (
+                            <VerifiedBadge signature={commit.signature} />
+                        )}
+                        <NextLink
+                            href={`/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
+                            className="font-mono text-gray-600 text-xs hover:text-blue-600 hover:underline dark:text-zinc-400 dark:hover:text-blue-400"
+                        >
+                            {commit?.oid.slice(0, 7)}
+                        </NextLink>
+                    </div>
                 </div>
             );
         }

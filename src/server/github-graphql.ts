@@ -248,9 +248,19 @@ query PullRequestTimeline(
 						createdAt
 						deletedCommentAuthor { ...SimpleUser }
 					}
-					... on PullRequestCommit {
+... on PullRequestCommit {
 						id
-						commit { oid message committedDate }
+						commit {
+							oid
+							message
+							committedDate
+							signature {
+								__typename
+								... on GpgSignature { isValid keyId state }
+								... on SshSignature { isValid state }
+								... on SmimeSignature { isValid state }
+							}
+						}
 					}
 					... on ReviewDismissedEvent {
 						id
@@ -519,6 +529,30 @@ export type GQLCommentDeletedEvent = {
     deletedCommentAuthor: GQLActor | null;
 };
 
+export type GQLGpgSignature = {
+    __typename: "GpgSignature";
+    isValid: boolean;
+    keyId: string;
+    state: string;
+};
+
+export type GQLSshSignature = {
+    __typename: "SshSignature";
+    isValid: boolean;
+    state: string;
+};
+
+export type GQLSmimeSignature = {
+    __typename: "SmimeSignature";
+    isValid: boolean;
+    state: string;
+};
+
+export type GQLGitSignature =
+    | GQLGpgSignature
+    | GQLSshSignature
+    | GQLSmimeSignature;
+
 export type GQLPullRequestCommit = {
     __typename: "PullRequestCommit";
     id: string;
@@ -526,6 +560,7 @@ export type GQLPullRequestCommit = {
         oid: string;
         message: string;
         committedDate?: string;
+        signature?: GQLGitSignature | null;
     } | null;
 };
 

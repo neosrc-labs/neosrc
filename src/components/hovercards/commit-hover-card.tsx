@@ -1,6 +1,5 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useState } from "react";
 import {
@@ -8,6 +7,7 @@ import {
     HoverCardContent,
     HoverCardTrigger,
 } from "~/components/ui/hover-card";
+import { RestVerificationBadge } from "~/components/verified-badge";
 import type { Commit } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
@@ -42,8 +42,11 @@ export function CommitHoverCardContent({
                         <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-700 text-xs dark:bg-zinc-800 dark:text-gray-300">
                             {shortSha}
                         </code>
-                        {verification?.verified && (
-                            <ShieldCheck className="h-3.5 w-3.5 text-green-600" />
+                        {verification && (
+                            <RestVerificationBadge
+                                verified={verification.verified}
+                                reason={verification.reason}
+                            />
                         )}
                     </div>
                     {authorUser?.login && (
