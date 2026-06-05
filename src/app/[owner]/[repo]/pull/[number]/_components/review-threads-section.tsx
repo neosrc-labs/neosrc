@@ -1,9 +1,12 @@
 "use client";
 
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { CheckCircle, Circle, MessageSquare } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import type { ReviewThreadData } from "~/server/github";
 import { api } from "~/trpc/react";
+
+const THREAD_ITEM_HEIGHT = 50;
 
 function groupThread(thread: ReviewThreadData) {
     const root =
@@ -110,6 +113,15 @@ export function ReviewThreadsSection({
         { staleTime: 30_000 },
     );
 
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    const virtualizer = useVirtualizer({
+        count: threads?.length ?? 0,
+        getScrollElement: () => scrollRef.current,
+        estimateSize: () => THREAD_ITEM_HEIGHT,
+        overscan: 5,
+    });
+
     if (isLoading) {
         return (
             <div className="space-y-1">
@@ -129,13 +141,37 @@ export function ReviewThreadsSection({
     }
 
     return (
-        <div className="max-h-full space-y-0.5 overflow-y-auto">
-            {threads.map((thread, idx) => (
-                <ThreadCard
-                    key={thread.comments[0]?.id ?? idx}
-                    thread={thread}
-                />
-            ))}
+        <div
+            ref={scrollRef}
+            className="h-full overflow-y-auto"
+            style={{ contain: "strict" }}
+        >
+            <div
+                style={{
+                    height: `${virtualizer.getTotalSize()}px`,
+                    position: "relative",
+                }}
+            >
+                {virtualizer.getVirtualItems().map((virtualItem) => {
+                    const thread = threads[virtualItem.index];
+                    if (!thread) return null;
+                    return (
+                        <div
+                            key={virtualItem.key}
+                            style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "100%",
+                                height: `${virtualItem.size}px`,
+                                transform: `translateY(${virtualItem.start}px)`,
+                            }}
+                        >
+                            <ThreadCard thread={thread} />
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 }
