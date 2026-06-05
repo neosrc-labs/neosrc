@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 import { isGeneratedFile } from "~/utils/generated-files";
+import { isImageFile } from "~/utils/image-file";
 import { type ActiveComment, DiffView } from "./DiffView";
+import ImageDiff from "./ImageDiff";
 
 interface FileDiffProps {
     file: {
@@ -13,10 +15,13 @@ interface FileDiffProps {
         status: string;
         additions: number;
         deletions: number;
+        previous_filename?: string;
     };
     owner: string;
     repo: string;
     number: string;
+    baseSha?: string;
+    headSha?: string;
     comments?: ReviewComment[];
     showComments?: boolean;
     pendingReviewId?: number | null;
@@ -49,6 +54,8 @@ export default function FileDiff({
     owner,
     repo,
     number,
+    baseSha,
+    headSha,
     comments = [],
     showComments = true,
     pendingReviewId,
@@ -69,6 +76,33 @@ export default function FileDiff({
     const utils = api.useUtils();
 
     const generated = isGeneratedFile(file.filename);
+
+    const isImage = isImageFile(file.filename) && !file.patch && baseSha;
+
+    const imageUrls = useMemo(() => {
+        if (!isImage) return null;
+        const oldFilename = file.previous_filename ?? file.filename;
+        const params = (sha: string, path: string) =>
+            `/api/raw?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&sha=${encodeURIComponent(sha)}&path=${encodeURIComponent(path)}`;
+        const newUrl =
+            file.status !== "removed" && headSha
+                ? params(headSha, file.filename)
+                : null;
+        const oldUrl =
+            file.status !== "added" && baseSha
+                ? params(baseSha, oldFilename)
+                : null;
+        return { oldUrl, newUrl };
+    }, [
+        isImage,
+        file.status,
+        file.filename,
+        file.previous_filename,
+        owner,
+        repo,
+        baseSha,
+        headSha,
+    ]);
 
     const createMutation = api.reviewComments.create.useMutation({
         onSuccess: () => {
@@ -294,11 +328,14 @@ export default function FileDiff({
                         repo={repo}
                         pullNumber={number}
                     />
+                ) : isImage && imageUrls ? (
+                    <ImageDiff
+                        newUrl={imageUrls.newUrl}
+                        oldUrl={imageUrls.oldUrl}
+                    />
                 ) : (
                     <div className="px-4 py-3 text-gray-500 text-sm italic dark:text-gray-400">
-                        {file.patch === null
-                            ? "Binary file not shown"
-                            : "No changes"}
+                        {!file.patch ? "Binary file not shown" : "No changes"}
                     </div>
                 ))}
         </div>

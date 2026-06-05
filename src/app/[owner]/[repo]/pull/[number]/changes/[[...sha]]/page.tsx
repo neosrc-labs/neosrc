@@ -4,6 +4,7 @@ import { getSession, githubAccessToken } from "~/server/auth";
 import {
     type CommitData,
     getCachedCommit,
+    getCachedPullRequest,
     getPullRequestCommits,
     type PullsListCommitsResponseData,
 } from "~/server/github";
@@ -48,7 +49,19 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 
     let commit: Promise<CommitData> | null = null;
     let commits: Promise<PullsListCommitsResponseData> | null = null;
+    let baseSha: string | undefined;
+    let headSha: string | undefined;
     try {
+        const pr = await getCachedPullRequest(
+            accessToken,
+            owner,
+            repo,
+            number,
+            userId,
+        );
+        baseSha = pr.base.sha;
+        headSha = pr.head.sha;
+
         if (commitSha) {
             // Fetch commit details and all PR commits in parallel and don't block the main page render
             commit = getCachedCommit(
@@ -88,6 +101,8 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
             </Suspense>
             <Suspense>
                 <FilesSection
+                    baseSha={baseSha}
+                    headSha={commitSha ?? headSha}
                     number={number}
                     owner={owner}
                     repo={repo}
