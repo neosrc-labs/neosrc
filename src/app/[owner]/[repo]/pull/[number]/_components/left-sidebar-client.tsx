@@ -69,21 +69,23 @@ export function SidebarFileTree({
     const filesChanged = commitSha ? files.length : pullRequest?.changed_files;
 
     return (
-        <>
+        <div className="flex h-full flex-col">
             <h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-zinc-100">
                 Files Changed{" "}
                 {filesChanged ? <span>({filesChanged})</span> : null}
             </h3>
-            {isLoading ? (
-                <FileTreeSkeleton />
-            ) : files.length > 0 ? (
-                <FileTree basePath={basePath} files={fileTree} />
-            ) : (
-                <p className="text-gray-500 text-sm dark:text-zinc-400">
-                    No files changed
-                </p>
-            )}
-        </>
+            <div className="min-h-0 flex-1">
+                {isLoading ? (
+                    <FileTreeSkeleton />
+                ) : files.length > 0 ? (
+                    <FileTree basePath={basePath} files={fileTree} />
+                ) : (
+                    <p className="text-gray-500 text-sm dark:text-zinc-400">
+                        No files changed
+                    </p>
+                )}
+            </div>
+        </div>
     );
 }
 
