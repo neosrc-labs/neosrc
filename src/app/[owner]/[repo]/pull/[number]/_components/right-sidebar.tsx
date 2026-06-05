@@ -78,7 +78,7 @@ export default function RightSidebar({
                             key={key}
                             type="button"
                             onClick={() => setTab(key)}
-                            className={`rounded-md px-2.5 py-1 font-medium text-sm transition-colors ${
+                            className={`cursor-pointer rounded-md px-2.5 py-1 font-medium text-sm transition-colors ${
                                 tab === key
                                     ? "bg-gray-100 text-gray-900 dark:bg-zinc-800 dark:text-zinc-100"
                                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
