@@ -1,6 +1,10 @@
 import { headers } from "next/headers";
 import { getSession, githubAccessToken } from "~/server/auth";
-import { getAuthenticatedUser, getRepo } from "~/server/github";
+import {
+    getAuthenticatedUser,
+    getRepo,
+    getRepoIssuePullCounts,
+} from "~/server/github";
 import type { HeaderRepoData } from "./HeaderClient";
 import { HeaderClient } from "./HeaderClient";
 
@@ -38,7 +42,10 @@ export async function Header() {
             try {
                 const token = await githubAccessToken();
                 if (!token) return null;
-                const repoInfo = await getRepo(token, owner, repo);
+                const [repoInfo, counts] = await Promise.all([
+                    getRepo(token, owner, repo),
+                    getRepoIssuePullCounts(token, owner, repo),
+                ]);
                 return {
                     hasIssues: repoInfo.has_issues,
                     hasWiki: repoInfo.has_wiki,
@@ -49,6 +56,8 @@ export async function Header() {
                         admin: repoInfo.permissions?.admin ?? false,
                     },
                     ownerAvatarUrl: repoInfo.owner.avatar_url,
+                    openIssuesCount: counts.openIssuesCount,
+                    openPullRequestsCount: counts.openPullRequestsCount,
                 };
             } catch {
                 return null;

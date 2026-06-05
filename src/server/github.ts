@@ -1093,6 +1093,30 @@ export const getRepo = cache(
     },
 );
 
+export const getRepoIssuePullCounts = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+    ): Promise<{ openIssuesCount: number; openPullRequestsCount: number }> => {
+        const octokit = createOctokit(accessToken);
+        const [issuesRes, prsRes] = await Promise.all([
+            octokit.search.issuesAndPullRequests({
+                q: `repo:${owner}/${repo} type:issue state:open`,
+                per_page: 1,
+            }),
+            octokit.search.issuesAndPullRequests({
+                q: `repo:${owner}/${repo} type:pr state:open`,
+                per_page: 1,
+            }),
+        ]);
+        return {
+            openIssuesCount: issuesRes.data.total_count,
+            openPullRequestsCount: prsRes.data.total_count,
+        };
+    },
+);
+
 export type Milestone = NonNullable<PullsGetResponseData["milestone"]>;
 
 export type RepoMilestone =

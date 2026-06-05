@@ -26,6 +26,7 @@ interface Tab {
     show: boolean;
     isActive: boolean;
     icon: ElementType;
+    count?: number | null;
 }
 
 export interface HeaderRepoData {
@@ -36,6 +37,8 @@ export interface HeaderRepoData {
     isPrivate: boolean;
     permissions: { admin: boolean };
     ownerAvatarUrl: string | null;
+    openIssuesCount: number | null;
+    openPullRequestsCount: number | null;
 }
 
 interface HeaderClientProps {
@@ -103,6 +106,7 @@ export function HeaderClient({
                 show: repoData.hasIssues ?? true,
                 isActive: false,
                 icon: CircleDot,
+                count: repoData.openIssuesCount,
             },
             {
                 label: "Pull Requests",
@@ -110,6 +114,7 @@ export function HeaderClient({
                 show: true,
                 isActive: isPR,
                 icon: GitPullRequest,
+                count: repoData.openPullRequestsCount,
             },
             {
                 label: "Actions",
@@ -263,6 +268,11 @@ export function HeaderClient({
                                       >
                                           <tab.icon className="size-4" />
                                           {tab.label}
+                                          {tab.count != null && (
+                                              <span className="text-gray-400 dark:text-gray-500">
+                                                  {tab.count.toLocaleString()}
+                                              </span>
+                                          )}
                                       </a>
                                   ))
                                 : SKELETON_WIDTHS.map((w) => (
