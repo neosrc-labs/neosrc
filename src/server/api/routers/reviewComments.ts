@@ -14,6 +14,7 @@ import {
     getPullRequestReviewCommentsForReview,
     getPullRequestReviews,
     getReviewThreads,
+    getReviewThreadsPage,
     getSuggestionPatch,
     replyToPullRequestReviewComment,
     resolveReviewThread,
@@ -249,6 +250,39 @@ export const reviewCommentsRouter = createTRPCRouter({
                 input.repo,
                 input.number,
             );
+        }),
+
+    threadsPage: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+                perPage: z.number().min(1).max(100).default(50),
+                cursor: z.string().optional(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            const result = await getReviewThreadsPage(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+                input.perPage,
+                input.cursor,
+            );
+
+            return {
+                threads: result.threads,
+                nextCursor: result.hasNextPage
+                    ? (result.endCursor ?? undefined)
+                    : undefined,
+            };
         }),
 
     resolveThread: protectedProcedure

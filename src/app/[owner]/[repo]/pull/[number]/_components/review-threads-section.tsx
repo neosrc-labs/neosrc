@@ -2,7 +2,7 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CheckCircle, Circle, MessageSquare } from "lucide-react";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ReviewThreadData } from "~/server/github";
 import { api } from "~/trpc/react";
 
@@ -108,19 +108,47 @@ export function ReviewThreadsSection({
     repo,
     number,
 }: ReviewThreadsSectionProps) {
-    const { data: threads, isLoading } = api.reviewComments.threads.useQuery(
-        { owner, repo, number },
-        { staleTime: 30_000 },
+    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+        api.reviewComments.threadsPage.useInfiniteQuery(
+            { owner, repo, number },
+            {
+                getNextPageParam: (lastPage) => lastPage.nextCursor,
+                staleTime: 30_000,
+            },
+        );
+
+    const threads = useMemo(
+        () => data?.pages.flatMap((page) => page.threads) ?? [],
+        [data],
     );
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const virtualizer = useVirtualizer({
-        count: threads?.length ?? 0,
+        count: threads.length,
         getScrollElement: () => scrollRef.current,
         estimateSize: () => THREAD_ITEM_HEIGHT,
         overscan: 5,
     });
+
+    const sentinelRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const el = sentinelRef.current;
+        const scrollEl = scrollRef.current;
+        if (!el || !scrollEl || !hasNextPage) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry?.isIntersecting) {
+                    fetchNextPage();
+                }
+            },
+            { root: scrollEl, rootMargin: "400px" },
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [hasNextPage, fetchNextPage]);
 
     if (isLoading) {
         return (
@@ -132,7 +160,7 @@ export function ReviewThreadsSection({
         );
     }
 
-    if (!threads || threads.length === 0) {
+    if (threads.length === 0) {
         return (
             <p className="text-gray-500 text-sm dark:text-zinc-400">
                 No review threads
@@ -172,6 +200,12 @@ export function ReviewThreadsSection({
                     );
                 })}
             </div>
+            {hasNextPage && <div ref={sentinelRef} style={{ height: 1 }} />}
+            {isFetchingNextPage && (
+                <p className="py-2 text-center text-gray-500 text-xs dark:text-gray-400">
+                    Loading more threads...
+                </p>
+            )}
         </div>
     );
 }

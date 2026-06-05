@@ -1405,6 +1405,118 @@ export const getReviewThreads = async (
         });
 };
 
+export async function getReviewThreadsPage(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    perPage = 50,
+    after?: string,
+): Promise<{
+    threads: ReviewThreadData[];
+    hasNextPage: boolean;
+    endCursor: string | null;
+}> {
+    const afterVar = after ? ", $after: String!" : "";
+    const afterArg = after ? ", after: $after" : "";
+    const response = await fetch("https://api.github.com/graphql", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            query: `
+                query($owner: String!, $repo: String!, $number: Int!, $first: Int!${afterVar}) {
+                    repository(owner: $owner, name: $repo) {
+                        pullRequest(number: $number) {
+                            id
+                            reviewThreads(first: $first${afterArg}) {
+                                pageInfo {
+                                    hasNextPage
+                                    endCursor
+                                }
+                                nodes {
+                                    id
+                                    isResolved
+                                    isOutdated
+                                    path
+                                    comments(first: 100) {
+                                        nodes {
+                                            databaseId
+                                            body
+                                            author {
+                                                login
+                                                avatarUrl
+                                                url
+                                            }
+                                            createdAt
+                                            replyTo {
+                                                databaseId
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            `,
+            variables: {
+                owner,
+                repo,
+                number: pullNumber,
+                first: perPage,
+                ...(after ? { after } : {}),
+            },
+        }),
+    });
+
+    const result = await response.json();
+    if (result.errors) {
+        throw new Error(
+            `Failed to fetch review threads: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
+        );
+    }
+
+    const reviewThreads = result.data?.repository?.pullRequest?.reviewThreads;
+    const pageInfo = reviewThreads?.pageInfo ?? {
+        hasNextPage: false,
+        endCursor: null,
+    };
+    const threadNodes = reviewThreads?.nodes ?? [];
+    const pullRequestId = result.data?.repository?.pullRequest?.id ?? "";
+
+    const threads = threadNodes
+        .filter((thread: unknown) => thread != null)
+        .map((thread: RawReviewThreadNode) => {
+            const comments = (thread.comments?.nodes ?? [])
+                .filter((c): c is RawReviewThreadComment => c != null)
+                .map((c) => ({
+                    id: c.databaseId,
+                    body: c.body,
+                    author: c.author,
+                    createdAt: c.createdAt,
+                    replyToId: c.replyTo?.databaseId ?? null,
+                }));
+
+            return {
+                id: thread.id,
+                isResolved: thread.isResolved,
+                isOutdated: thread.isOutdated,
+                path: thread.path,
+                pullRequestId,
+                comments,
+            };
+        });
+
+    return {
+        threads,
+        hasNextPage: pageInfo.hasNextPage ?? false,
+        endCursor: pageInfo.endCursor ?? null,
+    };
+}
+
 export const resolveReviewThread = async (
     accessToken: string,
     threadId: string,
