@@ -75,6 +75,17 @@ export function PullRequestDescriptionSection({
                 const existing = old.reactions?.find(
                     (r) => r.user?.login === userLogin && r.content === content,
                 );
+                const updatedCounts = old.counts
+                    ? {
+                          ...old.counts,
+                          total_count: existing
+                              ? old.counts.total_count - 1
+                              : old.counts.total_count + 1,
+                          [content]: existing
+                              ? old.counts[content] - 1
+                              : old.counts[content] + 1,
+                      }
+                    : old.counts;
                 return {
                     ...old,
                     reactions: existing
@@ -110,6 +121,7 @@ export function PullRequestDescriptionSection({
                                   } satisfies SimpleUser,
                               },
                           ],
+                    counts: updatedCounts,
                 };
             });
             return { prevData };
@@ -321,35 +333,64 @@ export function PullRequestDescriptionSection({
                                     fallback={null}
                                     promise={canInteractPromise}
                                 >
-                                    {(canInteract) => (
-                                        <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                                            {reactionsData &&
-                                                reactionsData.reactions.length >
-                                                    0 && (
+                                    {(canInteract) => {
+                                        const reactionCounts =
+                                            reactionsData?.counts
+                                                ? {
+                                                      "+1": reactionsData
+                                                          .counts["+1"],
+                                                      "-1": reactionsData
+                                                          .counts["-1"],
+                                                      laugh: reactionsData
+                                                          .counts.laugh,
+                                                      confused:
+                                                          reactionsData.counts
+                                                              .confused,
+                                                      heart: reactionsData
+                                                          .counts.heart,
+                                                      hooray: reactionsData
+                                                          .counts.hooray,
+                                                      rocket: reactionsData
+                                                          .counts.rocket,
+                                                      eyes: reactionsData.counts
+                                                          .eyes,
+                                                  }
+                                                : undefined;
+                                        const hasReactions = reactionsData
+                                            ? (reactionsData.counts
+                                                  ?.total_count ?? 0) > 0 ||
+                                              reactionsData.reactions.length > 0
+                                            : false;
+                                        return (
+                                            <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                                                {hasReactions && (
                                                     <ReactionBar
                                                         disabled={!canInteract}
                                                         reactions={
-                                                            reactionsData.reactions
+                                                            reactionsData?.reactions ??
+                                                            []
                                                         }
+                                                        counts={reactionCounts}
                                                         currentUserLogin={
                                                             currentUserData?.login
                                                         }
                                                         onReact={handleReact}
                                                     />
                                                 )}
-                                            <ReactionPicker
-                                                disabled={!canInteract}
-                                                reactions={
-                                                    reactionsData?.reactions ??
-                                                    []
-                                                }
-                                                currentUserLogin={
-                                                    currentUserData?.login
-                                                }
-                                                onReact={handleReact}
-                                            />
-                                        </div>
-                                    )}
+                                                <ReactionPicker
+                                                    disabled={!canInteract}
+                                                    reactions={
+                                                        reactionsData?.reactions ??
+                                                        []
+                                                    }
+                                                    currentUserLogin={
+                                                        currentUserData?.login
+                                                    }
+                                                    onReact={handleReact}
+                                                />
+                                            </div>
+                                        );
+                                    }}
                                 </Async>
                             )}
                         </div>

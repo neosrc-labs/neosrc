@@ -11,7 +11,9 @@ import {
     deletePullRequestReviewCommentReaction,
     getAuthenticatedUser,
     getIssueCommentReactions,
+    getIssueReactionCounts,
     getPullRequestReactions,
+    getPullRequestReactionsPage,
     getPullRequestReviewCommentReactions,
 } from "~/server/github";
 import {
@@ -35,9 +37,15 @@ export const reactionsRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
 
-            const [currentUser, reactions] = await Promise.all([
+            const [currentUser, reactions, reactionCounts] = await Promise.all([
                 getAuthenticatedUser(accessToken),
-                getPullRequestReactions(
+                getPullRequestReactionsPage(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                ),
+                getIssueReactionCounts(
                     accessToken,
                     input.owner,
                     input.repo,
@@ -45,7 +53,11 @@ export const reactionsRouter = createTRPCRouter({
                 ),
             ]);
 
-            return { reactions, currentUserLogin: currentUser.login };
+            return {
+                reactions,
+                currentUserLogin: currentUser.login,
+                counts: reactionCounts,
+            };
         }),
 
     toggleIssueComment: protectedProcedure

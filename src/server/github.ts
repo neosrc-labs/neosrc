@@ -8,6 +8,9 @@ import {
 import type { GQLActor } from "~/server/github-graphql";
 export type PullsGetResponseData =
     RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
+export type ReactionRollup = NonNullable<
+    RestEndpointMethodTypes["issues"]["get"]["response"]["data"]["reactions"]
+>;
 export type PullsListCommitsResponseData =
     RestEndpointMethodTypes["pulls"]["listCommits"]["response"]["data"];
 export type CommitData =
@@ -588,12 +591,49 @@ export const getPullRequestReactions = cache(
         pullNumber: number,
     ) => {
         const octokit = createOctokit(accessToken);
+        const allReactions = await octokit.paginate(
+            octokit.rest.reactions.listForIssue,
+            { owner, repo, issue_number: pullNumber, per_page: 100 },
+        );
+        return allReactions;
+    },
+);
+
+export const getPullRequestReactionsPage = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        pullNumber: number,
+        page: number = 1,
+        perPage: number = 100,
+    ) => {
+        const octokit = createOctokit(accessToken);
         const response = await octokit.rest.reactions.listForIssue({
             owner,
             repo,
             issue_number: pullNumber,
+            per_page: perPage,
+            page,
         });
         return response.data;
+    },
+);
+
+export const getIssueReactionCounts = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        issueNumber: number,
+    ) => {
+        const octokit = createOctokit(accessToken);
+        const response = await octokit.rest.issues.get({
+            owner,
+            repo,
+            issue_number: issueNumber,
+        });
+        return response.data.reactions ?? null;
     },
 );
 
@@ -604,12 +644,11 @@ export const getIssueCommentReactions = async (
     commentId: number,
 ) => {
     const octokit = createOctokit(accessToken);
-    const response = await octokit.rest.reactions.listForIssueComment({
-        owner,
-        repo,
-        comment_id: commentId,
-    });
-    return response.data;
+    const allReactions = await octokit.paginate(
+        octokit.rest.reactions.listForIssueComment,
+        { owner, repo, comment_id: commentId, per_page: 100 },
+    );
+    return allReactions;
 };
 
 export const createIssueCommentReaction = async (
@@ -660,13 +699,11 @@ export const getPullRequestReviewCommentReactions = async (
     commentId: number,
 ) => {
     const octokit = createOctokit(accessToken);
-    const response =
-        await octokit.rest.reactions.listForPullRequestReviewComment({
-            owner,
-            repo,
-            comment_id: commentId,
-        });
-    return response.data;
+    const allReactions = await octokit.paginate(
+        octokit.rest.reactions.listForPullRequestReviewComment,
+        { owner, repo, comment_id: commentId, per_page: 100 },
+    );
+    return allReactions;
 };
 
 export const createPullRequestReviewCommentReaction = async (
