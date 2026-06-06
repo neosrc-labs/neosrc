@@ -1038,7 +1038,7 @@ export const deleteReviewComment = async (
     });
 };
 
-// TODO: Check if generators support cache() or maybe interally we can cache?
+// TODO: Check if generators support cache() or maybe internally we can cache?
 export async function* getPullRequestFilesStream(
     accessToken: string,
     owner: string,

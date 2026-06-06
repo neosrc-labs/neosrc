@@ -1,6 +1,6 @@
 import { graphql as octokitGraphql } from "@octokit/graphql";
 
-// NOTE: The itemType filter is an explict whitelist because of https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/about-oauth-app-access-restrictions
+// NOTE: The itemType filter is an explicit whitelist because of https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/about-oauth-app-access-restrictions
 // Some event types ADDED_TO_PROJECT_V2_EVENT and PROJECT_V2_ITEM_STATUS_CHANGED_EVENT (and maybe others) will
 // result in the entire API call failing.
 
