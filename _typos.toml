@@ -1,0 +1,21 @@
+[default]
+extend-ignore-re = [
+    # Esy package manager lock directory (e.g. "foo.esy.lock")
+    "\\.esy\\.",
+]
+
+[default.extend-identifiers]
+# betterAuth table prefix
+ba_user = "ba_user"
+ba_session = "ba_session"
+ba_account = "ba_account"
+ba_verification = "ba_verification"
+
+[default.extend-words]
+# Esy package manager (https://esy.sh)
+esy = "esy"
+# Part of "hello" split by code block markers in test
+hel = "hel"
+
+[files]
+extend-exclude = []
