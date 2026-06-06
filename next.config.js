@@ -5,6 +5,20 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+    async headers() {
+        return [
+            {
+                source: "/material-icons/:path*",
+                headers: [
+                    {
+                        key: "Cache-Control",
+                        value: "public, max-age=604800", // 7 day cache
+                    },
+                ],
+            },
+        ];
+    },
+};
 
 export default config;
