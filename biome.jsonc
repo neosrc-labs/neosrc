@@ -1,6 +1,9 @@
 {
     "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
     "root": true,
+    "files": {
+        "includes": ["**", "!drizzle"]
+    },
     "vcs": {
         "enabled": true,
         "useIgnoreFile": true,
