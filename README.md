@@ -10,7 +10,8 @@ Early development. Many things are rough or missing.
 
 ## How it works
 
-Neosrc authenticates with your GitHub account (read-only access to repos and PRs) and serves a reimagined PR review interface. The URL scheme mirrors GitHub's: `/{owner}/{repo}/pull/{number}`.
+Neosrc authenticates with your GitHub account and serves a reimagined PR review interface.
+The URL scheme mirrors GitHub's: `/{owner}/{repo}/pull/{number}`.
 
 ## Contributing
 
