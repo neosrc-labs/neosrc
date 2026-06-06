@@ -294,7 +294,13 @@ export default function FileDiff({
             {!isCollapsed &&
                 (performanceHidden && !showPerformanceDiff ? (
                     <div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-gray-500 text-sm dark:border-gray-700 dark:text-gray-400">
-                        <span>This diff is hidden to improve performance.</span>
+                        <span>
+                            {file.status === "removed"
+                                ? "This file was deleted."
+                                : file.additions + file.deletions > 1000
+                                  ? `This diff is large (${(file.additions + file.deletions).toLocaleString()} lines changed) and is hidden by default.`
+                                  : "This diff is hidden to improve performance."}
+                        </span>
                         <button
                             className="cursor-pointer font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                             onClick={() => onTogglePerformanceDiff?.()}

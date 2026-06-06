@@ -198,7 +198,12 @@ export function FilesSection({
                                 (c) => c.path === file.filename,
                             );
                             const fileId = file.filename.replace(/\//g, "-");
-                            const isOverflow = index >= OVERFLOW_THRESHOLD;
+                            const totalChanged =
+                                file.additions + file.deletions;
+                            const isOverflow =
+                                index >= OVERFLOW_THRESHOLD ||
+                                file.status === "removed" ||
+                                totalChanged > 1000;
 
                             return (
                                 <LazyRenderItem
