@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .bg { fill: #374151; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #d1d5db; }
+    }
+  </style>
+  <text class="bg" x="16" y="16" text-anchor="middle" dominant-baseline="central" font-family="system-ui, -apple-system, sans-serif" font-size="36" font-weight="700">N</text>
+</svg>

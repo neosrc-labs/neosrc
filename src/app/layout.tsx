@@ -14,7 +14,7 @@ import { TRPCReactProvider } from "~/trpc/react";
 export const metadata: Metadata = {
     title: "Neosrc",
     description: "Neosrc",
-    icons: [{ rel: "icon", url: "/favicon.ico" }],
+    icons: [{ rel: "icon", type: "image/svg+xml", url: "/favicon.svg" }],
 };
 
 const geist = Geist({

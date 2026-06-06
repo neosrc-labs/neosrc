@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .bg { fill: #f3f4f6; }
+    .letter { fill: #374151; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #27272a; }
+      .letter { fill: #d1d5db; }
+    }
+  </style>
+  <rect class="bg" width="32" height="32" rx="6" />
+  <text class="letter" x="16" y="16" text-anchor="middle" dominant-baseline="central" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700">N</text>
+</svg>

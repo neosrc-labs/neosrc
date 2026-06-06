@@ -158,9 +158,13 @@ export function HeaderClient({
                 <div className="px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="flex size-8 items-center justify-center rounded-md bg-gray-100 font-bold text-gray-700 text-sm dark:bg-zinc-800 dark:text-gray-300">
-                                N
-                            </div>
+                            <img
+                                src="/logo.svg"
+                                alt="Neosrc"
+                                width={32}
+                                height={32}
+                                className="size-8 shrink-0"
+                            />
                             {showRepoNav && (
                                 <div className="flex items-center gap-1.5">
                                     <a
