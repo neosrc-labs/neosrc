@@ -1,13 +1,16 @@
+import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import { ResizableLayout } from "~/components/ResizableLayout";
 import { getAccount } from "~/server/auth";
 import {
     type CheckRun,
+    getAllPullRequestFiles,
     getAuthenticatedUser,
     getCachedPullRequest,
     getCheckRuns,
     getConflictedFiles,
     getUserRepoPermission,
+    type PullRequestFile,
     type PullsGetResponseData,
 } from "~/server/github";
 import LeftSidebar from "./_components/left-sidebar";
@@ -32,6 +35,7 @@ export default async function PullRequestLayout({
     let checks: Promise<Array<CheckRun>> | null = new Promise(() => {});
     let conflictedFiles: Promise<string[]> | null = new Promise(() => {});
     let userPermission: Promise<string | null> | null = new Promise(() => {});
+    let filesPromise: Promise<PullRequestFile[]> | null = null;
     let currentUserLogin: string | undefined;
 
     const account = await getAccount();
@@ -56,6 +60,20 @@ export default async function PullRequestLayout({
             currentUserLogin,
             userId,
         ).catch(() => null);
+
+        const headersList = await headers();
+        const pathname = headersList.get("x-pathname") ?? "";
+        const isChangesRoute =
+            pathname.endsWith("/changes") || pathname.includes("/changes/");
+
+        if (isChangesRoute) {
+            filesPromise = getAllPullRequestFiles(
+                accessToken,
+                owner,
+                repo,
+                number,
+            );
+        }
 
         // Fetch conflicted files if there are merge conflicts
         conflictedFiles = pullRequest.then(async (pr) => {
@@ -120,6 +138,7 @@ export default async function PullRequestLayout({
                     userPermissionPromise={userPermission}
                     pullRequestPromise={pullRequest}
                     conflictedFilesPromise={conflictedFiles}
+                    filesPromise={filesPromise}
                     number={number}
                     owner={owner}
                     repo={repo}

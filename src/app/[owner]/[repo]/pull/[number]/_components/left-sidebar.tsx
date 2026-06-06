@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import type { PullsGetResponseData } from "~/server/github";
+import type { PullRequestFile, PullsGetResponseData } from "~/server/github";
 import { ActionSection } from "./actions-section";
 import {
     LeftSidebarContentSection,
@@ -14,6 +14,7 @@ interface LeftSidebarProps {
     conflictedFilesPromise?: Promise<string[]> | null;
     userPermissionPromise?: Promise<string | null> | null;
     currentUserLogin?: string;
+    filesPromise?: Promise<PullRequestFile[]> | null;
 }
 
 export default function LeftSidebar({
@@ -24,6 +25,7 @@ export default function LeftSidebar({
     conflictedFilesPromise,
     userPermissionPromise,
     currentUserLogin,
+    filesPromise,
 }: LeftSidebarProps) {
     return (
         <aside className="flex h-full flex-col border-gray-200 border-r bg-white px-4 py-6 pr-1 dark:border-zinc-800 dark:bg-zinc-950">
@@ -46,6 +48,7 @@ export default function LeftSidebar({
                         owner={owner}
                         pullRequestPromise={pullRequestPromise}
                         repo={repo}
+                        filesPromise={filesPromise}
                     />
                 </Suspense>
             </div>

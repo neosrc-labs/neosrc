@@ -1063,6 +1063,24 @@ export async function* getPullRequestFilesStream(
     }
 }
 
+export const getAllPullRequestFiles = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        pullNumber: number,
+    ) => {
+        const octokit = createOctokit(accessToken);
+        const files = await octokit.paginate(octokit.pulls.listFiles, {
+            owner,
+            repo,
+            pull_number: pullNumber,
+            per_page: 100,
+        });
+        return files;
+    },
+);
+
 export const getGitHubUser = cache(
     async (accessToken: string, username: string) => {
         const octokit = createOctokit(accessToken);

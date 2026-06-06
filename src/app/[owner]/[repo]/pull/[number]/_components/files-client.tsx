@@ -1,32 +1,41 @@
 "use client";
 
 import { MessageSquare, MessageSquareOff } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Async } from "~/components/async";
-import FileDiff from "~/components/FileDiff";
+import type { ReactNode } from "react";
 import {
-    LazyRenderItem,
-    SCROLL_TARGET_EVENT,
-} from "~/components/LazyRenderItem";
-import { useFiles } from "~/hooks/files";
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import { Async } from "~/components/async";
+import { SCROLL_TARGET_EVENT } from "~/components/LazyRenderItem";
 import type { PullsGetResponseData, ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 
-function FileDiffSkeleton() {
-    return (
-        <div className="mb-6 overflow-hidden rounded border border-gray-200 dark:border-zinc-700">
-            <div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900">
-                <div className="h-4 w-1/3 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
-            </div>
-            <div className="bg-white p-4 dark:bg-zinc-950">
-                <div className="space-y-2">
-                    <div className="h-3.5 w-5/6 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
-                    <div className="h-3.5 w-2/3 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
-                    <div className="h-3.5 w-3/4 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
-                </div>
-            </div>
-        </div>
-    );
+export interface FilesContextValue {
+    allCommentsAll: ReviewComment[];
+    pendingReviewId: number | null;
+    showComments: boolean;
+    expandedGeneratedFiles: Set<string>;
+    expandedOverflowFiles: Set<string>;
+    toggleGeneratedFile: (filename: string) => void;
+    toggleOverflowFile: (filename: string) => void;
+    pullRequestPromise: Promise<PullsGetResponseData>;
+    commitSha?: string;
+    heightMapRef: React.MutableRefObject<Map<string, number>>;
+}
+
+const FilesContext = createContext<FilesContextValue | null>(null);
+
+export function useFilesContext(): FilesContextValue {
+    const ctx = useContext(FilesContext);
+    if (!ctx)
+        throw new Error("useFilesContext must be used within FilesSection");
+    return ctx;
 }
 
 interface FilesSectionProps {
@@ -35,6 +44,7 @@ interface FilesSectionProps {
     number: number;
     commitSha?: string;
     pullRequestPromise: Promise<PullsGetResponseData>;
+    children: ReactNode;
 }
 
 export function FilesSection({
@@ -43,6 +53,7 @@ export function FilesSection({
     number,
     commitSha,
     pullRequestPromise,
+    children,
 }: FilesSectionProps) {
     const [showComments, setShowComments] = useState(true);
     const [expandedGeneratedFiles, setExpandedGeneratedFiles] = useState(
@@ -52,14 +63,6 @@ export function FilesSection({
         () => new Set<string>(),
     );
     const heightMapRef = useRef(new Map<string, number>());
-    const { files: allFiles, isLoading } = useFiles({
-        owner,
-        repo,
-        number,
-        commitSha,
-    });
-
-    const OVERFLOW_THRESHOLD = 200;
 
     const { data: allComments = [] } = api.reviewComments.list.useQuery(
         { owner, repo, number },
@@ -104,22 +107,6 @@ export function FilesSection({
     }, []);
 
     useEffect(() => {
-        if (allFiles.length <= OVERFLOW_THRESHOLD) return;
-        const firstOverflow = allFiles[OVERFLOW_THRESHOLD];
-        if (!firstOverflow) return;
-        const measuredHeight = heightMapRef.current.get(firstOverflow.filename);
-        if (measuredHeight === undefined) return;
-        for (let i = OVERFLOW_THRESHOLD; i < allFiles.length; i++) {
-            const file = allFiles[i];
-            if (!file) continue;
-            const key = file.filename;
-            if (!heightMapRef.current.has(key)) {
-                heightMapRef.current.set(key, measuredHeight);
-            }
-        }
-    }, [allFiles]);
-
-    useEffect(() => {
         if (allCommentsAll.length === 0) return;
         const hash = window.location.hash;
         if (hash.startsWith("#review-thread-")) {
@@ -135,128 +122,101 @@ export function FilesSection({
     }, [allCommentsAll]);
 
     useEffect(() => {
-        if (isLoading || allFiles.length === 0) return;
         const hash = window.location.hash;
         if (!hash || hash.startsWith("#review-thread-")) return;
 
         const id = hash.slice(1);
 
-        window.dispatchEvent(
-            new CustomEvent(SCROLL_TARGET_EVENT, { detail: id }),
-        );
-
-        const el = document.getElementById(id);
-        if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
-            return;
-        }
-
-        const observer = new MutationObserver(() => {
+        const scrollToTarget = () => {
+            window.dispatchEvent(
+                new CustomEvent(SCROLL_TARGET_EVENT, { detail: id }),
+            );
             const el = document.getElementById(id);
             if (el) {
                 el.scrollIntoView({ behavior: "smooth", block: "center" });
+                return true;
+            }
+            return false;
+        };
+
+        if (scrollToTarget()) return;
+
+        const observer = new MutationObserver(() => {
+            if (scrollToTarget()) {
                 observer.disconnect();
             }
         });
         observer.observe(document.body, { childList: true, subtree: true });
-        setTimeout(() => observer.disconnect(), 15000);
-    }, [allFiles, isLoading]);
+        const timeout = setTimeout(() => observer.disconnect(), 15000);
+        return () => {
+            observer.disconnect();
+            clearTimeout(timeout);
+        };
+    }, []);
+
+    const contextValue = useMemo<FilesContextValue>(
+        () => ({
+            allCommentsAll,
+            pendingReviewId,
+            showComments,
+            expandedGeneratedFiles,
+            expandedOverflowFiles,
+            toggleGeneratedFile,
+            toggleOverflowFile,
+            pullRequestPromise,
+            commitSha,
+            heightMapRef,
+        }),
+        [
+            allCommentsAll,
+            pendingReviewId,
+            showComments,
+            expandedGeneratedFiles,
+            expandedOverflowFiles,
+            toggleGeneratedFile,
+            toggleOverflowFile,
+            pullRequestPromise,
+            commitSha,
+        ],
+    );
 
     return (
-        <div>
-            <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
-                    Files Changed{!isLoading && ` (${allFiles.length})`}
-                </h2>
-                <div className="flex items-center gap-2">
-                    <button
-                        className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
-                        onClick={() => setShowComments(!showComments)}
-                        title={showComments ? "Hide comments" : "Show comments"}
-                        type="button"
+        <FilesContext.Provider value={contextValue}>
+            <div>
+                <div className="mb-4 flex items-center justify-between">
+                    <Async
+                        promise={pullRequestPromise}
+                        fallback={
+                            <h2 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
+                                Files Changed
+                            </h2>
+                        }
                     >
-                        {showComments ? (
-                            <MessageSquare size={16} />
-                        ) : (
-                            <MessageSquareOff size={16} />
+                        {(pr) => (
+                            <h2 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
+                                Files Changed ({pr.changed_files ?? 0})
+                            </h2>
                         )}
-                    </button>
-                </div>
-            </div>
-            {isLoading && allFiles.length === 0 && (
-                <>
-                    <FileDiffSkeleton />
-                    <FileDiffSkeleton />
-                    <FileDiffSkeleton />
-                </>
-            )}
-            <Async promise={pullRequestPromise}>
-                {(pullRequest) => (
-                    <div className="flex flex-col gap-6">
-                        {allFiles.map((file, index) => {
-                            const fileComments = allCommentsAll.filter(
-                                (c) => c.path === file.filename,
-                            );
-                            const fileId = file.filename.replace(/\//g, "-");
-                            const totalChanged =
-                                file.additions + file.deletions;
-                            const isOverflow =
-                                index >= OVERFLOW_THRESHOLD ||
-                                file.status === "removed" ||
-                                totalChanged > 1000;
-
-                            return (
-                                <LazyRenderItem
-                                    className="scroll-mt-[calc(var(--header-height)+8px)]"
-                                    heightMap={heightMapRef.current}
-                                    id={fileId}
-                                    itemKey={file.filename}
-                                    key={file.filename}
-                                    renderOnIds={[
-                                        ...fileComments.map(
-                                            (c) => `review-thread-${c.id}`,
-                                        ),
-                                        fileId,
-                                    ]}
-                                >
-                                    <FileDiff
-                                        baseSha={pullRequest.base.sha}
-                                        headSha={
-                                            pullRequest.head.sha ?? commitSha
-                                        }
-                                        comments={fileComments}
-                                        file={file}
-                                        number={number.toString()}
-                                        onToggleGeneratedDiff={() =>
-                                            toggleGeneratedFile(file.filename)
-                                        }
-                                        onTogglePerformanceDiff={() =>
-                                            toggleOverflowFile(file.filename)
-                                        }
-                                        owner={owner}
-                                        pendingReviewId={pendingReviewId}
-                                        performanceHidden={isOverflow}
-                                        repo={repo}
-                                        showComments={showComments}
-                                        showGeneratedDiff={
-                                            expandedGeneratedFiles.has(
-                                                file.filename,
-                                            ) ||
-                                            (isOverflow &&
-                                                expandedOverflowFiles.has(
-                                                    file.filename,
-                                                ))
-                                        }
-                                        showPerformanceDiff={expandedOverflowFiles.has(
-                                            file.filename,
-                                        )}
-                                    />
-                                </LazyRenderItem>
-                            );
-                        })}
+                    </Async>
+                    <div className="flex items-center gap-2">
+                        <button
+                            className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                            onClick={() => setShowComments(!showComments)}
+                            title={
+                                showComments ? "Hide comments" : "Show comments"
+                            }
+                            type="button"
+                        >
+                            {showComments ? (
+                                <MessageSquare size={16} />
+                            ) : (
+                                <MessageSquareOff size={16} />
+                            )}
+                        </button>
                     </div>
-                )}
-            </Async>
-        </div>
+                </div>
+                {children}
+            </div>
+        </FilesContext.Provider>
     );
 }

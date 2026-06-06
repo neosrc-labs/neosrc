@@ -13,6 +13,7 @@ import {
     CommitHeader,
     CommitHeaderSkeleton,
 } from "../../_components/commit-header";
+import { FilePages } from "../../_components/file-pages";
 import { FilesSection } from "../../_components/files-client";
 
 interface ChangesPageProps {
@@ -98,7 +99,16 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
                     repo={repo}
                     commitSha={commitSha ?? undefined}
                     pullRequestPromise={prPromise}
-                />
+                >
+                    <FilePages
+                        accessToken={accessToken}
+                        owner={owner}
+                        repo={repo}
+                        pullNumber={number}
+                        commitSha={commitSha ?? undefined}
+                        userId={userId ?? undefined}
+                    />
+                </FilesSection>
             </Suspense>
         </div>
     );

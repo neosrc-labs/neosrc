@@ -5,8 +5,7 @@ import { use, useEffect, useMemo } from "react";
 import { Async } from "~/components/async";
 import { useSidebar } from "~/components/sidebar-context";
 import { NavItem, NavMenu } from "~/components/ui/nav-menu";
-import { useFiles } from "~/hooks/files";
-import type { PullsGetResponseData } from "~/server/github";
+import type { PullRequestFile, PullsGetResponseData } from "~/server/github";
 import { buildFileTree, FileTree, FileTreeSkeleton } from "./file-tree";
 import { ReviewThreadsSection } from "./review-threads-section";
 
@@ -15,6 +14,7 @@ interface LeftSidebarContentSectionProps {
     repo: string;
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData> | null;
+    filesPromise?: Promise<PullRequestFile[]> | null;
 }
 
 export function LeftSidebarContentSection({
@@ -22,6 +22,7 @@ export function LeftSidebarContentSection({
     repo,
     number,
     pullRequestPromise,
+    filesPromise,
 }: LeftSidebarContentSectionProps) {
     const pathname = usePathname();
     const basePath = `/${owner}/${repo}/pull/${number}`;
@@ -42,6 +43,7 @@ export function LeftSidebarContentSection({
                 owner={owner}
                 pullRequestPromise={pullRequestPromise}
                 repo={repo}
+                filesPromise={filesPromise}
             />
         );
     }
@@ -54,6 +56,7 @@ interface SidebarFileTreeProps {
     repo: string;
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData> | null;
+    filesPromise?: Promise<PullRequestFile[]> | null;
 }
 
 export function SidebarFileTree({
@@ -61,6 +64,7 @@ export function SidebarFileTree({
     repo,
     number,
     pullRequestPromise,
+    filesPromise,
 }: SidebarFileTreeProps) {
     const pathname = usePathname();
     const basePath = `/${owner}/${repo}/pull/${number}`;
@@ -70,29 +74,30 @@ export function SidebarFileTree({
     }, [pathname]);
 
     const pullRequest = use(pullRequestPromise ?? Promise.resolve(null));
-    const { files, isLoading } = useFiles({ owner, repo, number, commitSha });
-
-    const fileTree = useMemo(() => buildFileTree(files), [files]);
+    const files = filesPromise ? use(filesPromise) : [];
 
     const filesChanged = commitSha ? files.length : pullRequest?.changed_files;
+    const fileTree = useMemo(() => buildFileTree(files), [files]);
+
+    const fileContent = filesPromise ? (
+        files.length > 0 ? (
+            <FileTree basePath={basePath} files={fileTree} />
+        ) : (
+            <p className="text-gray-500 text-sm dark:text-zinc-400">
+                No files changed
+            </p>
+        )
+    ) : (
+        <FileTreeSkeleton />
+    );
 
     return (
         <div className="flex h-full flex-col">
             <h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-zinc-100">
                 Files Changed{" "}
-                {filesChanged ? <span>({filesChanged})</span> : null}
+                {filesChanged != null ? <span>({filesChanged})</span> : null}
             </h3>
-            <div className="min-h-0 flex-1">
-                {isLoading ? (
-                    <FileTreeSkeleton />
-                ) : files.length > 0 ? (
-                    <FileTree basePath={basePath} files={fileTree} />
-                ) : (
-                    <p className="text-gray-500 text-sm dark:text-zinc-400">
-                        No files changed
-                    </p>
-                )}
-            </div>
+            <div className="min-h-0 flex-1">{fileContent}</div>
         </div>
     );
 }
