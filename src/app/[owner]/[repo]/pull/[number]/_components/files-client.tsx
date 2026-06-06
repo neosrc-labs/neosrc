@@ -2,13 +2,14 @@
 
 import { MessageSquare, MessageSquareOff } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Async } from "~/components/async";
 import FileDiff from "~/components/FileDiff";
 import {
     LazyRenderItem,
     SCROLL_TARGET_EVENT,
 } from "~/components/LazyRenderItem";
 import { useFiles } from "~/hooks/files";
-import type { ReviewComment } from "~/server/github";
+import type { PullsGetResponseData, ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 
 function FileDiffSkeleton() {
@@ -33,8 +34,7 @@ interface FilesSectionProps {
     repo: string;
     number: number;
     commitSha?: string;
-    baseSha?: string;
-    headSha?: string;
+    pullRequestPromise: Promise<PullsGetResponseData>;
 }
 
 export function FilesSection({
@@ -42,8 +42,7 @@ export function FilesSection({
     repo,
     number,
     commitSha,
-    baseSha,
-    headSha,
+    pullRequestPromise,
 }: FilesSectionProps) {
     const [showComments, setShowComments] = useState(true);
     const [expandedGeneratedFiles, setExpandedGeneratedFiles] = useState(
@@ -191,60 +190,68 @@ export function FilesSection({
                     <FileDiffSkeleton />
                 </>
             )}
-            <div className="flex flex-col gap-6">
-                {allFiles.map((file, index) => {
-                    const fileComments = allCommentsAll.filter(
-                        (c) => c.path === file.filename,
-                    );
-                    const fileId = file.filename.replace(/\//g, "-");
-                    const isOverflow = index >= OVERFLOW_THRESHOLD;
+            <Async promise={pullRequestPromise}>
+                {(pullRequest) => (
+                    <div className="flex flex-col gap-6">
+                        {allFiles.map((file, index) => {
+                            const fileComments = allCommentsAll.filter(
+                                (c) => c.path === file.filename,
+                            );
+                            const fileId = file.filename.replace(/\//g, "-");
+                            const isOverflow = index >= OVERFLOW_THRESHOLD;
 
-                    return (
-                        <LazyRenderItem
-                            className="scroll-mt-[calc(var(--header-height)+8px)]"
-                            heightMap={heightMapRef.current}
-                            id={fileId}
-                            itemKey={file.filename}
-                            key={file.filename}
-                            renderOnIds={[
-                                ...fileComments.map(
-                                    (c) => `review-thread-${c.id}`,
-                                ),
-                                fileId,
-                            ]}
-                        >
-                            <FileDiff
-                                baseSha={baseSha}
-                                headSha={headSha}
-                                comments={fileComments}
-                                file={file}
-                                number={number.toString()}
-                                onToggleGeneratedDiff={() =>
-                                    toggleGeneratedFile(file.filename)
-                                }
-                                onTogglePerformanceDiff={() =>
-                                    toggleOverflowFile(file.filename)
-                                }
-                                owner={owner}
-                                pendingReviewId={pendingReviewId}
-                                performanceHidden={isOverflow}
-                                repo={repo}
-                                showComments={showComments}
-                                showGeneratedDiff={
-                                    expandedGeneratedFiles.has(file.filename) ||
-                                    (isOverflow &&
-                                        expandedOverflowFiles.has(
+                            return (
+                                <LazyRenderItem
+                                    className="scroll-mt-[calc(var(--header-height)+8px)]"
+                                    heightMap={heightMapRef.current}
+                                    id={fileId}
+                                    itemKey={file.filename}
+                                    key={file.filename}
+                                    renderOnIds={[
+                                        ...fileComments.map(
+                                            (c) => `review-thread-${c.id}`,
+                                        ),
+                                        fileId,
+                                    ]}
+                                >
+                                    <FileDiff
+                                        baseSha={pullRequest.base.sha}
+                                        headSha={
+                                            pullRequest.head.sha ?? commitSha
+                                        }
+                                        comments={fileComments}
+                                        file={file}
+                                        number={number.toString()}
+                                        onToggleGeneratedDiff={() =>
+                                            toggleGeneratedFile(file.filename)
+                                        }
+                                        onTogglePerformanceDiff={() =>
+                                            toggleOverflowFile(file.filename)
+                                        }
+                                        owner={owner}
+                                        pendingReviewId={pendingReviewId}
+                                        performanceHidden={isOverflow}
+                                        repo={repo}
+                                        showComments={showComments}
+                                        showGeneratedDiff={
+                                            expandedGeneratedFiles.has(
+                                                file.filename,
+                                            ) ||
+                                            (isOverflow &&
+                                                expandedOverflowFiles.has(
+                                                    file.filename,
+                                                ))
+                                        }
+                                        showPerformanceDiff={expandedOverflowFiles.has(
                                             file.filename,
-                                        ))
-                                }
-                                showPerformanceDiff={expandedOverflowFiles.has(
-                                    file.filename,
-                                )}
-                            />
-                        </LazyRenderItem>
-                    );
-                })}
-            </div>
+                                        )}
+                                    />
+                                </LazyRenderItem>
+                            );
+                        })}
+                    </div>
+                )}
+            </Async>
         </div>
     );
 }

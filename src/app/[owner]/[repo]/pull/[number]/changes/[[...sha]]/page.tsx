@@ -51,41 +51,29 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
     const session = await getSession();
     const userId = session?.user?.id;
 
-    let commit: Promise<CommitData> | null = null;
-    let commits: Promise<PullsListCommitsResponseData> | null = null;
-    let baseSha: string | undefined;
-    let headSha: string | undefined;
-    try {
-        const pr = await getCachedPullRequest(
+    const prPromise = getCachedPullRequest(
+        accessToken,
+        owner,
+        repo,
+        number,
+        userId,
+    );
+
+    let commitPromise: Promise<CommitData> | null = null;
+    let commitsPromise: Promise<PullsListCommitsResponseData> | null = null;
+    if (commitSha) {
+        commitPromise = getCachedCommit(
+            accessToken,
+            owner,
+            repo,
+            commitSha,
+            userId,
+        );
+        commitsPromise = getPullRequestCommits(
             accessToken,
             owner,
             repo,
             number,
-            userId,
-        );
-        baseSha = pr.base.sha;
-        headSha = pr.head.sha;
-
-        if (commitSha) {
-            // Fetch commit details and all PR commits in parallel and don't block the main page render
-            commit = getCachedCommit(
-                accessToken,
-                owner,
-                repo,
-                commitSha,
-                userId,
-            );
-            commits = getPullRequestCommits(accessToken, owner, repo, number);
-        }
-    } catch {
-        return (
-            <div className="px-6 py-8">
-                <p className="text-gray-600 dark:text-gray-400">
-                    {commitSha
-                        ? "Failed to fetch commit changes."
-                        : "Failed to fetch file changes."}
-                </p>
-            </div>
         );
     }
 
@@ -95,8 +83,8 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
                 fallback={commitSha ? <CommitHeaderSkeleton /> : undefined}
             >
                 <CommitHeader
-                    commitPromise={commit}
-                    commitsPromise={commits}
+                    commitPromise={commitPromise}
+                    commitsPromise={commitsPromise}
                     number={number}
                     owner={owner}
                     repo={repo}
@@ -105,12 +93,11 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
             </Suspense>
             <Suspense>
                 <FilesSection
-                    baseSha={baseSha}
-                    headSha={commitSha ?? headSha}
                     number={number}
                     owner={owner}
                     repo={repo}
                     commitSha={commitSha ?? undefined}
+                    pullRequestPromise={prPromise}
                 />
             </Suspense>
         </div>
