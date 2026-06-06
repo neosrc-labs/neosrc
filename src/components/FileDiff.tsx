@@ -27,6 +27,9 @@ interface FileDiffProps {
     pendingReviewId?: number | null;
     showGeneratedDiff?: boolean;
     onToggleGeneratedDiff?: () => void;
+    performanceHidden?: boolean;
+    showPerformanceDiff?: boolean;
+    onTogglePerformanceDiff?: () => void;
 }
 
 function getViewedKey(owner: string, repo: string, number: string): string {
@@ -61,6 +64,9 @@ export default function FileDiff({
     pendingReviewId,
     showGeneratedDiff = false,
     onToggleGeneratedDiff,
+    performanceHidden = false,
+    showPerformanceDiff = true,
+    onTogglePerformanceDiff,
 }: FileDiffProps) {
     const [isViewed, setIsViewed] = useState(() => {
         if (typeof window === "undefined") return false;
@@ -286,7 +292,18 @@ export default function FileDiff({
             </div>
 
             {!isCollapsed &&
-                (generated && !showGeneratedDiff ? (
+                (performanceHidden && !showPerformanceDiff ? (
+                    <div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-gray-500 text-sm dark:border-gray-700 dark:text-gray-400">
+                        <span>This diff is hidden to improve performance.</span>
+                        <button
+                            className="cursor-pointer font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            onClick={() => onTogglePerformanceDiff?.()}
+                            type="button"
+                        >
+                            Show changes
+                        </button>
+                    </div>
+                ) : generated && !showGeneratedDiff ? (
                     <div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-gray-500 text-sm dark:border-gray-700 dark:text-gray-400">
                         <span>
                             This file is generated and hidden by default.

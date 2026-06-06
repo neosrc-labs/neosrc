@@ -49,13 +49,18 @@ export function FilesSection({
     const [expandedGeneratedFiles, setExpandedGeneratedFiles] = useState(
         () => new Set<string>(),
     );
+    const [expandedOverflowFiles, setExpandedOverflowFiles] = useState(
+        () => new Set<string>(),
+    );
     const heightMapRef = useRef(new Map<string, number>());
-    const { files, isLoading } = useFiles({
+    const { files: allFiles, isLoading } = useFiles({
         owner,
         repo,
         number,
         commitSha,
     });
+
+    const OVERFLOW_THRESHOLD = 200;
 
     const { data: allComments = [] } = api.reviewComments.list.useQuery(
         { owner, repo, number },
@@ -87,6 +92,34 @@ export function FilesSection({
         });
     }, []);
 
+    const toggleOverflowFile = useCallback((filename: string) => {
+        setExpandedOverflowFiles((prev) => {
+            const next = new Set(prev);
+            if (next.has(filename)) {
+                next.delete(filename);
+            } else {
+                next.add(filename);
+            }
+            return next;
+        });
+    }, []);
+
+    useEffect(() => {
+        if (allFiles.length <= OVERFLOW_THRESHOLD) return;
+        const firstOverflow = allFiles[OVERFLOW_THRESHOLD];
+        if (!firstOverflow) return;
+        const measuredHeight = heightMapRef.current.get(firstOverflow.filename);
+        if (measuredHeight === undefined) return;
+        for (let i = OVERFLOW_THRESHOLD; i < allFiles.length; i++) {
+            const file = allFiles[i];
+            if (!file) continue;
+            const key = file.filename;
+            if (!heightMapRef.current.has(key)) {
+                heightMapRef.current.set(key, measuredHeight);
+            }
+        }
+    }, [allFiles]);
+
     useEffect(() => {
         if (allCommentsAll.length === 0) return;
         const hash = window.location.hash;
@@ -103,7 +136,7 @@ export function FilesSection({
     }, [allCommentsAll]);
 
     useEffect(() => {
-        if (isLoading || files.length === 0) return;
+        if (isLoading || allFiles.length === 0) return;
         const hash = window.location.hash;
         if (!hash || hash.startsWith("#review-thread-")) return;
 
@@ -128,13 +161,13 @@ export function FilesSection({
         });
         observer.observe(document.body, { childList: true, subtree: true });
         setTimeout(() => observer.disconnect(), 15000);
-    }, [files, isLoading]);
+    }, [allFiles, isLoading]);
 
     return (
         <div>
             <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
-                    Files Changed{!isLoading && ` (${files.length})`}
+                    Files Changed{!isLoading && ` (${allFiles.length})`}
                 </h2>
                 <div className="flex items-center gap-2">
                     <button
@@ -151,7 +184,7 @@ export function FilesSection({
                     </button>
                 </div>
             </div>
-            {isLoading && files.length === 0 && (
+            {isLoading && allFiles.length === 0 && (
                 <>
                     <FileDiffSkeleton />
                     <FileDiffSkeleton />
@@ -159,11 +192,12 @@ export function FilesSection({
                 </>
             )}
             <div className="flex flex-col gap-6">
-                {files.map((file) => {
+                {allFiles.map((file, index) => {
                     const fileComments = allCommentsAll.filter(
                         (c) => c.path === file.filename,
                     );
                     const fileId = file.filename.replace(/\//g, "-");
+                    const isOverflow = index >= OVERFLOW_THRESHOLD;
 
                     return (
                         <LazyRenderItem
@@ -188,11 +222,22 @@ export function FilesSection({
                                 onToggleGeneratedDiff={() =>
                                     toggleGeneratedFile(file.filename)
                                 }
+                                onTogglePerformanceDiff={() =>
+                                    toggleOverflowFile(file.filename)
+                                }
                                 owner={owner}
                                 pendingReviewId={pendingReviewId}
+                                performanceHidden={isOverflow}
                                 repo={repo}
                                 showComments={showComments}
-                                showGeneratedDiff={expandedGeneratedFiles.has(
+                                showGeneratedDiff={
+                                    expandedGeneratedFiles.has(file.filename) ||
+                                    (isOverflow &&
+                                        expandedOverflowFiles.has(
+                                            file.filename,
+                                        ))
+                                }
+                                showPerformanceDiff={expandedOverflowFiles.has(
                                     file.filename,
                                 )}
                             />
