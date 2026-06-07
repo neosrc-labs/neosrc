@@ -119,11 +119,7 @@ function AggregatedLabel({
                         {" added "}
                         {added.map((c, i) => (
                             <span key={c.label.name}>
-                                {i > 0 && i === added.length - 1
-                                    ? " and "
-                                    : i > 0
-                                      ? ", "
-                                      : ""}
+                                {i > 0 && i === added.length - 1 ? " and " : ""}
                                 <Label
                                     color={c.label.color}
                                     description={
@@ -144,9 +140,7 @@ function AggregatedLabel({
                             <span key={c.label.name}>
                                 {i > 0 && i === removed.length - 1
                                     ? " and "
-                                    : i > 0
-                                      ? ", "
-                                      : ""}
+                                    : ""}
                                 <Label
                                     color={c.label.color}
                                     description={
