@@ -139,32 +139,37 @@ function injectButton() {
     const btn = document.createElement("a");
     btn.setAttribute("data-neosrc-btn", "");
     btn.href = `${neosrcUrl}${path}`;
-    btn.textContent = "Neosrc";
+    btn.title = "Open in NeoSrc";
+
+    const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>.bg{fill:#f3f4f6}.letter{fill:#374151}@media(prefers-color-scheme:dark){.bg{fill:#27272a}.letter{fill:#d1d5db}}</style><rect class="bg" width="32" height="32" rx="6"/><text class="letter" x="16" y="16" text-anchor="middle" dominant-baseline="central" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="700">N</text></svg>`;
+    const logo = document.createElement("img");
+    logo.src = `data:image/svg+xml,${encodeURIComponent(svgContent)}`;
+    logo.alt = "Neosrc";
+    logo.style.width = "35px";
+    logo.style.height = "35px";
+    logo.style.display = "block";
+    btn.appendChild(logo);
 
     Object.assign(btn.style, {
         display: "inline-flex",
         alignItems: "center",
-        gap: "4px",
-        padding: "3px 8px",
-        fontSize: "inherit",
-        lineHeight: "inherit",
-        fontWeight: "500",
-        color: "#0969da",
-        background: "transparent",
-        border: "1px solid #d0d7de",
+        justifyContent: "center",
+        padding: "4px",
         borderRadius: "6px",
         textDecoration: "none",
         cursor: "pointer",
-        whiteSpace: "nowrap",
         verticalAlign: "middle",
         marginLeft: "8px",
+        transition: "box-shadow 0.15s",
     });
 
     btn.addEventListener("mouseenter", () => {
-        btn.style.background = "#f3f4f6";
+        btn.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
+        logo.style.filter = "brightness(0.85)";
     });
     btn.addEventListener("mouseleave", () => {
-        btn.style.background = "transparent";
+        btn.style.boxShadow = "none";
+        logo.style.filter = "none";
     });
     btn.addEventListener("click", (e) => {
         e.preventDefault();
