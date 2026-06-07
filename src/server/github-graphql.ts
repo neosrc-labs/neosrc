@@ -6,6 +6,7 @@ import { graphql as octokitGraphql } from "@octokit/graphql";
 
 const TIMELINE_QUERY = `
 fragment SimpleUser on Actor {
+	__typename
 	login
 	avatarUrl
 	url
@@ -295,6 +296,7 @@ query PullRequestTimeline(
 `;
 
 export type GQLActor = {
+    __typename: string;
     login: string;
     avatarUrl: string;
     url: string;

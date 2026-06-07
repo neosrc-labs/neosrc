@@ -166,11 +166,17 @@ function UserLink({
     actor,
 }: {
     actor:
-        | { login: string; avatarUrl: string; url?: string }
+        | {
+              __typename?: string;
+              login: string;
+              avatarUrl: string;
+              url?: string;
+          }
         | null
         | undefined;
 }) {
     if (!actor) return null;
+    const isBot = actor.__typename === "Bot";
     return (
         <UserHoverCard login={actor.login}>
             <a className="flex items-center gap-2" href={actor.url}>
@@ -182,6 +188,11 @@ function UserLink({
                 <span className="font-medium text-gray-800 dark:text-zinc-200">
                     {actor.login}
                 </span>
+                {isBot && (
+                    <span className="rounded bg-zinc-200 px-1 font-medium text-[10px] text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400">
+                        bot
+                    </span>
+                )}
             </a>
         </UserHoverCard>
     );
@@ -843,15 +854,8 @@ function EventContent({
                     : "restored";
             return (
                 <EventRow>
-                    <img
-                        src={event.actor?.avatarUrl ?? ""}
-                        alt={event.actor?.login ?? ""}
-                        className="h-5 w-5 rounded-full"
-                    />
+                    <UserLink actor={event.actor} />
                     <p>
-                        <span className="font-medium text-gray-800 dark:text-zinc-200">
-                            {event.actor?.login}
-                        </span>
                         {` ${verb} the `}
                         <span className="font-medium text-gray-800 dark:text-zinc-200">
                             branch
@@ -967,15 +971,8 @@ function EventContent({
             const timestamp = formatRelativeTime(event.createdAt);
             return (
                 <EventRow>
-                    <img
-                        src={event.actor?.avatarUrl ?? ""}
-                        alt={event.actor?.login ?? ""}
-                        className="h-5 w-5 rounded-full"
-                    />
+                    <UserLink actor={event.actor} />
                     <p>
-                        <span className="font-medium text-gray-800 dark:text-zinc-200">
-                            {event.actor?.login}
-                        </span>
                         {" renamed this "}
                         <span className="font-medium text-gray-800 line-through dark:text-zinc-200">
                             {event.previousTitle}
