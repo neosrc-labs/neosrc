@@ -23,8 +23,8 @@ import { PullRequestRow } from "./pull-request-row";
 import {
     addQualifier,
     hasQualifier,
-    parseQuery,
     removeQualifier,
+    splitQuery,
 } from "./search-utils";
 
 type FilterState = "open" | "closed" | "merged";
@@ -105,24 +105,6 @@ function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
         status_state: getStatusState(item),
         status_contexts: getStatusContexts(item),
     };
-}
-
-const QUALIFIER_LABELS: Record<string, string> = {
-    is: "State",
-    author: "Author",
-    label: "Label",
-    assignee: "Assignee",
-    milestone: "Milestone",
-    reviewed_by: "Reviewer",
-    review_requested: "Review requested",
-    head: "Head branch",
-    base: "Base branch",
-    draft: "Draft",
-};
-
-function qualifierLabel(key: string, value: string): string {
-    const prefix = QUALIFIER_LABELS[key] ?? key;
-    return `${prefix}: ${value}`;
 }
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -216,8 +198,6 @@ export function PullRequestList({
     const totalCount = data?.totalCount ?? 0;
     const hasNext = data?.hasNextPage ?? false;
 
-    const parsedQuery = useMemo(() => parseQuery(searchQuery), [searchQuery]);
-
     const navigate = useCallback(
         (changes: Record<string, string | null>) => {
             const params = new URLSearchParams(searchParams.toString());
@@ -290,12 +270,39 @@ export function PullRequestList({
             <div className="border-gray-200 border-b dark:border-zinc-800">
                 <div className="flex items-center gap-1 px-4 py-2">
                     <div className="relative flex flex-1 items-center">
+                        <div
+                            className="pointer-events-none absolute inset-0 flex items-center px-3 py-1.5 text-sm"
+                            aria-hidden="true"
+                        >
+                            {searchInput ? (
+                                <span className="whitespace-nowrap">
+                                    {splitQuery(searchInput).map((seg, i) => {
+                                        const key = `${seg.text}-${seg.isQualifier ? "q" : "t"}-${i}`;
+                                        return seg.isQualifier ? (
+                                            <span
+                                                key={key}
+                                                className="rounded bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300"
+                                            >
+                                                {seg.text}
+                                            </span>
+                                        ) : (
+                                            <span
+                                                key={key}
+                                                className="text-gray-900 dark:text-gray-100"
+                                            >
+                                                {seg.text}
+                                            </span>
+                                        );
+                                    })}
+                                </span>
+                            ) : null}
+                        </div>
                         <input
                             type="text"
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
                             placeholder="Search pull requests by title, body, or comments"
-                            className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 pr-8 text-gray-900 text-sm placeholder-gray-500 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+                            className="relative w-full rounded-md border border-gray-300 bg-transparent px-3 py-1.5 pr-8 text-sm text-transparent placeholder-gray-500 caret-gray-900 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:placeholder-gray-500 dark:caret-gray-100 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                         />
                         {searchInput && (
                             <button
@@ -345,28 +352,6 @@ export function PullRequestList({
                         }
                     />
                 </div>
-
-                {parsedQuery.qualifiers.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 px-4 pb-2">
-                        {parsedQuery.qualifiers.map((q) => (
-                            <span
-                                key={`${q.key}:${q.value}`}
-                                className="inline-flex items-center gap-1 rounded-md border border-blue-300 bg-blue-50 px-2 py-0.5 font-medium text-blue-700 text-xs dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300"
-                            >
-                                {qualifierLabel(q.key, q.value)}
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        handleRemoveQualifier(q.key, q.value)
-                                    }
-                                    className="ml-0.5 cursor-pointer rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-500/20"
-                                >
-                                    <X className="size-3" />
-                                </button>
-                            </span>
-                        ))}
-                    </div>
-                )}
             </div>
 
             <div className="border-gray-200 border-b dark:border-zinc-800">
