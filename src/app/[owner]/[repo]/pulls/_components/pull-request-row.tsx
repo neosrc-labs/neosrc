@@ -40,6 +40,7 @@ export interface PrRowData {
         description: string | null;
         url: string | null;
     }>;
+    review_decision: string | null;
 }
 
 function StatusCheckIcon({
@@ -211,6 +212,23 @@ export function PullRequestRow({
                         </span>
                     ) : (
                         <span>by unknown</span>
+                    )}
+                    {pr.review_decision === "APPROVED" && (
+                        <span className="flex items-center gap-0.5 text-green-600 text-xs dark:text-green-500">
+                            <Check className="size-3.5" />
+                            Approved
+                        </span>
+                    )}
+                    {pr.review_decision === "CHANGES_REQUESTED" && (
+                        <span className="flex items-center gap-0.5 text-red-600 text-xs dark:text-red-500">
+                            <XCircle className="size-3.5" />
+                            Changes requested
+                        </span>
+                    )}
+                    {pr.review_decision === "REVIEW_REQUIRED" && (
+                        <span className="text-amber-600 text-xs dark:text-amber-500">
+                            Review required
+                        </span>
                     )}
                 </div>
                 {pr.labels && pr.labels.length > 0 && (

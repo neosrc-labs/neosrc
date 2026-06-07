@@ -107,6 +107,7 @@ function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
         comments_count: item.comments.totalCount,
         status_state: getStatusState(item),
         status_contexts: getStatusContexts(item),
+        review_decision: item.reviewDecision,
     };
 }
 
