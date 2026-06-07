@@ -17,6 +17,7 @@ interface SearchableDropdownProps<T> {
     beforeItems?: React.ReactNode;
     disabled?: boolean;
     trigger?: React.ReactNode;
+    onSearchChange?: (query: string) => void;
 }
 
 export function SearchableDropdown<T>({
@@ -32,20 +33,26 @@ export function SearchableDropdown<T>({
     beforeItems,
     disabled,
     trigger,
+    onSearchChange,
 }: SearchableDropdownProps<T>) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const onSearchChangeRef = useRef(onSearchChange);
+    onSearchChangeRef.current = onSearchChange;
 
     useEffect(() => {
-        if (!open) return;
+        if (!open) {
+            setSearch("");
+            onSearchChangeRef.current?.("");
+            return;
+        }
         const handler = (e: MouseEvent) => {
             if (
                 dropdownRef.current &&
                 !dropdownRef.current.contains(e.target as Node)
             ) {
                 setOpen(false);
-                setSearch("");
             }
         };
         document.addEventListener("mousedown", handler);
@@ -53,6 +60,11 @@ export function SearchableDropdown<T>({
     }, [open]);
 
     const sortedCache = useRef<T[] | null>(null);
+    const prevItemsRef = useRef(items);
+    if (open && items && items !== prevItemsRef.current) {
+        sortedCache.current = null;
+        prevItemsRef.current = items;
+    }
     if (open && items && !sortedCache.current) {
         sortedCache.current = [...items].sort((a, b) => {
             const aApplied = isSelected(a) ? 0 : 1;
@@ -90,7 +102,10 @@ export function SearchableDropdown<T>({
                     <input
                         autoFocus
                         className="w-full border-gray-200 border-b px-3 py-2 text-sm outline-none placeholder:text-gray-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                        onChange={(e) => setSearch(e.target.value)}
+                        onChange={(e) => {
+                            setSearch(e.target.value);
+                            onSearchChangeRef.current?.(e.target.value);
+                        }}
                         placeholder={placeholder}
                         value={search}
                     />

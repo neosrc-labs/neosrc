@@ -239,7 +239,13 @@ export function PullRequestList({
                         owner={owner}
                         repo={repo}
                         currentQuery={searchQuery}
-                        onSelect={handleAddQualifier}
+                        onToggle={(key: string, value: string) => {
+                            if (hasQualifier(searchQuery, key, value)) {
+                                handleRemoveQualifier(key, value);
+                            } else {
+                                handleAddQualifier(key, value);
+                            }
+                        }}
                     />
 
                     <LabelDropdown
@@ -426,26 +432,25 @@ function AuthorDropdown({
     owner,
     repo,
     currentQuery,
-    onSelect,
+    onToggle,
 }: {
     owner: string;
     repo: string;
     currentQuery: string;
-    onSelect: (key: string, value: string) => void;
+    onToggle: (key: string, value: string) => void;
 }) {
-    const [open, setOpen] = useState(false);
     const { data: users } = api.pulls.listAssignees.useQuery({ owner, repo });
-    const [search, setSearch] = useState("");
-    const debouncedSearch = useDebounce(search, 300);
+    const [searchText, setSearchText] = useState("");
+    const debouncedSearch = useDebounce(searchText, 300);
 
     const filtered = useMemo(
         () =>
             (users ?? []).filter(
                 (u: { login: string }) =>
-                    u.login.toLowerCase().includes(search.toLowerCase()) &&
+                    u.login.toLowerCase().includes(searchText.toLowerCase()) &&
                     !currentQuery.includes(`author:${u.login}`),
             ),
-        [users, search, currentQuery],
+        [users, searchText, currentQuery],
     );
 
     const isCustomAuthor =
@@ -465,98 +470,76 @@ function AuthorDropdown({
     )?.user;
     const userNotFound = isCustomAuthor && userSearchDone && !searchedUser;
 
-    const ref = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        function handleClickOutside(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
-                setOpen(false);
-                setSearch("");
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () =>
-            document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+    const customAuthorItem =
+        isCustomAuthor && !userNotFound
+            ? [
+                  {
+                      login: debouncedSearch,
+                      avatar_url: searchedUser?.avatar_url ?? "",
+                      isCustom: true as const,
+                  },
+              ]
+            : [];
+
+    const allItems = [...filtered, ...customAuthorItem];
+
+    const selectedNames = new Set(
+        (users ?? [])
+            .filter((u: { login: string }) =>
+                currentQuery.includes(`author:${u.login}`),
+            )
+            .map((u: { login: string }) => u.login),
+    );
 
     return (
-        <div ref={ref} className="relative">
-            <button
-                type="button"
-                onClick={() => setOpen(!open)}
-                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
-            >
-                <User className="size-4" />
-                Author
-            </button>
-            {open && (
-                <div className="absolute top-full right-0 z-50 mt-1 w-56 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Filter users..."
-                        className="mb-1 w-full rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                    />
-                    <div className="max-h-48 overflow-y-auto">
-                        {filtered.length === 0 && !search && (
-                            <p className="px-2 py-3 text-center text-gray-500 text-sm">
-                                No users found
-                            </p>
-                        )}
-                        {filtered.map(
-                            (u: { login: string; avatar_url?: string }) => (
-                                <button
-                                    key={u.login}
-                                    type="button"
-                                    onClick={() => {
-                                        onSelect("author", u.login);
-                                        setOpen(false);
-                                        setSearch("");
-                                    }}
-                                    className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 text-sm hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
-                                >
-                                    {u.avatar_url && (
-                                        <img
-                                            src={u.avatar_url}
-                                            alt=""
-                                            className="size-5 rounded-full"
-                                        />
-                                    )}
-                                    {u.login}
-                                </button>
-                            ),
-                        )}
-                        {isCustomAuthor && userNotFound && (
-                            <p className="px-2 py-3 text-center text-gray-500 text-sm">
-                                No users found
-                            </p>
-                        )}
-                        {isCustomAuthor && !userNotFound && (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    onSelect("author", debouncedSearch);
-                                    setOpen(false);
-                                    setSearch("");
-                                }}
-                                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 text-sm hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
-                            >
-                                {searchedUser?.avatar_url ? (
-                                    <img
-                                        src={searchedUser.avatar_url}
-                                        alt=""
-                                        className="size-5 rounded-full"
-                                    />
-                                ) : (
-                                    <div className="size-5 rounded-full bg-gray-200 dark:bg-zinc-700" />
-                                )}
-                                {debouncedSearch}
-                            </button>
-                        )}
-                    </div>
+        <SearchableDropdown
+            items={allItems}
+            isSelected={(u: { login: string }) => selectedNames.has(u.login)}
+            onSelect={(u: { login: string }) => onToggle("author", u.login)}
+            keyFn={(u: { login: string }) => u.login}
+            searchFn={(u: { login: string }, q: string) =>
+                u.login.toLowerCase().includes(q.toLowerCase())
+            }
+            renderItem={(
+                u: { login: string; avatar_url?: string },
+                selected: boolean,
+            ) => (
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                    {u.avatar_url ? (
+                        <img
+                            src={u.avatar_url}
+                            alt=""
+                            className="size-5 shrink-0 rounded-full"
+                        />
+                    ) : (
+                        <div className="size-5 shrink-0 rounded-full bg-gray-200 dark:bg-zinc-700" />
+                    )}
+                    <span className="truncate">{u.login}</span>
+                    {selected && (
+                        <span className="ml-auto shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                            &#10003;
+                        </span>
+                    )}
                 </div>
             )}
-        </div>
+            placeholder="Filter users..."
+            emptyText={
+                isCustomAuthor && userNotFound
+                    ? "No users found"
+                    : "No users found"
+            }
+            ariaLabel="Filter by author"
+            onSearchChange={setSearchText}
+            trigger={
+                <button
+                    type="button"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                >
+                    <User className="size-4" />
+                    Author
+                </button>
+            }
+        />
     );
 }
 
