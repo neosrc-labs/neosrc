@@ -2,6 +2,7 @@ import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 
 export function UserLink({
     actor,
+    onClick,
 }: {
     actor:
         | {
@@ -12,12 +13,22 @@ export function UserLink({
           }
         | null
         | undefined;
+    onClick?: (e: React.MouseEvent) => void;
 }) {
     if (!actor) return null;
     const isBot = actor.__typename === "Bot";
     return (
         <UserHoverCard login={actor.login}>
-            <a className="flex items-center gap-2" href={actor.url}>
+            <a
+                className="flex cursor-pointer items-center gap-2"
+                href={actor.url}
+                onClick={(e) => {
+                    if (onClick) {
+                        e.preventDefault();
+                        onClick(e);
+                    }
+                }}
+            >
                 <img
                     src={actor.avatarUrl}
                     alt={actor.login}
