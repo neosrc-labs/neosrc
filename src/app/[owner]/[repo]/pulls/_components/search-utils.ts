@@ -65,6 +65,44 @@ export function removeQualifier(
     return formatQuery(parsed);
 }
 
+const HIGHLIGHT_RE = /(\w+:"[^"]*"|\w+:\S+)/g;
+
+export interface QuerySegment {
+    text: string;
+    isQualifier: boolean;
+}
+
+export function splitQuery(query: string): QuerySegment[] {
+    const segments: QuerySegment[] = [];
+    let lastIndex = 0;
+    HIGHLIGHT_RE.lastIndex = 0;
+
+    for (;;) {
+        const match = HIGHLIGHT_RE.exec(query);
+        if (!match) break;
+        if (match.index > lastIndex) {
+            segments.push({
+                text: query.slice(lastIndex, match.index),
+                isQualifier: false,
+            });
+        }
+        segments.push({
+            text: match[0],
+            isQualifier: true,
+        });
+        lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < query.length) {
+        segments.push({
+            text: query.slice(lastIndex),
+            isQualifier: false,
+        });
+    }
+
+    return segments;
+}
+
 export function addQualifier(
     query: string,
     key: string,
