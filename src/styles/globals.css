@@ -56,6 +56,14 @@ html {
     display: inline;
 }
 
+.prose :where(td, th) img {
+    margin: 0;
+}
+
+.prose table {
+    margin: 0;
+}
+
 .prose tbody tr:nth-child(even) {
     background: var(--color-surface-secondary);
 }

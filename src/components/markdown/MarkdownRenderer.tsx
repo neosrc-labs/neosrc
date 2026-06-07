@@ -287,7 +287,7 @@ export function MarkdownRenderer({
                 img({ ...props }) {
                     return (
                         <img
-                            className="inline-block max-h-10 align-middle"
+                            className="m-0 inline-block max-h-10 align-middle"
                             {...props}
                             alt={props.alt ?? ""}
                         />
