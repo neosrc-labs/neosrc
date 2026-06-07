@@ -291,6 +291,44 @@ export function MarkdownRenderer({
                         </summary>
                     );
                 },
+                table({ children }) {
+                    return (
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse border border-gray-300 dark:border-zinc-600">
+                                {children}
+                            </table>
+                        </div>
+                    );
+                },
+                thead({ children }) {
+                    return (
+                        <thead className="bg-gray-100 dark:bg-zinc-800">
+                            {children}
+                        </thead>
+                    );
+                },
+                th({ children, style, ...props }) {
+                    return (
+                        <th
+                            className="border border-gray-300 px-3 py-2 font-semibold dark:border-zinc-600"
+                            style={style}
+                            {...props}
+                        >
+                            {children}
+                        </th>
+                    );
+                },
+                td({ children, style, ...props }) {
+                    return (
+                        <td
+                            className="border border-gray-300 px-3 py-2 dark:border-zinc-600"
+                            style={style}
+                            {...props}
+                        >
+                            {children}
+                        </td>
+                    );
+                },
             }}
         >
             {stripped}
