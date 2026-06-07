@@ -5,12 +5,17 @@ export default async function PullsPage({
     searchParams,
 }: {
     params: Promise<{ owner: string; repo: string }>;
-    searchParams: Promise<{ state?: string }>;
+    searchParams: Promise<{
+        state?: string;
+        q?: string;
+        sort?: string;
+        order?: string;
+    }>;
 }) {
     const { owner, repo } = await params;
     const { state } = await searchParams;
 
-    const defaultState =
+    const defaultState: "open" | "closed" | "merged" =
         state === "closed" || state === "merged" ? state : "open";
 
     return (

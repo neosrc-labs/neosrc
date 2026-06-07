@@ -893,6 +893,9 @@ export type IssueSearchItem = {
     user: { login: string } | null;
 };
 
+export type PrSearchResultItem =
+    RestEndpointMethodTypes["search"]["issuesAndPullRequests"]["response"]["data"]["items"][number];
+
 export const searchIssues = cache(
     async (accessToken: string, owner: string, repo: string, query: string) => {
         const octokit = createOctokit(accessToken);
@@ -914,6 +917,33 @@ export const searchIssues = cache(
                 user: item.user ? { login: item.user.login } : null,
             }),
         );
+    },
+);
+
+export const searchPullRequests = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        query: string,
+        page: number = 1,
+        perPage: number = 30,
+        sort: "created" | "updated" | "comments" = "created",
+        order: "asc" | "desc" = "desc",
+    ) => {
+        const octokit = createOctokit(accessToken);
+        const q = `repo:${owner}/${repo} is:pr ${query}`.trim();
+        const response = await octokit.search.issuesAndPullRequests({
+            q,
+            page,
+            per_page: perPage,
+            sort,
+            order,
+        });
+        return {
+            items: response.data.items,
+            totalCount: response.data.total_count,
+        };
     },
 );
 
