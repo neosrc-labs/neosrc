@@ -210,10 +210,14 @@ export function HeaderClient({
                         </div>
 
                         <div className="flex items-center gap-1">
-                            {prMatch && (
+                            {(prMatch ?? pullsMatch) && (
                                 <a
                                     className="flex size-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
-                                    href={`https://github.com/${prMatch[1]}/${prMatch[2]}/pull/${prMatch[3]}?neosrc_exit=1`}
+                                    href={
+                                        prMatch
+                                            ? `https://github.com/${prMatch[1]}/${prMatch[2]}/pull/${prMatch[3]}?neosrc_exit=1`
+                                            : `https://github.com/${owner}/${repo}/pulls`
+                                    }
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     title="Back to GitHub"
