@@ -40,7 +40,7 @@ export async function CommitHeader({
                     {prevCommit ? (
                         <a
                             className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-zinc-700"
-                            href={`/${owner}/${repo}/pull/${number}/changes/${prevCommit.sha}`}
+                            href={`/${owner}/${repo}/pull/${number}/files/${prevCommit.sha}`}
                         >
                             ← Previous
                         </a>
@@ -56,7 +56,7 @@ export async function CommitHeader({
                     {nextCommit ? (
                         <a
                             className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-zinc-700"
-                            href={`/${owner}/${repo}/pull/${number}/changes/${nextCommit.sha}`}
+                            href={`/${owner}/${repo}/pull/${number}/files/${nextCommit.sha}`}
                         >
                             Next →
                         </a>

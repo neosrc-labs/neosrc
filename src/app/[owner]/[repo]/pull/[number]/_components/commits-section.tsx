@@ -29,7 +29,7 @@ export function CommitsSection({
 }: CommitsSectionProps) {
     const pathname = usePathname();
     const currentSha =
-        pathname?.match(/\/changes\/([a-f0-9]{7,40})/)?.[1] ?? null;
+        pathname?.match(/\/files\/([a-f0-9]{7,40})/)?.[1] ?? null;
 
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
         api.commits.listForPullRequest.useInfiniteQuery(
@@ -119,7 +119,7 @@ function CommitsList({
         return () => observer.disconnect();
     }, [hasNextPage, fetchNextPage, scrollRef]);
 
-    const baseUrl = `/${pullRequest.base.repo.owner.login}/${pullRequest.base.repo.name}/pull/${pullRequest.number}/changes`;
+    const baseUrl = `/${pullRequest.base.repo.owner.login}/${pullRequest.base.repo.name}/pull/${pullRequest.number}/files`;
 
     return (
         <>
