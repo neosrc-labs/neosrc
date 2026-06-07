@@ -51,7 +51,30 @@ const SORT_OPTIONS: {
 
 function getStatusState(item: GqlPrSearchItem): string | null {
     const rollup = item.commits.nodes[0]?.commit.statusCheckRollup;
-    return rollup?.state ?? null;
+    if (!rollup) return null;
+
+    console.log(item.commits);
+
+    const hasFailed = rollup.contexts.nodes.some((ctx) => {
+        if (ctx.__typename === "CheckRun") {
+            return (
+                ctx.conclusion === "failure" || ctx.conclusion === "timed_out"
+            );
+        }
+        return ctx.state === "FAILURE" || ctx.state === "ERROR";
+    });
+
+    if (hasFailed) return "FAILURE";
+
+    const hasInProgress = rollup.contexts.nodes.some((ctx) => {
+        if (ctx.__typename === "CheckRun") {
+            return ctx.status === "IN_PROGRESS" || ctx.status === "QUEUED";
+        }
+        return ctx.state === "PENDING" || ctx.state === "EXPECTED";
+    });
+
+    if (hasInProgress) return "IN_PROGRESS";
+    return rollup.state;
 }
 
 function getStatusContexts(

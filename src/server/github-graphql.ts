@@ -932,7 +932,7 @@ query SearchPRs($searchQuery: String!, $first: Int!, $after: String) {
               oid
               statusCheckRollup {
                 state
-                contexts(first: 10) {
+                contexts(first: 100) {
                   nodes {
                     __typename
                     ... on CheckRun {
