@@ -1,6 +1,12 @@
 "use client";
 
-import { GitMerge, GitPullRequest, GitPullRequestClosed } from "lucide-react";
+import {
+    ChevronLeft,
+    ChevronRight,
+    GitMerge,
+    GitPullRequest,
+    GitPullRequestClosed,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo } from "react";
 import { cn } from "~/lib/utils";
@@ -28,12 +34,15 @@ export function PullRequestList({
     const router = useRouter();
     const activeTab: FilterState =
         (searchParams.get("state") as FilterState) ?? defaultState;
+    const currentPage = parseInt(searchParams.get("page") ?? "1", 10);
 
-    const apiState = activeTab === "merged" ? "all" : activeTab;
+    const apiState: "open" | "closed" | "all" =
+        activeTab === "merged" ? "all" : activeTab;
     const { data, isLoading } = api.pulls.list.useQuery({
         owner,
         repo,
         state: apiState,
+        page: currentPage,
     });
 
     const filteredPulls = useMemo(() => {
@@ -41,24 +50,33 @@ export function PullRequestList({
         if (activeTab === "merged") {
             return data.pulls.filter((pr) => pr.merged_at != null);
         }
-        if (activeTab === "closed") {
-            return data.pulls;
-        }
         return data.pulls;
     }, [data, activeTab]);
 
-    const setTab = useCallback(
-        (tab: FilterState) => {
+    const navigate = useCallback(
+        (changes: Record<string, string | null>) => {
             const params = new URLSearchParams(searchParams.toString());
-            if (tab === "open") {
-                params.delete("state");
-            } else {
-                params.set("state", tab);
+            for (const [key, value] of Object.entries(changes)) {
+                if (value === null) {
+                    params.delete(key);
+                } else {
+                    params.set(key, value);
+                }
             }
+            window.scrollTo({ top: 0, behavior: "smooth" });
             router.replace(`/${owner}/${repo}/pulls?${params.toString()}`);
         },
         [owner, repo, router, searchParams],
     );
+
+    const setTab = useCallback(
+        (tab: FilterState) => {
+            navigate({ state: tab === "open" ? null : tab, page: null });
+        },
+        [navigate],
+    );
+
+    const hasNext = data?.hasNext ?? false;
 
     return (
         <div>
@@ -138,6 +156,46 @@ export function PullRequestList({
                     </div>
                 )}
             </div>
+
+            {!isLoading && filteredPulls.length > 0 && (
+                <div className="flex items-center justify-between border-gray-200 border-t px-4 py-3 dark:border-zinc-800">
+                    <button
+                        type="button"
+                        disabled={currentPage <= 1}
+                        onClick={() =>
+                            navigate({ page: String(currentPage - 1) })
+                        }
+                        className={cn(
+                            "inline-flex items-center gap-1 rounded-md px-3 py-1.5 font-medium text-sm transition-colors",
+                            currentPage <= 1
+                                ? "cursor-not-allowed text-gray-400 dark:text-gray-600"
+                                : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-zinc-800 dark:hover:text-gray-100",
+                        )}
+                    >
+                        <ChevronLeft className="size-4" />
+                        Previous
+                    </button>
+                    <span className="text-gray-600 text-sm dark:text-gray-400">
+                        Page {currentPage}
+                    </span>
+                    <button
+                        type="button"
+                        disabled={!hasNext}
+                        onClick={() =>
+                            navigate({ page: String(currentPage + 1) })
+                        }
+                        className={cn(
+                            "inline-flex items-center gap-1 rounded-md px-3 py-1.5 font-medium text-sm transition-colors",
+                            !hasNext
+                                ? "cursor-not-allowed text-gray-400 dark:text-gray-600"
+                                : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-zinc-800 dark:hover:text-gray-100",
+                        )}
+                    >
+                        Next
+                        <ChevronRight className="size-4" />
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
