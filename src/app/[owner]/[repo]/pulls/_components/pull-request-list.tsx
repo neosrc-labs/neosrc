@@ -24,6 +24,11 @@ import { api } from "~/trpc/react";
 import type { PrRowData } from "./pull-request-row";
 import { PullRequestRow } from "./pull-request-row";
 import {
+    detectQualifier,
+    replaceQualifierValue,
+    SearchAutocomplete,
+} from "./search-autocomplete";
+import {
     addQualifier,
     hasQualifier,
     removeQualifier,
@@ -247,12 +252,21 @@ export function PullRequestList({
     );
 
     const [searchInput, setSearchInput] = useState(searchQuery);
+    const pendingNavRef = useRef(false);
 
+    // Sync from URL only when navigation wasn't triggered by our own debounce
+    // biome-ignore lint/correctness/useExhaustiveDependencies: searchInput intentionally excluded to avoid overwriting user keystrokes
     useEffect(() => {
-        setSearchInput(searchQuery);
+        if (pendingNavRef.current) {
+            pendingNavRef.current = false;
+            return;
+        }
+        if (searchInput !== searchQuery) {
+            setSearchInput(searchQuery);
+        }
     }, [searchQuery]);
 
-    const debouncedSearch = useDebounce(searchInput, 300);
+    const debouncedSearch = useDebounce(searchInput, 500);
 
     useEffect(() => {
         if (
@@ -263,6 +277,7 @@ export function PullRequestList({
             if (debouncedSearch) params.set("q", debouncedSearch);
             else params.delete("q");
             params.delete("page");
+            pendingNavRef.current = true;
             router.replace(`/${owner}/${repo}/pulls?${params.toString()}`);
         }
     }, [
@@ -293,11 +308,59 @@ export function PullRequestList({
         [navigate, searchQuery],
     );
 
+    // Autocomplete state
+    const inputRef = useRef<HTMLInputElement>(null);
+    const searchBarRef = useRef<HTMLDivElement>(null);
+    const autocompleteRef = useRef<{
+        handleKeyDown: (e: React.KeyboardEvent) => boolean;
+    }>(null);
+    const [cursorPos, setCursorPos] = useState(0);
+    const autocompleteMatch = detectQualifier(searchInput, cursorPos);
+
+    // Close autocomplete when clicking outside the search bar
+    useEffect(() => {
+        if (!autocompleteMatch) return;
+        const handler = (e: MouseEvent) => {
+            if (
+                searchBarRef.current &&
+                !searchBarRef.current.contains(e.target as Node)
+            ) {
+                setCursorPos(0);
+            }
+        };
+        requestAnimationFrame(() => {
+            document.addEventListener("mousedown", handler);
+        });
+        return () => document.removeEventListener("mousedown", handler);
+    }, [autocompleteMatch]);
+
+    const handleAutocompleteSelect = useCallback(
+        (key: string, value: string) => {
+            const newQuery = replaceQualifierValue(
+                searchInput,
+                cursorPos,
+                key,
+                value,
+            );
+            setSearchInput(newQuery);
+            setCursorPos(0);
+            navigate({ q: newQuery || null, page: null });
+        },
+        [searchInput, cursorPos, navigate],
+    );
+
+    const handleAutocompleteClose = useCallback(() => {
+        setCursorPos(0);
+    }, []);
+
     return (
         <div>
             <div className="border-gray-200 border-b dark:border-zinc-800">
                 <div className="flex items-center gap-1 px-4 py-2">
-                    <div className="relative flex flex-1 items-center">
+                    <div
+                        ref={searchBarRef}
+                        className="relative flex flex-1 items-center"
+                    >
                         <div
                             className="pointer-events-none absolute inset-0 flex items-center px-3 py-1.5 text-sm"
                             aria-hidden="true"
@@ -326,12 +389,45 @@ export function PullRequestList({
                             ) : null}
                         </div>
                         <input
+                            ref={inputRef}
                             type="text"
                             value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
+                            onChange={(e) => {
+                                setSearchInput(e.target.value);
+                                setCursorPos(e.target.selectionStart ?? 0);
+                            }}
+                            onKeyDown={(e) => {
+                                if (
+                                    autocompleteMatch &&
+                                    autocompleteRef.current?.handleKeyDown(e)
+                                ) {
+                                    return;
+                                }
+                            }}
+                            onClick={(e) => {
+                                setCursorPos(
+                                    e.currentTarget.selectionStart ?? 0,
+                                );
+                            }}
+                            onSelect={(e) => {
+                                setCursorPos(
+                                    e.currentTarget.selectionStart ?? 0,
+                                );
+                            }}
                             placeholder="Search pull requests by title, body, or comments"
                             className="relative w-full rounded-md border border-gray-300 bg-transparent px-3 py-1.5 pr-8 text-sm text-transparent placeholder-gray-500 caret-gray-900 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:placeholder-gray-500 dark:caret-gray-100 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                         />
+                        {autocompleteMatch && (
+                            <SearchAutocomplete
+                                ref={autocompleteRef}
+                                owner={owner}
+                                repo={repo}
+                                match={autocompleteMatch}
+                                query={autocompleteMatch.value}
+                                onSelect={handleAutocompleteSelect}
+                                onClose={handleAutocompleteClose}
+                            />
+                        )}
                         {searchInput && (
                             <button
                                 type="button"
