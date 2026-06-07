@@ -126,12 +126,14 @@ export function PullRequestRow({
     repo,
     onAssigneesFilter,
     onAuthorFilter,
+    onLabelFilter,
 }: {
     pr: PrRowData;
     owner: string;
     repo: string;
     onAssigneesFilter?: (login: string) => void;
     onAuthorFilter?: (login: string) => void;
+    onLabelFilter?: (name: string) => void;
 }) {
     const isMerged = pr.merged_at !== null && pr.merged_at !== undefined;
     const status: PrStatus = isMerged
@@ -219,6 +221,8 @@ export function PullRequestRow({
                                 <Label
                                     key={label.id ?? label.name}
                                     color={label.color}
+                                    className="cursor-pointer"
+                                    onClick={() => onLabelFilter?.(label.name)}
                                 >
                                     {label.name}
                                 </Label>

@@ -31,7 +31,13 @@ function getBgColor(hex: string, darkMode: boolean): string {
     return `#${hex}`;
 }
 
-export function Label({ color, description, className, children }: LabelProps) {
+export function Label({
+    color,
+    description,
+    className,
+    children,
+    ...props
+}: LabelProps) {
     const { resolvedTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
 
@@ -55,6 +61,7 @@ export function Label({ color, description, className, children }: LabelProps) {
                 color: getTextColor(color, darkMode),
             }}
             title={description}
+            {...props}
         >
             {children}
         </span>
