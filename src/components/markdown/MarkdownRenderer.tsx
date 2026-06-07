@@ -284,6 +284,15 @@ export function MarkdownRenderer({
                         </CodeElement>
                     );
                 },
+                img({ ...props }) {
+                    return (
+                        <img
+                            className="inline-block max-h-10 align-middle"
+                            {...props}
+                            alt={props.alt ?? ""}
+                        />
+                    );
+                },
                 summary({ children, ...props }) {
                     return (
                         <summary className="cursor-pointer" {...props}>
