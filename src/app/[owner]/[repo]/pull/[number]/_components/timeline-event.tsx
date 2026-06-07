@@ -17,6 +17,7 @@ import {
     MessageSquare,
     Pencil,
     RefreshCw,
+    Rocket,
     SquarePen,
     Tag,
     Target,
@@ -229,6 +230,7 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
         HeadRefForcePushedEvent: <ArrowUp size={ICON_SIZE} />,
         AddedToProjectV2Event: <ClipboardList size={ICON_SIZE} />,
         ProjectV2ItemStatusChangedEvent: <RefreshCw size={ICON_SIZE} />,
+        DeployedEvent: <Rocket className="text-blue-500" size={ICON_SIZE} />,
     };
 
     const typename = event.__typename;
@@ -1143,6 +1145,33 @@ function EventContent({
                 <EventRow>
                     <UserLink actor={event.actor} />
                     <p>changed the project status {timestamp}</p>
+                </EventRow>
+            );
+        }
+
+        case "DeployedEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
+            const environment = event.deployment?.environment ?? "a deployment";
+            const refName = event.ref?.name ?? null;
+            return (
+                <EventRow>
+                    <UserLink actor={event.actor} />
+                    <p>
+                        {" deployed to "}
+                        <span className="font-medium text-gray-800 dark:text-zinc-200">
+                            {environment}
+                        </span>
+                        {refName ? (
+                            <>
+                                {" ("}
+                                <span className="font-medium text-gray-800 dark:text-zinc-200">
+                                    {refName}
+                                </span>
+                                {")"}
+                            </>
+                        ) : null}
+                        {` ${timestamp}`}
+                    </p>
                 </EventRow>
             );
         }

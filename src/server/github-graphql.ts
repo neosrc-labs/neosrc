@@ -45,6 +45,7 @@ query PullRequestTimeline(
 				READY_FOR_REVIEW_EVENT,
 				REFERENCED_EVENT,
 				COMMENT_DELETED_EVENT,
+				DEPLOYED_EVENT,
 				PULL_REQUEST_COMMIT,
 				REVIEW_DISMISSED_EVENT
 			]) {
@@ -247,6 +248,19 @@ query PullRequestTimeline(
 						actor { ...SimpleUser }
 						createdAt
 						deletedCommentAuthor { ...SimpleUser }
+					}
+					... on DeployedEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						deployment {
+							environment
+							task
+							description
+							latestStatus { state }
+							state
+						}
+						ref { name }
 					}
 ... on PullRequestCommit {
 						id
@@ -529,6 +543,21 @@ export type GQLCommentDeletedEvent = {
     deletedCommentAuthor: GQLActor | null;
 };
 
+export type GQLDeployedEvent = {
+    __typename: "DeployedEvent";
+    id: string;
+    actor: GQLActor | null;
+    createdAt: string;
+    deployment: {
+        environment: string | null;
+        task: string | null;
+        description: string | null;
+        latestStatus: { state: string } | null;
+        state: string | null;
+    } | null;
+    ref: { name: string } | null;
+};
+
 export type GQLGpgSignature = {
     __typename: "GpgSignature";
     isValid: boolean;
@@ -613,6 +642,7 @@ export type GQLTimelineEvent =
     | GQLAddedToProjectV2Event
     | GQLProjectV2ItemStatusChangedEvent
     | GQLCommentDeletedEvent
+    | GQLDeployedEvent
     | GQLPullRequestCommit
     | GQLReviewDismissedEvent
     | GQLMentionedEvent
