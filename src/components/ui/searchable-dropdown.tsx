@@ -16,6 +16,7 @@ interface SearchableDropdownProps<T> {
     ariaLabel: string;
     beforeItems?: React.ReactNode;
     disabled?: boolean;
+    trigger?: React.ReactNode;
 }
 
 export function SearchableDropdown<T>({
@@ -30,6 +31,7 @@ export function SearchableDropdown<T>({
     ariaLabel,
     beforeItems,
     disabled,
+    trigger,
 }: SearchableDropdownProps<T>) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
@@ -71,14 +73,18 @@ export function SearchableDropdown<T>({
 
     return (
         <div className="relative" ref={dropdownRef}>
-            <button
-                className="cursor-pointer rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300"
-                onClick={() => setOpen(!open)}
-                type="button"
-                aria-label={ariaLabel}
-            >
-                <Settings size={14} />
-            </button>
+            {trigger ? (
+                <div onClick={() => setOpen(!open)}>{trigger}</div>
+            ) : (
+                <button
+                    className="cursor-pointer rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300"
+                    onClick={() => setOpen(!open)}
+                    type="button"
+                    aria-label={ariaLabel}
+                >
+                    <Settings size={14} />
+                </button>
+            )}
             {open && (
                 <div className="absolute right-0 z-20 mt-1 w-64 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                     <input
