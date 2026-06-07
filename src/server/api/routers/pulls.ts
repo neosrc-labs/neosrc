@@ -22,6 +22,7 @@ import {
     removeLabelFromIssue,
     removeReviewersFromPullRequest,
     reopenPullRequest,
+    searchPullRequests,
     updateIssueComment,
     updateIssueMilestone,
     updatePullRequest,
@@ -608,6 +609,35 @@ export const pullsRouter = createTRPCRouter({
                 input.repo,
                 input.state,
                 input.page,
+            );
+        }),
+
+    search: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                query: z.string(),
+                page: z.number().optional(),
+                sort: z.enum(["created", "updated", "comments"]).optional(),
+                order: z.enum(["asc", "desc"]).optional(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            return searchPullRequests(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.query,
+                input.page,
+                30,
+                input.sort,
+                input.order,
             );
         }),
 

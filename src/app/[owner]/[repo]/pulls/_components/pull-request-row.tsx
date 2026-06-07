@@ -1,7 +1,18 @@
 import { GitMerge, GitPullRequest } from "lucide-react";
 import Link from "next/link";
 import { cn } from "~/lib/utils";
-import type { PullRequestData } from "~/server/github";
+
+export interface PrRowData {
+    id: number;
+    number: number;
+    title: string;
+    state: string;
+    draft: boolean;
+    user: { login: string; avatar_url: string } | null;
+    labels: Array<{ id?: number; name: string; color: string }>;
+    created_at: string;
+    merged_at: string | null;
+}
 
 function relativeTime(date: string | Date): string {
     const now = Date.now();
@@ -32,7 +43,7 @@ export function PullRequestRow({
     owner,
     repo,
 }: {
-    pr: PullRequestData;
+    pr: PrRowData;
     owner: string;
     repo: string;
 }) {
@@ -67,18 +78,24 @@ export function PullRequestRow({
                 </div>
                 {pr.labels && pr.labels.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
-                        {pr.labels.map((label) => (
-                            <span
-                                key={label.id ?? label.name}
-                                className="inline-block rounded-full px-2 py-0.5 font-medium text-[11px] leading-none"
-                                style={{
-                                    backgroundColor: `#${label.color}20`,
-                                    color: `#${label.color}`,
-                                }}
-                            >
-                                {label.name}
-                            </span>
-                        ))}
+                        {pr.labels.map(
+                            (label: {
+                                id?: number;
+                                name: string;
+                                color: string;
+                            }) => (
+                                <span
+                                    key={label.id ?? label.name}
+                                    className="inline-block rounded-full px-2 py-0.5 font-medium text-[11px] leading-none"
+                                    style={{
+                                        backgroundColor: `#${label.color}20`,
+                                        color: `#${label.color}`,
+                                    }}
+                                >
+                                    {label.name}
+                                </span>
+                            ),
+                        )}
                     </div>
                 )}
             </div>

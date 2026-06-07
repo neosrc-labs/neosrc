@@ -6,12 +6,19 @@ import {
     GitMerge,
     GitPullRequest,
     GitPullRequestClosed,
+    ListOrdered,
+    Tag,
+    User,
+    X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "~/lib/utils";
+import type { PrSearchResultItem } from "~/server/github";
 import { api } from "~/trpc/react";
+import type { PrRowData } from "./pull-request-row";
 import { PullRequestRow } from "./pull-request-row";
+import { addQualifier, parseQuery, removeQualifier } from "./search-utils";
 
 type FilterState = "open" | "closed" | "merged";
 
@@ -20,6 +27,65 @@ const TABS: { key: FilterState; label: string }[] = [
     { key: "closed", label: "Closed" },
     { key: "merged", label: "Merged" },
 ];
+
+const SORT_OPTIONS: {
+    label: string;
+    sort: "created" | "updated" | "comments";
+    order: "asc" | "desc";
+}[] = [
+    { label: "Newest", sort: "created", order: "desc" },
+    { label: "Oldest", sort: "created", order: "asc" },
+    { label: "Recently updated", sort: "updated", order: "desc" },
+    { label: "Most commented", sort: "comments", order: "desc" },
+];
+
+function normalizeSearchItem(item: PrSearchResultItem): PrRowData {
+    const pr = item.pull_request as { merged_at?: string | null } | undefined;
+    return {
+        id: item.id,
+        number: item.number,
+        title: item.title,
+        state: item.state,
+        draft: (item.draft ?? false) as boolean,
+        user: item.user
+            ? { login: item.user.login, avatar_url: item.user.avatar_url ?? "" }
+            : null,
+        labels: (item.labels ?? []).map((l: Record<string, unknown>) => ({
+            id: l.id as number | undefined,
+            name: (l.name as string) ?? "",
+            color: (l.color as string) ?? "000000",
+        })),
+        created_at: item.created_at,
+        merged_at: pr?.merged_at ?? null,
+    };
+}
+
+const QUALIFIER_LABELS: Record<string, string> = {
+    is: "State",
+    author: "Author",
+    label: "Label",
+    assignee: "Assignee",
+    milestone: "Milestone",
+    reviewed_by: "Reviewer",
+    review_requested: "Review requested",
+    head: "Head branch",
+    base: "Base branch",
+    draft: "Draft",
+};
+
+function qualifierLabel(key: string, value: string): string {
+    const prefix = QUALIFIER_LABELS[key] ?? key;
+    return `${prefix}: ${value}`;
+}
+
+function useDebounce<T>(value: T, delay: number): T {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+        const timer = setTimeout(() => setDebounced(value), delay);
+        return () => clearTimeout(timer);
+    }, [value, delay]);
+    return debounced;
+}
 
 export function PullRequestList({
     owner,
@@ -32,36 +98,49 @@ export function PullRequestList({
 }) {
     const searchParams = useSearchParams();
     const router = useRouter();
+
     const activeTab: FilterState =
         (searchParams.get("state") as FilterState) ?? defaultState;
     const currentPage = parseInt(searchParams.get("page") ?? "1", 10);
+    const searchQuery = searchParams.get("q") ?? "";
+    const currentSort = (searchParams.get("sort") ?? "created") as
+        | "created"
+        | "updated"
+        | "comments";
+    const currentOrder = (searchParams.get("order") ?? "desc") as
+        | "asc"
+        | "desc";
 
-    const apiState: "open" | "closed" | "all" =
-        activeTab === "merged" ? "all" : activeTab;
-    const { data, isLoading } = api.pulls.list.useQuery({
+    const stateQualifier =
+        activeTab === "merged" ? "is:merged" : `is:${activeTab}`;
+    const apiQuery = searchQuery
+        ? `${stateQualifier} ${searchQuery}`
+        : stateQualifier;
+
+    const { data, isLoading } = api.pulls.search.useQuery({
         owner,
         repo,
-        state: apiState,
+        query: apiQuery,
         page: currentPage,
+        sort: currentSort,
+        order: currentOrder,
     });
 
-    const filteredPulls = useMemo(() => {
-        if (!data?.pulls) return [];
-        if (activeTab === "merged") {
-            return data.pulls.filter((pr) => pr.merged_at != null);
-        }
-        return data.pulls;
-    }, [data, activeTab]);
+    const items = useMemo(
+        () => (data?.items ?? []).map(normalizeSearchItem),
+        [data],
+    );
+    const totalCount = data?.totalCount ?? 0;
+    const hasNext = items.length >= 30;
+
+    const parsedQuery = useMemo(() => parseQuery(searchQuery), [searchQuery]);
 
     const navigate = useCallback(
         (changes: Record<string, string | null>) => {
             const params = new URLSearchParams(searchParams.toString());
             for (const [key, value] of Object.entries(changes)) {
-                if (value === null) {
-                    params.delete(key);
-                } else {
-                    params.set(key, value);
-                }
+                if (value === null) params.delete(key);
+                else params.set(key, value);
             }
             window.scrollTo({ top: 0, behavior: "smooth" });
             router.replace(`/${owner}/${repo}/pulls?${params.toString()}`);
@@ -76,27 +155,149 @@ export function PullRequestList({
         [navigate],
     );
 
-    const hasNext = data?.hasNext ?? false;
+    const [searchInput, setSearchInput] = useState(searchQuery);
+
+    useEffect(() => {
+        setSearchInput(searchQuery);
+    }, [searchQuery]);
+
+    const debouncedSearch = useDebounce(searchInput, 300);
+
+    useEffect(() => {
+        if (
+            debouncedSearch !== searchQuery &&
+            debouncedSearch === searchInput
+        ) {
+            const params = new URLSearchParams(searchParams.toString());
+            if (debouncedSearch) params.set("q", debouncedSearch);
+            else params.delete("q");
+            params.delete("page");
+            router.replace(`/${owner}/${repo}/pulls?${params.toString()}`);
+        }
+    }, [
+        debouncedSearch,
+        searchQuery,
+        searchInput,
+        searchParams,
+        router,
+        owner,
+        repo,
+    ]);
+
+    const handleRemoveQualifier = useCallback(
+        (key: string, value: string) => {
+            const newQuery = removeQualifier(searchQuery, key, value);
+            setSearchInput(newQuery);
+            navigate({ q: newQuery || null, page: null });
+        },
+        [navigate, searchQuery],
+    );
+
+    const handleAddQualifier = useCallback(
+        (key: string, value: string) => {
+            const newQuery = addQualifier(searchQuery, key, value);
+            setSearchInput(newQuery);
+            navigate({ q: newQuery || null, page: null });
+        },
+        [navigate, searchQuery],
+    );
 
     return (
         <div>
             <div className="border-gray-200 border-b dark:border-zinc-800">
-                <div className="flex">
-                    {TABS.map((tab) => (
-                        <button
-                            key={tab.key}
-                            type="button"
-                            onClick={() => setTab(tab.key)}
-                            className={cn(
-                                "relative -mb-px px-4 py-3 font-medium text-sm transition-colors",
-                                activeTab === tab.key
-                                    ? "border-blue-500 border-b-2 text-gray-900 dark:text-gray-100"
-                                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100",
-                            )}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
+                <div className="flex items-center gap-1 px-4 py-2">
+                    <div className="relative flex flex-1 items-center">
+                        <input
+                            type="text"
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            placeholder="Search pull requests by title, body, or comments"
+                            className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 pr-8 text-gray-900 text-sm placeholder-gray-500 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+                        />
+                        {searchInput && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSearchInput("");
+                                    navigate({ q: null, page: null });
+                                }}
+                                className="absolute right-2 flex size-4 cursor-pointer items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                                <X className="size-3" />
+                            </button>
+                        )}
+                    </div>
+
+                    <AuthorDropdown
+                        owner={owner}
+                        repo={repo}
+                        currentQuery={searchQuery}
+                        onSelect={handleAddQualifier}
+                    />
+
+                    <LabelDropdown
+                        owner={owner}
+                        repo={repo}
+                        currentQuery={searchQuery}
+                        onSelect={handleAddQualifier}
+                    />
+
+                    <SortDropdown
+                        currentSort={currentSort}
+                        currentOrder={currentOrder}
+                        onSelect={(sort, order) =>
+                            navigate({ sort, order, page: null })
+                        }
+                    />
+                </div>
+
+                {parsedQuery.qualifiers.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 px-4 pb-2">
+                        {parsedQuery.qualifiers.map((q) => (
+                            <span
+                                key={`${q.key}:${q.value}`}
+                                className="inline-flex items-center gap-1 rounded-md border border-blue-300 bg-blue-50 px-2 py-0.5 font-medium text-blue-700 text-xs dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300"
+                            >
+                                {qualifierLabel(q.key, q.value)}
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        handleRemoveQualifier(q.key, q.value)
+                                    }
+                                    className="ml-0.5 cursor-pointer rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-500/20"
+                                >
+                                    <X className="size-3" />
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="border-gray-200 border-b dark:border-zinc-800">
+                <div className="flex items-center justify-between px-4">
+                    <div className="flex">
+                        {TABS.map((tab) => (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                onClick={() => setTab(tab.key)}
+                                className={cn(
+                                    "relative -mb-px cursor-pointer px-4 py-3 font-medium text-sm transition-colors",
+                                    activeTab === tab.key
+                                        ? "border-blue-500 border-b-2 text-gray-900 dark:text-gray-100"
+                                        : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100",
+                                )}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                    {!isLoading && (
+                        <span className="text-gray-500 text-xs dark:text-gray-500">
+                            {totalCount.toLocaleString()} results
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -116,25 +317,33 @@ export function PullRequestList({
                             </div>
                         ))}
                     </div>
-                ) : filteredPulls.length === 0 ? (
+                ) : items.length === 0 ? (
                     <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-                        {activeTab === "open" && (
+                        {searchQuery ? (
+                            <>
+                                <GitPullRequest className="size-8 text-gray-400" />
+                                <p className="font-medium text-gray-900 dark:text-gray-100">
+                                    No pull requests match your search
+                                </p>
+                                <p className="text-gray-500 text-sm dark:text-gray-400">
+                                    Try a different search or clear filters
+                                </p>
+                            </>
+                        ) : activeTab === "open" ? (
                             <>
                                 <GitPullRequest className="size-8 text-gray-400" />
                                 <p className="font-medium text-gray-900 dark:text-gray-100">
                                     No open pull requests
                                 </p>
                             </>
-                        )}
-                        {activeTab === "closed" && (
+                        ) : activeTab === "closed" ? (
                             <>
                                 <GitPullRequestClosed className="size-8 text-gray-400" />
                                 <p className="font-medium text-gray-900 dark:text-gray-100">
                                     No closed pull requests
                                 </p>
                             </>
-                        )}
-                        {activeTab === "merged" && (
+                        ) : (
                             <>
                                 <GitMerge className="size-8 text-gray-400" />
                                 <p className="font-medium text-gray-900 dark:text-gray-100">
@@ -145,7 +354,7 @@ export function PullRequestList({
                     </div>
                 ) : (
                     <div>
-                        {filteredPulls.map((pr) => (
+                        {items.map((pr) => (
                             <PullRequestRow
                                 key={pr.id}
                                 pr={pr}
@@ -157,7 +366,7 @@ export function PullRequestList({
                 )}
             </div>
 
-            {!isLoading && filteredPulls.length > 0 && (
+            {!isLoading && items.length > 0 && (
                 <div className="flex items-center justify-between border-gray-200 border-t px-4 py-3 dark:border-zinc-800">
                     <button
                         type="button"
@@ -169,7 +378,7 @@ export function PullRequestList({
                             "inline-flex items-center gap-1 rounded-md px-3 py-1.5 font-medium text-sm transition-colors",
                             currentPage <= 1
                                 ? "cursor-not-allowed text-gray-400 dark:text-gray-600"
-                                : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-zinc-800 dark:hover:text-gray-100",
+                                : "cursor-pointer text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-zinc-800 dark:hover:text-gray-100",
                         )}
                     >
                         <ChevronLeft className="size-4" />
@@ -188,12 +397,311 @@ export function PullRequestList({
                             "inline-flex items-center gap-1 rounded-md px-3 py-1.5 font-medium text-sm transition-colors",
                             !hasNext
                                 ? "cursor-not-allowed text-gray-400 dark:text-gray-600"
-                                : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-zinc-800 dark:hover:text-gray-100",
+                                : "cursor-pointer text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-zinc-800 dark:hover:text-gray-100",
                         )}
                     >
                         Next
                         <ChevronRight className="size-4" />
                     </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function AuthorDropdown({
+    owner,
+    repo,
+    currentQuery,
+    onSelect,
+}: {
+    owner: string;
+    repo: string;
+    currentQuery: string;
+    onSelect: (key: string, value: string) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const { data: users } = api.pulls.listAssignees.useQuery({ owner, repo });
+    const [search, setSearch] = useState("");
+    const debouncedSearch = useDebounce(search, 300);
+
+    const filtered = useMemo(
+        () =>
+            (users ?? []).filter(
+                (u: { login: string }) =>
+                    u.login.toLowerCase().includes(search.toLowerCase()) &&
+                    !currentQuery.includes(`author:${u.login}`),
+            ),
+        [users, search, currentQuery],
+    );
+
+    const isCustomAuthor =
+        debouncedSearch.length > 0 &&
+        !filtered.some(
+            (u: { login: string }) =>
+                u.login.toLowerCase() === debouncedSearch.toLowerCase(),
+        );
+
+    const { data: searchedUserRaw, isFetched: userSearchDone } =
+        api.users.getByUsername.useQuery(
+            { username: debouncedSearch },
+            { enabled: isCustomAuthor, retry: false },
+        );
+    const searchedUser = (
+        searchedUserRaw as { user?: { avatar_url?: string } } | undefined
+    )?.user;
+    const userNotFound = isCustomAuthor && userSearchDone && !searchedUser;
+
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+                setSearch("");
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    return (
+        <div ref={ref} className="relative">
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+            >
+                <User className="size-4" />
+                Author
+            </button>
+            {open && (
+                <div className="absolute top-full right-0 z-50 mt-1 w-56 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Filter users..."
+                        className="mb-1 w-full rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                    />
+                    <div className="max-h-48 overflow-y-auto">
+                        {filtered.length === 0 && !search && (
+                            <p className="px-2 py-3 text-center text-gray-500 text-sm">
+                                No users found
+                            </p>
+                        )}
+                        {filtered.map(
+                            (u: { login: string; avatar_url?: string }) => (
+                                <button
+                                    key={u.login}
+                                    type="button"
+                                    onClick={() => {
+                                        onSelect("author", u.login);
+                                        setOpen(false);
+                                        setSearch("");
+                                    }}
+                                    className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 text-sm hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+                                >
+                                    {u.avatar_url && (
+                                        <img
+                                            src={u.avatar_url}
+                                            alt=""
+                                            className="size-5 rounded-full"
+                                        />
+                                    )}
+                                    {u.login}
+                                </button>
+                            ),
+                        )}
+                        {isCustomAuthor && userNotFound && (
+                            <p className="px-2 py-3 text-center text-gray-500 text-sm">
+                                No users found
+                            </p>
+                        )}
+                        {isCustomAuthor && !userNotFound && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onSelect("author", debouncedSearch);
+                                    setOpen(false);
+                                    setSearch("");
+                                }}
+                                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 text-sm hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+                            >
+                                {searchedUser?.avatar_url ? (
+                                    <img
+                                        src={searchedUser.avatar_url}
+                                        alt=""
+                                        className="size-5 rounded-full"
+                                    />
+                                ) : (
+                                    <div className="size-5 rounded-full bg-gray-200 dark:bg-zinc-700" />
+                                )}
+                                {debouncedSearch}
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function LabelDropdown({
+    owner,
+    repo,
+    currentQuery,
+    onSelect,
+}: {
+    owner: string;
+    repo: string;
+    currentQuery: string;
+    onSelect: (key: string, value: string) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const { data: labels } = api.pulls.listLabels.useQuery({ owner, repo });
+    const [search, setSearch] = useState("");
+
+    const filtered = useMemo(
+        () =>
+            (labels ?? []).filter(
+                (l: { name: string; color: string }) =>
+                    l.name.toLowerCase().includes(search.toLowerCase()) &&
+                    !currentQuery.includes(`label:${l.name}`),
+            ),
+        [labels, search, currentQuery],
+    );
+
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+                setSearch("");
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    return (
+        <div ref={ref} className="relative">
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+            >
+                <Tag className="size-4" />
+                Label
+            </button>
+            {open && (
+                <div className="absolute top-full right-0 z-50 mt-1 w-56 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Filter labels..."
+                        className="mb-1 w-full rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
+                    />
+                    <div className="max-h-48 overflow-y-auto">
+                        {filtered.length === 0 ? (
+                            <p className="px-2 py-3 text-center text-gray-500 text-sm">
+                                No labels found
+                            </p>
+                        ) : (
+                            filtered.map(
+                                (l: { name: string; color: string }) => (
+                                    <button
+                                        key={l.name}
+                                        type="button"
+                                        onClick={() => {
+                                            onSelect("label", l.name);
+                                            setOpen(false);
+                                            setSearch("");
+                                        }}
+                                        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 text-sm hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+                                    >
+                                        <span
+                                            className="inline-block size-3 shrink-0 rounded-full"
+                                            style={{
+                                                backgroundColor: `#${l.color}`,
+                                            }}
+                                        />
+                                        {l.name}
+                                    </button>
+                                ),
+                            )
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function SortDropdown({
+    currentSort,
+    currentOrder,
+    onSelect,
+}: {
+    currentSort: string;
+    currentOrder: string;
+    onSelect: (
+        sort: "created" | "updated" | "comments",
+        order: "asc" | "desc",
+    ) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    const currentLabel =
+        SORT_OPTIONS.find(
+            (o) => o.sort === currentSort && o.order === currentOrder,
+        )?.label ?? "Newest";
+
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    return (
+        <div ref={ref} className="relative">
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+            >
+                <ListOrdered className="size-4" />
+                {currentLabel}
+            </button>
+            {open && (
+                <div className="absolute top-full right-0 z-50 mt-1 w-44 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                    {SORT_OPTIONS.map((opt) => (
+                        <button
+                            key={opt.label}
+                            type="button"
+                            onClick={() => {
+                                onSelect(opt.sort, opt.order);
+                                setOpen(false);
+                            }}
+                            className={cn(
+                                "flex w-full cursor-pointer items-center rounded-md px-3 py-1.5 text-sm transition-colors",
+                                opt.sort === currentSort &&
+                                    opt.order === currentOrder
+                                    ? "bg-gray-100 font-medium text-gray-900 dark:bg-zinc-800 dark:text-gray-100"
+                                    : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800",
+                            )}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
                 </div>
             )}
         </div>
