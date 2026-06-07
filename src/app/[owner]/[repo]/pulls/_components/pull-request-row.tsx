@@ -78,24 +78,26 @@ export function PullRequestRow({
                 </div>
                 {pr.labels && pr.labels.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
-                        {pr.labels.map(
-                            (label: {
-                                id?: number;
-                                name: string;
-                                color: string;
-                            }) => (
-                                <span
-                                    key={label.id ?? label.name}
-                                    className="inline-block rounded-full px-2 py-0.5 font-medium text-[11px] leading-none"
-                                    style={{
-                                        backgroundColor: `#${label.color}20`,
-                                        color: `#${label.color}`,
-                                    }}
-                                >
-                                    {label.name}
-                                </span>
-                            ),
-                        )}
+                        {[...pr.labels]
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map(
+                                (label: {
+                                    id?: number;
+                                    name: string;
+                                    color: string;
+                                }) => (
+                                    <span
+                                        key={label.id ?? label.name}
+                                        className="inline-block rounded-full px-2 py-0.5 font-medium text-[11px] leading-none"
+                                        style={{
+                                            backgroundColor: `#${label.color}20`,
+                                            color: `#${label.color}`,
+                                        }}
+                                    >
+                                        {label.name}
+                                    </span>
+                                ),
+                            )}
                     </div>
                 )}
             </div>
