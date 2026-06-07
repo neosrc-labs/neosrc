@@ -7,6 +7,7 @@ import {
     GitPullRequestDraft,
     Loader2,
     MessageSquare,
+    X,
     XCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -54,9 +55,14 @@ function StatusCheckIcon({
         return <Check className={cn(className, "text-green-600")} />;
     }
     if (state === "FAILURE" || state === "ERROR" || state === "TIMED_OUT") {
-        return <XCircle className={cn(className, "text-red-600")} />;
+        return <X className={cn(className, "text-red-600")} />;
     }
-    if (state === "IN_PROGRESS") {
+    if (
+        state === "IN_PROGRESS" ||
+        state === "PENDING" ||
+        state === "EXPECTED" ||
+        state === "QUEUED"
+    ) {
         return (
             <Loader2
                 className={cn(className, "animate-spin text-yellow-500")}
@@ -167,7 +173,7 @@ export function PullRequestRow({
                             <HoverCardTrigger asChild>
                                 <button
                                     type="button"
-                                    className="cursor-pointer"
+                                    className="flex cursor-pointer items-center"
                                     tabIndex={-1}
                                 >
                                     <StatusCheckIcon
