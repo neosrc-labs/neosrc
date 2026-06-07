@@ -13,12 +13,19 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Label as LabelComponent } from "~/components/ui/label";
+import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn } from "~/lib/utils";
 import type { PrSearchResultItem } from "~/server/github";
 import { api } from "~/trpc/react";
 import type { PrRowData } from "./pull-request-row";
 import { PullRequestRow } from "./pull-request-row";
-import { addQualifier, parseQuery, removeQualifier } from "./search-utils";
+import {
+    addQualifier,
+    hasQualifier,
+    parseQuery,
+    removeQualifier,
+} from "./search-utils";
 
 type FilterState = "open" | "closed" | "merged";
 
@@ -239,7 +246,13 @@ export function PullRequestList({
                         owner={owner}
                         repo={repo}
                         currentQuery={searchQuery}
-                        onSelect={handleAddQualifier}
+                        onToggle={(labelName: string) => {
+                            if (hasQualifier(searchQuery, "label", labelName)) {
+                                handleRemoveQualifier("label", labelName);
+                            } else {
+                                handleAddQualifier("label", labelName);
+                            }
+                        }}
                     />
 
                     <SortDropdown
@@ -551,92 +564,71 @@ function LabelDropdown({
     owner,
     repo,
     currentQuery,
-    onSelect,
+    onToggle,
 }: {
     owner: string;
     repo: string;
     currentQuery: string;
-    onSelect: (key: string, value: string) => void;
+    onToggle: (labelName: string) => void;
 }) {
-    const [open, setOpen] = useState(false);
     const { data: labels } = api.pulls.listLabels.useQuery({ owner, repo });
-    const [search, setSearch] = useState("");
 
-    const filtered = useMemo(
-        () =>
-            (labels ?? []).filter(
-                (l: { name: string; color: string }) =>
-                    l.name.toLowerCase().includes(search.toLowerCase()) &&
-                    !currentQuery.includes(`label:${l.name}`),
-            ),
-        [labels, search, currentQuery],
+    const items = labels ?? [];
+    const currentNames = new Set(
+        items
+            .filter((l: { name: string }) =>
+                currentQuery.includes(`label:${l.name}`),
+            )
+            .map((l: { name: string }) => l.name),
     );
 
-    const ref = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        function handleClickOutside(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
-                setOpen(false);
-                setSearch("");
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () =>
-            document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
     return (
-        <div ref={ref} className="relative">
-            <button
-                type="button"
-                onClick={() => setOpen(!open)}
-                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
-            >
-                <Tag className="size-4" />
-                Label
-            </button>
-            {open && (
-                <div className="absolute top-full right-0 z-50 mt-1 w-56 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Filter labels..."
-                        className="mb-1 w-full rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-gray-100"
-                    />
-                    <div className="max-h-48 overflow-y-auto">
-                        {filtered.length === 0 ? (
-                            <p className="px-2 py-3 text-center text-gray-500 text-sm">
-                                No labels found
-                            </p>
-                        ) : (
-                            filtered.map(
-                                (l: { name: string; color: string }) => (
-                                    <button
-                                        key={l.name}
-                                        type="button"
-                                        onClick={() => {
-                                            onSelect("label", l.name);
-                                            setOpen(false);
-                                            setSearch("");
-                                        }}
-                                        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-gray-700 text-sm hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
-                                    >
-                                        <span
-                                            className="inline-block size-3 shrink-0 rounded-full"
-                                            style={{
-                                                backgroundColor: `#${l.color}`,
-                                            }}
-                                        />
-                                        {l.name}
-                                    </button>
-                                ),
-                            )
+        <SearchableDropdown
+            items={items}
+            isSelected={(l: { name: string }) => currentNames.has(l.name)}
+            onSelect={(l: { name: string }) => onToggle(l.name)}
+            keyFn={(l: { name: string }) => l.name}
+            searchFn={(l: { name: string }, q: string) =>
+                l.name.toLowerCase().includes(q.toLowerCase())
+            }
+            renderItem={(
+                l: { name: string; color: string; description?: string | null },
+                selected: boolean,
+            ) => (
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                        <LabelComponent
+                            color={l.color}
+                            description={l.description ?? undefined}
+                        >
+                            {l.name}
+                        </LabelComponent>
+                        {selected && (
+                            <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                                &#10003;
+                            </span>
                         )}
                     </div>
+                    {l.description && (
+                        <span className="truncate text-gray-400 text-xs">
+                            {l.description}
+                        </span>
+                    )}
                 </div>
             )}
-        </div>
+            placeholder="Filter labels"
+            emptyText="No labels found"
+            ariaLabel="Filter by label"
+            trigger={
+                <button
+                    type="button"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                >
+                    <Tag className="size-4" />
+                    Label
+                </button>
+            }
+        />
     );
 }
 
