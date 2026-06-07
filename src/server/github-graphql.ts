@@ -844,6 +844,148 @@ export async function addReaction(
     return result.addReaction.reaction;
 }
 
+export interface GqlPrSearchItem {
+    databaseId: number;
+    number: number;
+    title: string;
+    state: string;
+    isDraft: boolean;
+    createdAt: string;
+    mergedAt: string | null;
+    author: { login: string; avatarUrl: string; url: string } | null;
+    labels: { nodes: Array<{ id: string; name: string; color: string }> };
+    assignees: { nodes: Array<{ login: string; avatarUrl: string }> };
+    comments: { totalCount: number };
+    commits: {
+        nodes: Array<{
+            commit: {
+                oid: string;
+                statusCheckRollup: {
+                    state: string;
+                    contexts: {
+                        nodes: Array<
+                            | {
+                                  __typename: "CheckRun";
+                                  name: string;
+                                  status: string;
+                                  conclusion: string | null;
+                                  detailsUrl: string;
+                              }
+                            | {
+                                  __typename: "StatusContext";
+                                  context: string;
+                                  description: string | null;
+                                  state: string;
+                                  targetUrl: string | null;
+                              }
+                        >;
+                    };
+                } | null;
+            };
+        }>;
+    };
+}
+
+export interface GqlPrSearchResult {
+    search: {
+        issueCount: number;
+        pageInfo: { endCursor: string | null; hasNextPage: boolean };
+        nodes: Array<
+            | ({ __typename: "PullRequest" } & GqlPrSearchItem)
+            | { __typename: string }
+            | null
+        >;
+    };
+}
+
+const PR_SEARCH_QUERY = `
+query SearchPRs($searchQuery: String!, $first: Int!, $after: String) {
+  search(query: $searchQuery, type: ISSUE, first: $first, after: $after) {
+    issueCount
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    nodes {
+      __typename
+      ... on PullRequest {
+        databaseId
+        number
+        title
+        state
+        isDraft
+        createdAt
+        mergedAt
+        author { login avatarUrl url }
+        labels(first: 10) {
+          nodes { id name color }
+        }
+        assignees(first: 5) {
+          nodes { login avatarUrl }
+        }
+        comments { totalCount }
+        commits(last: 1) {
+          nodes {
+            commit {
+              oid
+              statusCheckRollup {
+                state
+                contexts(first: 10) {
+                  nodes {
+                    __typename
+                    ... on CheckRun {
+                      name
+                      status
+                      conclusion
+                      detailsUrl
+                    }
+                    ... on StatusContext {
+                      context
+                      description
+                      state
+                      targetUrl
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`;
+
+export async function searchPullRequestsWithStatus(
+    accessToken: string,
+    query: string,
+    first: number = 30,
+    after: string | null = null,
+) {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const result = await graphql<GqlPrSearchResult>(PR_SEARCH_QUERY, {
+        searchQuery: query,
+        first,
+        after,
+    });
+
+    const items = result.search.nodes.filter(
+        (n): n is { __typename: "PullRequest" } & GqlPrSearchItem =>
+            n?.__typename === "PullRequest",
+    );
+
+    return {
+        items,
+        totalCount: result.search.issueCount,
+        hasNextPage: result.search.pageInfo.hasNextPage,
+        endCursor: result.search.pageInfo.endCursor,
+    };
+}
+
 export async function removeReaction(
     accessToken: string,
     subjectId: string,

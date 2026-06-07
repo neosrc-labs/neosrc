@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Label as LabelComponent } from "~/components/ui/label";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn } from "~/lib/utils";
-import type { PrSearchResultItem } from "~/server/github";
+import type { GqlPrSearchItem } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import type { PrRowData } from "./pull-request-row";
 import { PullRequestRow } from "./pull-request-row";
@@ -46,31 +46,64 @@ const SORT_OPTIONS: {
     { label: "Most commented", sort: "comments", order: "desc" },
 ];
 
-function normalizeSearchItem(item: PrSearchResultItem): PrRowData {
-    const pr = item.pull_request as { merged_at?: string | null } | undefined;
+function getStatusState(item: GqlPrSearchItem): string | null {
+    const rollup = item.commits.nodes[0]?.commit.statusCheckRollup;
+    return rollup?.state ?? null;
+}
+
+function getStatusContexts(
+    item: GqlPrSearchItem,
+): PrRowData["status_contexts"] {
+    const rollup = item.commits.nodes[0]?.commit.statusCheckRollup;
+    if (!rollup) return [];
+    return rollup.contexts.nodes.map((ctx) => {
+        if (ctx.__typename === "CheckRun") {
+            return {
+                name: ctx.name,
+                state: ctx.conclusion ?? ctx.status,
+                description: null,
+                url: ctx.detailsUrl,
+            };
+        }
+        return {
+            name: ctx.context,
+            state: ctx.state,
+            description: ctx.description,
+            url: ctx.targetUrl,
+        };
+    });
+}
+
+function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
+    const assigneeNode = item.assignees.nodes[0];
     return {
-        id: item.id,
+        id: item.databaseId,
         number: item.number,
         title: item.title,
-        state: item.state,
-        draft: (item.draft ?? false) as boolean,
-        user: item.user
-            ? { login: item.user.login, avatar_url: item.user.avatar_url ?? "" }
-            : null,
-        assignee: item.assignee
+        state: item.state === "MERGED" ? "closed" : item.state.toLowerCase(),
+        draft: item.isDraft,
+        user: item.author
             ? {
-                  login: item.assignee.login,
-                  avatar_url: item.assignee.avatar_url ?? "",
+                  login: item.author.login,
+                  avatar_url: item.author.avatarUrl,
               }
             : null,
-        labels: (item.labels ?? []).map((l: Record<string, unknown>) => ({
-            id: l.id as number | undefined,
-            name: (l.name as string) ?? "",
-            color: (l.color as string) ?? "000000",
+        assignee: assigneeNode
+            ? {
+                  login: assigneeNode.login,
+                  avatar_url: assigneeNode.avatarUrl,
+              }
+            : null,
+        labels: item.labels.nodes.map((l) => ({
+            id: undefined,
+            name: l.name,
+            color: l.color,
         })),
-        created_at: item.created_at,
-        merged_at: pr?.merged_at ?? null,
-        comments_count: item.comments ?? 0,
+        created_at: item.createdAt,
+        merged_at: item.mergedAt,
+        comments_count: item.comments.totalCount,
+        status_state: getStatusState(item),
+        status_contexts: getStatusContexts(item),
     };
 }
 
@@ -125,27 +158,63 @@ export function PullRequestList({
         | "asc"
         | "desc";
 
+    const [pageCursors, setPageCursors] = useState<Record<number, string>>({});
+    const prevQueryKey = useRef<string | undefined>(undefined);
+
+    // Reset cursors when query changes
+    const queryKey = `${activeTab}:${searchQuery}:${currentSort}:${currentOrder}`;
+    if (
+        prevQueryKey.current !== undefined &&
+        prevQueryKey.current !== queryKey
+    ) {
+        setPageCursors({});
+    }
+    prevQueryKey.current = queryKey;
+
     const stateQualifier =
         activeTab === "merged" ? "is:merged" : `is:${activeTab}`;
     const apiQuery = searchQuery
         ? `${stateQualifier} ${searchQuery}`
         : stateQualifier;
 
+    // For GraphQL cursor pagination: if we have the cursor for the previous page, use it
+    // Otherwise fetch enough items to cover the current page from the start
+    const after =
+        currentPage > 1 ? (pageCursors[currentPage - 1] ?? null) : null;
+    const first = after ? 30 : currentPage * 30;
+
     const { data, isLoading } = api.pulls.search.useQuery({
         owner,
         repo,
         query: apiQuery,
         page: currentPage,
+        after: after ?? undefined,
+        first,
         sort: currentSort,
         order: currentOrder,
     });
 
-    const items = useMemo(
+    // Store cursor for current page
+    useEffect(() => {
+        const cursor = data?.endCursor;
+        if (cursor) {
+            setPageCursors((prev) => ({
+                ...prev,
+                [currentPage]: cursor,
+            }));
+        }
+    }, [data?.endCursor, currentPage]);
+
+    // If we fetched extra items, slice to just the current page
+    const allItems = useMemo(
         () => (data?.items ?? []).map(normalizeSearchItem),
         [data],
     );
+    const items = after
+        ? allItems.slice(0, 30)
+        : allItems.slice((currentPage - 1) * 30, currentPage * 30);
     const totalCount = data?.totalCount ?? 0;
-    const hasNext = items.length >= 30;
+    const hasNext = data?.hasNextPage ?? false;
 
     const parsedQuery = useMemo(() => parseQuery(searchQuery), [searchQuery]);
 
