@@ -17,11 +17,22 @@ type CacheEntry = {
 
 const cache = new Map<string, CacheEntry>();
 
-function getCacheKey(owner: string, repo: string, number: number, commitSha?: string) {
+function getCacheKey(
+    owner: string,
+    repo: string,
+    number: number,
+    commitSha?: string,
+) {
     return `${owner}/${repo}/${number}/${commitSha ?? ""}`;
 }
 
-function fetchFiles(key: string, owner: string, repo: string, number: number, commitSha?: string) {
+function fetchFiles(
+    key: string,
+    owner: string,
+    repo: string,
+    number: number,
+    commitSha?: string,
+) {
     const controller = new AbortController();
     const entry: CacheEntry = {
         files: [],
@@ -36,11 +47,12 @@ function fetchFiles(key: string, owner: string, repo: string, number: number, co
         try {
             const res = await fetch(
                 `/api/files?owner=${owner}&repo=${repo}&number=${number}` +
-                (commitSha ? `&commitSha=${commitSha}` : ""),
+                    (commitSha ? `&commitSha=${commitSha}` : ""),
                 { signal: controller.signal },
             );
             const reader = res.body?.getReader();
-            if (!reader) throw new Error("body reader was null when loading files");
+            if (!reader)
+                throw new Error("body reader was null when loading files");
 
             const decoder = new TextDecoder();
             let buffer = "";
@@ -53,16 +65,17 @@ function fetchFiles(key: string, owner: string, repo: string, number: number, co
                 for (const line of lines.filter(Boolean)) {
                     const data = JSON.parse(line);
                     entry.files = [...entry.files, ...data];
-                    entry.subscribers.forEach((cb) => cb(entry.files));
+                    for (const cb of entry.subscribers) cb(entry.files);
                 }
             }
         } catch (err) {
-            if (err instanceof DOMException && err.name === "AbortError") return;
+            if (err instanceof DOMException && err.name === "AbortError")
+                return;
             throw err;
         } finally {
             if (!controller.signal.aborted) {
                 entry.isLoading = false;
-                entry.loadingSubscribers.forEach((cb) => cb(false));
+                for (const cb of entry.loadingSubscribers) cb(false);
             }
         }
     })();
@@ -80,7 +93,8 @@ export function useFiles({ owner, repo, number, commitSha }: UseFilesParams) {
         const key = getCacheKey(owner, repo, number, commitSha);
 
         // Reuse an in-flight or completed entry, otherwise start a new fetch
-        const entry = cache.get(key) ?? fetchFiles(key, owner, repo, number, commitSha);
+        const entry =
+            cache.get(key) ?? fetchFiles(key, owner, repo, number, commitSha);
 
         // Sync immediately with whatever is already buffered
         setFiles(entry.files);
