@@ -2,6 +2,7 @@
 
 import { keepPreviousData } from "@tanstack/react-query";
 import {
+    AlertTriangle,
     Bold,
     Code,
     Code2,
@@ -12,7 +13,9 @@ import {
     ListOrdered,
     ListTodo,
     Strikethrough,
+    Table,
     TextQuote,
+    ToggleLeft,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
@@ -81,7 +84,9 @@ export function MarkdownEditor({
     const [slashMenuView, setSlashMenuView] = useState<
         "menu" | "table-form" | "alert-form" | null
     >(null);
-    const [slashMenuPos, setSlashMenuPos] = useState({ top: 80 });
+    const [slashMenuPos, setSlashMenuPos] = useState<React.CSSProperties>({
+        top: 80,
+    });
     const [alertType, setAlertType] = useState("Note");
     const slashLinePosRef = useRef<number | null>(null);
 
@@ -221,6 +226,22 @@ export function MarkdownEditor({
     const handleSlashBackToMenu = useCallback(() => {
         setSlashMenuView("menu");
     }, []);
+
+    const handleToolbarInsert = useCallback(
+        (generated: { text: string; cursorPos: number }) => {
+            const textarea = textareaRef.current;
+            if (!textarea) return;
+            const cursorPos = textarea.selectionStart;
+            const newText =
+                valueRef.current.slice(0, cursorPos) +
+                generated.text +
+                valueRef.current.slice(cursorPos);
+            const newCursor = cursorPos + generated.cursorPos;
+            cursorRef.current = { start: newCursor, end: newCursor };
+            onChangeRef.current(newText);
+        },
+        [],
+    );
 
     const handleAutocompleteSelect = useCallback(
         (issueNumber: number) => {
@@ -563,26 +584,6 @@ export function MarkdownEditor({
         ],
         [
             {
-                icon: Code,
-                key: "code",
-                title: "Inline code",
-                onClick: handleCode,
-            },
-            {
-                icon: Code2,
-                key: "codeblock",
-                title: `Code block (${tooltipMod}+Shift+K)`,
-                onClick: handleCodeBlock,
-            },
-            {
-                icon: Link,
-                key: "link",
-                title: `Link (${tooltipMod}+K)`,
-                onClick: handleLink,
-            },
-        ],
-        [
-            {
                 icon: List,
                 key: "unordered-list",
                 title: "Unordered list",
@@ -607,6 +608,58 @@ export function MarkdownEditor({
                 onClick: handleBlockquote,
             },
         ],
+        [
+            {
+                icon: Code,
+                key: "code",
+                title: "Inline code",
+                onClick: handleCode,
+            },
+            {
+                icon: Code2,
+                key: "codeblock",
+                title: `Code block (${tooltipMod}+Shift+K)`,
+                onClick: handleCodeBlock,
+            },
+            {
+                icon: Link,
+                key: "link",
+                title: `Link (${tooltipMod}+K)`,
+                onClick: handleLink,
+            },
+        ],
+        [
+            {
+                icon: Table,
+                key: "table-insert",
+                title: "Insert table",
+                onClick: () => {
+                    const textarea = textareaRef.current;
+                    if (!textarea) return;
+                    slashLinePosRef.current = textarea.selectionStart;
+                    setSlashMenuPos({ top: 34, right: 8 });
+                    setSlashMenuView("table-form");
+                },
+            },
+            {
+                icon: AlertTriangle,
+                key: "alert-insert",
+                title: "Insert alert",
+                onClick: () => {
+                    const textarea = textareaRef.current;
+                    if (!textarea) return;
+                    slashLinePosRef.current = textarea.selectionStart;
+                    setSlashMenuPos({ top: 34, right: 8 });
+                    setSlashMenuView("alert-form");
+                },
+            },
+            {
+                icon: ToggleLeft,
+                key: "details-insert",
+                title: "Insert details block",
+                onClick: () => handleToolbarInsert(generateDetails()),
+            },
+        ],
     ];
 
     return (
@@ -614,7 +667,7 @@ export function MarkdownEditor({
             className={`relative rounded-lg border border-gray-300 bg-white dark:border-zinc-600 dark:bg-zinc-950 ${className}`}
             ref={containerRef}
         >
-            <div className="-mb-px flex items-center gap-6 rounded-t-lg border-gray-300 border-b bg-gray-50 px-3 dark:border-zinc-600 dark:bg-zinc-900">
+            <div className="-mb-px flex flex-wrap items-center gap-1 rounded-t-lg border-gray-300 border-b bg-gray-50 px-3 dark:border-zinc-600 dark:bg-zinc-900">
                 <button
                     className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
                         mode === "write"
@@ -637,11 +690,8 @@ export function MarkdownEditor({
                 >
                     Preview
                 </button>
-            </div>
-
-            {mode === "write" ? (
-                <>
-                    <div className="flex flex-wrap items-center gap-0.5 border-gray-300 border-b px-3 py-1.5 dark:border-zinc-600">
+                {mode === "write" && (
+                    <span className="ml-auto flex items-center gap-0.5">
                         {toolbarGroups.map((group, gi) => (
                             <span
                                 className="flex items-center gap-0.5"
@@ -649,15 +699,13 @@ export function MarkdownEditor({
                                 key={gi}
                             >
                                 {gi > 0 && (
-                                    <span className="mx-1 select-none text-gray-300 dark:text-zinc-600">
-                                        |
-                                    </span>
+                                    <span className="mx-1 w-px self-stretch bg-gray-300 dark:bg-zinc-600" />
                                 )}
                                 {group.map((btn) => {
                                     const Icon = btn.icon;
                                     return (
                                         <button
-                                            className="inline-flex items-center justify-center rounded-md p-1.5 text-gray-600 hover:bg-gray-200 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+                                            className="inline-flex cursor-pointer items-center justify-center rounded-md p-1 text-gray-600 hover:bg-gray-200 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
                                             disabled={disabled}
                                             key={btn.key}
                                             onMouseDown={(e) => {
@@ -682,8 +730,12 @@ export function MarkdownEditor({
                                 })}
                             </span>
                         ))}
-                    </div>
+                    </span>
+                )}
+            </div>
 
+            {mode === "write" ? (
+                <>
                     {autocompleteQuery !== null &&
                         owner &&
                         repo &&
@@ -705,7 +757,7 @@ export function MarkdownEditor({
                         )}
                     {slashMenuView !== null && (
                         <SlashCommandMenu
-                            style={{ top: slashMenuPos.top }}
+                            style={slashMenuPos}
                             view={slashMenuView}
                             onCommandSelect={handleSlashMenuItemSelect}
                             onInsertTable={handleInsertTable}
@@ -799,7 +851,7 @@ export function MarkdownEditor({
                                         end: slashPos,
                                     };
                                 }
-                                setSlashMenuPos({ top });
+                                setSlashMenuPos({ top, right: 0 });
                                 setSlashMenuView("menu");
                             } else if (
                                 slashResult === null &&
