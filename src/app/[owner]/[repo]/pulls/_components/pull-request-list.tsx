@@ -325,7 +325,12 @@ export function PullRequestList({
 
             <div className="border-gray-200 border-b dark:border-zinc-800">
                 <div className="flex items-center justify-between px-4">
-                    <div className="flex">
+                    <div className="flex items-center">
+                        {!isLoading && (
+                            <span className="mr-4 text-gray-500 text-xs dark:text-gray-500">
+                                {totalCount.toLocaleString()} results
+                            </span>
+                        )}
                         {TABS.map((tab) => (
                             <button
                                 key={tab.key}
@@ -429,12 +434,6 @@ export function PullRequestList({
                                 navigate({ sort, order, page: null })
                             }
                         />
-
-                        {!isLoading && (
-                            <span className="text-gray-500 text-xs dark:text-gray-500">
-                                {totalCount.toLocaleString()} results
-                            </span>
-                        )}
                     </div>
                 </div>
             </div>
@@ -1002,7 +1001,7 @@ function SortDropdown({
                 className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
             >
                 <ListOrdered className="size-4" />
-                {currentLabel}
+                Sort: {currentLabel}
                 <ChevronDown className="size-3.5 text-gray-400" />
             </button>
             {open && (
