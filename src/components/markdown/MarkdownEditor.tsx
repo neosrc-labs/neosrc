@@ -59,7 +59,7 @@ export function MarkdownEditor({
     placeholder = "",
     cancelLabel = "Cancel",
     disabled = false,
-    minHeight = "auto",
+    minHeight = "135px",
     className = "",
     owner,
     repo,
