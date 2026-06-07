@@ -51,6 +51,11 @@ html {
     padding: 0.5rem 0.75rem;
 }
 
+.prose :where(td, th) p {
+    margin: 0;
+    display: inline;
+}
+
 .prose tbody tr:nth-child(even) {
     background: var(--color-surface-secondary);
 }
