@@ -1,8 +1,10 @@
 "use client";
 
 import {
+    ChevronDown,
     ChevronLeft,
     ChevronRight,
+    Flag,
     GitMerge,
     GitPullRequest,
     GitPullRequestClosed,
@@ -318,44 +320,6 @@ export function PullRequestList({
                             </button>
                         )}
                     </div>
-
-                    <AuthorDropdown
-                        owner={owner}
-                        repo={repo}
-                        currentQuery={searchQuery}
-                        onToggle={(key: string, value: string) => {
-                            const newQuery = hasQualifier(
-                                searchQuery,
-                                key,
-                                value,
-                            )
-                                ? removeQualifier(searchQuery, key, value)
-                                : replaceQualifier(searchQuery, key, value);
-                            setSearchInput(newQuery);
-                            navigate({ q: newQuery || null, page: null });
-                        }}
-                    />
-
-                    <LabelDropdown
-                        owner={owner}
-                        repo={repo}
-                        currentQuery={searchQuery}
-                        onToggle={(labelName: string) => {
-                            if (hasQualifier(searchQuery, "label", labelName)) {
-                                handleRemoveQualifier("label", labelName);
-                            } else {
-                                handleAddQualifier("label", labelName);
-                            }
-                        }}
-                    />
-
-                    <SortDropdown
-                        currentSort={currentSort}
-                        currentOrder={currentOrder}
-                        onSelect={(sort, order) =>
-                            navigate({ sort, order, page: null })
-                        }
-                    />
                 </div>
             </div>
 
@@ -378,11 +342,100 @@ export function PullRequestList({
                             </button>
                         ))}
                     </div>
-                    {!isLoading && (
-                        <span className="text-gray-500 text-xs dark:text-gray-500">
-                            {totalCount.toLocaleString()} results
-                        </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                        <AuthorDropdown
+                            owner={owner}
+                            repo={repo}
+                            currentQuery={searchQuery}
+                            onToggle={(key: string, value: string) => {
+                                const newQuery = hasQualifier(
+                                    searchQuery,
+                                    key,
+                                    value,
+                                )
+                                    ? removeQualifier(searchQuery, key, value)
+                                    : replaceQualifier(searchQuery, key, value);
+                                setSearchInput(newQuery);
+                                navigate({
+                                    q: newQuery || null,
+                                    page: null,
+                                });
+                            }}
+                        />
+
+                        <LabelDropdown
+                            owner={owner}
+                            repo={repo}
+                            currentQuery={searchQuery}
+                            onToggle={(labelName: string) => {
+                                if (
+                                    hasQualifier(
+                                        searchQuery,
+                                        "label",
+                                        labelName,
+                                    )
+                                ) {
+                                    handleRemoveQualifier("label", labelName);
+                                } else {
+                                    handleAddQualifier("label", labelName);
+                                }
+                            }}
+                        />
+
+                        <MilestoneDropdown
+                            owner={owner}
+                            repo={repo}
+                            currentQuery={searchQuery}
+                            onToggle={(milestone: string) => {
+                                const quoted = `"${milestone}"`;
+                                if (
+                                    hasQualifier(
+                                        searchQuery,
+                                        "milestone",
+                                        quoted,
+                                    )
+                                ) {
+                                    handleRemoveQualifier("milestone", quoted);
+                                } else {
+                                    handleAddQualifier("milestone", quoted);
+                                }
+                            }}
+                        />
+
+                        <AssigneeDropdown
+                            owner={owner}
+                            repo={repo}
+                            currentQuery={searchQuery}
+                            onToggle={(key: string, value: string) => {
+                                const newQuery = hasQualifier(
+                                    searchQuery,
+                                    key,
+                                    value,
+                                )
+                                    ? removeQualifier(searchQuery, key, value)
+                                    : replaceQualifier(searchQuery, key, value);
+                                setSearchInput(newQuery);
+                                navigate({
+                                    q: newQuery || null,
+                                    page: null,
+                                });
+                            }}
+                        />
+
+                        <SortDropdown
+                            currentSort={currentSort}
+                            currentOrder={currentOrder}
+                            onSelect={(sort, order) =>
+                                navigate({ sort, order, page: null })
+                            }
+                        />
+
+                        {!isLoading && (
+                            <span className="text-gray-500 text-xs dark:text-gray-500">
+                                {totalCount.toLocaleString()} results
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -685,6 +738,152 @@ function AuthorDropdown({
                 >
                     <User className="size-4" />
                     Author
+                    <ChevronDown className="size-3.5 text-gray-400" />
+                </button>
+            }
+        />
+    );
+}
+
+function AssigneeDropdown({
+    owner,
+    repo,
+    currentQuery,
+    onToggle,
+}: {
+    owner: string;
+    repo: string;
+    currentQuery: string;
+    onToggle: (key: string, value: string) => void;
+}) {
+    const { data: users } = api.pulls.listAssignees.useQuery({ owner, repo });
+
+    const selectedNames = new Set(
+        (users ?? [])
+            .filter((u: { login: string }) =>
+                currentQuery.includes(`assignee:${u.login}`),
+            )
+            .map((u: { login: string }) => u.login),
+    );
+
+    return (
+        <SearchableDropdown
+            items={users ?? []}
+            isSelected={(u: { login: string }) => selectedNames.has(u.login)}
+            onSelect={(u: { login: string }) => onToggle("assignee", u.login)}
+            keyFn={(u: { login: string }) => u.login}
+            searchFn={(u: { login: string }, q: string) =>
+                u.login.toLowerCase().includes(q.toLowerCase())
+            }
+            renderItem={(
+                u: { login: string; avatar_url?: string },
+                selected: boolean,
+            ) => (
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                    {u.avatar_url ? (
+                        <img
+                            src={u.avatar_url}
+                            alt=""
+                            className="size-5 shrink-0 rounded-full"
+                        />
+                    ) : (
+                        <div className="size-5 shrink-0 rounded-full bg-gray-200 dark:bg-zinc-700" />
+                    )}
+                    <span className="truncate">{u.login}</span>
+                    {selected && (
+                        <span className="ml-auto shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                            &#10003;
+                        </span>
+                    )}
+                </div>
+            )}
+            placeholder="Filter users..."
+            emptyText="No users found"
+            ariaLabel="Filter by assignee"
+            trigger={
+                <button
+                    type="button"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                >
+                    <User className="size-4" />
+                    Assignee
+                    <ChevronDown className="size-3.5 text-gray-400" />
+                </button>
+            }
+        />
+    );
+}
+
+function MilestoneDropdown({
+    owner,
+    repo,
+    currentQuery,
+    onToggle,
+}: {
+    owner: string;
+    repo: string;
+    currentQuery: string;
+    onToggle: (milestone: string) => void;
+}) {
+    const { data: milestones } = api.pulls.listMilestones.useQuery({
+        owner,
+        repo,
+    });
+
+    const items = milestones ?? [];
+    const currentNames = new Set(
+        items
+            .filter((m: { title: string }) =>
+                currentQuery.includes(`milestone:"${m.title}"`),
+            )
+            .map((m: { title: string }) => m.title),
+    );
+
+    return (
+        <SearchableDropdown
+            items={items}
+            isSelected={(m: { title: string }) => currentNames.has(m.title)}
+            onSelect={(m: { title: string }) => onToggle(m.title)}
+            keyFn={(m: { title: string }) => m.title}
+            searchFn={(m: { title: string }, q: string) =>
+                m.title.toLowerCase().includes(q.toLowerCase())
+            }
+            renderItem={(
+                m: {
+                    title: string;
+                    description?: string | null;
+                    open_issues?: number;
+                    closed_issues?: number;
+                },
+                selected: boolean,
+            ) => (
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                        <span className="truncate font-medium">{m.title}</span>
+                        {selected && (
+                            <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                                &#10003;
+                            </span>
+                        )}
+                    </div>
+                    {m.description && (
+                        <span className="truncate text-gray-400 text-xs">
+                            {m.description}
+                        </span>
+                    )}
+                </div>
+            )}
+            placeholder="Filter milestones"
+            emptyText="No milestones found"
+            ariaLabel="Filter by milestone"
+            trigger={
+                <button
+                    type="button"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                >
+                    <Flag className="size-4" />
+                    Milestone
+                    <ChevronDown className="size-3.5 text-gray-400" />
                 </button>
             }
         />
@@ -757,6 +956,7 @@ function LabelDropdown({
                 >
                     <Tag className="size-4" />
                     Label
+                    <ChevronDown className="size-3.5 text-gray-400" />
                 </button>
             }
         />
@@ -803,6 +1003,7 @@ function SortDropdown({
             >
                 <ListOrdered className="size-4" />
                 {currentLabel}
+                <ChevronDown className="size-3.5 text-gray-400" />
             </button>
             {open && (
                 <div className="absolute top-full right-0 z-50 mt-1 w-44 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
