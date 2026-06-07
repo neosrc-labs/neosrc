@@ -5,6 +5,7 @@ import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 import { isGeneratedFile } from "~/utils/generated-files";
 import { isImageFile } from "~/utils/image-file";
+import { getStoredSet, getViewedKey, setStoredSet } from "~/utils/viewed-files";
 import { type ActiveComment, DiffView } from "./DiffView";
 import ImageDiff from "./ImageDiff";
 
@@ -30,26 +31,6 @@ interface FileDiffProps {
     performanceHidden?: boolean;
     showPerformanceDiff?: boolean;
     onTogglePerformanceDiff?: () => void;
-}
-
-function getViewedKey(owner: string, repo: string, number: string): string {
-    return `pr-file:viewed:${owner}:${repo}:${number}`;
-}
-
-function getStoredSet(key: string): Set<string> {
-    if (typeof window === "undefined") return new Set();
-    try {
-        const data = localStorage.getItem(key);
-        if (!data) return new Set();
-        return new Set(JSON.parse(data) as string[]);
-    } catch {
-        return new Set();
-    }
-}
-
-function setStoredSet(key: string, set: Set<string>): void {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(key, JSON.stringify(Array.from(set)));
 }
 
 export default function FileDiff({
@@ -206,6 +187,7 @@ export default function FileDiff({
         } else if (isViewed && isCollapsed) {
             toggleCollapsed();
         }
+        window.dispatchEvent(new Event("file-viewed-changed"));
     };
 
     const statusColor =

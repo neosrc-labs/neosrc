@@ -11,6 +11,7 @@ import {
 import { useFiles } from "~/hooks/files";
 import type { PullsGetResponseData, ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
+import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
 
 function FileDiffSkeleton() {
     return (
@@ -64,6 +65,26 @@ export function FilesSection({
         number,
         commitSha,
     });
+
+    const [viewedCount, setViewedCount] = useState(0);
+
+    useEffect(() => {
+        const key = getViewedKey(owner, repo, number);
+        const viewed = getStoredSet(key);
+        setViewedCount(allFiles.filter((f) => viewed.has(f.filename)).length);
+    }, [allFiles, owner, repo, number]);
+
+    useEffect(() => {
+        const handler = () => {
+            const key = getViewedKey(owner, repo, number);
+            const viewed = getStoredSet(key);
+            setViewedCount(
+                allFiles.filter((f) => viewed.has(f.filename)).length,
+            );
+        };
+        window.addEventListener("file-viewed-changed", handler);
+        return () => window.removeEventListener("file-viewed-changed", handler);
+    }, [allFiles, owner, repo, number]);
 
     const OVERFLOW_THRESHOLD = 200;
 
@@ -175,6 +196,25 @@ export function FilesSection({
                     Files Changed{!isLoading && ` (${allFiles.length})`}
                 </h2>
                 <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-0.5 text-gray-600 text-xs dark:text-gray-400">
+                        <div className="flex items-center gap-1.5">
+                            <span>
+                                {viewedCount}/{allFiles.length} files viewed
+                            </span>
+                        </div>
+                        <div className="h-1 w-24 overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700">
+                            <div
+                                className="h-full rounded-full bg-blue-400 transition-all"
+                                style={{
+                                    width: `${allFiles.length > 0
+                                            ? (viewedCount / allFiles.length) *
+                                            100
+                                            : 0
+                                        }%`,
+                                }}
+                            />
+                        </div>
+                    </div>
                     <button
                         className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
                         onClick={() => setShowComments(!showComments)}
