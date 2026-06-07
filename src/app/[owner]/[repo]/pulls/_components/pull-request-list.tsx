@@ -57,6 +57,12 @@ function normalizeSearchItem(item: PrSearchResultItem): PrRowData {
         user: item.user
             ? { login: item.user.login, avatar_url: item.user.avatar_url ?? "" }
             : null,
+        assignee: item.assignee
+            ? {
+                  login: item.assignee.login,
+                  avatar_url: item.assignee.avatar_url ?? "",
+              }
+            : null,
         labels: (item.labels ?? []).map((l: Record<string, unknown>) => ({
             id: l.id as number | undefined,
             name: (l.name as string) ?? "",
@@ -64,6 +70,7 @@ function normalizeSearchItem(item: PrSearchResultItem): PrRowData {
         })),
         created_at: item.created_at,
         merged_at: pr?.merged_at ?? null,
+        comments_count: item.comments ?? 0,
     };
 }
 
@@ -320,6 +327,15 @@ export function PullRequestList({
                 </div>
             </div>
 
+            <div className="flex items-center border-gray-200 border-b px-4 py-1.5 text-gray-400 text-xs dark:border-zinc-800 dark:text-gray-500">
+                <div className="flex-1" />
+                <div className="flex w-20 shrink-0 items-center justify-end">
+                    <span>Assignee</span>
+                </div>
+                <div className="flex w-16 shrink-0 items-center justify-end">
+                    <span>Comments</span>
+                </div>
+            </div>
             <div>
                 {isLoading ? (
                     <div className="space-y-0">
@@ -333,6 +349,8 @@ export function PullRequestList({
                                     <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
                                     <div className="h-3 w-1/2 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
                                 </div>
+                                <div className="size-5 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
+                                <div className="h-4 w-8 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
                             </div>
                         ))}
                     </div>
@@ -379,6 +397,28 @@ export function PullRequestList({
                                 pr={pr}
                                 owner={owner}
                                 repo={repo}
+                                onAssigneesFilter={(login) => {
+                                    const newQuery = hasQualifier(
+                                        searchQuery,
+                                        "assignee",
+                                        login,
+                                    )
+                                        ? removeQualifier(
+                                              searchQuery,
+                                              "assignee",
+                                              login,
+                                          )
+                                        : addQualifier(
+                                              searchQuery,
+                                              "assignee",
+                                              login,
+                                          );
+                                    setSearchInput(newQuery);
+                                    navigate({
+                                        q: newQuery || null,
+                                        page: null,
+                                    });
+                                }}
                             />
                         ))}
                     </div>
