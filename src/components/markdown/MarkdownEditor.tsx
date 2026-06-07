@@ -136,7 +136,6 @@ export function MarkdownEditor({
         if (pos !== null) {
             cursorRef.current = { start: pos, end: pos };
         }
-        textareaRef.current?.focus();
     }, []);
 
     function detectSlashCommand(
@@ -190,6 +189,7 @@ export function MarkdownEditor({
             cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
             onChangeRef.current(newText);
             dismissSlashMenu();
+            textareaRef.current?.focus();
         },
         [dismissSlashMenu],
     );
@@ -207,6 +207,7 @@ export function MarkdownEditor({
             cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
             onChangeRef.current(newText);
             dismissSlashMenu();
+            textareaRef.current?.focus();
         },
         [dismissSlashMenu],
     );
@@ -224,6 +225,7 @@ export function MarkdownEditor({
             cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
             onChangeRef.current(newText);
             dismissSlashMenu();
+            textareaRef.current?.focus();
         },
         [dismissSlashMenu],
     );
@@ -971,7 +973,10 @@ export function MarkdownEditor({
                     selectedAlertType={alertType}
                     onSelectAlertType={handleSelectAlertType}
                     onBackToMenu={handleSlashBackToMenu}
-                    onClose={dismissSlashMenu}
+                    onClose={() => {
+                        dismissSlashMenu();
+                        textareaRef.current?.focus();
+                    }}
                 />
             )}
         </div>
