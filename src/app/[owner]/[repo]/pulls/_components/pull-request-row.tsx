@@ -1,5 +1,6 @@
-import { GitMerge, GitPullRequest } from "lucide-react";
+import { GitMerge, GitPullRequest, MessageSquare } from "lucide-react";
 import Link from "next/link";
+import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { UserLink } from "~/components/user-link";
 import { cn } from "~/lib/utils";
 import { formatRelativeTime } from "~/utils";
@@ -11,9 +12,11 @@ export interface PrRowData {
     state: string;
     draft: boolean;
     user: { login: string; avatar_url: string } | null;
+    assignee: { login: string; avatar_url: string } | null;
     labels: Array<{ id?: number; name: string; color: string }>;
     created_at: string;
     merged_at: string | null;
+    comments_count: number;
 }
 
 const STATUS_COLORS = {
@@ -26,10 +29,12 @@ export function PullRequestRow({
     pr,
     owner,
     repo,
+    onAssigneesFilter,
 }: {
     pr: PrRowData;
     owner: string;
     repo: string;
+    onAssigneesFilter?: (login: string) => void;
 }) {
     const isMerged = pr.merged_at !== null && pr.merged_at !== undefined;
     const status = isMerged ? "merged" : (pr.state as "open" | "closed");
@@ -97,14 +102,38 @@ export function PullRequestRow({
                     </div>
                 )}
             </div>
-            <div className="shrink-0">
-                {pr.user && (
-                    <UserLink
-                        actor={{
-                            login: pr.user.login,
-                            avatarUrl: pr.user.avatar_url,
-                        }}
-                    />
+            <div className="flex w-20 shrink-0 items-center justify-end gap-3">
+                {pr.assignee ? (
+                    <UserHoverCard login={pr.assignee.login}>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                // biome-ignore lint/style/noNonNullAssertion: guarded by enclosing conditional
+                                const login = pr.assignee!.login;
+                                onAssigneesFilter?.(login);
+                            }}
+                            className="cursor-pointer rounded-full"
+                        >
+                            <img
+                                src={pr.assignee.avatar_url}
+                                alt={pr.assignee.login}
+                                className="size-5 rounded-full"
+                            />
+                        </button>
+                    </UserHoverCard>
+                ) : (
+                    <span className="size-5" />
+                )}
+            </div>
+            <div className="flex w-16 shrink-0 justify-end">
+                {pr.comments_count > 0 && (
+                    <a
+                        href={`/${owner}/${repo}/pull/${pr.number}#issuecomment`}
+                        className="flex items-center gap-1 text-gray-500 text-sm hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                    >
+                        <MessageSquare className="size-4" />
+                        <span>{pr.comments_count}</span>
+                    </a>
                 )}
             </div>
         </div>
