@@ -114,13 +114,13 @@ function UserHoverCardContent({ login }: { login: string }) {
                 <div className="mt-0.5 flex items-center gap-3 text-gray-600 text-xs dark:text-gray-400">
                     <span>
                         <strong className="font-semibold text-gray-900 dark:text-gray-100">
-                            {user.followers}
+                            {user.followers.toLocaleString()}
                         </strong>{" "}
                         followers
                     </span>
                     <span>
                         <strong className="font-semibold text-gray-900 dark:text-gray-100">
-                            {user.following}
+                            {user.following.toLocaleString()}
                         </strong>{" "}
                         following
                     </span>
