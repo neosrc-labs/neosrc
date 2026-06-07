@@ -125,11 +125,13 @@ export function PullRequestRow({
     owner,
     repo,
     onAssigneesFilter,
+    onAuthorFilter,
 }: {
     pr: PrRowData;
     owner: string;
     repo: string;
     onAssigneesFilter?: (login: string) => void;
+    onAuthorFilter?: (login: string) => void;
 }) {
     const isMerged = pr.merged_at !== null && pr.merged_at !== undefined;
     const status: PrStatus = isMerged
@@ -142,7 +144,7 @@ export function PullRequestRow({
     return (
         <div className="flex items-start gap-3 border-gray-200 border-b px-4 py-3 transition-colors hover:bg-gray-50 dark:border-zinc-800 dark:hover:bg-zinc-900/50">
             <div className="mt-0.5 shrink-0">
-                <StatusIcon className={cn("size-4", color)} />
+                <StatusIcon className={cn("size-4 cursor-pointer", color)} />
             </div>
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -198,6 +200,10 @@ export function PullRequestRow({
                                 actor={{
                                     login: pr.user.login,
                                     avatarUrl: pr.user.avatar_url,
+                                }}
+                                onClick={() => {
+                                    // biome-ignore lint/style/noNonNullAssertion: guarded by enclosing conditional
+                                    onAuthorFilter?.(pr.user!.login);
                                 }}
                             />
                         </span>

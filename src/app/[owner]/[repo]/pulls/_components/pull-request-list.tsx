@@ -471,6 +471,28 @@ export function PullRequestList({
                                 pr={pr}
                                 owner={owner}
                                 repo={repo}
+                                onAuthorFilter={(login) => {
+                                    const newQuery = hasQualifier(
+                                        searchQuery,
+                                        "author",
+                                        login,
+                                    )
+                                        ? removeQualifier(
+                                              searchQuery,
+                                              "author",
+                                              login,
+                                          )
+                                        : addQualifier(
+                                              searchQuery,
+                                              "author",
+                                              login,
+                                          );
+                                    setSearchInput(newQuery);
+                                    navigate({
+                                        q: newQuery || null,
+                                        page: null,
+                                    });
+                                }}
                                 onAssigneesFilter={(login) => {
                                     const newQuery = hasQualifier(
                                         searchQuery,
