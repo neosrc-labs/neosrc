@@ -1,12 +1,21 @@
 import {
+    Check,
+    Circle,
     GitMerge,
     GitPullRequest,
     GitPullRequestClosed,
     GitPullRequestDraft,
+    Loader2,
     MessageSquare,
+    XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import {
+    HoverCard,
+    HoverCardContent,
+    HoverCardTrigger,
+} from "~/components/ui/hover-card";
 import { Label } from "~/components/ui/label";
 import { UserLink } from "~/components/user-link";
 import { cn } from "~/lib/utils";
@@ -24,6 +33,73 @@ export interface PrRowData {
     created_at: string;
     merged_at: string | null;
     comments_count: number;
+    status_state: string | null;
+    status_contexts: Array<{
+        name: string;
+        state: string;
+        description: string | null;
+        url: string | null;
+    }>;
+}
+
+function StatusCheckIcon({
+    state,
+    className,
+}: {
+    state: string;
+    className?: string;
+}) {
+    if (state === "SUCCESS") {
+        return <Check className={cn(className, "text-green-600")} />;
+    }
+    if (state === "FAILURE" || state === "ERROR" || state === "TIMED_OUT") {
+        return <XCircle className={cn(className, "text-red-600")} />;
+    }
+    if (state === "IN_PROGRESS") {
+        return (
+            <Loader2
+                className={cn(className, "animate-spin text-yellow-500")}
+            />
+        );
+    }
+    return <Circle className={cn(className, "text-gray-400")} />;
+}
+
+function StatusContextRow({
+    context,
+}: {
+    context: {
+        name: string;
+        state: string;
+        description: string | null;
+        url: string | null;
+    };
+}) {
+    const linkProps = context.url
+        ? { href: context.url, target: "_blank", rel: "noreferrer" }
+        : {};
+
+    return (
+        <a
+            {...linkProps}
+            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-zinc-800"
+        >
+            <StatusCheckIcon
+                state={context.state}
+                className="size-3.5 shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+                <div className="truncate font-medium text-gray-900 dark:text-gray-100">
+                    {context.name}
+                </div>
+                {context.description && (
+                    <div className="truncate text-gray-500 dark:text-gray-400">
+                        {context.description}
+                    </div>
+                )}
+            </div>
+        </a>
+    );
 }
 
 type PrStatus = "draft" | "open" | "closed" | "merged";
@@ -70,16 +146,46 @@ export function PullRequestRow({
             </div>
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
+                    {pr.draft && (
+                        <span className="inline-flex items-center rounded-full border border-gray-300 px-2 py-0.5 font-medium text-[10px] text-gray-600 uppercase tracking-wide dark:border-zinc-600 dark:text-gray-400">
+                            Draft
+                        </span>
+                    )}
                     <Link
                         href={`/${owner}/${repo}/pull/${pr.number}`}
                         className="font-medium text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-400"
                     >
                         {pr.title}
                     </Link>
-                    {pr.draft && (
-                        <span className="inline-flex items-center rounded-full border border-gray-300 px-2 py-0.5 font-medium text-[10px] text-gray-600 uppercase tracking-wide dark:border-zinc-600 dark:text-gray-400">
-                            Draft
-                        </span>
+                    {pr.status_state && (
+                        <HoverCard openDelay={200}>
+                            <HoverCardTrigger asChild>
+                                <button
+                                    type="button"
+                                    className="cursor-pointer"
+                                    tabIndex={-1}
+                                >
+                                    <StatusCheckIcon
+                                        state={pr.status_state}
+                                        className="size-4"
+                                    />
+                                </button>
+                            </HoverCardTrigger>
+                            <HoverCardContent
+                                align="start"
+                                side="bottom"
+                                className="w-72 bg-white p-3 dark:bg-zinc-950"
+                            >
+                                <div className="space-y-1.5">
+                                    {pr.status_contexts.map((ctx) => (
+                                        <StatusContextRow
+                                            key={ctx.name}
+                                            context={ctx}
+                                        />
+                                    ))}
+                                </div>
+                            </HoverCardContent>
+                        </HoverCard>
                     )}
                 </div>
                 <div className="mt-1 flex items-center gap-1 text-gray-600 text-sm dark:text-gray-400">

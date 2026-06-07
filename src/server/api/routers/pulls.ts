@@ -22,12 +22,12 @@ import {
     removeLabelFromIssue,
     removeReviewersFromPullRequest,
     reopenPullRequest,
-    searchPullRequests,
     updateIssueComment,
     updateIssueMilestone,
     updatePullRequest,
     updatePullRequestReview,
 } from "~/server/github";
+import { searchPullRequestsWithStatus } from "~/server/github-graphql";
 
 export const pullsRouter = createTRPCRouter({
     updateBody: protectedProcedure
@@ -619,6 +619,8 @@ export const pullsRouter = createTRPCRouter({
                 repo: z.string(),
                 query: z.string(),
                 page: z.number().optional(),
+                after: z.string().optional(),
+                first: z.number().optional(),
                 sort: z.enum(["created", "updated", "comments"]).optional(),
                 order: z.enum(["asc", "desc"]).optional(),
             }),
@@ -629,16 +631,21 @@ export const pullsRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
 
-            return searchPullRequests(
+            // Build GraphQL search query with repo + sort qualifiers
+            const sortOrder =
+                input.sort && input.order
+                    ? ` sort:${input.sort}-${input.order}`
+                    : "";
+            const gqlQuery = `repo:${input.owner}/${input.repo} is:pr ${input.query}${sortOrder}`;
+
+            const result = await searchPullRequestsWithStatus(
                 accessToken,
-                input.owner,
-                input.repo,
-                input.query,
-                input.page,
-                30,
-                input.sort,
-                input.order,
+                gqlQuery,
+                input.first ?? 30,
+                input.after ?? null,
             );
+
+            return result;
         }),
 
     listReviews: protectedProcedure
