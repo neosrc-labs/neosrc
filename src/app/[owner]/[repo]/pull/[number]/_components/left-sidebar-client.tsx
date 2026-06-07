@@ -83,10 +83,10 @@ export function SidebarFileTree({
                 {filesChanged ? <span>({filesChanged})</span> : null}
             </h3>
             <div className="min-h-0 flex-1">
-                {isLoading ? (
-                    <FileTreeSkeleton />
-                ) : files.length > 0 ? (
+                {files.length > 0 ? (
                     <FileTree basePath={basePath} files={fileTree} />
+                ) : isLoading ? (
+                    <FileTreeSkeleton />
                 ) : (
                     <p className="text-gray-500 text-sm dark:text-zinc-400">
                         No files changed
