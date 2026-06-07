@@ -1,6 +1,7 @@
 import { GitMerge, GitPullRequest, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import { Label } from "~/components/ui/label";
 import { UserLink } from "~/components/user-link";
 import { cn } from "~/lib/utils";
 import { formatRelativeTime } from "~/utils";
@@ -81,24 +82,14 @@ export function PullRequestRow({
                     <div className="mt-1.5 flex flex-wrap gap-1">
                         {[...pr.labels]
                             .sort((a, b) => a.name.localeCompare(b.name))
-                            .map(
-                                (label: {
-                                    id?: number;
-                                    name: string;
-                                    color: string;
-                                }) => (
-                                    <span
-                                        key={label.id ?? label.name}
-                                        className="inline-block rounded-full px-2 py-0.5 font-medium text-[11px] leading-none"
-                                        style={{
-                                            backgroundColor: `#${label.color}20`,
-                                            color: `#${label.color}`,
-                                        }}
-                                    >
-                                        {label.name}
-                                    </span>
-                                ),
-                            )}
+                            .map((label) => (
+                                <Label
+                                    key={label.id ?? label.name}
+                                    color={label.color}
+                                >
+                                    {label.name}
+                                </Label>
+                            ))}
                     </div>
                 )}
             </div>
