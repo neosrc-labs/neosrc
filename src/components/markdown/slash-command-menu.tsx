@@ -52,15 +52,13 @@ const MENU_ITEMS: MenuItem[] = [
     },
 ];
 
+const MAX_GRID = 10;
+
 interface SlashCommandMenuProps {
     style?: React.CSSProperties;
     view: "menu" | "table-form" | "alert-form";
     onCommandSelect: (commandId: string) => void;
-    tableColumns: number;
-    tableRows: number;
-    onTableColumnsChange: (cols: number) => void;
-    onTableRowsChange: (rows: number) => void;
-    onInsertTable: () => void;
+    onInsertTable: (columns: number, rows: number) => void;
     selectedAlertType: string;
     onSelectAlertType: (type: string) => void;
     onBackToMenu: () => void;
@@ -70,10 +68,6 @@ export function SlashCommandMenu({
     style,
     view,
     onCommandSelect,
-    tableColumns,
-    tableRows,
-    onTableColumnsChange,
-    onTableRowsChange,
     onInsertTable,
     selectedAlertType,
     onSelectAlertType,
@@ -81,8 +75,11 @@ export function SlashCommandMenu({
 }: SlashCommandMenuProps) {
     const listRef = useRef<HTMLUListElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const gridRef = useRef<HTMLDivElement>(null);
     const [search, setSearch] = useState("");
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [gridCol, setGridCol] = useState(3);
+    const [gridRow, setGridRow] = useState(3);
 
     useEffect(() => {
         if (view === "menu") {
@@ -91,7 +88,9 @@ export function SlashCommandMenu({
             setSelectedIndex(0);
         }
         if (view === "table-form") {
-            inputRef.current?.focus();
+            setGridCol(3);
+            setGridRow(3);
+            gridRef.current?.focus();
         }
     }, [view]);
 
@@ -138,51 +137,71 @@ export function SlashCommandMenu({
     if (view === "table-form") {
         return (
             <div className={baseStyle} data-autocomplete="true" style={style}>
-                <div className="px-3 py-2 font-medium text-gray-700 text-sm dark:text-zinc-200">
-                    Insert table
+                <div className="flex items-center justify-between px-3 py-2">
+                    <span className="font-medium text-gray-700 text-sm dark:text-zinc-200">
+                        Insert table
+                    </span>
+                    <span className="font-medium text-gray-500 text-xs tabular-nums dark:text-zinc-400">
+                        {gridCol} &times; {gridRow}
+                    </span>
                 </div>
-                <div className="flex items-center gap-2 px-3 pb-2">
-                    <label className="flex items-center gap-1 text-gray-600 text-xs dark:text-zinc-400">
-                        Columns
-                        <input
-                            className="w-14 rounded border border-gray-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-                            max={10}
-                            min={1}
-                            onChange={(e) => {
-                                const v = Number(e.target.value);
-                                if (v >= 1 && v <= 10) onTableColumnsChange(v);
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    onInsertTable();
-                                }
-                            }}
-                            ref={inputRef}
-                            type="number"
-                            value={tableColumns}
-                        />
-                    </label>
-                    <label className="flex items-center gap-1 text-gray-600 text-xs dark:text-zinc-400">
-                        Rows
-                        <input
-                            className="w-14 rounded border border-gray-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-                            max={10}
-                            min={1}
-                            onChange={(e) => {
-                                const v = Number(e.target.value);
-                                if (v >= 1 && v <= 10) onTableRowsChange(v);
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    onInsertTable();
-                                }
-                            }}
-                            type="number"
-                            value={tableRows}
-                        />
-                    </label>
+                <div
+                    className="flex place-items-center px-4 pb-2"
+                    onMouseLeave={() => {
+                        setGridCol(3);
+                        setGridRow(3);
+                    }}
+                >
+                    <div
+                        className="grid grid-cols-[repeat(10,16px)] gap-0.5 focus:outline-none"
+                        ref={gridRef}
+                        onKeyDown={(e) => {
+                            if (e.key === "ArrowRight") {
+                                e.preventDefault();
+                                setGridCol((c) => Math.min(MAX_GRID, c + 1));
+                            } else if (e.key === "ArrowLeft") {
+                                e.preventDefault();
+                                setGridCol((c) => Math.max(1, c - 1));
+                            } else if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                setGridRow((r) => Math.min(MAX_GRID, r + 1));
+                            } else if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                setGridRow((r) => Math.max(1, r - 1));
+                            } else if (e.key === "Enter") {
+                                e.preventDefault();
+                                onInsertTable(gridCol, gridRow);
+                            }
+                        }}
+                        // biome-ignore lint/a11y/noNoninteractiveTabindex: grid needs keyboard nav
+                        tabIndex={0}
+                    >
+                        {Array.from({ length: MAX_GRID }, (_, r) =>
+                            Array.from({ length: MAX_GRID }, (_, c) => {
+                                const active =
+                                    c + 1 <= gridCol && r + 1 <= gridRow;
+                                return (
+                                    <button
+                                        className={`h-4 w-4 rounded-sm border transition-colors ${
+                                            active
+                                                ? "border-blue-500 bg-blue-500/20 dark:border-blue-400 dark:bg-blue-400/20"
+                                                : "border-gray-300 bg-white hover:border-gray-400 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:border-zinc-500"
+                                        }`}
+                                        // biome-ignore lint/suspicious/noArrayIndexKey: grid is static
+                                        key={`${r}-${c}`}
+                                        onClick={() => {
+                                            onInsertTable(gridCol, gridRow);
+                                        }}
+                                        onMouseEnter={() => {
+                                            setGridCol(c + 1);
+                                            setGridRow(r + 1);
+                                        }}
+                                        type="button"
+                                    />
+                                );
+                            }),
+                        )}
+                    </div>
                 </div>
                 <div className="flex items-center justify-between border-gray-200 border-t px-3 py-2 dark:border-zinc-700">
                     <button
@@ -191,13 +210,6 @@ export function SlashCommandMenu({
                         type="button"
                     >
                         Back
-                    </button>
-                    <button
-                        className="cursor-pointer rounded bg-blue-600 px-3 py-1 text-white text-xs hover:bg-blue-700"
-                        onClick={onInsertTable}
-                        type="button"
-                    >
-                        Insert
                     </button>
                 </div>
             </div>

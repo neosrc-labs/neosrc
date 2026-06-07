@@ -82,8 +82,6 @@ export function MarkdownEditor({
         "menu" | "table-form" | "alert-form" | null
     >(null);
     const [slashMenuPos, setSlashMenuPos] = useState({ top: 80 });
-    const [tableColumns, setTableColumns] = useState(3);
-    const [tableRows, setTableRows] = useState(3);
     const [alertType, setAlertType] = useState("Note");
     const slashLinePosRef = useRef<number | null>(null);
 
@@ -128,8 +126,6 @@ export function MarkdownEditor({
     const dismissSlashMenu = useCallback(() => {
         setSlashMenuView(null);
         slashLinePosRef.current = null;
-        setTableColumns(3);
-        setTableRows(3);
         setAlertType("Note");
     }, []);
 
@@ -188,19 +184,22 @@ export function MarkdownEditor({
         [dismissSlashMenu],
     );
 
-    const handleInsertTable = useCallback(() => {
-        const linePos = slashLinePosRef.current;
-        if (linePos === null) return;
-        const generated = generateTable(tableColumns, tableRows);
-        const newText =
-            valueRef.current.slice(0, linePos) +
-            generated.text +
-            valueRef.current.slice(linePos);
-        const adjustedCursor = linePos + generated.cursorPos;
-        cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
-        onChangeRef.current(newText);
-        dismissSlashMenu();
-    }, [tableColumns, tableRows, dismissSlashMenu]);
+    const handleInsertTable = useCallback(
+        (columns: number, rows: number) => {
+            const linePos = slashLinePosRef.current;
+            if (linePos === null) return;
+            const generated = generateTable(columns, rows);
+            const newText =
+                valueRef.current.slice(0, linePos) +
+                generated.text +
+                valueRef.current.slice(linePos);
+            const adjustedCursor = linePos + generated.cursorPos;
+            cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
+            onChangeRef.current(newText);
+            dismissSlashMenu();
+        },
+        [dismissSlashMenu],
+    );
 
     const handleSelectAlertType = useCallback(
         (type: string) => {
@@ -423,7 +422,7 @@ export function MarkdownEditor({
                         dismissSlashMenu();
                         return;
                     }
-                    // Let number inputs handle their own keys
+                    e.preventDefault();
                     return;
                 }
                 if (slashMenuView === "alert-form") {
@@ -700,10 +699,6 @@ export function MarkdownEditor({
                             style={{ top: slashMenuPos.top }}
                             view={slashMenuView}
                             onCommandSelect={handleSlashMenuItemSelect}
-                            tableColumns={tableColumns}
-                            tableRows={tableRows}
-                            onTableColumnsChange={setTableColumns}
-                            onTableRowsChange={setTableRows}
                             onInsertTable={handleInsertTable}
                             selectedAlertType={alertType}
                             onSelectAlertType={handleSelectAlertType}
