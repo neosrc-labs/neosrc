@@ -81,7 +81,6 @@ export function MarkdownEditor({
     const [slashMenuView, setSlashMenuView] = useState<
         "menu" | "table-form" | "alert-form" | null
     >(null);
-    const [slashMenuIndex, setSlashMenuIndex] = useState(0);
     const [slashMenuPos, setSlashMenuPos] = useState({ top: 80 });
     const [tableColumns, setTableColumns] = useState(3);
     const [tableRows, setTableRows] = useState(3);
@@ -128,7 +127,6 @@ export function MarkdownEditor({
 
     const dismissSlashMenu = useCallback(() => {
         setSlashMenuView(null);
-        setSlashMenuIndex(0);
         slashLinePosRef.current = null;
         setTableColumns(3);
         setTableRows(3);
@@ -149,12 +147,10 @@ export function MarkdownEditor({
         (itemId: string) => {
             if (itemId === "table") {
                 setSlashMenuView("table-form");
-                setSlashMenuIndex(0);
                 return;
             }
             if (itemId === "alert") {
                 setSlashMenuView("alert-form");
-                setSlashMenuIndex(0);
                 return;
             }
 
@@ -183,7 +179,7 @@ export function MarkdownEditor({
             const newText =
                 valueRef.current.slice(0, linePos) +
                 generated.text +
-                valueRef.current.slice(linePos + 1);
+                valueRef.current.slice(linePos);
             const adjustedCursor = linePos + generated.cursorPos;
             cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
             onChangeRef.current(newText);
@@ -199,7 +195,7 @@ export function MarkdownEditor({
         const newText =
             valueRef.current.slice(0, linePos) +
             generated.text +
-            valueRef.current.slice(linePos + 1);
+            valueRef.current.slice(linePos);
         const adjustedCursor = linePos + generated.cursorPos;
         cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
         onChangeRef.current(newText);
@@ -214,7 +210,7 @@ export function MarkdownEditor({
             const newText =
                 valueRef.current.slice(0, linePos) +
                 generated.text +
-                valueRef.current.slice(linePos + 1);
+                valueRef.current.slice(linePos);
             const adjustedCursor = linePos + generated.cursorPos;
             cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
             onChangeRef.current(newText);
@@ -225,7 +221,6 @@ export function MarkdownEditor({
 
     const handleSlashBackToMenu = useCallback(() => {
         setSlashMenuView("menu");
-        setSlashMenuIndex(0);
     }, []);
 
     const handleAutocompleteSelect = useCallback(
@@ -471,36 +466,12 @@ export function MarkdownEditor({
                     }
                     return;
                 }
-                if (e.key === "ArrowUp") {
-                    e.preventDefault();
-                    setSlashMenuIndex((i) => Math.max(0, i - 1));
-                    return;
-                }
-                if (e.key === "ArrowDown") {
-                    e.preventDefault();
-                    setSlashMenuIndex((i) => i + 1);
-                    return;
-                }
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    const menuItems = [
-                        "table",
-                        "alert",
-                        "details",
-                        "codeblock",
-                        "tasklist",
-                    ] as const;
-                    const itemId = menuItems[slashMenuIndex];
-                    if (itemId) {
-                        handleSlashMenuItemSelect(itemId);
-                    }
-                    return;
-                }
                 if (e.key === "Escape") {
                     e.preventDefault();
                     dismissSlashMenu();
                     return;
                 }
+                e.preventDefault();
                 return;
             }
 
@@ -539,9 +510,7 @@ export function MarkdownEditor({
             handleAutocompleteSelect,
             dismissAutocomplete,
             slashMenuView,
-            slashMenuIndex,
             dismissSlashMenu,
-            handleSlashMenuItemSelect,
             alertType,
             handleSelectAlertType,
             handleSlashBackToMenu,
@@ -730,20 +699,7 @@ export function MarkdownEditor({
                         <SlashCommandMenu
                             style={{ top: slashMenuPos.top }}
                             view={slashMenuView}
-                            selectedIndex={slashMenuIndex}
-                            onSelectItem={(index) => {
-                                const menuItems = [
-                                    "table",
-                                    "alert",
-                                    "details",
-                                    "codeblock",
-                                    "tasklist",
-                                ] as const;
-                                const itemId = menuItems[index];
-                                if (itemId) {
-                                    handleSlashMenuItemSelect(itemId);
-                                }
-                            }}
+                            onCommandSelect={handleSlashMenuItemSelect}
                             tableColumns={tableColumns}
                             tableRows={tableRows}
                             onTableColumnsChange={setTableColumns}
@@ -774,6 +730,10 @@ export function MarkdownEditor({
                             }, 100);
                         }}
                         onChange={(e) => {
+                            if (slashMenuView === "menu") {
+                                e.target.value = valueRef.current;
+                                return;
+                            }
                             const newValue = e.target.value;
                             const cursorPos = e.target.selectionStart;
                             onChangeRef.current(newValue);
@@ -815,9 +775,6 @@ export function MarkdownEditor({
                                     8 +
                                     (lineNumber + 1) * 20 -
                                     textarea.scrollTop;
-                                setSlashMenuPos({ top });
-                                setSlashMenuView("menu");
-                                setSlashMenuIndex(0);
                                 const textBeforeCursor = newValue.slice(
                                     0,
                                     cursorPos,
@@ -829,7 +786,17 @@ export function MarkdownEditor({
                                         (match.index ?? 0) +
                                         (match[0].startsWith("\n") ? 1 : 0);
                                     slashLinePosRef.current = slashPos;
+                                    const removedSlash =
+                                        newValue.slice(0, slashPos) +
+                                        newValue.slice(slashPos + 1);
+                                    onChangeRef.current(removedSlash);
+                                    cursorRef.current = {
+                                        start: slashPos,
+                                        end: slashPos,
+                                    };
                                 }
+                                setSlashMenuPos({ top });
+                                setSlashMenuView("menu");
                             } else if (
                                 slashResult === null &&
                                 slashMenuView !== null
