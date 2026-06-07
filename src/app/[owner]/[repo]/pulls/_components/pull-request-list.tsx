@@ -24,6 +24,7 @@ import {
     addQualifier,
     hasQualifier,
     removeQualifier,
+    replaceQualifier,
     splitQuery,
 } from "./search-utils";
 
@@ -323,11 +324,15 @@ export function PullRequestList({
                         repo={repo}
                         currentQuery={searchQuery}
                         onToggle={(key: string, value: string) => {
-                            if (hasQualifier(searchQuery, key, value)) {
-                                handleRemoveQualifier(key, value);
-                            } else {
-                                handleAddQualifier(key, value);
-                            }
+                            const newQuery = hasQualifier(
+                                searchQuery,
+                                key,
+                                value,
+                            )
+                                ? removeQualifier(searchQuery, key, value)
+                                : replaceQualifier(searchQuery, key, value);
+                            setSearchInput(newQuery);
+                            navigate({ q: newQuery || null, page: null });
                         }}
                     />
 
@@ -489,7 +494,7 @@ export function PullRequestList({
                                               "author",
                                               login,
                                           )
-                                        : addQualifier(
+                                        : replaceQualifier(
                                               searchQuery,
                                               "author",
                                               login,
@@ -511,7 +516,7 @@ export function PullRequestList({
                                               "assignee",
                                               login,
                                           )
-                                        : addQualifier(
+                                        : replaceQualifier(
                                               searchQuery,
                                               "assignee",
                                               login,
