@@ -1,6 +1,6 @@
 console.log("[Neosrc Popup] popup opened");
 
-const DEFAULT_NEOSRC_URL = "http://localhost:3000";
+const DEFAULT_NEOSRC_URL = "https://neosrc.dev";
 const DEFAULT_EXCLUDED_OWNERS = [];
 
 const toggle = document.getElementById("toggle");

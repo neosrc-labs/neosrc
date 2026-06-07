@@ -1,4 +1,4 @@
-const DEFAULT_NEOSRC_URL = "http://localhost:3000";
+const DEFAULT_NEOSRC_URL = "https://neosrc.dev";
 const DEFAULT_EXCLUDED_OWNERS = [];
 
 let neosrcUrl = DEFAULT_NEOSRC_URL;

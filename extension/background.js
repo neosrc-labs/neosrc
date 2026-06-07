@@ -1,7 +1,7 @@
 console.log("[Neosrc BG] service worker started");
 
 const RULE_ID = 1;
-const DEFAULT_NEOSRC_URL = "http://localhost:3000";
+const DEFAULT_NEOSRC_URL = "https://neosrc.dev";
 const DEFAULT_EXCLUDED_OWNERS = [];
 
 function escapeRe2(s) {

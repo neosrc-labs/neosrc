@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "Neosrc GitHub integration",
+    "name": "Neosrc Redirector",
     "version": "0.4.0",
-    "description": "Neosrc GitHub integration",
+    "description": "Neosrc Redirector",
     "host_permissions": ["https://github.com/*", "https://www.github.com/*"],
     "permissions": ["declarativeNetRequest", "storage"],
     "background": {
