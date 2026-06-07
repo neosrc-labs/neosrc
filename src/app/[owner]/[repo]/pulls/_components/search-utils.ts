@@ -103,6 +103,17 @@ export function splitQuery(query: string): QuerySegment[] {
     return segments;
 }
 
+export function replaceQualifier(
+    query: string,
+    key: string,
+    value: string,
+): string {
+    const parsed = parseQuery(query);
+    parsed.qualifiers = parsed.qualifiers.filter((q) => q.key !== key);
+    parsed.qualifiers.push({ key, value });
+    return formatQuery(parsed);
+}
+
 export function addQualifier(
     query: string,
     key: string,
