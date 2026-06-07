@@ -1,6 +1,8 @@
 import { GitMerge, GitPullRequest } from "lucide-react";
 import Link from "next/link";
+import { UserLink } from "~/components/user-link";
 import { cn } from "~/lib/utils";
+import { formatRelativeTime } from "~/utils";
 
 export interface PrRowData {
     id: number;
@@ -12,24 +14,6 @@ export interface PrRowData {
     labels: Array<{ id?: number; name: string; color: string }>;
     created_at: string;
     merged_at: string | null;
-}
-
-function relativeTime(date: string | Date): string {
-    const now = Date.now();
-    const diff = now - new Date(date).getTime();
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    const weeks = Math.floor(days / 7);
-    const months = Math.floor(days / 30);
-
-    if (seconds < 60) return "just now";
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    if (weeks < 5) return `${weeks}w ago`;
-    return `${months}mo ago`;
 }
 
 const STATUS_COLORS = {
@@ -71,10 +55,22 @@ export function PullRequestRow({
                         </span>
                     )}
                 </div>
-                <div className="mt-1 flex items-center gap-2 text-gray-600 text-sm dark:text-gray-400">
-                    <span>#{pr.number}</span>
-                    <span>by {pr.user?.login ?? "unknown"}</span>
-                    <span>{relativeTime(pr.created_at)}</span>
+                <div className="mt-1 flex items-center gap-1 text-gray-600 text-sm dark:text-gray-400">
+                    <span>#{pr.number} opened </span>
+                    <span>{formatRelativeTime(pr.created_at)}</span>
+                    {pr.user ? (
+                        <span className="flex items-center gap-1">
+                            by{" "}
+                            <UserLink
+                                actor={{
+                                    login: pr.user.login,
+                                    avatarUrl: pr.user.avatar_url,
+                                }}
+                            />
+                        </span>
+                    ) : (
+                        <span>by unknown</span>
+                    )}
                 </div>
                 {pr.labels && pr.labels.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
@@ -102,11 +98,12 @@ export function PullRequestRow({
                 )}
             </div>
             <div className="shrink-0">
-                {pr.user?.avatar_url && (
-                    <img
-                        src={pr.user.avatar_url}
-                        alt={pr.user.login ?? ""}
-                        className="size-5 rounded-full"
+                {pr.user && (
+                    <UserLink
+                        actor={{
+                            login: pr.user.login,
+                            avatarUrl: pr.user.avatar_url,
+                        }}
                     />
                 )}
             </div>
