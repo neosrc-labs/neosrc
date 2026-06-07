@@ -9,6 +9,7 @@ import {
     GitPullRequest,
     GitPullRequestClosed,
     ListOrdered,
+    Milestone,
     Tag,
     User,
     X,
@@ -344,6 +345,30 @@ export function PullRequestList({
                             </button>
                         )}
                     </div>
+
+                    <a
+                        href={`https://github.com/${owner}/${repo}/labels`}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                    >
+                        <Tag className="size-4" />
+                        Labels
+                    </a>
+
+                    <a
+                        href={`https://github.com/${owner}/${repo}/milestones`}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                    >
+                        <Milestone className="size-4" />
+                        Milestones
+                    </a>
+
+                    <a
+                        href={`https://github.com/${owner}/${repo}/compare`}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-green-600 bg-green-600 px-2.5 py-1.5 font-medium text-sm text-white transition-colors hover:bg-green-700 dark:border-green-500 dark:bg-green-600 dark:hover:bg-green-700"
+                    >
+                        <GitPullRequest className="size-4" />
+                        New Pull Request
+                    </a>
                 </div>
             </div>
 
