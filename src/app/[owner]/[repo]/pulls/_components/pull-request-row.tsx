@@ -102,7 +102,7 @@ export function PullRequestRow({
                     </div>
                 )}
             </div>
-            <div className="flex w-20 shrink-0 items-center justify-end gap-3">
+            <div className="flex w-20 shrink-0 items-center justify-center">
                 {pr.assignee ? (
                     <UserHoverCard login={pr.assignee.login}>
                         <button
@@ -125,8 +125,8 @@ export function PullRequestRow({
                     <span className="size-5" />
                 )}
             </div>
-            <div className="flex w-16 shrink-0 justify-end">
-                {pr.comments_count > 0 && (
+            <div className="flex w-16 shrink-0 items-center justify-end">
+                {pr.comments_count > 0 ? (
                     <a
                         href={`/${owner}/${repo}/pull/${pr.number}#issuecomment`}
                         className="flex items-center gap-1 text-gray-500 text-sm hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
@@ -134,6 +134,8 @@ export function PullRequestRow({
                         <MessageSquare className="size-4" />
                         <span>{pr.comments_count}</span>
                     </a>
+                ) : (
+                    <span className="size-4" />
                 )}
             </div>
         </div>
