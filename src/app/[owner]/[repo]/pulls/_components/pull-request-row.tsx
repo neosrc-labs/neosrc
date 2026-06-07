@@ -1,4 +1,10 @@
-import { GitMerge, GitPullRequest, MessageSquare } from "lucide-react";
+import {
+    GitMerge,
+    GitPullRequest,
+    GitPullRequestClosed,
+    GitPullRequestDraft,
+    MessageSquare,
+} from "lucide-react";
 import Link from "next/link";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { Label } from "~/components/ui/label";
@@ -20,10 +26,22 @@ export interface PrRowData {
     comments_count: number;
 }
 
-const STATUS_COLORS = {
-    open: "text-green-600 dark:text-green-500",
-    closed: "text-purple-600 dark:text-purple-500",
-    merged: "text-purple-600 dark:text-purple-500",
+type PrStatus = "draft" | "open" | "closed" | "merged";
+
+const STATUS_CONFIG: Record<
+    PrStatus,
+    { icon: typeof GitPullRequest; color: string }
+> = {
+    draft: {
+        icon: GitPullRequestDraft,
+        color: "text-gray-500 dark:text-gray-400",
+    },
+    open: { icon: GitPullRequest, color: "text-green-600 dark:text-green-500" },
+    closed: {
+        icon: GitPullRequestClosed,
+        color: "text-red-600 dark:text-red-500",
+    },
+    merged: { icon: GitMerge, color: "text-purple-600 dark:text-purple-500" },
 } as const;
 
 export function PullRequestRow({
@@ -38,14 +56,17 @@ export function PullRequestRow({
     onAssigneesFilter?: (login: string) => void;
 }) {
     const isMerged = pr.merged_at !== null && pr.merged_at !== undefined;
-    const status = isMerged ? "merged" : (pr.state as "open" | "closed");
-
-    const StatusIcon = status === "open" ? GitPullRequest : GitMerge;
+    const status: PrStatus = isMerged
+        ? "merged"
+        : pr.draft
+          ? "draft"
+          : (pr.state as "open" | "closed");
+    const { icon: StatusIcon, color } = STATUS_CONFIG[status];
 
     return (
         <div className="flex items-start gap-3 border-gray-200 border-b px-4 py-3 transition-colors hover:bg-gray-50 dark:border-zinc-800 dark:hover:bg-zinc-900/50">
             <div className="mt-0.5 shrink-0">
-                <StatusIcon className={cn("size-4", STATUS_COLORS[status])} />
+                <StatusIcon className={cn("size-4", color)} />
             </div>
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
