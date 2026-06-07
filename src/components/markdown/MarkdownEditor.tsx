@@ -667,29 +667,31 @@ export function MarkdownEditor({
             className={`relative rounded-lg border border-gray-300 bg-white dark:border-zinc-600 dark:bg-zinc-950 ${className}`}
             ref={containerRef}
         >
-            <div className="-mb-px flex flex-wrap items-center gap-1 rounded-t-lg border-gray-300 border-b bg-gray-50 px-3 dark:border-zinc-600 dark:bg-zinc-900">
-                <button
-                    className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
-                        mode === "write"
-                            ? "border-blue-500 text-blue-600"
-                            : "border-transparent text-gray-600 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-                    }`}
-                    onClick={() => setMode("write")}
-                    type="button"
-                >
-                    Write
-                </button>
-                <button
-                    className={`cursor-pointer border-b-2 px-1 py-2 font-medium text-sm ${
-                        mode === "preview"
-                            ? "border-blue-500 text-blue-600"
-                            : "border-transparent text-gray-600 hover:text-gray-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-                    }`}
-                    onClick={() => setMode("preview")}
-                    type="button"
-                >
-                    Preview
-                </button>
+            <div className="flex flex-wrap items-center gap-1 border-gray-300 border-b px-3 dark:border-zinc-600">
+                <span className="flex items-center gap-3">
+                    <button
+                        className={`cursor-pointer border-b-2 pt-2 pb-1.5 font-medium text-sm transition-colors ${
+                            mode === "write"
+                                ? "border-gray-900 text-gray-900 dark:border-zinc-100 dark:text-zinc-100"
+                                : "border-transparent text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                        }`}
+                        onClick={() => setMode("write")}
+                        type="button"
+                    >
+                        Write
+                    </button>
+                    <button
+                        className={`cursor-pointer border-b-2 pt-2 pb-1.5 font-medium text-sm transition-colors ${
+                            mode === "preview"
+                                ? "border-gray-900 text-gray-900 dark:border-zinc-100 dark:text-zinc-100"
+                                : "border-transparent text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                        }`}
+                        onClick={() => setMode("preview")}
+                        type="button"
+                    >
+                        Preview
+                    </button>
+                </span>
                 {mode === "write" && (
                     <span className="ml-auto flex items-center gap-0.5">
                         {toolbarGroups.map((group, gi) => (
