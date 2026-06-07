@@ -664,112 +664,82 @@ export function MarkdownEditor({
 
     return (
         <div
-            className={`relative rounded-lg border border-gray-300 bg-white dark:border-zinc-600 dark:bg-zinc-950 ${className}`}
+            className={`relative rounded-lg border border-gray-300 dark:border-zinc-600 ${className}`}
             ref={containerRef}
         >
-            <div className="flex flex-wrap items-center gap-1 border-gray-300 border-b px-3 dark:border-zinc-600">
-                <span className="flex items-center gap-3">
-                    <button
-                        className={`cursor-pointer border-b-2 pt-2 pb-1.5 font-medium text-sm transition-colors ${
-                            mode === "write"
-                                ? "border-gray-900 text-gray-900 dark:border-zinc-100 dark:text-zinc-100"
-                                : "border-transparent text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-                        }`}
-                        onClick={() => setMode("write")}
-                        type="button"
-                    >
-                        Write
-                    </button>
-                    <button
-                        className={`cursor-pointer border-b-2 pt-2 pb-1.5 font-medium text-sm transition-colors ${
-                            mode === "preview"
-                                ? "border-gray-900 text-gray-900 dark:border-zinc-100 dark:text-zinc-100"
-                                : "border-transparent text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-200"
-                        }`}
-                        onClick={() => setMode("preview")}
-                        type="button"
-                    >
-                        Preview
-                    </button>
-                </span>
-                {mode === "write" && (
-                    <span className="ml-auto flex items-center gap-0.5">
-                        {toolbarGroups.map((group, gi) => (
-                            <span
-                                className="flex items-center gap-0.5"
-                                // biome-ignore lint/suspicious/noArrayIndexKey: toolbar groups are static
-                                key={gi}
-                            >
-                                {gi > 0 && (
-                                    <span className="mx-1 w-px self-stretch bg-gray-300 dark:bg-zinc-600" />
-                                )}
-                                {group.map((btn) => {
-                                    const Icon = btn.icon;
-                                    return (
-                                        <button
-                                            className="inline-flex cursor-pointer items-center justify-center rounded-md p-1 text-gray-600 hover:bg-gray-200 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
-                                            disabled={disabled}
-                                            key={btn.key}
-                                            onMouseDown={(e) => {
-                                                const textarea =
-                                                    textareaRef.current;
-                                                if (textarea) {
-                                                    savedSelectionRef.current =
-                                                        {
-                                                            start: textarea.selectionStart,
-                                                            end: textarea.selectionEnd,
-                                                        };
-                                                }
-                                                e.preventDefault();
-                                            }}
-                                            onClick={btn.onClick}
-                                            title={btn.title}
-                                            type="button"
-                                        >
-                                            <Icon className="size-4" />
-                                        </button>
-                                    );
-                                })}
-                            </span>
-                        ))}
+            <div className="overflow-hidden rounded-lg">
+                <div className="flex flex-wrap items-center gap-1 border-gray-300 border-b bg-gray-50 px-3 dark:border-zinc-600 dark:bg-zinc-900">
+                    <span className="flex items-center gap-3">
+                        <button
+                            className={`cursor-pointer border-b-2 pt-2 pb-1.5 font-medium text-sm transition-colors ${
+                                mode === "write"
+                                    ? "border-gray-900 text-gray-900 dark:border-zinc-100 dark:text-zinc-100"
+                                    : "border-transparent text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                            }`}
+                            onClick={() => setMode("write")}
+                            type="button"
+                        >
+                            Write
+                        </button>
+                        <button
+                            className={`cursor-pointer border-b-2 pt-2 pb-1.5 font-medium text-sm transition-colors ${
+                                mode === "preview"
+                                    ? "border-gray-900 text-gray-900 dark:border-zinc-100 dark:text-zinc-100"
+                                    : "border-transparent text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                            }`}
+                            onClick={() => setMode("preview")}
+                            type="button"
+                        >
+                            Preview
+                        </button>
                     </span>
-                )}
-            </div>
-
-            {mode === "write" ? (
-                <>
-                    {autocompleteQuery !== null &&
-                        owner &&
-                        repo &&
-                        !issuesLoading &&
-                        autocompleteIssues.length > 0 && (
-                            <IssueAutocomplete
-                                issues={autocompleteIssues}
-                                loading={issuesLoading}
-                                error={
-                                    issuesError
-                                        ? (issuesErrorObj?.message ??
-                                          "Unknown error")
-                                        : null
-                                }
-                                selectedIndex={autocompleteIndex}
-                                onSelect={handleAutocompleteSelect}
-                                style={{ top: dropdownTop }}
-                            />
-                        )}
-                    {slashMenuView !== null && (
-                        <SlashCommandMenu
-                            style={slashMenuPos}
-                            view={slashMenuView}
-                            onCommandSelect={handleSlashMenuItemSelect}
-                            onInsertTable={handleInsertTable}
-                            selectedAlertType={alertType}
-                            onSelectAlertType={handleSelectAlertType}
-                            onBackToMenu={handleSlashBackToMenu}
-                        />
+                    {mode === "write" && (
+                        <span className="ml-auto flex items-center gap-0.5">
+                            {toolbarGroups.map((group, gi) => (
+                                <span
+                                    className="flex items-center gap-0.5"
+                                    // biome-ignore lint/suspicious/noArrayIndexKey: toolbar groups are static
+                                    key={gi}
+                                >
+                                    {gi > 0 && (
+                                        <span className="mx-1 w-px self-stretch bg-gray-300 dark:bg-zinc-600" />
+                                    )}
+                                    {group.map((btn) => {
+                                        const Icon = btn.icon;
+                                        return (
+                                            <button
+                                                className="inline-flex cursor-pointer items-center justify-center rounded-md p-1 text-gray-600 hover:bg-gray-200 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+                                                disabled={disabled}
+                                                key={btn.key}
+                                                onMouseDown={(e) => {
+                                                    const textarea =
+                                                        textareaRef.current;
+                                                    if (textarea) {
+                                                        savedSelectionRef.current =
+                                                            {
+                                                                start: textarea.selectionStart,
+                                                                end: textarea.selectionEnd,
+                                                            };
+                                                    }
+                                                    e.preventDefault();
+                                                }}
+                                                onClick={btn.onClick}
+                                                title={btn.title}
+                                                type="button"
+                                            >
+                                                <Icon className="size-4" />
+                                            </button>
+                                        );
+                                    })}
+                                </span>
+                            ))}
+                        </span>
                     )}
+                </div>
+
+                {mode === "write" ? (
                     <textarea
-                        className="w-full resize-y rounded-b-lg border-0 px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder-zinc-500 disabled:dark:bg-zinc-800"
+                        className="w-full resize-y border-0 bg-white px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder-zinc-500 disabled:dark:bg-zinc-800"
                         disabled={disabled}
                         onBlur={(e) => {
                             savedSelectionRef.current = {
@@ -911,61 +881,93 @@ export function MarkdownEditor({
                         style={{ minHeight }}
                         value={value}
                     />
-                </>
-            ) : (
-                <div
-                    className="prose prose-sm dark:prose-invert max-w-none px-3 py-2"
-                    style={{ minHeight }}
-                >
-                    <MarkdownRenderer
-                        content={value}
-                        owner={owner}
-                        repo={repo}
-                    />
-                </div>
-            )}
+                ) : (
+                    <div
+                        className="prose prose-sm dark:prose-invert max-w-none bg-white px-3 py-2 dark:bg-zinc-950"
+                        style={{ minHeight }}
+                    >
+                        <MarkdownRenderer
+                            content={value}
+                            owner={owner}
+                            repo={repo}
+                        />
+                    </div>
+                )}
 
-            {(footerActions || onCancel) && (
-                <div className="flex items-center justify-between gap-2 border-gray-300 border-t px-3 py-2 dark:border-zinc-600">
-                    {onCancel ? (
-                        <button
-                            className="cursor-pointer rounded-md border border-gray-300 px-4 py-1.5 font-medium text-gray-600 text-sm transition-colors hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                            disabled={disabled}
-                            onClick={onCancel}
-                            type="button"
-                        >
-                            {cancelLabel}
-                        </button>
-                    ) : (
-                        <div />
-                    )}
-                    {footerActions && (
-                        <div className="flex items-center gap-2">
-                            {footerActions.map((action) => (
-                                <button
-                                    className={`cursor-pointer rounded-md px-4 py-1.5 font-medium text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                                        action.variant === "approve"
-                                            ? "bg-[#2da44e] text-white hover:bg-[#218838]"
-                                            : action.variant === "danger"
-                                              ? "bg-[#cf222e] text-white hover:bg-[#b91c23]"
-                                              : "bg-neutral-200 text-black hover:bg-neutral-300"
-                                    }`}
-                                    disabled={
-                                        disabled ||
-                                        (typeof action.disabled === "function"
-                                            ? action.disabled(value)
-                                            : action.disabled)
-                                    }
-                                    key={action.label}
-                                    onClick={action.onClick}
-                                    type="button"
-                                >
-                                    {action.label}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                {(footerActions || onCancel) && (
+                    <div className="flex items-center justify-between gap-2 border-gray-300 border-t bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
+                        {onCancel ? (
+                            <button
+                                className="cursor-pointer rounded-md border border-gray-300 px-4 py-1.5 font-medium text-gray-600 text-sm transition-colors hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                                disabled={disabled}
+                                onClick={onCancel}
+                                type="button"
+                            >
+                                {cancelLabel}
+                            </button>
+                        ) : (
+                            <div />
+                        )}
+                        {footerActions && (
+                            <div className="flex items-center gap-2">
+                                {footerActions.map((action) => (
+                                    <button
+                                        className={`cursor-pointer rounded-md px-4 py-1.5 font-medium text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                            action.variant === "approve"
+                                                ? "bg-[#2da44e] text-white hover:bg-[#218838]"
+                                                : action.variant === "danger"
+                                                  ? "bg-[#cf222e] text-white hover:bg-[#b91c23]"
+                                                  : "bg-neutral-200 text-black hover:bg-neutral-300"
+                                        }`}
+                                        disabled={
+                                            disabled ||
+                                            (typeof action.disabled ===
+                                            "function"
+                                                ? action.disabled(value)
+                                                : action.disabled)
+                                        }
+                                        key={action.label}
+                                        onClick={action.onClick}
+                                        type="button"
+                                    >
+                                        {action.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {mode === "write" &&
+                autocompleteQuery !== null &&
+                owner &&
+                repo &&
+                !issuesLoading &&
+                autocompleteIssues.length > 0 && (
+                    <IssueAutocomplete
+                        issues={autocompleteIssues}
+                        loading={issuesLoading}
+                        error={
+                            issuesError
+                                ? (issuesErrorObj?.message ?? "Unknown error")
+                                : null
+                        }
+                        selectedIndex={autocompleteIndex}
+                        onSelect={handleAutocompleteSelect}
+                        style={{ top: dropdownTop }}
+                    />
+                )}
+            {mode === "write" && slashMenuView !== null && (
+                <SlashCommandMenu
+                    style={slashMenuPos}
+                    view={slashMenuView}
+                    onCommandSelect={handleSlashMenuItemSelect}
+                    onInsertTable={handleInsertTable}
+                    selectedAlertType={alertType}
+                    onSelectAlertType={handleSelectAlertType}
+                    onBackToMenu={handleSlashBackToMenu}
+                />
             )}
         </div>
     );
