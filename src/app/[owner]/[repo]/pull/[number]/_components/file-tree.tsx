@@ -199,14 +199,17 @@ function FileTreeNode({
                     src={`/material-icons/${iconName}.svg`}
                 />
                 <span className="flex-1 truncate">{node.name}</span>
-                {node.additions ? (
-                    <span className="font-medium text-green-600 text-xs">
-                        +{node.additions}
+                {node.status === "added" ? (
+                    <span className="flex h-3 w-3 flex-shrink-0 items-center justify-center rounded border border-green-500">
+                        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                     </span>
-                ) : null}
-                {node.deletions ? (
-                    <span className="font-medium text-red-600 text-xs">
-                        -{node.deletions}
+                ) : node.status === "modified" ? (
+                    <span className="flex h-3 w-3 flex-shrink-0 items-center justify-center rounded border border-orange-500">
+                        <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                    </span>
+                ) : node.status === "removed" ? (
+                    <span className="flex h-3 w-3 flex-shrink-0 items-center justify-center rounded border border-red-500">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                     </span>
                 ) : null}
             </a>
