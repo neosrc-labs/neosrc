@@ -856,6 +856,7 @@ export interface GqlPrSearchItem {
     labels: { nodes: Array<{ id: string; name: string; color: string }> };
     assignees: { nodes: Array<{ login: string; avatarUrl: string }> };
     comments: { totalCount: number };
+    reviewDecision: string | null;
     commits: {
         nodes: Array<{
             commit: {
@@ -924,6 +925,7 @@ query SearchPRs($searchQuery: String!, $first: Int!, $after: String) {
           nodes { login avatarUrl }
         }
         comments { totalCount }
+        reviewDecision
         commits(last: 1) {
           nodes {
             commit {
