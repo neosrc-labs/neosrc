@@ -128,6 +128,66 @@ export function applyCodeBlockFormat(
     };
 }
 
+export function generateTable(
+    columns: number,
+    rows: number,
+): { text: string; cursorPos: number } {
+    const headers = Array.from(
+        { length: columns },
+        (_, i) => `Column ${i + 1}`,
+    );
+    const separator = Array.from({ length: columns }, () => "---");
+    const body = Array.from({ length: rows }, () =>
+        Array.from({ length: columns }, (_, j) => (j === 0 ? "" : "Cell")),
+    );
+
+    const headerLine = `| ${headers.join(" | ")} |`;
+    const separatorLine = `| ${separator.join(" | ")} |`;
+    const bodyLines = body.map((row) => `| ${row.join(" | ")} |`);
+
+    const text = [headerLine, separatorLine, ...bodyLines].join("\n");
+    // Cursor ends up in the first data cell (first row, first column after header)
+    const cursorPos = headerLine.length + separatorLine.length + 3;
+    return { text, cursorPos };
+}
+
+export function generateAlert(type: string): {
+    text: string;
+    cursorPos: number;
+} {
+    const text = `> [!${type}]\n> `;
+    return { text, cursorPos: text.length };
+}
+
+export function generateDetails(): { text: string; cursorPos: number } {
+    const text = `<details>\n<summary>Click to expand</summary>\n\n\n</details>`;
+    return { text, cursorPos: text.length - 10 };
+}
+
+export function generateCodeBlock(language?: string): {
+    text: string;
+    cursorPos: number;
+} {
+    const lang = language ?? "";
+    if (lang) {
+        const text = `\`\`\`${lang}\n\n\`\`\``;
+        return { text, cursorPos: text.length - 3 };
+    }
+    const text = "```\n\n```";
+    return { text, cursorPos: text.length - 3 };
+}
+
+export function generateTaskList(items?: number): {
+    text: string;
+    cursorPos: number;
+} {
+    const count = items ?? 3;
+    const text = Array.from({ length: count }, (_, i) =>
+        i === 0 ? "- [ ] " : `\n- [ ] `,
+    ).join("");
+    return { text, cursorPos: 6 };
+}
+
 export function applyListFormat(
     text: string,
     start: number,

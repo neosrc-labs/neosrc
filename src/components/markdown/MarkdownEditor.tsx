@@ -23,7 +23,13 @@ import {
     applyInlineFormat,
     applyListFormat,
     findLineStart,
+    generateAlert,
+    generateCodeBlock,
+    generateDetails,
+    generateTable,
+    generateTaskList,
 } from "./markdown-utils";
+import { SlashCommandMenu } from "./slash-command-menu";
 
 export interface FooterAction {
     label: string;
@@ -72,6 +78,15 @@ export function MarkdownEditor({
     const containerRef = useRef<HTMLDivElement>(null);
     const savedSelectionRef = useRef({ start: 0, end: 0 });
     const [dropdownTop, setDropdownTop] = useState(80);
+    const [slashMenuView, setSlashMenuView] = useState<
+        "menu" | "table-form" | "alert-form" | null
+    >(null);
+    const [slashMenuIndex, setSlashMenuIndex] = useState(0);
+    const [slashMenuPos, setSlashMenuPos] = useState({ top: 80 });
+    const [tableColumns, setTableColumns] = useState(3);
+    const [tableRows, setTableRows] = useState(3);
+    const [alertType, setAlertType] = useState("Note");
+    const slashLinePosRef = useRef<number | null>(null);
 
     valueRef.current = value;
     onChangeRef.current = onChange;
@@ -109,6 +124,108 @@ export function MarkdownEditor({
     const dismissAutocomplete = useCallback(() => {
         setAutocompleteQuery(null);
         setAutocompleteIndex(0);
+    }, []);
+
+    const dismissSlashMenu = useCallback(() => {
+        setSlashMenuView(null);
+        setSlashMenuIndex(0);
+        slashLinePosRef.current = null;
+        setTableColumns(3);
+        setTableRows(3);
+        setAlertType("Note");
+    }, []);
+
+    function detectSlashCommand(
+        text: string,
+        cursorPos: number,
+    ): "menu" | null {
+        const textBeforeCursor = text.slice(0, cursorPos);
+        const match = textBeforeCursor.match(/(?:\n|^)\/(\w*)$/);
+        if (!match) return null;
+        return "menu";
+    }
+
+    const handleSlashMenuItemSelect = useCallback(
+        (itemId: string) => {
+            if (itemId === "table") {
+                setSlashMenuView("table-form");
+                setSlashMenuIndex(0);
+                return;
+            }
+            if (itemId === "alert") {
+                setSlashMenuView("alert-form");
+                setSlashMenuIndex(0);
+                return;
+            }
+
+            const linePos = slashLinePosRef.current;
+            if (linePos === null) return;
+
+            let generated: { text: string; cursorPos: number };
+            switch (itemId) {
+                case "details": {
+                    generated = generateDetails();
+                    break;
+                }
+                case "codeblock": {
+                    generated = generateCodeBlock();
+                    break;
+                }
+                case "tasklist": {
+                    generated = generateTaskList();
+                    break;
+                }
+                default: {
+                    return;
+                }
+            }
+
+            const newText =
+                valueRef.current.slice(0, linePos) +
+                generated.text +
+                valueRef.current.slice(linePos + 1);
+            const adjustedCursor = linePos + generated.cursorPos;
+            cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
+            onChangeRef.current(newText);
+            dismissSlashMenu();
+        },
+        [dismissSlashMenu],
+    );
+
+    const handleInsertTable = useCallback(() => {
+        const linePos = slashLinePosRef.current;
+        if (linePos === null) return;
+        const generated = generateTable(tableColumns, tableRows);
+        const newText =
+            valueRef.current.slice(0, linePos) +
+            generated.text +
+            valueRef.current.slice(linePos + 1);
+        const adjustedCursor = linePos + generated.cursorPos;
+        cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
+        onChangeRef.current(newText);
+        dismissSlashMenu();
+    }, [tableColumns, tableRows, dismissSlashMenu]);
+
+    const handleSelectAlertType = useCallback(
+        (type: string) => {
+            const linePos = slashLinePosRef.current;
+            if (linePos === null) return;
+            const generated = generateAlert(type);
+            const newText =
+                valueRef.current.slice(0, linePos) +
+                generated.text +
+                valueRef.current.slice(linePos + 1);
+            const adjustedCursor = linePos + generated.cursorPos;
+            cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
+            onChangeRef.current(newText);
+            dismissSlashMenu();
+        },
+        [dismissSlashMenu],
+    );
+
+    const handleSlashBackToMenu = useCallback(() => {
+        setSlashMenuView("menu");
+        setSlashMenuIndex(0);
     }, []);
 
     const handleAutocompleteSelect = useCallback(
@@ -304,6 +421,89 @@ export function MarkdownEditor({
                 }
             }
 
+            if (slashMenuView !== null) {
+                if (slashMenuView === "table-form") {
+                    if (e.key === "Escape") {
+                        e.preventDefault();
+                        dismissSlashMenu();
+                        return;
+                    }
+                    // Let number inputs handle their own keys
+                    return;
+                }
+                if (slashMenuView === "alert-form") {
+                    const ALERT_TYPE_LIST = [
+                        "Note",
+                        "Tip",
+                        "Important",
+                        "Warning",
+                        "Caution",
+                    ] as const;
+                    if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        const idx = ALERT_TYPE_LIST.indexOf(
+                            alertType as (typeof ALERT_TYPE_LIST)[number],
+                        );
+                        const prev =
+                            idx <= 0 ? ALERT_TYPE_LIST.length - 1 : idx - 1;
+                        setAlertType(ALERT_TYPE_LIST[prev] ?? "Note");
+                        return;
+                    }
+                    if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        const idx = ALERT_TYPE_LIST.indexOf(
+                            alertType as (typeof ALERT_TYPE_LIST)[number],
+                        );
+                        const next =
+                            idx >= ALERT_TYPE_LIST.length - 1 ? 0 : idx + 1;
+                        setAlertType(ALERT_TYPE_LIST[next] ?? "Note");
+                        return;
+                    }
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSelectAlertType(alertType);
+                        return;
+                    }
+                    if (e.key === "Escape") {
+                        e.preventDefault();
+                        handleSlashBackToMenu();
+                        return;
+                    }
+                    return;
+                }
+                if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setSlashMenuIndex((i) => Math.max(0, i - 1));
+                    return;
+                }
+                if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setSlashMenuIndex((i) => i + 1);
+                    return;
+                }
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    const menuItems = [
+                        "table",
+                        "alert",
+                        "details",
+                        "codeblock",
+                        "tasklist",
+                    ] as const;
+                    const itemId = menuItems[slashMenuIndex];
+                    if (itemId) {
+                        handleSlashMenuItemSelect(itemId);
+                    }
+                    return;
+                }
+                if (e.key === "Escape") {
+                    e.preventDefault();
+                    dismissSlashMenu();
+                    return;
+                }
+                return;
+            }
+
             if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "b") {
                 e.preventDefault();
                 handleBold();
@@ -338,6 +538,13 @@ export function MarkdownEditor({
             autocompleteIndex,
             handleAutocompleteSelect,
             dismissAutocomplete,
+            slashMenuView,
+            slashMenuIndex,
+            dismissSlashMenu,
+            handleSlashMenuItemSelect,
+            alertType,
+            handleSelectAlertType,
+            handleSlashBackToMenu,
             handleBold,
             handleItalic,
             handleLink,
@@ -519,6 +726,34 @@ export function MarkdownEditor({
                                 style={{ top: dropdownTop }}
                             />
                         )}
+                    {slashMenuView !== null && (
+                        <SlashCommandMenu
+                            style={{ top: slashMenuPos.top }}
+                            view={slashMenuView}
+                            selectedIndex={slashMenuIndex}
+                            onSelectItem={(index) => {
+                                const menuItems = [
+                                    "table",
+                                    "alert",
+                                    "details",
+                                    "codeblock",
+                                    "tasklist",
+                                ] as const;
+                                const itemId = menuItems[index];
+                                if (itemId) {
+                                    handleSlashMenuItemSelect(itemId);
+                                }
+                            }}
+                            tableColumns={tableColumns}
+                            tableRows={tableRows}
+                            onTableColumnsChange={setTableColumns}
+                            onTableRowsChange={setTableRows}
+                            onInsertTable={handleInsertTable}
+                            selectedAlertType={alertType}
+                            onSelectAlertType={handleSelectAlertType}
+                            onBackToMenu={handleSlashBackToMenu}
+                        />
+                    )}
                     <textarea
                         className="w-full resize-y rounded-b-lg border-0 px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder-zinc-500 disabled:dark:bg-zinc-800"
                         disabled={disabled}
@@ -535,6 +770,7 @@ export function MarkdownEditor({
                                 )
                                     return;
                                 dismissAutocomplete();
+                                dismissSlashMenu();
                             }, 100);
                         }}
                         onChange={(e) => {
@@ -561,6 +797,45 @@ export function MarkdownEditor({
                                     setDropdownTop(top);
                                 }
                             }
+
+                            const slashResult = detectSlashCommand(
+                                newValue,
+                                cursorPos,
+                            );
+                            if (
+                                slashResult === "menu" &&
+                                slashMenuView === null
+                            ) {
+                                const textarea = e.target;
+                                const lineNumber =
+                                    newValue.slice(0, cursorPos).split("\n")
+                                        .length - 1;
+                                const top =
+                                    textarea.offsetTop +
+                                    8 +
+                                    (lineNumber + 1) * 20 -
+                                    textarea.scrollTop;
+                                setSlashMenuPos({ top });
+                                setSlashMenuView("menu");
+                                setSlashMenuIndex(0);
+                                const textBeforeCursor = newValue.slice(
+                                    0,
+                                    cursorPos,
+                                );
+                                const match =
+                                    textBeforeCursor.match(/(?:\n|^)\/(\w*)$/);
+                                if (match) {
+                                    const slashPos =
+                                        (match.index ?? 0) +
+                                        (match[0].startsWith("\n") ? 1 : 0);
+                                    slashLinePosRef.current = slashPos;
+                                }
+                            } else if (
+                                slashResult === null &&
+                                slashMenuView !== null
+                            ) {
+                                dismissSlashMenu();
+                            }
                         }}
                         onKeyDown={handleKeyDown}
                         onKeyUp={(e) => {
@@ -581,6 +856,27 @@ export function MarkdownEditor({
                                     );
                                     if (q === null) {
                                         dismissAutocomplete();
+                                    }
+                                }
+                            }
+                            if (
+                                slashMenuView !== null &&
+                                [
+                                    "ArrowLeft",
+                                    "ArrowRight",
+                                    "Home",
+                                    "End",
+                                    "Backspace",
+                                ].includes(e.key)
+                            ) {
+                                const textarea = textareaRef.current;
+                                if (textarea) {
+                                    const result = detectSlashCommand(
+                                        textarea.value,
+                                        textarea.selectionStart,
+                                    );
+                                    if (result === null) {
+                                        dismissSlashMenu();
                                     }
                                 }
                             }
