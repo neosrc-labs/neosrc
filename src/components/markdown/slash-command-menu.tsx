@@ -62,6 +62,7 @@ interface SlashCommandMenuProps {
     selectedAlertType: string;
     onSelectAlertType: (type: string) => void;
     onBackToMenu: () => void;
+    onClose: () => void;
 }
 
 export function SlashCommandMenu({
@@ -72,6 +73,7 @@ export function SlashCommandMenu({
     selectedAlertType,
     onSelectAlertType,
     onBackToMenu,
+    onClose,
 }: SlashCommandMenuProps) {
     const listRef = useRef<HTMLUListElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -131,6 +133,9 @@ export function SlashCommandMenu({
             if (item) {
                 onCommandSelect(item.id);
             }
+        } else if (e.key === "Escape") {
+            e.preventDefault();
+            onClose();
         }
     }
 
@@ -171,6 +176,9 @@ export function SlashCommandMenu({
                             } else if (e.key === "Enter") {
                                 e.preventDefault();
                                 onInsertTable(gridCol, gridRow);
+                            } else if (e.key === "Escape") {
+                                e.preventDefault();
+                                onClose();
                             }
                         }}
                         // biome-ignore lint/a11y/noNoninteractiveTabindex: grid needs keyboard nav
@@ -218,7 +226,17 @@ export function SlashCommandMenu({
 
     if (view === "alert-form") {
         return (
-            <div className={baseStyle} data-autocomplete="true" style={style}>
+            <div
+                className={baseStyle}
+                data-autocomplete="true"
+                onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                        e.preventDefault();
+                        onClose();
+                    }
+                }}
+                style={style}
+            >
                 <div className="px-3 py-2 font-medium text-gray-700 text-sm dark:text-zinc-200">
                     Choose alert type
                 </div>
@@ -252,12 +270,7 @@ export function SlashCommandMenu({
     }
 
     return (
-        <div
-            className={baseStyle}
-            data-autocomplete="true"
-            onKeyDown={handleMenuKeyDown}
-            style={style}
-        >
+        <div className={baseStyle} data-autocomplete="true" style={style}>
             <div className="relative border-gray-200 border-b dark:border-zinc-700">
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
                 <input

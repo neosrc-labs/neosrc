@@ -130,8 +130,13 @@ export function MarkdownEditor({
 
     const dismissSlashMenu = useCallback(() => {
         setSlashMenuView(null);
+        const pos = slashLinePosRef.current;
         slashLinePosRef.current = null;
         setAlertType("Note");
+        if (pos !== null) {
+            cursorRef.current = { start: pos, end: pos };
+        }
+        textareaRef.current?.focus();
     }, []);
 
     function detectSlashCommand(
@@ -269,14 +274,14 @@ export function MarkdownEditor({
         [dismissAutocomplete],
     );
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: need to re-run after value changes to restore cursor
+    // biome-ignore lint/correctness/useExhaustiveDependencies: need to re-run after value/menu changes to restore cursor
     useEffect(() => {
         if (cursorRef.current && textareaRef.current) {
             const { start, end } = cursorRef.current;
             textareaRef.current.setSelectionRange(start, end);
             cursorRef.current = null;
         }
-    }, [value]);
+    }, [value, slashMenuView]);
 
     // biome-ignore lint/correctness/useExhaustiveDependencies: need to re-run after value changes to auto-resize
     useEffect(() => {
@@ -490,7 +495,7 @@ export function MarkdownEditor({
                     }
                     if (e.key === "Escape") {
                         e.preventDefault();
-                        handleSlashBackToMenu();
+                        dismissSlashMenu();
                         return;
                     }
                     return;
@@ -542,7 +547,6 @@ export function MarkdownEditor({
             dismissSlashMenu,
             alertType,
             handleSelectAlertType,
-            handleSlashBackToMenu,
             handleBold,
             handleItalic,
             handleLink,
@@ -823,7 +827,7 @@ export function MarkdownEditor({
                                         end: slashPos,
                                     };
                                 }
-                                setSlashMenuPos({ top, right: 0 });
+                                setSlashMenuPos({ top, left: 0 });
                                 setSlashMenuView("menu");
                             } else if (
                                 slashResult === null &&
@@ -967,6 +971,7 @@ export function MarkdownEditor({
                     selectedAlertType={alertType}
                     onSelectAlertType={handleSelectAlertType}
                     onBackToMenu={handleSlashBackToMenu}
+                    onClose={dismissSlashMenu}
                 />
             )}
         </div>
