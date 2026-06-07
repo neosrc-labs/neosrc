@@ -206,11 +206,12 @@ export function FilesSection({
                             <div
                                 className="h-full rounded-full bg-blue-400 transition-all"
                                 style={{
-                                    width: `${allFiles.length > 0
+                                    width: `${
+                                        allFiles.length > 0
                                             ? (viewedCount / allFiles.length) *
-                                            100
+                                              100
                                             : 0
-                                        }%`,
+                                    }%`,
                                 }}
                             />
                         </div>
