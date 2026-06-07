@@ -257,6 +257,15 @@ export function MarkdownEditor({
         }
     }, [value]);
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: need to re-run after value changes to auto-resize
+    useEffect(() => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+            textarea.style.height = "auto";
+            textarea.style.height = `${textarea.scrollHeight}px`;
+        }
+    }, [value]);
+
     const applyFormatting = useCallback(
         (
             formatter: (
