@@ -45,3 +45,12 @@ html {
     --tw-prose-th-borders: #4b5563;
     --tw-prose-td-borders: #374151;
 }
+
+.prose th,
+.prose td {
+    padding: 0.5rem 0.75rem;
+}
+
+.prose tbody tr:nth-child(even) {
+    background: var(--color-surface-secondary);
+}
