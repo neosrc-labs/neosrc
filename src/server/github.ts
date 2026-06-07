@@ -42,6 +42,10 @@ export function createOctokit(accessToken: string) {
     });
 }
 
+export type PullsListResponseData =
+    RestEndpointMethodTypes["pulls"]["list"]["response"]["data"];
+export type PullRequestData = PullsListResponseData[number];
+
 export type UsersGetByUsernameResponseData =
     RestEndpointMethodTypes["users"]["getByUsername"]["response"]["data"];
 
@@ -105,6 +109,30 @@ export async function getCachedPullRequest(
         },
     );
 }
+
+export const listPullRequests = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        state: "open" | "closed" | "all" = "open",
+        page: number = 1,
+        perPage: number = 30,
+    ) => {
+        const octokit = createOctokit(accessToken);
+        const response = await octokit.pulls.list({
+            owner,
+            repo,
+            state,
+            page,
+            per_page: perPage,
+        });
+        return {
+            pulls: response.data,
+            hasNext: response.data.length >= perPage,
+        };
+    },
+);
 
 export const getPullRequestCommits = cache(
     async (

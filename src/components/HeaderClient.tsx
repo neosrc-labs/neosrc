@@ -58,6 +58,7 @@ export function HeaderClient({
 }: HeaderClientProps) {
     const pathname = usePathname();
     const prMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
+    const pullsMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/pulls/);
     const repoMatch = pathname.match(/^\/([^/]+)\/([^/]+)/);
     const owner = repoMatch?.[1];
     const repo = repoMatch?.[2];
@@ -92,12 +93,14 @@ export function HeaderClient({
 
         const isPR = !!prMatch;
 
+        const isPulls = !!pullsMatch;
+
         const allTabs: Tab[] = [
             {
                 label: "Code",
                 path: `https://github.com/${owner}/${repo}`,
                 show: true,
-                isActive: !isPR,
+                isActive: !isPR && !isPulls,
                 icon: Code2,
             },
             {
@@ -110,9 +113,9 @@ export function HeaderClient({
             },
             {
                 label: "Pull Requests",
-                path: `https://github.com/${owner}/${repo}/pulls`,
+                path: `/${owner}/${repo}/pulls`,
                 show: true,
-                isActive: isPR,
+                isActive: isPR || isPulls,
                 icon: GitPullRequest,
                 count: repoData.openPullRequestsCount,
             },
@@ -147,7 +150,7 @@ export function HeaderClient({
         ];
 
         return allTabs.filter((t) => t.show);
-    }, [repoData, owner, repo, prMatch]);
+    }, [repoData, owner, repo, prMatch, pullsMatch]);
 
     return (
         <>

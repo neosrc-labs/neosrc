@@ -13,6 +13,7 @@ import {
     getPullRequestReviews,
     listLabelsForRepo,
     listMilestonesForRepo,
+    listPullRequests,
     listRepoAssignees,
     markPullRequestAsDraft,
     markPullRequestAsReady,
@@ -584,6 +585,30 @@ export const pullsRouter = createTRPCRouter({
             );
 
             return { success: true as const };
+        }),
+
+    list: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                state: z.enum(["open", "closed", "all"]).default("open"),
+                page: z.number().optional(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            return listPullRequests(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.state,
+                input.page,
+            );
         }),
 
     listReviews: protectedProcedure
