@@ -1,6 +1,5 @@
 "use client";
 
-import { User } from "lucide-react";
 import {
     forwardRef,
     useCallback,
@@ -14,11 +13,12 @@ import { Label } from "~/components/ui/label";
 import { api } from "~/trpc/react";
 
 interface AutocompleteMatch {
-    key: "author" | "label" | "assignee";
+    key: "author" | "label" | "assignee" | "sort" | "review" | "status";
     value: string;
 }
 
-const QUALIFIER_RE = /(author:|label:|assignee:)([\w-]*)$/;
+const QUALIFIER_RE =
+    /(author:|label:|assignee:|sort:|review:|status:)([\w-]*)$/;
 
 export function detectQualifier(
     text: string,
@@ -65,6 +65,29 @@ interface Suggestion {
 export interface SearchAutocompleteHandle {
     handleKeyDown: (e: React.KeyboardEvent) => boolean;
 }
+
+const STATIC_OPTIONS: Record<string, { label: string; subtitle?: string }[]> = {
+    sort: [
+        { label: "created-desc", subtitle: "Newest" },
+        { label: "created-asc", subtitle: "Oldest" },
+        { label: "updated-desc", subtitle: "Recently updated" },
+        { label: "comments-desc", subtitle: "Most commented" },
+    ],
+    review: [
+        { label: "none", subtitle: "Not reviewed" },
+        { label: "required", subtitle: "Review required" },
+        { label: "approved", subtitle: "Approved" },
+        {
+            label: "changes_requested",
+            subtitle: "Changes requested",
+        },
+    ],
+    status: [
+        { label: "pending", subtitle: "Pending" },
+        { label: "success", subtitle: "Success" },
+        { label: "failure", subtitle: "Failure" },
+    ],
+};
 
 export const SearchAutocomplete = forwardRef<
     SearchAutocompleteHandle,
@@ -177,6 +200,11 @@ export const SearchAutocomplete = forwardRef<
             return result;
         }
 
+        const options = STATIC_OPTIONS[match.key];
+        if (options) {
+            return options.filter((o) => o.label.toLowerCase().includes(q));
+        }
+
         return [];
     }, [match.key, query, labels, allUsers]);
 
@@ -278,9 +306,7 @@ export const SearchAutocomplete = forwardRef<
                                 alt=""
                                 className="size-5 shrink-0 rounded-full"
                             />
-                        ) : (
-                            <User className="size-4 shrink-0 text-gray-400" />
-                        )}
+                        ) : null}
                         {!suggestion.color && (
                             <span className="flex min-w-0 flex-1 flex-col text-left">
                                 {suggestion.name ? (
