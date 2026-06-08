@@ -243,7 +243,7 @@ export function PullRequestList({
                 else params.set(key, value);
             }
             window.scrollTo({ top: 0, behavior: "smooth" });
-            router.replace(`/${owner}/${repo}/pulls?${params.toString()}`);
+            router.push(`/${owner}/${repo}/pulls?${params.toString()}`);
         },
         [owner, repo, router, searchParams],
     );
@@ -267,7 +267,7 @@ export function PullRequestList({
         if (searchInput) params.set("q", searchInput);
         else params.delete("q");
         params.delete("page");
-        router.replace(`/${owner}/${repo}/pulls?${params.toString()}`);
+        router.push(`/${owner}/${repo}/pulls?${params.toString()}`);
     }, [searchInput, searchParams, router, owner, repo]);
 
     const handleRemoveQualifier = useCallback(
@@ -383,7 +383,8 @@ export function PullRequestList({
                                 ) {
                                     return;
                                 }
-                                if (e.key === "Enter") {
+                                if (e.key === "Enter" && !e.defaultPrevented) {
+                                    e.preventDefault();
                                     handleSearch();
                                 }
                             }}
