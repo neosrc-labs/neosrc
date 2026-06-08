@@ -509,6 +509,7 @@ export function PullRequestList({
                             )}
                             <button
                                 type="button"
+                                aria-label="Search"
                                 onClick={handleSearch}
                                 className="flex size-6 cursor-pointer items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
                             >
