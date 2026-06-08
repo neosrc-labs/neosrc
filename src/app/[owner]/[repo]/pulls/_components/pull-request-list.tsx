@@ -363,31 +363,22 @@ export function PullRequestList({
         (key: string, value: string) => {
             if (key === "is") {
                 const tab = value as FilterState;
-                if (tab === "open") {
-                    setTab("open");
-                    const detection = detectQualifier(searchInput, cursorPos);
-                    const newQuery = detection
-                        ? [
-                              searchInput.slice(0, detection.start).trimEnd(),
-                              searchInput.slice(detection.end).trimStart(),
-                          ]
-                              .filter(Boolean)
-                              .join(" ")
-                        : searchInput;
-                    setSearchInput(newQuery);
-                    setCursorPos(0);
-                } else {
-                    setTab(tab);
-                    const newQuery = replaceQualifierValue(
-                        searchInput,
-                        cursorPos,
-                        key,
-                        value,
-                    );
-                    setSearchInput(newQuery);
-                    setCursorPos(0);
-                    navigate({ q: newQuery || null, page: null });
+                const parsed = parseQuery(searchInput);
+                parsed.qualifiers = parsed.qualifiers.filter(
+                    (q) => q.key !== "is",
+                );
+                if (tab !== "open") {
+                    parsed.qualifiers.push({ key: "is", value: tab });
                 }
+                const newQuery = formatQuery(parsed);
+                const withSpace = newQuery ? `${newQuery} ` : newQuery;
+                setSearchInput(withSpace);
+                setCursorPos(withSpace ? withSpace.length : 0);
+                navigate({
+                    state: tab === "open" ? null : tab,
+                    q: withSpace || null,
+                    page: null,
+                });
                 return;
             }
             const newQuery = replaceQualifierValue(
@@ -408,7 +399,7 @@ export function PullRequestList({
                 navigate({ q: newQuery || null, page: null });
             }
         },
-        [searchInput, cursorPos, navigate, setTab],
+        [searchInput, cursorPos, navigate],
     );
 
     const handleAutocompleteClose = useCallback(() => {
