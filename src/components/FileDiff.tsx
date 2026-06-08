@@ -173,16 +173,7 @@ export default function FileDiff({
 
     const toggleCollapsed = () => {
         const willCollapse = !isCollapsed;
-        const rootStyle = getComputedStyle(document.documentElement);
-        const headerHeight =
-            parseInt(
-                rootStyle
-                    .getPropertyValue("--header-height")
-                    .trim()
-                    .replace("px", ""),
-                10,
-            ) || 0;
-        const stickyOffset = headerHeight + 56;
+        const stickyOffset = 56;
 
         if (willCollapse && headerRef.current) {
             const headerTop = headerRef.current.getBoundingClientRect().top;
@@ -235,7 +226,7 @@ export default function FileDiff({
         <div className="rounded border border-gray-200 dark:border-zinc-700">
             <div
                 ref={headerRef}
-                className="sticky top-[calc(var(--header-height)+56px)] z-[1] flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                className="sticky top-[56px] z-[1] flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900"
             >
                 <button
                     className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"

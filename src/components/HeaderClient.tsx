@@ -69,6 +69,8 @@ export function HeaderClient({
         owner === initialOwner && repo === initialRepo ? serverRepoData : null;
 
     const headerRef = useRef<HTMLDivElement>(null);
+    const leftToggleRef = useRef<HTMLButtonElement>(null);
+    const rightToggleRef = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
         const header = headerRef.current;
@@ -89,6 +91,28 @@ export function HeaderClient({
         observer.observe(header);
         return () => observer.disconnect();
     }, []);
+
+    useEffect(() => {
+        const header = headerRef.current;
+        if (!prMatch || !header) return;
+
+        const updateTogglePosition = () => {
+            const rect = header.getBoundingClientRect();
+            const visible = Math.min(rect.height, Math.max(0, rect.bottom));
+            if (leftToggleRef.current) {
+                leftToggleRef.current.style.top = `${visible}px`;
+            }
+            if (rightToggleRef.current) {
+                rightToggleRef.current.style.top = `${visible}px`;
+            }
+        };
+
+        updateTogglePosition();
+        window.addEventListener("scroll", updateTogglePosition, {
+            passive: true,
+        });
+        return () => window.removeEventListener("scroll", updateTogglePosition);
+    }, [prMatch]);
 
     const showRepoNav = !!owner && !!repo;
 
@@ -161,7 +185,7 @@ export function HeaderClient({
     return (
         <>
             <header
-                className="sticky top-0 z-50 border-gray-200 border-b bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                className="z-50 border-gray-200 border-b bg-white dark:border-zinc-800 dark:bg-zinc-950"
                 ref={headerRef}
             >
                 <div className="px-4 sm:px-6 lg:px-8">
@@ -313,6 +337,7 @@ export function HeaderClient({
 
             {prMatch && !isLeftOpen && (
                 <button
+                    ref={leftToggleRef}
                     className="fixed left-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-r-md bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-700 dark:bg-zinc-950 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
                     style={{ top: "var(--header-height)" }}
                     onClick={toggleLeft}
@@ -325,6 +350,7 @@ export function HeaderClient({
 
             {prMatch && (
                 <button
+                    ref={rightToggleRef}
                     className="fixed right-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-l-md bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-700 dark:bg-zinc-950 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
                     style={{ top: "var(--header-height)" }}
                     onClick={toggleRight}

@@ -119,7 +119,7 @@ export function ResizableLayout({
         >
             {/* Left Sidebar - Sticky */}
             <div
-                className={`relative sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto ${!isLeftOpen ? "overflow-hidden" : ""}`}
+                className={`relative sticky top-0 h-[99vh] overflow-y-auto ${!isLeftOpen ? "overflow-hidden" : ""}`}
             >
                 {isLeftOpen && (
                     <div
@@ -137,7 +137,7 @@ export function ResizableLayout({
 
             {/* Right Sidebar - Sticky */}
             <div
-                className={`relative sticky top-[var(--header-height)] h-[calc(99vh-var(--header-height))] overflow-y-auto ${!isRightOpen ? "overflow-hidden" : ""}`}
+                className={`relative sticky top-0 h-[99vh] overflow-y-auto ${!isRightOpen ? "overflow-hidden" : ""}`}
             >
                 {isRightOpen && (
                     <div
