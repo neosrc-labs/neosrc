@@ -191,7 +191,7 @@ export function FilesSection({
 
     return (
         <div>
-            <div className="mb-4 flex items-center justify-between">
+            <div className="sticky top-[var(--header-height)] z-10 flex items-center justify-between bg-white py-4 pr-2 dark:bg-zinc-950">
                 <h2 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
                     Files Changed{!isLoading && ` (${allFiles.length})`}
                 </h2>

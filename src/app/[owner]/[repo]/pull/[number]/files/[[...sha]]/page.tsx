@@ -78,19 +78,21 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
     }
 
     return (
-        <div className="px-6 py-8">
-            <Suspense
-                fallback={commitSha ? <CommitHeaderSkeleton /> : undefined}
-            >
-                <CommitHeader
-                    commitPromise={commitPromise}
-                    commitsPromise={commitsPromise}
-                    number={number}
-                    owner={owner}
-                    repo={repo}
-                    commitSha={commitSha ?? null}
-                />
-            </Suspense>
+        <div className="px-6 pb-8">
+            {commitSha && (
+                <div className="pt-8">
+                    <Suspense fallback={<CommitHeaderSkeleton />}>
+                        <CommitHeader
+                            commitPromise={commitPromise}
+                            commitsPromise={commitsPromise}
+                            number={number}
+                            owner={owner}
+                            repo={repo}
+                            commitSha={commitSha}
+                        />
+                    </Suspense>
+                </div>
+            )}
             <Suspense>
                 <FilesSection
                     number={number}
