@@ -705,14 +705,28 @@ function EventContent({
 
         case "PullRequestCommit": {
             const commit = event.commit;
+            const author = commit?.author;
+            const actor = author
+                ? {
+                      __typename: author.user?.__typename,
+                      login: author.user?.login ?? author.name ?? "unknown",
+                      avatarUrl: author.avatarUrl,
+                      url: author.user?.url,
+                  }
+                : null;
             return (
                 <div className="item-center flex justify-between text-gray-600 text-sm dark:text-zinc-400">
-                    <NextLink
-                        href={`/${owner}/${repo}/pull/${number}/files/${commit?.oid}`}
-                        className="hover:text-blue-600 hover:underline dark:hover:text-blue-400"
-                    >
-                        {commit?.message.split("\n")[0]}
-                    </NextLink>
+                    <div className="item-center flex min-w-0 gap-2">
+                        {actor && (
+                            <UserLink actor={actor} showUsername={false} />
+                        )}
+                        <NextLink
+                            href={`/${owner}/${repo}/pull/${number}/files/${commit?.oid}`}
+                            className="truncate hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                        >
+                            {commit?.message.split("\n")[0]}
+                        </NextLink>
+                    </div>
                     <div className="flex shrink-0 items-center gap-2">
                         {commit?.signature?.isValid && (
                             <VerifiedBadge signature={commit.signature} />

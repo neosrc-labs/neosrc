@@ -269,6 +269,11 @@ query PullRequestTimeline(
 							oid
 							message
 							committedDate
+							author {
+								name
+								avatarUrl
+								user { ...SimpleUser }
+							}
 							signature {
 								__typename
 								... on GpgSignature { isValid keyId state }
@@ -584,6 +589,12 @@ export type GQLGitSignature =
     | GQLSshSignature
     | GQLSmimeSignature;
 
+export type GQLCommitAuthor = {
+    name: string | null;
+    avatarUrl: string;
+    user: GQLActor | null;
+};
+
 export type GQLPullRequestCommit = {
     __typename: "PullRequestCommit";
     id: string;
@@ -591,6 +602,7 @@ export type GQLPullRequestCommit = {
         oid: string;
         message: string;
         committedDate?: string;
+        author?: GQLCommitAuthor | null;
         signature?: GQLGitSignature | null;
     } | null;
 };
