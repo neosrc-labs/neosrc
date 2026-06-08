@@ -191,7 +191,7 @@ export function FilesSection({
 
     return (
         <div>
-            <div className="sticky top-[var(--header-height)] z-10 flex items-center justify-between bg-white py-4 pr-2 dark:bg-zinc-950">
+            <div className="sticky top-0 z-10 flex items-center justify-between bg-white py-4 pr-2 dark:bg-zinc-950">
                 <h2 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
                     Files Changed{!isLoading && ` (${allFiles.length})`}
                 </h2>
@@ -272,7 +272,7 @@ export function FilesSection({
 
                             return (
                                 <LazyRenderItem
-                                    className="scroll-mt-[calc(var(--header-height)+8px)]"
+                                    className="scroll-mt-[8px]"
                                     heightMap={heightMapRef.current}
                                     id={fileId}
                                     itemKey={file.filename}
