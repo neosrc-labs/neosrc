@@ -853,7 +853,14 @@ export interface GqlPrSearchItem {
     createdAt: string;
     mergedAt: string | null;
     author: { login: string; avatarUrl: string; url: string } | null;
-    labels: { nodes: Array<{ id: string; name: string; color: string }> };
+    labels: {
+        nodes: Array<{
+            id: string;
+            name: string;
+            color: string;
+            description: string | null;
+        }>;
+    };
     assignees: { nodes: Array<{ login: string; avatarUrl: string }> };
     comments: { totalCount: number };
     reviewDecision: string | null;
@@ -921,7 +928,7 @@ query SearchPRs($searchQuery: String!, $first: Int!, $after: String) {
         mergedAt
         author { login avatarUrl url }
         labels(first: 10) {
-          nodes { id name color }
+          nodes { id name color description }
         }
         assignees(first: 5) {
           nodes { login avatarUrl }

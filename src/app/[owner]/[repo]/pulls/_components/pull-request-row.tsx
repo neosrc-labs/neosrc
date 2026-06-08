@@ -31,7 +31,12 @@ export interface PrRowData {
     draft: boolean;
     user: { login: string; avatar_url: string } | null;
     assignee: { login: string; avatar_url: string } | null;
-    labels: Array<{ id?: number; name: string; color: string }>;
+    labels: Array<{
+        id?: number;
+        name: string;
+        color: string;
+        description?: string | null;
+    }>;
     created_at: string;
     merged_at: string | null;
     comments_count: number;
@@ -371,6 +376,7 @@ export function PullRequestRow({
                                 <Label
                                     key={label.id ?? label.name}
                                     color={label.color}
+                                    description={label.description ?? undefined}
                                     className="cursor-pointer"
                                     onClick={() => onLabelFilter?.(label.name)}
                                 >

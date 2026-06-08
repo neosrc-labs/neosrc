@@ -132,6 +132,7 @@ function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
             id: undefined,
             name: l.name,
             color: l.color,
+            description: l.description,
         })),
         created_at: item.createdAt,
         merged_at: item.mergedAt,
