@@ -137,7 +137,9 @@ async function openDropdownAndSelectLabel(
     await user.click(option);
 }
 
-async function mockUserSearchData(users?: { login: string; avatar_url: string }[]) {
+async function mockUserSearchData(
+    users?: { login: string; avatar_url: string }[],
+) {
     const userList = users ?? [{ login: "testuser", avatar_url: "" }];
     const listAssigneesMock = vi.mocked(
         (await import("~/trpc/react")).api.pulls.listAssignees.useQuery,
@@ -463,8 +465,8 @@ describe("PullRequestList", () => {
         await user.click(screen.getByRole("button", { name: /closed/i }));
 
         const value = getSearchInput().value;
-        expect(value).toContain("label:bug label:enhancement author:testuser is:closed");
+        expect(value).toContain(
+            "label:bug label:enhancement author:testuser is:closed",
+        );
     });
-
-
 });
