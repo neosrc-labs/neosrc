@@ -332,7 +332,9 @@ export function PullRequestRow({
                 </div>
                 <div className="mt-1 flex items-center gap-1 text-gray-600 text-sm dark:text-gray-400">
                     <span>#{pr.number} opened </span>
-                    <span>{formatRelativeTime(pr.created_at)}</span>
+                    <span title={new Date(pr.created_at).toLocaleString()}>
+                        {formatRelativeTime(pr.created_at)}
+                    </span>
                     {pr.user ? (
                         <span className="flex items-center gap-1">
                             by{" "}
