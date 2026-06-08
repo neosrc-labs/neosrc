@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 import { isGeneratedFile } from "~/utils/generated-files";
@@ -61,6 +61,7 @@ export default function FileDiff({
     );
     const [commentBody, setCommentBody] = useState("");
     const utils = api.useUtils();
+    const headerRef = useRef<HTMLDivElement>(null);
 
     const generated = isGeneratedFile(file.filename);
 
@@ -170,7 +171,38 @@ export default function FileDiff({
               },
           ];
 
-    const toggleCollapsed = () => setIsCollapsed(!isCollapsed);
+    const toggleCollapsed = () => {
+        const willCollapse = !isCollapsed;
+        const rootStyle = getComputedStyle(document.documentElement);
+        const headerHeight =
+            parseInt(
+                rootStyle
+                    .getPropertyValue("--header-height")
+                    .trim()
+                    .replace("px", ""),
+                10,
+            ) || 0;
+        const stickyOffset = headerHeight + 56;
+
+        if (willCollapse && headerRef.current) {
+            const headerTop = headerRef.current.getBoundingClientRect().top;
+            if (Math.abs(headerTop - stickyOffset) < 20) {
+                setIsCollapsed(true);
+                setTimeout(() => {
+                    if (headerRef.current) {
+                        const newTop =
+                            headerRef.current.getBoundingClientRect().top;
+                        const delta = newTop - stickyOffset;
+                        if (Math.abs(delta) > 1) {
+                            window.scrollBy(0, delta);
+                        }
+                    }
+                }, 0);
+                return;
+            }
+        }
+        setIsCollapsed(!isCollapsed);
+    };
 
     const toggleViewed = () => {
         const key = getViewedKey(owner, repo, number);
@@ -201,7 +233,10 @@ export default function FileDiff({
 
     return (
         <div className="rounded border border-gray-200 dark:border-zinc-700">
-            <div className="sticky top-[calc(var(--header-height)+56px)] z-[1] flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900">
+            <div
+                ref={headerRef}
+                className="sticky top-[calc(var(--header-height)+56px)] z-[1] flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            >
                 <button
                     className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                     onClick={toggleCollapsed}
