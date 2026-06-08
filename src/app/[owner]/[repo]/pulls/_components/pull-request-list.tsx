@@ -31,7 +31,9 @@ import {
 } from "./search-autocomplete";
 import {
     addQualifier,
+    formatQuery,
     hasQualifier,
+    parseQuery,
     removeQualifier,
     replaceQualifier,
     splitQuery,
@@ -192,8 +194,14 @@ export function PullRequestList({
 
     const stateQualifier =
         activeTab === "merged" ? "is:merged" : `is:${activeTab}`;
-    const apiQuery = searchQuery
-        ? `${stateQualifier} ${searchQuery}`
+    let cleanedQuery = searchQuery;
+    if (cleanedQuery) {
+        const parsed = parseQuery(cleanedQuery);
+        parsed.qualifiers = parsed.qualifiers.filter((q) => q.key !== "sort");
+        cleanedQuery = formatQuery(parsed);
+    }
+    const apiQuery = cleanedQuery
+        ? `${stateQualifier} ${cleanedQuery}`
         : stateQualifier;
 
     // For GraphQL cursor pagination: if we have the cursor for the previous page, use it
@@ -324,7 +332,15 @@ export function PullRequestList({
             );
             setSearchInput(newQuery);
             setCursorPos(0);
-            navigate({ q: newQuery || null, page: null });
+            if (key === "sort") {
+                const [sort, order] = value.split("-") as [
+                    "created" | "updated" | "comments",
+                    "asc" | "desc",
+                ];
+                navigate({ q: newQuery || null, sort, order, page: null });
+            } else {
+                navigate({ q: newQuery || null, page: null });
+            }
         },
         [searchInput, cursorPos, navigate],
     );
@@ -1178,7 +1194,7 @@ function SortDropdown({
                 className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
             >
                 <ListOrdered className="size-4" />
-                Sort: {currentLabel}
+                {currentLabel}
                 <ChevronDown className="size-3.5 text-gray-400" />
             </button>
             {open && (
