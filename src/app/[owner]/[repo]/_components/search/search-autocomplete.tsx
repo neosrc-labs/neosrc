@@ -13,22 +13,21 @@ import { Label } from "~/components/ui/label";
 import { api } from "~/trpc/react";
 
 interface AutocompleteMatch {
-    key: "author" | "label" | "assignee" | "sort" | "review" | "status" | "is";
+    key: string;
     value: string;
 }
-
-const QUALIFIER_RE =
-    /(author:|label:|assignee:|sort:|review:|status:|is:)([\w-]*)$/;
 
 export function detectQualifier(
     text: string,
     cursorPos: number,
+    supportedQualifiers: string[],
 ): (AutocompleteMatch & { start: number; end: number }) | null {
     const textBeforeCursor = text.slice(0, cursorPos);
-    // First find the qualifier in text before cursor
+    const pattern = `(${supportedQualifiers.join(":|")}:)([\\w-]*)$`;
+    const QUALIFIER_RE = new RegExp(pattern);
     const match = textBeforeCursor.match(QUALIFIER_RE);
     if (!match) return null;
-    const key = (match[1] ?? "").slice(0, -1) as AutocompleteMatch["key"];
+    const key = (match[1] ?? "").slice(0, -1);
     const value = match[2] ?? "";
     const idx = match.index ?? 0;
     return {
@@ -45,7 +44,11 @@ export function replaceQualifierValue(
     key: string,
     value: string,
 ): string {
-    const detection = detectQualifier(text, cursorPos);
+    const detection = detectQualifier(
+        text,
+        cursorPos,
+        Object.keys(STATIC_OPTIONS),
+    );
     if (!detection) return text;
     const replacement = `${key}:${value.includes(" ") ? `"${value}"` : value}`;
     const prefix = text.slice(0, detection.start);
@@ -66,33 +69,8 @@ export interface SearchAutocompleteHandle {
     handleKeyDown: (e: React.KeyboardEvent) => boolean;
 }
 
-const STATIC_OPTIONS: Record<string, { label: string; subtitle?: string }[]> = {
-    sort: [
-        { label: "created-desc", subtitle: "Newest" },
-        { label: "created-asc", subtitle: "Oldest" },
-        { label: "updated-desc", subtitle: "Recently updated" },
-        { label: "comments-desc", subtitle: "Most commented" },
-    ],
-    review: [
-        { label: "none", subtitle: "Not reviewed" },
-        { label: "required", subtitle: "Review required" },
-        { label: "approved", subtitle: "Approved" },
-        {
-            label: "changes_requested",
-            subtitle: "Changes requested",
-        },
-    ],
-    status: [
-        { label: "pending", subtitle: "Pending" },
-        { label: "success", subtitle: "Success" },
-        { label: "failure", subtitle: "Failure" },
-    ],
-    is: [
-        { label: "open", subtitle: "Open pull requests" },
-        { label: "closed", subtitle: "Closed pull requests" },
-        { label: "merged", subtitle: "Merged pull requests" },
-    ],
-};
+// biome-ignore lint/suspicious/noExplicitAny: used as a default fallback
+const STATIC_OPTIONS: Record<string, any> = {};
 
 export const SearchAutocomplete = forwardRef<
     SearchAutocompleteHandle,
@@ -101,11 +79,20 @@ export const SearchAutocomplete = forwardRef<
         repo: string;
         match: AutocompleteMatch;
         query: string;
+        staticOptions?: Record<string, { label: string; subtitle?: string }[]>;
         onSelect: (key: string, value: string) => void;
         onClose: () => void;
     }
 >(function SearchAutocomplete(
-    { owner, repo, match, query, onSelect, onClose },
+    {
+        owner,
+        repo,
+        match,
+        query,
+        staticOptions = STATIC_OPTIONS,
+        onSelect,
+        onClose,
+    },
     ref,
 ) {
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -205,13 +192,15 @@ export const SearchAutocomplete = forwardRef<
             return result;
         }
 
-        const options = STATIC_OPTIONS[match.key];
+        const options = staticOptions[match.key];
         if (options) {
-            return options.filter((o) => o.label.toLowerCase().includes(q));
+            return options.filter((o: { label: string }) =>
+                o.label.toLowerCase().includes(q),
+            );
         }
 
         return [];
-    }, [match.key, query, labels, allUsers]);
+    }, [match.key, query, labels, allUsers, staticOptions]);
 
     const prevCountRef = useRef(suggestions.length);
     if (prevCountRef.current !== suggestions.length) {

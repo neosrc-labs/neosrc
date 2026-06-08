@@ -99,7 +99,7 @@ export function MarkdownEditor({
         isFetching: issuesLoading,
         isError: issuesError,
         error: issuesErrorObj,
-    } = api.issues.search.useQuery(
+    } = api.issues.searchAutocomplete.useQuery(
         {
             owner: owner ?? "",
             repo: repo ?? "",

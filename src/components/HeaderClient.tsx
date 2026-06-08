@@ -59,6 +59,7 @@ export function HeaderClient({
     const pathname = usePathname();
     const prMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
     const pullsMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/pulls/);
+    const issuesMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/issues/);
     const repoMatch = pathname.match(/^\/([^/]+)\/([^/]+)/);
     const owner = repoMatch?.[1];
     const repo = repoMatch?.[2];
@@ -95,22 +96,24 @@ export function HeaderClient({
         if (!repoData || !owner || !repo) return [];
 
         const isPR = !!prMatch;
-
         const isPulls = !!pullsMatch;
+        const isIssues = !!issuesMatch;
+
+        const isCode = pathname === `/${owner}/${repo}`;
 
         const allTabs: Tab[] = [
             {
                 label: "Code",
                 path: `https://github.com/${owner}/${repo}`,
                 show: true,
-                isActive: !isPR && !isPulls,
+                isActive: isCode,
                 icon: Code2,
             },
             {
                 label: "Issues",
-                path: `https://github.com/${owner}/${repo}/issues`,
+                path: `/${owner}/${repo}/issues`,
                 show: repoData.hasIssues ?? true,
-                isActive: false,
+                isActive: isIssues,
                 icon: CircleDot,
                 count: repoData.openIssuesCount,
             },
@@ -153,7 +156,7 @@ export function HeaderClient({
         ];
 
         return allTabs.filter((t) => t.show);
-    }, [repoData, owner, repo, prMatch, pullsMatch]);
+    }, [repoData, owner, repo, prMatch, pullsMatch, issuesMatch, pathname]);
 
     return (
         <>
@@ -213,13 +216,15 @@ export function HeaderClient({
                         </div>
 
                         <div className="flex items-center gap-1">
-                            {(prMatch ?? pullsMatch) && (
+                            {(prMatch ?? pullsMatch ?? issuesMatch) && (
                                 <a
                                     className="flex size-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
                                     href={
                                         prMatch
                                             ? `https://github.com/${prMatch[1]}/${prMatch[2]}/pull/${prMatch[3]}?neosrc_exit=1`
-                                            : `https://github.com/${owner}/${repo}/pulls`
+                                            : issuesMatch
+                                              ? `https://github.com/${owner}/${repo}/issues`
+                                              : `https://github.com/${owner}/${repo}/pulls`
                                     }
                                     target="_blank"
                                     rel="noopener noreferrer"
