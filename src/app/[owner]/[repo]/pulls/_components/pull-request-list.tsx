@@ -275,10 +275,11 @@ export function PullRequestList({
                 parsed.qualifiers.push({ key: "is", value: tab });
             }
             const newQuery = formatQuery(parsed);
-            setSearchInput(newQuery);
+            const withSpace = newQuery ? `${newQuery} ` : newQuery;
+            setSearchInput(withSpace);
             navigate({
                 state: tab === "open" ? null : tab,
-                q: newQuery || null,
+                q: withSpace || null,
                 page: null,
             });
         },
