@@ -2,8 +2,6 @@
 
 import {
     ChevronDown,
-    ChevronLeft,
-    ChevronRight,
     CircleCheck,
     Eye,
     Flag,
@@ -20,6 +18,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Label as LabelComponent } from "~/components/ui/label";
+import { Pagination } from "~/components/ui/pagination";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn } from "~/lib/utils";
 import type { GqlPrSearchItem } from "~/server/github-graphql";
@@ -182,7 +181,11 @@ export function PullRequestList({
         | "desc";
 
     const [pageCursors, setPageCursors] = useState<Record<number, string>>({});
+    const pageCursorsRef = useRef(pageCursors);
+    pageCursorsRef.current = pageCursors;
+    const [isResolving, setIsResolving] = useState(false);
     const prevQueryKey = useRef<string | undefined>(undefined);
+    const utils = api.useUtils();
 
     // Reset cursors when query changes
     const queryKey = `${activeTab}:${searchQuery}:${currentSort}:${currentOrder}`;
@@ -208,22 +211,26 @@ export function PullRequestList({
         ? `${stateQualifier} ${cleanedQuery}`
         : stateQualifier;
 
-    // For GraphQL cursor pagination: if we have the cursor for the previous page, use it
-    // Otherwise fetch enough items to cover the current page from the start
+    // Always fetch exactly 30 items per page
     const after =
         currentPage > 1 ? (pageCursors[currentPage - 1] ?? null) : null;
-    const first = after ? 30 : currentPage * 30;
+    const first = 30;
 
-    const { data, isLoading } = api.pulls.search.useQuery({
-        owner,
-        repo,
-        query: apiQuery,
-        page: currentPage,
-        after: after ?? undefined,
-        first,
-        sort: currentSort,
-        order: currentOrder,
-    });
+    const { data, isLoading } = api.pulls.search.useQuery(
+        {
+            owner,
+            repo,
+            query: apiQuery,
+            page: currentPage,
+            after: after ?? undefined,
+            first,
+            sort: currentSort,
+            order: currentOrder,
+        },
+        { enabled: !isResolving },
+    );
+
+    const showLoading = isLoading || isResolving;
 
     // Store cursor for current page
     useEffect(() => {
@@ -236,16 +243,75 @@ export function PullRequestList({
         }
     }, [data?.endCursor, currentPage]);
 
-    // If we fetched extra items, slice to just the current page
-    const allItems = useMemo(
+    // When jumping to a page whose cursor isn't cached, resolve the cursor chain
+    // by sequentially fetching intermediate pages
+    useEffect(() => {
+        if (currentPage <= 1) return;
+        if (pageCursorsRef.current[currentPage - 1]) return;
+
+        let cancelled = false;
+
+        async function resolveCursors() {
+            setIsResolving(true);
+            let cursor: string | null = null;
+
+            for (let page = 1; page < currentPage; page++) {
+                if (cancelled) return;
+
+                try {
+                    const result = await utils.pulls.search.fetch({
+                        owner,
+                        repo,
+                        query: apiQuery,
+                        after: cursor ?? undefined,
+                        first: 30,
+                        sort: currentSort,
+                        order: currentOrder,
+                    });
+
+                    if (cancelled) return;
+
+                    const newCursor = result?.endCursor;
+                    if (newCursor) {
+                        setPageCursors((prev) => ({
+                            ...prev,
+                            [page]: newCursor,
+                        }));
+                    }
+                    cursor = newCursor ?? null;
+
+                    if (!result?.hasNextPage) break;
+                } catch {
+                    break;
+                }
+            }
+
+            if (!cancelled) {
+                setIsResolving(false);
+            }
+        }
+
+        resolveCursors();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        currentPage,
+        apiQuery,
+        owner,
+        repo,
+        currentSort,
+        currentOrder,
+        utils.pulls.search.fetch,
+    ]);
+
+    const items = useMemo(
         () => (data?.items ?? []).map(normalizeSearchItem),
         [data],
     );
-    const items = after
-        ? allItems.slice(0, 30)
-        : allItems.slice((currentPage - 1) * 30, currentPage * 30);
     const stateCounts = data?.stateCounts;
-    const hasNext = data?.hasNextPage ?? false;
+    const totalPages = Math.ceil((data?.totalCount ?? 0) / 30);
 
     const navigate = useCallback(
         (changes: Record<string, string | null>) => {
@@ -704,7 +770,7 @@ export function PullRequestList({
                 </div>
             </div>
             <div>
-                {isLoading ? (
+                {showLoading ? (
                     <div className="space-y-0">
                         {["sk1", "sk2", "sk3", "sk4", "sk5"].map((id) => (
                             <div
@@ -850,44 +916,12 @@ export function PullRequestList({
                 )}
             </div>
 
-            {!isLoading && items.length > 0 && (
-                <div className="flex items-center justify-between border-gray-200 border-t px-4 py-3 dark:border-zinc-800">
-                    <button
-                        type="button"
-                        disabled={currentPage <= 1}
-                        onClick={() =>
-                            navigate({ page: String(currentPage - 1) })
-                        }
-                        className={cn(
-                            "inline-flex items-center gap-1 rounded-md px-3 py-1.5 font-medium text-sm transition-colors",
-                            currentPage <= 1
-                                ? "cursor-not-allowed text-gray-400 dark:text-gray-600"
-                                : "cursor-pointer text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-zinc-800 dark:hover:text-gray-100",
-                        )}
-                    >
-                        <ChevronLeft className="size-4" />
-                        Previous
-                    </button>
-                    <span className="text-gray-600 text-sm dark:text-gray-400">
-                        Page {currentPage}
-                    </span>
-                    <button
-                        type="button"
-                        disabled={!hasNext}
-                        onClick={() =>
-                            navigate({ page: String(currentPage + 1) })
-                        }
-                        className={cn(
-                            "inline-flex items-center gap-1 rounded-md px-3 py-1.5 font-medium text-sm transition-colors",
-                            !hasNext
-                                ? "cursor-not-allowed text-gray-400 dark:text-gray-600"
-                                : "cursor-pointer text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-zinc-800 dark:hover:text-gray-100",
-                        )}
-                    >
-                        Next
-                        <ChevronRight className="size-4" />
-                    </button>
-                </div>
+            {!showLoading && items.length > 0 && (
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={(page) => navigate({ page: String(page) })}
+                />
             )}
         </div>
     );

@@ -28,8 +28,25 @@ vi.mock("next/navigation", () => ({
     useSearchParams: () => getSearchParams(),
 }));
 
+const mockSearchFetch = vi.fn(() =>
+    Promise.resolve({
+        items: [],
+        totalCount: 0,
+        hasNextPage: false,
+        endCursor: null,
+        stateCounts: { open: 0, closed: 0 },
+    }),
+);
+
 vi.mock("~/trpc/react", () => ({
     api: {
+        useUtils: vi.fn(() => ({
+            pulls: {
+                search: {
+                    fetch: mockSearchFetch,
+                },
+            },
+        })),
         pulls: {
             search: {
                 useQuery: vi.fn(() => ({
