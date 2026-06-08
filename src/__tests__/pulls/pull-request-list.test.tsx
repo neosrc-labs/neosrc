@@ -87,6 +87,100 @@ function renderList(props?: {
     );
 }
 
+// --- Test Helpers ---
+
+function getSearchInput() {
+    return screen.getByPlaceholderText(
+        "Search pull requests by title, body, or comments",
+    ) as HTMLInputElement;
+}
+
+async function mockLabelData(labels?: { name: string; color: string }[]) {
+    const labelList = labels ?? [
+        { name: "bug", color: "d73a4a" },
+        { name: "enhancement", color: "a2eeef" },
+    ];
+    const listLabelsMock = vi.mocked(
+        (await import("~/trpc/react")).api.pulls.listLabels.useQuery,
+    );
+    listLabelsMock.mockReturnValue({
+        data: labelList,
+        isLoading: false,
+    } as never);
+}
+
+async function openDropdownAndSelectLabel(
+    user: ReturnType<typeof userEvent.setup>,
+    labelName: string,
+) {
+    // Only open the dropdown if it's not already open (labels don't autoclose)
+    const existingInput = screen.queryByPlaceholderText("Filter labels");
+    if (!existingInput) {
+        const allButtons = screen.getAllByRole("button");
+        const labelBtn = allButtons.find(
+            (b) => b.textContent?.trim() === "Label",
+        );
+        if (!labelBtn) throw new Error("Label button not found");
+        await user.click(labelBtn);
+    }
+
+    const dropdownInput = await screen.findByPlaceholderText("Filter labels");
+    expect(dropdownInput).toBeInTheDocument();
+
+    // Clear any previous filter text and type the new label name
+    await user.clear(dropdownInput);
+    await user.type(dropdownInput, labelName);
+
+    const option = screen.getByRole("option", {
+        name: new RegExp(`^${labelName}$`, "i"),
+    });
+    await user.click(option);
+}
+
+async function mockUserSearchData(users?: { login: string; avatar_url: string }[]) {
+    const userList = users ?? [{ login: "testuser", avatar_url: "" }];
+    const listAssigneesMock = vi.mocked(
+        (await import("~/trpc/react")).api.pulls.listAssignees.useQuery,
+    );
+    listAssigneesMock.mockReturnValue({
+        data: userList,
+        isLoading: false,
+    } as never);
+
+    const listRecentAuthorsMock = vi.mocked(
+        (await import("~/trpc/react")).api.pulls.listRecentAuthors.useQuery,
+    );
+    listRecentAuthorsMock.mockReturnValue({
+        data: userList,
+        isLoading: false,
+    } as never);
+
+    const currentUserMock = vi.mocked(
+        (await import("~/trpc/react")).api.users.currentUser.useQuery,
+    );
+    currentUserMock.mockReturnValue({
+        data: { login: userList[0]?.login ?? "testuser", avatar_url: "" },
+        isLoading: false,
+    } as never);
+}
+
+async function openDropdownAndSelectUser(
+    user: ReturnType<typeof userEvent.setup>,
+    triggerName: RegExp,
+    searchText?: string,
+) {
+    const text = searchText ?? "testuser";
+    await user.click(screen.getByRole("button", { name: triggerName }));
+
+    const dropdownInput = screen.getByPlaceholderText("Filter users...");
+    expect(dropdownInput).toBeInTheDocument();
+
+    await user.type(dropdownInput, text);
+
+    const option = screen.getByRole("option", { name: new RegExp(text, "i") });
+    await user.click(option);
+}
+
 // --- Tests ---
 
 describe("PullRequestList", () => {
@@ -279,4 +373,98 @@ describe("PullRequestList", () => {
         expect(input.value).toBe("is:closed ");
         expect(input.selectionStart).toBe("is:closed ".length);
     });
+
+    it("clicking Merged tab sets 'is:merged ', then clicking Open tab clears the search bar", async () => {
+        const user = userEvent.setup();
+        renderList();
+
+        const input = screen.getByPlaceholderText(
+            "Search pull requests by title, body, or comments",
+        ) as HTMLInputElement;
+
+        await user.click(screen.getByRole("button", { name: /merged/i }));
+        expect(input.value).toBe("is:merged ");
+
+        await user.click(screen.getByRole("button", { name: /open/i }));
+        expect(input.value).toBe("");
+    });
+
+    it("clicking the Author button and selecting a user adds 'author:<login>' to the search bar", async () => {
+        await mockUserSearchData();
+
+        const user = userEvent.setup();
+        renderList();
+
+        await openDropdownAndSelectUser(user, /author/i);
+
+        expect(getSearchInput().value).toContain("author:testuser");
+    });
+
+    it("clicking the Assignee button and selecting a user adds 'assignee:<login>' to the search bar", async () => {
+        await mockUserSearchData();
+
+        const user = userEvent.setup();
+        renderList();
+
+        await openDropdownAndSelectUser(user, /assignee/i);
+
+        expect(getSearchInput().value).toContain("assignee:testuser");
+    });
+
+    it("selecting a second author replaces the first author in the search bar", async () => {
+        await mockUserSearchData([
+            { login: "user1", avatar_url: "" },
+            { login: "user2", avatar_url: "" },
+        ]);
+
+        const user = userEvent.setup();
+        renderList();
+
+        await openDropdownAndSelectUser(user, /author/i, "user1");
+        expect(getSearchInput().value).toContain("author:user1");
+
+        await openDropdownAndSelectUser(user, /author/i, "user2");
+        expect(getSearchInput().value).toContain("author:user2");
+        expect(getSearchInput().value).not.toContain("author:user1");
+    });
+
+    it("selecting a second assignee replaces the first assignee in the search bar", async () => {
+        await mockUserSearchData([
+            { login: "user1", avatar_url: "" },
+            { login: "user2", avatar_url: "" },
+        ]);
+
+        const user = userEvent.setup();
+        renderList();
+
+        await openDropdownAndSelectUser(user, /assignee/i, "user1");
+        expect(getSearchInput().value).toContain("assignee:user1");
+
+        await openDropdownAndSelectUser(user, /assignee/i, "user2");
+        expect(getSearchInput().value).toContain("assignee:user2");
+        expect(getSearchInput().value).not.toContain("assignee:user1");
+    });
+
+    it("adds two labels, an author, and clicks Closed tab - search bar shows all qualifiers", async () => {
+        await mockLabelData([
+            { name: "bug", color: "d73a4a" },
+            { name: "enhancement", color: "a2eeef" },
+        ]);
+        await mockUserSearchData([{ login: "testuser", avatar_url: "" }]);
+
+        const user = userEvent.setup();
+        renderList();
+
+        await openDropdownAndSelectLabel(user, "bug");
+
+        await openDropdownAndSelectLabel(user, "enhancement");
+        await openDropdownAndSelectUser(user, /author/i);
+
+        await user.click(screen.getByRole("button", { name: /closed/i }));
+
+        const value = getSearchInput().value;
+        expect(value).toContain("label:bug label:enhancement author:testuser is:closed");
+    });
+
+
 });
