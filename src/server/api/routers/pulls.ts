@@ -655,11 +655,24 @@ export const pullsRouter = createTRPCRouter({
                     : "";
             const gqlQuery = `repo:${input.owner}/${input.repo} is:pr ${input.query}${sortOrder}`;
 
+            // Extract the base query (without state qualifier) to build count queries
+            const restQuery = input.query.replace(
+                /^(is:open|is:closed|is:merged)\s*/,
+                "",
+            );
+            const sortSuffix = sortOrder;
+            const base = `repo:${input.owner}/${input.repo} is:pr`;
+            const countQueries = {
+                open: `${base} is:open ${restQuery}${sortSuffix}`.trim(),
+                closed: `${base} is:closed ${restQuery}${sortSuffix}`.trim(),
+            };
+
             const result = await searchPullRequestsWithStatus(
                 accessToken,
                 gqlQuery,
                 input.first ?? 30,
                 input.after ?? null,
+                countQueries,
             );
 
             return result;

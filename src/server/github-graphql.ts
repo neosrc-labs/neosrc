@@ -970,21 +970,50 @@ query SearchPRs($searchQuery: String!, $first: Int!, $after: String) {
 }
 `;
 
+const COUNT_QUERY = `
+query CountPRs($searchQuery: String!) {
+  search(query: $searchQuery, type: ISSUE, first: 1) {
+    issueCount
+  }
+}
+`;
+
 export async function searchPullRequestsWithStatus(
     accessToken: string,
     query: string,
     first: number = 30,
     after: string | null = null,
+    countQueries?: { open: string; closed: string; merged?: string },
 ) {
     const graphql = octokitGraphql.defaults({
         headers: { authorization: `bearer ${accessToken}` },
     });
 
-    const result = await graphql<GqlPrSearchResult>(PR_SEARCH_QUERY, {
-        searchQuery: query,
-        first,
-        after,
-    });
+    const [result, ...countResults] = await Promise.all([
+        graphql<GqlPrSearchResult>(PR_SEARCH_QUERY, {
+            searchQuery: query,
+            first,
+            after,
+        }),
+        ...(countQueries
+            ? [
+                  graphql<{ search: { issueCount: number } }>(COUNT_QUERY, {
+                      searchQuery: countQueries.open,
+                  }),
+                  graphql<{ search: { issueCount: number } }>(COUNT_QUERY, {
+                      searchQuery: countQueries.closed,
+                  }),
+                  ...(countQueries.merged
+                      ? [
+                            graphql<{ search: { issueCount: number } }>(
+                                COUNT_QUERY,
+                                { searchQuery: countQueries.merged },
+                            ),
+                        ]
+                      : []),
+              ]
+            : []),
+    ]);
 
     const items = result.search.nodes.filter(
         (n): n is { __typename: "PullRequest" } & GqlPrSearchItem =>
@@ -996,6 +1025,17 @@ export async function searchPullRequestsWithStatus(
         totalCount: result.search.issueCount,
         hasNextPage: result.search.pageInfo.hasNextPage,
         endCursor: result.search.pageInfo.endCursor,
+        stateCounts: countQueries
+            ? {
+                  open: countResults[0]?.search.issueCount ?? 0,
+                  closed: countResults[1]?.search.issueCount ?? 0,
+                  ...(countQueries.merged
+                      ? {
+                            merged: countResults[2]?.search.issueCount ?? 0,
+                        }
+                      : {}),
+              }
+            : undefined,
     };
 }
 

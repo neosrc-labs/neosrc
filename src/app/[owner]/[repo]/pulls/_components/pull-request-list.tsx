@@ -242,7 +242,7 @@ export function PullRequestList({
     const items = after
         ? allItems.slice(0, 30)
         : allItems.slice((currentPage - 1) * 30, currentPage * 30);
-    const totalCount = data?.totalCount ?? 0;
+    const stateCounts = data?.stateCounts;
     const hasNext = data?.hasNextPage ?? false;
 
     const navigate = useCallback(
@@ -482,26 +482,32 @@ export function PullRequestList({
             <div className="border-gray-200 border-b dark:border-zinc-800">
                 <div className="flex items-center justify-between px-4">
                     <div className="flex items-center">
-                        {!isLoading && (
-                            <span className="mr-4 text-gray-500 text-xs dark:text-gray-500">
-                                {totalCount.toLocaleString()} results
-                            </span>
-                        )}
-                        {TABS.map((tab) => (
-                            <button
-                                key={tab.key}
-                                type="button"
-                                onClick={() => setTab(tab.key)}
-                                className={cn(
-                                    "relative -mb-px cursor-pointer px-4 py-3 font-medium text-sm transition-colors",
-                                    activeTab === tab.key
-                                        ? "border-blue-500 border-b-2 text-gray-900 dark:text-gray-100"
-                                        : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100",
-                                )}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
+                        {TABS.map((tab) => {
+                            const count =
+                                tab.key !== "merged"
+                                    ? stateCounts?.[tab.key]
+                                    : undefined;
+                            return (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    onClick={() => setTab(tab.key)}
+                                    className={cn(
+                                        "relative -mb-px cursor-pointer px-4 py-3 font-medium text-sm transition-colors",
+                                        activeTab === tab.key
+                                            ? "border-blue-500 border-b-2 text-gray-900 dark:text-gray-100"
+                                            : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100",
+                                    )}
+                                >
+                                    {tab.label}
+                                    {count !== undefined && (
+                                        <span className="ml-1.5 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs tabular-nums dark:bg-zinc-700">
+                                            {count.toLocaleString()}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                     <div className="flex items-center gap-2">
                         <AuthorDropdown
