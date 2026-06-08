@@ -95,6 +95,8 @@ function getStatusContexts(
                 state: ctx.conclusion ?? ctx.status,
                 description: null,
                 url: ctx.detailsUrl,
+                startedAt: ctx.startedAt,
+                completedAt: ctx.completedAt,
             };
         }
         return {

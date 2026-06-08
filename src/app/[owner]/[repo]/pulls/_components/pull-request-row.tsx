@@ -1,6 +1,7 @@
 import {
     Check,
     Circle,
+    CircleX,
     GitMerge,
     GitPullRequest,
     GitPullRequestClosed,
@@ -40,6 +41,8 @@ export interface PrRowData {
         state: string;
         description: string | null;
         url: string | null;
+        startedAt?: string | null;
+        completedAt?: string | null;
     }>;
     review_decision: string | null;
 }
@@ -57,6 +60,9 @@ function StatusCheckIcon({
     if (state === "FAILURE" || state === "ERROR" || state === "TIMED_OUT") {
         return <X className={cn(className, "text-red-600")} />;
     }
+    if (state === "CANCELLED") {
+        return <CircleX className={cn(className, "text-gray-400")} />;
+    }
     if (
         state === "IN_PROGRESS" ||
         state === "PENDING" ||
@@ -72,6 +78,37 @@ function StatusCheckIcon({
     return <Circle className={cn(className, "text-gray-400")} />;
 }
 
+function formatDuration(
+    startedAt: string,
+    completedAt?: string | null,
+): string | null {
+    const start = new Date(startedAt).getTime();
+    if (Number.isNaN(start)) return null;
+    const end = completedAt ? new Date(completedAt).getTime() : Date.now();
+    if (Number.isNaN(end)) return null;
+    const diffMs = end - start;
+    if (diffMs < 1000) return null;
+    const totalSec = Math.floor(diffMs / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    if (min > 0) {
+        return `${min}m ${sec}s`;
+    }
+    return `${sec}s`;
+}
+
+function statusLabel(state: string): string | null {
+    if (state === "SUCCESS") return "passed";
+    if (state === "FAILURE") return "failed";
+    if (state === "ERROR") return "error";
+    if (state === "TIMED_OUT") return "timed out";
+    if (state === "CANCELLED") return "cancelled";
+    if (state === "SKIPPED") return "skipped";
+    if (state === "NEUTRAL") return "neutral";
+    if (state === "IN_PROGRESS" || state === "QUEUED") return null;
+    return null;
+}
+
 function StatusContextRow({
     context,
 }: {
@@ -80,11 +117,18 @@ function StatusContextRow({
         state: string;
         description: string | null;
         url: string | null;
+        startedAt?: string | null;
+        completedAt?: string | null;
     };
 }) {
     const linkProps = context.url
         ? { href: context.url, target: "_blank", rel: "noreferrer" }
         : {};
+
+    const duration =
+        context.startedAt &&
+        formatDuration(context.startedAt, context.completedAt);
+    const label = statusLabel(context.state);
 
     return (
         <a
@@ -99,11 +143,18 @@ function StatusContextRow({
                 <div className="truncate font-medium text-gray-900 dark:text-gray-100">
                     {context.name}
                 </div>
-                {context.description && (
-                    <div className="truncate text-gray-500 dark:text-gray-400">
-                        {context.description}
-                    </div>
-                )}
+                <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                    {label && <span className="capitalize">{label}</span>}
+                    {duration && (
+                        <>
+                            {label && <span>·</span>}
+                            <span>in {duration}</span>
+                        </>
+                    )}
+                    {!label && !duration && context.description && (
+                        <span className="truncate">{context.description}</span>
+                    )}
+                </div>
             </div>
         </a>
     );
@@ -185,16 +236,91 @@ export function PullRequestRow({
                             <HoverCardContent
                                 align="start"
                                 side="bottom"
-                                className="w-72 bg-white p-3 dark:bg-zinc-950"
+                                className="w-72 bg-white p-0 dark:bg-zinc-950"
                             >
-                                <div className="space-y-1.5">
-                                    {pr.status_contexts.map((ctx) => (
-                                        <StatusContextRow
-                                            key={ctx.name}
-                                            context={ctx}
-                                        />
-                                    ))}
-                                </div>
+                                {(() => {
+                                    const counts = {
+                                        successful: 0,
+                                        failing: 0,
+                                        cancelled: 0,
+                                        skipped: 0,
+                                        pending: 0,
+                                    };
+                                    for (const ctx of pr.status_contexts) {
+                                        switch (ctx.state) {
+                                            case "SUCCESS":
+                                                counts.successful++;
+                                                break;
+                                            case "FAILURE":
+                                            case "ERROR":
+                                            case "TIMED_OUT":
+                                                counts.failing++;
+                                                break;
+                                            case "CANCELLED":
+                                                counts.cancelled++;
+                                                break;
+                                            case "SKIPPED":
+                                                counts.skipped++;
+                                                break;
+                                            default:
+                                                counts.pending++;
+                                                break;
+                                        }
+                                    }
+                                    const nonOk =
+                                        counts.failing +
+                                        counts.cancelled +
+                                        counts.skipped +
+                                        counts.pending;
+                                    const allPassed = nonOk === 0;
+                                    const parts: string[] = [];
+                                    if (counts.successful > 0)
+                                        parts.push(
+                                            `${counts.successful} successful`,
+                                        );
+                                    if (counts.failing > 0)
+                                        parts.push(`${counts.failing} failing`);
+                                    if (counts.cancelled > 0)
+                                        parts.push(
+                                            `${counts.cancelled} cancelled`,
+                                        );
+                                    if (counts.skipped > 0)
+                                        parts.push(`${counts.skipped} skipped`);
+                                    if (counts.pending > 0)
+                                        parts.push(`${counts.pending} pending`);
+                                    const summary =
+                                        parts.length > 1
+                                            ? parts.slice(0, -1).join(", ") +
+                                              ", and " +
+                                              parts[parts.length - 1]
+                                            : parts[0];
+                                    return (
+                                        <>
+                                            <div className="border-gray-200 border-b px-3 py-2 dark:border-zinc-800">
+                                                <div className="font-medium text-xs">
+                                                    {allPassed
+                                                        ? "All checks have passed"
+                                                        : "Some checks were not successful"}
+                                                </div>
+                                                {summary && (
+                                                    <div className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                                                        {summary}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="max-h-80 space-y-1.5 overflow-y-auto p-3">
+                                                {pr.status_contexts.map(
+                                                    (ctx) => (
+                                                        <StatusContextRow
+                                                            key={ctx.name}
+                                                            context={ctx}
+                                                        />
+                                                    ),
+                                                )}
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </HoverCardContent>
                         </HoverCard>
                     )}

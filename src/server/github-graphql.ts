@@ -871,6 +871,8 @@ export interface GqlPrSearchItem {
                                   status: string;
                                   conclusion: string | null;
                                   detailsUrl: string;
+                                  startedAt: string | null;
+                                  completedAt: string | null;
                               }
                             | {
                                   __typename: "StatusContext";
@@ -940,6 +942,8 @@ query SearchPRs($searchQuery: String!, $first: Int!, $after: String) {
                       status
                       conclusion
                       detailsUrl
+                      startedAt
+                      completedAt
                     }
                     ... on StatusContext {
                       context
