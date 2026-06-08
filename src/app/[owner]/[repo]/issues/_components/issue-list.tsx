@@ -5,6 +5,7 @@ import {
     CircleCheck,
     GitPullRequest,
     Milestone,
+    Plus,
     Search,
     Tag,
     X,
@@ -521,6 +522,15 @@ export function IssueList({
                     >
                         <Milestone className="size-4" />
                         Milestones
+                    </a>
+
+                    {/* TODO: Support /issues/new/choose for repos with issue templates */}
+                    <a
+                        href={`https://github.com/${owner}/${repo}/issues/new`}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-green-600 bg-green-600 px-2.5 py-1.5 font-medium text-sm text-white transition-colors hover:bg-green-700 dark:border-green-500 dark:bg-green-600 dark:hover:bg-green-700"
+                    >
+                        <Plus className="size-4" />
+                        New Issue
                     </a>
                 </div>
             </div>
