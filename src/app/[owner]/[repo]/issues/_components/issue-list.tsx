@@ -1,12 +1,9 @@
 "use client";
 
 import {
-    ChevronDown,
+    Circle,
     CircleCheck,
-    Eye,
-    GitMerge,
     GitPullRequest,
-    GitPullRequestClosed,
     Milestone,
     Search,
     Tag,
@@ -34,32 +31,22 @@ import {
 } from "~/app/[owner]/[repo]/_components/search/search-utils";
 import { SortDropdown } from "~/app/[owner]/[repo]/_components/search/sort-dropdown";
 import { Pagination } from "~/components/ui/pagination";
-import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn } from "~/lib/utils";
-import type { GqlPrSearchItem } from "~/server/github-graphql";
+import type { GqlIssueSearchItem } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
-import type { PrRowData } from "./pull-request-row";
-import { PullRequestRow } from "./pull-request-row";
+import type { IssueRowData } from "./issue-row";
+import { IssueRow } from "./issue-row";
 
-type FilterState = "open" | "closed" | "merged";
+type FilterState = "open" | "closed";
 
 const TABS: { key: FilterState; label: string }[] = [
     { key: "open", label: "Open" },
     { key: "closed", label: "Closed" },
-    { key: "merged", label: "Merged" },
 ];
 
-const PR_QUALIFIERS = [
-    "author",
-    "label",
-    "assignee",
-    "sort",
-    "review",
-    "status",
-    "is",
-];
+const ISSUE_QUALIFIERS = ["author", "label", "assignee", "sort", "is"];
 
-const PR_AUTOCOMPLETE_OPTIONS: Record<
+const ISSUE_AUTOCOMPLETE_OPTIONS: Record<
     string,
     { label: string; subtitle?: string }[]
 > = {
@@ -69,85 +56,18 @@ const PR_AUTOCOMPLETE_OPTIONS: Record<
         { label: "updated-desc", subtitle: "Recently updated" },
         { label: "comments-desc", subtitle: "Most commented" },
     ],
-    review: [
-        { label: "none", subtitle: "Not reviewed" },
-        { label: "required", subtitle: "Review required" },
-        { label: "approved", subtitle: "Approved" },
-        { label: "changes_requested", subtitle: "Changes requested" },
-    ],
-    status: [
-        { label: "pending", subtitle: "Pending" },
-        { label: "success", subtitle: "Success" },
-        { label: "failure", subtitle: "Failure" },
-    ],
     is: [
-        { label: "open", subtitle: "Open pull requests" },
-        { label: "closed", subtitle: "Closed pull requests" },
-        { label: "merged", subtitle: "Merged pull requests" },
+        { label: "open", subtitle: "Open issues" },
+        { label: "closed", subtitle: "Closed issues" },
     ],
 };
 
-function getStatusState(item: GqlPrSearchItem): string | null {
-    const rollup = item.commits.nodes[0]?.commit.statusCheckRollup;
-    if (!rollup) return null;
-
-    console.log(item.commits);
-
-    const hasFailed = rollup.contexts.nodes.some((ctx) => {
-        if (ctx.__typename === "CheckRun") {
-            return (
-                ctx.conclusion === "failure" || ctx.conclusion === "timed_out"
-            );
-        }
-        return ctx.state === "FAILURE" || ctx.state === "ERROR";
-    });
-
-    if (hasFailed) return "FAILURE";
-
-    const hasInProgress = rollup.contexts.nodes.some((ctx) => {
-        if (ctx.__typename === "CheckRun") {
-            return ctx.status === "IN_PROGRESS" || ctx.status === "QUEUED";
-        }
-        return ctx.state === "PENDING" || ctx.state === "EXPECTED";
-    });
-
-    if (hasInProgress) return "IN_PROGRESS";
-    return rollup.state;
-}
-
-function getStatusContexts(
-    item: GqlPrSearchItem,
-): PrRowData["status_contexts"] {
-    const rollup = item.commits.nodes[0]?.commit.statusCheckRollup;
-    if (!rollup) return [];
-    return rollup.contexts.nodes.map((ctx) => {
-        if (ctx.__typename === "CheckRun") {
-            return {
-                name: ctx.name,
-                state: ctx.conclusion ?? ctx.status,
-                description: null,
-                url: ctx.detailsUrl,
-                startedAt: ctx.startedAt,
-                completedAt: ctx.completedAt,
-            };
-        }
-        return {
-            name: ctx.context,
-            state: ctx.state,
-            description: ctx.description,
-            url: ctx.targetUrl,
-        };
-    });
-}
-
-function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
+function normalizeSearchItem(item: GqlIssueSearchItem): IssueRowData {
     const assigneeNode = item.assignees.nodes[0];
     return {
-        id: item.databaseId,
         number: item.number,
         title: item.title,
-        state: item.state === "MERGED" ? "closed" : item.state.toLowerCase(),
-        draft: item.isDraft,
+        state: item.state.toLowerCase(),
         user: item.author
             ? {
                   login: item.author.login,
@@ -161,21 +81,17 @@ function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
               }
             : null,
         labels: item.labels.nodes.map((l) => ({
-            id: undefined,
             name: l.name,
             color: l.color,
             description: l.description,
         })),
         created_at: item.createdAt,
-        merged_at: item.mergedAt,
+        closed_at: item.closedAt,
         comments_count: item.comments.totalCount,
-        status_state: getStatusState(item),
-        status_contexts: getStatusContexts(item),
-        review_decision: item.reviewDecision,
     };
 }
 
-export function PullRequestList({
+export function IssueList({
     owner,
     repo,
     defaultState,
@@ -206,7 +122,6 @@ export function PullRequestList({
     const prevQueryKey = useRef<string | undefined>(undefined);
     const utils = api.useUtils();
 
-    // Reset cursors when query changes
     const queryKey = `${activeTab}:${searchQuery}:${currentSort}:${currentOrder}`;
     if (
         prevQueryKey.current !== undefined &&
@@ -216,8 +131,7 @@ export function PullRequestList({
     }
     prevQueryKey.current = queryKey;
 
-    const stateQualifier =
-        activeTab === "merged" ? "is:merged" : `is:${activeTab}`;
+    const stateQualifier = `is:${activeTab}`;
     let cleanedQuery = searchQuery;
     if (cleanedQuery) {
         const parsed = parseQuery(cleanedQuery);
@@ -230,12 +144,11 @@ export function PullRequestList({
         ? `${stateQualifier} ${cleanedQuery}`
         : stateQualifier;
 
-    // Always fetch exactly 30 items per page
     const after =
         currentPage > 1 ? (pageCursors[currentPage - 1] ?? null) : null;
     const first = 30;
 
-    const { data, isLoading } = api.pulls.search.useQuery(
+    const { data, isLoading } = api.issues.search.useQuery(
         {
             owner,
             repo,
@@ -251,7 +164,6 @@ export function PullRequestList({
 
     const showLoading = isLoading || isResolving;
 
-    // Store cursor for current page
     useEffect(() => {
         const cursor = data?.endCursor;
         if (cursor) {
@@ -262,8 +174,6 @@ export function PullRequestList({
         }
     }, [data?.endCursor, currentPage]);
 
-    // When jumping to a page whose cursor isn't cached, resolve the cursor chain
-    // by sequentially fetching intermediate pages
     useEffect(() => {
         if (currentPage <= 1) return;
         if (pageCursorsRef.current[currentPage - 1]) return;
@@ -278,7 +188,7 @@ export function PullRequestList({
                 if (cancelled) return;
 
                 try {
-                    const result = await utils.pulls.search.fetch({
+                    const result = await utils.issues.search.fetch({
                         owner,
                         repo,
                         query: apiQuery,
@@ -322,7 +232,7 @@ export function PullRequestList({
         repo,
         currentSort,
         currentOrder,
-        utils.pulls.search.fetch,
+        utils.issues.search.fetch,
     ]);
 
     const items = useMemo(
@@ -340,14 +250,13 @@ export function PullRequestList({
                 else params.set(key, value);
             }
             window.scrollTo({ top: 0, behavior: "smooth" });
-            router.push(`/${owner}/${repo}/pulls?${params.toString()}`);
+            router.push(`/${owner}/${repo}/issues?${params.toString()}`);
         },
         [owner, repo, router, searchParams],
     );
 
     const [searchInput, setSearchInput] = useState(searchQuery);
 
-    // Sync searchInput from URL when it changes externally (e.g., browser nav)
     useEffect(() => {
         setSearchInput(searchQuery);
     }, [searchQuery]);
@@ -392,12 +301,12 @@ export function PullRequestList({
                 else params.delete("q");
             }
             params.delete("page");
-            router.push(`/${owner}/${repo}/pulls?${params.toString()}`);
+            router.push(`/${owner}/${repo}/issues?${params.toString()}`);
         } else {
             if (searchInput) params.set("q", searchInput);
             else params.delete("q");
             params.delete("page");
-            router.push(`/${owner}/${repo}/pulls?${params.toString()}`);
+            router.push(`/${owner}/${repo}/issues?${params.toString()}`);
         }
     }, [searchInput, searchParams, router, owner, repo]);
 
@@ -419,7 +328,6 @@ export function PullRequestList({
         [navigate, searchQuery],
     );
 
-    // Autocomplete state
     const inputRef = useRef<HTMLInputElement>(null);
     const searchBarRef = useRef<HTMLDivElement>(null);
     const autocompleteRef = useRef<{
@@ -429,10 +337,9 @@ export function PullRequestList({
     const autocompleteMatch = detectQualifier(
         searchInput,
         cursorPos,
-        PR_QUALIFIERS,
+        ISSUE_QUALIFIERS,
     );
 
-    // Close autocomplete when clicking outside the search bar
     useEffect(() => {
         if (!autocompleteMatch) return;
         const handler = (e: MouseEvent) => {
@@ -561,7 +468,7 @@ export function PullRequestList({
                                     e.currentTarget.selectionStart ?? 0,
                                 );
                             }}
-                            placeholder="Search pull requests by title, body, or comments"
+                            placeholder="Search issues by title, body, or comments"
                             className="relative w-full rounded-md border border-gray-300 bg-transparent px-3 py-1.5 pr-12 text-sm text-transparent placeholder-gray-500 caret-gray-900 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:placeholder-gray-500 dark:caret-gray-100 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                         />
                         {autocompleteMatch && (
@@ -571,7 +478,7 @@ export function PullRequestList({
                                 repo={repo}
                                 match={autocompleteMatch}
                                 query={autocompleteMatch.value}
-                                staticOptions={PR_AUTOCOMPLETE_OPTIONS}
+                                staticOptions={ISSUE_AUTOCOMPLETE_OPTIONS}
                                 onSelect={handleAutocompleteSelect}
                                 onClose={handleAutocompleteClose}
                             />
@@ -615,14 +522,6 @@ export function PullRequestList({
                         <Milestone className="size-4" />
                         Milestones
                     </a>
-
-                    <a
-                        href={`https://github.com/${owner}/${repo}/compare`}
-                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-green-600 bg-green-600 px-2.5 py-1.5 font-medium text-sm text-white transition-colors hover:bg-green-700 dark:border-green-500 dark:bg-green-600 dark:hover:bg-green-700"
-                    >
-                        <GitPullRequest className="size-4" />
-                        New Pull Request
-                    </a>
                 </div>
             </div>
 
@@ -630,10 +529,7 @@ export function PullRequestList({
                 <div className="flex items-center justify-between px-4">
                     <div className="flex items-center">
                         {TABS.map((tab) => {
-                            const count =
-                                tab.key !== "merged"
-                                    ? stateCounts?.[tab.key]
-                                    : undefined;
+                            const count = stateCounts?.[tab.key];
                             return (
                                 <button
                                     key={tab.key}
@@ -736,42 +632,6 @@ export function PullRequestList({
                             }}
                         />
 
-                        <StatusDropdown
-                            currentQuery={searchQuery}
-                            onToggle={(key: string, value: string) => {
-                                const newQuery = hasQualifier(
-                                    searchQuery,
-                                    key,
-                                    value,
-                                )
-                                    ? removeQualifier(searchQuery, key, value)
-                                    : replaceQualifier(searchQuery, key, value);
-                                setSearchInput(newQuery);
-                                navigate({
-                                    q: newQuery || null,
-                                    page: null,
-                                });
-                            }}
-                        />
-
-                        <ReviewDropdown
-                            currentQuery={searchQuery}
-                            onToggle={(key: string, value: string) => {
-                                const newQuery = hasQualifier(
-                                    searchQuery,
-                                    key,
-                                    value,
-                                )
-                                    ? removeQualifier(searchQuery, key, value)
-                                    : replaceQualifier(searchQuery, key, value);
-                                setSearchInput(newQuery);
-                                navigate({
-                                    q: newQuery || null,
-                                    page: null,
-                                });
-                            }}
-                        />
-
                         <SortDropdown
                             currentSort={currentSort}
                             currentOrder={currentOrder}
@@ -831,7 +691,7 @@ export function PullRequestList({
                             <>
                                 <GitPullRequest className="size-8 text-gray-400" />
                                 <p className="font-medium text-gray-900 dark:text-gray-100">
-                                    No pull requests match your search
+                                    No issues match your search
                                 </p>
                                 <p className="text-gray-500 text-sm dark:text-gray-400">
                                     Try a different search or clear filters
@@ -839,33 +699,26 @@ export function PullRequestList({
                             </>
                         ) : activeTab === "open" ? (
                             <>
-                                <GitPullRequest className="size-8 text-gray-400" />
+                                <CircleCheck className="size-8 text-gray-400" />
                                 <p className="font-medium text-gray-900 dark:text-gray-100">
-                                    No open pull requests
-                                </p>
-                            </>
-                        ) : activeTab === "closed" ? (
-                            <>
-                                <GitPullRequestClosed className="size-8 text-gray-400" />
-                                <p className="font-medium text-gray-900 dark:text-gray-100">
-                                    No closed pull requests
+                                    No open issues
                                 </p>
                             </>
                         ) : (
                             <>
-                                <GitMerge className="size-8 text-gray-400" />
+                                <Circle className="size-8 text-gray-400" />
                                 <p className="font-medium text-gray-900 dark:text-gray-100">
-                                    No merged pull requests
+                                    No closed issues
                                 </p>
                             </>
                         )}
                     </div>
                 ) : (
                     <div>
-                        {items.map((pr) => (
-                            <PullRequestRow
-                                key={pr.id}
-                                pr={pr}
+                        {items.map((issue) => (
+                            <IssueRow
+                                key={issue.number}
+                                issue={issue}
                                 owner={owner}
                                 repo={repo}
                                 onLabelFilter={(name) => {
@@ -948,116 +801,5 @@ export function PullRequestList({
                 />
             )}
         </div>
-    );
-}
-
-function StatusDropdown({
-    currentQuery,
-    onToggle,
-}: {
-    currentQuery: string;
-    onToggle: (key: string, value: string) => void;
-}) {
-    const STATUS_OPTIONS = [
-        { label: "pending", subtitle: "Pending" },
-        { label: "success", subtitle: "Success" },
-        { label: "failure", subtitle: "Failure" },
-    ];
-
-    return (
-        <SearchableDropdown
-            items={STATUS_OPTIONS}
-            isSelected={(o: { label: string }) =>
-                hasQualifier(currentQuery, "status", o.label)
-            }
-            onSelect={(o: { label: string }) => onToggle("status", o.label)}
-            keyFn={(o: { label: string }) => o.label}
-            searchFn={(o: { label: string }, q: string) =>
-                o.label.toLowerCase().includes(q.toLowerCase())
-            }
-            renderItem={(
-                o: { label: string; subtitle: string },
-                selected: boolean,
-            ) => (
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <span className="truncate">{o.label}</span>
-                    {selected && (
-                        <span className="ml-auto shrink-0 text-blue-600 text-xs dark:text-blue-400">
-                            &#10003;
-                        </span>
-                    )}
-                </div>
-            )}
-            placeholder="Filter status..."
-            emptyText="No status options"
-            ariaLabel="Filter by status"
-            closeOnSelect
-            trigger={
-                <button
-                    type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
-                >
-                    <CircleCheck className="size-4" />
-                    Checks
-                    <ChevronDown className="size-3.5 text-gray-400" />
-                </button>
-            }
-        />
-    );
-}
-
-function ReviewDropdown({
-    currentQuery,
-    onToggle,
-}: {
-    currentQuery: string;
-    onToggle: (key: string, value: string) => void;
-}) {
-    const REVIEW_OPTIONS = [
-        { label: "none", subtitle: "Not reviewed" },
-        { label: "required", subtitle: "Review required" },
-        { label: "approved", subtitle: "Approved" },
-        { label: "changes_requested", subtitle: "Changes requested" },
-    ];
-
-    return (
-        <SearchableDropdown
-            items={REVIEW_OPTIONS}
-            isSelected={(o: { label: string }) =>
-                hasQualifier(currentQuery, "review", o.label)
-            }
-            onSelect={(o: { label: string }) => onToggle("review", o.label)}
-            keyFn={(o: { label: string }) => o.label}
-            searchFn={(o: { label: string }, q: string) =>
-                o.label.toLowerCase().includes(q.toLowerCase())
-            }
-            renderItem={(
-                o: { label: string; subtitle: string },
-                selected: boolean,
-            ) => (
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <span className="truncate">{o.subtitle ?? o.label}</span>
-                    {selected && (
-                        <span className="ml-auto shrink-0 text-blue-600 text-xs dark:text-blue-400">
-                            &#10003;
-                        </span>
-                    )}
-                </div>
-            )}
-            placeholder="Filter review..."
-            emptyText="No review options"
-            ariaLabel="Filter by review"
-            closeOnSelect
-            trigger={
-                <button
-                    type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
-                >
-                    <Eye className="size-4" />
-                    Review
-                    <ChevronDown className="size-3.5 text-gray-400" />
-                </button>
-            }
-        />
     );
 }

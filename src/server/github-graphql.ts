@@ -1039,6 +1039,115 @@ export async function searchPullRequestsWithStatus(
     };
 }
 
+export interface GqlIssueSearchItem {
+    databaseId: number;
+    number: number;
+    title: string;
+    state: string;
+    createdAt: string;
+    closedAt: string | null;
+    author: { login: string; avatarUrl: string; url: string } | null;
+    labels: {
+        nodes: Array<{
+            id: string;
+            name: string;
+            color: string;
+            description: string | null;
+        }>;
+    };
+    assignees: { nodes: Array<{ login: string; avatarUrl: string }> };
+    comments: { totalCount: number };
+}
+
+const ISSUE_SEARCH_QUERY = `
+query SearchIssues($searchQuery: String!, $first: Int!, $after: String) {
+  search(query: $searchQuery, type: ISSUE, first: $first, after: $after) {
+    issueCount
+    pageInfo {
+      endCursor
+      hasNextPage
+    }
+    nodes {
+      __typename
+      ... on Issue {
+        databaseId
+        number
+        title
+        state
+        createdAt
+        closedAt
+        author { login avatarUrl url }
+        labels(first: 10) {
+          nodes { id name color description }
+        }
+        assignees(first: 5) {
+          nodes { login avatarUrl }
+        }
+        comments { totalCount }
+      }
+    }
+  }
+}
+`;
+
+export async function searchIssuesWithMetadata(
+    accessToken: string,
+    query: string,
+    first: number = 30,
+    after: string | null = null,
+    countQueries?: { open: string; closed: string },
+) {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const [result, ...countResults] = await Promise.all([
+        graphql<{
+            search: {
+                issueCount: number;
+                pageInfo: { endCursor: string | null; hasNextPage: boolean };
+                nodes: Array<
+                    | ({ __typename: "Issue" } & GqlIssueSearchItem)
+                    | { __typename: string }
+                    | null
+                >;
+            };
+        }>(ISSUE_SEARCH_QUERY, {
+            searchQuery: query,
+            first,
+            after,
+        }),
+        ...(countQueries
+            ? [
+                  graphql<{ search: { issueCount: number } }>(COUNT_QUERY, {
+                      searchQuery: countQueries.open,
+                  }),
+                  graphql<{ search: { issueCount: number } }>(COUNT_QUERY, {
+                      searchQuery: countQueries.closed,
+                  }),
+              ]
+            : []),
+    ]);
+
+    const items = result.search.nodes.filter(
+        (n): n is { __typename: "Issue" } & GqlIssueSearchItem =>
+            n?.__typename === "Issue",
+    );
+
+    return {
+        items,
+        totalCount: result.search.issueCount,
+        hasNextPage: result.search.pageInfo.hasNextPage,
+        endCursor: result.search.pageInfo.endCursor,
+        stateCounts: countQueries
+            ? {
+                  open: countResults[0]?.search.issueCount ?? 0,
+                  closed: countResults[1]?.search.issueCount ?? 0,
+              }
+            : undefined,
+    };
+}
+
 export async function removeReaction(
     accessToken: string,
     subjectId: string,
