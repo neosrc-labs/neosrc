@@ -19,7 +19,7 @@ export default async function PullsPage({
         state === "closed" || state === "merged" ? state : "open";
 
     return (
-        <main className="min-h-screen min-w-0 border-gray-200 border-r bg-white dark:border-zinc-800 dark:bg-zinc-950">
+        <main className="min-h-[calc(100svh-var(--header-height))] min-w-0 border-gray-200 border-r bg-white dark:border-zinc-800 dark:bg-zinc-950">
             <div className="mx-auto max-w-7xl px-6 py-8">
                 <PullRequestList
                     owner={owner}

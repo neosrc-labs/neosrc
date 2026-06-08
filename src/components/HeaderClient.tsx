@@ -75,9 +75,12 @@ export function HeaderClient({
 
         const observer = new ResizeObserver(([entry]) => {
             if (entry) {
+                const height =
+                    entry.borderBoxSize?.[0]?.blockSize ??
+                    entry.contentRect.height;
                 document.documentElement.style.setProperty(
                     "--header-height",
-                    `${entry.contentRect.height}px`,
+                    `${height}px`,
                 );
             }
         });
