@@ -200,8 +200,8 @@ export default function FileDiff({
                 : "text-yellow-600";
 
     return (
-        <div className="overflow-hidden rounded border border-gray-200 dark:border-zinc-700">
-            <div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="rounded border border-gray-200 dark:border-zinc-700">
+            <div className="sticky top-[calc(var(--header-height)+56px)] z-[1] flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900">
                 <button
                     className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                     onClick={toggleCollapsed}
@@ -273,78 +273,80 @@ export default function FileDiff({
                 </label>
             </div>
 
-            {!isCollapsed &&
-                (performanceHidden && !showPerformanceDiff ? (
-                    <div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-gray-500 text-sm dark:border-gray-700 dark:text-gray-400">
-                        <span>
-                            {file.status === "removed"
-                                ? "This file was deleted."
-                                : file.additions + file.deletions > 1000
-                                  ? `This diff is large (${(file.additions + file.deletions).toLocaleString()} lines changed) and is hidden by default.`
-                                  : "This diff is hidden to improve performance."}
-                        </span>
-                        <button
-                            className="cursor-pointer font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            onClick={() => onTogglePerformanceDiff?.()}
-                            type="button"
-                        >
-                            Show changes
-                        </button>
-                    </div>
-                ) : generated && !showGeneratedDiff ? (
-                    <div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-gray-500 text-sm dark:border-gray-700 dark:text-gray-400">
-                        <span>
-                            This file is generated and hidden by default.
-                        </span>
-                        <button
-                            className="cursor-pointer font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            onClick={() => onToggleGeneratedDiff?.()}
-                            type="button"
-                        >
-                            Show changes
-                        </button>
-                    </div>
-                ) : file.patch ? (
-                    <DiffView
-                        patch={file.patch}
-                        filename={file.filename}
-                        comments={showComments ? comments : undefined}
-                        showComments={showComments}
-                        showCommentButton={showComments}
-                        activeComment={activeComment}
-                        onStartComment={setActiveComment}
-                        commentBody={commentBody}
-                        onCommentBodyChange={setCommentBody}
-                        commentPending={
-                            createMutation.isPending ||
-                            startReviewMutation.isPending
-                        }
-                        commentError={
-                            createMutation.isError ||
-                            startReviewMutation.isError
-                        }
-                        onCancelComment={() => {
-                            setActiveComment(null);
-                            setCommentBody("");
-                        }}
-                        footerActions={footerActions}
-                        pendingReviewId={pendingReviewId}
-                        owner={owner}
-                        repo={repo}
-                        pullNumber={number}
-                    />
-                ) : isImage && imageUrls ? (
-                    <ImageDiff
-                        newUrl={imageUrls.newUrl}
-                        oldUrl={imageUrls.oldUrl}
-                    />
-                ) : (
-                    <div className="px-4 py-3 text-gray-500 text-sm italic dark:text-gray-400">
-                        {file.status === "renamed"
-                            ? `File renamed from ${file.previous_filename} without changes`
-                            : "Binary file not shown"}
-                    </div>
-                ))}
+            <div className="overflow-hidden rounded-b">
+                {!isCollapsed &&
+                    (performanceHidden && !showPerformanceDiff ? (
+                        <div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-gray-500 text-sm dark:border-gray-700 dark:text-gray-400">
+                            <span>
+                                {file.status === "removed"
+                                    ? "This file was deleted."
+                                    : file.additions + file.deletions > 1000
+                                      ? `This diff is large (${(file.additions + file.deletions).toLocaleString()} lines changed) and is hidden by default.`
+                                      : "This diff is hidden to improve performance."}
+                            </span>
+                            <button
+                                className="cursor-pointer font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                onClick={() => onTogglePerformanceDiff?.()}
+                                type="button"
+                            >
+                                Show changes
+                            </button>
+                        </div>
+                    ) : generated && !showGeneratedDiff ? (
+                        <div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-gray-500 text-sm dark:border-gray-700 dark:text-gray-400">
+                            <span>
+                                This file is generated and hidden by default.
+                            </span>
+                            <button
+                                className="cursor-pointer font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                onClick={() => onToggleGeneratedDiff?.()}
+                                type="button"
+                            >
+                                Show changes
+                            </button>
+                        </div>
+                    ) : file.patch ? (
+                        <DiffView
+                            patch={file.patch}
+                            filename={file.filename}
+                            comments={showComments ? comments : undefined}
+                            showComments={showComments}
+                            showCommentButton={showComments}
+                            activeComment={activeComment}
+                            onStartComment={setActiveComment}
+                            commentBody={commentBody}
+                            onCommentBodyChange={setCommentBody}
+                            commentPending={
+                                createMutation.isPending ||
+                                startReviewMutation.isPending
+                            }
+                            commentError={
+                                createMutation.isError ||
+                                startReviewMutation.isError
+                            }
+                            onCancelComment={() => {
+                                setActiveComment(null);
+                                setCommentBody("");
+                            }}
+                            footerActions={footerActions}
+                            pendingReviewId={pendingReviewId}
+                            owner={owner}
+                            repo={repo}
+                            pullNumber={number}
+                        />
+                    ) : isImage && imageUrls ? (
+                        <ImageDiff
+                            newUrl={imageUrls.newUrl}
+                            oldUrl={imageUrls.oldUrl}
+                        />
+                    ) : (
+                        <div className="px-4 py-3 text-gray-500 text-sm italic dark:text-gray-400">
+                            {file.status === "renamed"
+                                ? `File renamed from ${file.previous_filename} without changes`
+                                : "Binary file not shown"}
+                        </div>
+                    ))}
+            </div>
         </div>
     );
 }
