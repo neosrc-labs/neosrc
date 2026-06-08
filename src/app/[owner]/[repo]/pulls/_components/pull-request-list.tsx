@@ -10,6 +10,7 @@ import {
     GitPullRequestClosed,
     ListOrdered,
     Milestone,
+    Search,
     Tag,
     User,
     X,
@@ -255,43 +256,19 @@ export function PullRequestList({
     );
 
     const [searchInput, setSearchInput] = useState(searchQuery);
-    const pendingNavRef = useRef(false);
 
-    // Sync from URL only when navigation wasn't triggered by our own debounce
-    // biome-ignore lint/correctness/useExhaustiveDependencies: searchInput intentionally excluded to avoid overwriting user keystrokes
+    // Sync searchInput from URL when it changes externally (e.g., browser nav)
     useEffect(() => {
-        if (pendingNavRef.current) {
-            pendingNavRef.current = false;
-            return;
-        }
-        if (searchInput !== searchQuery) {
-            setSearchInput(searchQuery);
-        }
+        setSearchInput(searchQuery);
     }, [searchQuery]);
 
-    const debouncedSearch = useDebounce(searchInput, 500);
-
-    useEffect(() => {
-        if (
-            debouncedSearch !== searchQuery &&
-            debouncedSearch === searchInput
-        ) {
-            const params = new URLSearchParams(searchParams.toString());
-            if (debouncedSearch) params.set("q", debouncedSearch);
-            else params.delete("q");
-            params.delete("page");
-            pendingNavRef.current = true;
-            router.replace(`/${owner}/${repo}/pulls?${params.toString()}`);
-        }
-    }, [
-        debouncedSearch,
-        searchQuery,
-        searchInput,
-        searchParams,
-        router,
-        owner,
-        repo,
-    ]);
+    const handleSearch = useCallback(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (searchInput) params.set("q", searchInput);
+        else params.delete("q");
+        params.delete("page");
+        router.replace(`/${owner}/${repo}/pulls?${params.toString()}`);
+    }, [searchInput, searchParams, router, owner, repo]);
 
     const handleRemoveQualifier = useCallback(
         (key: string, value: string) => {
@@ -406,6 +383,9 @@ export function PullRequestList({
                                 ) {
                                     return;
                                 }
+                                if (e.key === "Enter") {
+                                    handleSearch();
+                                }
                             }}
                             onClick={(e) => {
                                 setCursorPos(
@@ -418,7 +398,7 @@ export function PullRequestList({
                                 );
                             }}
                             placeholder="Search pull requests by title, body, or comments"
-                            className="relative w-full rounded-md border border-gray-300 bg-transparent px-3 py-1.5 pr-8 text-sm text-transparent placeholder-gray-500 caret-gray-900 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:placeholder-gray-500 dark:caret-gray-100 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+                            className="relative w-full rounded-md border border-gray-300 bg-transparent px-3 py-1.5 pr-12 text-sm text-transparent placeholder-gray-500 caret-gray-900 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:placeholder-gray-500 dark:caret-gray-100 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                         />
                         {autocompleteMatch && (
                             <SearchAutocomplete
@@ -431,18 +411,27 @@ export function PullRequestList({
                                 onClose={handleAutocompleteClose}
                             />
                         )}
-                        {searchInput && (
+                        <div className="absolute right-2 flex items-center gap-0.5">
+                            {searchInput && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSearchInput("");
+                                        navigate({ q: null, page: null });
+                                    }}
+                                    className="flex size-4 cursor-pointer items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                >
+                                    <X className="size-3" />
+                                </button>
+                            )}
                             <button
                                 type="button"
-                                onClick={() => {
-                                    setSearchInput("");
-                                    navigate({ q: null, page: null });
-                                }}
-                                className="absolute right-2 flex size-4 cursor-pointer items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                onClick={handleSearch}
+                                className="flex size-6 cursor-pointer items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
                             >
-                                <X className="size-3" />
+                                <Search className="size-4" />
                             </button>
-                        )}
+                        </div>
                     </div>
 
                     <a
