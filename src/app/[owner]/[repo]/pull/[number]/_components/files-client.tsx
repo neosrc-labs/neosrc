@@ -195,7 +195,25 @@ export function FilesSection({
                 <h2 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
                     Files Changed{!isLoading && ` (${allFiles.length})`}
                 </h2>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                    <Async promise={pullRequestPromise}>
+                        {(pullRequest) => (
+                            <div className="flex items-center gap-1.5 text-sm">
+                                {pullRequest.additions > 0 && (
+                                    <span className="font-medium text-green-600 dark:text-green-500">
+                                        +
+                                        {pullRequest.additions.toLocaleString()}
+                                    </span>
+                                )}
+                                {pullRequest.deletions > 0 && (
+                                    <span className="font-medium text-red-600 dark:text-red-500">
+                                        -
+                                        {pullRequest.deletions.toLocaleString()}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </Async>
                     <div className="flex flex-col gap-0.5 text-gray-600 text-xs dark:text-gray-400">
                         <div className="flex items-center gap-1.5">
                             <span>
