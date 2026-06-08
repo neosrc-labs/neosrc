@@ -1,16 +1,31 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // --- Mocks ---
 
-const mockRouter = { push: vi.fn(), replace: vi.fn() };
-const mockSearchParams = new URLSearchParams();
+let paramsState = new URLSearchParams();
+function getSearchParams() {
+    return paramsState;
+}
+function setSearchParams(params: URLSearchParams) {
+    paramsState = params;
+}
+
+const mockRouter = {
+    push: vi.fn((url: string) => {
+        const queryStart = url.indexOf("?");
+        if (queryStart !== -1) {
+            setSearchParams(new URLSearchParams(url.slice(queryStart + 1)));
+        }
+    }),
+    replace: vi.fn(),
+};
 
 vi.mock("next/navigation", () => ({
     useRouter: () => mockRouter,
-    useSearchParams: () => mockSearchParams,
+    useSearchParams: () => getSearchParams(),
 }));
 
 vi.mock("~/trpc/react", () => ({
@@ -77,11 +92,11 @@ function renderList(props?: {
 describe("PullRequestList", () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockSearchParams.delete("state");
-        mockSearchParams.delete("q");
-        mockSearchParams.delete("page");
-        mockSearchParams.delete("sort");
-        mockSearchParams.delete("order");
+        paramsState.delete("state");
+        paramsState.delete("q");
+        paramsState.delete("page");
+        paramsState.delete("sort");
+        paramsState.delete("order");
     });
 
     it("renders the search input with placeholder", () => {
@@ -168,9 +183,44 @@ describe("PullRequestList", () => {
     });
 
     it("appears on the correct tab based on URL state param", () => {
-        mockSearchParams.set("state", "closed");
+        paramsState.set("state", "closed");
         renderList();
         const closedTab = screen.getByRole("button", { name: /closed/i });
         expect(closedTab.className).toContain("border-blue-500");
+    });
+
+    it("typing 'is:m' and pressing Enter selects 'is:merged' from autocomplete and switches to Merged tab", async () => {
+        const user = userEvent.setup();
+        renderList();
+
+        const input = screen.getByPlaceholderText(
+            "Search pull requests by title, body, or comments",
+        ) as HTMLInputElement;
+
+        // Type "is:m" which should trigger the autocomplete for "is:" with "merged" as a suggestion
+        await user.click(input);
+        await user.type(input, "is:m");
+
+        // Verify the input has the expected value
+        expect(input.value).toBe("is:m");
+
+        // Press Enter to select "merged" from autocomplete
+        await user.keyboard("{Enter}");
+
+        // The search input should now show "is:merged " with cursor at the end
+        expect(input.value).toBe("is:merged ");
+        expect(input.selectionStart).toBe("is:merged ".length);
+
+        // Selecting from autocomplete should have navigated with state=merged
+        const pushCalls = mockRouter.push.mock.calls.map((c) => c[0] as string);
+        expect(pushCalls.some((url) => url.includes("state=merged"))).toBe(
+            true,
+        );
+        expect(pushCalls.some((url) => url.includes("q=is%3Amerged"))).toBe(
+            true,
+        );
+
+        const mergedTab = screen.getByRole("button", { name: /merged/i });
+        expect(mergedTab.className).toContain("border-blue-500");
     });
 });
