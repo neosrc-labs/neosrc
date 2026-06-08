@@ -223,4 +223,60 @@ describe("PullRequestList", () => {
         const mergedTab = screen.getByRole("button", { name: /merged/i });
         expect(mergedTab.className).toContain("border-blue-500");
     });
+
+    it("clicking the Merged tab adds 'is:merged ' to the search bar", async () => {
+        const user = userEvent.setup();
+        renderList();
+
+        await user.click(screen.getByRole("button", { name: /merged/i }));
+
+        const input = screen.getByPlaceholderText(
+            "Search pull requests by title, body, or comments",
+        ) as HTMLInputElement;
+        expect(input.value).toBe("is:merged ");
+        expect(input.selectionStart).toBe("is:merged ".length);
+    });
+
+    it("typing 'is:c' and pressing Enter selects 'is:closed' from autocomplete and switches to Closed tab", async () => {
+        const user = userEvent.setup();
+        renderList();
+
+        const input = screen.getByPlaceholderText(
+            "Search pull requests by title, body, or comments",
+        ) as HTMLInputElement;
+
+        await user.click(input);
+        await user.type(input, "is:c");
+
+        expect(input.value).toBe("is:c");
+
+        await user.keyboard("{Enter}");
+
+        expect(input.value).toBe("is:closed ");
+        expect(input.selectionStart).toBe("is:closed ".length);
+
+        const pushCalls = mockRouter.push.mock.calls.map((c) => c[0] as string);
+        expect(pushCalls.some((url) => url.includes("state=closed"))).toBe(
+            true,
+        );
+        expect(pushCalls.some((url) => url.includes("q=is%3Aclosed"))).toBe(
+            true,
+        );
+
+        const closedTab = screen.getByRole("button", { name: /closed/i });
+        expect(closedTab.className).toContain("border-blue-500");
+    });
+
+    it("clicking the Closed tab adds 'is:closed ' to the search bar", async () => {
+        const user = userEvent.setup();
+        renderList();
+
+        await user.click(screen.getByRole("button", { name: /closed/i }));
+
+        const input = screen.getByPlaceholderText(
+            "Search pull requests by title, body, or comments",
+        ) as HTMLInputElement;
+        expect(input.value).toBe("is:closed ");
+        expect(input.selectionStart).toBe("is:closed ".length);
+    });
 });
