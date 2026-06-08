@@ -18,6 +18,7 @@ interface SearchableDropdownProps<T> {
     disabled?: boolean;
     trigger?: React.ReactNode;
     onSearchChange?: (query: string) => void;
+    closeOnSelect?: boolean;
 }
 
 export function SearchableDropdown<T>({
@@ -34,6 +35,7 @@ export function SearchableDropdown<T>({
     disabled,
     trigger,
     onSearchChange,
+    closeOnSelect,
 }: SearchableDropdownProps<T>) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
@@ -126,7 +128,10 @@ export function SearchableDropdown<T>({
                                                 "bg-blue-50 dark:bg-blue-950/30",
                                         )}
                                         key={keyFn(item)}
-                                        onClick={() => onSelect(item)}
+                                        onClick={() => {
+                                            onSelect(item);
+                                            if (closeOnSelect) setOpen(false);
+                                        }}
                                         role="option"
                                         aria-selected={selected}
                                     >

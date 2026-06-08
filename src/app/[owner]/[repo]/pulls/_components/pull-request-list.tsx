@@ -4,6 +4,8 @@ import {
     ChevronDown,
     ChevronLeft,
     ChevronRight,
+    CircleCheck,
+    Eye,
     Flag,
     GitMerge,
     GitPullRequest,
@@ -581,6 +583,42 @@ export function PullRequestList({
                             }}
                         />
 
+                        <StatusDropdown
+                            currentQuery={searchQuery}
+                            onToggle={(key: string, value: string) => {
+                                const newQuery = hasQualifier(
+                                    searchQuery,
+                                    key,
+                                    value,
+                                )
+                                    ? removeQualifier(searchQuery, key, value)
+                                    : replaceQualifier(searchQuery, key, value);
+                                setSearchInput(newQuery);
+                                navigate({
+                                    q: newQuery || null,
+                                    page: null,
+                                });
+                            }}
+                        />
+
+                        <ReviewDropdown
+                            currentQuery={searchQuery}
+                            onToggle={(key: string, value: string) => {
+                                const newQuery = hasQualifier(
+                                    searchQuery,
+                                    key,
+                                    value,
+                                )
+                                    ? removeQualifier(searchQuery, key, value)
+                                    : replaceQualifier(searchQuery, key, value);
+                                setSearchInput(newQuery);
+                                navigate({
+                                    q: newQuery || null,
+                                    page: null,
+                                });
+                            }}
+                        />
+
                         <SortDropdown
                             currentSort={currentSort}
                             currentOrder={currentOrder}
@@ -922,6 +960,7 @@ function AuthorDropdown({
                     : "No users found"
             }
             ariaLabel="Filter by author"
+            closeOnSelect
             onSearchChange={setSearchText}
             trigger={
                 <button
@@ -992,6 +1031,7 @@ function AssigneeDropdown({
             placeholder="Filter users..."
             emptyText="No users found"
             ariaLabel="Filter by assignee"
+            closeOnSelect
             trigger={
                 <button
                     type="button"
@@ -1148,6 +1188,109 @@ function LabelDropdown({
                 >
                     <Tag className="size-4" />
                     Label
+                    <ChevronDown className="size-3.5 text-gray-400" />
+                </button>
+            }
+        />
+    );
+}
+
+function StatusDropdown({
+    currentQuery,
+    onToggle,
+}: {
+    currentQuery: string;
+    onToggle: (key: string, value: string) => void;
+}) {
+    const STATUS_OPTIONS = [
+        { label: "pending", subtitle: "Pending" },
+        { label: "success", subtitle: "Success" },
+        { label: "failure", subtitle: "Failure" },
+    ];
+
+    return (
+        <SearchableDropdown
+            items={STATUS_OPTIONS}
+            isSelected={(o) => hasQualifier(currentQuery, "status", o.label)}
+            onSelect={(o) => onToggle("status", o.label)}
+            keyFn={(o) => o.label}
+            searchFn={(o, q) => o.label.toLowerCase().includes(q.toLowerCase())}
+            renderItem={(
+                o: { label: string; subtitle: string },
+                selected: boolean,
+            ) => (
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <span className="truncate">{o.label}</span>
+                    {selected && (
+                        <span className="ml-auto shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                            &#10003;
+                        </span>
+                    )}
+                </div>
+            )}
+            placeholder="Filter status..."
+            emptyText="No status options"
+            ariaLabel="Filter by status"
+            closeOnSelect
+            trigger={
+                <button
+                    type="button"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                >
+                    <CircleCheck className="size-4" />
+                    Checks
+                    <ChevronDown className="size-3.5 text-gray-400" />
+                </button>
+            }
+        />
+    );
+}
+
+function ReviewDropdown({
+    currentQuery,
+    onToggle,
+}: {
+    currentQuery: string;
+    onToggle: (key: string, value: string) => void;
+}) {
+    const REVIEW_OPTIONS = [
+        { label: "none", subtitle: "Not reviewed" },
+        { label: "required", subtitle: "Review required" },
+        { label: "approved", subtitle: "Approved" },
+        { label: "changes_requested", subtitle: "Changes requested" },
+    ];
+
+    return (
+        <SearchableDropdown
+            items={REVIEW_OPTIONS}
+            isSelected={(o) => hasQualifier(currentQuery, "review", o.label)}
+            onSelect={(o) => onToggle("review", o.label)}
+            keyFn={(o) => o.label}
+            searchFn={(o, q) => o.label.toLowerCase().includes(q.toLowerCase())}
+            renderItem={(
+                o: { label: string; subtitle: string },
+                selected: boolean,
+            ) => (
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <span className="truncate">{o.subtitle ?? o.label}</span>
+                    {selected && (
+                        <span className="ml-auto shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                            &#10003;
+                        </span>
+                    )}
+                </div>
+            )}
+            placeholder="Filter review..."
+            emptyText="No review options"
+            ariaLabel="Filter by review"
+            closeOnSelect
+            trigger={
+                <button
+                    type="button"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                >
+                    <Eye className="size-4" />
+                    Review
                     <ChevronDown className="size-3.5 text-gray-400" />
                 </button>
             }
