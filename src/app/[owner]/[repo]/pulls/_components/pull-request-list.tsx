@@ -199,7 +199,9 @@ export function PullRequestList({
     let cleanedQuery = searchQuery;
     if (cleanedQuery) {
         const parsed = parseQuery(cleanedQuery);
-        parsed.qualifiers = parsed.qualifiers.filter((q) => q.key !== "sort");
+        parsed.qualifiers = parsed.qualifiers.filter(
+            (q) => q.key !== "sort" && q.key !== "is",
+        );
         cleanedQuery = formatQuery(parsed);
     }
     const apiQuery = cleanedQuery
@@ -258,13 +260,6 @@ export function PullRequestList({
         [owner, repo, router, searchParams],
     );
 
-    const setTab = useCallback(
-        (tab: FilterState) => {
-            navigate({ state: tab === "open" ? null : tab, page: null });
-        },
-        [navigate],
-    );
-
     const [searchInput, setSearchInput] = useState(searchQuery);
 
     // Sync searchInput from URL when it changes externally (e.g., browser nav)
@@ -272,12 +267,52 @@ export function PullRequestList({
         setSearchInput(searchQuery);
     }, [searchQuery]);
 
+    const setTab = useCallback(
+        (tab: FilterState) => {
+            const parsed = parseQuery(searchInput);
+            parsed.qualifiers = parsed.qualifiers.filter((q) => q.key !== "is");
+            if (tab !== "open") {
+                parsed.qualifiers.push({ key: "is", value: tab });
+            }
+            const newQuery = formatQuery(parsed);
+            setSearchInput(newQuery);
+            navigate({
+                state: tab === "open" ? null : tab,
+                q: newQuery || null,
+                page: null,
+            });
+        },
+        [navigate, searchInput],
+    );
+
     const handleSearch = useCallback(() => {
+        const parsed = parseQuery(searchInput);
+        const isQualifier = parsed.qualifiers.find((q) => q.key === "is");
         const params = new URLSearchParams(searchParams.toString());
-        if (searchInput) params.set("q", searchInput);
-        else params.delete("q");
-        params.delete("page");
-        router.push(`/${owner}/${repo}/pulls?${params.toString()}`);
+        if (isQualifier) {
+            const tab = isQualifier.value as FilterState;
+            if (tab === "open") {
+                params.delete("state");
+                parsed.qualifiers = parsed.qualifiers.filter(
+                    (q) => q.key !== "is",
+                );
+                const newQuery = formatQuery(parsed);
+                if (newQuery) params.set("q", newQuery);
+                else params.delete("q");
+                setSearchInput(newQuery);
+            } else {
+                params.set("state", tab);
+                if (searchInput) params.set("q", searchInput);
+                else params.delete("q");
+            }
+            params.delete("page");
+            router.push(`/${owner}/${repo}/pulls?${params.toString()}`);
+        } else {
+            if (searchInput) params.set("q", searchInput);
+            else params.delete("q");
+            params.delete("page");
+            router.push(`/${owner}/${repo}/pulls?${params.toString()}`);
+        }
     }, [searchInput, searchParams, router, owner, repo]);
 
     const handleRemoveQualifier = useCallback(
@@ -326,6 +361,35 @@ export function PullRequestList({
 
     const handleAutocompleteSelect = useCallback(
         (key: string, value: string) => {
+            if (key === "is") {
+                const tab = value as FilterState;
+                if (tab === "open") {
+                    setTab("open");
+                    const detection = detectQualifier(searchInput, cursorPos);
+                    const newQuery = detection
+                        ? [
+                              searchInput.slice(0, detection.start).trimEnd(),
+                              searchInput.slice(detection.end).trimStart(),
+                          ]
+                              .filter(Boolean)
+                              .join(" ")
+                        : searchInput;
+                    setSearchInput(newQuery);
+                    setCursorPos(0);
+                } else {
+                    setTab(tab);
+                    const newQuery = replaceQualifierValue(
+                        searchInput,
+                        cursorPos,
+                        key,
+                        value,
+                    );
+                    setSearchInput(newQuery);
+                    setCursorPos(0);
+                    navigate({ q: newQuery || null, page: null });
+                }
+                return;
+            }
             const newQuery = replaceQualifierValue(
                 searchInput,
                 cursorPos,
@@ -344,7 +408,7 @@ export function PullRequestList({
                 navigate({ q: newQuery || null, page: null });
             }
         },
-        [searchInput, cursorPos, navigate],
+        [searchInput, cursorPos, navigate, setTab],
     );
 
     const handleAutocompleteClose = useCallback(() => {

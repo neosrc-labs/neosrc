@@ -13,12 +13,12 @@ import { Label } from "~/components/ui/label";
 import { api } from "~/trpc/react";
 
 interface AutocompleteMatch {
-    key: "author" | "label" | "assignee" | "sort" | "review" | "status";
+    key: "author" | "label" | "assignee" | "sort" | "review" | "status" | "is";
     value: string;
 }
 
 const QUALIFIER_RE =
-    /(author:|label:|assignee:|sort:|review:|status:)([\w-]*)$/;
+    /(author:|label:|assignee:|sort:|review:|status:|is:)([\w-]*)$/;
 
 export function detectQualifier(
     text: string,
@@ -86,6 +86,11 @@ const STATIC_OPTIONS: Record<string, { label: string; subtitle?: string }[]> = {
         { label: "pending", subtitle: "Pending" },
         { label: "success", subtitle: "Success" },
         { label: "failure", subtitle: "Failure" },
+    ],
+    is: [
+        { label: "open", subtitle: "Open pull requests" },
+        { label: "closed", subtitle: "Closed pull requests" },
+        { label: "merged", subtitle: "Merged pull requests" },
     ],
 };
 
