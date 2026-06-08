@@ -92,6 +92,48 @@ export const SearchAutocomplete = forwardRef<
         { owner, repo },
         { enabled: match.key === "assignee" || match.key === "author" },
     );
+    const { data: recentAuthors } = api.pulls.listRecentAuthors.useQuery(
+        { owner, repo },
+        { enabled: match.key === "author" },
+    );
+    const { data: currentUser } = api.users.currentUser.useQuery();
+
+    const allUsers = useMemo(() => {
+        if (match.key !== "author" && match.key !== "assignee") return [];
+        const map = new Map<
+            string,
+            { login: string; name?: string | null; avatar_url?: string }
+        >();
+        for (const u of assignees ?? []) {
+            map.set(u.login, u);
+        }
+        if (match.key === "author") {
+            for (const u of recentAuthors ?? []) {
+                if (!map.has(u.login)) {
+                    map.set(u.login, u);
+                }
+            }
+        }
+        if (currentUser?.login && !map.has(currentUser.login)) {
+            map.set(currentUser.login, {
+                login: currentUser.login,
+                avatar_url: currentUser.avatarUrl,
+            });
+        }
+        const result = Array.from(map.values());
+        result.sort((a, b) => {
+            if (a.login === currentUser?.login) return -1;
+            if (b.login === currentUser?.login) return 1;
+            return a.login.localeCompare(b.login);
+        });
+        return result;
+    }, [
+        match.key,
+        assignees,
+        recentAuthors,
+        currentUser?.login,
+        currentUser?.avatarUrl,
+    ]);
 
     const suggestions = useMemo((): Suggestion[] => {
         const q = query.toLowerCase();
@@ -115,20 +157,14 @@ export const SearchAutocomplete = forwardRef<
         }
 
         if (match.key === "author" || match.key === "assignee") {
-            const filtered = (assignees ?? []).filter((u: { login: string }) =>
+            const filtered = allUsers.filter((u) =>
                 u.login.toLowerCase().includes(q),
             );
-            const result: Suggestion[] = filtered.map(
-                (u: {
-                    login: string;
-                    name?: string | null;
-                    avatar_url?: string;
-                }) => ({
-                    label: u.login,
-                    name: u.name ?? undefined,
-                    avatarUrl: u.avatar_url,
-                }),
-            );
+            const result: Suggestion[] = filtered.map((u) => ({
+                label: u.login,
+                name: u.name ?? undefined,
+                avatarUrl: u.avatar_url,
+            }));
             if (
                 q.length > 0 &&
                 !result.some((r) => r.label.toLowerCase() === q)
@@ -142,7 +178,7 @@ export const SearchAutocomplete = forwardRef<
         }
 
         return [];
-    }, [match.key, query, labels, assignees]);
+    }, [match.key, query, labels, allUsers]);
 
     const prevCountRef = useRef(suggestions.length);
     if (prevCountRef.current !== suggestions.length) {

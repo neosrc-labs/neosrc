@@ -14,6 +14,7 @@ import {
     listLabelsForRepo,
     listMilestonesForRepo,
     listPullRequests,
+    listRecentIssueAuthors,
     listRepoAssignees,
     markPullRequestAsDraft,
     markPullRequestAsReady,
@@ -238,6 +239,22 @@ export const pullsRouter = createTRPCRouter({
             );
 
             return listRepoAssignees(accessToken, input.owner, input.repo);
+        }),
+
+    listRecentAuthors: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            return listRecentIssueAuthors(accessToken, input.owner, input.repo);
         }),
 
     addAssignee: protectedProcedure

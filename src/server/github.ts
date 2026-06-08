@@ -1329,6 +1329,34 @@ export const removeAssigneesFromIssue = async (
     return response.data;
 };
 
+export const listRecentIssueAuthors = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+) => {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.issues.listForRepo({
+        owner,
+        repo,
+        state: "all",
+        sort: "created",
+        direction: "desc",
+        per_page: 100,
+    });
+    const seen = new Set<string>();
+    const authors: Array<{ login: string; avatar_url: string }> = [];
+    for (const issue of response.data) {
+        if (issue.user && !seen.has(issue.user.login)) {
+            seen.add(issue.user.login);
+            authors.push({
+                login: issue.user.login,
+                avatar_url: issue.user.avatar_url ?? "",
+            });
+        }
+    }
+    return authors;
+};
+
 export const addReviewersToPullRequest = async (
     accessToken: string,
     owner: string,
