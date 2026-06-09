@@ -1,11 +1,15 @@
 "use client";
 
-import { Check, Circle, Loader2, XCircle } from "lucide-react";
-import { use, useEffect, useRef, useState } from "react";
+import { Check, Circle, CircleX, Loader2, X, XCircle } from "lucide-react";
+import { use, useRef, useState } from "react";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
-import { computeChecksPollingInterval } from "~/utils/checks-polling";
+import {
+    type CheckStatusRollup,
+    computeCheckStatusRollup,
+    computeChecksPollingInterval,
+} from "~/utils/checks-polling";
 import { CommitsSection } from "./commits-section";
 import { MetadataSection } from "./metadata-section";
 
@@ -16,6 +20,22 @@ interface RightSidebarProps {
     owner: string;
     repo: string;
     number: number;
+}
+
+function RollupIcon({ rollup }: { rollup: CheckStatusRollup | null }) {
+    if (rollup === "SUCCESS") {
+        return <Check className="size-3.5 text-green-600" />;
+    }
+    if (rollup === "FAILURE" || rollup === "ERROR" || rollup === "TIMED_OUT") {
+        return <X className="size-3.5 text-red-600" />;
+    }
+    if (rollup === "CANCELLED") {
+        return <CircleX className="size-3.5 text-gray-400" />;
+    }
+    if (rollup === "IN_PROGRESS" || rollup === "PENDING") {
+        return <Loader2 className="size-3.5 animate-spin text-yellow-500" />;
+    }
+    return <Circle className="size-3.5 text-gray-400" />;
 }
 
 export default function RightSidebar({
@@ -32,14 +52,36 @@ export default function RightSidebar({
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (!checksPromise) return;
-        checksPromise.then((checks) => {
-            if (!checks || checks.length === 0) {
-                setTab("commits");
-            }
-        });
-    }, [checksPromise]);
+    const pullRequest = pullRequestPromise ? use(pullRequestPromise) : null;
+    const initialChecks = checksPromise ? use(checksPromise) : null;
+
+    const commitCount = pullRequest?.commits ?? 0;
+    const isMerged = pullRequest?.merged ?? false;
+    const isClosed = pullRequest?.state === "closed";
+    const createdAt = pullRequest?.created_at ?? "";
+    const sha = pullRequest?.head?.sha;
+
+    const { data: checks } = api.checks.list.useQuery(
+        { owner, repo, sha: sha ?? "" },
+        {
+            enabled: !!sha && !!checksPromise,
+            initialData: initialChecks ?? undefined,
+            refetchInterval(query) {
+                const data = query.state.data as Array<CheckRun> | undefined;
+                if (!data) return false;
+
+                return computeChecksPollingInterval(data, {
+                    isMerged,
+                    isClosed,
+                    createdAt,
+                });
+            },
+        },
+    );
+
+    const displayChecks = checks ?? initialChecks;
+    const checkCount = displayChecks?.length ?? 0;
+    const rollup = computeCheckStatusRollup(displayChecks ?? []);
 
     if (!pullRequestPromise) {
         return (
@@ -51,17 +93,25 @@ export default function RightSidebar({
         );
     }
 
-    const pullRequest = use(pullRequestPromise);
-    const commitCount = pullRequest.commits;
-
-    const checks = checksPromise ? use(checksPromise) : null;
-    const checkCount = checks?.length ?? 0;
-
-    const tabs = [
+    const tabs: {
+        key: "checks" | "commits";
+        icon: React.ReactNode;
+        label: string;
+    }[] = [
         ...(checksPromise
-            ? [["checks", `Checks (${checkCount})`] as const]
+            ? [
+                  {
+                      key: "checks" as const,
+                      icon: <RollupIcon rollup={rollup} />,
+                      label: `Checks (${checkCount})`,
+                  },
+              ]
             : []),
-        ["commits", `Commits (${commitCount})`] as const,
+        {
+            key: "commits" as const,
+            icon: null,
+            label: `Commits (${commitCount})`,
+        },
     ];
 
     return (
@@ -75,17 +125,18 @@ export default function RightSidebar({
                     number={number}
                 />
                 <div className="flex gap-1 border-gray-200 border-b pb-2 dark:border-zinc-800">
-                    {tabs.map(([key, label]) => (
+                    {tabs.map(({ key, icon, label }) => (
                         <button
                             key={key}
                             type="button"
                             onClick={() => setTab(key)}
-                            className={`cursor-pointer rounded-md px-2.5 py-1 font-medium text-sm transition-colors ${
+                            className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 font-medium text-sm transition-colors ${
                                 tab === key
                                     ? "bg-gray-100 text-gray-900 dark:bg-zinc-800 dark:text-zinc-100"
                                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                             }`}
                         >
+                            {icon}
                             {label}
                         </button>
                     ))}
@@ -94,12 +145,7 @@ export default function RightSidebar({
 
             <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
                 {tab === "checks" && checksPromise ? (
-                    <ChecksSection
-                        checksPromise={checksPromise}
-                        pullRequest={pullRequest}
-                        owner={owner}
-                        repo={repo}
-                    />
+                    <ChecksSection checks={displayChecks ?? []} />
                 ) : null}
                 {tab === "commits" ? (
                     <CommitsSection
@@ -116,43 +162,10 @@ export default function RightSidebar({
 }
 
 interface ChecksSectionProps {
-    checksPromise: Promise<Array<CheckRun>>;
-    pullRequest: PullsGetResponseData;
-    owner: string;
-    repo: string;
+    checks: Array<CheckRun>;
 }
 
-function ChecksSection({
-    checksPromise,
-    pullRequest,
-    owner,
-    repo,
-}: ChecksSectionProps) {
-    const initialChecks = use(checksPromise);
-    const isMerged = pullRequest.merged ?? false;
-    const isClosed = pullRequest.state === "closed";
-    const createdAt = pullRequest.created_at;
-
-    const sha = pullRequest.head?.sha;
-
-    const { data: checks } = api.checks.list.useQuery(
-        { owner, repo, sha: sha ?? "" },
-        {
-            enabled: !!sha,
-            initialData: initialChecks,
-            refetchInterval(query) {
-                const data = query.state.data as Array<CheckRun> | undefined;
-                if (!data) return false;
-
-                return computeChecksPollingInterval(data, {
-                    isMerged,
-                    isClosed,
-                    createdAt,
-                });
-            },
-        },
-    );
-
+function ChecksSection({ checks }: ChecksSectionProps) {
     if (!checks || checks.length === 0) {
         return (
             <p className="text-gray-500 text-sm dark:text-zinc-400">
