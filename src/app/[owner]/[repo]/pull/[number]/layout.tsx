@@ -94,36 +94,20 @@ export default async function PullRequestLayout({
                     ),
                 ]);
                 const checkRunItems = (checksResult.check_runs || []).map(
-                    (check: {
-                        name: string;
-                        conclusion: string | null;
-                        status: string;
-                        description?: string | null;
-                        html_url?: string;
-                        details_url?: string | null;
-                        started_at?: string | null;
-                        completed_at?: string | null;
-                        app?: {
-                            name: string;
-                            icon?: string | null;
-                            owner?: {
-                                avatar_url: string;
-                            } | null;
-                        } | null;
-                    }) =>
+                    (check) =>
                         ({
                             name: check.name,
                             conclusion: check.conclusion,
                             status: check.status,
-                            description: check.description ?? null,
-                            html_url: check.html_url,
+                            description:
+                                check.output.title ?? check.output.summary,
+                            html_url: check.html_url ?? undefined,
                             details_url: check.details_url,
                             started_at: check.started_at,
                             completed_at: check.completed_at,
                             app: check.app
                                 ? {
                                       name: check.app.name,
-                                      icon: check.app.icon,
                                       owner: check.app.owner
                                           ? {
                                                 avatar_url:
