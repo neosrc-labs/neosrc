@@ -60,10 +60,15 @@ export function ActionSection({
         { staleTime: 30_000 },
     );
 
+    const navigateAndScroll = useCallback(() => {
+        router.push(`/${owner}/${repo}/pull/${number}?scrollTo=bottom`);
+    }, [router, owner, repo, number]);
+
     const approveMutation = api.pulls.approve.useMutation({
         onSuccess: () => {
             utils.timeline.list.invalidate();
             utils.reviews.getPending.invalidate();
+            navigateAndScroll();
         },
     });
 
@@ -71,6 +76,7 @@ export function ActionSection({
         onSuccess: () => {
             utils.timeline.list.invalidate();
             utils.reviews.getPending.invalidate();
+            navigateAndScroll();
         },
     });
 
@@ -79,6 +85,7 @@ export function ActionSection({
             utils.reviews.getPending.invalidate();
             utils.reviewComments.list.invalidate();
             utils.timeline.list.invalidate();
+            navigateAndScroll();
         },
     });
 
@@ -127,7 +134,7 @@ export function ActionSection({
         onSuccess: () => {
             utils.timeline.list.invalidate();
             utils.reviews.getPending.invalidate();
-            router.refresh();
+            navigateAndScroll();
         },
     });
 
