@@ -3,6 +3,7 @@
 import { Check, Circle, CircleX, Loader2, X, XCircle } from "lucide-react";
 import { use, useRef, useState } from "react";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
+import { UserLink } from "~/components/user-link";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import {
@@ -176,41 +177,69 @@ function ChecksSection({ checks }: ChecksSectionProps) {
 
     return (
         <div className="space-y-2">
-            {checks.map((check: CheckRun) => (
-                <CheckHoverCard
-                    check={check}
-                    key={check.html_url ?? check.name}
-                >
-                    <a
-                        className="flex items-start gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800"
-                        href={check.html_url}
-                        rel="noopener noreferrer"
-                        target="_blank"
+            {checks
+
+                .map((a) => {
+                    {
+                        /* console.log(a) */
+                    }
+                    return a;
+                })
+                .map((check: CheckRun) => (
+                    <CheckHoverCard
+                        check={check}
+                        key={check.html_url ?? check.name}
                     >
-                        <span className="mt-0.5 text-sm">
-                            {check.conclusion === "success" ? (
-                                <Check className="h-3.5 w-3.5 shrink-0 text-green-600" />
-                            ) : check.conclusion === "failure" ? (
-                                <XCircle className="h-3.5 w-3.5 shrink-0 text-red-600" />
-                            ) : check.status === "in_progress" ? (
-                                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-yellow-500" />
-                            ) : (
-                                <Circle className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                            )}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                            <span className="block truncate text-gray-700 text-sm dark:text-zinc-300">
-                                {check.name}
+                        <a
+                            className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800"
+                            href={check.html_url}
+                            rel="noopener noreferrer"
+                            target="_blank"
+                        >
+                            <span className="flex shrink-0 items-center gap-1">
+                                {check.conclusion === "success" ? (
+                                    <Check className="h-3.5 w-3.5 text-green-600" />
+                                ) : check.conclusion === "failure" ? (
+                                    <XCircle className="h-3.5 w-3.5 text-red-600" />
+                                ) : check.status === "in_progress" ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-yellow-500" />
+                                ) : (
+                                    <Circle className="h-3.5 w-3.5 text-gray-400" />
+                                )}
+                                {check.creator ? (
+                                    <UserLink
+                                        actor={{
+                                            login: check.creator.login,
+                                            avatarUrl: check.creator.avatar_url,
+                                            url: check.creator.html_url,
+                                        }}
+                                        showUsername={false}
+                                    />
+                                ) : check.app?.icon ||
+                                  check.app?.owner?.avatar_url ? (
+                                    <img
+                                        src={
+                                            check.app.icon ??
+                                            check.app?.owner?.avatar_url ??
+                                            ""
+                                        }
+                                        alt=""
+                                        className="h-5 w-5 rounded-full"
+                                    />
+                                ) : null}
                             </span>
-                            {check.description && (
-                                <span className="block truncate text-gray-500 text-xs dark:text-gray-400">
-                                    {check.description}
-                                </span>
-                            )}
-                        </span>
-                    </a>
-                </CheckHoverCard>
-            ))}
+                            <span className="min-w-0 truncate text-gray-700 text-sm dark:text-zinc-300">
+                                {check.name}
+                                {check.description && (
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                        {" "}
+                                        - {check.description}
+                                    </span>
+                                )}
+                            </span>
+                        </a>
+                    </CheckHoverCard>
+                ))}
         </div>
     );
 }

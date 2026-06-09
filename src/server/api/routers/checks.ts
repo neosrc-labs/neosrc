@@ -32,7 +32,6 @@ export const checksRouter = createTRPCRouter({
                     input.sha,
                 ),
             ]);
-
             const checkRunItems = (checks.check_runs ?? []).map(
                 (check: {
                     name: string;
@@ -46,6 +45,9 @@ export const checksRouter = createTRPCRouter({
                     app?: {
                         name: string;
                         icon?: string | null;
+                        owner?: {
+                            avatar_url: string;
+                        } | null;
                     } | null;
                 }) => ({
                     name: check.name,
@@ -57,7 +59,13 @@ export const checksRouter = createTRPCRouter({
                     started_at: check.started_at,
                     completed_at: check.completed_at,
                     app: check.app
-                        ? { name: check.app.name, icon: check.app.icon }
+                        ? {
+                              name: check.app.name,
+                              icon: check.app.icon,
+                              owner: check.app.owner
+                                  ? { avatar_url: check.app.owner.avatar_url }
+                                  : null,
+                          }
                         : null,
                 }),
             );
