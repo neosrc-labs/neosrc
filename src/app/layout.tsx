@@ -31,7 +31,7 @@ export default function RootLayout({
             lang="en"
             suppressHydrationWarning
         >
-            <body>
+            <body className="bg-white dark:bg-zinc-950">
                 <ThemeProvider
                     attribute="class"
                     defaultTheme="system"
