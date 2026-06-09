@@ -453,6 +453,17 @@ export function ActionSection({
                         </button>
                     ) : null}
                 </div>
+                {effectiveMerged && (
+                    <div className="flex items-center justify-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-3 py-2.5 dark:border-violet-900/50 dark:bg-violet-950/30">
+                        <GitMerge
+                            size={16}
+                            className="text-violet-600 dark:text-violet-400"
+                        />
+                        <span className="font-medium text-sm text-violet-700 dark:text-violet-300">
+                            Merged
+                        </span>
+                    </div>
+                )}
                 {markAsDraftMutation.isError && (
                     <p className="text-red-600 text-xs">
                         Failed to mark as draft. Please try again.
