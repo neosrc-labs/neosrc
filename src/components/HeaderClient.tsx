@@ -16,6 +16,7 @@ import {
 import { usePathname } from "next/navigation";
 import type { ElementType } from "react";
 import { useEffect, useMemo, useRef } from "react";
+import { Async } from "~/components/async";
 import { cn } from "~/lib/utils";
 import { useSidebar } from "./sidebar-context";
 import { ThemeToggle } from "./ThemeToggle";
@@ -42,8 +43,8 @@ export interface HeaderRepoData {
 }
 
 interface HeaderClientProps {
-    currentUser: { login: string; avatarUrl: string } | null;
-    repoData: HeaderRepoData | null;
+    currentUserPromise: Promise<{ login: string; avatarUrl: string } | null>;
+    repoDataPromise: Promise<HeaderRepoData | null>;
     initialOwner: string | null;
     initialRepo: string | null;
 }
@@ -51,11 +52,51 @@ interface HeaderClientProps {
 const SKELETON_WIDTHS = [48, 56, 72, 52, 60, 44, 64];
 
 export function HeaderClient({
+    currentUserPromise,
+    repoDataPromise,
+    initialOwner,
+    initialRepo,
+}: HeaderClientProps) {
+    const dataPromise = useMemo(
+        () => Promise.all([currentUserPromise, repoDataPromise]),
+        [currentUserPromise, repoDataPromise],
+    );
+
+    return (
+        <Async
+            promise={dataPromise}
+            fallback={
+                <HeaderContent
+                    currentUser={null}
+                    repoData={null}
+                    initialOwner={initialOwner}
+                    initialRepo={initialRepo}
+                />
+            }
+        >
+            {([currentUser, repoData]) => (
+                <HeaderContent
+                    currentUser={currentUser}
+                    repoData={repoData}
+                    initialOwner={initialOwner}
+                    initialRepo={initialRepo}
+                />
+            )}
+        </Async>
+    );
+}
+
+function HeaderContent({
     currentUser,
     repoData: serverRepoData,
     initialOwner,
     initialRepo,
-}: HeaderClientProps) {
+}: {
+    currentUser: { login: string; avatarUrl: string } | null;
+    repoData: HeaderRepoData | null;
+    initialOwner: string | null;
+    initialRepo: string | null;
+}) {
     const pathname = usePathname();
     const prMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
     const pullsMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/pulls/);

@@ -1175,6 +1175,51 @@ export const getRepoIssuePullCounts = cache(
     },
 );
 
+export async function getCachedRepoIssuePullCounts(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<{ openIssuesCount: number; openPullRequestsCount: number }> {
+    return withStaleWhileRevalidate(
+        `counts:${owner}:${repo}`,
+        () => getRepoIssuePullCounts(accessToken, owner, repo),
+        { staleAfter: 3_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    );
+}
+
+export interface RepoHeaderInfo {
+    hasIssues: boolean;
+    hasWiki: boolean;
+    hasProjects: boolean;
+    hasDiscussions: boolean;
+    isPrivate: boolean;
+    permissions: { admin: boolean };
+    ownerAvatarUrl: string | null;
+}
+
+export async function getCachedRepoHeaderData(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<RepoHeaderInfo> {
+    return withStaleWhileRevalidate(
+        `repo-header:${owner}:${repo}`,
+        async () => {
+            const repoInfo = await getRepo(accessToken, owner, repo);
+            return {
+                hasIssues: repoInfo.has_issues,
+                hasWiki: repoInfo.has_wiki,
+                hasProjects: repoInfo.has_projects,
+                hasDiscussions: repoInfo.has_discussions,
+                isPrivate: repoInfo.private,
+                permissions: { admin: repoInfo.permissions?.admin ?? false },
+                ownerAvatarUrl: repoInfo.owner.avatar_url,
+            };
+        },
+        { staleAfter: 5 * 60 * 1000, deleteAfter: 24 * 60 * 60 * 1000 },
+    );
+}
+
 export type Milestone = NonNullable<PullsGetResponseData["milestone"]>;
 
 export type RepoMilestone =
