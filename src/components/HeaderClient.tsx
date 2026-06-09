@@ -185,7 +185,7 @@ export function HeaderClient({
     return (
         <>
             <header
-                className="z-50 border-gray-200 border-b bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                className="relative z-50 border-gray-200 border-b bg-white dark:border-zinc-800 dark:bg-zinc-950"
                 ref={headerRef}
             >
                 <div className="px-4 sm:px-6 lg:px-8">
