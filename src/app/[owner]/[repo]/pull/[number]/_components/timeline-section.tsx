@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
 import { LazyRenderItem } from "~/components/LazyRenderItem";
 import type { ReviewComment } from "~/server/github";
@@ -96,6 +97,27 @@ export function TimelineSection({
     );
 
     const heightMapRef = useRef(new Map<string, number>());
+    const searchParams = useSearchParams();
+    const timelineRouter = useRouter();
+    const timelineEndRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (searchParams.get("scrollTo") !== "bottom") return;
+        if (!data) return;
+
+        const timer = setTimeout(() => {
+            timelineEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("scrollTo");
+            const newParams = params.toString();
+            timelineRouter.replace(
+                `/${owner}/${repo}/pull/${number}${newParams ? `?${newParams}` : ""}`,
+                { scroll: false },
+            );
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, [searchParams, data, owner, repo, number, timelineRouter]);
 
     const reviewThreadIds = useMemo(() => {
         const map = new Map<number, string[]>();
@@ -180,12 +202,14 @@ export function TimelineSection({
                 </div>
             )}
 
-            <CommentForm
-                disabled={!canInteract}
-                number={number}
-                owner={owner}
-                repo={repo}
-            />
+            <div ref={timelineEndRef}>
+                <CommentForm
+                    disabled={!canInteract}
+                    number={number}
+                    owner={owner}
+                    repo={repo}
+                />
+            </div>
         </div>
     );
 }
