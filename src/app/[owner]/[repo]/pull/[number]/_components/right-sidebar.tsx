@@ -4,6 +4,8 @@ import { CheckCircle, Circle, Loader2, XCircle } from "lucide-react";
 import { use, useEffect, useRef, useState } from "react";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
+import { api } from "~/trpc/react";
+import { computeChecksPollingInterval } from "~/utils/checks-polling";
 import { CommitsSection } from "./commits-section";
 import { MetadataSection } from "./metadata-section";
 
@@ -92,7 +94,12 @@ export default function RightSidebar({
 
             <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
                 {tab === "checks" && checksPromise ? (
-                    <ChecksSection checksPromise={checksPromise} />
+                    <ChecksSection
+                        checksPromise={checksPromise}
+                        pullRequest={pullRequest}
+                        owner={owner}
+                        repo={repo}
+                    />
                 ) : null}
                 {tab === "commits" ? (
                     <CommitsSection
@@ -110,10 +117,41 @@ export default function RightSidebar({
 
 interface ChecksSectionProps {
     checksPromise: Promise<Array<CheckRun>>;
+    pullRequest: PullsGetResponseData;
+    owner: string;
+    repo: string;
 }
 
-function ChecksSection({ checksPromise }: ChecksSectionProps) {
-    const checks = use(checksPromise);
+function ChecksSection({
+    checksPromise,
+    pullRequest,
+    owner,
+    repo,
+}: ChecksSectionProps) {
+    const initialChecks = use(checksPromise);
+    const isMerged = pullRequest.merged ?? false;
+    const isClosed = pullRequest.state === "closed";
+    const createdAt = pullRequest.created_at;
+
+    const sha = pullRequest.head?.sha;
+
+    const { data: checks } = api.checks.list.useQuery(
+        { owner, repo, sha: sha ?? "" },
+        {
+            enabled: !!sha,
+            initialData: initialChecks,
+            refetchInterval(query) {
+                const data = query.state.data as Array<CheckRun> | undefined;
+                if (!data) return false;
+
+                return computeChecksPollingInterval(data, {
+                    isMerged,
+                    isClosed,
+                    createdAt,
+                });
+            },
+        },
+    );
 
     if (!checks || checks.length === 0) {
         return (
@@ -125,7 +163,7 @@ function ChecksSection({ checksPromise }: ChecksSectionProps) {
 
     return (
         <div className="space-y-2">
-            {checks.map((check) => (
+            {checks.map((check: CheckRun) => (
                 <CheckHoverCard
                     check={check}
                     key={check.html_url ?? check.name}
