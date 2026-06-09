@@ -215,14 +215,9 @@ function ChecksSection({ checks }: ChecksSectionProps) {
                                         }}
                                         showUsername={false}
                                     />
-                                ) : check.app?.icon ||
-                                  check.app?.owner?.avatar_url ? (
+                                ) : check.app?.owner?.avatar_url ? (
                                     <img
-                                        src={
-                                            check.app.icon ??
-                                            check.app?.owner?.avatar_url ??
-                                            ""
-                                        }
+                                        src={check.app.owner.avatar_url}
                                         alt=""
                                         className="h-5 w-5 rounded-full"
                                     />

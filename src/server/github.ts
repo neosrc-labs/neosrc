@@ -63,7 +63,6 @@ export type CheckRun = {
     completed_at?: string | null;
     app?: {
         name: string;
-        icon?: string | null;
         owner?: {
             avatar_url: string;
         } | null;
@@ -566,14 +565,11 @@ export const getCheckRuns = cache(
         commitSha: string,
     ) => {
         const octokit = createOctokit(accessToken);
-        const response = await octokit.request(
-            "GET /repos/{owner}/{repo}/commits/{commit_sha}/check-runs",
-            {
-                owner,
-                repo,
-                commit_sha: commitSha,
-            },
-        );
+        const response = await octokit.checks.listForRef({
+            owner,
+            repo,
+            ref: commitSha,
+        });
         return response.data;
     },
 );
