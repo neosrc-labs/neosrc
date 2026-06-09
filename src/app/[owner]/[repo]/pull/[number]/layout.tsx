@@ -6,10 +6,15 @@ import {
     getAuthenticatedUser,
     getCachedPullRequest,
     getCheckRuns,
+    getCommitStatuses,
     getConflictedFiles,
     getUserRepoPermission,
     type PullsGetResponseData,
 } from "~/server/github";
+import {
+    deduplicateCommitStatuses,
+    mapStatusToCheckRun,
+} from "~/utils/status-checks";
 import LeftSidebar from "./_components/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
 
@@ -71,21 +76,29 @@ export default async function PullRequestLayout({
             return [];
         });
 
-        // Fetch check runs if we have the PR head SHA
+        // Fetch check runs and commit statuses if we have the PR head SHA
         checks = pullRequest.then(async (pullRequest) => {
             if (pullRequest?.head?.sha) {
-                const checksResult = await getCheckRuns(
-                    accessToken,
-                    owner,
-                    repo,
-                    pullRequest.head.sha,
-                );
-
-                return (checksResult.check_runs || []).map(
+                const [checksResult, statuses] = await Promise.all([
+                    getCheckRuns(
+                        accessToken,
+                        owner,
+                        repo,
+                        pullRequest.head.sha,
+                    ),
+                    getCommitStatuses(
+                        accessToken,
+                        owner,
+                        repo,
+                        pullRequest.head.sha,
+                    ),
+                ]);
+                const checkRunItems = (checksResult.check_runs || []).map(
                     (check: {
                         name: string;
                         conclusion: string | null;
                         status: string;
+                        description?: string | null;
                         html_url?: string;
                         details_url?: string | null;
                         started_at?: string | null;
@@ -94,19 +107,27 @@ export default async function PullRequestLayout({
                             name: string;
                             icon?: string | null;
                         } | null;
-                    }) => ({
-                        name: check.name,
-                        conclusion: check.conclusion,
-                        status: check.status,
-                        html_url: check.html_url,
-                        details_url: check.details_url,
-                        started_at: check.started_at,
-                        completed_at: check.completed_at,
-                        app: check.app
-                            ? { name: check.app.name, icon: check.app.icon }
-                            : null,
-                    }),
+                    }) =>
+                        ({
+                            name: check.name,
+                            conclusion: check.conclusion,
+                            status: check.status,
+                            description: check.description ?? null,
+                            html_url: check.html_url,
+                            details_url: check.details_url,
+                            started_at: check.started_at,
+                            completed_at: check.completed_at,
+                            app: check.app
+                                ? { name: check.app.name, icon: check.app.icon }
+                                : null,
+                        }) as CheckRun,
                 );
+
+                const statusItems = deduplicateCommitStatuses(
+                    statuses ?? [],
+                ).map(mapStatusToCheckRun);
+
+                return [...checkRunItems, ...statusItems];
             }
             return [];
         });

@@ -56,6 +56,7 @@ export type CheckRun = {
     name: string;
     conclusion: string | null;
     status: string;
+    description?: string | null;
     html_url?: string;
     details_url?: string | null;
     started_at?: string | null;
@@ -566,6 +567,33 @@ export const getCheckRuns = cache(
             },
         );
         return response.data;
+    },
+);
+
+export const getCommitStatuses = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        commitSha: string,
+    ) => {
+        const octokit = createOctokit(accessToken);
+        const response = await octokit.request(
+            "GET /repos/{owner}/{repo}/commits/{ref}/statuses",
+            {
+                owner,
+                repo,
+                ref: commitSha,
+            },
+        );
+        return response.data as Array<{
+            state: string;
+            target_url: string | null;
+            description: string | null;
+            context: string;
+            created_at: string;
+            updated_at: string;
+        }>;
     },
 );
 
