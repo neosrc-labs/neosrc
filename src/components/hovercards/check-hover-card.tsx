@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, Circle, Clock, Loader2, XCircle } from "lucide-react";
+import { Check, Circle, Clock, Loader2, XCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import {
     HoverCard,
@@ -56,7 +56,7 @@ function statusLabel(status: string, conclusion: string | null): string {
 
 function StatusIcon({ check }: { check: CheckRun }) {
     if (check.conclusion === "success") {
-        return <CheckCircle className="h-3.5 w-3.5 text-green-600" />;
+        return <Check className="h-3.5 w-3.5 text-green-600" />;
     }
     if (check.conclusion === "failure") {
         return <XCircle className="h-3.5 w-3.5 text-red-600" />;
