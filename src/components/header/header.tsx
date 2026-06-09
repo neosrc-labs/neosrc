@@ -5,8 +5,8 @@ import {
     getCachedRepoHeaderData,
     getCachedRepoIssuePullCounts,
 } from "~/server/github";
-import type { HeaderRepoData } from "./HeaderClient";
-import { HeaderClient } from "./HeaderClient";
+import type { HeaderRepoData } from "./header-client";
+import { HeaderClient } from "./header-client";
 
 export async function Header() {
     const h = await headers();

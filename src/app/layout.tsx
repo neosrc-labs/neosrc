@@ -5,7 +5,7 @@ import "highlight.js/styles/github.min.css";
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 
-import { Header } from "~/components/Header";
+import { Header } from "~/components/header/header";
 import { SidebarProvider } from "~/components/sidebar-context";
 import { ThemeProvider } from "~/components/ThemeProvider";
 import { ThemeStylesheets } from "~/components/ThemeStylesheets";
