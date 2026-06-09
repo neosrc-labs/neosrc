@@ -18,8 +18,8 @@ import type { ElementType } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { Async } from "~/components/async";
 import { cn } from "~/lib/utils";
-import { useSidebar } from "./sidebar-context";
-import { ThemeToggle } from "./ThemeToggle";
+import { useSidebar } from "../sidebar-context";
+import { ThemeToggle } from "../ThemeToggle";
 
 interface Tab {
     label: string;
