@@ -91,8 +91,6 @@ function getStatusState(item: GqlPrSearchItem): string | null {
     const rollup = item.commits.nodes[0]?.commit.statusCheckRollup;
     if (!rollup) return null;
 
-    console.log(item.commits);
-
     const hasFailed = rollup.contexts.nodes.some((ctx) => {
         if (ctx.__typename === "CheckRun") {
             return (
