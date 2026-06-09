@@ -1,7 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useSidebar } from "./sidebar-context";
 
 const LEFT_STORAGE_KEY = "neosrc-sidebar-width";
@@ -27,6 +26,24 @@ export function ResizableLayout({
     const { isLeftOpen, isRightOpen, toggleLeft, toggleRight } = useSidebar();
     const [leftWidth, setLeftWidth] = useState(DEFAULT_LEFT_WIDTH);
     const [rightWidth, setRightWidth] = useState(DEFAULT_RIGHT_WIDTH);
+    const [sidebarTopPx, setSidebarTopPx] = useState(0);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const headerHeight = parseFloat(
+                getComputedStyle(document.documentElement).getPropertyValue(
+                    "--header-height",
+                ) || "0",
+            );
+            setSidebarTopPx(Math.max(0, headerHeight - window.scrollY));
+        };
+        handleScroll();
+        window.addEventListener("scroll", handleScroll, { passive: true });
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
+
+    const sidebarTop = `${sidebarTopPx}px`;
+
     const isDraggingRef = useRef(false);
     const dragSideRef = useRef<"left" | "right">("left");
     const startXRef = useRef(0);
@@ -114,20 +131,34 @@ export function ResizableLayout({
 
     return (
         <div
-            className="grid"
+            className="grid min-h-0"
             style={{ gridTemplateColumns: getGridTemplateColumns() }}
         >
-            {/* Left Sidebar - Sticky */}
-            <div
-                className={`relative sticky top-0 h-[99vh] overflow-y-auto ${!isLeftOpen ? "overflow-hidden" : ""}`}
-            >
+            {/* Left sidebar spacer for grid layout */}
+            <div className="relative">
                 {isLeftOpen && (
-                    <div
-                        className="absolute top-0 right-0 z-10 h-full w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600 dark:bg-zinc-700"
-                        onMouseDown={handleMouseDown("left")}
-                    />
+                    <>
+                        <div
+                            className="fixed bottom-0 overflow-y-auto border-gray-200 border-r bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                            style={{
+                                left: 0,
+                                width: leftWidth,
+                                top: sidebarTop,
+                            }}
+                        >
+                            {leftSidebar}
+                        </div>
+                        <div
+                            className="fixed z-10 w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600 dark:bg-zinc-700"
+                            style={{
+                                left: leftWidth - 4,
+                                top: sidebarTop,
+                                bottom: 0,
+                            }}
+                            onMouseDown={handleMouseDown("left")}
+                        />
+                    </>
                 )}
-                {leftSidebar}
             </div>
 
             {/* Middle Section - PR Content */}
@@ -135,17 +166,31 @@ export function ResizableLayout({
                 {children}
             </main>
 
-            {/* Right Sidebar - Sticky */}
-            <div
-                className={`relative sticky top-0 h-[99vh] overflow-y-auto ${!isRightOpen ? "overflow-hidden" : ""}`}
-            >
+            {/* Right sidebar spacer for grid layout */}
+            <div className="relative">
                 {isRightOpen && (
-                    <div
-                        className="absolute top-0 left-0 z-10 h-full w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600 dark:bg-zinc-700"
-                        onMouseDown={handleMouseDown("right")}
-                    />
+                    <>
+                        <div
+                            className="fixed bottom-0 overflow-y-auto border-gray-200 border-l bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                            style={{
+                                right: 0,
+                                width: rightWidth,
+                                top: sidebarTop,
+                            }}
+                        >
+                            {rightSidebar}
+                        </div>
+                        <div
+                            className="fixed z-10 w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600 dark:bg-zinc-700"
+                            style={{
+                                right: rightWidth - 4,
+                                top: sidebarTop,
+                                bottom: 0,
+                            }}
+                            onMouseDown={handleMouseDown("right")}
+                        />
+                    </>
                 )}
-                {rightSidebar}
             </div>
         </div>
     );
