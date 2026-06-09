@@ -131,7 +131,7 @@ export function ResizableLayout({
 
     return (
         <div
-            className="grid min-h-0"
+            className="grid"
             style={{ gridTemplateColumns: getGridTemplateColumns() }}
         >
             {/* Left sidebar spacer for grid layout */}
