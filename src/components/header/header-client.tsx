@@ -62,26 +62,34 @@ export function HeaderClient({
         [currentUserPromise, repoDataPromise],
     );
 
+    const lastContentRef = useRef<React.ReactNode>(null);
+
     return (
         <Async
             promise={dataPromise}
             fallback={
-                <HeaderContent
-                    currentUser={null}
-                    repoData={null}
-                    initialOwner={initialOwner}
-                    initialRepo={initialRepo}
-                />
+                lastContentRef.current ?? (
+                    <HeaderContent
+                        currentUser={null}
+                        repoData={null}
+                        initialOwner={initialOwner}
+                        initialRepo={initialRepo}
+                    />
+                )
             }
         >
-            {([currentUser, repoData]) => (
-                <HeaderContent
-                    currentUser={currentUser}
-                    repoData={repoData}
-                    initialOwner={initialOwner}
-                    initialRepo={initialRepo}
-                />
-            )}
+            {([currentUser, repoData]) => {
+                const content = (
+                    <HeaderContent
+                        currentUser={currentUser}
+                        repoData={repoData}
+                        initialOwner={initialOwner}
+                        initialRepo={initialRepo}
+                    />
+                );
+                lastContentRef.current = content;
+                return content;
+            }}
         </Async>
     );
 }
