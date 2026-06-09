@@ -45,6 +45,7 @@ export function ActionSection({
     const utils = api.useUtils();
     const [markedReady, setMarkedReady] = useState(false);
     const [convertedToDraft, setConvertedToDraft] = useState(false);
+    const [isMerged, setIsMerged] = useState(false);
     const [body, setBody] = useState("");
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [isCancelPopoverOpen, setIsCancelPopoverOpen] = useState(false);
@@ -132,8 +133,10 @@ export function ActionSection({
 
     const mergeMutation = api.pulls.merge.useMutation({
         onSuccess: () => {
+            setIsMerged(true);
             utils.timeline.list.invalidate();
             utils.reviews.getPending.invalidate();
+            router.refresh();
             navigateAndScroll();
         },
     });
@@ -305,6 +308,7 @@ export function ActionSection({
         userPermission: string | null,
     ) => {
         const isDraft = !!pullRequest.draft && !markedReady;
+        const effectiveMerged = pullRequest.merged || isMerged;
         const isAuthor = currentUserLogin === pullRequest.user?.login;
         const isPending =
             submitReviewMutation.isPending ||
@@ -358,7 +362,8 @@ export function ActionSection({
                 {conflictedFilesSection}
                 {reviewInProgress}
                 <div className="flex gap-1">
-                    {canManagePR &&
+                    {!effectiveMerged &&
+                        canManagePR &&
                         !pullRequest.draft &&
                         !convertedToDraft &&
                         pullRequest.state === "open" && (
@@ -374,7 +379,9 @@ export function ActionSection({
                                     : "Mark as draft"}
                             </button>
                         )}
-                    {pullRequest.state === "open" && canManagePR ? (
+                    {!effectiveMerged &&
+                    pullRequest.state === "open" &&
+                    canManagePR ? (
                         <Popover
                             open={isClosePopoverOpen}
                             onOpenChange={setIsClosePopoverOpen}
@@ -429,7 +436,8 @@ export function ActionSection({
                                 </div>
                             </PopoverContent>
                         </Popover>
-                    ) : pullRequest.state === "closed" &&
+                    ) : !effectiveMerged &&
+                      pullRequest.state === "closed" &&
                       !pullRequest.merged &&
                       canManagePR ? (
                         <button
@@ -529,7 +537,7 @@ export function ActionSection({
                             </Popover>
                         </div>
                     )}
-                {pullRequest.state === "open" && (
+                {!effectiveMerged && pullRequest.state === "open" && (
                     <div className="flex gap-2">
                         {isDraft && canManagePR ? (
                             <button
