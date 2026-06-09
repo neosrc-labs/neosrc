@@ -154,6 +154,8 @@ query PullRequestTimeline(
 						id
 						actor { ...SimpleUser }
 						createdAt
+						mergeRefName
+						commit { abbreviatedOid commitUrl }
 					}
 					... on LabeledEvent {
 						id
@@ -420,6 +422,8 @@ export type GQLMergedEvent = {
     id: string;
     actor: GQLActor | null;
     createdAt: string;
+    mergeRefName: string;
+    commit: { abbreviatedOid: string; commitUrl: string } | null;
 };
 
 export type GQLLabeledEvent = {
