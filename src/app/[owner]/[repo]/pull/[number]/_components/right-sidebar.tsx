@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, Circle, Loader2, XCircle } from "lucide-react";
+import { Check, Circle, Loader2, XCircle } from "lucide-react";
 import { use, useEffect, useRef, useState } from "react";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
@@ -176,7 +176,7 @@ function ChecksSection({
                     >
                         <span className="text-sm">
                             {check.conclusion === "success" ? (
-                                <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                                <Check className="h-3.5 w-3.5 text-green-600" />
                             ) : check.conclusion === "failure" ? (
                                 <XCircle className="h-3.5 w-3.5 text-red-600" />
                             ) : check.status === "in_progress" ? (
