@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { computeChecksPollingInterval } from "./checks-polling";
+import {
+    computeCheckStatusRollup,
+    computeChecksPollingInterval,
+} from "./checks-polling";
 
 function makeCheck(status: string, conclusion: string | null = null) {
     return { name: "test", status, conclusion };
@@ -24,6 +27,74 @@ const mergedPr = {
 const S = 5_000;
 const M = 30_000;
 const L = 90_000;
+
+describe("computeCheckStatusRollup", () => {
+    it("returns null for empty checks", () => {
+        expect(computeCheckStatusRollup([])).toBeNull();
+    });
+
+    it("returns FAILURE when any check has failure conclusion", () => {
+        const checks = [
+            makeCheck("completed", "success"),
+            makeCheck("completed", "failure"),
+        ];
+        expect(computeCheckStatusRollup(checks)).toBe("FAILURE");
+    });
+
+    it("returns FAILURE when any check has timed_out conclusion", () => {
+        const checks = [
+            makeCheck("completed", "success"),
+            makeCheck("completed", "timed_out"),
+        ];
+        expect(computeCheckStatusRollup(checks)).toBe("FAILURE");
+    });
+
+    it("returns CANCELLED when any check is cancelled (no failures)", () => {
+        const checks = [
+            makeCheck("completed", "success"),
+            makeCheck("completed", "cancelled"),
+        ];
+        expect(computeCheckStatusRollup(checks)).toBe("CANCELLED");
+    });
+
+    it("returns IN_PROGRESS when any check is in_progress (no failures)", () => {
+        const checks = [
+            makeCheck("completed", "success"),
+            makeCheck("in_progress"),
+        ];
+        expect(computeCheckStatusRollup(checks)).toBe("IN_PROGRESS");
+    });
+
+    it("returns IN_PROGRESS when any check is queued (no failures)", () => {
+        const checks = [makeCheck("completed", "success"), makeCheck("queued")];
+        expect(computeCheckStatusRollup(checks)).toBe("IN_PROGRESS");
+    });
+
+    it("returns FAILURE even when some checks are in_progress", () => {
+        const checks = [
+            makeCheck("completed", "failure"),
+            makeCheck("in_progress"),
+        ];
+        expect(computeCheckStatusRollup(checks)).toBe("FAILURE");
+    });
+
+    it("returns SUCCESS when all checks passed", () => {
+        const checks = [
+            makeCheck("completed", "success"),
+            makeCheck("completed", "success"),
+        ];
+        expect(computeCheckStatusRollup(checks)).toBe("SUCCESS");
+    });
+
+    it("returns NEUTRAL for mixed non-failure conclusions", () => {
+        const checks = [
+            makeCheck("completed", "success"),
+            makeCheck("completed", "neutral"),
+            makeCheck("completed", "skipped"),
+        ];
+        expect(computeCheckStatusRollup(checks)).toBe("NEUTRAL");
+    });
+});
 
 describe("computeChecksPollingInterval", () => {
     describe("running checks", () => {
