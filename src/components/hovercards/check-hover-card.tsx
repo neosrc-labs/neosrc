@@ -98,6 +98,11 @@ function CheckHoverCardContent({ check }: { check: CheckRun }) {
                             {check.app.name}
                         </p>
                     )}
+                    {!check.app?.name && check.description && (
+                        <p className="mt-0.5 line-clamp-2 text-gray-500 text-xs dark:text-gray-400">
+                            {check.description}
+                        </p>
+                    )}
                 </div>
             </div>
             <div className="flex flex-col gap-1.5 p-3 pt-2.5">

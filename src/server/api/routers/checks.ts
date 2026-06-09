@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getGitHubToken } from "~/server/auth";
-import { getCheckRuns } from "~/server/github";
+import { getCheckRuns, getCommitStatuses } from "~/server/github";
+import {
+    deduplicateCommitStatuses,
+    mapStatusToCheckRun,
+} from "~/utils/status-checks";
 
 export const checksRouter = createTRPCRouter({
     list: protectedProcedure
@@ -19,18 +23,22 @@ export const checksRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
 
-            const checks = await getCheckRuns(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.sha,
-            );
+            const [checks, statuses] = await Promise.all([
+                getCheckRuns(accessToken, input.owner, input.repo, input.sha),
+                getCommitStatuses(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.sha,
+                ),
+            ]);
 
-            return (checks.check_runs ?? []).map(
+            const checkRunItems = (checks.check_runs ?? []).map(
                 (check: {
                     name: string;
                     conclusion: string | null;
                     status: string;
+                    description?: string | null;
                     html_url?: string;
                     details_url?: string | null;
                     started_at?: string | null;
@@ -43,6 +51,7 @@ export const checksRouter = createTRPCRouter({
                     name: check.name,
                     conclusion: check.conclusion,
                     status: check.status,
+                    description: check.description ?? null,
                     html_url: check.html_url,
                     details_url: check.details_url,
                     started_at: check.started_at,
@@ -52,5 +61,11 @@ export const checksRouter = createTRPCRouter({
                         : null,
                 }),
             );
+
+            const statusItems = deduplicateCommitStatuses(statuses ?? []).map(
+                mapStatusToCheckRun,
+            );
+
+            return [...checkRunItems, ...statusItems];
         }),
 });
