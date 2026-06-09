@@ -64,6 +64,14 @@ export type CheckRun = {
     app?: {
         name: string;
         icon?: string | null;
+        owner?: {
+            avatar_url: string;
+        } | null;
+    } | null;
+    creator?: {
+        login: string;
+        avatar_url: string;
+        html_url?: string;
     } | null;
 };
 
@@ -593,6 +601,11 @@ export const getCommitStatuses = cache(
             context: string;
             created_at: string;
             updated_at: string;
+            creator: {
+                login: string;
+                avatar_url: string;
+                html_url: string;
+            } | null;
         }>;
     },
 );

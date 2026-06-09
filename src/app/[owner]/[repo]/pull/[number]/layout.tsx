@@ -106,6 +106,9 @@ export default async function PullRequestLayout({
                         app?: {
                             name: string;
                             icon?: string | null;
+                            owner?: {
+                                avatar_url: string;
+                            } | null;
                         } | null;
                     }) =>
                         ({
@@ -118,7 +121,16 @@ export default async function PullRequestLayout({
                             started_at: check.started_at,
                             completed_at: check.completed_at,
                             app: check.app
-                                ? { name: check.app.name, icon: check.app.icon }
+                                ? {
+                                      name: check.app.name,
+                                      icon: check.app.icon,
+                                      owner: check.app.owner
+                                          ? {
+                                                avatar_url:
+                                                    check.app.owner.avatar_url,
+                                            }
+                                          : null,
+                                  }
                                 : null,
                         }) as CheckRun,
                 );

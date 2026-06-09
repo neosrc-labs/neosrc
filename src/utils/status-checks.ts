@@ -7,6 +7,11 @@ export interface CommitStatus {
     context: string;
     created_at: string;
     updated_at: string;
+    creator: {
+        login: string;
+        avatar_url: string;
+        html_url: string;
+    } | null;
 }
 
 export function mapStatusToCheckRun(status: CommitStatus): CheckRun {
@@ -25,6 +30,7 @@ export function mapStatusToCheckRun(status: CommitStatus): CheckRun {
         started_at: status.created_at,
         completed_at: isPending ? null : status.updated_at,
         app: null,
+        creator: status.creator,
     };
 }
 
