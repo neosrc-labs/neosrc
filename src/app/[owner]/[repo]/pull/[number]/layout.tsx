@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ResizableLayout } from "~/components/ResizableLayout";
-import { getAccount } from "~/server/auth";
+import { getAccount, getUser } from "~/server/auth";
 import {
     type CheckRun,
     getAuthenticatedUser,
@@ -53,7 +53,11 @@ export default async function PullRequestLayout({
             userId,
         );
 
-        currentUserLogin = (await getAuthenticatedUser(accessToken)).login;
+        // Try to get the username from the database since it's probably
+        // faster, but fallback to github if its missing.
+        currentUserLogin =
+            (await getUser(account.userId))?.githubUsername ??
+            (await getAuthenticatedUser(accessToken)).login;
 
         userPermission = getUserRepoPermission(
             accessToken,

@@ -220,3 +220,13 @@ export const githubAccessToken = cache(async () => {
 
     return account.accessToken;
 });
+
+export async function getUser(userId: string) {
+    const [user] = await db
+        .select({ githubUsername: betterAuthUser.githubUsername })
+        .from(betterAuthUser)
+        .where(eq(betterAuthUser.id, userId))
+        .limit(1);
+
+    return user;
+}
