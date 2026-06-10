@@ -1,3 +1,4 @@
+import { graphql as octokitGraphql } from "@octokit/graphql";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -7,6 +8,85 @@ import {
     deduplicateCommitStatuses,
     mapStatusToCheckRun,
 } from "~/utils/status-checks";
+
+interface StatusContext {
+    name: string;
+    state: string;
+    description: string | null;
+    url: string | null;
+    startedAt: string | null;
+    completedAt: string | null;
+}
+
+function buildPrStatusBatchQuery(numbers: number[]): string {
+    const aliases = numbers.map(
+        (num, i) => `
+  pr${i}: repository(owner: $owner, name: $repo) {
+    pullRequest(number: ${num}) {
+      commits(last: 1) {
+        nodes {
+          commit {
+            oid
+            statusCheckRollup {
+              state
+              contexts(first: 30) {
+                nodes {
+                  __typename
+                  ... on CheckRun {
+                    name
+                    status
+                    conclusion
+                    detailsUrl
+                    startedAt
+                    completedAt
+                  }
+                  ... on StatusContext {
+                    context
+                    description
+                    state
+                    targetUrl
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }`,
+    );
+
+    return `query BatchPrChecks($owner: String!, $repo: String!) {${aliases.join("")}
+}`;
+}
+
+function extractStatusContexts(prData: any): StatusContext[] {
+    const rollup = prData?.commits?.nodes?.[0]?.commit?.statusCheckRollup;
+    if (!rollup?.contexts?.nodes) return [];
+
+    return rollup.contexts.nodes
+        .filter((n: any) => n != null)
+        .map((ctx: any) => {
+            if (ctx.__typename === "CheckRun") {
+                return {
+                    name: ctx.name,
+                    state: (ctx.conclusion ?? ctx.status).toUpperCase(),
+                    description: null,
+                    url: ctx.detailsUrl ?? null,
+                    startedAt: ctx.startedAt ?? null,
+                    completedAt: ctx.completedAt ?? null,
+                };
+            }
+            return {
+                name: ctx.context,
+                state: ctx.state,
+                description: ctx.description ?? null,
+                url: ctx.targetUrl ?? null,
+                startedAt: null,
+                completedAt: null,
+            };
+        });
+}
 
 export const checksRouter = createTRPCRouter({
     list: protectedProcedure
@@ -56,5 +136,39 @@ export const checksRouter = createTRPCRouter({
             );
 
             return [...checkRunItems, ...statusItems];
+        }),
+
+    listByPrNumbers: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                prNumbers: z.array(z.number()),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            const graphql = octokitGraphql.defaults({
+                headers: { authorization: `bearer ${accessToken}` },
+            });
+
+            const query = buildPrStatusBatchQuery(input.prNumbers);
+            const raw = await graphql<Record<string, any>>(query, {
+                owner: input.owner,
+                repo: input.repo,
+            });
+
+            return input.prNumbers.reduce<Record<number, StatusContext[]>>(
+                (acc, num, i) => {
+                    const prData = raw[`pr${i}`]?.pullRequest;
+                    acc[num] = extractStatusContexts(prData);
+                    return acc;
+                },
+                {},
+            );
         }),
 });
