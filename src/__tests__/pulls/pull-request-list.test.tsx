@@ -73,6 +73,11 @@ vi.mock("~/trpc/react", () => ({
                 useQuery: vi.fn(() => ({ data: [], isLoading: false })),
             },
         },
+        checks: {
+            listByPrNumbers: {
+                useQuery: vi.fn(() => ({ data: {}, isLoading: false })),
+            },
+        },
         users: {
             currentUser: {
                 useQuery: vi.fn(() => ({ data: null, isLoading: false })),
