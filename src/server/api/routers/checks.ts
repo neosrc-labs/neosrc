@@ -18,6 +18,37 @@ interface StatusContext {
     completedAt: string | null;
 }
 
+interface GqlContextNode {
+    __typename: string;
+    name?: string;
+    status?: string;
+    conclusion?: string | null;
+    detailsUrl?: string | null;
+    startedAt?: string | null;
+    completedAt?: string | null;
+    context?: string;
+    description?: string | null;
+    state?: string;
+    targetUrl?: string | null;
+}
+
+interface GqlPrStatusRollup {
+    commit?: {
+        statusCheckRollup?: {
+            state?: string;
+            contexts?: {
+                nodes?: (GqlContextNode | null)[];
+            };
+        };
+    };
+}
+
+interface GqlPrData {
+    commits?: {
+        nodes?: GqlPrStatusRollup[];
+    };
+}
+
 function buildPrStatusBatchQuery(numbers: number[]): string {
     const aliases = numbers.map(
         (num, i) => `
@@ -60,17 +91,19 @@ function buildPrStatusBatchQuery(numbers: number[]): string {
 }`;
 }
 
-function extractStatusContexts(prData: any): StatusContext[] {
+function extractStatusContexts(
+    prData: GqlPrData | null | undefined,
+): StatusContext[] {
     const rollup = prData?.commits?.nodes?.[0]?.commit?.statusCheckRollup;
     if (!rollup?.contexts?.nodes) return [];
 
     return rollup.contexts.nodes
-        .filter((n: any) => n != null)
-        .map((ctx: any) => {
+        .filter((n): n is GqlContextNode => n != null)
+        .map((ctx) => {
             if (ctx.__typename === "CheckRun") {
                 return {
-                    name: ctx.name,
-                    state: (ctx.conclusion ?? ctx.status).toUpperCase(),
+                    name: ctx.name ?? "",
+                    state: (ctx.conclusion ?? ctx.status ?? "").toUpperCase(),
                     description: null,
                     url: ctx.detailsUrl ?? null,
                     startedAt: ctx.startedAt ?? null,
@@ -78,8 +111,8 @@ function extractStatusContexts(prData: any): StatusContext[] {
                 };
             }
             return {
-                name: ctx.context,
-                state: ctx.state,
+                name: ctx.context ?? "",
+                state: ctx.state ?? "",
                 description: ctx.description ?? null,
                 url: ctx.targetUrl ?? null,
                 startedAt: null,
@@ -157,15 +190,17 @@ export const checksRouter = createTRPCRouter({
             });
 
             const query = buildPrStatusBatchQuery(input.prNumbers);
-            const raw = await graphql<Record<string, any>>(query, {
+            const raw = await graphql<Record<string, unknown>>(query, {
                 owner: input.owner,
                 repo: input.repo,
             });
 
             return input.prNumbers.reduce<Record<number, StatusContext[]>>(
                 (acc, num, i) => {
-                    const prData = raw[`pr${i}`]?.pullRequest;
-                    acc[num] = extractStatusContexts(prData);
+                    const entry = raw[`pr${i}`] as
+                        | { pullRequest?: GqlPrData }
+                        | undefined;
+                    acc[num] = extractStatusContexts(entry?.pullRequest);
                     return acc;
                 },
                 {},
