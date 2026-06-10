@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
 import { ResizableLayout } from "~/components/ResizableLayout";
-import { getAccount, getUser } from "~/server/auth";
+import { getAccount, getGithubUsername } from "~/server/auth";
 import {
     type CheckRun,
-    getAuthenticatedUser,
     getCachedPullRequest,
     getCheckRuns,
     getCommitStatuses,
@@ -53,11 +52,10 @@ export default async function PullRequestLayout({
             userId,
         );
 
-        // Try to get the username from the database since it's probably
-        // faster, but fallback to github if its missing.
-        currentUserLogin =
-            (await getUser(account.userId))?.githubUsername ??
-            (await getAuthenticatedUser(accessToken)).login;
+        currentUserLogin = await getGithubUsername(account.userId, accessToken);
+        if (!currentUserLogin) {
+            throw new Error("github username name not found");
+        }
 
         userPermission = getUserRepoPermission(
             accessToken,

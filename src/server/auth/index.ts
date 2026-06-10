@@ -13,6 +13,7 @@ import {
     betterAuthUser,
     betterAuthVerification,
 } from "~/server/db/schema";
+import { getAuthenticatedUser } from "../github";
 
 const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
 
@@ -229,4 +230,17 @@ export async function getUser(userId: string) {
         .limit(1);
 
     return user;
+}
+
+export async function getGithubUsername(
+    userId: string | null,
+    accessToken: string,
+): Promise<string | undefined> {
+    // Try to get the username from the database since it's probably
+    // faster, but fallback to github if its missing.
+    return (
+        (userId
+            ? (await getUser(userId))?.githubUsername
+            : (await getAuthenticatedUser(accessToken)).login) ?? undefined
+    );
 }
