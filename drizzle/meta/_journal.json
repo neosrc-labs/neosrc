@@ -8,6 +8,13 @@
       "when": 1780757561158,
       "tag": "0000_brave_garia",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781087063925,
+      "tag": "0001_rapid_wallflower",
+      "breakpoints": true
     }
   ]
 }

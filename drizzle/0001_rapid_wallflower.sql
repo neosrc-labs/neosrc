@@ -1,0 +1,1 @@
+ALTER TABLE "ba_user" ADD COLUMN "githubUsername" text;

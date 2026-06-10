@@ -57,6 +57,15 @@ export const auth = betterAuth({
             verification: betterAuthVerification,
         },
     }),
+    user: {
+        additionalFields: {
+            githubUsername: {
+                type: "string",
+                required: false,
+                returned: true,
+            },
+        },
+    },
     socialProviders: {
         github: {
             clientId: env.GITHUB_CLIENT_ID,
@@ -71,26 +80,34 @@ export const auth = betterAuth({
                 "read:discussion",
             ],
             redirectURI: `${env.BETTER_AUTH_URL}/api/auth/callback/github`,
+            overrideUserInfoOnSignIn: true,
+            mapProfileToUser: (profile) => {
+                return {
+                    githubUsername: profile.login,
+                };
+            },
         },
     },
     plugins: [nextCookies()],
     databaseHooks: {
         account: {
             create: {
-                before: async (data) => ({
-                    data: {
-                        ...data,
-                        accessToken: data.accessToken
-                            ? encrypt(data.accessToken)
-                            : data.accessToken,
-                        refreshToken: data.refreshToken
-                            ? encrypt(data.refreshToken)
-                            : data.refreshToken,
-                        idToken: data.idToken
-                            ? encrypt(data.idToken)
-                            : data.idToken,
-                    },
-                }),
+                before: async (data) => {
+                    return {
+                        data: {
+                            ...data,
+                            accessToken: data.accessToken
+                                ? encrypt(data.accessToken)
+                                : data.accessToken,
+                            refreshToken: data.refreshToken
+                                ? encrypt(data.refreshToken)
+                                : data.refreshToken,
+                            idToken: data.idToken
+                                ? encrypt(data.idToken)
+                                : data.idToken,
+                        },
+                    };
+                },
             },
             update: {
                 before: async (data) => {

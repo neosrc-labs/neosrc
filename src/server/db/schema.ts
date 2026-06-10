@@ -8,6 +8,7 @@ export const betterAuthUser = createTable("ba_user", (d) => ({
     email: d.text().notNull().unique(),
     emailVerified: d.boolean().notNull(),
     image: d.text(),
+    githubUsername: d.text(),
     createdAt: d.timestamp({ withTimezone: true, mode: "date" }).notNull(),
     updatedAt: d.timestamp({ withTimezone: true, mode: "date" }).notNull(),
 }));
