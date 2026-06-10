@@ -87,56 +87,56 @@ const PR_AUTOCOMPLETE_OPTIONS: Record<
     ],
 };
 
-function getStatusState(item: GqlPrSearchItem): string | null {
-    const rollup = item.commits.nodes[0]?.commit.statusCheckRollup;
-    if (!rollup) return null;
-
-    const hasFailed = rollup.contexts.nodes.some((ctx) => {
-        if (ctx.__typename === "CheckRun") {
-            return (
-                ctx.conclusion === "failure" || ctx.conclusion === "timed_out"
-            );
-        }
-        return ctx.state === "FAILURE" || ctx.state === "ERROR";
-    });
-
-    if (hasFailed) return "FAILURE";
-
-    const hasInProgress = rollup.contexts.nodes.some((ctx) => {
-        if (ctx.__typename === "CheckRun") {
-            return ctx.status === "IN_PROGRESS" || ctx.status === "QUEUED";
-        }
-        return ctx.state === "PENDING" || ctx.state === "EXPECTED";
-    });
-
-    if (hasInProgress) return "IN_PROGRESS";
-    return rollup.state;
-}
-
-function getStatusContexts(
-    item: GqlPrSearchItem,
-): PrRowData["status_contexts"] {
-    const rollup = item.commits.nodes[0]?.commit.statusCheckRollup;
-    if (!rollup) return [];
-    return rollup.contexts.nodes.map((ctx) => {
-        if (ctx.__typename === "CheckRun") {
-            return {
-                name: ctx.name,
-                state: ctx.conclusion ?? ctx.status,
-                description: null,
-                url: ctx.detailsUrl,
-                startedAt: ctx.startedAt,
-                completedAt: ctx.completedAt,
-            };
-        }
-        return {
-            name: ctx.context,
-            state: ctx.state,
-            description: ctx.description,
-            url: ctx.targetUrl,
-        };
-    });
-}
+// function getStatusState(item: GqlPrSearchItem): string | null {
+//     const rollup = item.commits.nodes[0]?.commit.statusCheckRollup;
+//     if (!rollup) return null;
+//
+//     const hasFailed = rollup.contexts.nodes.some((ctx) => {
+//         if (ctx.__typename === "CheckRun") {
+//             return (
+//                 ctx.conclusion === "failure" || ctx.conclusion === "timed_out"
+//             );
+//         }
+//         return ctx.state === "FAILURE" || ctx.state === "ERROR";
+//     });
+//
+//     if (hasFailed) return "FAILURE";
+//
+//     const hasInProgress = rollup.contexts.nodes.some((ctx) => {
+//         if (ctx.__typename === "CheckRun") {
+//             return ctx.status === "IN_PROGRESS" || ctx.status === "QUEUED";
+//         }
+//         return ctx.state === "PENDING" || ctx.state === "EXPECTED";
+//     });
+//
+//     if (hasInProgress) return "IN_PROGRESS";
+//     return rollup.state;
+// }
+//
+// function getStatusContexts(
+//     item: GqlPrSearchItem,
+// ): PrRowData["status_contexts"] {
+//     const rollup = item.commits.nodes[0]?.commit.statusCheckRollup;
+//     if (!rollup) return [];
+//     return rollup.contexts.nodes.map((ctx) => {
+//         if (ctx.__typename === "CheckRun") {
+//             return {
+//                 name: ctx.name,
+//                 state: ctx.conclusion ?? ctx.status,
+//                 description: null,
+//                 url: ctx.detailsUrl,
+//                 startedAt: ctx.startedAt,
+//                 completedAt: ctx.completedAt,
+//             };
+//         }
+//         return {
+//             name: ctx.context,
+//             state: ctx.state,
+//             description: ctx.description,
+//             url: ctx.targetUrl,
+//         };
+//     });
+// }
 
 function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
     const assigneeNode = item.assignees.nodes[0];
@@ -167,8 +167,10 @@ function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
         created_at: item.createdAt,
         merged_at: item.mergedAt,
         comments_count: item.comments.totalCount,
-        status_state: getStatusState(item),
-        status_contexts: getStatusContexts(item),
+        // FIXME: Disabled for perf.
+        status_state: null, //getStatusState(item),
+        // FIXME: Disabled for perf.
+        status_contexts: [], // getStatusContexts(item),
         review_decision: item.reviewDecision,
     };
 }

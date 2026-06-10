@@ -880,36 +880,36 @@ export interface GqlPrSearchItem {
     assignees: { nodes: Array<{ login: string; avatarUrl: string }> };
     comments: { totalCount: number };
     reviewDecision: string | null;
-    commits: {
-        nodes: Array<{
-            commit: {
-                oid: string;
-                statusCheckRollup: {
-                    state: string;
-                    contexts: {
-                        nodes: Array<
-                            | {
-                                  __typename: "CheckRun";
-                                  name: string;
-                                  status: string;
-                                  conclusion: string | null;
-                                  detailsUrl: string;
-                                  startedAt: string | null;
-                                  completedAt: string | null;
-                              }
-                            | {
-                                  __typename: "StatusContext";
-                                  context: string;
-                                  description: string | null;
-                                  state: string;
-                                  targetUrl: string | null;
-                              }
-                        >;
-                    };
-                } | null;
-            };
-        }>;
-    };
+    // commits: {
+    // 	nodes: Array<{
+    // 		commit: {
+    // 			oid: string;
+    // 			statusCheckRollup: {
+    // 				state: string;
+    // 				contexts: {
+    // 					nodes: Array<
+    // 						| {
+    // 							__typename: "CheckRun";
+    // 							name: string;
+    // 							status: string;
+    // 							conclusion: string | null;
+    // 							detailsUrl: string;
+    // 							startedAt: string | null;
+    // 							completedAt: string | null;
+    // 						}
+    // 						| {
+    // 							__typename: "StatusContext";
+    // 							context: string;
+    // 							description: string | null;
+    // 							state: string;
+    // 							targetUrl: string | null;
+    // 						}
+    // 					>;
+    // 				};
+    // 			} | null;
+    // 		};
+    // 	}>;
+    // };
 }
 
 export interface GqlPrSearchResult {
@@ -946,90 +946,61 @@ query SearchPRs($searchQuery: String!, $first: Int!, $after: String) {
         labels(first: 10) {
           nodes { id name color description }
         }
-        assignees(first: 5) {
+        assignees(first: 3) {
           nodes { login avatarUrl }
         }
         comments { totalCount }
         reviewDecision
-        commits(last: 1) {
-          nodes {
-            commit {
-              oid
-              statusCheckRollup {
-                state
-                contexts(first: 100) {
-                  nodes {
-                    __typename
-                    ... on CheckRun {
-                      name
-                      status
-                      conclusion
-                      detailsUrl
-                      startedAt
-                      completedAt
-                    }
-                    ... on StatusContext {
-                      context
-                      description
-                      state
-                      targetUrl
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
       }
     }
   }
 }
 `;
 
-const COUNT_QUERY = `
-query CountPRs($searchQuery: String!) {
-  search(query: $searchQuery, type: ISSUE, first: 1) {
-    issueCount
-  }
+const COUNT_PR_QUERY = `
+query CountPRs($openQuery: String!, $closedQuery: String!, $mergedQuery: String!) {
+  open: search(query: $openQuery, type: ISSUE, first: 1) { issueCount }
+  closed: search(query: $closedQuery, type: ISSUE, first: 1) { issueCount }
+  merged: search(query: $mergedQuery, type: ISSUE, first: 1) { issueCount }
 }
 `;
+
+type CountPrQueryResult = {
+    open: { issueCount: number };
+    closed: { issueCount: number };
+    merged: { issueCount: number };
+};
 
 export async function searchPullRequestsWithStatus(
     accessToken: string,
     query: string,
     first: number = 30,
     after: string | null = null,
-    countQueries?: { open: string; closed: string; merged?: string },
+    countQueries: { open: string; closed: string; merged: string },
 ) {
     const graphql = octokitGraphql.defaults({
         headers: { authorization: `bearer ${accessToken}` },
     });
 
-    const [result, ...countResults] = await Promise.all([
+    const promises: [
+        Promise<GqlPrSearchResult>,
+        ...Promise<CountPrQueryResult>[],
+    ] = [
         graphql<GqlPrSearchResult>(PR_SEARCH_QUERY, {
             searchQuery: query,
             first,
             after,
         }),
-        ...(countQueries
-            ? [
-                  graphql<{ search: { issueCount: number } }>(COUNT_QUERY, {
-                      searchQuery: countQueries.open,
-                  }),
-                  graphql<{ search: { issueCount: number } }>(COUNT_QUERY, {
-                      searchQuery: countQueries.closed,
-                  }),
-                  ...(countQueries.merged
-                      ? [
-                            graphql<{ search: { issueCount: number } }>(
-                                COUNT_QUERY,
-                                { searchQuery: countQueries.merged },
-                            ),
-                        ]
-                      : []),
-              ]
-            : []),
-    ]);
+        graphql<CountPrQueryResult>(COUNT_PR_QUERY, {
+            openQuery: countQueries.open,
+            closedQuery: countQueries.closed,
+            mergedQuery: countQueries.merged,
+        }),
+    ];
+
+    const start = Date.now();
+    const [result, countResult] = await Promise.all(promises);
+    console.log(`${Date.now() - start}ms (query)`);
 
     const items = result.search.nodes.filter(
         (n): n is { __typename: "PullRequest" } & GqlPrSearchItem =>
@@ -1041,17 +1012,11 @@ export async function searchPullRequestsWithStatus(
         totalCount: result.search.issueCount,
         hasNextPage: result.search.pageInfo.hasNextPage,
         endCursor: result.search.pageInfo.endCursor,
-        stateCounts: countQueries
-            ? {
-                  open: countResults[0]?.search.issueCount ?? 0,
-                  closed: countResults[1]?.search.issueCount ?? 0,
-                  ...(countQueries.merged
-                      ? {
-                            merged: countResults[2]?.search.issueCount ?? 0,
-                        }
-                      : {}),
-              }
-            : undefined,
+        stateCounts: {
+            open: countResult?.open?.issueCount ?? 0,
+            closed: countResult?.closed?.issueCount ?? 0,
+            merged: countResult?.merged?.issueCount ?? 0,
+        },
     };
 }
 
@@ -1106,19 +1071,31 @@ query SearchIssues($searchQuery: String!, $first: Int!, $after: String) {
 }
 `;
 
+const COUNT_ISSUE_QUERY = `
+query CountIssues($openQuery: String!, $closedQuery: String!) {
+  open: search(query: $openQuery, type: ISSUE, first: 1) { issueCount }
+  closed: search(query: $closedQuery, type: ISSUE, first: 1) { issueCount }
+}
+`;
+
+type CountIssueQueryResult = {
+    open: { issueCount: number };
+    closed: { issueCount: number };
+};
+
 export async function searchIssuesWithMetadata(
     accessToken: string,
     query: string,
     first: number = 30,
     after: string | null = null,
-    countQueries?: { open: string; closed: string },
+    countQueries: { open: string; closed: string },
 ) {
     const graphql = octokitGraphql.defaults({
         headers: { authorization: `bearer ${accessToken}` },
     });
 
-    const [result, ...countResults] = await Promise.all([
-        graphql<{
+    const promises: [
+        Promise<{
             search: {
                 issueCount: number;
                 pageInfo: { endCursor: string | null; hasNextPage: boolean };
@@ -1128,22 +1105,21 @@ export async function searchIssuesWithMetadata(
                     | null
                 >;
             };
-        }>(ISSUE_SEARCH_QUERY, {
+        }>,
+        ...Promise<CountIssueQueryResult>[],
+    ] = [
+        graphql(ISSUE_SEARCH_QUERY, {
             searchQuery: query,
             first,
             after,
         }),
-        ...(countQueries
-            ? [
-                  graphql<{ search: { issueCount: number } }>(COUNT_QUERY, {
-                      searchQuery: countQueries.open,
-                  }),
-                  graphql<{ search: { issueCount: number } }>(COUNT_QUERY, {
-                      searchQuery: countQueries.closed,
-                  }),
-              ]
-            : []),
-    ]);
+        graphql<CountIssueQueryResult>(COUNT_ISSUE_QUERY, {
+            openQuery: countQueries.open,
+            closedQuery: countQueries.closed,
+        }),
+    ];
+
+    const [result, countResult] = await Promise.all(promises);
 
     const items = result.search.nodes.filter(
         (n): n is { __typename: "Issue" } & GqlIssueSearchItem =>
@@ -1155,12 +1131,10 @@ export async function searchIssuesWithMetadata(
         totalCount: result.search.issueCount,
         hasNextPage: result.search.pageInfo.hasNextPage,
         endCursor: result.search.pageInfo.endCursor,
-        stateCounts: countQueries
-            ? {
-                  open: countResults[0]?.search.issueCount ?? 0,
-                  closed: countResults[1]?.search.issueCount ?? 0,
-              }
-            : undefined,
+        stateCounts: {
+            open: countResult?.open?.issueCount ?? 0,
+            closed: countResult?.closed?.issueCount ?? 0,
+        },
     };
 }
 

@@ -58,8 +58,8 @@ export const issuesRouter = createTRPCRouter({
             );
             const base = `repo:${input.owner}/${input.repo} is:issue`;
             const countQueries = {
-                open: `${base} is:open ${restQuery}${sortOrder}`.trim(),
-                closed: `${base} is:closed ${restQuery}${sortOrder}`.trim(),
+                open: `${base} is:open ${restQuery}`.trim(),
+                closed: `${base} is:closed ${restQuery}`.trim(),
             };
 
             const result = await searchIssuesWithMetadata(
