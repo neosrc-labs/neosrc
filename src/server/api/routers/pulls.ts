@@ -660,11 +660,11 @@ export const pullsRouter = createTRPCRouter({
                 /^(is:open|is:closed|is:merged)\s*/,
                 "",
             );
-            const sortSuffix = sortOrder;
             const base = `repo:${input.owner}/${input.repo} is:pr`;
             const countQueries = {
-                open: `${base} is:open ${restQuery}${sortSuffix}`.trim(),
-                closed: `${base} is:closed ${restQuery}${sortSuffix}`.trim(),
+                open: `${base} is:open ${restQuery}`.trim(),
+                closed: `${base} is:closed ${restQuery}`.trim(),
+                merged: `${base} is:merged ${restQuery}`.trim(),
             };
 
             const result = await searchPullRequestsWithStatus(

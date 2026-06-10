@@ -942,33 +942,6 @@ export const searchIssues = cache(
     },
 );
 
-export const searchPullRequests = cache(
-    async (
-        accessToken: string,
-        owner: string,
-        repo: string,
-        query: string,
-        page: number = 1,
-        perPage: number = 30,
-        sort: "created" | "updated" | "comments" = "created",
-        order: "asc" | "desc" = "desc",
-    ) => {
-        const octokit = createOctokit(accessToken);
-        const q = `repo:${owner}/${repo} is:pr ${query}`.trim();
-        const response = await octokit.search.issuesAndPullRequests({
-            q,
-            page,
-            per_page: perPage,
-            sort,
-            order,
-        });
-        return {
-            items: response.data.items,
-            totalCount: response.data.total_count,
-        };
-    },
-);
-
 export const getPullRequestReviewComments = cache(
     async (
         accessToken: string,
