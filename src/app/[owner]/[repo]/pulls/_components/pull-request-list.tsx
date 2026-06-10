@@ -87,56 +87,31 @@ const PR_AUTOCOMPLETE_OPTIONS: Record<
     ],
 };
 
-// function getStatusState(item: GqlPrSearchItem): string | null {
-//     const rollup = item.commits.nodes[0]?.commit.statusCheckRollup;
-//     if (!rollup) return null;
-//
-//     const hasFailed = rollup.contexts.nodes.some((ctx) => {
-//         if (ctx.__typename === "CheckRun") {
-//             return (
-//                 ctx.conclusion === "failure" || ctx.conclusion === "timed_out"
-//             );
-//         }
-//         return ctx.state === "FAILURE" || ctx.state === "ERROR";
-//     });
-//
-//     if (hasFailed) return "FAILURE";
-//
-//     const hasInProgress = rollup.contexts.nodes.some((ctx) => {
-//         if (ctx.__typename === "CheckRun") {
-//             return ctx.status === "IN_PROGRESS" || ctx.status === "QUEUED";
-//         }
-//         return ctx.state === "PENDING" || ctx.state === "EXPECTED";
-//     });
-//
-//     if (hasInProgress) return "IN_PROGRESS";
-//     return rollup.state;
-// }
-//
-// function getStatusContexts(
-//     item: GqlPrSearchItem,
-// ): PrRowData["status_contexts"] {
-//     const rollup = item.commits.nodes[0]?.commit.statusCheckRollup;
-//     if (!rollup) return [];
-//     return rollup.contexts.nodes.map((ctx) => {
-//         if (ctx.__typename === "CheckRun") {
-//             return {
-//                 name: ctx.name,
-//                 state: ctx.conclusion ?? ctx.status,
-//                 description: null,
-//                 url: ctx.detailsUrl,
-//                 startedAt: ctx.startedAt,
-//                 completedAt: ctx.completedAt,
-//             };
-//         }
-//         return {
-//             name: ctx.context,
-//             state: ctx.state,
-//             description: ctx.description,
-//             url: ctx.targetUrl,
-//         };
-//     });
-// }
+function computeStatusState(checks: Array<{ state: string }>): string | null {
+    if (checks.length === 0) return null;
+    if (
+        checks.some(
+            (c) =>
+                c.state === "FAILURE" ||
+                c.state === "ERROR" ||
+                c.state === "TIMED_OUT",
+        )
+    ) {
+        return "FAILURE";
+    }
+    if (
+        checks.some(
+            (c) =>
+                c.state === "IN_PROGRESS" ||
+                c.state === "QUEUED" ||
+                c.state === "PENDING" ||
+                c.state === "EXPECTED",
+        )
+    ) {
+        return "IN_PROGRESS";
+    }
+    return "SUCCESS";
+}
 
 function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
     const assigneeNode = item.assignees.nodes[0];
@@ -167,10 +142,8 @@ function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
         created_at: item.createdAt,
         merged_at: item.mergedAt,
         comments_count: item.comments.totalCount,
-        // FIXME: Disabled for perf.
-        status_state: null, //getStatusState(item),
-        // FIXME: Disabled for perf.
-        status_contexts: [], // getStatusContexts(item),
+        status_state: null,
+        status_contexts: [],
         review_decision: item.reviewDecision,
     };
 }
@@ -325,10 +298,28 @@ export function PullRequestList({
         utils.pulls.search.fetch,
     ]);
 
-    const items = useMemo(
-        () => (data?.items ?? []).map(normalizeSearchItem),
+    const prNumbers = useMemo(
+        () => (data?.items ?? []).map((i) => i.number),
         [data],
     );
+
+    const { data: statusByPr } = api.checks.listByPrNumbers.useQuery(
+        { owner, repo, prNumbers },
+        { enabled: prNumbers.length > 0 },
+    );
+
+    const items = useMemo(() => {
+        if (!data) return [];
+        return data.items.map((item) => {
+            const normalized = normalizeSearchItem(item);
+            const checks = statusByPr?.[item.number];
+            if (checks) {
+                normalized.status_contexts = checks;
+                normalized.status_state = computeStatusState(checks);
+            }
+            return normalized;
+        });
+    }, [data, statusByPr]);
     const stateCounts = data?.stateCounts;
     const totalPages = Math.ceil((data?.totalCount ?? 0) / 30);
 
