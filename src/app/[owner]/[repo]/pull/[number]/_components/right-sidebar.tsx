@@ -3,7 +3,6 @@
 import { Check, Circle, CircleX, Loader2, X, XCircle } from "lucide-react";
 import { use, useRef, useState } from "react";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
-import { UserLink } from "~/components/user-link";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import {
@@ -206,14 +205,11 @@ function ChecksSection({ checks }: ChecksSectionProps) {
                                 ) : (
                                     <Circle className="h-3.5 w-3.5 text-gray-400" />
                                 )}
-                                {check.creator ? (
-                                    <UserLink
-                                        actor={{
-                                            login: check.creator.login,
-                                            avatarUrl: check.creator.avatar_url,
-                                            url: check.creator.html_url,
-                                        }}
-                                        showUsername={false}
+                                {check.creator?.avatar_url ? (
+                                    <img
+                                        src={check.creator.avatar_url}
+                                        alt=""
+                                        className="h-5 w-5 rounded-full"
                                     />
                                 ) : check.app?.owner?.avatar_url ? (
                                     <img
