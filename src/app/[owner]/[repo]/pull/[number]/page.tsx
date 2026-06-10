@@ -2,11 +2,7 @@ import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-meth
 import type { Metadata } from "next";
 import { Suspense, use } from "react";
 import { getSession, githubAccessToken } from "~/server/auth";
-import {
-    getAuthenticatedUser,
-    getCachedPullRequest,
-    getUserRepoPermission,
-} from "~/server/github";
+import { getCachedPullRequest, getUserRepoPermission } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
 import { PullRequestDescriptionSection } from "./_components/description";
 import {
@@ -102,19 +98,19 @@ async function computeCanInteract(
     pullRequestPromise: Promise<PullsGetResponseData>,
     userId: string | undefined,
 ) {
-    if (!userId) {
+    const session = await getSession();
+    const currentUser = session?.user.githubUsername;
+    if (!currentUser || !userId) {
         const pr = await pullRequestPromise;
         return !pr.locked;
     }
-
-    const currentUser = await getAuthenticatedUser(accessToken);
     const [pr, userPermission] = await Promise.all([
         pullRequestPromise,
         getUserRepoPermission(
             accessToken,
             owner,
             repo,
-            currentUser.login,
+            currentUser,
             userId,
         ).catch(() => null),
     ]);
@@ -123,7 +119,7 @@ async function computeCanInteract(
         !pr.locked ||
         userPermission === "admin" ||
         userPermission === "write" ||
-        currentUser.login === pr.user?.login
+        currentUser === pr.user?.login
     );
 }
 

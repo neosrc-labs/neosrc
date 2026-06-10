@@ -35,8 +35,8 @@ async function getCurrentUser(): Promise<{
 } | null> {
     const session = await getSession();
     if (!session?.user) return null;
-    const login = session.user.name ?? "";
-    const avatarUrl = session.user.image ?? "";
+    const login = session.user.name;
+    const avatarUrl = session.user.image;
     if (!login || !avatarUrl) {
         const token = await githubAccessToken();
         if (!token) return null;

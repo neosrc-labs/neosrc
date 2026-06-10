@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getGitHubToken } from "~/server/auth";
+import { getGitHubToken, getGithubUsername } from "~/server/auth";
 import {
     getAuthenticatedUser,
     getGitHubTeam,
@@ -10,10 +10,21 @@ import {
 
 export const usersRouter = createTRPCRouter({
     currentUser: protectedProcedure.query(async ({ ctx }) => {
-        const accessToken = await getGitHubToken(ctx.db, ctx.session.user.id);
+        const { githubUsername, image: avatarUrl } = ctx.session.user;
 
+        if (githubUsername && avatarUrl) {
+            return { login: githubUsername, avatarUrl };
+        }
+
+        const accessToken = await getGitHubToken(ctx.db, ctx.session.user.id);
         const user = await getAuthenticatedUser(accessToken);
-        return { login: user.login, avatarUrl: user.avatar_url };
+
+        return {
+            login:
+                githubUsername ??
+                (await getGithubUsername(ctx.session.user.id, accessToken)),
+            avatarUrl: avatarUrl ?? user.avatar_url,
+        };
     }),
     getByUsername: protectedProcedure
         .input(
