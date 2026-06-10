@@ -13,6 +13,7 @@ import {
 } from "~/server/github";
 import {
     deduplicateCommitStatuses,
+    mapGitHubCheckRunToCheckRun,
     mapStatusToCheckRun,
 } from "~/utils/status-checks";
 import LeftSidebar from "./_components/left-sidebar";
@@ -77,56 +78,9 @@ export default async function PullRequestLayout({
         });
 
         // Fetch check runs and commit statuses if we have the PR head SHA
-        checks = pullRequest.then(async (pullRequest) => {
-            if (pullRequest?.head?.sha) {
-                const [checksResult, statuses] = await Promise.all([
-                    getCheckRuns(
-                        accessToken,
-                        owner,
-                        repo,
-                        pullRequest.head.sha,
-                    ),
-                    getCommitStatuses(
-                        accessToken,
-                        owner,
-                        repo,
-                        pullRequest.head.sha,
-                    ),
-                ]);
-                const checkRunItems = (checksResult.check_runs || []).map(
-                    (check) =>
-                        ({
-                            name: check.name,
-                            conclusion: check.conclusion,
-                            status: check.status,
-                            description:
-                                check.output.title ?? check.output.summary,
-                            html_url: check.html_url ?? undefined,
-                            details_url: check.details_url,
-                            started_at: check.started_at,
-                            completed_at: check.completed_at,
-                            app: check.app
-                                ? {
-                                      name: check.app.name,
-                                      owner: check.app.owner
-                                          ? {
-                                                avatar_url:
-                                                    check.app.owner.avatar_url,
-                                            }
-                                          : null,
-                                  }
-                                : null,
-                        }) as CheckRun,
-                );
-
-                const statusItems = deduplicateCommitStatuses(
-                    statuses ?? [],
-                ).map(mapStatusToCheckRun);
-
-                return [...checkRunItems, ...statusItems];
-            }
-            return [];
-        });
+        checks = pullRequest.then((pullRequest) =>
+            fetchChecks(accessToken, owner, repo, pullRequest.head.sha),
+        );
     }
 
     return (
@@ -156,4 +110,26 @@ export default async function PullRequestLayout({
             {children}
         </ResizableLayout>
     );
+}
+
+async function fetchChecks(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    headSha: string,
+): Promise<CheckRun[]> {
+    const [checksResult, statuses] = await Promise.all([
+        getCheckRuns(accessToken, owner, repo, headSha),
+        getCommitStatuses(accessToken, owner, repo, headSha),
+    ]);
+
+    const checkRunItems = (checksResult.check_runs ?? []).map(
+        mapGitHubCheckRunToCheckRun,
+    );
+
+    const statusItems = deduplicateCommitStatuses(statuses ?? []).map(
+        mapStatusToCheckRun,
+    );
+
+    return [...checkRunItems, ...statusItems];
 }

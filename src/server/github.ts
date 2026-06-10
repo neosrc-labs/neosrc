@@ -35,22 +35,16 @@ export type PullRequestReview =
     RestEndpointMethodTypes["pulls"]["listReviews"]["response"]["data"][number];
 export type PullRequestFile =
     RestEndpointMethodTypes["pulls"]["listFiles"]["response"]["data"][number];
-
-export function createOctokit(accessToken: string) {
-    return new Octokit({
-        auth: accessToken,
-    });
-}
-
 export type PullsListResponseData =
     RestEndpointMethodTypes["pulls"]["list"]["response"]["data"];
 export type PullRequestData = PullsListResponseData[number];
-
 export type UsersGetByUsernameResponseData =
     RestEndpointMethodTypes["users"]["getByUsername"]["response"]["data"];
-
 export type TeamGetByNameResponseData =
     RestEndpointMethodTypes["teams"]["getByName"]["response"]["data"];
+export type GhCheckRuns =
+    RestEndpointMethodTypes["checks"]["listForRef"]["response"]["data"];
+export type GhCheckRun = GhCheckRuns["check_runs"][number];
 
 export type CheckRun = {
     name: string;
@@ -75,6 +69,12 @@ export type CheckRun = {
 };
 
 export type { Octokit };
+
+export function createOctokit(accessToken: string) {
+    return new Octokit({
+        auth: accessToken,
+    });
+}
 
 export const getPullRequest = cache(
     async (
@@ -563,7 +563,7 @@ export const getCheckRuns = cache(
         owner: string,
         repo: string,
         commitSha: string,
-    ) => {
+    ): Promise<GhCheckRuns> => {
         const octokit = createOctokit(accessToken);
         const response = await octokit.checks.listForRef({
             owner,
@@ -582,27 +582,12 @@ export const getCommitStatuses = cache(
         commitSha: string,
     ) => {
         const octokit = createOctokit(accessToken);
-        const response = await octokit.request(
-            "GET /repos/{owner}/{repo}/commits/{ref}/statuses",
-            {
-                owner,
-                repo,
-                ref: commitSha,
-            },
-        );
-        return response.data as Array<{
-            state: string;
-            target_url: string | null;
-            description: string | null;
-            context: string;
-            created_at: string;
-            updated_at: string;
-            creator: {
-                login: string;
-                avatar_url: string;
-                html_url: string;
-            } | null;
-        }>;
+        const response = await octokit.repos.listCommitStatusesForRef({
+            owner,
+            repo,
+            ref: commitSha,
+        });
+        return response.data;
     },
 );
 
