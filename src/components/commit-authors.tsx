@@ -85,9 +85,11 @@ export function CommitAuthors({ authors, size = 20 }: CommitAuthorsProps) {
                             zIndex: visible.length - i,
                         }}
                     >
-                        {author.user?.login ? (
+                        {author.user ? (
                             <UserHoverCard login={author.user.login}>
-                                {avatar}
+                                <a className="flex" href={author.user.url}>
+                                    {avatar}
+                                </a>
                             </UserHoverCard>
                         ) : (
                             avatar
