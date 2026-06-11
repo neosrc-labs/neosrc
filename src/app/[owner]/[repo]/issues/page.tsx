@@ -1,4 +1,14 @@
+import type { Metadata } from "next";
 import { IssueList } from "./_components/issue-list";
+
+export async function generateMetadata({
+    params,
+}: {
+    params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+    const { owner, repo } = await params;
+    return { title: `Issues - ${owner}/${repo}` };
+}
 
 export default async function IssuesPage({
     params,

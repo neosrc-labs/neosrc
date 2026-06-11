@@ -1,4 +1,14 @@
+import type { Metadata } from "next";
 import { PullRequestList } from "./_components/pull-request-list";
+
+export async function generateMetadata({
+    params,
+}: {
+    params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+    const { owner, repo } = await params;
+    return { title: `Pulls - ${owner}/${repo}` };
+}
 
 export default async function PullsPage({
     params,
