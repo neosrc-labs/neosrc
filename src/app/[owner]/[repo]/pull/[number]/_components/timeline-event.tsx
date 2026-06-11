@@ -186,7 +186,7 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
                 size={ICON_SIZE}
             />
         ),
-        MergedEvent: <GitMerge className="text-purple-500" size={ICON_SIZE} />,
+        MergedEvent: <GitMerge className="text-white" size={ICON_SIZE} />,
         LabeledEvent: <Tag size={ICON_SIZE} />,
         UnlabeledEvent: <Tag size={ICON_SIZE} />,
         AssignedEvent: <User size={ICON_SIZE} />,
@@ -214,22 +214,25 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
 
     const typename = event.__typename;
     const isApproved =
-        typename === "PullRequestReview" && event.state === "approved";
+        typename === "PullRequestReview" && event.state === "APPROVED";
     const isChangesRequested =
-        typename === "PullRequestReview" && event.state === "changes_requested";
+        typename === "PullRequestReview" && event.state === "CHANGES_REQUESTED";
+    const isMerged = typename === "MergedEvent";
 
     const circleClass = isApproved
         ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-green-500"
         : isChangesRequested
           ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-red-500"
-          : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700";
+          : isMerged
+            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-purple-500"
+            : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700";
 
     let icon = iconMap[typename] ?? <Circle size={ICON_SIZE} />;
 
     if (typename === "PullRequestReview") {
-        if (event.state === "approved")
+        if (event.state === "APPROVED")
             icon = <Check className="text-white" size={ICON_SIZE} />;
-        if (event.state === "changes_requested")
+        if (event.state === "CHANGES_REQUESTED")
             icon = <FileText className="text-white" size={ICON_SIZE} />;
     }
 
