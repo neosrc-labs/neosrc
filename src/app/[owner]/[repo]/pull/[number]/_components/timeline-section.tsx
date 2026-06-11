@@ -3,8 +3,13 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
 import { LazyRenderItem } from "~/components/LazyRenderItem";
+import { UserLink } from "~/components/user-link";
 import type { ReviewComment } from "~/server/github";
-import type { GQLReactionNode } from "~/server/github-graphql";
+import type {
+    GQLMergeQueueEntry,
+    GQLMergeQueueEntryState,
+    GQLReactionNode,
+} from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { CommentForm } from "./comment-form";
 import { TimelineEvent } from "./timeline-event";
@@ -131,6 +136,81 @@ export function TimelineSection({
         return map;
     }, [allComments]);
 
+    const STATE_LABELS: Record<GQLMergeQueueEntryState, string> = {
+        QUEUED: "In queue",
+        AWAITING_CHECKS: "Awaiting checks",
+        MERGEABLE: "Mergeable",
+        UNMERGEABLE: "Unmergeable",
+        LOCKED: "Locked",
+    };
+
+    const STATE_COLORS: Record<
+        GQLMergeQueueEntryState,
+        { bg: string; text: string; dot: string }
+    > = {
+        QUEUED: {
+            bg: "bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800",
+            text: "text-blue-700 dark:text-blue-300",
+            dot: "bg-blue-500",
+        },
+        AWAITING_CHECKS: {
+            bg: "bg-yellow-50 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800",
+            text: "text-yellow-700 dark:text-yellow-300",
+            dot: "bg-yellow-500",
+        },
+        MERGEABLE: {
+            bg: "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800",
+            text: "text-green-700 dark:text-green-300",
+            dot: "bg-green-500",
+        },
+        UNMERGEABLE: {
+            bg: "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800",
+            text: "text-red-700 dark:text-red-300",
+            dot: "bg-red-500",
+        },
+        LOCKED: {
+            bg: "bg-gray-50 border-gray-200 dark:bg-gray-900/30 dark:border-gray-700",
+            text: "text-gray-600 dark:text-gray-400",
+            dot: "bg-gray-400",
+        },
+    };
+
+    function MergeQueueBanner({
+        entry,
+    }: {
+        entry: NonNullable<GQLMergeQueueEntry>;
+    }) {
+        const colors = STATE_COLORS[entry.state];
+        const label = STATE_LABELS[entry.state];
+
+        return (
+            <div className={`mb-4 rounded-lg border px-4 py-3 ${colors.bg}`}>
+                <div className="flex items-center gap-2">
+                    <span
+                        className={`inline-block h-2.5 w-2.5 rounded-full ${colors.dot}`}
+                    />
+                    <span className={`font-medium text-sm ${colors.text}`}>
+                        {`#${entry.position} in merge queue`}
+                    </span>
+                    <span
+                        className={`rounded-full px-2 py-0.5 font-medium text-xs ${colors.bg} ${colors.text}`}
+                    >
+                        {label}
+                    </span>
+                </div>
+                <div className="mt-1 flex items-center gap-1 text-gray-500 text-xs dark:text-zinc-400">
+                    <UserLink actor={entry.enqueuer} />
+                    <span>queued this PR</span>
+                    {entry.headCommit && (
+                        <span className="font-mono">
+                            {entry.headCommit.oid.slice(0, 7)}
+                        </span>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
     if (isLoading) {
         return (
             <div className="mt-5">
@@ -140,12 +220,15 @@ export function TimelineSection({
     }
 
     const currentUserLogin = data?.pages[0]?.currentUserLogin ?? "";
+    const mergeQueueEntry = data?.pages[0]?.mergeQueueEntry ?? null;
     const filteredEvents = filterTimelineEvents(allEvents);
 
     const wrappers = aggregateEvents(filteredEvents);
 
     return (
         <div className="mt-5">
+            {mergeQueueEntry && <MergeQueueBanner entry={mergeQueueEntry} />}
+
             {wrappers.length === 0 && (
                 <p className="text-gray-500 text-sm dark:text-gray-400">
                     No timeline events yet.

@@ -105,6 +105,11 @@ function filterTimelineEvents(events: GQLTimelineEvent[]): GQLTimelineEvent[] {
         if (event.__typename === "ClosedEvent" && hasSeenMerge) {
             return false;
         }
+        // Merging automatically removes the PR from the merge queue, so
+        // RemovedFromMergeQueueEvent is redundant when it follows a merge.
+        if (event.__typename === "RemovedFromMergeQueueEvent" && hasSeenMerge) {
+            return false;
+        }
         return true;
     });
 }
