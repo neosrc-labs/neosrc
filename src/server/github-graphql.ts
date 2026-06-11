@@ -55,6 +55,10 @@ query PullRequestTimeline(
 				HEAD_REF_RESTORED_EVENT,
 				CROSS_REFERENCED_EVENT,
 				ASSIGNED_EVENT,
+				AUTO_MERGE_DISABLED_EVENT,
+				AUTO_MERGE_ENABLED_EVENT,
+				ADDED_TO_MERGE_QUEUE_EVENT,
+				REMOVED_FROM_MERGE_QUEUE_EVENT,
 				UNASSIGNED_EVENT,
 				CLOSED_EVENT,
 				REOPENED_EVENT,
@@ -309,11 +313,43 @@ query PullRequestTimeline(
 						createdAt
 						dismissalMessage
 					}
+					... on AutoMergeEnabledEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+					}
+					... on AutoMergeDisabledEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						reason
+					}
+					... on AddedToMergeQueueEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						enqueuer { ...SimpleUser }
+					}
+					... on RemovedFromMergeQueueEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						enqueuer { ...SimpleUser }
+						reason
+					}
 				}
 				pageInfo {
 					hasNextPage
 					endCursor
 				}
+			}
+			mergeQueueEntry {
+				state
+				position
+				headCommit { oid }
+				enqueuer { ...SimpleUser }
+				enqueuedAt
+				solo
 			}
 		}
 	}
@@ -699,6 +735,54 @@ export type GQLSubscribedEvent = {
     createdAt: string;
 };
 
+export type GQLAutoMergeEnabledEvent = {
+    __typename: "AutoMergeEnabledEvent";
+    id: string;
+    actor: GQLActor | null;
+    createdAt: string;
+};
+
+export type GQLAutoMergeDisabledEvent = {
+    __typename: "AutoMergeDisabledEvent";
+    id: string;
+    actor: GQLActor | null;
+    createdAt: string;
+    reason?: string | null;
+};
+
+export type GQLAddedToMergeQueueEvent = {
+    __typename: "AddedToMergeQueueEvent";
+    id: string;
+    actor: GQLActor | null;
+    createdAt: string;
+    enqueuer: GQLActor | null;
+};
+
+export type GQLRemovedFromMergeQueueEvent = {
+    __typename: "RemovedFromMergeQueueEvent";
+    id: string;
+    actor: GQLActor | null;
+    createdAt: string;
+    enqueuer: GQLActor | null;
+    reason: string | null;
+};
+
+export type GQLMergeQueueEntryState =
+    | "QUEUED"
+    | "AWAITING_CHECKS"
+    | "MERGEABLE"
+    | "UNMERGEABLE"
+    | "LOCKED";
+
+export type GQLMergeQueueEntry = {
+    state: GQLMergeQueueEntryState;
+    position: number;
+    headCommit: { oid: string } | null;
+    enqueuer: GQLActor;
+    enqueuedAt: string;
+    solo: boolean;
+} | null;
+
 export type GQLTimelineEvent =
     | GQLIssueComment
     | GQLPullRequestReview
@@ -731,7 +815,11 @@ export type GQLTimelineEvent =
     | GQLPullRequestCommit
     | GQLReviewDismissedEvent
     | GQLMentionedEvent
-    | GQLSubscribedEvent;
+    | GQLSubscribedEvent
+    | GQLAutoMergeEnabledEvent
+    | GQLAutoMergeDisabledEvent
+    | GQLAddedToMergeQueueEvent
+    | GQLRemovedFromMergeQueueEvent;
 
 const CONTENT_MAP: Record<string, string> = {
     THUMBS_UP: "+1",
@@ -766,6 +854,7 @@ export async function getPullRequestTimelineGraphQL(
                         endCursor: string | null;
                     };
                 };
+                mergeQueueEntry: Record<string, unknown> | null;
             };
         };
         viewer: { login: string };
@@ -814,12 +903,16 @@ export async function getPullRequestTimelineGraphQL(
         }
     }
 
+    const mergeQueueEntry = result.repository.pullRequest
+        .mergeQueueEntry as GQLMergeQueueEntry;
+
     return {
         events,
         hasMore: pageInfo.hasNextPage,
         endCursor: pageInfo.endCursor ?? undefined,
         commentReactions,
         currentUserLogin: result.viewer.login,
+        mergeQueueEntry,
     };
 }
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getGitHubToken } from "~/server/auth";
 import {
+    type GQLMergeQueueEntry,
     type GQLTimelineEvent,
     getPullRequestTimelineGraphQL,
 } from "~/server/github-graphql";
@@ -20,6 +21,7 @@ export type TimelineResult = {
         }[]
     >;
     currentUserLogin: string;
+    mergeQueueEntry: GQLMergeQueueEntry;
 };
 
 export const timelineRouter = createTRPCRouter({
@@ -53,6 +55,7 @@ export const timelineRouter = createTRPCRouter({
                 nextCursor: result.hasMore ? result.endCursor : undefined,
                 commentReactions: result.commentReactions,
                 currentUserLogin: result.currentUserLogin,
+                mergeQueueEntry: result.mergeQueueEntry,
             } satisfies TimelineResult;
         }),
 });

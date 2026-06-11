@@ -7,12 +7,14 @@ import {
     ChevronDown,
     Circle,
     ClipboardList,
+    Clock,
     Eye,
     FileText,
     GitBranch,
     GitCommitHorizontal,
     GitMerge,
     Link,
+    ListOrdered,
     Lock,
     LockOpen,
     MessageSquare,
@@ -24,6 +26,7 @@ import {
     Target,
     Trash2,
     User,
+    X,
 } from "lucide-react";
 import NextLink from "next/link";
 import { useState } from "react";
@@ -210,6 +213,14 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
         AddedToProjectV2Event: <ClipboardList size={ICON_SIZE} />,
         ProjectV2ItemStatusChangedEvent: <RefreshCw size={ICON_SIZE} />,
         DeployedEvent: <Rocket className="text-blue-500" size={ICON_SIZE} />,
+        AutoMergeEnabledEvent: (
+            <ListOrdered className="text-blue-500" size={ICON_SIZE} />
+        ),
+        AutoMergeDisabledEvent: <X className="text-red-400" size={ICON_SIZE} />,
+        AddedToMergeQueueEvent: <Clock size={ICON_SIZE} />,
+        RemovedFromMergeQueueEvent: (
+            <X className="text-red-400" size={ICON_SIZE} />
+        ),
     };
 
     const typename = event.__typename;
@@ -1199,6 +1210,66 @@ function EventContent({
                                 {")"}
                             </>
                         ) : null}
+                        {` ${timestamp}`}
+                    </p>
+                </EventRow>
+            );
+        }
+
+        case "AutoMergeEnabledEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
+            return (
+                <EventRow>
+                    <UserLink actor={event.actor} />
+                    <p>
+                        {" enabled auto-merge"}
+                        {` ${timestamp}`}
+                    </p>
+                </EventRow>
+            );
+        }
+
+        case "AutoMergeDisabledEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
+            const reasonDisplay = event.reason
+                ? event.reason.toLowerCase().replace(/_/g, " ")
+                : null;
+            return (
+                <EventRow>
+                    <UserLink actor={event.actor} />
+                    <p>
+                        {" disabled auto-merge"}
+                        {reasonDisplay ? ` — ${reasonDisplay}` : ""}
+                        {` ${timestamp}`}
+                    </p>
+                </EventRow>
+            );
+        }
+
+        case "AddedToMergeQueueEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
+            return (
+                <EventRow>
+                    <UserLink actor={event.actor} />
+                    <p>
+                        {" queued this PR in the merge queue"}
+                        {` ${timestamp}`}
+                    </p>
+                </EventRow>
+            );
+        }
+
+        case "RemovedFromMergeQueueEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
+            const reasonDisplay = event.reason
+                ? event.reason.toLowerCase().replace(/_/g, " ")
+                : null;
+            return (
+                <EventRow>
+                    <UserLink actor={event.actor} />
+                    <p>
+                        {" removed this PR from the merge queue"}
+                        {reasonDisplay ? ` — ${reasonDisplay}` : ""}
                         {` ${timestamp}`}
                     </p>
                 </EventRow>
