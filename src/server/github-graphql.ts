@@ -659,7 +659,7 @@ export type GQLGitSignature =
 
 export type GQLCommitAuthor = {
     name: string | null;
-    avatarUrl: string;
+    avatarUrl: string | null;
     user: GQLActor | null;
 };
 
@@ -1232,13 +1232,17 @@ export type GQLCommitWithAuthors = {
     oid: string;
     message: string;
     committedDate?: string;
-    authors: {
-        name: string | null;
-        avatarUrl: string;
-        user: GQLActor | null;
-    }[];
+    authors: GQLCommitAuthor[];
     signature?: GQLGitSignature | null;
 };
+
+function toCommitAuthors(
+    authors: GQLCommitFields["authors"],
+): GQLCommitAuthor[] {
+    return (authors?.nodes ?? []).filter(
+        (a): a is GQLCommitAuthor => a !== null,
+    );
+}
 
 export async function getPullRequestCommitsGraphQL(
     accessToken: string,
@@ -1286,13 +1290,7 @@ export async function getPullRequestCommitsGraphQL(
         oid: n.commit.oid,
         message: n.commit.message,
         committedDate: n.commit.committedDate,
-        authors: (n.commit.authors?.nodes ?? [])
-            .filter((a): a is GQLCommitAuthor => a !== null)
-            .map((a) => ({
-                name: a.name,
-                avatarUrl: a.avatarUrl,
-                user: a.user,
-            })),
+        authors: toCommitAuthors(n.commit.authors),
         signature: n.commit.signature,
     }));
 
@@ -1334,13 +1332,7 @@ export async function getCommitGraphQL(
         oid: commit.oid,
         message: commit.message,
         committedDate: commit.committedDate,
-        authors: (commit.authors?.nodes ?? [])
-            .filter((a): a is GQLCommitAuthor => a !== null)
-            .map((a) => ({
-                name: a.name,
-                avatarUrl: a.avatarUrl,
-                user: a.user,
-            })),
+        authors: toCommitAuthors(commit.authors),
         signature: commit.signature,
     };
 }

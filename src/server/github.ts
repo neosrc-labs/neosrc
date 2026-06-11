@@ -20,7 +20,6 @@ export type Reviewer = NonNullable<
     PullsGetResponseData["requested_reviewers"]
 >[number];
 export type Assignee = NonNullable<PullsGetResponseData["assignees"]>[number];
-export type Commit = PullsListCommitsResponseData[number];
 export type TimelineEventData =
     RestEndpointMethodTypes["issues"]["listEventsForTimeline"]["response"]["data"][number];
 export type IssueCommentData =
@@ -158,28 +157,6 @@ export const getPullRequestCommits = cache(
         return response.data;
     },
 );
-
-export async function getPullRequestCommitsPage(
-    accessToken: string,
-    owner: string,
-    repo: string,
-    pullNumber: number,
-    per_page = 30,
-    page = 1,
-) {
-    const octokit = createOctokit(accessToken);
-    const response = await octokit.pulls.listCommits({
-        owner,
-        repo,
-        pull_number: pullNumber,
-        per_page,
-        page,
-    });
-    return {
-        commits: response.data,
-        hasNext: response.data.length >= per_page,
-    };
-}
 
 export const getPullRequestFiles = cache(
     async (
