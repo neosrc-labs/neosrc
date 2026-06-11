@@ -45,9 +45,12 @@ function UserHoverCardContent({ login }: { login: string }) {
                 <div className="min-w-0">
                     <div className="flex flex-wrap items-baseline gap-x-2">
                         {user.name && (
-                            <span className="font-semibold text-base text-gray-900 dark:text-gray-100">
+                            <a
+                                className="font-semibold text-base text-gray-900 hover:underline dark:text-gray-100"
+                                href={`https://github.com/${user.login}`}
+                            >
                                 {user.name}
-                            </span>
+                            </a>
                         )}
                         <span className="text-gray-500 text-sm dark:text-gray-400">
                             {user.login}
