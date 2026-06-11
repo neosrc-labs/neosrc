@@ -150,22 +150,26 @@ function CommitsList({
                             }}
                         >
                             <CommitHoverCard baseUrl={baseUrl} commit={commit}>
-                                <AsyncLink
+                                <div
                                     className={`flex items-start gap-2 rounded-md px-2 py-1 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800 ${
                                         isCurrent
                                             ? "border-blue-500 border-l-2 bg-blue-50 dark:bg-blue-950"
                                             : ""
                                     }`}
-                                    href={`${baseUrl}/${commit.oid}`}
                                 >
                                     <CommitAuthors
                                         authors={commit.authors}
                                         size={20}
                                     />
                                     <div className="min-w-0">
-                                        <p className="truncate font-medium text-gray-900 text-sm dark:text-gray-100">
-                                            {commit.message.split("\n")[0]}
-                                        </p>
+                                        <AsyncLink
+                                            className="font-medium text-gray-900 text-sm dark:text-gray-100"
+                                            href={`${baseUrl}/${commit.oid}`}
+                                        >
+                                            <p className="truncate text-inherit">
+                                                {commit.message.split("\n")[0]}
+                                            </p>
+                                        </AsyncLink>
                                         {commit.authors[0] && (
                                             <p className="mt-0.5 text-gray-500 text-xs dark:text-gray-400">
                                                 {commit.authors[0]?.user
@@ -179,7 +183,7 @@ function CommitsList({
                                             </p>
                                         )}
                                     </div>
-                                </AsyncLink>
+                                </div>
                             </CommitHoverCard>
                         </div>
                     );
