@@ -28,6 +28,7 @@ import {
 import NextLink from "next/link";
 import { useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
+import { CommitAuthors } from "~/components/commit-authors";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { ReactionBar } from "~/components/ReactionBar";
@@ -707,20 +708,14 @@ function EventContent({
 
         case "PullRequestCommit": {
             const commit = event.commit;
-            const author = commit?.author;
-            const actor = author
-                ? {
-                      __typename: author.user?.__typename,
-                      login: author.user?.login ?? author.name ?? "unknown",
-                      avatarUrl: author.avatarUrl,
-                      url: author.user?.url,
-                  }
-                : null;
             return (
                 <div className="item-center flex justify-between text-gray-600 text-sm dark:text-zinc-400">
                     <div className="item-center flex min-w-0 gap-2">
-                        {actor && (
-                            <UserLink actor={actor} showUsername={false} />
+                        {commit && (
+                            <CommitAuthors
+                                authors={commit.authors?.nodes ?? []}
+                                size={20}
+                            />
                         )}
                         <NextLink
                             href={`/${owner}/${repo}/pull/${number}/files/${commit?.oid}`}

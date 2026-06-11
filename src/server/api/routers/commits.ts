@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getGitHubToken } from "~/server/auth";
-import { getCommit, getPullRequestCommitsPage } from "~/server/github";
+import {
+    getCommitGraphQL,
+    getPullRequestCommitsGraphQL,
+} from "~/server/github-graphql";
 
 export const commitsRouter = createTRPCRouter({
     getBySha: protectedProcedure
@@ -19,7 +22,7 @@ export const commitsRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
 
-            const commit = await getCommit(
+            const commit = await getCommitGraphQL(
                 accessToken,
                 input.owner,
                 input.repo,
@@ -36,28 +39,27 @@ export const commitsRouter = createTRPCRouter({
                 repo: z.string(),
                 number: z.number(),
                 perPage: z.number().min(1).max(100).default(30),
-                cursor: z.number().optional(),
+                cursor: z.string().optional(),
             }),
         )
         .query(async ({ ctx, input }) => {
-            const page = input.cursor ?? 1;
             const accessToken = await getGitHubToken(
                 ctx.db,
                 ctx.session.user.id,
             );
 
-            const result = await getPullRequestCommitsPage(
+            const result = await getPullRequestCommitsGraphQL(
                 accessToken,
                 input.owner,
                 input.repo,
                 input.number,
                 input.perPage,
-                page,
+                input.cursor ?? undefined,
             );
 
             return {
                 commits: result.commits,
-                nextPage: result.hasNext ? page + 1 : undefined,
+                nextCursor: result.hasNext ? result.endCursor : undefined,
             };
         }),
 });

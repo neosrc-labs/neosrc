@@ -5,8 +5,10 @@ import { usePathname } from "next/navigation";
 import type React from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { Async, AsyncLink } from "~/components/async";
+import { CommitAuthors } from "~/components/commit-authors";
 import { CommitHoverCard } from "~/components/hovercards/commit-hover-card";
-import type { Commit, PullsGetResponseData } from "~/server/github";
+import type { PullsGetResponseData } from "~/server/github";
+import type { GQLCommitWithAuthors } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 
@@ -35,7 +37,7 @@ export function CommitsSection({
         api.commits.listForPullRequest.useInfiniteQuery(
             { owner, repo, number },
             {
-                getNextPageParam: (lastPage) => lastPage.nextPage,
+                getNextPageParam: (lastPage) => lastPage.nextCursor,
             },
         );
 
@@ -75,7 +77,7 @@ export function CommitsSection({
 }
 
 interface CommitsListProps {
-    commits: Commit[];
+    commits: GQLCommitWithAuthors[];
     pullRequest: PullsGetResponseData;
     currentSha: string | null;
     scrollRef: React.RefObject<HTMLDivElement | null>;
@@ -133,7 +135,7 @@ function CommitsList({
                     const commit = commits[virtualItem.index];
                     if (!commit) return null;
                     const isCurrent = currentSha
-                        ? commit.sha.startsWith(currentSha)
+                        ? commit.oid.startsWith(currentSha)
                         : false;
                     return (
                         <div
@@ -154,34 +156,28 @@ function CommitsList({
                                             ? "border-blue-500 border-l-2 bg-blue-50 dark:bg-blue-950"
                                             : ""
                                     }`}
-                                    href={`${baseUrl}/${commit.sha}`}
+                                    href={`${baseUrl}/${commit.oid}`}
                                 >
-                                    {commit.author && (
-                                        <img
-                                            alt={commit.author.login}
-                                            className="mt-0.5 h-5 w-5 shrink-0 rounded-full"
-                                            src={commit.author.avatar_url}
-                                        />
-                                    )}
+                                    <CommitAuthors
+                                        authors={commit.authors}
+                                        size={20}
+                                    />
                                     <div className="min-w-0">
                                         <p className="truncate font-medium text-gray-900 text-sm dark:text-gray-100">
-                                            {
-                                                commit.commit.message.split(
-                                                    "\n",
-                                                )[0]
-                                            }
+                                            {commit.message.split("\n")[0]}
                                         </p>
-                                        {commit.author &&
-                                            commit.commit.committer && (
-                                                <p className="mt-0.5 text-gray-500 text-xs dark:text-gray-400">
-                                                    {commit.author.login}{" "}
-                                                    committed{" "}
-                                                    {formatRelativeTime(
-                                                        commit.commit.committer
-                                                            .date ?? "",
-                                                    )}
-                                                </p>
-                                            )}
+                                        {commit.authors[0] && (
+                                            <p className="mt-0.5 text-gray-500 text-xs dark:text-gray-400">
+                                                {commit.authors[0]?.user
+                                                    ?.login ??
+                                                    commit.authors[0]?.name ??
+                                                    "Unknown"}{" "}
+                                                committed{" "}
+                                                {formatRelativeTime(
+                                                    commit.committedDate ?? "",
+                                                )}
+                                            </p>
+                                        )}
                                     </div>
                                 </AsyncLink>
                             </CommitHoverCard>

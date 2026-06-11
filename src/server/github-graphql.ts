@@ -4,13 +4,39 @@ import { graphql as octokitGraphql } from "@octokit/graphql";
 // Some event types ADDED_TO_PROJECT_V2_EVENT and PROJECT_V2_ITEM_STATUS_CHANGED_EVENT (and maybe others) will
 // result in the entire API call failing.
 
-const TIMELINE_QUERY = `
+const SIMPLE_USER_FRAGMENT = `
 fragment SimpleUser on Actor {
 	__typename
 	login
 	avatarUrl
 	url
 }
+`;
+
+const COMMIT_FIELDS_FRAGMENT = `
+fragment CommitFields on Commit {
+	oid
+	message
+	committedDate
+	authors(first: 10) {
+		nodes {
+			name
+			avatarUrl
+			user { ...SimpleUser }
+		}
+	}
+	signature {
+		__typename
+		... on GpgSignature { isValid keyId state }
+		... on SshSignature { isValid state }
+		... on SmimeSignature { isValid state }
+	}
+}
+`;
+
+const TIMELINE_QUERY = `
+${SIMPLE_USER_FRAGMENT}
+${COMMIT_FIELDS_FRAGMENT}
 
 query PullRequestTimeline(
 	$owner: String!
@@ -275,22 +301,7 @@ query PullRequestTimeline(
 					}
 ... on PullRequestCommit {
 						id
-						commit {
-							oid
-							message
-							committedDate
-							author {
-								name
-								avatarUrl
-								user { ...SimpleUser }
-							}
-							signature {
-								__typename
-								... on GpgSignature { isValid keyId state }
-								... on SshSignature { isValid state }
-								... on SmimeSignature { isValid state }
-							}
-						}
+						commit { ...CommitFields }
 					}
 					... on ReviewDismissedEvent {
 						id
@@ -307,6 +318,42 @@ query PullRequestTimeline(
 		}
 	}
 	viewer { login }
+}
+`;
+const PR_COMMITS_QUERY = `
+${SIMPLE_USER_FRAGMENT}
+${COMMIT_FIELDS_FRAGMENT}
+
+query PullRequestCommits(
+	$owner: String!
+	$repo: String!
+	$number: Int!
+	$first: Int!
+	$after: String
+) {
+	repository(owner: $owner, name: $repo) {
+		pullRequest(number: $number) {
+			commits(first: $first, after: $after) {
+				nodes {
+					commit { ...CommitFields }
+				}
+				pageInfo { hasNextPage endCursor }
+			}
+		}
+	}
+}
+`;
+
+const COMMIT_BY_OID_QUERY = `
+${SIMPLE_USER_FRAGMENT}
+${COMMIT_FIELDS_FRAGMENT}
+
+query CommitByOid($owner: String!, $repo: String!, $oid: String!) {
+	repository(owner: $owner, name: $repo) {
+		object(oid: $oid) {
+			... on Commit { ...CommitFields }
+		}
+	}
 }
 `;
 
@@ -616,16 +663,18 @@ export type GQLCommitAuthor = {
     user: GQLActor | null;
 };
 
+export type GQLCommitFields = {
+    oid: string;
+    message: string;
+    committedDate?: string;
+    authors: { nodes: (GQLCommitAuthor | null)[] };
+    signature?: GQLGitSignature | null;
+};
+
 export type GQLPullRequestCommit = {
     __typename: "PullRequestCommit";
     id: string;
-    commit: {
-        oid: string;
-        message: string;
-        committedDate?: string;
-        author?: GQLCommitAuthor | null;
-        signature?: GQLGitSignature | null;
-    } | null;
+    commit: GQLCommitFields | null;
 };
 
 export type GQLReviewDismissedEvent = {
@@ -1177,4 +1226,121 @@ export async function removeReaction(
 	`,
         { subjectId, content: gqlContent },
     );
+}
+
+export type GQLCommitWithAuthors = {
+    oid: string;
+    message: string;
+    committedDate?: string;
+    authors: {
+        name: string | null;
+        avatarUrl: string;
+        user: GQLActor | null;
+    }[];
+    signature?: GQLGitSignature | null;
+};
+
+export async function getPullRequestCommitsGraphQL(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    limit: number,
+    after?: string,
+): Promise<{
+    commits: GQLCommitWithAuthors[];
+    hasNext: boolean;
+    endCursor: string | undefined;
+}> {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const result = await graphql<{
+        repository: {
+            pullRequest: {
+                commits: {
+                    nodes: {
+                        commit: GQLCommitFields | null;
+                    }[];
+                    pageInfo: {
+                        hasNextPage: boolean;
+                        endCursor: string | null;
+                    };
+                };
+            };
+        };
+    }>(PR_COMMITS_QUERY, {
+        owner,
+        repo,
+        number: pullNumber,
+        first: limit,
+        after: after ?? undefined,
+    });
+
+    const nodes = result.repository.pullRequest.commits.nodes.filter(
+        (n): n is { commit: GQLCommitFields } => n.commit !== null,
+    );
+
+    const commits: GQLCommitWithAuthors[] = nodes.map((n) => ({
+        oid: n.commit.oid,
+        message: n.commit.message,
+        committedDate: n.commit.committedDate,
+        authors: (n.commit.authors?.nodes ?? [])
+            .filter((a): a is GQLCommitAuthor => a !== null)
+            .map((a) => ({
+                name: a.name,
+                avatarUrl: a.avatarUrl,
+                user: a.user,
+            })),
+        signature: n.commit.signature,
+    }));
+
+    return {
+        commits,
+        hasNext: result.repository.pullRequest.commits.pageInfo.hasNextPage,
+        endCursor:
+            result.repository.pullRequest.commits.pageInfo.endCursor ??
+            undefined,
+    };
+}
+
+export async function getCommitGraphQL(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    oid: string,
+): Promise<GQLCommitWithAuthors> {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const result = await graphql<{
+        repository: {
+            object: GQLCommitFields | null;
+        };
+    }>(COMMIT_BY_OID_QUERY, {
+        owner,
+        repo,
+        oid,
+    });
+
+    const commit = result.repository.object;
+    if (!commit) {
+        throw new Error(`Commit ${oid} not found`);
+    }
+
+    return {
+        oid: commit.oid,
+        message: commit.message,
+        committedDate: commit.committedDate,
+        authors: (commit.authors?.nodes ?? [])
+            .filter((a): a is GQLCommitAuthor => a !== null)
+            .map((a) => ({
+                name: a.name,
+                avatarUrl: a.avatarUrl,
+                user: a.user,
+            })),
+        signature: commit.signature,
+    };
 }
