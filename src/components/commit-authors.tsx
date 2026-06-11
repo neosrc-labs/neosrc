@@ -10,14 +10,18 @@ function Avatar({
     author,
     size,
 }: {
-    author: { name: string | null; avatarUrl: string; login?: string | null };
+    author: {
+        name: string | null;
+        avatarUrl: string | null;
+        login?: string | null;
+    };
     size: number;
 }) {
     return (
         <img
             alt={author.login ?? author.name ?? "Author"}
             className="shrink-0 rounded-full ring-2 ring-white dark:ring-zinc-950"
-            src={author.avatarUrl}
+            src={author.avatarUrl ?? undefined}
             style={{ width: size, height: size }}
         />
     );
@@ -51,8 +55,6 @@ export function CommitAuthors({ authors, size = 20 }: CommitAuthorsProps) {
     const visible = nonNull.slice(0, 2);
     const overflow = nonNull.slice(2).length;
 
-    const hasAvatarUrls = visible.some((a) => a.avatarUrl);
-
     if (authors.length === 0) return null;
 
     return (
@@ -67,7 +69,7 @@ export function CommitAuthors({ authors, size = 20 }: CommitAuthorsProps) {
             {visible.map((author, i) => {
                 const avatar = (
                     <span className="flex">
-                        {hasAvatarUrls && author.avatarUrl ? (
+                        {author.avatarUrl ? (
                             <Avatar author={author} size={size} />
                         ) : (
                             <PlaceholderAvatar name={author.name} size={size} />
