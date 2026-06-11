@@ -9,6 +9,7 @@ import {
     TimelineSection,
     TimelineSkeleton,
 } from "./_components/timeline-section";
+import { PullRequestTitleSetter } from "./_components/title-setter";
 
 type PullsGetResponseData =
     RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
@@ -62,6 +63,7 @@ export default async function PullRequestPage({ params }: PageProps) {
 
     return (
         <div className="px-6 py-8">
+            <PullRequestTitleSetter pullRequestPromise={pullRequestPromise} />
             <PullRequestDescriptionSection
                 canInteractPromise={canInteractPromise}
                 pullRequestPromise={pullRequestPromise}
