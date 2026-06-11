@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, User } from "lucide-react";
+import { useMemo } from "react";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { api } from "~/trpc/react";
 
@@ -15,19 +16,41 @@ export function AssigneeDropdown({
     currentQuery: string;
     onToggle: (key: string, value: string) => void;
 }) {
-    const { data: users } = api.pulls.listAssignees.useQuery({ owner, repo });
+    const { data: assignees } = api.pulls.listAssignees.useQuery({
+        owner,
+        repo,
+    });
+    const { data: currentUser } = api.users.currentUser.useQuery();
+
+    const allUsers = useMemo(() => {
+        const map = new Map<string, { login: string; avatar_url?: string }>();
+        for (const u of assignees ?? []) {
+            map.set(u.login, u);
+        }
+        if (currentUser?.login && !map.has(currentUser.login)) {
+            map.set(currentUser.login, {
+                login: currentUser.login,
+                avatar_url: currentUser.avatarUrl,
+            });
+        }
+        const result = Array.from(map.values());
+        result.sort((a, b) => {
+            if (a.login === currentUser?.login) return -1;
+            if (b.login === currentUser?.login) return 1;
+            return a.login.localeCompare(b.login);
+        });
+        return result;
+    }, [assignees, currentUser?.login, currentUser?.avatarUrl]);
 
     const selectedNames = new Set(
-        (users ?? [])
-            .filter((u: { login: string }) =>
-                currentQuery.includes(`assignee:${u.login}`),
-            )
-            .map((u: { login: string }) => u.login),
+        allUsers
+            .filter((u) => currentQuery.includes(`assignee:${u.login}`))
+            .map((u) => u.login),
     );
 
     return (
         <SearchableDropdown
-            items={users ?? []}
+            items={allUsers}
             isSelected={(u: { login: string }) => selectedNames.has(u.login)}
             onSelect={(u: { login: string }) => onToggle("assignee", u.login)}
             keyFn={(u: { login: string }) => u.login}
