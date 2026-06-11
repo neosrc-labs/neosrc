@@ -9,6 +9,7 @@ import {
     ClipboardList,
     Eye,
     FileText,
+    GitBranch,
     GitCommitHorizontal,
     GitMerge,
     Link,
@@ -188,6 +189,7 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
         LabeledEvent: <Tag size={ICON_SIZE} />,
         UnlabeledEvent: <Tag size={ICON_SIZE} />,
         AssignedEvent: <User size={ICON_SIZE} />,
+        BaseRefChangedEvent: <GitBranch size={ICON_SIZE} />,
         UnassignedEvent: <User size={ICON_SIZE} />,
         ReviewRequestedEvent: <ClipboardList size={ICON_SIZE} />,
         ReviewRequestRemovedEvent: <ClipboardList size={ICON_SIZE} />,
@@ -914,6 +916,26 @@ function EventContent({
                         {isAssigned ? " assigned " : " unassigned "}
                         <UserLink actor={event.assignee} /> {timestamp}
                     </div>
+                </EventRow>
+            );
+        }
+
+        case "BaseRefChangedEvent": {
+            const timestamp = formatRelativeTime(event.createdAt);
+            return (
+                <EventRow>
+                    <UserLink actor={event.actor} />
+                    <p>
+                        {" changed the base branch from "}
+                        <span className="font-medium text-gray-800 line-through dark:text-zinc-200">
+                            {event.previousRefName}
+                        </span>
+                        {" → "}
+                        <span className="font-medium text-gray-800 dark:text-zinc-200">
+                            {event.currentRefName}
+                        </span>{" "}
+                        {timestamp}
+                    </p>
                 </EventRow>
             );
         }

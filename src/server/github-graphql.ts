@@ -48,7 +48,8 @@ query PullRequestTimeline(
 				COMMENT_DELETED_EVENT,
 				DEPLOYED_EVENT,
 				PULL_REQUEST_COMMIT,
-				REVIEW_DISMISSED_EVENT
+				REVIEW_DISMISSED_EVENT,
+				BASE_REF_CHANGED_EVENT
 			]) {
 				nodes {
 					__typename
@@ -175,6 +176,13 @@ query PullRequestTimeline(
 						createdAt
 						previousTitle
 						currentTitle
+					}
+					... on BaseRefChangedEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						currentRefName
+						previousRefName
 					}
 					... on LockedEvent {
 						id
@@ -451,6 +459,15 @@ export type GQLRenamedTitleEvent = {
     currentTitle: string;
 };
 
+export type GQLBaseRefChangedEvent = {
+    __typename: "BaseRefChangedEvent";
+    id: string;
+    actor: GQLActor | null;
+    createdAt: string;
+    currentRefName: string;
+    previousRefName: string;
+};
+
 export type GQLLockedEvent = {
     __typename: "LockedEvent";
     id: string;
@@ -641,6 +658,7 @@ export type GQLTimelineEvent =
     | GQLHeadRefRestoredEvent
     | GQLCrossReferencedEvent
     | GQLAssignedEvent
+    | GQLBaseRefChangedEvent
     | GQLUnassignedEvent
     | GQLClosedEvent
     | GQLReopenedEvent
