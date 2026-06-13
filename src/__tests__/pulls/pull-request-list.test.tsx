@@ -89,7 +89,7 @@ vi.mock("~/trpc/react", () => ({
     },
 }));
 
-import { PullRequestList } from "~/app/[owner]/[repo]/pulls/_components/pull-request-list";
+import { PullRequestList } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-list";
 
 // --- Helpers ---
 
