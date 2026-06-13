@@ -2,7 +2,7 @@
     "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
     "root": true,
     "files": {
-        "includes": ["**", "!drizzle"]
+        "includes": ["**", "!drizzle", "!api-specs"]
     },
     "vcs": {
         "enabled": true,
