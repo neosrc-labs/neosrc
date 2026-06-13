@@ -14,6 +14,7 @@ import {
     betterAuthUser,
     betterAuthVerification,
 } from "~/server/db/schema";
+import { getUser as getCodebergUser } from "../codeberg";
 import { getAuthenticatedUser } from "../github";
 
 const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
@@ -107,17 +108,11 @@ export const auth = betterAuth({
                     scopes: ["read:user"],
                     overrideUserInfo: true,
                     getUserInfo: async (tokens) => {
-                        const res = await fetch(
-                            "https://codeberg.org/api/v1/user",
-                            {
-                                headers: {
-                                    Authorization: `token ${tokens.accessToken}`,
-                                    Accept: "application/json",
-                                },
-                            },
+                        if (!tokens.accessToken) return null;
+                        const profile = await getCodebergUser(
+                            tokens.accessToken,
                         );
-                        if (!res.ok) return null;
-                        const profile = await res.json();
+                        if (!profile) return null;
                         return {
                             id: String(profile.id),
                             name: profile.full_name || profile.login,
