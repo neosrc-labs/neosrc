@@ -106,10 +106,12 @@ function HeaderContent({
     initialRepo: string | null;
 }) {
     const pathname = usePathname();
-    const prMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
-    const pullsMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/pulls/);
-    const issuesMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/issues/);
-    const repoMatch = pathname.match(/^\/([^/]+)\/([^/]+)/);
+    // Strip optional /gh or /cb prefix for owner/repo extraction
+    const cleanPath = pathname.replace(/^\/(?:gh|cb)(?=\/)/, "");
+    const prMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
+    const pullsMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pulls/);
+    const issuesMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/issues/);
+    const repoMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)/);
     const owner = repoMatch?.[1];
     const repo = repoMatch?.[2];
     const { isLeftOpen, isRightOpen, toggleLeft, toggleRight } = useSidebar();
@@ -192,7 +194,7 @@ function HeaderContent({
             },
             {
                 label: "Pull Requests",
-                path: `/${owner}/${repo}/pulls`,
+                path: `/gh/${owner}/${repo}/pulls`,
                 show: true,
                 isActive: isPR || isPulls,
                 icon: GitPullRequest,

@@ -1,8 +1,14 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getGitHubToken } from "~/server/auth";
+import { getCodebergToken, getGitHubToken } from "~/server/auth";
 import { deleteCache, prCacheKey } from "~/server/cache";
+import {
+    type CodebergPullRequest,
+    type CodebergPullRequestSort,
+    listPullRequests as listCodebergPullRequests,
+} from "~/server/codeberg";
+import type { db } from "~/server/db";
 import {
     addAssigneesToIssue,
     addLabelsToIssue,
@@ -28,7 +34,126 @@ import {
     updatePullRequest,
     updatePullRequestReview,
 } from "~/server/github";
+import type { GqlPrSearchItem } from "~/server/github-graphql";
 import { searchPullRequestsWithStatus } from "~/server/github-graphql";
+
+function codebergState(state: string): "open" | "closed" | "all" {
+    if (state === "merged") return "closed";
+    if (state === "open") return "open";
+    return "all";
+}
+
+function codebergPrToSearchItem(pr: CodebergPullRequest): GqlPrSearchItem {
+    return {
+        databaseId: pr.id,
+        number: pr.number,
+        title: pr.title,
+        state: pr.merged_at ? "MERGED" : pr.state.toUpperCase(),
+        isDraft: pr.draft,
+        createdAt: pr.created_at,
+        mergedAt: pr.merged_at,
+        author: pr.user
+            ? {
+                login: pr.user.login,
+                avatarUrl: pr.user.avatar_url,
+                url: "",
+            }
+            : null,
+        labels: {
+            nodes: (pr.labels ?? []).map((l) => ({
+                id: String(l.id),
+                name: l.name,
+                color: l.color,
+                description: l.description,
+            })),
+        },
+        assignees: {
+            nodes: (pr.assignees ?? []).map((a) => ({
+                login: a.login,
+                avatarUrl: a.avatar_url,
+            })),
+        },
+        comments: { totalCount: pr.comments ?? 0 },
+        reviewDecision: null,
+    };
+}
+
+async function searchCodebergPullRequests(
+    ctx: {
+        db: typeof db;
+        session: { user: { id: string } };
+    },
+    input: {
+        owner: string;
+        repo: string;
+        query: string;
+        page?: number;
+        first?: number;
+        sort?: "created" | "updated" | "comments";
+        order?: "asc" | "desc";
+    },
+) {
+    const accessToken = await getCodebergToken(ctx.db, ctx.session.user.id);
+
+    const stateMatch = input.query.match(/^(is:open|is:closed|is:merged)\s*/);
+    const stateQualifier = stateMatch?.[1] ?? "is:open";
+    const activeState = stateQualifier.replace("is:", "") as
+        | "open"
+        | "closed"
+        | "merged";
+
+    const sortMap: Record<string, string | undefined> = {
+        "created-desc": "newest",
+        "created-asc": "oldest",
+        "updated-desc": "recentupdate",
+        "updated-asc": "leastupdate",
+        "comments-desc": "mostcomment",
+        "comments-asc": "leastcomment",
+    };
+    const sortKey =
+        input.sort && input.order
+            ? `${input.sort}-${input.order}`
+            : "created-desc";
+    const cbSort = sortMap[sortKey] ?? "newest";
+
+    const page = input.page ?? 1;
+    const limit = input.first ?? 30;
+
+    const [result, openCount, closedCount] = await Promise.all([
+        listCodebergPullRequests(accessToken, input.owner, input.repo, {
+            state: codebergState(activeState),
+            sort: cbSort as CodebergPullRequestSort,
+            page,
+            limit,
+        }),
+        listCodebergPullRequests(accessToken, input.owner, input.repo, {
+            state: "open",
+            sort: cbSort as CodebergPullRequestSort,
+            limit: 1,
+            page: 1,
+        }),
+        listCodebergPullRequests(accessToken, input.owner, input.repo, {
+            state: "closed",
+            sort: cbSort as CodebergPullRequestSort,
+            limit: 1,
+            page: 1,
+        }),
+    ]);
+
+    const items = result.items.map(codebergPrToSearchItem);
+
+    return {
+        items,
+        totalCount: result.totalCount,
+        hasNextPage: result.hasNextPage,
+        endCursor: result.hasNextPage ? String(page + 1) : null,
+        stateCounts: {
+            open: openCount.totalCount,
+            closed: closedCount.totalCount,
+            merged: 0,
+        },
+    };
+}
 
 export const pullsRouter = createTRPCRouter({
     updateBody: protectedProcedure
@@ -237,6 +362,7 @@ export const pullsRouter = createTRPCRouter({
                 ctx.db,
                 ctx.session.user.id,
             );
+            console.log({ accessToken })
 
             return listRepoAssignees(accessToken, input.owner, input.repo);
         }),
@@ -632,6 +758,7 @@ export const pullsRouter = createTRPCRouter({
     search: protectedProcedure
         .input(
             z.object({
+                provider: z.enum(["gh", "cb"]).default("gh"),
                 owner: z.string(),
                 repo: z.string(),
                 query: z.string(),
@@ -643,6 +770,10 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
+            if (input.provider === "cb") {
+                return searchCodebergPullRequests(ctx, input);
+            }
+
             const accessToken = await getGitHubToken(
                 ctx.db,
                 ctx.session.user.id,

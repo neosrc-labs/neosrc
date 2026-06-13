@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { genericOAuth } from "better-auth/plugins";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { env } from "~/env";
@@ -16,6 +16,8 @@ import {
 } from "~/server/db/schema";
 import { getUser as getCodebergUser } from "../codeberg";
 import { getAuthenticatedUser } from "../github";
+
+const CODEBERG_TOKEN_URL = "https://codeberg.org/login/oauth/access_token";
 
 const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
 
@@ -105,7 +107,7 @@ export const auth = betterAuth({
                     clientSecret: env.CODEBERG_CLIENT_SECRET,
                     discoveryUrl:
                         "https://codeberg.org/.well-known/openid-configuration",
-                    scopes: ["read:user"],
+                    scopes: ["read:user", "read:repository", "write:repository"],
                     overrideUserInfo: true,
                     getUserInfo: async (tokens) => {
                         if (!tokens.accessToken) return null;
@@ -217,7 +219,12 @@ export const getGitHubToken = async (database: typeof db, userId: string) => {
     const [account] = await database
         .select({ accessToken: betterAuthAccount.accessToken })
         .from(betterAuthAccount)
-        .where(eq(betterAuthAccount.userId, userId))
+        .where(
+            and(
+                eq(betterAuthAccount.userId, userId),
+                eq(betterAuthAccount.providerId, "github"),
+            ),
+        )
         .limit(1);
 
     if (!account?.accessToken) {
@@ -247,9 +254,9 @@ export const githubAccessToken = cache(async () => {
                 ),
                 refreshTokenExpiresAt: refreshed.refresh_token_expires_in
                     ? new Date(
-                          Date.now() +
-                              refreshed.refresh_token_expires_in * 1000,
-                      )
+                        Date.now() +
+                        refreshed.refresh_token_expires_in * 1000,
+                    )
                     : undefined,
             })
             .where(eq(betterAuthAccount.id, account.id));
@@ -258,6 +265,84 @@ export const githubAccessToken = cache(async () => {
 
     return account.accessToken;
 });
+
+export const getCodebergToken = async (database: typeof db, userId: string) => {
+    const [account] = await database
+        .select({ accessToken: betterAuthAccount.accessToken })
+        .from(betterAuthAccount)
+        .where(
+            and(
+                eq(betterAuthAccount.userId, userId),
+                eq(betterAuthAccount.providerId, "codeberg"),
+            ),
+        )
+        .limit(1);
+
+    if (!account?.accessToken) {
+        throw new Error("Codeberg account not connected");
+    }
+
+    return decrypt(account.accessToken);
+};
+
+export const codebergAccessToken = cache(async () => {
+    const account = await getAccount();
+
+    if (!account) return null;
+
+    const now = Date.now();
+    const expiresAt = account.accessTokenExpiresAt?.getTime() ?? Infinity;
+
+    if (expiresAt < now && account.refreshToken) {
+        const refreshed = await refreshCodebergToken(account.refreshToken);
+        await db
+            .update(betterAuthAccount)
+            .set({
+                accessToken: encrypt(refreshed.access_token),
+                refreshToken: encrypt(refreshed.refresh_token),
+                accessTokenExpiresAt: new Date(
+                    Date.now() + refreshed.expires_in * 1000,
+                ),
+                refreshTokenExpiresAt: refreshed.refresh_token_expires_in
+                    ? new Date(
+                        Date.now() +
+                        refreshed.refresh_token_expires_in * 1000,
+                    )
+                    : undefined,
+            })
+            .where(eq(betterAuthAccount.id, account.id));
+        return refreshed.access_token;
+    }
+
+    return account.accessToken;
+});
+
+async function refreshCodebergToken(refreshToken: string) {
+    const res = await fetch(CODEBERG_TOKEN_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+        },
+        body: JSON.stringify({
+            client_id: env.CODEBERG_CLIENT_ID,
+            client_secret: env.CODEBERG_CLIENT_SECRET,
+            grant_type: "refresh_token",
+            refresh_token: refreshToken,
+        }),
+    });
+
+    if (!res.ok) {
+        throw new Error("Failed to refresh Codeberg token");
+    }
+
+    return res.json() as Promise<{
+        access_token: string;
+        refresh_token: string;
+        expires_in: number;
+        refresh_token_expires_in?: number;
+    }>;
+}
 
 export async function getUser(userId: string) {
     const [user] = await db
