@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { genericOAuth } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { cache } from "react";
@@ -65,6 +66,11 @@ export const auth = betterAuth({
                 required: false,
                 returned: true,
             },
+            codebergUsername: {
+                type: "string",
+                required: false,
+                returned: true,
+            },
         },
     },
     socialProviders: {
@@ -89,7 +95,43 @@ export const auth = betterAuth({
             },
         },
     },
-    plugins: [nextCookies()],
+    plugins: [
+        genericOAuth({
+            config: [
+                {
+                    providerId: "codeberg",
+                    clientId: env.CODEBERG_CLIENT_ID,
+                    clientSecret: env.CODEBERG_CLIENT_SECRET,
+                    discoveryUrl:
+                        "https://codeberg.org/.well-known/openid-configuration",
+                    scopes: ["read:user"],
+                    overrideUserInfo: true,
+                    getUserInfo: async (tokens) => {
+                        const res = await fetch(
+                            "https://codeberg.org/api/v1/user",
+                            {
+                                headers: {
+                                    Authorization: `token ${tokens.accessToken}`,
+                                    Accept: "application/json",
+                                },
+                            },
+                        );
+                        if (!res.ok) return null;
+                        const profile = await res.json();
+                        return {
+                            id: String(profile.id),
+                            name: profile.full_name || profile.login,
+                            email: profile.email,
+                            image: profile.avatar_url,
+                            emailVerified: true,
+                            codebergUsername: profile.username,
+                        };
+                    },
+                },
+            ],
+        }),
+        nextCookies(),
+    ],
     databaseHooks: {
         account: {
             create: {
