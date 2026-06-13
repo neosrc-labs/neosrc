@@ -15,6 +15,13 @@
       "when": 1781087063925,
       "tag": "0001_rapid_wallflower",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781356091996,
+      "tag": "0002_nebulous_thanos",
+      "breakpoints": true
     }
   ]
 }
