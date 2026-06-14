@@ -386,13 +386,7 @@ function HeaderContent({
                             <ThemeToggle />
                             <a
                                 className="flex size-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
-                                href={
-                                    currentUser?.login
-                                        ? `https://github.com/${currentUser.login}`
-                                        : undefined
-                                }
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                href="/profile"
                             >
                                 {currentUser?.avatarUrl ? (
                                     <img
