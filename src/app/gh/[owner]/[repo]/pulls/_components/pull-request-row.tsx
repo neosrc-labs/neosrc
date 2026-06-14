@@ -210,7 +210,7 @@ export function PullRequestRow({
     const prHref =
         provider === "gh"
             ? `/gh/${owner}/${repo}/pull/${pr.number}`
-            : `https://codeberg.org/${owner}/${repo}/pull/${pr.number}`;
+            : `https://codeberg.org/${owner}/${repo}/pulls/${pr.number}`;
 
     return (
         <div className="flex items-start gap-3 border-gray-200 border-b px-4 py-3 transition-colors hover:bg-gray-50 dark:border-zinc-800 dark:hover:bg-zinc-900/50">
