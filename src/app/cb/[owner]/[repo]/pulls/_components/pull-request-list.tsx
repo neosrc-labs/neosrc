@@ -1,9 +1,6 @@
 "use client";
 
 import {
-    ChevronDown,
-    CircleCheck,
-    Eye,
     GitMerge,
     GitPullRequest,
     GitPullRequestClosed,
@@ -14,7 +11,6 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AssigneeDropdown } from "~/app/[owner]/[repo]/_components/search/assignee-dropdown";
 import { AuthorDropdown } from "~/app/[owner]/[repo]/_components/search/author-dropdown";
 import { LabelDropdown } from "~/app/[owner]/[repo]/_components/search/label-dropdown";
 import { MilestoneDropdown } from "~/app/[owner]/[repo]/_components/search/milestone-dropdown";
@@ -33,13 +29,12 @@ import {
     splitQuery,
 } from "~/app/[owner]/[repo]/_components/search/search-utils";
 import { SortDropdown } from "~/app/[owner]/[repo]/_components/search/sort-dropdown";
+import type { PrRowData } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
+import { PullRequestRow } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
 import { Pagination } from "~/components/ui/pagination";
-import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn } from "~/lib/utils";
-import type { GqlPrSearchItem } from "~/server/github-graphql";
+import type { PrSearchItem } from "~/server/api/routers/pulls/types";
 import { api } from "~/trpc/react";
-import type { PrRowData } from "./pull-request-row";
-import { PullRequestRow } from "./pull-request-row";
 
 type FilterState = "open" | "closed" | "merged";
 
@@ -49,15 +44,7 @@ const TABS: { key: FilterState; label: string }[] = [
     { key: "merged", label: "Merged" },
 ];
 
-const PR_QUALIFIERS = [
-    "author",
-    "label",
-    "assignee",
-    "sort",
-    "review",
-    "status",
-    "is",
-];
+const PR_QUALIFIERS = ["author", "label", "assignee", "sort", "is"];
 
 const PR_AUTOCOMPLETE_OPTIONS: Record<
     string,
@@ -69,17 +56,6 @@ const PR_AUTOCOMPLETE_OPTIONS: Record<
         { label: "updated-desc", subtitle: "Recently updated" },
         { label: "comments-desc", subtitle: "Most commented" },
     ],
-    review: [
-        { label: "none", subtitle: "Not reviewed" },
-        { label: "required", subtitle: "Review required" },
-        { label: "approved", subtitle: "Approved" },
-        { label: "changes_requested", subtitle: "Changes requested" },
-    ],
-    status: [
-        { label: "pending", subtitle: "Pending" },
-        { label: "success", subtitle: "Success" },
-        { label: "failure", subtitle: "Failure" },
-    ],
     is: [
         { label: "open", subtitle: "Open pull requests" },
         { label: "closed", subtitle: "Closed pull requests" },
@@ -87,36 +63,9 @@ const PR_AUTOCOMPLETE_OPTIONS: Record<
     ],
 };
 
-function computeStatusState(checks: Array<{ state: string }>): string | null {
-    if (checks.length === 0) return null;
-    if (
-        checks.some(
-            (c) =>
-                c.state === "FAILURE" ||
-                c.state === "ERROR" ||
-                c.state === "TIMED_OUT",
-        )
-    ) {
-        return "FAILURE";
-    }
-    if (
-        checks.some(
-            (c) =>
-                c.state === "IN_PROGRESS" ||
-                c.state === "QUEUED" ||
-                c.state === "PENDING" ||
-                c.state === "EXPECTED",
-        )
-    ) {
-        return "IN_PROGRESS";
-    }
-    return "SUCCESS";
-}
-
-function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
-    const assigneeNode = item.assignees.nodes[0];
+function normalizeSearchItem(item: PrSearchItem): PrRowData {
     return {
-        id: item.databaseId,
+        id: item.id,
         number: item.number,
         title: item.title,
         state: item.state === "MERGED" ? "closed" : item.state.toLowerCase(),
@@ -127,13 +76,13 @@ function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
                   avatar_url: item.author.avatarUrl,
               }
             : null,
-        assignee: assigneeNode
+        assignee: item.assignees[0]
             ? {
-                  login: assigneeNode.login,
-                  avatar_url: assigneeNode.avatarUrl,
+                  login: item.assignees[0].login,
+                  avatar_url: item.assignees[0].avatarUrl,
               }
             : null,
-        labels: item.labels.nodes.map((l) => ({
+        labels: item.labels.map((l) => ({
             id: undefined,
             name: l.name,
             color: l.color,
@@ -141,7 +90,7 @@ function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
         })),
         created_at: item.createdAt,
         merged_at: item.mergedAt,
-        comments_count: item.comments.totalCount,
+        comments_count: item.comments,
         status_state: null,
         status_contexts: [],
         review_decision: item.reviewDecision,
@@ -179,7 +128,6 @@ export function PullRequestList({
     const prevQueryKey = useRef<string | undefined>(undefined);
     const utils = api.useUtils();
 
-    // Reset cursors when query changes
     const queryKey = `${activeTab}:${searchQuery}:${currentSort}:${currentOrder}`;
     if (
         prevQueryKey.current !== undefined &&
@@ -203,13 +151,13 @@ export function PullRequestList({
         ? `${stateQualifier} ${cleanedQuery}`
         : stateQualifier;
 
-    // Always fetch exactly 30 items per page
     const after =
         currentPage > 1 ? (pageCursors[currentPage - 1] ?? null) : null;
     const first = 30;
 
     const { data, isLoading } = api.pulls.search.useQuery(
         {
+            provider: "cb",
             owner,
             repo,
             query: apiQuery,
@@ -224,7 +172,6 @@ export function PullRequestList({
 
     const showLoading = isLoading || isResolving;
 
-    // Store cursor for current page
     useEffect(() => {
         const cursor = data?.endCursor;
         if (cursor) {
@@ -235,8 +182,6 @@ export function PullRequestList({
         }
     }, [data?.endCursor, currentPage]);
 
-    // When jumping to a page whose cursor isn't cached, resolve the cursor chain
-    // by sequentially fetching intermediate pages
     useEffect(() => {
         if (currentPage <= 1) return;
         if (pageCursorsRef.current[currentPage - 1]) return;
@@ -252,6 +197,7 @@ export function PullRequestList({
 
                 try {
                     const result = await utils.pulls.search.fetch({
+                        provider: "cb",
                         owner,
                         repo,
                         query: apiQuery,
@@ -298,28 +244,11 @@ export function PullRequestList({
         utils.pulls.search.fetch,
     ]);
 
-    const prNumbers = useMemo(
-        () => (data?.items ?? []).map((i) => i.number),
-        [data],
-    );
-
-    const { data: statusByPr } = api.checks.listByPrNumbers.useQuery(
-        { owner, repo, prNumbers },
-        { enabled: prNumbers.length > 0 },
-    );
-
     const items = useMemo(() => {
         if (!data) return [];
-        return data.items.map((item) => {
-            const normalized = normalizeSearchItem(item);
-            const checks = statusByPr?.[item.number];
-            if (checks) {
-                normalized.status_contexts = checks;
-                normalized.status_state = computeStatusState(checks);
-            }
-            return normalized;
-        });
-    }, [data, statusByPr]);
+        return data.items.map(normalizeSearchItem);
+    }, [data]);
+
     const stateCounts = data?.stateCounts;
     const totalPages = Math.ceil((data?.totalCount ?? 0) / 30);
 
@@ -331,14 +260,13 @@ export function PullRequestList({
                 else params.set(key, value);
             }
             window.scrollTo({ top: 0, behavior: "smooth" });
-            router.push(`/${owner}/${repo}/pulls?${params.toString()}`);
+            router.push(`/cb/${owner}/${repo}/pulls?${params.toString()}`);
         },
         [owner, repo, router, searchParams],
     );
 
     const [searchInput, setSearchInput] = useState(searchQuery);
 
-    // Sync searchInput from URL when it changes externally (e.g., browser nav)
     useEffect(() => {
         setSearchInput(searchQuery);
     }, [searchQuery]);
@@ -383,12 +311,12 @@ export function PullRequestList({
                 else params.delete("q");
             }
             params.delete("page");
-            router.push(`/${owner}/${repo}/pulls?${params.toString()}`);
+            router.push(`/cb/${owner}/${repo}/pulls?${params.toString()}`);
         } else {
             if (searchInput) params.set("q", searchInput);
             else params.delete("q");
             params.delete("page");
-            router.push(`/${owner}/${repo}/pulls?${params.toString()}`);
+            router.push(`/cb/${owner}/${repo}/pulls?${params.toString()}`);
         }
     }, [searchInput, searchParams, router, owner, repo]);
 
@@ -410,7 +338,6 @@ export function PullRequestList({
         [navigate, searchQuery],
     );
 
-    // Autocomplete state
     const inputRef = useRef<HTMLInputElement>(null);
     const searchBarRef = useRef<HTMLDivElement>(null);
     const autocompleteRef = useRef<{
@@ -423,7 +350,6 @@ export function PullRequestList({
         PR_QUALIFIERS,
     );
 
-    // Close autocomplete when clicking outside the search bar
     useEffect(() => {
         if (!autocompleteMatch) return;
         const handler = (e: MouseEvent) => {
@@ -528,7 +454,9 @@ export function PullRequestList({
                             value={searchInput}
                             onChange={(e) => {
                                 setSearchInput(e.target.value);
-                                setCursorPos(e.target.selectionStart ?? 0);
+                                setCursorPos(
+                                    e.currentTarget.selectionStart ?? 0,
+                                );
                             }}
                             onKeyDown={(e) => {
                                 if (
@@ -592,7 +520,7 @@ export function PullRequestList({
                     </div>
 
                     <a
-                        href={`https://github.com/${owner}/${repo}/labels`}
+                        href={`https://codeberg.org/${owner}/${repo}/labels`}
                         className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
                     >
                         <Tag className="size-4" />
@@ -600,7 +528,7 @@ export function PullRequestList({
                     </a>
 
                     <a
-                        href={`https://github.com/${owner}/${repo}/milestones`}
+                        href={`https://codeberg.org/${owner}/${repo}/milestones`}
                         className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
                     >
                         <Milestone className="size-4" />
@@ -608,7 +536,7 @@ export function PullRequestList({
                     </a>
 
                     <a
-                        href={`https://github.com/${owner}/${repo}/compare`}
+                        href={`https://codeberg.org/${owner}/${repo}/compare`}
                         className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-green-600 bg-green-600 px-2.5 py-1.5 font-medium text-sm text-white transition-colors hover:bg-green-700 dark:border-green-500 dark:bg-green-600 dark:hover:bg-green-700"
                     >
                         <GitPullRequest className="size-4" />
@@ -649,6 +577,7 @@ export function PullRequestList({
                     </div>
                     <div className="flex items-center gap-2">
                         <AuthorDropdown
+                            provider="cb"
                             owner={owner}
                             repo={repo}
                             currentQuery={searchQuery}
@@ -669,6 +598,7 @@ export function PullRequestList({
                         />
 
                         <LabelDropdown
+                            provider="cb"
                             owner={owner}
                             repo={repo}
                             currentQuery={searchQuery}
@@ -688,6 +618,7 @@ export function PullRequestList({
                         />
 
                         <MilestoneDropdown
+                            provider="cb"
                             owner={owner}
                             repo={repo}
                             currentQuery={searchQuery}
@@ -704,62 +635,6 @@ export function PullRequestList({
                                 } else {
                                     handleAddQualifier("milestone", quoted);
                                 }
-                            }}
-                        />
-
-                        <AssigneeDropdown
-                            owner={owner}
-                            repo={repo}
-                            currentQuery={searchQuery}
-                            onToggle={(key: string, value: string) => {
-                                const newQuery = hasQualifier(
-                                    searchQuery,
-                                    key,
-                                    value,
-                                )
-                                    ? removeQualifier(searchQuery, key, value)
-                                    : replaceQualifier(searchQuery, key, value);
-                                setSearchInput(newQuery);
-                                navigate({
-                                    q: newQuery || null,
-                                    page: null,
-                                });
-                            }}
-                        />
-
-                        <StatusDropdown
-                            currentQuery={searchQuery}
-                            onToggle={(key: string, value: string) => {
-                                const newQuery = hasQualifier(
-                                    searchQuery,
-                                    key,
-                                    value,
-                                )
-                                    ? removeQualifier(searchQuery, key, value)
-                                    : replaceQualifier(searchQuery, key, value);
-                                setSearchInput(newQuery);
-                                navigate({
-                                    q: newQuery || null,
-                                    page: null,
-                                });
-                            }}
-                        />
-
-                        <ReviewDropdown
-                            currentQuery={searchQuery}
-                            onToggle={(key: string, value: string) => {
-                                const newQuery = hasQualifier(
-                                    searchQuery,
-                                    key,
-                                    value,
-                                )
-                                    ? removeQualifier(searchQuery, key, value)
-                                    : replaceQualifier(searchQuery, key, value);
-                                setSearchInput(newQuery);
-                                navigate({
-                                    q: newQuery || null,
-                                    page: null,
-                                });
                             }}
                         />
 
@@ -856,6 +731,7 @@ export function PullRequestList({
                         {items.map((pr) => (
                             <PullRequestRow
                                 key={pr.id}
+                                provider="cb"
                                 pr={pr}
                                 owner={owner}
                                 repo={repo}
@@ -939,116 +815,5 @@ export function PullRequestList({
                 />
             )}
         </div>
-    );
-}
-
-function StatusDropdown({
-    currentQuery,
-    onToggle,
-}: {
-    currentQuery: string;
-    onToggle: (key: string, value: string) => void;
-}) {
-    const STATUS_OPTIONS = [
-        { label: "pending", subtitle: "Pending" },
-        { label: "success", subtitle: "Success" },
-        { label: "failure", subtitle: "Failure" },
-    ];
-
-    return (
-        <SearchableDropdown
-            items={STATUS_OPTIONS}
-            isSelected={(o: { label: string }) =>
-                hasQualifier(currentQuery, "status", o.label)
-            }
-            onSelect={(o: { label: string }) => onToggle("status", o.label)}
-            keyFn={(o: { label: string }) => o.label}
-            searchFn={(o: { label: string }, q: string) =>
-                o.label.toLowerCase().includes(q.toLowerCase())
-            }
-            renderItem={(
-                o: { label: string; subtitle: string },
-                selected: boolean,
-            ) => (
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <span className="truncate">{o.label}</span>
-                    {selected && (
-                        <span className="ml-auto shrink-0 text-blue-600 text-xs dark:text-blue-400">
-                            &#10003;
-                        </span>
-                    )}
-                </div>
-            )}
-            placeholder="Filter status..."
-            emptyText="No status options"
-            ariaLabel="Filter by status"
-            closeOnSelect
-            trigger={
-                <button
-                    type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
-                >
-                    <CircleCheck className="size-4" />
-                    Checks
-                    <ChevronDown className="size-3.5 text-gray-400" />
-                </button>
-            }
-        />
-    );
-}
-
-function ReviewDropdown({
-    currentQuery,
-    onToggle,
-}: {
-    currentQuery: string;
-    onToggle: (key: string, value: string) => void;
-}) {
-    const REVIEW_OPTIONS = [
-        { label: "none", subtitle: "Not reviewed" },
-        { label: "required", subtitle: "Review required" },
-        { label: "approved", subtitle: "Approved" },
-        { label: "changes_requested", subtitle: "Changes requested" },
-    ];
-
-    return (
-        <SearchableDropdown
-            items={REVIEW_OPTIONS}
-            isSelected={(o: { label: string }) =>
-                hasQualifier(currentQuery, "review", o.label)
-            }
-            onSelect={(o: { label: string }) => onToggle("review", o.label)}
-            keyFn={(o: { label: string }) => o.label}
-            searchFn={(o: { label: string }, q: string) =>
-                o.label.toLowerCase().includes(q.toLowerCase())
-            }
-            renderItem={(
-                o: { label: string; subtitle: string },
-                selected: boolean,
-            ) => (
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <span className="truncate">{o.subtitle ?? o.label}</span>
-                    {selected && (
-                        <span className="ml-auto shrink-0 text-blue-600 text-xs dark:text-blue-400">
-                            &#10003;
-                        </span>
-                    )}
-                </div>
-            )}
-            placeholder="Filter review..."
-            emptyText="No review options"
-            ariaLabel="Filter by review"
-            closeOnSelect
-            trigger={
-                <button
-                    type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
-                >
-                    <Eye className="size-4" />
-                    Review
-                    <ChevronDown className="size-3.5 text-gray-400" />
-                </button>
-            }
-        />
     );
 }

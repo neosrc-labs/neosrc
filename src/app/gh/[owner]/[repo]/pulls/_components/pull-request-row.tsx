@@ -187,6 +187,7 @@ export function PullRequestRow({
     pr,
     owner,
     repo,
+    provider = "gh",
     onAssigneesFilter,
     onAuthorFilter,
     onLabelFilter,
@@ -194,6 +195,7 @@ export function PullRequestRow({
     pr: PrRowData;
     owner: string;
     repo: string;
+    provider?: "gh" | "cb";
     onAssigneesFilter?: (login: string) => void;
     onAuthorFilter?: (login: string) => void;
     onLabelFilter?: (name: string) => void;
@@ -339,6 +341,7 @@ export function PullRequestRow({
                         <span className="flex items-center gap-1">
                             by{" "}
                             <UserLink
+                                provider={provider}
                                 actor={{
                                     login: pr.user.login,
                                     avatarUrl: pr.user.avatar_url,
@@ -390,7 +393,10 @@ export function PullRequestRow({
             </div>
             <div className="flex w-20 shrink-0 items-center justify-center">
                 {pr.assignee ? (
-                    <UserHoverCard login={pr.assignee.login}>
+                    <UserHoverCard
+                        login={pr.assignee.login}
+                        provider={provider}
+                    >
                         <button
                             type="button"
                             onClick={() => {

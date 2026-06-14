@@ -1,12 +1,31 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getGitHubToken, getGithubUsername } from "~/server/auth";
+import {
+    getCodebergToken,
+    getGitHubToken,
+    getGithubUsername,
+} from "~/server/auth";
+import { getUserByUsername as getCodebergUserByUsername } from "~/server/codeberg";
 import {
     getAuthenticatedUser,
     getGitHubTeam,
     getGitHubUser,
 } from "~/server/github";
+
+export type UserProfile = {
+    login: string;
+    avatar_url: string;
+    name?: string | null;
+    bio?: string | null;
+    company?: string | null;
+    location?: string | null;
+    blog?: string | null;
+    twitter_username?: string | null;
+    created_at?: string | null;
+    followers?: number;
+    following?: number;
+};
 
 export const usersRouter = createTRPCRouter({
     currentUser: protectedProcedure.query(async ({ ctx }) => {
@@ -29,19 +48,49 @@ export const usersRouter = createTRPCRouter({
     getByUsername: protectedProcedure
         .input(
             z.object({
+                provider: z.enum(["gh", "cb"]).default("gh"),
                 username: z.string(),
             }),
         )
-        .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session.user.id,
-            );
+        .query(
+            async ({ ctx, input }): Promise<{ user: UserProfile | null }> => {
+                if (input.provider === "cb") {
+                    const accessToken = await getCodebergToken(
+                        ctx.db,
+                        ctx.session.user.id,
+                    );
+                    const raw = await getCodebergUserByUsername(
+                        accessToken,
+                        input.username,
+                    );
+                    if (!raw) return { user: null };
+                    return {
+                        user: {
+                            login: raw.login,
+                            avatar_url: raw.avatar_url,
+                            name: raw.full_name || null,
+                            bio: raw.description || null,
+                            company: null,
+                            location: raw.location || null,
+                            blog: raw.website || null,
+                            twitter_username: null,
+                            created_at: raw.created_at || null,
+                            followers: raw.followers_count,
+                            following: raw.following_count,
+                        },
+                    };
+                }
 
-            const user = await getGitHubUser(accessToken, input.username);
+                const accessToken = await getGitHubToken(
+                    ctx.db,
+                    ctx.session.user.id,
+                );
 
-            return { user };
-        }),
+                const user = await getGitHubUser(accessToken, input.username);
+
+                return { user };
+            },
+        ),
     getByTeamSlug: protectedProcedure
         .input(
             z.object({

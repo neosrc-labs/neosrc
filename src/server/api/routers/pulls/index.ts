@@ -1,8 +1,14 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getGitHubToken } from "~/server/auth";
+import { getCodebergToken, getGitHubToken } from "~/server/auth";
 import { deleteCache, prCacheKey } from "~/server/cache";
+import {
+    listAssignees as listCodebergAssignees,
+    listLabels as listCodebergLabels,
+    listMilestones as listCodebergMilestones,
+    listRecentIssueAuthors as listCodebergRecentAuthors,
+} from "~/server/codeberg";
 import {
     addAssigneesToIssue,
     addLabelsToIssue,
@@ -28,7 +34,10 @@ import {
     updatePullRequest,
     updatePullRequestReview,
 } from "~/server/github";
-import { searchPullRequestsWithStatus } from "~/server/github-graphql";
+import { CodebergPullRequestProvider } from "./codeberg";
+import { GitHubPullRequestProvider } from "./github";
+import type { Ctx } from "./provider";
+import type { PrSearchResult } from "./types";
 
 export const pullsRouter = createTRPCRouter({
     updateBody: protectedProcedure
@@ -152,11 +161,20 @@ export const pullsRouter = createTRPCRouter({
     listLabels: protectedProcedure
         .input(
             z.object({
+                provider: z.enum(["gh", "cb"]).default("gh"),
                 owner: z.string(),
                 repo: z.string(),
             }),
         )
         .query(async ({ ctx, input }) => {
+            if (input.provider === "cb") {
+                const accessToken = await getCodebergToken(
+                    ctx.db,
+                    ctx.session.user.id,
+                );
+                return listCodebergLabels(accessToken, input.owner, input.repo);
+            }
+
             const accessToken = await getGitHubToken(
                 ctx.db,
                 ctx.session.user.id,
@@ -228,11 +246,24 @@ export const pullsRouter = createTRPCRouter({
     listAssignees: protectedProcedure
         .input(
             z.object({
+                provider: z.enum(["gh", "cb"]).default("gh"),
                 owner: z.string(),
                 repo: z.string(),
             }),
         )
         .query(async ({ ctx, input }) => {
+            if (input.provider === "cb") {
+                const accessToken = await getCodebergToken(
+                    ctx.db,
+                    ctx.session.user.id,
+                );
+                return listCodebergAssignees(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                );
+            }
+
             const accessToken = await getGitHubToken(
                 ctx.db,
                 ctx.session.user.id,
@@ -244,11 +275,24 @@ export const pullsRouter = createTRPCRouter({
     listRecentAuthors: protectedProcedure
         .input(
             z.object({
+                provider: z.enum(["gh", "cb"]).default("gh"),
                 owner: z.string(),
                 repo: z.string(),
             }),
         )
         .query(async ({ ctx, input }) => {
+            if (input.provider === "cb") {
+                const accessToken = await getCodebergToken(
+                    ctx.db,
+                    ctx.session.user.id,
+                );
+                return listCodebergRecentAuthors(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                );
+            }
+
             const accessToken = await getGitHubToken(
                 ctx.db,
                 ctx.session.user.id,
@@ -320,11 +364,24 @@ export const pullsRouter = createTRPCRouter({
     listMilestones: protectedProcedure
         .input(
             z.object({
+                provider: z.enum(["gh", "cb"]).default("gh"),
                 owner: z.string(),
                 repo: z.string(),
             }),
         )
         .query(async ({ ctx, input }) => {
+            if (input.provider === "cb") {
+                const accessToken = await getCodebergToken(
+                    ctx.db,
+                    ctx.session.user.id,
+                );
+                return listCodebergMilestones(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                );
+            }
+
             const accessToken = await getGitHubToken(
                 ctx.db,
                 ctx.session.user.id,
@@ -632,6 +689,7 @@ export const pullsRouter = createTRPCRouter({
     search: protectedProcedure
         .input(
             z.object({
+                provider: z.enum(["gh", "cb"]).default("gh"),
                 owner: z.string(),
                 repo: z.string(),
                 query: z.string(),
@@ -642,40 +700,21 @@ export const pullsRouter = createTRPCRouter({
                 order: z.enum(["asc", "desc"]).optional(),
             }),
         )
-        .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session.user.id,
-            );
-
-            // Build GraphQL search query with repo + sort qualifiers
-            const sortOrder =
-                input.sort && input.order
-                    ? ` sort:${input.sort}-${input.order}`
-                    : "";
-            const gqlQuery = `repo:${input.owner}/${input.repo} is:pr ${input.query}${sortOrder}`;
-
-            // Extract the base query (without state qualifier) to build count queries
-            const restQuery = input.query.replace(
-                /^(is:open|is:closed|is:merged)\s*/,
-                "",
-            );
-            const base = `repo:${input.owner}/${input.repo} is:pr`;
-            const countQueries = {
-                open: `${base} is:open ${restQuery}`.trim(),
-                closed: `${base} is:closed ${restQuery}`.trim(),
-                merged: `${base} is:merged ${restQuery}`.trim(),
+        .query(async ({ ctx, input }): Promise<PrSearchResult> => {
+            const providerCtx: Ctx = {
+                db: ctx.db,
+                session: ctx.session,
             };
 
-            const result = await searchPullRequestsWithStatus(
-                accessToken,
-                gqlQuery,
-                input.first ?? 30,
-                input.after ?? null,
-                countQueries,
-            );
+            const provider =
+                input.provider === "cb"
+                    ? new CodebergPullRequestProvider()
+                    : new GitHubPullRequestProvider();
 
-            return result;
+            return provider.search({
+                ...input,
+                ctx: providerCtx,
+            });
         }),
 
     listReviews: protectedProcedure

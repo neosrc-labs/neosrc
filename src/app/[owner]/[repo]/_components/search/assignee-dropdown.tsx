@@ -8,15 +8,18 @@ import { api } from "~/trpc/react";
 export function AssigneeDropdown({
     owner,
     repo,
+    provider = "gh",
     currentQuery,
     onToggle,
 }: {
     owner: string;
     repo: string;
+    provider?: "gh" | "cb";
     currentQuery: string;
     onToggle: (key: string, value: string) => void;
 }) {
     const { data: assignees } = api.pulls.listAssignees.useQuery({
+        provider,
         owner,
         repo,
     });

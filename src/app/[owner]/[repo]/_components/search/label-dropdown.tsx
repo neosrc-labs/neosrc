@@ -8,15 +8,21 @@ import { api } from "~/trpc/react";
 export function LabelDropdown({
     owner,
     repo,
+    provider = "gh",
     currentQuery,
     onToggle,
 }: {
     owner: string;
     repo: string;
+    provider?: "gh" | "cb";
     currentQuery: string;
     onToggle: (labelName: string) => void;
 }) {
-    const { data: labels } = api.pulls.listLabels.useQuery({ owner, repo });
+    const { data: labels } = api.pulls.listLabels.useQuery({
+        provider,
+        owner,
+        repo,
+    });
 
     const items = labels ?? [];
     const currentNames = new Set(

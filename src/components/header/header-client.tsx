@@ -18,6 +18,7 @@ import type { ElementType } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { Async } from "~/components/async";
 import { cn } from "~/lib/utils";
+import { api } from "~/trpc/react";
 import { useSidebar } from "../sidebar-context";
 import { ThemeToggle } from "../ThemeToggle";
 
@@ -62,6 +63,27 @@ export function HeaderClient({
         [currentUserPromise, repoDataPromise],
     );
 
+    const pathname = usePathname();
+    const cleanPath = pathname.replace(/^\/(?:gh|cb)(?=\/)/, "");
+    const repoMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)/);
+    const owner = repoMatch?.[1] ?? "";
+    const repo = repoMatch?.[2] ?? "";
+    const provider = pathname.startsWith("/cb/") ? "cb" : "gh";
+
+    const { data: clientRepoData } = api.repos.getByOwnerAndRepo.useQuery(
+        { provider, owner, repo },
+        { enabled: !!owner && !!repo },
+    );
+    const { data: clientCounts } = api.repos.getCountsByOwnerAndRepo.useQuery(
+        { provider, owner, repo },
+        { enabled: !!owner && !!repo },
+    );
+
+    const clientFetchedData =
+        clientRepoData && clientCounts
+            ? { ...clientRepoData, ...clientCounts }
+            : null;
+
     const lastContentRef = useRef<React.ReactNode>(null);
 
     return (
@@ -72,6 +94,7 @@ export function HeaderClient({
                     <HeaderContent
                         currentUser={null}
                         repoData={null}
+                        clientFetchedData={clientFetchedData}
                         initialOwner={initialOwner}
                         initialRepo={initialRepo}
                     />
@@ -83,6 +106,7 @@ export function HeaderClient({
                     <HeaderContent
                         currentUser={currentUser}
                         repoData={repoData}
+                        clientFetchedData={clientFetchedData}
                         initialOwner={initialOwner}
                         initialRepo={initialRepo}
                     />
@@ -97,25 +121,34 @@ export function HeaderClient({
 function HeaderContent({
     currentUser,
     repoData: serverRepoData,
+    clientFetchedData,
     initialOwner,
     initialRepo,
 }: {
     currentUser: { login: string; avatarUrl: string } | null;
     repoData: HeaderRepoData | null;
+    clientFetchedData?: HeaderRepoData | null;
     initialOwner: string | null;
     initialRepo: string | null;
 }) {
     const pathname = usePathname();
-    const prMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
-    const pullsMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/pulls/);
-    const issuesMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/issues/);
-    const repoMatch = pathname.match(/^\/([^/]+)\/([^/]+)/);
+    // Strip optional /gh or /cb prefix for owner/repo extraction
+    const cleanPath = pathname.replace(/^\/(?:gh|cb)(?=\/)/, "");
+    const prMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
+    const pullsMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pulls/);
+    const issuesMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/issues/);
+    const repoMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)/);
     const owner = repoMatch?.[1];
     const repo = repoMatch?.[2];
+    const provider = pathname.startsWith("/cb/") ? "cb" : "gh";
     const { isLeftOpen, isRightOpen, toggleLeft, toggleRight } = useSidebar();
 
     const repoData =
-        owner === initialOwner && repo === initialRepo ? serverRepoData : null;
+        owner === initialOwner && repo === initialRepo
+            ? serverRepoData
+            : clientFetchedData;
+
+    const resolvedRepoData = repoData;
 
     const headerRef = useRef<HTMLDivElement>(null);
     const leftToggleRef = useRef<HTMLButtonElement>(null);
@@ -166,18 +199,21 @@ function HeaderContent({
     const showRepoNav = !!owner && !!repo;
 
     const tabs = useMemo((): Tab[] => {
-        if (!repoData || !owner || !repo) return [];
+        if (!resolvedRepoData || !owner || !repo) return [];
 
         const isPR = !!prMatch;
         const isPulls = !!pullsMatch;
         const isIssues = !!issuesMatch;
 
-        const isCode = pathname === `/${owner}/${repo}`;
+        const isCode = cleanPath === `/${owner}/${repo}`;
 
         const allTabs: Tab[] = [
             {
                 label: "Code",
-                path: `https://github.com/${owner}/${repo}`,
+                path:
+                    provider === "cb"
+                        ? `https://codeberg.org/${owner}/${repo}`
+                        : `https://github.com/${owner}/${repo}`,
                 show: true,
                 isActive: isCode,
                 icon: Code2,
@@ -185,51 +221,72 @@ function HeaderContent({
             {
                 label: "Issues",
                 path: `/${owner}/${repo}/issues`,
-                show: repoData.hasIssues ?? true,
+                show: resolvedRepoData.hasIssues ?? true,
                 isActive: isIssues,
                 icon: CircleDot,
-                count: repoData.openIssuesCount,
+                count: resolvedRepoData.openIssuesCount,
             },
             {
                 label: "Pull Requests",
-                path: `/${owner}/${repo}/pulls`,
+                path: `/${provider}/${owner}/${repo}/pulls`,
                 show: true,
                 isActive: isPR || isPulls,
                 icon: GitPullRequest,
-                count: repoData.openPullRequestsCount,
+                count: resolvedRepoData.openPullRequestsCount,
             },
             {
                 label: "Actions",
-                path: `https://github.com/${owner}/${repo}/actions`,
+                path:
+                    provider === "cb"
+                        ? `https://codeberg.org/${owner}/${repo}/actions`
+                        : `https://github.com/${owner}/${repo}/actions`,
                 show: true,
                 isActive: false,
                 icon: CirclePlay,
             },
             {
                 label: "Projects",
-                path: `https://github.com/${owner}/${repo}/projects`,
-                show: repoData.hasProjects ?? false,
+                path:
+                    provider === "cb"
+                        ? `https://codeberg.org/${owner}/${repo}/projects`
+                        : `https://github.com/${owner}/${repo}/projects`,
+                show: resolvedRepoData.hasProjects ?? false,
                 isActive: false,
                 icon: Table2,
             },
             {
                 label: "Wiki",
-                path: `https://github.com/${owner}/${repo}/wiki`,
-                show: repoData.hasWiki ?? false,
+                path:
+                    provider === "cb"
+                        ? `https://codeberg.org/${owner}/${repo}/wiki`
+                        : `https://github.com/${owner}/${repo}/wiki`,
+                show: resolvedRepoData.hasWiki ?? false,
                 isActive: false,
                 icon: BookOpen,
             },
             {
                 label: "Settings",
-                path: `https://github.com/${owner}/${repo}/settings`,
-                show: repoData.permissions.admin ?? false,
+                path:
+                    provider === "cb"
+                        ? `https://codeberg.org/${owner}/${repo}/settings`
+                        : `https://github.com/${owner}/${repo}/settings`,
+                show: resolvedRepoData.permissions.admin ?? false,
                 isActive: false,
                 icon: Settings,
             },
         ];
 
         return allTabs.filter((t) => t.show);
-    }, [repoData, owner, repo, prMatch, pullsMatch, issuesMatch, pathname]);
+    }, [
+        resolvedRepoData,
+        owner,
+        repo,
+        prMatch,
+        pullsMatch,
+        issuesMatch,
+        cleanPath,
+        provider,
+    ]);
 
     return (
         <>
@@ -255,9 +312,11 @@ function HeaderContent({
                                         target="_blank"
                                         rel="noopener noreferrer"
                                     >
-                                        {repoData?.ownerAvatarUrl ? (
+                                        {resolvedRepoData?.ownerAvatarUrl ? (
                                             <img
-                                                src={repoData.ownerAvatarUrl}
+                                                src={
+                                                    resolvedRepoData.ownerAvatarUrl
+                                                }
                                                 alt={owner}
                                                 className="size-5 rounded-full"
                                             />

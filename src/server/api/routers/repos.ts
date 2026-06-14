@@ -1,18 +1,44 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getGitHubToken } from "~/server/auth";
-import { getRepo } from "~/server/github";
+import { getCodebergToken, getGitHubToken } from "~/server/auth";
+import { getRepo as getCodebergRepo } from "~/server/codeberg";
+import { getCachedRepoIssuePullCounts, getRepo } from "~/server/github";
 
 export const reposRouter = createTRPCRouter({
     getByOwnerAndRepo: protectedProcedure
         .input(
             z.object({
+                provider: z.enum(["gh", "cb"]).default("gh"),
                 owner: z.string(),
                 repo: z.string(),
             }),
         )
         .query(async ({ ctx, input }) => {
+            if (input.provider === "cb") {
+                const accessToken = await getCodebergToken(
+                    ctx.db,
+                    ctx.session.user.id,
+                );
+                const data = await getCodebergRepo(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                );
+                if (!data) return null;
+                return {
+                    hasIssues: data.has_issues,
+                    hasWiki: data.has_wiki,
+                    hasProjects: data.has_projects,
+                    hasDiscussions: false,
+                    isPrivate: data.private,
+                    permissions: {
+                        admin: data.permissions.admin,
+                    },
+                    ownerAvatarUrl: data.owner.avatar_url,
+                };
+            }
+
             const accessToken = await getGitHubToken(
                 ctx.db,
                 ctx.session.user.id,
@@ -31,5 +57,33 @@ export const reposRouter = createTRPCRouter({
                 },
                 ownerAvatarUrl: data.owner.avatar_url,
             };
+        }),
+    getCountsByOwnerAndRepo: protectedProcedure
+        .input(
+            z.object({
+                provider: z.enum(["gh", "cb"]).default("gh"),
+                owner: z.string(),
+                repo: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            if (input.provider === "cb") {
+                const accessToken = await getCodebergToken(
+                    ctx.db,
+                    ctx.session.user.id,
+                );
+                const { getRepoCounts } = await import("~/server/codeberg");
+                return getRepoCounts(accessToken, input.owner, input.repo);
+            }
+
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            return getCachedRepoIssuePullCounts(
+                accessToken,
+                input.owner,
+                input.repo,
+            );
         }),
 });

@@ -18,4 +18,4 @@ esy = "esy"
 hel = "hel"
 
 [files]
-extend-exclude = ["drizzle/**/*"]
+extend-exclude = ["drizzle/**/*", "api-specs/**/*"]

@@ -2,7 +2,14 @@
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
  * for Docker builds.
  */
+import { setDefaultResultOrder } from "node:dns";
 import "./src/env.js";
+import net from "node:net";
+
+// This is due to some wierd IPv6 issues with Codeberg.
+net.setDefaultAutoSelectFamily(false);
+// TODO: I think this could probably be removed
+setDefaultResultOrder("ipv4first");
 
 /** @type {import("next").NextConfig} */
 const config = {

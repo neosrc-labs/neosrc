@@ -12,13 +12,18 @@ import {
     HoverCardContent,
     HoverCardTrigger,
 } from "~/components/ui/hover-card";
-import type { UsersGetByUsernameResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 
-function UserHoverCardContent({ login }: { login: string }) {
+function UserHoverCardContent({
+    login,
+    provider = "gh",
+}: {
+    login: string;
+    provider?: "gh" | "cb";
+}) {
     const { data, isLoading } = api.users.getByUsername.useQuery(
-        { username: login },
+        { provider, username: login },
         { staleTime: 5 * 60 * 1000 },
     );
 
@@ -31,8 +36,13 @@ function UserHoverCardContent({ login }: { login: string }) {
         );
     }
 
-    const user = data?.user as UsersGetByUsernameResponseData | undefined;
+    const user = data?.user;
     if (!user) return null;
+
+    const profileUrl =
+        provider === "cb"
+            ? `https://codeberg.org/${user.login}`
+            : `https://github.com/${user.login}`;
 
     return (
         <div>
@@ -47,7 +57,7 @@ function UserHoverCardContent({ login }: { login: string }) {
                         {user.name && (
                             <a
                                 className="font-semibold text-base text-gray-900 hover:underline dark:text-gray-100"
-                                href={`https://github.com/${user.login}`}
+                                href={profileUrl}
                             >
                                 {user.name}
                             </a>
@@ -117,13 +127,13 @@ function UserHoverCardContent({ login }: { login: string }) {
                 <div className="mt-0.5 flex items-center gap-3 text-gray-600 text-xs dark:text-gray-400">
                     <span>
                         <strong className="font-semibold text-gray-900 dark:text-gray-100">
-                            {user.followers.toLocaleString()}
+                            {(user.followers ?? 0).toLocaleString()}
                         </strong>{" "}
                         followers
                     </span>
                     <span>
                         <strong className="font-semibold text-gray-900 dark:text-gray-100">
-                            {user.following.toLocaleString()}
+                            {(user.following ?? 0).toLocaleString()}
                         </strong>{" "}
                         following
                     </span>
@@ -135,15 +145,20 @@ function UserHoverCardContent({ login }: { login: string }) {
 
 interface UserHoverCardProps {
     login: string;
+    provider?: "gh" | "cb";
     children: ReactNode;
 }
 
-export function UserHoverCard({ login, children }: UserHoverCardProps) {
+export function UserHoverCard({
+    login,
+    provider = "gh",
+    children,
+}: UserHoverCardProps) {
     return (
         <HoverCard>
             <HoverCardTrigger asChild>{children}</HoverCardTrigger>
             <HoverCardContent className="w-80 bg-white p-0 dark:bg-zinc-950">
-                <UserHoverCardContent login={login} />
+                <UserHoverCardContent login={login} provider={provider} />
             </HoverCardContent>
         </HoverCard>
     );

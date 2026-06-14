@@ -7,15 +7,18 @@ import { api } from "~/trpc/react";
 export function MilestoneDropdown({
     owner,
     repo,
+    provider = "gh",
     currentQuery,
     onToggle,
 }: {
     owner: string;
     repo: string;
+    provider?: "gh" | "cb";
     currentQuery: string;
     onToggle: (milestone: string) => void;
 }) {
     const { data: milestones } = api.pulls.listMilestones.useQuery({
+        provider,
         owner,
         repo,
     });
