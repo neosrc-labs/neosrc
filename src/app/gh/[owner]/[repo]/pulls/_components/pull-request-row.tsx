@@ -207,6 +207,10 @@ export function PullRequestRow({
           ? "draft"
           : (pr.state as "open" | "closed");
     const { icon: StatusIcon, color } = STATUS_CONFIG[status];
+    const prHref =
+        provider === "gh"
+            ? `/gh/${owner}/${repo}/pull/${pr.number}`
+            : `https://codeberg.org/${owner}/${repo}/pull/${pr.number}`;
 
     return (
         <div className="flex items-start gap-3 border-gray-200 border-b px-4 py-3 transition-colors hover:bg-gray-50 dark:border-zinc-800 dark:hover:bg-zinc-900/50">
@@ -221,7 +225,7 @@ export function PullRequestRow({
                         </span>
                     )}
                     <Link
-                        href={`/${owner}/${repo}/pull/${pr.number}`}
+                        href={prHref}
                         className="font-medium text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-400"
                     >
                         {pr.title}
@@ -420,7 +424,7 @@ export function PullRequestRow({
             <div className="flex w-16 shrink-0 items-center justify-end">
                 {pr.comments_count > 0 ? (
                     <a
-                        href={`/${owner}/${repo}/pull/${pr.number}#issuecomment`}
+                        href={`${prHref}#issuecomment`}
                         className="flex items-center gap-1 text-gray-500 text-sm hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
                     >
                         <MessageSquare className="size-4" />

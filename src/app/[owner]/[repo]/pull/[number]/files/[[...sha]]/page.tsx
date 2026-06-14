@@ -1,107 +1,57 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import { getSession, githubAccessToken } from "~/server/auth";
+import { notFound, redirect } from "next/navigation";
 import {
-    type CommitData,
-    getCachedCommit,
-    getCachedPullRequest,
-    getPullRequestCommits,
-    type PullsListCommitsResponseData,
-} from "~/server/github";
-import { generatePRMetadata } from "~/server/metadata";
-import {
-    CommitHeader,
-    CommitHeaderSkeleton,
-} from "../../_components/commit-header";
-import { FilesSection } from "../../_components/files-client";
+    codebergAccessToken,
+    getSession,
+    githubAccessToken,
+} from "~/server/auth";
+import { getRepo as getCodebergRepo } from "~/server/codeberg";
+import { getRepo as getGitHubRepo } from "~/server/github";
 
-interface ChangesPageProps {
+async function checkGitHubRepo(token: string, owner: string, repo: string) {
+    try {
+        await getGitHubRepo(token, owner, repo);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function checkCodebergRepo(token: string, owner: string, repo: string) {
+    const result = await getCodebergRepo(token, owner, repo);
+    return result !== null;
+}
+
+export default async function FilesRedirectPage({
+    params,
+}: {
     params: Promise<{
         owner: string;
         repo: string;
         number: string;
         sha?: string[];
     }>;
-}
-
-export async function generateMetadata({
-    params,
-}: ChangesPageProps): Promise<Metadata> {
-    const { owner, repo, number } = await params;
-    return generatePRMetadata(owner, repo, number);
-}
-
-export default async function ChangesPage({ params }: ChangesPageProps) {
-    const { owner, repo, number: numberStr, sha } = await params;
-    const number = parseInt(numberStr, 10);
-    const commitSha = sha && sha.length > 0 ? sha[0] : null;
-
-    const accessToken = await githubAccessToken();
-
-    if (!accessToken) {
-        return (
-            <div className="px-6 py-8">
-                <p className="text-gray-600 dark:text-gray-400">
-                    Please sign in to view this pull request.
-                </p>
-            </div>
-        );
-    }
-
+}) {
+    const { owner, repo, number, sha } = await params;
     const session = await getSession();
-    const userId = session?.user?.id;
+    if (!session) notFound();
 
-    const prPromise = getCachedPullRequest(
-        accessToken,
-        owner,
-        repo,
-        number,
-        userId,
-    );
+    const [githubToken, codebergToken] = await Promise.all([
+        githubAccessToken(),
+        codebergAccessToken(),
+    ]);
 
-    let commitPromise: Promise<CommitData> | null = null;
-    let commitsPromise: Promise<PullsListCommitsResponseData> | null = null;
-    if (commitSha) {
-        commitPromise = getCachedCommit(
-            accessToken,
-            owner,
-            repo,
-            commitSha,
-            userId,
+    const [githubExists, codebergExists] = await Promise.all([
+        githubToken ? checkGitHubRepo(githubToken, owner, repo) : false,
+        codebergToken ? checkCodebergRepo(codebergToken, owner, repo) : false,
+    ]);
+
+    const shaPath = sha && sha.length > 0 ? `/${sha.join("/")}` : "";
+
+    if (githubExists)
+        redirect(`/gh/${owner}/${repo}/pull/${number}/files${shaPath}`);
+    if (codebergExists)
+        redirect(
+            `https://codeberg.org/${owner}/${repo}/pull/${number}/files${shaPath}`,
         );
-        commitsPromise = getPullRequestCommits(
-            accessToken,
-            owner,
-            repo,
-            number,
-        );
-    }
-
-    return (
-        <div className="px-6 pb-8">
-            {commitSha && (
-                <div className="pt-8">
-                    <Suspense fallback={<CommitHeaderSkeleton />}>
-                        <CommitHeader
-                            commitPromise={commitPromise}
-                            commitsPromise={commitsPromise}
-                            number={number}
-                            owner={owner}
-                            repo={repo}
-                            commitSha={commitSha}
-                        />
-                    </Suspense>
-                </div>
-            )}
-            <Suspense>
-                <FilesSection
-                    number={number}
-                    owner={owner}
-                    repo={repo}
-                    commitSha={commitSha ?? undefined}
-                    pullRequestPromise={prPromise}
-                />
-            </Suspense>
-        </div>
-    );
+    notFound();
 }

@@ -732,7 +732,7 @@ function EventContent({
                             />
                         )}
                         <NextLink
-                            href={`/${owner}/${repo}/pull/${number}/files/${commit?.oid}`}
+                            href={`/gh/${owner}/${repo}/pull/${number}/files/${commit?.oid}`}
                             className="truncate hover:text-blue-600 hover:underline dark:hover:text-blue-400"
                         >
                             {commit?.message.split("\n")[0]}
@@ -743,7 +743,7 @@ function EventContent({
                             <VerifiedBadge signature={commit.signature} />
                         )}
                         <NextLink
-                            href={`/${owner}/${repo}/pull/${number}/files/${commit?.oid}`}
+                            href={`/gh/${owner}/${repo}/pull/${number}/files/${commit?.oid}`}
                             className="font-mono text-gray-600 text-xs hover:text-blue-600 hover:underline dark:text-zinc-400 dark:hover:text-blue-400"
                         >
                             {commit?.oid.slice(0, 7)}
@@ -770,10 +770,10 @@ function EventContent({
                 event.beforeCommit?.oid.slice(0, 7) ?? "unknown";
             const afterShort = event.afterCommit?.oid.slice(0, 7) ?? "unknown";
             const beforeHref = event.beforeCommit?.oid
-                ? `/${owner}/${repo}/pull/${number}/files/${event.beforeCommit.oid}`
+                ? `/gh/${owner}/${repo}/pull/${number}/files/${event.beforeCommit.oid}`
                 : null;
             const afterHref = event.afterCommit?.oid
-                ? `/${owner}/${repo}/pull/${number}/files/${event.afterCommit.oid}`
+                ? `/gh/${owner}/${repo}/pull/${number}/files/${event.afterCommit.oid}`
                 : null;
             return (
                 <EventRow>

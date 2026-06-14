@@ -121,7 +121,7 @@ function CommitsList({
         return () => observer.disconnect();
     }, [hasNextPage, fetchNextPage, scrollRef]);
 
-    const baseUrl = `/${pullRequest.base.repo.owner.login}/${pullRequest.base.repo.name}/pull/${pullRequest.number}/files`;
+    const baseUrl = `/gh/${pullRequest.base.repo.owner.login}/${pullRequest.base.repo.name}/pull/${pullRequest.number}/files`;
 
     return (
         <>

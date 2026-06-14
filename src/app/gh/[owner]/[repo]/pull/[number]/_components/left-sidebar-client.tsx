@@ -24,7 +24,7 @@ export function LeftSidebarContentSection({
     pullRequestPromise,
 }: LeftSidebarContentSectionProps) {
     const pathname = usePathname();
-    const basePath = `/${owner}/${repo}/pull/${number}`;
+    const basePath = `/gh/${owner}/${repo}/pull/${number}`;
     const isFilesActive =
         pathname === `${basePath}/files` ||
         pathname.startsWith(`${basePath}/files/`);
@@ -63,7 +63,7 @@ export function SidebarFileTree({
     pullRequestPromise,
 }: SidebarFileTreeProps) {
     const pathname = usePathname();
-    const basePath = `/${owner}/${repo}/pull/${number}`;
+    const basePath = `/gh/${owner}/${repo}/pull/${number}`;
     const commitSha = useMemo(() => {
         const match = pathname?.match(/\/files\/([a-f0-9]{7,40})/);
         return match ? match[1] : undefined;
@@ -113,7 +113,7 @@ export function SidebarNavMenu({
     fileCountPromise,
 }: SidebarNavMenuProps) {
     const pathname = usePathname();
-    const basePath = `/${owner}/${repo}/pull/${number}`;
+    const basePath = `/gh/${owner}/${repo}/pull/${number}`;
     const isFilesActive =
         pathname === `${basePath}/files` ||
         pathname.startsWith(`${basePath}/files/`);

@@ -116,7 +116,7 @@ export function TimelineSection({
             params.delete("scrollTo");
             const newParams = params.toString();
             timelineRouter.replace(
-                `/${owner}/${repo}/pull/${number}${newParams ? `?${newParams}` : ""}`,
+                `/gh/${owner}/${repo}/pull/${number}${newParams ? `?${newParams}` : ""}`,
                 { scroll: false },
             );
         }, 100);
