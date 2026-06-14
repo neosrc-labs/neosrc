@@ -5,7 +5,10 @@ import {
     applyListFormat,
     findEnclosingCodeBlock,
     findLineStart,
+    getLinePrefix,
     getListPrefixLength,
+    getNextOrderedNumber,
+    handleEnterKey,
 } from "./markdown-utils";
 
 describe("findLineStart", () => {
@@ -252,6 +255,164 @@ describe("applyListFormat", () => {
             expect(result.newText).toBe("- [ ] item");
             expect(result.newStart).toBe(7);
         });
+    });
+});
+
+describe("getLinePrefix", () => {
+    it("returns unordered for dash prefix", () => {
+        expect(getLinePrefix("- item")).toEqual({
+            prefix: "- ",
+            type: "unordered",
+        });
+    });
+
+    it("returns unordered for asterisk prefix", () => {
+        expect(getLinePrefix("* item")).toEqual({
+            prefix: "* ",
+            type: "unordered",
+        });
+    });
+
+    it("returns unordered for plus prefix", () => {
+        expect(getLinePrefix("+ item")).toEqual({
+            prefix: "+ ",
+            type: "unordered",
+        });
+    });
+
+    it("returns task unchecked for - [ ] prefix", () => {
+        expect(getLinePrefix("- [ ] task")).toEqual({
+            prefix: "- [ ] ",
+            type: "task",
+            checked: false,
+        });
+    });
+
+    it("returns task checked for - [x] prefix", () => {
+        expect(getLinePrefix("- [x] done")).toEqual({
+            prefix: "- [x] ",
+            type: "task",
+            checked: true,
+        });
+    });
+
+    it("returns ordered for numbered prefix", () => {
+        expect(getLinePrefix("1. item")).toEqual({
+            prefix: "1. ",
+            type: "ordered",
+            number: 1,
+        });
+    });
+
+    it("handles multi-digit ordered prefix", () => {
+        expect(getLinePrefix("42. answer")).toEqual({
+            prefix: "42. ",
+            type: "ordered",
+            number: 42,
+        });
+    });
+
+    it("returns blockquote for > prefix", () => {
+        expect(getLinePrefix("> quote")).toEqual({
+            prefix: "> ",
+            type: "blockquote",
+        });
+    });
+
+    it("returns none for plain text", () => {
+        expect(getLinePrefix("hello")).toEqual({
+            prefix: "",
+            type: "none",
+        });
+    });
+
+    it("returns none for empty string", () => {
+        expect(getLinePrefix("")).toEqual({ prefix: "", type: "none" });
+    });
+});
+
+describe("getNextOrderedNumber", () => {
+    it("returns 1 when no previous ordered item", () => {
+        expect(getNextOrderedNumber("some text\n- item\n", 11)).toBe(1);
+    });
+
+    it("returns next number after previous ordered item", () => {
+        expect(getNextOrderedNumber("1. first\n2. second\n", 17)).toBe(3);
+    });
+
+    it("returns 1 when no previous ordered item exists", () => {
+        expect(getNextOrderedNumber("some text\n\n", 11)).toBe(1);
+    });
+
+    it("stops at non-empty non-ordered line", () => {
+        expect(getNextOrderedNumber("1. first\nsome text\n", 20)).toBe(1);
+    });
+
+    it("continues from last ordered item before blank lines", () => {
+        expect(getNextOrderedNumber("1. first\n2. second\n\n", 18)).toBe(3);
+    });
+});
+
+describe("handleEnterKey", () => {
+    it("continues unordered list", () => {
+        const result = handleEnterKey("- hello", 7);
+        expect(result).not.toBeNull();
+        expect(result?.newText).toBe("- hello\n- ");
+        expect(result?.newCursorPos).toBe(10);
+    });
+
+    it("ends list when item is empty", () => {
+        const result = handleEnterKey("- ", 2);
+        expect(result).not.toBeNull();
+        expect(result?.newText).toBe("");
+        expect(result?.newCursorPos).toBe(0);
+    });
+
+    it("ends list when item has only prefix", () => {
+        const result = handleEnterKey("- \n- hello", 2);
+        expect(result).not.toBeNull();
+        expect(result?.newText).toBe("- hello");
+        expect(result?.newCursorPos).toBe(0);
+    });
+
+    it("continues task list with unchecked item", () => {
+        const result = handleEnterKey("- [x] done", 10);
+        expect(result).not.toBeNull();
+        expect(result?.newText).toBe("- [x] done\n- [ ] ");
+        expect(result?.newCursorPos).toBe(17);
+    });
+
+    it("continues ordered list with incremented number", () => {
+        const result = handleEnterKey("1. first\n2. second", 18);
+        expect(result).not.toBeNull();
+        expect(result?.newText).toBe("1. first\n2. second\n3. ");
+        expect(result?.newCursorPos).toBe(22);
+    });
+
+    it("continues blockquote", () => {
+        const result = handleEnterKey("> hello", 7);
+        expect(result).not.toBeNull();
+        expect(result?.newText).toBe("> hello\n> ");
+        expect(result?.newCursorPos).toBe(10);
+    });
+
+    it("returns null for non-list text", () => {
+        const result = handleEnterKey("hello world", 11);
+        expect(result).toBeNull();
+    });
+
+    it("splits line at cursor position (mid-word)", () => {
+        const result = handleEnterKey("- hello world", 4);
+        expect(result).not.toBeNull();
+        expect(result?.newText).toBe("- he\n- llo world");
+        expect(result?.newCursorPos).toBe(7);
+    });
+
+    it("splits line at end, creating empty next item", () => {
+        const result = handleEnterKey("- hello", 7);
+        expect(result).not.toBeNull();
+        expect(result?.newText).toBe("- hello\n- ");
+        expect(result?.newCursorPos).toBe(10);
     });
 });
 

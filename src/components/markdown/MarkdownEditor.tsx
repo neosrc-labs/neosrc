@@ -31,6 +31,7 @@ import {
     generateDetails,
     generateTable,
     generateTaskList,
+    handleEnterKey,
 } from "./markdown-utils";
 import { SlashCommandMenu } from "./slash-command-menu";
 
@@ -535,6 +536,22 @@ export function MarkdownEditor({
             ) {
                 e.preventDefault();
                 handleCodeBlock();
+            } else if (e.key === "Enter") {
+                const textarea = textareaRef.current;
+                if (textarea) {
+                    const result = handleEnterKey(
+                        valueRef.current,
+                        textarea.selectionStart,
+                    );
+                    if (result) {
+                        e.preventDefault();
+                        cursorRef.current = {
+                            start: result.newCursorPos,
+                            end: result.newCursorPos,
+                        };
+                        onChangeRef.current(result.newText);
+                    }
+                }
             } else if (e.key === "Escape") {
                 onCancel?.();
             }
@@ -896,6 +913,7 @@ export function MarkdownEditor({
                             content={value}
                             owner={owner}
                             repo={repo}
+                            onToggleTask={(newContent) => onChange(newContent)}
                         />
                     </div>
                 )}

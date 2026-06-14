@@ -188,6 +188,96 @@ export function generateTaskList(items?: number): {
     return { text, cursorPos: 6 };
 }
 
+export interface LinePrefix {
+    prefix: string;
+    type: "unordered" | "ordered" | "task" | "blockquote" | "none";
+    number?: number;
+    checked?: boolean;
+}
+
+export function getLinePrefix(lineText: string): LinePrefix {
+    if (lineText.startsWith("- [x] "))
+        return { prefix: "- [x] ", type: "task", checked: true };
+    if (lineText.startsWith("- [ ] "))
+        return { prefix: "- [ ] ", type: "task", checked: false };
+    if (lineText.startsWith("- ")) return { prefix: "- ", type: "unordered" };
+    if (lineText.startsWith("* ")) return { prefix: "* ", type: "unordered" };
+    if (lineText.startsWith("+ ")) return { prefix: "+ ", type: "unordered" };
+    if (lineText.startsWith("> ")) return { prefix: "> ", type: "blockquote" };
+    const orderedMatch = lineText.match(/^(\d+)\.\s/);
+    if (orderedMatch)
+        return {
+            prefix: orderedMatch[0],
+            type: "ordered",
+            number: Number.parseInt(orderedMatch[1] ?? "1", 10),
+        };
+    return { prefix: "", type: "none" };
+}
+
+export function getNextOrderedNumber(text: string, lineStart: number): number {
+    const beforeText = text.slice(0, lineStart);
+    const lines = beforeText.split("\n");
+    for (let i = lines.length - 1; i >= 0; i--) {
+        const match = lines[i]?.match(/^(\d+)\.\s/);
+        if (match) {
+            return Number.parseInt(match[1] ?? "1", 10) + 1;
+        }
+        const line = lines[i];
+        if (line !== undefined && line.trim() !== "") break;
+    }
+    return 1;
+}
+
+export function handleEnterKey(
+    text: string,
+    cursorPos: number,
+): { newText: string; newCursorPos: number } | null {
+    const lineStart = findLineStart(text, cursorPos);
+    const lineEnd = text.indexOf("\n", cursorPos);
+    const lineEndPos = lineEnd === -1 ? text.length : lineEnd;
+    const lineText = text.slice(lineStart, lineEndPos);
+
+    const prefixInfo = getLinePrefix(lineText);
+    if (prefixInfo.type === "none") return null;
+
+    const contentAfterPrefix = lineText.slice(prefixInfo.prefix.length);
+
+    if (contentAfterPrefix.trim() === "") {
+        const afterNewline = lineEnd === -1 ? text.length : lineEnd + 1;
+        return {
+            newText: text.slice(0, lineStart) + text.slice(afterNewline),
+            newCursorPos: lineStart,
+        };
+    }
+
+    const offsetInLine = Math.max(
+        cursorPos - lineStart,
+        prefixInfo.prefix.length,
+    );
+    const leftPart = lineText.slice(0, offsetInLine);
+    const rightPart = lineText.slice(offsetInLine);
+
+    let newPrefix: string;
+    if (prefixInfo.type === "ordered") {
+        newPrefix = `${(prefixInfo.number ?? 0) + 1}. `;
+    } else if (prefixInfo.type === "task") {
+        newPrefix = "- [ ] ";
+    } else {
+        newPrefix = prefixInfo.prefix;
+    }
+
+    return {
+        newText:
+            text.slice(0, lineStart) +
+            leftPart +
+            "\n" +
+            newPrefix +
+            rightPart +
+            text.slice(lineEndPos),
+        newCursorPos: lineStart + leftPart.length + 1 + newPrefix.length,
+    };
+}
+
 export function applyListFormat(
     text: string,
     start: number,

@@ -7,6 +7,7 @@ import {
     type ReactNode,
     useContext,
     useEffect,
+    useRef,
     useState,
 } from "react";
 import ReactMarkdown from "react-markdown";
@@ -117,6 +118,7 @@ interface MarkdownRendererProps {
     commentLine?: number | null;
     commentStartLine?: number | null;
     commentThreadId?: string;
+    onToggleTask?: (content: string) => void;
 }
 
 const schema = {
@@ -137,6 +139,18 @@ const schema = {
     },
 };
 
+function toggleCheckboxInContent(content: string, targetIndex: number): string {
+    const taskRegex = /- \[([ x])\]/g;
+    let count = 0;
+    return content.replace(taskRegex, (match, state) => {
+        if (count === targetIndex) {
+            return `- [${state === " " ? "x" : " "}]`;
+        }
+        count++;
+        return match;
+    });
+}
+
 function getPlainText(children: ReactNode): string {
     if (typeof children === "string") return children;
     if (typeof children === "number") return String(children);
@@ -153,7 +167,10 @@ export function MarkdownRenderer({
     commentLine,
     commentStartLine,
     commentThreadId,
+    onToggleTask,
 }: MarkdownRendererProps) {
+    const checkboxIndexRef = useRef(0);
+
     if (!content) {
         return (
             <p className="text-gray-500 italic dark:text-gray-400">
@@ -163,6 +180,7 @@ export function MarkdownRenderer({
     }
 
     const stripped = content.replace(/<!--[\s\S]*?-->/g, "");
+    checkboxIndexRef.current = 0;
     return (
         <ReactMarkdown
             remarkPlugins={[
@@ -336,6 +354,25 @@ export function MarkdownRenderer({
                         >
                             {children}
                         </td>
+                    );
+                },
+                input({ checked, disabled: _disabled, ...props }) {
+                    const index = checkboxIndexRef.current++;
+                    const isChecked = checked === true;
+                    return (
+                        <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                                const newContent = toggleCheckboxInContent(
+                                    stripped,
+                                    index,
+                                );
+                                onToggleTask?.(newContent);
+                            }}
+                            className="size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-500 dark:bg-zinc-700 dark:focus:ring-blue-400"
+                            {...props}
+                        />
                     );
                 },
             }}
