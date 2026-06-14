@@ -62,7 +62,7 @@ export function ActionSection({
     );
 
     const navigateAndScroll = useCallback(() => {
-        router.push(`/${owner}/${repo}/pull/${number}?scrollTo=bottom`);
+        router.push(`/gh/${owner}/${repo}/pull/${number}?scrollTo=bottom`);
     }, [router, owner, repo, number]);
 
     const approveMutation = api.pulls.approve.useMutation({
