@@ -9,19 +9,23 @@ import { useDebounce } from "./use-debounce";
 export function AuthorDropdown({
     owner,
     repo,
+    provider = "gh",
     currentQuery,
     onToggle,
 }: {
     owner: string;
     repo: string;
+    provider?: "gh" | "cb";
     currentQuery: string;
     onToggle: (key: string, value: string) => void;
 }) {
     const { data: assignees } = api.pulls.listAssignees.useQuery({
+        provider,
         owner,
         repo,
     });
     const { data: recentAuthors } = api.pulls.listRecentAuthors.useQuery({
+        provider,
         owner,
         repo,
     });

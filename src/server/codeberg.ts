@@ -68,15 +68,40 @@ export type CodebergPullRequestSort =
 type CodebergPrListParams = {
     state?: "open" | "closed" | "all";
     sort?:
-    | "oldest"
-    | "recentupdate"
-    | "newest"
-    | "leastupdate"
-    | "mostcomment"
-    | "leastcomment";
+        | "oldest"
+        | "recentupdate"
+        | "newest"
+        | "leastupdate"
+        | "mostcomment"
+        | "leastcomment";
     page?: number;
     limit?: number;
 };
+
+function parseTotalCountFromLinkHeader(
+    linkHeader: string | null,
+    limit: number,
+    currentCount: number,
+    page: number,
+): number {
+    if (!linkHeader) return currentCount;
+
+    // Extract all page numbers from link relations
+    const linkPattern = /<[^>]*page=(\d+)[^>]*>;\s*rel="(\w+)"/g;
+    let maxPage = page;
+    const matches = linkHeader.matchAll(linkPattern);
+    for (const m of matches) {
+        const p = Number.parseInt(m[1]!, 10);
+        if (p > maxPage) maxPage = p;
+    }
+
+    if (maxPage > page) {
+        // There are more pages beyond current; estimate total
+        return (maxPage - 1) * limit + currentCount;
+    }
+
+    return currentCount;
+}
 
 export const listPullRequests = cache(
     async (
@@ -102,11 +127,20 @@ export const listPullRequests = cache(
         if (!res.ok) return { items: [], totalCount: 0 };
 
         const items = (await res.json()) as CodebergPullRequest[];
+        const limit = params.limit ?? 30;
 
         const linkHeader = res.headers.get("Link");
         const hasNextPage = linkHeader?.includes('rel="next"') ?? false;
 
-        return { items, totalCount: items.length, hasNextPage };
+        const page = params.page ?? 1;
+        const totalCount = parseTotalCountFromLinkHeader(
+            linkHeader,
+            limit,
+            items.length,
+            page,
+        );
+
+        return { items, totalCount, hasNextPage };
     },
 );
 
@@ -120,3 +154,129 @@ export const getUser = cache(async (accessToken: string) => {
     if (!res.ok) return null;
     return res.json() as Promise<CodebergUser>;
 });
+
+export type CodebergLabel = {
+    id: number;
+    name: string;
+    color: string;
+    description: string | null;
+};
+
+export const listLabels = cache(
+    async (accessToken: string, owner: string, repo: string) => {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/labels`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) return [];
+        return res.json() as Promise<CodebergLabel[]>;
+    },
+);
+
+export type CodebergMilestone = {
+    id: number;
+    title: string;
+    description: string | null;
+    state: string;
+    open_issues: number;
+    closed_issues: number;
+};
+
+export const listMilestones = cache(
+    async (accessToken: string, owner: string, repo: string) => {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/milestones?state=open`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) return [];
+        return res.json() as Promise<CodebergMilestone[]>;
+    },
+);
+
+export type CodebergAssignee = {
+    id: number;
+    login: string;
+    avatar_url: string;
+};
+
+export const listAssignees = cache(
+    async (accessToken: string, owner: string, repo: string) => {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/assignees`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) return [];
+        return res.json() as Promise<CodebergAssignee[]>;
+    },
+);
+
+export type CodebergUserByUsername = {
+    id: number;
+    login: string;
+    full_name: string;
+    avatar_url: string;
+    description: string;
+    location: string;
+    website: string;
+    created_at: string;
+    followers_count: number;
+    following_count: number;
+};
+
+export const getUserByUsername = cache(
+    async (accessToken: string, username: string) => {
+        const res = await fetch(`${CODEBERG_API}/api/v1/users/${username}`, {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        });
+        if (!res.ok) return null;
+        return res.json() as Promise<CodebergUserByUsername>;
+    },
+);
+
+export const listRecentIssueAuthors = cache(
+    async (accessToken: string, owner: string, repo: string) => {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?state=all&sort=created&direction=desc&limit=100`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) return [];
+        const issues = (await res.json()) as Array<{
+            user: { login: string; avatar_url: string } | null;
+        }>;
+        const seen = new Set<string>();
+        const authors: Array<{ login: string; avatar_url: string }> = [];
+        for (const issue of issues) {
+            if (issue.user && !seen.has(issue.user.login)) {
+                seen.add(issue.user.login);
+                authors.push({
+                    login: issue.user.login,
+                    avatar_url: issue.user.avatar_url,
+                });
+            }
+        }
+        return authors;
+    },
+);

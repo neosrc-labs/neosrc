@@ -651,6 +651,7 @@ export function PullRequestList({
                     </div>
                     <div className="flex items-center gap-2">
                         <AuthorDropdown
+                            provider="gh"
                             owner={owner}
                             repo={repo}
                             currentQuery={searchQuery}
@@ -671,6 +672,7 @@ export function PullRequestList({
                         />
 
                         <LabelDropdown
+                            provider="gh"
                             owner={owner}
                             repo={repo}
                             currentQuery={searchQuery}
@@ -690,6 +692,7 @@ export function PullRequestList({
                         />
 
                         <MilestoneDropdown
+                            provider="gh"
                             owner={owner}
                             repo={repo}
                             currentQuery={searchQuery}
@@ -710,6 +713,7 @@ export function PullRequestList({
                         />
 
                         <AssigneeDropdown
+                            provider="gh"
                             owner={owner}
                             repo={repo}
                             currentQuery={searchQuery}
@@ -858,6 +862,7 @@ export function PullRequestList({
                         {items.map((pr) => (
                             <PullRequestRow
                                 key={pr.id}
+                                provider="gh"
                                 pr={pr}
                                 owner={owner}
                                 repo={repo}

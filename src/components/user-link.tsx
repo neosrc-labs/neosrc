@@ -2,6 +2,7 @@ import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 
 export function UserLink({
     actor,
+    provider = "gh",
     onClick,
     showUsername = true,
 }: {
@@ -14,13 +15,14 @@ export function UserLink({
           }
         | null
         | undefined;
+    provider?: "gh" | "cb";
     onClick?: (e: React.MouseEvent) => void;
     showUsername?: boolean;
 }) {
     if (!actor) return null;
     const isBot = actor.__typename === "Bot";
     return (
-        <UserHoverCard login={actor.login}>
+        <UserHoverCard login={actor.login} provider={provider}>
             <a
                 className="flex cursor-pointer items-center gap-2"
                 href={actor.url}
