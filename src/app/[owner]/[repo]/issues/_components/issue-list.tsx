@@ -477,6 +477,7 @@ export function IssueList({
                                 ref={autocompleteRef}
                                 owner={owner}
                                 repo={repo}
+                                provider="gh"
                                 match={autocompleteMatch}
                                 query={autocompleteMatch.value}
                                 staticOptions={ISSUE_AUTOCOMPLETE_OPTIONS}

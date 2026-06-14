@@ -77,7 +77,7 @@ export function AuthorDropdown({
 
     const { data: searchedUserRaw, isFetched: userSearchDone } =
         api.users.getByUsername.useQuery(
-            { username: debouncedSearch },
+            { username: debouncedSearch, provider },
             { enabled: isCustomAuthor, retry: false },
         );
     const searchedUser = (

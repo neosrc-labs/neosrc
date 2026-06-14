@@ -561,6 +561,7 @@ export function PullRequestList({
                                 ref={autocompleteRef}
                                 owner={owner}
                                 repo={repo}
+                                provider="gh"
                                 match={autocompleteMatch}
                                 query={autocompleteMatch.value}
                                 staticOptions={PR_AUTOCOMPLETE_OPTIONS}

@@ -77,6 +77,7 @@ export const SearchAutocomplete = forwardRef<
     {
         owner: string;
         repo: string;
+        provider?: "gh" | "cb";
         match: AutocompleteMatch;
         query: string;
         staticOptions?: Record<string, { label: string; subtitle?: string }[]>;
@@ -87,6 +88,7 @@ export const SearchAutocomplete = forwardRef<
     {
         owner,
         repo,
+        provider = "gh",
         match,
         query,
         staticOptions = STATIC_OPTIONS,
@@ -99,16 +101,16 @@ export const SearchAutocomplete = forwardRef<
     const listRef = useRef<HTMLDivElement>(null);
 
     const { data: labels } = api.pulls.listLabels.useQuery(
-        { owner, repo },
+        { provider, owner, repo },
         { enabled: match.key === "label" },
     );
 
     const { data: assignees } = api.pulls.listAssignees.useQuery(
-        { owner, repo },
+        { provider, owner, repo },
         { enabled: match.key === "assignee" || match.key === "author" },
     );
     const { data: recentAuthors } = api.pulls.listRecentAuthors.useQuery(
-        { owner, repo },
+        { provider, owner, repo },
         { enabled: match.key === "author" },
     );
     const { data: currentUser } = api.users.currentUser.useQuery();
