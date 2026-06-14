@@ -297,13 +297,15 @@ function HeaderContent({
                 <div className="px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <img
-                                src="/logo.svg"
-                                alt="Neosrc"
-                                width={32}
-                                height={32}
-                                className="size-8 shrink-0"
-                            />
+                            <a href="/">
+                                <img
+                                    src="/logo.svg"
+                                    alt="Neosrc"
+                                    width={32}
+                                    height={32}
+                                    className="size-8 shrink-0"
+                                />
+                            </a>
                             {showRepoNav && (
                                 <div className="flex items-center gap-1.5">
                                     <a
