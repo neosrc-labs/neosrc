@@ -107,7 +107,11 @@ export const auth = betterAuth({
                     clientSecret: env.CODEBERG_CLIENT_SECRET,
                     discoveryUrl:
                         "https://codeberg.org/.well-known/openid-configuration",
-                    scopes: ["read:user", "read:repository", "write:repository"],
+                    scopes: [
+                        "read:user",
+                        "read:repository",
+                        "write:repository",
+                    ],
                     overrideUserInfo: true,
                     getUserInfo: async (tokens) => {
                         if (!tokens.accessToken) return null;
@@ -254,9 +258,9 @@ export const githubAccessToken = cache(async () => {
                 ),
                 refreshTokenExpiresAt: refreshed.refresh_token_expires_in
                     ? new Date(
-                        Date.now() +
-                        refreshed.refresh_token_expires_in * 1000,
-                    )
+                          Date.now() +
+                              refreshed.refresh_token_expires_in * 1000,
+                      )
                     : undefined,
             })
             .where(eq(betterAuthAccount.id, account.id));
@@ -305,9 +309,9 @@ export const codebergAccessToken = cache(async () => {
                 ),
                 refreshTokenExpiresAt: refreshed.refresh_token_expires_in
                     ? new Date(
-                        Date.now() +
-                        refreshed.refresh_token_expires_in * 1000,
-                    )
+                          Date.now() +
+                              refreshed.refresh_token_expires_in * 1000,
+                      )
                     : undefined,
             })
             .where(eq(betterAuthAccount.id, account.id));

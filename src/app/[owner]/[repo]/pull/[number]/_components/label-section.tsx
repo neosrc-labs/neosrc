@@ -34,11 +34,15 @@ export function LabelsSection({
         setOperations([]);
     }, [pullRequestPromise]);
 
-    const { data: repoLabels } = api.pulls.listLabels.useQuery({ owner, repo });
+    const { data: repoLabels } = api.pulls.listLabels.useQuery({
+        provider: "gh",
+        owner,
+        repo,
+    });
     const addMutation = api.pulls.addLabel.useMutation();
     const removeMutation = api.pulls.removeLabel.useMutation();
 
-    const labelsData = repoLabels ?? [];
+    const labelsData = (repoLabels ?? []) as Label[];
     const handleAdd = (label: Label) => {
         const repoLabel = labelsData.find((l) => l.name === label.name);
         if (!repoLabel) return;

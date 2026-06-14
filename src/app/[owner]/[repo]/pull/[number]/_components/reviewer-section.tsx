@@ -6,7 +6,7 @@ import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { applyArrayOperations, opId } from "~/lib/utils";
-import type { PullsGetResponseData, Reviewer } from "~/server/github";
+import type { Assignee, PullsGetResponseData, Reviewer } from "~/server/github";
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";
 
@@ -37,9 +37,11 @@ export function ReviewerSection({
     }, [pullRequestPromise]);
 
     const { data: repoUsers } = api.pulls.listAssignees.useQuery({
+        provider: "gh",
         owner,
         repo,
     });
+    const usersData = (repoUsers ?? []) as Assignee[];
     const addMutation = api.pulls.addReviewer.useMutation();
     const removeMutation = api.pulls.removeReviewer.useMutation();
     const reviewsQuery = api.pulls.listReviews.useQuery(
@@ -47,7 +49,6 @@ export function ReviewerSection({
         { staleTime: 30_000 },
     );
 
-    const usersData = repoUsers ?? [];
     const handleAdd = (reviewer: Reviewer) => {
         const repoUser = usersData.find((u) => u.login === reviewer.login);
         if (!repoUser) return;
