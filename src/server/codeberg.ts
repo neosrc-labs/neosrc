@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { withStaleWhileRevalidate } from "~/server/cache";
 
 const CODEBERG_API = "https://codeberg.org";
 
@@ -550,3 +551,49 @@ export const searchIssues = cache(
             }));
     },
 );
+
+export interface CodebergRepoHeaderInfo {
+    hasIssues: boolean;
+    hasWiki: boolean;
+    hasProjects: boolean;
+    hasDiscussions: boolean;
+    isPrivate: boolean;
+    permissions: { admin: boolean };
+    ownerAvatarUrl: string | null;
+}
+
+export async function getCachedRepoHeaderData(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<CodebergRepoHeaderInfo> {
+    return withStaleWhileRevalidate(
+        `cb:repo-header:${owner}:${repo}`,
+        async () => {
+            const repoInfo = await getRepo(accessToken, owner, repo);
+            if (!repoInfo) throw new Error("Repo not found");
+            return {
+                hasIssues: repoInfo.has_issues,
+                hasWiki: repoInfo.has_wiki,
+                hasProjects: repoInfo.has_projects,
+                hasDiscussions: false,
+                isPrivate: repoInfo.private,
+                permissions: { admin: repoInfo.permissions.admin },
+                ownerAvatarUrl: repoInfo.owner.avatar_url,
+            };
+        },
+        { staleAfter: 5 * 60 * 1000, deleteAfter: 24 * 60 * 60 * 1000 },
+    );
+}
+
+export async function getCachedRepoCounts(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<{ openIssuesCount: number; openPullRequestsCount: number }> {
+    return withStaleWhileRevalidate(
+        `cb:counts:${owner}:${repo}`,
+        () => getRepoCounts(accessToken, owner, repo),
+        { staleAfter: 3_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    );
+}

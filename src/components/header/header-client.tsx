@@ -84,25 +84,27 @@ export function HeaderClient({
             ? { ...clientRepoData, ...clientCounts }
             : null;
 
-    const lastContentRef = useRef<React.ReactNode>(null);
+    const cachedDataRef = useRef<{
+        currentUser: { login: string; avatarUrl: string } | null;
+        repoData: HeaderRepoData | null;
+    } | null>(null);
 
     return (
         <Async
             promise={dataPromise}
             fallback={
-                lastContentRef.current ?? (
-                    <HeaderContent
-                        currentUser={null}
-                        repoData={null}
-                        clientFetchedData={clientFetchedData}
-                        initialOwner={initialOwner}
-                        initialRepo={initialRepo}
-                    />
-                )
+                <HeaderContent
+                    currentUser={cachedDataRef.current?.currentUser ?? null}
+                    repoData={cachedDataRef.current?.repoData ?? null}
+                    clientFetchedData={clientFetchedData}
+                    initialOwner={initialOwner}
+                    initialRepo={initialRepo}
+                />
             }
         >
             {([currentUser, repoData]) => {
-                const content = (
+                cachedDataRef.current = { currentUser, repoData };
+                return (
                     <HeaderContent
                         currentUser={currentUser}
                         repoData={repoData}
@@ -111,8 +113,6 @@ export function HeaderClient({
                         initialRepo={initialRepo}
                     />
                 );
-                lastContentRef.current = content;
-                return content;
             }}
         </Async>
     );
@@ -220,7 +220,7 @@ function HeaderContent({
             },
             {
                 label: "Issues",
-                path: `/${owner}/${repo}/issues`,
+                path: `/${provider}/${owner}/${repo}/issues`,
                 show: resolvedRepoData.hasIssues ?? true,
                 isActive: isIssues,
                 icon: CircleDot,

@@ -1153,7 +1153,7 @@ export async function getCachedRepoIssuePullCounts(
     repo: string,
 ): Promise<{ openIssuesCount: number; openPullRequestsCount: number }> {
     return withStaleWhileRevalidate(
-        `counts:${owner}:${repo}`,
+        `gh:counts:${owner}:${repo}`,
         () => getRepoIssuePullCounts(accessToken, owner, repo),
         { staleAfter: 3_000, deleteAfter: 24 * 60 * 60 * 1000 },
     );
@@ -1175,7 +1175,7 @@ export async function getCachedRepoHeaderData(
     repo: string,
 ): Promise<RepoHeaderInfo> {
     return withStaleWhileRevalidate(
-        `repo-header:${owner}:${repo}`,
+        `gh:repo-header:${owner}:${repo}`,
         async () => {
             const repoInfo = await getRepo(accessToken, owner, repo);
             return {

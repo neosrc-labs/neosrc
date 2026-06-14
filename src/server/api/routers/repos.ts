@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
-import { getRepo as getCodebergRepo } from "~/server/codeberg";
+import {
+    getCachedRepoHeaderData as getCachedCodebergRepoHeaderData,
+    getCachedRepoCounts,
+} from "~/server/codeberg";
 import { getCachedRepoIssuePullCounts, getRepo } from "~/server/github";
 
 export const reposRouter = createTRPCRouter({
@@ -20,23 +23,11 @@ export const reposRouter = createTRPCRouter({
                     ctx.db,
                     ctx.session.user.id,
                 );
-                const data = await getCodebergRepo(
+                return getCachedCodebergRepoHeaderData(
                     accessToken,
                     input.owner,
                     input.repo,
                 );
-                if (!data) return null;
-                return {
-                    hasIssues: data.has_issues,
-                    hasWiki: data.has_wiki,
-                    hasProjects: data.has_projects,
-                    hasDiscussions: false,
-                    isPrivate: data.private,
-                    permissions: {
-                        admin: data.permissions.admin,
-                    },
-                    ownerAvatarUrl: data.owner.avatar_url,
-                };
             }
 
             const accessToken = await getGitHubToken(
@@ -72,8 +63,11 @@ export const reposRouter = createTRPCRouter({
                     ctx.db,
                     ctx.session.user.id,
                 );
-                const { getRepoCounts } = await import("~/server/codeberg");
-                return getRepoCounts(accessToken, input.owner, input.repo);
+                return getCachedRepoCounts(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                );
             }
 
             const accessToken = await getGitHubToken(

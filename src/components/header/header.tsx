@@ -5,8 +5,8 @@ import {
     githubAccessToken,
 } from "~/server/auth";
 import {
-    getRepo as getCodebergRepo,
-    getRepoCounts as getCodebergRepoCounts,
+    getCachedRepoHeaderData as getCachedCodebergRepoHeaderData,
+    getCachedRepoCounts,
 } from "~/server/codeberg";
 import {
     getAuthenticatedUser,
@@ -75,17 +75,12 @@ async function getRepoData(
     if (provider === "cb") {
         const token = await codebergAccessToken();
         if (!token) return null;
-        const raw = await getCodebergRepo(token, owner, repo);
-        if (!raw) return null;
-        const counts = await getCodebergRepoCounts(token, owner, repo);
+        const [headerData, counts] = await Promise.all([
+            getCachedCodebergRepoHeaderData(token, owner, repo),
+            getCachedRepoCounts(token, owner, repo),
+        ]);
         return {
-            hasIssues: raw.has_issues,
-            hasWiki: raw.has_wiki,
-            hasProjects: raw.has_projects,
-            hasDiscussions: false,
-            isPrivate: raw.private,
-            permissions: { admin: raw.permissions.admin },
-            ownerAvatarUrl: raw.owner.avatar_url,
+            ...headerData,
             openIssuesCount: counts.openIssuesCount,
             openPullRequestsCount: counts.openPullRequestsCount,
         };
