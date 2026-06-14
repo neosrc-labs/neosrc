@@ -6,7 +6,10 @@ import { setDefaultResultOrder } from "dns";
 import "./src/env.js";
 import net from "net";
 
+// This is due to some wierd IPv6 issues with Codeberg.
 net.setDefaultAutoSelectFamily(false);
+// TODO: I think this could probably be removed
+setDefaultResultOrder("ipv4first");
 
 /** @type {import("next").NextConfig} */
 const config = {
@@ -24,7 +27,5 @@ const config = {
         ];
     },
 };
-
-setDefaultResultOrder("ipv4first");
 
 export default config;
