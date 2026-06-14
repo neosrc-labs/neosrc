@@ -12,7 +12,6 @@ import {
     HoverCardContent,
     HoverCardTrigger,
 } from "~/components/ui/hover-card";
-import type { UserProfile } from "~/server/api/routers/users";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 
