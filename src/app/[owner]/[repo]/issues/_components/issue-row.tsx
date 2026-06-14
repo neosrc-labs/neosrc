@@ -1,5 +1,6 @@
 import { Circle, CircleCheck, MessageSquare } from "lucide-react";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import { CodeTitle } from "~/components/markdown/code-title";
 import { Label } from "~/components/ui/label";
 import { UserLink } from "~/components/user-link";
 import { formatRelativeTime } from "~/utils";
@@ -52,7 +53,7 @@ export function IssueRow({
                         href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues/${issue.number}`}
                         className="font-medium text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-400"
                     >
-                        {issue.title}
+                        <CodeTitle>{issue.title}</CodeTitle>
                     </a>
                 </div>
                 <div className="mt-1 flex items-center gap-1 text-gray-600 text-sm dark:text-gray-400">

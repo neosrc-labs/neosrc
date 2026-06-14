@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import { CodeTitle } from "~/components/markdown/code-title";
 import {
     HoverCard,
     HoverCardContent,
@@ -228,7 +229,7 @@ export function PullRequestRow({
                         href={prHref}
                         className="font-medium text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-400"
                     >
-                        {pr.title}
+                        <CodeTitle>{pr.title}</CodeTitle>
                     </Link>
                     {pr.status_state && (
                         <HoverCard openDelay={200}>

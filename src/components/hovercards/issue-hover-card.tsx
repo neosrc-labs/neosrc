@@ -3,6 +3,7 @@
 import { MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useState } from "react";
+import { CodeTitle } from "~/components/markdown/code-title";
 import {
     HoverCard,
     HoverCardContent,
@@ -52,7 +53,7 @@ function IssueHoverCardContent({
                         </span>
                     </div>
                     <p className="mt-1 font-semibold text-gray-900 text-sm leading-snug dark:text-gray-100">
-                        {issue.title}
+                        <CodeTitle>{issue.title}</CodeTitle>
                     </p>
                     {issue.user && (
                         <div className="mt-1 flex items-center gap-1.5">

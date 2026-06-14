@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { CodeTitle } from "~/components/markdown/code-title";
 
 interface IssueItem {
     number: number;
@@ -124,7 +125,7 @@ export function IssueAutocomplete({
                         <span className="font-medium text-blue-600 dark:text-blue-400">
                             #{issue.number}
                         </span>{" "}
-                        {issue.title}
+                        <CodeTitle>{issue.title}</CodeTitle>
                     </li>
                 ))}
             </ul>
