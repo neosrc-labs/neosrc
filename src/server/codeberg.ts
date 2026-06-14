@@ -381,3 +381,172 @@ export const listRecentIssueAuthors = cache(
         return authors;
     },
 );
+
+export type CodebergIssue = {
+    id: number;
+    number: number;
+    title: string;
+    state: "open" | "closed";
+    html_url: string;
+    created_at: string;
+    updated_at: string;
+    closed_at: string | null;
+    body: string;
+    user: {
+        id: number;
+        login: string;
+        full_name: string;
+        avatar_url: string;
+    } | null;
+    assignees: Array<{
+        id: number;
+        login: string;
+        avatar_url: string;
+    }> | null;
+    labels: Array<{
+        id: number;
+        name: string;
+        color: string;
+        description: string | null;
+    }> | null;
+    milestone: {
+        id: number;
+        title: string;
+    } | null;
+    comments: number | null;
+    pull_request?: {
+        url: string;
+    } | null;
+};
+
+export type CodebergIssueSort =
+    | "oldest"
+    | "recentupdate"
+    | "newest"
+    | "leastupdate"
+    | "mostcomment"
+    | "leastcomment";
+
+export type CodebergIssueListParams = {
+    state?: "open" | "closed" | "all";
+    sort?: CodebergIssueSort;
+    page?: number;
+    limit?: number;
+    author?: string;
+    labels?: string[];
+};
+
+export const listIssues = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        params: CodebergIssueListParams = {},
+    ) => {
+        const searchParams = new URLSearchParams();
+        searchParams.set("type", "issues");
+        if (params.state) searchParams.set("state", params.state);
+        if (params.sort) searchParams.set("sort", params.sort);
+        if (params.page) searchParams.set("page", String(params.page));
+        if (params.limit) searchParams.set("limit", String(params.limit));
+
+        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?${searchParams}`;
+
+        const res = await fetch(url, {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        });
+        if (!res.ok) return { items: [], totalCount: 0 };
+
+        let items = (await res.json()) as CodebergIssue[];
+
+        items = items.filter((issue) => !issue.pull_request);
+
+        if (params.author) {
+            items = items.filter(
+                (issue) =>
+                    issue.user?.login.toLowerCase() ===
+                    params.author?.toLowerCase(),
+            );
+        }
+
+        if (params.labels && params.labels.length > 0) {
+            items = items.filter((issue) => {
+                const issueLabelNames = (issue.labels ?? []).map((l) =>
+                    l.name.toLowerCase(),
+                );
+                return params.labels?.every((label) =>
+                    issueLabelNames.includes(label.toLowerCase()),
+                );
+            });
+        }
+
+        const limit = params.limit ?? 30;
+
+        const linkHeader = res.headers.get("Link");
+        const hasNextPage = linkHeader?.includes('rel="next"') ?? false;
+
+        const page = params.page ?? 1;
+        const totalCount = parseTotalCountFromLinkHeader(
+            linkHeader,
+            limit,
+            items.length,
+            page,
+        );
+
+        return { items, totalCount, hasNextPage };
+    },
+);
+
+export const getIssue = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        issueNumber: number,
+    ) => {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/${issueNumber}`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) return null;
+        return res.json() as Promise<CodebergIssue>;
+    },
+);
+
+export const searchIssues = cache(
+    async (accessToken: string, owner: string, repo: string, query: string) => {
+        const searchParams = new URLSearchParams();
+        searchParams.set("type", "issues");
+        searchParams.set("limit", "5");
+        if (query) searchParams.set("q", query);
+
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?${searchParams}`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) return [];
+        const items = (await res.json()) as CodebergIssue[];
+        return items
+            .filter((issue) => !issue.pull_request)
+            .map((issue) => ({
+                number: issue.number,
+                title: issue.title,
+                state: issue.state,
+                type: "issue" as const,
+                user: issue.user ? { login: issue.user.login } : null,
+            }));
+    },
+);

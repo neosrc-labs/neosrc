@@ -33,7 +33,7 @@ import {
 import { SortDropdown } from "~/app/[owner]/[repo]/_components/search/sort-dropdown";
 import { Pagination } from "~/components/ui/pagination";
 import { cn } from "~/lib/utils";
-import type { GqlIssueSearchItem } from "~/server/github-graphql";
+import type { IssueSearchItem } from "~/server/api/routers/issues/types";
 import { api } from "~/trpc/react";
 import type { IssueRowData } from "./issue-row";
 import { IssueRow } from "./issue-row";
@@ -63,8 +63,8 @@ const ISSUE_AUTOCOMPLETE_OPTIONS: Record<
     ],
 };
 
-function normalizeSearchItem(item: GqlIssueSearchItem): IssueRowData {
-    const assigneeNode = item.assignees.nodes[0];
+function normalizeSearchItem(item: IssueSearchItem): IssueRowData {
+    const assigneeNode = item.assignees[0];
     return {
         number: item.number,
         title: item.title,
@@ -81,22 +81,24 @@ function normalizeSearchItem(item: GqlIssueSearchItem): IssueRowData {
                   avatar_url: assigneeNode.avatarUrl,
               }
             : null,
-        labels: item.labels.nodes.map((l) => ({
+        labels: item.labels.map((l) => ({
             name: l.name,
             color: l.color,
             description: l.description,
         })),
         created_at: item.createdAt,
         closed_at: item.closedAt,
-        comments_count: item.comments.totalCount,
+        comments_count: item.comments,
     };
 }
 
 export function IssueList({
+    provider = "gh",
     owner,
     repo,
     defaultState,
 }: {
+    provider?: "gh" | "cb";
     owner: string;
     repo: string;
     defaultState: FilterState;
@@ -151,6 +153,7 @@ export function IssueList({
 
     const { data, isLoading } = api.issues.search.useQuery(
         {
+            provider,
             owner,
             repo,
             query: apiQuery,
@@ -190,6 +193,7 @@ export function IssueList({
 
                 try {
                     const result = await utils.issues.search.fetch({
+                        provider,
                         owner,
                         repo,
                         query: apiQuery,
@@ -229,6 +233,7 @@ export function IssueList({
     }, [
         currentPage,
         apiQuery,
+        provider,
         owner,
         repo,
         currentSort,
@@ -251,9 +256,11 @@ export function IssueList({
                 else params.set(key, value);
             }
             window.scrollTo({ top: 0, behavior: "smooth" });
-            router.push(`/${owner}/${repo}/issues?${params.toString()}`);
+            router.push(
+                `/${provider}/${owner}/${repo}/issues?${params.toString()}`,
+            );
         },
-        [owner, repo, router, searchParams],
+        [provider, owner, repo, router, searchParams],
     );
 
     const [searchInput, setSearchInput] = useState(searchQuery);
@@ -302,14 +309,18 @@ export function IssueList({
                 else params.delete("q");
             }
             params.delete("page");
-            router.push(`/${owner}/${repo}/issues?${params.toString()}`);
+            router.push(
+                `/${provider}/${owner}/${repo}/issues?${params.toString()}`,
+            );
         } else {
             if (searchInput) params.set("q", searchInput);
             else params.delete("q");
             params.delete("page");
-            router.push(`/${owner}/${repo}/issues?${params.toString()}`);
+            router.push(
+                `/${provider}/${owner}/${repo}/issues?${params.toString()}`,
+            );
         }
-    }, [searchInput, searchParams, router, owner, repo]);
+    }, [provider, searchInput, searchParams, router, owner, repo]);
 
     const handleRemoveQualifier = useCallback(
         (key: string, value: string) => {
@@ -477,7 +488,7 @@ export function IssueList({
                                 ref={autocompleteRef}
                                 owner={owner}
                                 repo={repo}
-                                provider="gh"
+                                provider={provider}
                                 match={autocompleteMatch}
                                 query={autocompleteMatch.value}
                                 staticOptions={ISSUE_AUTOCOMPLETE_OPTIONS}
@@ -510,7 +521,7 @@ export function IssueList({
                     </div>
 
                     <a
-                        href={`https://github.com/${owner}/${repo}/labels`}
+                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/labels`}
                         className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
                     >
                         <Tag className="size-4" />
@@ -518,7 +529,7 @@ export function IssueList({
                     </a>
 
                     <a
-                        href={`https://github.com/${owner}/${repo}/milestones`}
+                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/milestones`}
                         className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
                     >
                         <Milestone className="size-4" />
@@ -527,7 +538,7 @@ export function IssueList({
 
                     {/* TODO: Support /issues/new/choose for repos with issue templates */}
                     <a
-                        href={`https://github.com/${owner}/${repo}/issues/new`}
+                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues/new`}
                         className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-green-600 bg-green-600 px-2.5 py-1.5 font-medium text-sm text-white transition-colors hover:bg-green-700 dark:border-green-500 dark:bg-green-600 dark:hover:bg-green-700"
                     >
                         <Plus className="size-4" />
@@ -565,6 +576,7 @@ export function IssueList({
                     </div>
                     <div className="flex items-center gap-2">
                         <AuthorDropdown
+                            provider={provider}
                             owner={owner}
                             repo={repo}
                             currentQuery={searchQuery}
@@ -585,6 +597,7 @@ export function IssueList({
                         />
 
                         <LabelDropdown
+                            provider={provider}
                             owner={owner}
                             repo={repo}
                             currentQuery={searchQuery}
@@ -604,6 +617,7 @@ export function IssueList({
                         />
 
                         <MilestoneDropdown
+                            provider={provider}
                             owner={owner}
                             repo={repo}
                             currentQuery={searchQuery}
@@ -624,6 +638,7 @@ export function IssueList({
                         />
 
                         <AssigneeDropdown
+                            provider={provider}
                             owner={owner}
                             repo={repo}
                             currentQuery={searchQuery}
@@ -730,6 +745,7 @@ export function IssueList({
                             <IssueRow
                                 key={issue.number}
                                 issue={issue}
+                                provider={provider}
                                 owner={owner}
                                 repo={repo}
                                 onLabelFilter={(name) => {

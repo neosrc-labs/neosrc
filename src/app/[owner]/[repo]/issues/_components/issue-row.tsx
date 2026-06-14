@@ -22,6 +22,7 @@ export interface IssueRowData {
 
 export function IssueRow({
     issue,
+    provider = "gh",
     owner,
     repo,
     onAssigneesFilter,
@@ -29,6 +30,7 @@ export function IssueRow({
     onLabelFilter,
 }: {
     issue: IssueRowData;
+    provider?: "gh" | "cb";
     owner: string;
     repo: string;
     onAssigneesFilter?: (login: string) => void;
@@ -47,7 +49,7 @@ export function IssueRow({
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                     <a
-                        href={`https://github.com/${owner}/${repo}/issues/${issue.number}`}
+                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues/${issue.number}`}
                         className="font-medium text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-400"
                     >
                         {issue.title}
@@ -120,7 +122,7 @@ export function IssueRow({
             <div className="flex w-16 shrink-0 items-center justify-end">
                 {issue.comments_count > 0 ? (
                     <a
-                        href={`https://github.com/${owner}/${repo}/issues/${issue.number}`}
+                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues/${issue.number}`}
                         className="flex items-center gap-1 text-gray-500 text-sm hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
                     >
                         <MessageSquare className="size-4" />
