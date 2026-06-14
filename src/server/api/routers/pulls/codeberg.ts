@@ -1,5 +1,6 @@
 import { getCodebergToken } from "~/server/auth";
 import {
+    type CodebergPrListParams,
     type CodebergPullRequest,
     type CodebergPullRequestSort,
     listPullRequests,
@@ -23,6 +24,17 @@ export class CodebergPullRequestProvider implements PullRequestProvider {
             | "closed"
             | "merged";
 
+        const authorMatch = params.query.match(/author:(\S+)/);
+        const authorQualifier = authorMatch?.[1];
+
+        const labelRegex = /label:\s*("[^"]*"|\S+)/g;
+        const labelQualifiers: string[] = [];
+        const allLabelMatches = params.query.matchAll(labelRegex);
+        for (const m of allLabelMatches) {
+            const name = (m[1] ?? "").replace(/^"|"$/g, "");
+            if (name) labelQualifiers.push(name);
+        }
+
         const sortMap: Record<string, string | undefined> = {
             "created-desc": "newest",
             "created-asc": "oldest",
@@ -40,13 +52,21 @@ export class CodebergPullRequestProvider implements PullRequestProvider {
         const page = params.page ?? 1;
         const limit = params.first ?? 30;
 
+        const prParams: CodebergPrListParams = {
+            state: codebergState(activeState),
+            sort: cbSort as CodebergPullRequestSort,
+            page,
+            limit,
+        };
+        if (authorQualifier) {
+            prParams.author = authorQualifier;
+        }
+        if (labelQualifiers.length > 0) {
+            prParams.labels = labelQualifiers;
+        }
+
         const [result, openCount, closedCount] = await Promise.all([
-            listPullRequests(accessToken, params.owner, params.repo, {
-                state: codebergState(activeState),
-                sort: cbSort as CodebergPullRequestSort,
-                page,
-                limit,
-            }),
+            listPullRequests(accessToken, params.owner, params.repo, prParams),
             listPullRequests(accessToken, params.owner, params.repo, {
                 state: "open",
                 sort: cbSort as CodebergPullRequestSort,

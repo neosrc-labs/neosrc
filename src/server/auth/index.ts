@@ -119,6 +119,8 @@ export const auth = betterAuth({
                         "read:user",
                         "read:repository",
                         "write:repository",
+                        "read:issue",
+                        "write:issue",
                     ],
                     overrideUserInfo: true,
                     getUserInfo: async (tokens) => {

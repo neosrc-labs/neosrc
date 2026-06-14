@@ -65,7 +65,7 @@ export type CodebergPullRequestSort =
     | "mostcomment"
     | "leastcomment";
 
-type CodebergPrListParams = {
+export type CodebergPrListParams = {
     state?: "open" | "closed" | "all";
     sort?:
         | "oldest"
@@ -76,6 +76,8 @@ type CodebergPrListParams = {
         | "leastcomment";
     page?: number;
     limit?: number;
+    author?: string;
+    labels?: string[];
 };
 
 function parseTotalCountFromLinkHeader(
@@ -126,7 +128,27 @@ export const listPullRequests = cache(
         });
         if (!res.ok) return { items: [], totalCount: 0 };
 
-        const items = (await res.json()) as CodebergPullRequest[];
+        let items = (await res.json()) as CodebergPullRequest[];
+
+        if (params.author) {
+            items = items.filter(
+                (pr) =>
+                    pr.user?.login.toLowerCase() ===
+                    params.author?.toLowerCase(),
+            );
+        }
+
+        if (params.labels && params.labels.length > 0) {
+            items = items.filter((pr) => {
+                const prLabelNames = (pr.labels ?? []).map((l) =>
+                    l.name.toLowerCase(),
+                );
+                return params.labels?.every((label) =>
+                    prLabelNames.includes(label.toLowerCase()),
+                );
+            });
+        }
+
         const limit = params.limit ?? 30;
 
         const linkHeader = res.headers.get("Link");
@@ -162,21 +184,23 @@ export type CodebergLabel = {
     description: string | null;
 };
 
-export const listLabels = cache(
-    async (accessToken: string, owner: string, repo: string) => {
-        const res = await fetch(
-            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/labels`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
+export const listLabels = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+) => {
+    const res = await fetch(
+        `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/labels`,
+        {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
             },
-        );
-        if (!res.ok) return [];
-        return res.json() as Promise<CodebergLabel[]>;
-    },
-);
+        },
+    );
+    if (!res.ok) return [];
+    return res.json() as Promise<CodebergLabel[]>;
+};
 
 export type CodebergMilestone = {
     id: number;
