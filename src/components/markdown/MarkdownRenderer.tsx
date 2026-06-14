@@ -2,8 +2,10 @@
 
 import { useTheme } from "next-themes";
 import {
+    Children,
     type CSSProperties,
     createContext,
+    isValidElement,
     type ReactNode,
     useContext,
     useEffect,
@@ -310,6 +312,49 @@ export function MarkdownRenderer({
                             alt={props.alt ?? ""}
                         />
                     );
+                },
+                ul({ children, className, style, ...props }) {
+                    const items = Children.toArray(children);
+                    const isTaskList = items.some((child) => {
+                        if (!isValidElement<{ children?: ReactNode }>(child))
+                            return false;
+                        const liChildren = Children.toArray(
+                            child.props.children,
+                        );
+                        return liChildren.some(
+                            (c) =>
+                                isValidElement<{ type?: string }>(c) &&
+                                c.props.type === "checkbox",
+                        );
+                    });
+                    return (
+                        <ul
+                            style={
+                                isTaskList
+                                    ? { ...style, paddingLeft: 0 }
+                                    : style
+                            }
+                            className={className}
+                            {...props}
+                        >
+                            {children}
+                        </ul>
+                    );
+                },
+                li({ children, className, ...props }) {
+                    const childrenArray = Children.toArray(children);
+                    const firstChild = childrenArray[0];
+                    const isTaskItem =
+                        isValidElement<{ type?: string }>(firstChild) &&
+                        firstChild.props.type === "checkbox";
+                    if (isTaskItem) {
+                        return (
+                            <li className="list-none" {...props}>
+                                {children}
+                            </li>
+                        );
+                    }
+                    return <li className={className}>{children}</li>;
                 },
                 summary({ children, ...props }) {
                     return (
