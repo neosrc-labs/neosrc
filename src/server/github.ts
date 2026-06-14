@@ -180,14 +180,14 @@ export const updatePullRequest = async (
     owner: string,
     repo: string,
     pullNumber: number,
-    body: string,
+    options: { body?: string; title?: string },
 ) => {
     const octokit = createOctokit(accessToken);
     const response = await octokit.pulls.update({
         owner,
         repo,
         pull_number: pullNumber,
-        body,
+        ...options,
     });
     return response.data;
 };

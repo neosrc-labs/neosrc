@@ -60,7 +60,7 @@ export const pullsRouter = createTRPCRouter({
                 input.owner,
                 input.repo,
                 input.number,
-                input.body,
+                { body: input.body },
             );
 
             await deleteCache(
@@ -68,6 +68,36 @@ export const pullsRouter = createTRPCRouter({
             );
 
             return { success: true as const, body: result.body };
+        }),
+
+    updateTitle: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+                title: z.string(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            const result = await updatePullRequest(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+                { title: input.title },
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
+            return { success: true as const, title: result.title };
         }),
 
     addComment: protectedProcedure
