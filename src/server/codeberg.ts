@@ -251,6 +251,83 @@ export const getUserByUsername = cache(
     },
 );
 
+export type CodebergRepo = {
+    id: number;
+    owner: { login: string; avatar_url: string };
+    name: string;
+    full_name: string;
+    private: boolean;
+    has_issues: boolean;
+    has_wiki: boolean;
+    has_projects: boolean;
+    permissions: { admin: boolean; push: boolean; pull: boolean };
+};
+
+export const getRepo = cache(
+    async (accessToken: string, owner: string, repo: string) => {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) return null;
+        return res.json() as Promise<CodebergRepo>;
+    },
+);
+
+export const getRepoCounts = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+    ): Promise<{ openIssuesCount: number; openPullRequestsCount: number }> => {
+        const [issues, pulls] = await Promise.all([
+            fetch(
+                `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?state=open&limit=1&type=issues`,
+                {
+                    headers: {
+                        Authorization: `token ${accessToken}`,
+                        Accept: "application/json",
+                    },
+                },
+            ),
+            fetch(
+                `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/pulls?state=open&limit=1`,
+                {
+                    headers: {
+                        Authorization: `token ${accessToken}`,
+                        Accept: "application/json",
+                    },
+                },
+            ),
+        ]);
+
+        const parseCount = async (res: Response): Promise<number> => {
+            if (!res.ok) return 0;
+            const items = (await res.json()) as unknown[];
+            const linkHeader = res.headers.get("Link");
+            const limit = 1;
+            return parseTotalCountFromLinkHeader(
+                linkHeader,
+                limit,
+                items.length,
+                1,
+            );
+        };
+
+        const [openIssuesCount, openPullRequestsCount] = await Promise.all([
+            parseCount(issues),
+            parseCount(pulls),
+        ]);
+
+        return { openIssuesCount, openPullRequestsCount };
+    },
+);
+
 export const listRecentIssueAuthors = cache(
     async (accessToken: string, owner: string, repo: string) => {
         const res = await fetch(

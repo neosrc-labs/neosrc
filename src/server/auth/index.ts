@@ -238,8 +238,37 @@ export const getGitHubToken = async (database: typeof db, userId: string) => {
     return decrypt(account.accessToken);
 };
 
+export const getAccountByProvider = cache(async (providerId: string) => {
+    const uid = await getUserId();
+    if (!uid) return null;
+
+    const [account] = await db
+        .select()
+        .from(betterAuthAccount)
+        .where(
+            and(
+                eq(betterAuthAccount.userId, uid),
+                eq(betterAuthAccount.providerId, providerId),
+            ),
+        )
+        .limit(1);
+
+    if (!account) return null;
+
+    return {
+        ...account,
+        accessToken: account.accessToken
+            ? decrypt(account.accessToken)
+            : account.accessToken,
+        refreshToken: account.refreshToken
+            ? decrypt(account.refreshToken)
+            : account.refreshToken,
+        idToken: account.idToken ? decrypt(account.idToken) : account.idToken,
+    };
+});
+
 export const githubAccessToken = cache(async () => {
-    const account = await getAccount();
+    const account = await getAccountByProvider("github");
 
     if (!account) return null;
 
@@ -290,7 +319,7 @@ export const getCodebergToken = async (database: typeof db, userId: string) => {
 };
 
 export const codebergAccessToken = cache(async () => {
-    const account = await getAccount();
+    const account = await getAccountByProvider("codeberg");
 
     if (!account) return null;
 
