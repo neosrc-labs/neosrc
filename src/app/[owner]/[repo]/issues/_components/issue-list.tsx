@@ -1,67 +1,27 @@
 "use client";
 
-import {
-    Circle,
-    CircleCheck,
-    GitPullRequest,
-    Milestone,
-    Plus,
-    Search,
-    Tag,
-    X,
-} from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AssigneeDropdown } from "~/app/[owner]/[repo]/_components/search/assignee-dropdown";
-import { AuthorDropdown } from "~/app/[owner]/[repo]/_components/search/author-dropdown";
-import { LabelDropdown } from "~/app/[owner]/[repo]/_components/search/label-dropdown";
-import { MilestoneDropdown } from "~/app/[owner]/[repo]/_components/search/milestone-dropdown";
-import {
-    detectQualifier,
-    replaceQualifierValue,
-    SearchAutocomplete,
-} from "~/app/[owner]/[repo]/_components/search/search-autocomplete";
+import { useMemo } from "react";
 import {
     addQualifier,
-    formatQuery,
     hasQualifier,
-    parseQuery,
     removeQualifier,
     replaceQualifier,
-    splitQuery,
 } from "~/app/[owner]/[repo]/_components/search/search-utils";
-import { SortDropdown } from "~/app/[owner]/[repo]/_components/search/sort-dropdown";
+import { useSearchList } from "~/app/[owner]/[repo]/_components/use-search-list";
 import { Pagination } from "~/components/ui/pagination";
-import { cn } from "~/lib/utils";
 import type { IssueSearchItem } from "~/server/api/routers/issues/types";
 import { api } from "~/trpc/react";
+import { IssueEmptyState } from "./issue-empty-state";
+import {
+    buildIssueConfig,
+    ISSUE_AUTOCOMPLETE_OPTIONS,
+    ISSUE_QUALIFIERS,
+} from "./issue-list-config";
 import type { IssueRowData } from "./issue-row";
 import { IssueRow } from "./issue-row";
-
-type FilterState = "open" | "closed";
-
-const TABS: { key: FilterState; label: string }[] = [
-    { key: "open", label: "Open" },
-    { key: "closed", label: "Closed" },
-];
-
-const ISSUE_QUALIFIERS = ["author", "label", "assignee", "sort", "is"];
-
-const ISSUE_AUTOCOMPLETE_OPTIONS: Record<
-    string,
-    { label: string; subtitle?: string }[]
-> = {
-    sort: [
-        { label: "created-desc", subtitle: "Newest" },
-        { label: "created-asc", subtitle: "Oldest" },
-        { label: "updated-desc", subtitle: "Recently updated" },
-        { label: "comments-desc", subtitle: "Most commented" },
-    ],
-    is: [
-        { label: "open", subtitle: "Open issues" },
-        { label: "closed", subtitle: "Closed issues" },
-    ],
-};
+import { IssueSearchBar } from "./issue-search-bar";
+import { IssueSkeleton } from "./issue-skeleton";
+import { IssueToolbar } from "./issue-toolbar";
 
 function normalizeSearchItem(item: IssueSearchItem): IssueRowData {
     const assigneeNode = item.assignees[0];
@@ -101,573 +61,67 @@ export function IssueList({
     provider?: "gh" | "cb";
     owner: string;
     repo: string;
-    defaultState: FilterState;
+    defaultState: "open" | "closed";
 }) {
-    const searchParams = useSearchParams();
-    const router = useRouter();
-
-    const activeTab: FilterState =
-        (searchParams.get("state") as FilterState) ?? defaultState;
-    const currentPage = parseInt(searchParams.get("page") ?? "1", 10);
-    const searchQuery = searchParams.get("q") ?? "";
-    const currentSort = (searchParams.get("sort") ?? "created") as
-        | "created"
-        | "updated"
-        | "comments";
-    const currentOrder = (searchParams.get("order") ?? "desc") as
-        | "asc"
-        | "desc";
-
-    const [pageCursors, setPageCursors] = useState<Record<number, string>>({});
-    const pageCursorsRef = useRef(pageCursors);
-    pageCursorsRef.current = pageCursors;
-    const [isResolving, setIsResolving] = useState(false);
-    const prevQueryKey = useRef<string | undefined>(undefined);
     const utils = api.useUtils();
+    const config = buildIssueConfig(provider, owner, repo);
 
-    const queryKey = `${activeTab}:${searchQuery}:${currentSort}:${currentOrder}`;
-    if (
-        prevQueryKey.current !== undefined &&
-        prevQueryKey.current !== queryKey
-    ) {
-        setPageCursors({});
-    }
-    prevQueryKey.current = queryKey;
-
-    const stateQualifier = `is:${activeTab}`;
-    let cleanedQuery = searchQuery;
-    if (cleanedQuery) {
-        const parsed = parseQuery(cleanedQuery);
-        parsed.qualifiers = parsed.qualifiers.filter(
-            (q) => q.key !== "sort" && q.key !== "is",
-        );
-        cleanedQuery = formatQuery(parsed);
-    }
-    const apiQuery = cleanedQuery
-        ? `${stateQualifier} ${cleanedQuery}`
-        : stateQualifier;
-
-    const after =
-        currentPage > 1 ? (pageCursors[currentPage - 1] ?? null) : null;
-    const first = 30;
-
-    const { data, isLoading } = api.issues.search.useQuery(
+    const list = useSearchList(
         {
-            provider,
+            ...config,
             owner,
             repo,
-            query: apiQuery,
-            page: currentPage,
-            after: after ?? undefined,
-            first,
-            sort: currentSort,
-            order: currentOrder,
+            defaultState,
         },
-        { enabled: !isResolving },
+        {
+            useSearchQuery: api.issues.search.useQuery,
+            searchFetch: (args) => utils.issues.search.fetch(args),
+        },
     );
-
-    const showLoading = isLoading || isResolving;
-
-    useEffect(() => {
-        const cursor = data?.endCursor;
-        if (cursor) {
-            setPageCursors((prev) => ({
-                ...prev,
-                [currentPage]: cursor,
-            }));
-        }
-    }, [data?.endCursor, currentPage]);
-
-    useEffect(() => {
-        if (currentPage <= 1) return;
-        if (pageCursorsRef.current[currentPage - 1]) return;
-
-        let cancelled = false;
-
-        async function resolveCursors() {
-            setIsResolving(true);
-            let cursor: string | null = null;
-
-            for (let page = 1; page < currentPage; page++) {
-                if (cancelled) return;
-
-                try {
-                    const result = await utils.issues.search.fetch({
-                        provider,
-                        owner,
-                        repo,
-                        query: apiQuery,
-                        after: cursor ?? undefined,
-                        first: 30,
-                        sort: currentSort,
-                        order: currentOrder,
-                    });
-
-                    if (cancelled) return;
-
-                    const newCursor = result?.endCursor;
-                    if (newCursor) {
-                        setPageCursors((prev) => ({
-                            ...prev,
-                            [page]: newCursor,
-                        }));
-                    }
-                    cursor = newCursor ?? null;
-
-                    if (!result?.hasNextPage) break;
-                } catch {
-                    break;
-                }
-            }
-
-            if (!cancelled) {
-                setIsResolving(false);
-            }
-        }
-
-        resolveCursors();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [
-        currentPage,
-        apiQuery,
-        provider,
-        owner,
-        repo,
-        currentSort,
-        currentOrder,
-        utils.issues.search.fetch,
-    ]);
 
     const items = useMemo(
-        () => (data?.items ?? []).map(normalizeSearchItem),
-        [data],
+        () =>
+            ((list.data?.items ?? []) as IssueSearchItem[]).map(
+                normalizeSearchItem,
+            ),
+        [list.data],
     );
-    const stateCounts = data?.stateCounts;
-    const totalPages = Math.ceil((data?.totalCount ?? 0) / 30);
-
-    const navigate = useCallback(
-        (changes: Record<string, string | null>) => {
-            const params = new URLSearchParams(searchParams.toString());
-            for (const [key, value] of Object.entries(changes)) {
-                if (value === null) params.delete(key);
-                else params.set(key, value);
-            }
-            window.scrollTo({ top: 0, behavior: "smooth" });
-            router.push(
-                `/${provider}/${owner}/${repo}/issues?${params.toString()}`,
-            );
-        },
-        [provider, owner, repo, router, searchParams],
-    );
-
-    const [searchInput, setSearchInput] = useState(searchQuery);
-
-    useEffect(() => {
-        setSearchInput(searchQuery);
-    }, [searchQuery]);
-
-    const setTab = useCallback(
-        (tab: FilterState) => {
-            const parsed = parseQuery(searchInput);
-            parsed.qualifiers = parsed.qualifiers.filter((q) => q.key !== "is");
-            if (tab !== "open") {
-                parsed.qualifiers.push({ key: "is", value: tab });
-            }
-            const newQuery = formatQuery(parsed);
-            const withSpace = newQuery ? `${newQuery} ` : newQuery;
-            setSearchInput(withSpace);
-            navigate({
-                state: tab === "open" ? null : tab,
-                q: withSpace || null,
-                page: null,
-            });
-        },
-        [navigate, searchInput],
-    );
-
-    const handleSearch = useCallback(() => {
-        const parsed = parseQuery(searchInput);
-        const isQualifier = parsed.qualifiers.find((q) => q.key === "is");
-        const params = new URLSearchParams(searchParams.toString());
-        if (isQualifier) {
-            const tab = isQualifier.value as FilterState;
-            if (tab === "open") {
-                params.delete("state");
-                parsed.qualifiers = parsed.qualifiers.filter(
-                    (q) => q.key !== "is",
-                );
-                const newQuery = formatQuery(parsed);
-                if (newQuery) params.set("q", newQuery);
-                else params.delete("q");
-                setSearchInput(newQuery);
-            } else {
-                params.set("state", tab);
-                if (searchInput) params.set("q", searchInput);
-                else params.delete("q");
-            }
-            params.delete("page");
-            router.push(
-                `/${provider}/${owner}/${repo}/issues?${params.toString()}`,
-            );
-        } else {
-            if (searchInput) params.set("q", searchInput);
-            else params.delete("q");
-            params.delete("page");
-            router.push(
-                `/${provider}/${owner}/${repo}/issues?${params.toString()}`,
-            );
-        }
-    }, [provider, searchInput, searchParams, router, owner, repo]);
-
-    const handleRemoveQualifier = useCallback(
-        (key: string, value: string) => {
-            const newQuery = removeQualifier(searchQuery, key, value);
-            setSearchInput(newQuery);
-            navigate({ q: newQuery || null, page: null });
-        },
-        [navigate, searchQuery],
-    );
-
-    const handleAddQualifier = useCallback(
-        (key: string, value: string) => {
-            const newQuery = addQualifier(searchQuery, key, value);
-            setSearchInput(newQuery);
-            navigate({ q: newQuery || null, page: null });
-        },
-        [navigate, searchQuery],
-    );
-
-    const inputRef = useRef<HTMLInputElement>(null);
-    const searchBarRef = useRef<HTMLDivElement>(null);
-    const autocompleteRef = useRef<{
-        handleKeyDown: (e: React.KeyboardEvent) => boolean;
-    }>(null);
-    const [cursorPos, setCursorPos] = useState(0);
-    const autocompleteMatch = detectQualifier(
-        searchInput,
-        cursorPos,
-        ISSUE_QUALIFIERS,
-    );
-
-    useEffect(() => {
-        if (!autocompleteMatch) return;
-        const handler = (e: MouseEvent) => {
-            if (
-                searchBarRef.current &&
-                !searchBarRef.current.contains(e.target as Node)
-            ) {
-                setCursorPos(0);
-            }
-        };
-        requestAnimationFrame(() => {
-            document.addEventListener("mousedown", handler);
-        });
-        return () => document.removeEventListener("mousedown", handler);
-    }, [autocompleteMatch]);
-
-    const handleAutocompleteSelect = useCallback(
-        (key: string, value: string) => {
-            if (key === "is") {
-                const tab = value as FilterState;
-                const parsed = parseQuery(searchInput);
-                parsed.qualifiers = parsed.qualifiers.filter(
-                    (q) => q.key !== "is",
-                );
-                if (tab !== "open") {
-                    parsed.qualifiers.push({ key: "is", value: tab });
-                }
-                const newQuery = formatQuery(parsed);
-                const withSpace = newQuery ? `${newQuery} ` : newQuery;
-                setSearchInput(withSpace);
-                setCursorPos(withSpace ? withSpace.length : 0);
-                navigate({
-                    state: tab === "open" ? null : tab,
-                    q: withSpace || null,
-                    page: null,
-                });
-                return;
-            }
-            const newQuery = replaceQualifierValue(
-                searchInput,
-                cursorPos,
-                key,
-                value,
-            );
-            setSearchInput(newQuery);
-            setCursorPos(0);
-            if (key === "sort") {
-                const [sort, order] = value.split("-") as [
-                    "created" | "updated" | "comments",
-                    "asc" | "desc",
-                ];
-                navigate({ q: newQuery || null, sort, order, page: null });
-            } else {
-                navigate({ q: newQuery || null, page: null });
-            }
-        },
-        [searchInput, cursorPos, navigate],
-    );
-
-    const handleAutocompleteClose = useCallback(() => {
-        setCursorPos(0);
-    }, []);
 
     return (
         <div>
-            <div className="border-gray-200 border-b dark:border-zinc-800">
-                <div className="flex items-center gap-1 px-4 py-2">
-                    <div
-                        ref={searchBarRef}
-                        className="relative flex flex-1 items-center"
-                    >
-                        <div
-                            className="pointer-events-none absolute inset-0 flex items-center px-3 py-1.5 text-sm"
-                            aria-hidden="true"
-                        >
-                            {searchInput ? (
-                                <span className="whitespace-nowrap">
-                                    {splitQuery(searchInput).map((seg, i) => {
-                                        const key = `${seg.text}-${seg.isQualifier ? "q" : "t"}-${i}`;
-                                        return seg.isQualifier ? (
-                                            <span
-                                                key={key}
-                                                className="rounded bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300"
-                                            >
-                                                {seg.text}
-                                            </span>
-                                        ) : (
-                                            <span
-                                                key={key}
-                                                className="text-gray-900 dark:text-gray-100"
-                                            >
-                                                {seg.text}
-                                            </span>
-                                        );
-                                    })}
-                                </span>
-                            ) : null}
-                        </div>
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            value={searchInput}
-                            onChange={(e) => {
-                                setSearchInput(e.target.value);
-                                setCursorPos(e.target.selectionStart ?? 0);
-                            }}
-                            onKeyDown={(e) => {
-                                if (
-                                    autocompleteMatch &&
-                                    autocompleteRef.current?.handleKeyDown(e)
-                                ) {
-                                    return;
-                                }
-                                if (e.key === "Enter" && !e.defaultPrevented) {
-                                    e.preventDefault();
-                                    handleSearch();
-                                }
-                            }}
-                            onClick={(e) => {
-                                setCursorPos(
-                                    e.currentTarget.selectionStart ?? 0,
-                                );
-                            }}
-                            onSelect={(e) => {
-                                setCursorPos(
-                                    e.currentTarget.selectionStart ?? 0,
-                                );
-                            }}
-                            placeholder="Search issues by title, body, or comments"
-                            className="relative w-full rounded-md border border-gray-300 bg-transparent px-3 py-1.5 pr-12 text-sm text-transparent placeholder-gray-500 caret-gray-900 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:placeholder-gray-500 dark:caret-gray-100 dark:focus:border-blue-400 dark:focus:ring-blue-400"
-                        />
-                        {autocompleteMatch && (
-                            <SearchAutocomplete
-                                ref={autocompleteRef}
-                                owner={owner}
-                                repo={repo}
-                                provider={provider}
-                                match={autocompleteMatch}
-                                query={autocompleteMatch.value}
-                                staticOptions={ISSUE_AUTOCOMPLETE_OPTIONS}
-                                onSelect={handleAutocompleteSelect}
-                                onClose={handleAutocompleteClose}
-                            />
-                        )}
-                        <div className="absolute right-2 flex items-center gap-0.5">
-                            {searchInput && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setSearchInput("");
-                                        navigate({ q: null, page: null });
-                                    }}
-                                    className="flex size-4 cursor-pointer items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                >
-                                    <X className="size-3" />
-                                </button>
-                            )}
-                            <button
-                                type="button"
-                                aria-label="Search"
-                                onClick={handleSearch}
-                                className="flex size-6 cursor-pointer items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
-                            >
-                                <Search className="size-4" />
-                            </button>
-                        </div>
-                    </div>
+            <IssueSearchBar
+                searchInput={list.searchInput}
+                setSearchInput={list.setSearchInput}
+                cursorPos={list.cursorPos}
+                setCursorPos={list.setCursorPos}
+                inputRef={list.inputRef}
+                searchBarRef={list.searchBarRef}
+                autocompleteRef={list.autocompleteRef}
+                qualifiers={ISSUE_QUALIFIERS}
+                autocompleteOptions={ISSUE_AUTOCOMPLETE_OPTIONS}
+                provider={provider}
+                owner={owner}
+                repo={repo}
+                onSearch={list.handleSearch}
+                onClear={list.handleClearSearch}
+                onAutocompleteSelect={list.handleAutocompleteSelect}
+            />
 
-                    <a
-                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/labels`}
-                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
-                    >
-                        <Tag className="size-4" />
-                        Labels
-                    </a>
-
-                    <a
-                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/milestones`}
-                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
-                    >
-                        <Milestone className="size-4" />
-                        Milestones
-                    </a>
-
-                    {/* TODO: Support /issues/new/choose for repos with issue templates */}
-                    <a
-                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues/new`}
-                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-green-600 bg-green-600 px-2.5 py-1.5 font-medium text-sm text-white transition-colors hover:bg-green-700 dark:border-green-500 dark:bg-green-600 dark:hover:bg-green-700"
-                    >
-                        <Plus className="size-4" />
-                        New Issue
-                    </a>
-                </div>
-            </div>
-
-            <div className="border-gray-200 border-b dark:border-zinc-800">
-                <div className="flex items-center justify-between px-4">
-                    <div className="flex items-center">
-                        {TABS.map((tab) => {
-                            const count = stateCounts?.[tab.key];
-                            return (
-                                <button
-                                    key={tab.key}
-                                    type="button"
-                                    onClick={() => setTab(tab.key)}
-                                    className={cn(
-                                        "relative -mb-px cursor-pointer px-4 py-3 font-medium text-sm transition-colors",
-                                        activeTab === tab.key
-                                            ? "border-blue-500 border-b-2 text-gray-900 dark:text-gray-100"
-                                            : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100",
-                                    )}
-                                >
-                                    {tab.label}
-                                    {count !== undefined && (
-                                        <span className="ml-1.5 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs tabular-nums dark:bg-zinc-700">
-                                            {count.toLocaleString()}
-                                        </span>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <AuthorDropdown
-                            provider={provider}
-                            owner={owner}
-                            repo={repo}
-                            currentQuery={searchQuery}
-                            onToggle={(key: string, value: string) => {
-                                const newQuery = hasQualifier(
-                                    searchQuery,
-                                    key,
-                                    value,
-                                )
-                                    ? removeQualifier(searchQuery, key, value)
-                                    : replaceQualifier(searchQuery, key, value);
-                                setSearchInput(newQuery);
-                                navigate({
-                                    q: newQuery || null,
-                                    page: null,
-                                });
-                            }}
-                        />
-
-                        <LabelDropdown
-                            provider={provider}
-                            owner={owner}
-                            repo={repo}
-                            currentQuery={searchQuery}
-                            onToggle={(labelName: string) => {
-                                if (
-                                    hasQualifier(
-                                        searchQuery,
-                                        "label",
-                                        labelName,
-                                    )
-                                ) {
-                                    handleRemoveQualifier("label", labelName);
-                                } else {
-                                    handleAddQualifier("label", labelName);
-                                }
-                            }}
-                        />
-
-                        <MilestoneDropdown
-                            provider={provider}
-                            owner={owner}
-                            repo={repo}
-                            currentQuery={searchQuery}
-                            onToggle={(milestone: string) => {
-                                const quoted = `"${milestone}"`;
-                                if (
-                                    hasQualifier(
-                                        searchQuery,
-                                        "milestone",
-                                        quoted,
-                                    )
-                                ) {
-                                    handleRemoveQualifier("milestone", quoted);
-                                } else {
-                                    handleAddQualifier("milestone", quoted);
-                                }
-                            }}
-                        />
-
-                        <AssigneeDropdown
-                            provider={provider}
-                            owner={owner}
-                            repo={repo}
-                            currentQuery={searchQuery}
-                            onToggle={(key: string, value: string) => {
-                                const newQuery = hasQualifier(
-                                    searchQuery,
-                                    key,
-                                    value,
-                                )
-                                    ? removeQualifier(searchQuery, key, value)
-                                    : replaceQualifier(searchQuery, key, value);
-                                setSearchInput(newQuery);
-                                navigate({
-                                    q: newQuery || null,
-                                    page: null,
-                                });
-                            }}
-                        />
-
-                        <SortDropdown
-                            currentSort={currentSort}
-                            currentOrder={currentOrder}
-                            onSelect={(sort, order) =>
-                                navigate({ sort, order, page: null })
-                            }
-                        />
-                    </div>
-                </div>
-            </div>
+            <IssueToolbar
+                activeTab={list.activeTab}
+                searchQuery={list.searchQuery}
+                setSearchInput={list.setSearchInput}
+                currentSort={list.currentSort}
+                currentOrder={list.currentOrder}
+                provider={provider}
+                owner={owner}
+                repo={repo}
+                stateCounts={list.stateCounts}
+                onTabChange={list.setTab}
+                onNavigate={list.navigate}
+                onAddQualifier={list.handleAddQualifier}
+                onRemoveQualifier={list.handleRemoveQualifier}
+            />
 
             <div className="flex items-center gap-3 border-gray-200 border-b px-4 py-1.5 text-gray-400 text-xs dark:border-zinc-800 dark:text-gray-500">
                 <div className="size-4 shrink-0" />
@@ -679,66 +133,15 @@ export function IssueList({
                     <span>Comments</span>
                 </div>
             </div>
+
             <div>
-                {showLoading ? (
-                    <div className="space-y-0">
-                        {["sk1", "sk2", "sk3", "sk4", "sk5"].map((id) => (
-                            <div
-                                key={id}
-                                className="flex items-start gap-3 border-gray-200 border-b px-4 py-3 dark:border-zinc-800"
-                            >
-                                <div className="mt-0.5 size-4 shrink-0 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
-                                <div className="flex-1 space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
-                                        <div className="size-4 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <div className="h-3 w-32 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
-                                        <div className="h-3 w-20 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
-                                    </div>
-                                    <div className="flex flex-wrap gap-1">
-                                        <div className="h-5 w-12 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
-                                        <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
-                                    </div>
-                                </div>
-                                <div className="flex w-20 shrink-0 items-center justify-center">
-                                    <div className="size-5 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
-                                </div>
-                                <div className="flex w-16 shrink-0 items-center justify-end">
-                                    <div className="h-4 w-8 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                {list.showLoading ? (
+                    <IssueSkeleton />
                 ) : items.length === 0 ? (
-                    <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-                        {searchQuery ? (
-                            <>
-                                <GitPullRequest className="size-8 text-gray-400" />
-                                <p className="font-medium text-gray-900 dark:text-gray-100">
-                                    No issues match your search
-                                </p>
-                                <p className="text-gray-500 text-sm dark:text-gray-400">
-                                    Try a different search or clear filters
-                                </p>
-                            </>
-                        ) : activeTab === "open" ? (
-                            <>
-                                <CircleCheck className="size-8 text-gray-400" />
-                                <p className="font-medium text-gray-900 dark:text-gray-100">
-                                    No open issues
-                                </p>
-                            </>
-                        ) : (
-                            <>
-                                <Circle className="size-8 text-gray-400" />
-                                <p className="font-medium text-gray-900 dark:text-gray-100">
-                                    No closed issues
-                                </p>
-                            </>
-                        )}
-                    </div>
+                    <IssueEmptyState
+                        searchQuery={list.searchQuery}
+                        activeTab={list.activeTab}
+                    />
                 ) : (
                     <div>
                         {items.map((issue) => (
@@ -750,66 +153,66 @@ export function IssueList({
                                 repo={repo}
                                 onLabelFilter={(name) => {
                                     const newQuery = hasQualifier(
-                                        searchQuery,
+                                        list.searchQuery,
                                         "label",
                                         name,
                                     )
                                         ? removeQualifier(
-                                              searchQuery,
+                                              list.searchQuery,
                                               "label",
                                               name,
                                           )
                                         : addQualifier(
-                                              searchQuery,
+                                              list.searchQuery,
                                               "label",
                                               name,
                                           );
-                                    setSearchInput(newQuery);
-                                    navigate({
+                                    list.setSearchInput(newQuery);
+                                    list.navigate({
                                         q: newQuery || null,
                                         page: null,
                                     });
                                 }}
                                 onAuthorFilter={(login) => {
                                     const newQuery = hasQualifier(
-                                        searchQuery,
+                                        list.searchQuery,
                                         "author",
                                         login,
                                     )
                                         ? removeQualifier(
-                                              searchQuery,
+                                              list.searchQuery,
                                               "author",
                                               login,
                                           )
                                         : replaceQualifier(
-                                              searchQuery,
+                                              list.searchQuery,
                                               "author",
                                               login,
                                           );
-                                    setSearchInput(newQuery);
-                                    navigate({
+                                    list.setSearchInput(newQuery);
+                                    list.navigate({
                                         q: newQuery || null,
                                         page: null,
                                     });
                                 }}
                                 onAssigneesFilter={(login) => {
                                     const newQuery = hasQualifier(
-                                        searchQuery,
+                                        list.searchQuery,
                                         "assignee",
                                         login,
                                     )
                                         ? removeQualifier(
-                                              searchQuery,
+                                              list.searchQuery,
                                               "assignee",
                                               login,
                                           )
                                         : replaceQualifier(
-                                              searchQuery,
+                                              list.searchQuery,
                                               "assignee",
                                               login,
                                           );
-                                    setSearchInput(newQuery);
-                                    navigate({
+                                    list.setSearchInput(newQuery);
+                                    list.navigate({
                                         q: newQuery || null,
                                         page: null,
                                     });
@@ -820,11 +223,13 @@ export function IssueList({
                 )}
             </div>
 
-            {!showLoading && items.length > 0 && (
+            {!list.showLoading && items.length > 0 && (
                 <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={(page) => navigate({ page: String(page) })}
+                    currentPage={list.currentPage}
+                    totalPages={list.totalPages}
+                    onPageChange={(page) =>
+                        list.navigate({ page: String(page) })
+                    }
                 />
             )}
         </div>
