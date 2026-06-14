@@ -52,6 +52,20 @@ export function PullRequestDescriptionSection({
         },
     });
 
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [editTitle, setEditTitle] = useState("");
+    const [savedTitle, setSavedTitle] = useState<string | null>(null);
+    const updateTitleMutation = api.pulls.updateTitle.useMutation({
+        onMutate: () => {
+            setSavedTitle(editTitle);
+            setIsEditingTitle(false);
+        },
+        onError: () => {
+            setSavedTitle(null);
+            setIsEditingTitle(true);
+        },
+    });
+
     const { data: currentUserData } = api.users.currentUser.useQuery();
 
     const { data: reactionsData } = api.reactions.get.useQuery(
@@ -166,6 +180,20 @@ export function PullRequestDescriptionSection({
         updateMutation.mutate({ owner, repo, number, body: editBody });
     }, [editBody, owner, repo, number, updateMutation]);
 
+    const handleStartEditTitle = useCallback((currentTitle: string) => {
+        setEditTitle(currentTitle);
+        setIsEditingTitle(true);
+    }, []);
+
+    const handleCancelTitle = useCallback(() => {
+        setIsEditingTitle(false);
+        setEditTitle("");
+    }, []);
+
+    const handleSaveTitle = useCallback(() => {
+        updateTitleMutation.mutate({ owner, repo, number, title: editTitle });
+    }, [editTitle, owner, repo, number, updateTitleMutation]);
+
     return (
         <div>
             {/* PR Header */}
@@ -198,16 +226,80 @@ export function PullRequestDescriptionSection({
                         }
                         promise={pullRequestPromise}
                     >
-                        {(pullRequest) => (
-                            <>
-                                <h1 className="font-bold text-2xl text-gray-900 dark:text-zinc-100">
-                                    <CodeTitle>{pullRequest.title}</CodeTitle>
-                                </h1>
-                                <h1 className="text-2xl text-gray-400 dark:text-zinc-500">
-                                    #{number}
-                                </h1>
-                            </>
-                        )}
+                        {(pullRequest) => {
+                            const displayTitle =
+                                savedTitle ?? pullRequest.title;
+                            return (
+                                <div className="flex w-full items-center gap-2">
+                                    {isEditingTitle ? (
+                                        <>
+                                            <input
+                                                type="text"
+                                                value={editTitle}
+                                                onChange={(e) =>
+                                                    setEditTitle(e.target.value)
+                                                }
+                                                className="flex-1 border-blue-500 border-b-2 bg-transparent font-bold text-2xl text-gray-900 outline-none dark:text-zinc-100"
+                                                autoFocus
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter")
+                                                        handleSaveTitle();
+                                                    if (e.key === "Escape")
+                                                        handleCancelTitle();
+                                                }}
+                                            />
+                                            <button
+                                                className="cursor-pointer rounded bg-green-600 px-2 py-1 text-white text-xs hover:bg-green-700"
+                                                onClick={handleSaveTitle}
+                                                type="button"
+                                            >
+                                                Save
+                                            </button>
+                                            <button
+                                                className="cursor-pointer text-gray-400 text-xs hover:text-gray-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                                                onClick={handleCancelTitle}
+                                                type="button"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <h1 className="font-bold text-2xl text-gray-900 dark:text-zinc-100">
+                                                <CodeTitle>
+                                                    {displayTitle}
+                                                </CodeTitle>
+                                            </h1>
+                                            <h1 className="text-2xl text-gray-400 dark:text-zinc-500">
+                                                #{number}
+                                            </h1>
+                                            <Async
+                                                fallback={null}
+                                                promise={canInteractPromise}
+                                            >
+                                                {(canInteract) =>
+                                                    canInteract ? (
+                                                        <button
+                                                            className="cursor-pointer text-gray-400 hover:text-gray-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                                                            onClick={() =>
+                                                                handleStartEditTitle(
+                                                                    displayTitle,
+                                                                )
+                                                            }
+                                                            type="button"
+                                                        >
+                                                            <SquarePen
+                                                                size={16}
+                                                            />
+                                                        </button>
+                                                    ) : null
+                                                }
+                                            </Async>
+                                        </>
+                                    )}
+                                </div>
+                            );
+                        }}
                     </Async>
                 </div>
 
