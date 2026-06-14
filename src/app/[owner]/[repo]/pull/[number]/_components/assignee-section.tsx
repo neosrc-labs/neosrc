@@ -36,13 +36,14 @@ export function AssigneeSection({
     }, [pullRequestPromise]);
 
     const { data: repoAssignees } = api.pulls.listAssignees.useQuery({
+        provider: "gh",
         owner,
         repo,
     });
+    const assigneesData = (repoAssignees ?? []) as Assignee[];
     const addMutation = api.pulls.addAssignee.useMutation();
     const removeMutation = api.pulls.removeAssignee.useMutation();
 
-    const assigneesData = repoAssignees ?? [];
     const handleAdd = (assignee: Assignee) => {
         const repoAssignee = assigneesData.find(
             (a) => a.login === assignee.login,

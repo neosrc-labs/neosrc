@@ -125,6 +125,18 @@ export default async function Home() {
                                     type="submit"
                                     formAction={async () => {
                                         "use server";
+                                        const test = await fetch(
+                                            "https://codeberg.org/.well-known/openid-configuration",
+                                        )
+                                            .then((r) => r.json())
+                                            .catch((e) => ({
+                                                error: e.message,
+                                                cause: e.cause,
+                                            }));
+                                        console.log(
+                                            "Codeberg discovery:",
+                                            JSON.stringify(test, null, 2),
+                                        );
                                         const res =
                                             await auth.api.signInWithOAuth2({
                                                 body: {
