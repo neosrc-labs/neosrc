@@ -6,6 +6,7 @@ import NextLink from "next/link";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import { CodeTitle } from "~/components/markdown/code-title";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { ReactionBar } from "~/components/ReactionBar";
@@ -200,7 +201,7 @@ export function PullRequestDescriptionSection({
                         {(pullRequest) => (
                             <>
                                 <h1 className="font-bold text-2xl text-gray-900 dark:text-zinc-100">
-                                    {pullRequest.title}
+                                    <CodeTitle>{pullRequest.title}</CodeTitle>
                                 </h1>
                                 <h1 className="text-2xl text-gray-400 dark:text-zinc-500">
                                     #{number}
