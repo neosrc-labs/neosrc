@@ -34,7 +34,7 @@ import type { PrRowData } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-r
 import { PullRequestRow } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
 import { Pagination } from "~/components/ui/pagination";
 import { cn } from "~/lib/utils";
-import type { GqlPrSearchItem } from "~/server/github-graphql";
+import type { PrSearchItem } from "~/server/api/routers/pulls/types";
 import { api } from "~/trpc/react";
 
 type FilterState = "open" | "closed" | "merged";
@@ -64,10 +64,9 @@ const PR_AUTOCOMPLETE_OPTIONS: Record<
     ],
 };
 
-function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
-    const assigneeNode = item.assignees.nodes[0];
+function normalizeSearchItem(item: PrSearchItem): PrRowData {
     return {
-        id: item.databaseId,
+        id: item.id,
         number: item.number,
         title: item.title,
         state: item.state === "MERGED" ? "closed" : item.state.toLowerCase(),
@@ -78,13 +77,13 @@ function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
                   avatar_url: item.author.avatarUrl,
               }
             : null,
-        assignee: assigneeNode
+        assignee: item.assignees[0]
             ? {
-                  login: assigneeNode.login,
-                  avatar_url: assigneeNode.avatarUrl,
+                  login: item.assignees[0].login,
+                  avatar_url: item.assignees[0].avatarUrl,
               }
             : null,
-        labels: item.labels.nodes.map((l) => ({
+        labels: item.labels.map((l) => ({
             id: undefined,
             name: l.name,
             color: l.color,
@@ -92,10 +91,10 @@ function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
         })),
         created_at: item.createdAt,
         merged_at: item.mergedAt,
-        comments_count: item.comments.totalCount,
+        comments_count: item.comments,
         status_state: null,
         status_contexts: [],
-        review_decision: null,
+        review_decision: item.reviewDecision,
     };
 }
 

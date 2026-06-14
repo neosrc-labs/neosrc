@@ -36,7 +36,7 @@ import { SortDropdown } from "~/app/[owner]/[repo]/_components/search/sort-dropd
 import { Pagination } from "~/components/ui/pagination";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn } from "~/lib/utils";
-import type { GqlPrSearchItem } from "~/server/github-graphql";
+import type { PrSearchItem } from "~/server/api/routers/pulls/types";
 import { api } from "~/trpc/react";
 import type { PrRowData } from "./pull-request-row";
 import { PullRequestRow } from "./pull-request-row";
@@ -113,10 +113,9 @@ function computeStatusState(checks: Array<{ state: string }>): string | null {
     return "SUCCESS";
 }
 
-function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
-    const assigneeNode = item.assignees.nodes[0];
+function normalizeSearchItem(item: PrSearchItem): PrRowData {
     return {
-        id: item.databaseId,
+        id: item.id,
         number: item.number,
         title: item.title,
         state: item.state === "MERGED" ? "closed" : item.state.toLowerCase(),
@@ -127,13 +126,13 @@ function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
                   avatar_url: item.author.avatarUrl,
               }
             : null,
-        assignee: assigneeNode
+        assignee: item.assignees[0]
             ? {
-                  login: assigneeNode.login,
-                  avatar_url: assigneeNode.avatarUrl,
+                  login: item.assignees[0].login,
+                  avatar_url: item.assignees[0].avatarUrl,
               }
             : null,
-        labels: item.labels.nodes.map((l) => ({
+        labels: item.labels.map((l) => ({
             id: undefined,
             name: l.name,
             color: l.color,
@@ -141,7 +140,7 @@ function normalizeSearchItem(item: GqlPrSearchItem): PrRowData {
         })),
         created_at: item.createdAt,
         merged_at: item.mergedAt,
-        comments_count: item.comments.totalCount,
+        comments_count: item.comments,
         status_state: null,
         status_contexts: [],
         review_decision: item.reviewDecision,
