@@ -2,6 +2,7 @@ import { GitPullRequest, LogIn, LogOut } from "lucide-react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { AccountManager } from "~/app/_components/account-manager";
 import { auth, getSession } from "~/server/auth";
 import { HydrateClient } from "~/trpc/server";
 
@@ -29,6 +30,14 @@ function Step({
 
 export default async function Home() {
     const session = await getSession();
+    const sessionUser = session?.user as
+        | {
+              name: string;
+              githubUsername?: string;
+              codebergUsername?: string;
+              image?: string;
+          }
+        | undefined;
 
     return (
         <HydrateClient>
@@ -75,22 +84,37 @@ export default async function Home() {
                     </section>
 
                     {session ? (
-                        <form>
-                            <button
-                                className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-red-600 px-6 py-3 font-semibold text-white transition hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-                                type="submit"
-                                formAction={async () => {
-                                    "use server";
-                                    await auth.api.signOut({
-                                        headers: await headers(),
-                                    });
-                                    redirect("/");
-                                }}
-                            >
-                                <LogOut className="h-4 w-4" />
-                                Sign out ({session.user?.name})
-                            </button>
-                        </form>
+                        <div className="flex flex-col items-center gap-4">
+                            <div className="flex flex-col items-center gap-2">
+                                <span className="text-gray-500 text-sm dark:text-gray-400">
+                                    Linked accounts
+                                </span>
+                                <AccountManager
+                                    githubUsername={
+                                        sessionUser?.githubUsername ?? null
+                                    }
+                                    codebergUsername={
+                                        sessionUser?.codebergUsername ?? null
+                                    }
+                                />
+                            </div>
+                            <form>
+                                <button
+                                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-red-600 px-6 py-3 font-semibold text-white transition hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                                    type="submit"
+                                    formAction={async () => {
+                                        "use server";
+                                        await auth.api.signOut({
+                                            headers: await headers(),
+                                        });
+                                        redirect("/");
+                                    }}
+                                >
+                                    <LogOut className="h-4 w-4" />
+                                    Sign out ({session.user?.name})
+                                </button>
+                            </form>
+                        </div>
                     ) : (
                         <div className="flex flex-col items-center gap-4">
                             <form>

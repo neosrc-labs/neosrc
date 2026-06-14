@@ -1,7 +1,6 @@
 "use client";
 
 import {
-    ChevronDown,
     GitMerge,
     GitPullRequest,
     GitPullRequestClosed,
