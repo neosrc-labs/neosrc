@@ -91,7 +91,7 @@ function parseTotalCountFromLinkHeader(
     let maxPage = page;
     const matches = linkHeader.matchAll(linkPattern);
     for (const m of matches) {
-        const p = Number.parseInt(m[1]!, 10);
+        const p = Number.parseInt(m[1] ?? "0", 10);
         if (p > maxPage) maxPage = p;
     }
 
