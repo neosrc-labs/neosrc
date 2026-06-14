@@ -62,6 +62,14 @@ export const auth = betterAuth({
             verification: betterAuthVerification,
         },
     }),
+    account: {
+        accountLinking: {
+            enabled: true,
+            trustedProviders: ["github", "codeberg"],
+            allowDifferentEmails: true,
+            updateUserInfoOnLink: true,
+        },
+    },
     user: {
         additionalFields: {
             githubUsername: {
