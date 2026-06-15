@@ -5,6 +5,7 @@ import { getSession, githubAccessToken } from "~/server/auth";
 import { getCachedPullRequest, getUserRepoPermission } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
 import { PullRequestDescriptionSection } from "./_components/description";
+import { PullRequestContent } from "./_components/pull-request-content";
 import {
     TimelineSection,
     TimelineSkeleton,
@@ -72,23 +73,30 @@ export default async function PullRequestPage({ params }: PageProps) {
                 number={number}
             />
 
-            <Suspense
-                fallback={
-                    <div className="mt-4 border-gray-200 border-t pt-6 dark:border-zinc-700">
-                        <h2 className="mb-4 font-semibold text-gray-900 text-lg dark:text-gray-100">
-                            Timeline
-                        </h2>
-                        <TimelineSkeleton />
-                    </div>
+            <PullRequestContent
+                owner={owner}
+                repo={repo}
+                number={number}
+                timeline={
+                    <Suspense
+                        fallback={
+                            <div className="mt-4 border-gray-200 border-t pt-6 dark:border-zinc-700">
+                                <h2 className="mb-4 font-semibold text-gray-900 text-lg dark:text-gray-100">
+                                    Timeline
+                                </h2>
+                                <TimelineSkeleton />
+                            </div>
+                        }
+                    >
+                        <TimelineSectionWithCanInteract
+                            canInteractPromise={canInteractPromise}
+                            number={number}
+                            owner={owner}
+                            repo={repo}
+                        />
+                    </Suspense>
                 }
-            >
-                <TimelineSectionWithCanInteract
-                    canInteractPromise={canInteractPromise}
-                    number={number}
-                    owner={owner}
-                    repo={repo}
-                />
-            </Suspense>
+            />
         </div>
     );
 }
