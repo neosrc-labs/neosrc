@@ -81,6 +81,7 @@ export const pullRequestReport = createTable(
         name: d.varchar({ length: 255 }).notNull(),
         title: d.varchar({ length: 255 }).notNull(),
         description: d.text(),
+        commitSha: d.varchar({ length: 40 }),
         type: d.varchar({ length: 64 }).notNull(),
         data: d.text(),
         createdAt: d

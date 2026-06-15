@@ -3,6 +3,7 @@ import { commitsRouter } from "~/server/api/routers/commits";
 import { issuesRouter } from "~/server/api/routers/issues";
 import { pullsRouter } from "~/server/api/routers/pulls";
 import { reactionsRouter } from "~/server/api/routers/reactions";
+import { reportsRouter } from "~/server/api/routers/reports";
 import { reposRouter } from "~/server/api/routers/repos";
 import { reviewCommentsRouter } from "~/server/api/routers/reviewComments";
 import { reviewsRouter } from "~/server/api/routers/reviews";
@@ -21,6 +22,7 @@ export const appRouter = createTRPCRouter({
     issues: issuesRouter,
     pulls: pullsRouter,
     reactions: reactionsRouter,
+    reports: reportsRouter,
     repos: reposRouter,
     reviewComments: reviewCommentsRouter,
     reviews: reviewsRouter,
