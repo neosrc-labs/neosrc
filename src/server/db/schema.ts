@@ -1,4 +1,4 @@
-import { pgTableCreator } from "drizzle-orm/pg-core";
+import { pgTableCreator, primaryKey } from "drizzle-orm/pg-core";
 
 export const createTable = pgTableCreator((name) => `${name}`);
 
@@ -70,3 +70,37 @@ export const cache = createTable("cache", (d) => ({
         .defaultNow()
         .notNull(),
 }));
+
+export const pullRequestReport = createTable(
+    "pull_request_report",
+    (d) => ({
+        provider: d.varchar({ length: 64 }).notNull(),
+        repositorySlug: d.varchar({ length: 255 }).notNull(),
+        prNumber: d.integer().notNull(),
+        revision: d.integer().notNull(),
+        name: d.varchar({ length: 255 }).notNull(),
+        title: d.varchar({ length: 255 }).notNull(),
+        description: d.text(),
+        type: d.varchar({ length: 64 }).notNull(),
+        data: d.text(),
+        createdAt: d
+            .timestamp({ withTimezone: true, mode: "date" })
+            .defaultNow()
+            .notNull(),
+        updatedAt: d
+            .timestamp({ withTimezone: true, mode: "date" })
+            .defaultNow()
+            .notNull(),
+    }),
+    (t) => [
+        primaryKey({
+            columns: [
+                t.provider,
+                t.repositorySlug,
+                t.prNumber,
+                t.name,
+                t.revision,
+            ],
+        }),
+    ],
+);
