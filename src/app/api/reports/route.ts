@@ -10,6 +10,7 @@ const reportSchema = z.object({
     name: z.string(),
     title: z.string(),
     description: z.string().optional(),
+    commitSha: z.string().optional(),
     type: z.enum(["markdown"]),
     data: z.string().min(1),
 });
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     }
 
     const parsed = result.data;
-    console.log('Got report', parsed);
+    console.log("Got report", parsed);
 
     // TODO: Validate authentication
 
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
         name: parsed.name,
         title: parsed.title,
         description: parsed.description,
+        commitSha: parsed.commitSha,
         type: parsed.type,
         data: parsed.data,
     });
