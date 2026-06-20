@@ -1,5 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { verifyGitHubOIDCToken } from "~/server/auth/github-oidc";
 import { db } from "~/server/db";
 import { pullRequestReport } from "~/server/db/schema";
 
@@ -37,7 +38,36 @@ export async function POST(request: Request) {
     const parsed = result.data;
     console.log("Got report", parsed);
 
-    // TODO: Validate authentication
+    if (parsed.provider === "github") {
+        const authHeader = request.headers.get("authorization");
+
+        if (!authHeader?.startsWith("Bearer ")) {
+            if (process.env.NODE_ENV !== "development") {
+                return Response.json(
+                    { error: "Missing bearer token" },
+                    { status: 401 },
+                );
+            }
+        } else {
+            const token = authHeader.slice(7);
+            try {
+                const claims = await verifyGitHubOIDCToken(token);
+                if (claims.repository !== parsed.repository) {
+                    return Response.json(
+                        {
+                            error: `Repository mismatch: token is for ${claims.repository}, payload is for ${parsed.repository}`,
+                        },
+                        { status: 403 },
+                    );
+                }
+            } catch {
+                return Response.json(
+                    { error: "Invalid token" },
+                    { status: 401 },
+                );
+            }
+        }
+    }
 
     const [latestRevision] = await db
         .select({ revision: pullRequestReport.revision })

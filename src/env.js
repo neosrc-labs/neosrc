@@ -15,6 +15,7 @@ export const env = createEnv({
         CODEBERG_CLIENT_SECRET: z.string(),
         DATABASE_URL: z.string().url(),
         DATA_ENCRYPTION_KEY: z.string().length(64).optional(),
+        REPORTS_OIDC_AUDIENCE: z.string().url().default("https://neosrc.dev"),
         NODE_ENV: z
             .enum(["development", "test", "production"])
             .default("development"),
@@ -42,6 +43,7 @@ export const env = createEnv({
         CODEBERG_CLIENT_SECRET: process.env.CODEBERG_CLIENT_SECRET,
         DATABASE_URL: process.env.DATABASE_URL,
         DATA_ENCRYPTION_KEY: process.env.DATA_ENCRYPTION_KEY,
+        REPORTS_OIDC_AUDIENCE: process.env.REPORTS_OIDC_AUDIENCE,
         NODE_ENV: process.env.NODE_ENV,
     },
     /**
