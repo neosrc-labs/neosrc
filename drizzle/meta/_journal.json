@@ -22,6 +22,13 @@
       "when": 1781356091996,
       "tag": "0002_nebulous_thanos",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781942492905,
+      "tag": "0003_right_satana",
+      "breakpoints": true
     }
   ]
 }
