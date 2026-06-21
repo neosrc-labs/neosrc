@@ -603,23 +603,44 @@ export async function getUserRepos(
 ): Promise<
     { owner: string; name: string; fullName: string; private: boolean }[]
 > {
-    const res = await fetch(`${CODEBERG_API}/api/v1/user/repos?limit=100`, {
-        headers: {
-            Authorization: `token ${accessToken}`,
-            Accept: "application/json",
-        },
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-        owner: { login: string };
+    const results: {
+        owner: string;
         name: string;
-        full_name: string;
+        fullName: string;
         private: boolean;
-    }[];
-    return data.map((r) => ({
-        owner: r.owner.login,
-        name: r.name,
-        fullName: r.full_name,
-        private: r.private,
-    }));
+    }[] = [];
+    let page = 1;
+    const limit = 100;
+
+    for (;;) {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/user/repos?limit=${limit}&page=${page}`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) break;
+        const data = (await res.json()) as {
+            owner: { login: string };
+            name: string;
+            full_name: string;
+            private: boolean;
+        }[];
+        if (data.length === 0) break;
+        for (const r of data) {
+            results.push({
+                owner: r.owner.login,
+                name: r.name,
+                fullName: r.full_name,
+                private: r.private,
+            });
+        }
+        if (data.length < limit) break;
+        page++;
+    }
+
+    return results;
 }

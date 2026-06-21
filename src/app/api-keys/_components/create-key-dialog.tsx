@@ -3,6 +3,7 @@
 import { Check, Copy, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
+import { parseTarget } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
 type PermissionKind = "UPLOAD_REPORT_OWNER" | "UPLOAD_REPORT_REPO";
@@ -16,6 +17,20 @@ interface ClientPermission {
 let permIdCounter = 0;
 function newPermId(): string {
     return `perm-${++permIdCounter}`;
+}
+
+export function PermissionBadge({
+    permission,
+}: {
+    permission: { kind: string; target: string };
+}) {
+    const { provider, name } = parseTarget(permission.target);
+    const prefix = permission.kind === "UPLOAD_REPORT_OWNER" ? "Owner" : "Repo";
+    return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 font-medium text-blue-800 text-xs dark:bg-blue-900 dark:text-blue-200">
+            {prefix}: {provider && <ProviderIcon provider={provider} />} {name}
+        </span>
+    );
 }
 
 export function ProviderIcon({ provider }: { provider: string }) {
@@ -254,7 +269,12 @@ export function CreateKeyDialog({
                                         </span>
                                     ) : (
                                         <div className="flex-1">
-                                            <SearchableDropdown
+                                            <SearchableDropdown<{
+                                                provider: string;
+                                                owner: string;
+                                                name: string;
+                                                fullName: string;
+                                            }>
                                                 items={allRepos}
                                                 isSelected={(item) =>
                                                     perm.target ===
