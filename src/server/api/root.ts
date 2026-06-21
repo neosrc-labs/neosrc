@@ -1,3 +1,4 @@
+import { apiKeysRouter } from "~/server/api/routers/api-keys";
 import { checksRouter } from "~/server/api/routers/checks";
 import { commitsRouter } from "~/server/api/routers/commits";
 import { issuesRouter } from "~/server/api/routers/issues";
@@ -17,6 +18,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
+    apiKeys: apiKeysRouter,
     checks: checksRouter,
     commits: commitsRouter,
     issues: issuesRouter,

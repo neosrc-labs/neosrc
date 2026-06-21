@@ -1837,3 +1837,27 @@ export const applySuggestion = async (
         branch: headRef,
     });
 };
+
+export type RepoListItem = {
+    owner: string;
+    name: string;
+    fullName: string;
+    private: boolean;
+};
+
+export async function getUserRepos(
+    accessToken: string,
+): Promise<RepoListItem[]> {
+    const octokit = createOctokit(accessToken);
+    const { data } = await octokit.repos.listForAuthenticatedUser({
+        per_page: 100,
+        sort: "full_name",
+        type: "owner",
+    });
+    return data.map((r) => ({
+        owner: r.owner.login,
+        name: r.name,
+        fullName: r.full_name,
+        private: r.private,
+    }));
+}

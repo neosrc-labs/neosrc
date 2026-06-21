@@ -597,3 +597,29 @@ export async function getCachedRepoCounts(
         { staleAfter: 3_000, deleteAfter: 24 * 60 * 60 * 1000 },
     );
 }
+
+export async function getUserRepos(
+    accessToken: string,
+): Promise<
+    { owner: string; name: string; fullName: string; private: boolean }[]
+> {
+    const res = await fetch(`${CODEBERG_API}/api/v1/user/repos?limit=100`, {
+        headers: {
+            Authorization: `token ${accessToken}`,
+            Accept: "application/json",
+        },
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as {
+        owner: { login: string };
+        name: string;
+        full_name: string;
+        private: boolean;
+    }[];
+    return data.map((r) => ({
+        owner: r.owner.login,
+        name: r.name,
+        fullName: r.full_name,
+        private: r.private,
+    }));
+}

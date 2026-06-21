@@ -1,5 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { checkReportPermission, verifyApiKey } from "~/server/api-keys";
 import { verifyGitHubOIDCToken } from "~/server/auth/github-oidc";
 import { db } from "~/server/db";
 import { pullRequestReport } from "~/server/db/schema";
@@ -38,10 +39,35 @@ export async function POST(request: Request) {
     const parsed = result.data;
     console.log("Got report", parsed);
 
-    if (parsed.provider === "github") {
-        const authHeader = request.headers.get("authorization");
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.startsWith("Bearer ")
+        ? authHeader.slice(7)
+        : null;
 
-        if (!authHeader?.startsWith("Bearer ")) {
+    if (token?.startsWith("neo_")) {
+        const verified = await verifyApiKey(token);
+        if (!verified) {
+            return Response.json(
+                { error: "Invalid or expired API key" },
+                { status: 401 },
+            );
+        }
+        if (
+            !checkReportPermission(
+                verified.permissions,
+                parsed.provider,
+                parsed.repository,
+            )
+        ) {
+            return Response.json(
+                {
+                    error: `API key does not have permission to upload to ${parsed.repository}`,
+                },
+                { status: 403 },
+            );
+        }
+    } else if (parsed.provider === "github") {
+        if (!token) {
             if (process.env.NODE_ENV !== "development") {
                 return Response.json(
                     { error: "Missing bearer token" },
@@ -49,7 +75,6 @@ export async function POST(request: Request) {
                 );
             }
         } else {
-            const token = authHeader.slice(7);
             try {
                 const claims = await verifyGitHubOIDCToken(token);
                 if (claims.repository !== parsed.repository) {
