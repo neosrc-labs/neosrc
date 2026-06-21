@@ -57,7 +57,6 @@ export const apiKeysRouter = createTRPCRouter({
         return keys.map((k) => ({
             id: k.id,
             name: k.name,
-            prefix: k.hash.slice(0, 8),
             createdAt: k.createdAt,
             updatedAt: k.updatedAt,
             expirationTimestamp: k.expirationTimestamp,
