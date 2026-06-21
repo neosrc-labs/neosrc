@@ -71,6 +71,43 @@ export const cache = createTable("cache", (d) => ({
         .notNull(),
 }));
 
+export const apiKey = createTable("api_key", (d) => ({
+    id: d.serial().notNull().primaryKey(),
+    name: d.text().notNull(),
+    hash: d.text().notNull(),
+    owner: d
+        .text()
+        .notNull()
+        .references(() => betterAuthUser.id),
+    expirationTimestamp: d.timestamp({ withTimezone: true, mode: "date" }),
+    createdAt: d
+        .timestamp({ withTimezone: true, mode: "date" })
+        .defaultNow()
+        .notNull(),
+    updatedAt: d
+        .timestamp({ withTimezone: true, mode: "date" })
+        .defaultNow()
+        .notNull(),
+}));
+
+export const apiKeyPermission = createTable("api_key_permission", (d) => ({
+    id: d.serial().notNull().primaryKey(),
+    kind: d.varchar({ length: 64 }).notNull(),
+    apiKeyId: d
+        .integer()
+        .notNull()
+        .references(() => apiKey.id, { onDelete: "cascade" }),
+    target: d.text().notNull(),
+    createdAt: d
+        .timestamp({ withTimezone: true, mode: "date" })
+        .defaultNow()
+        .notNull(),
+    updatedAt: d
+        .timestamp({ withTimezone: true, mode: "date" })
+        .defaultNow()
+        .notNull(),
+}));
+
 export const pullRequestReport = createTable(
     "pull_request_report",
     (d) => ({
