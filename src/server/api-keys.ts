@@ -2,7 +2,7 @@ import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "~/server/db";
 import { apiKey, apiKeyPermission } from "~/server/db/schema";
 
-const KEY_PREFIX = "neo_";
+export const KEY_PREFIX = "neo_";
 const KEY_BYTES = 32;
 
 function bufToHex(buf: ArrayBuffer): string {

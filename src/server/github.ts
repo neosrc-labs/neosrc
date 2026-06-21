@@ -1849,15 +1849,24 @@ export async function getUserRepos(
     accessToken: string,
 ): Promise<RepoListItem[]> {
     const octokit = createOctokit(accessToken);
-    const { data } = await octokit.repos.listForAuthenticatedUser({
-        per_page: 100,
-        sort: "full_name",
-        type: "owner",
-    });
-    return data.map((r) => ({
-        owner: r.owner.login,
-        name: r.name,
-        fullName: r.full_name,
-        private: r.private,
-    }));
+    const iterator = octokit.paginate.iterator(
+        octokit.rest.repos.listForAuthenticatedUser,
+        {
+            per_page: 100,
+            sort: "full_name",
+            type: "owner",
+        },
+    );
+    const results: RepoListItem[] = [];
+    for await (const { data } of iterator) {
+        for (const r of data) {
+            results.push({
+                owner: r.owner.login,
+                name: r.name,
+                fullName: r.full_name,
+                private: r.private,
+            });
+        }
+    }
+    return results;
 }

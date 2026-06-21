@@ -9,6 +9,18 @@ export function opId() {
     return Math.floor(Math.random() * 10000000);
 }
 
+export function parseTarget(target: string): {
+    provider: string | null;
+    name: string;
+} {
+    const colonIndex = target.indexOf(":");
+    if (colonIndex === -1) return { provider: null, name: target };
+    return {
+        provider: target.slice(0, colonIndex),
+        name: target.slice(colonIndex + 1),
+    };
+}
+
 export function applyArrayOperations<
     TItem,
     TOp extends { id: number; op: "add" | "remove" },

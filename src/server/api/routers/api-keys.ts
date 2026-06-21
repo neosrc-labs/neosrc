@@ -4,9 +4,9 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { generateApiKey } from "~/server/api-keys";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
-import { getUserRepos as getCodebergUserRepos } from "~/server/codeberg";
+import { getRepo as getCodebergRepo } from "~/server/codeberg";
 import { apiKey, apiKeyPermission, betterAuthUser } from "~/server/db/schema";
-import { getUserRepos as getGitHubUserRepos } from "~/server/github";
+import { getRepo as getGitHubRepo } from "~/server/github";
 
 const permissionSchema = z.discriminatedUnion("kind", [
     z.object({
@@ -117,32 +117,6 @@ export const apiKeysRouter = createTRPCRouter({
             );
 
             if (repoTargets.length > 0) {
-                const repoProviderCache = new Map<string, Set<string>>();
-
-                const getRepoSet = async (provider: string) => {
-                    const cached = repoProviderCache.get(provider);
-                    if (cached) return cached;
-
-                    const repos =
-                        provider === "github"
-                            ? await getGitHubUserRepos(
-                                  await getGitHubToken(
-                                      ctx.db,
-                                      ctx.session.user.id,
-                                  ),
-                              )
-                            : await getCodebergUserRepos(
-                                  await getCodebergToken(
-                                      ctx.db,
-                                      ctx.session.user.id,
-                                  ),
-                              );
-
-                    const set = new Set(repos.map((r) => r.fullName));
-                    repoProviderCache.set(provider, set);
-                    return set;
-                };
-
                 for (const rt of repoTargets) {
                     const colonIndex = rt.target.indexOf(":");
                     if (colonIndex === -1) {
@@ -152,12 +126,55 @@ export const apiKeysRouter = createTRPCRouter({
                     }
                     const rtProvider = rt.target.slice(0, colonIndex);
                     const rtName = rt.target.slice(colonIndex + 1);
-
-                    const validRepos = await getRepoSet(rtProvider);
-                    if (!validRepos.has(rtName)) {
+                    const owner = rtName.split("/")[0];
+                    if (!owner) {
                         throw new Error(
-                            `Repository "${rtName}" not found or not owned by you on ${rtProvider}`,
+                            `Invalid repository "${rtName}" - must be in "owner/repo" format`,
                         );
+                    }
+
+                    if (rtProvider === "github") {
+                        if (!user.githubUsername) {
+                            throw new Error("GitHub account not linked");
+                        }
+                        const ghToken = await getGitHubToken(
+                            ctx.db,
+                            ctx.session.user.id,
+                        );
+                        const ghRepo = await getGitHubRepo(
+                            ghToken,
+                            owner,
+                            rtName.split("/")[1] ?? "",
+                        );
+                        if (
+                            !ghRepo ||
+                            ghRepo.owner.login !== user.githubUsername
+                        ) {
+                            throw new Error(
+                                `Repository "${rtName}" not found or not owned by you on GitHub`,
+                            );
+                        }
+                    } else {
+                        if (!user.codebergUsername) {
+                            throw new Error("Codeberg account not linked");
+                        }
+                        const cbToken = await getCodebergToken(
+                            ctx.db,
+                            ctx.session.user.id,
+                        );
+                        const cbRepo = await getCodebergRepo(
+                            cbToken,
+                            owner,
+                            rtName.split("/")[1] ?? "",
+                        );
+                        if (
+                            !cbRepo ||
+                            cbRepo.owner.login !== user.codebergUsername
+                        ) {
+                            throw new Error(
+                                `Repository "${rtName}" not found or not owned by you on Codeberg`,
+                            );
+                        }
                     }
                 }
             }

@@ -1,6 +1,10 @@
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { checkReportPermission, verifyApiKey } from "~/server/api-keys";
+import {
+    checkReportPermission,
+    KEY_PREFIX,
+    verifyApiKey,
+} from "~/server/api-keys";
 import { verifyGitHubOIDCToken } from "~/server/auth/github-oidc";
 import { db } from "~/server/db";
 import { pullRequestReport } from "~/server/db/schema";
@@ -44,7 +48,7 @@ export async function POST(request: Request) {
         ? authHeader.slice(7)
         : null;
 
-    if (token?.startsWith("neo_")) {
+    if (token?.startsWith(KEY_PREFIX)) {
         const verified = await verifyApiKey(token);
         if (!verified) {
             return Response.json(

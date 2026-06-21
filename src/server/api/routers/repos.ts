@@ -85,27 +85,6 @@ export const reposRouter = createTRPCRouter({
                 input.repo,
             );
         }),
-    getMyRepos: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]),
-            }),
-        )
-        .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session.user.id,
-                );
-                return getCodebergUserRepos(accessToken);
-            }
-
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session.user.id,
-            );
-            return getGitHubUserRepos(accessToken);
-        }),
     getAllMyRepos: protectedProcedure.query(async ({ ctx }) => {
         const results: {
             provider: "github" | "codeberg";
@@ -114,24 +93,25 @@ export const reposRouter = createTRPCRouter({
             fullName: string;
         }[] = [];
 
-        try {
-            const ghToken = await getGitHubToken(ctx.db, ctx.session.user.id);
-            const ghRepos = await getGitHubUserRepos(ghToken);
-            for (const r of ghRepos) {
+        const settled = await Promise.allSettled([
+            getGitHubToken(ctx.db, ctx.session.user.id).then((token) =>
+                getGitHubUserRepos(token),
+            ),
+            getCodebergToken(ctx.db, ctx.session.user.id).then((token) =>
+                getCodebergUserRepos(token),
+            ),
+        ]);
+
+        if (settled[0]?.status === "fulfilled") {
+            for (const r of settled[0].value) {
                 results.push({ provider: "github", ...r });
             }
-        } catch {
-            // GitHub not linked
         }
 
-        try {
-            const cbToken = await getCodebergToken(ctx.db, ctx.session.user.id);
-            const cbRepos = await getCodebergUserRepos(cbToken);
-            for (const r of cbRepos) {
+        if (settled[1]?.status === "fulfilled") {
+            for (const r of settled[1].value) {
                 results.push({ provider: "codeberg", ...r });
             }
-        } catch {
-            // Codeberg not linked
         }
 
         return results;
