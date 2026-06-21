@@ -29,6 +29,13 @@
       "when": 1781942492905,
       "tag": "0003_right_satana",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782011715992,
+      "tag": "0004_new_steve_rogers",
+      "breakpoints": true
     }
   ]
 }
