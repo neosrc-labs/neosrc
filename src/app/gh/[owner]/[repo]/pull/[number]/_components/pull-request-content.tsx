@@ -47,13 +47,13 @@ export function PullRequestContent({
             {activeTab === TIMELINE_TAB ? (
                 timeline
             ) : activeReport ? (
-                <div className="rounded-b-lg border-gray-200 border-x border-b bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                <div className="relative rounded-b-lg border-gray-200 border-x border-b bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
                     {activeReport.sourceUrl && (
                         <a
                             href={activeReport.sourceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mb-3 inline-flex items-center gap-1 text-gray-500 text-xs hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            className="absolute top-3 right-4 inline-flex items-center gap-1 text-gray-500 text-xs hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                         >
                             <ExternalLink className="size-3" />
                             Source
