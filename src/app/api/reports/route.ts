@@ -19,6 +19,7 @@ const reportSchema = z.object({
     commitSha: z.string().optional(),
     type: z.enum(["markdown"]),
     data: z.string().min(1),
+    sourceUrl: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -123,6 +124,7 @@ export async function POST(request: Request) {
         title: parsed.title,
         description: parsed.description,
         commitSha: parsed.commitSha,
+        sourceUrl: parsed.sourceUrl,
         type: parsed.type,
         data: parsed.data,
     });

@@ -1,0 +1,1 @@
+ALTER TABLE "pull_request_report" ADD COLUMN "sourceUrl" varchar(2048);

@@ -1,5 +1,6 @@
 "use client";
 
+import { ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
@@ -47,6 +48,17 @@ export function PullRequestContent({
                 timeline
             ) : activeReport ? (
                 <div className="rounded-b-lg border-gray-200 border-x border-b bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                    {activeReport.sourceUrl && (
+                        <a
+                            href={activeReport.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mb-3 inline-flex items-center gap-1 text-gray-500 text-xs hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                            <ExternalLink className="size-3" />
+                            Source
+                        </a>
+                    )}
                     <div className="prose prose-sm max-w-none">
                         <MarkdownRenderer
                             content={activeReport.data ?? ""}
