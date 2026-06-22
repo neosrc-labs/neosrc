@@ -1,5 +1,5 @@
 import type { GQLTimelineEvent } from "~/server/github-graphql";
-import type { LabelChange, TimelineWrapper } from "./timeline-types";
+import type { LabelChange, TimelineWrapper } from "./types";
 
 const MAX_LABEL_GAP_MS = 3 * 60 * 60 * 1000;
 

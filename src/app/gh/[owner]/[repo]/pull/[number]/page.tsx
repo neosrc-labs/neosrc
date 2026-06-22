@@ -9,7 +9,7 @@ import { PullRequestContent } from "./_components/pull-request-content";
 import {
     TimelineSection,
     TimelineSkeleton,
-} from "./_components/timeline-section";
+} from "./_components/timeline/section";
 import { PullRequestTitleSetter } from "./_components/title-setter";
 
 type PullsGetResponseData =

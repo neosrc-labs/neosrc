@@ -11,9 +11,9 @@ import type {
     GQLReactionNode,
 } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
-import { CommentForm } from "./comment-form";
-import { TimelineEvent } from "./timeline-event";
-import { aggregateEvents, filterTimelineEvents } from "./timeline-utils";
+import { CommentForm } from "../comment-form";
+import { TimelineEvent } from "./event";
+import { aggregateEvents, filterTimelineEvents } from "./utils";
 
 export function TimelineSkeleton() {
     const items = [
