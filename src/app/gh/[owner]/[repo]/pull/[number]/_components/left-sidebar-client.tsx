@@ -56,7 +56,7 @@ interface SidebarFileTreeProps {
     pullRequestPromise: Promise<PullsGetResponseData> | null;
 }
 
-export function SidebarFileTree({
+function SidebarFileTree({
     owner,
     repo,
     number,

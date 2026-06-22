@@ -9,5 +9,3 @@ export type Ctx = {
     db: typeof db;
     session: { user: { id: string } };
 };
-
-export type ProviderType = "gh" | "cb";

@@ -8,9 +8,6 @@ import {
 import type { GQLActor } from "~/server/github-graphql";
 export type PullsGetResponseData =
     RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
-export type ReactionRollup = NonNullable<
-    RestEndpointMethodTypes["issues"]["get"]["response"]["data"]["reactions"]
->;
 export type PullsListCommitsResponseData =
     RestEndpointMethodTypes["pulls"]["listCommits"]["response"]["data"];
 export type CommitData =
@@ -20,25 +17,10 @@ export type Reviewer = NonNullable<
     PullsGetResponseData["requested_reviewers"]
 >[number];
 export type Assignee = NonNullable<PullsGetResponseData["assignees"]>[number];
-export type TimelineEventData =
-    RestEndpointMethodTypes["issues"]["listEventsForTimeline"]["response"]["data"][number];
-export type IssueCommentData =
-    RestEndpointMethodTypes["issues"]["createComment"]["response"]["data"];
-export type PullRequestReviewData =
-    RestEndpointMethodTypes["pulls"]["createReview"]["response"]["data"];
 export type ReviewComment =
     RestEndpointMethodTypes["pulls"]["listReviewComments"]["response"]["data"][number];
-export type ReviewCommentsForReviewData =
-    RestEndpointMethodTypes["pulls"]["listCommentsForReview"]["response"]["data"];
-export type PullRequestReview =
-    RestEndpointMethodTypes["pulls"]["listReviews"]["response"]["data"][number];
 export type PullRequestFile =
     RestEndpointMethodTypes["pulls"]["listFiles"]["response"]["data"][number];
-export type PullsListResponseData =
-    RestEndpointMethodTypes["pulls"]["list"]["response"]["data"];
-export type PullRequestData = PullsListResponseData[number];
-export type UsersGetByUsernameResponseData =
-    RestEndpointMethodTypes["users"]["getByUsername"]["response"]["data"];
 export type TeamGetByNameResponseData =
     RestEndpointMethodTypes["teams"]["getByName"]["response"]["data"];
 export type GhCheckRuns =
@@ -66,8 +48,6 @@ export type CheckRun = {
         html_url?: string;
     } | null;
 };
-
-export type { Octokit };
 
 export function createOctokit(accessToken: string) {
     return new Octokit({
@@ -150,23 +130,6 @@ export const getPullRequestCommits = cache(
     ) => {
         const octokit = createOctokit(accessToken);
         const response = await octokit.pulls.listCommits({
-            owner,
-            repo,
-            pull_number: pullNumber,
-        });
-        return response.data;
-    },
-);
-
-export const getPullRequestFiles = cache(
-    async (
-        accessToken: string,
-        owner: string,
-        repo: string,
-        pullNumber: number,
-    ) => {
-        const octokit = createOctokit(accessToken);
-        const response = await octokit.pulls.listFiles({
             owner,
             repo,
             pull_number: pullNumber,
@@ -568,7 +531,7 @@ export const getCommitStatuses = cache(
     },
 );
 
-export const getCommit = cache(
+const getCommit = cache(
     async (
         accessToken: string,
         owner: string,
@@ -851,39 +814,6 @@ export const getUserRepoPermission = cache(
     },
 );
 
-export const getPullRequestTimeline = cache(
-    async (
-        accessToken: string,
-        owner: string,
-        repo: string,
-        pullNumber: number,
-        page: number = 1,
-        perPage: number = 30,
-    ) => {
-        const octokit = createOctokit(accessToken);
-        const response = await octokit.request(
-            "GET /repos/{owner}/{repo}/issues/{issue_number}/timeline",
-            {
-                owner,
-                repo,
-                issue_number: pullNumber,
-                page,
-                per_page: perPage,
-                mediaType: {
-                    previews: ["mockingbird"],
-                },
-            },
-        );
-        const linkHeader = response.headers.link;
-        const hasMore = linkHeader?.includes('rel="next"') ?? false;
-        return {
-            events: response.data as TimelineEventData[],
-            hasMore,
-            nextPage: page + 1,
-        };
-    },
-);
-
 export type IssueSearchItem = {
     number: number;
     title: string;
@@ -891,9 +821,6 @@ export type IssueSearchItem = {
     type: "issue" | "pull_request";
     user: { login: string } | null;
 };
-
-export type PrSearchResultItem =
-    RestEndpointMethodTypes["search"]["issuesAndPullRequests"]["response"]["data"]["items"][number];
 
 export const searchIssues = cache(
     async (accessToken: string, owner: string, repo: string, query: string) => {
@@ -1112,9 +1039,6 @@ export const getGitHubTeam = cache(
     },
 );
 
-export type RepoGetResponseData =
-    RestEndpointMethodTypes["repos"]["get"]["response"]["data"];
-
 export const getRepo = cache(
     async (accessToken: string, owner: string, repo: string) => {
         const octokit = createOctokit(accessToken);
@@ -1123,7 +1047,7 @@ export const getRepo = cache(
     },
 );
 
-export const getRepoIssuePullCounts = cache(
+const getRepoIssuePullCounts = cache(
     async (
         accessToken: string,
         owner: string,
@@ -1194,9 +1118,6 @@ export async function getCachedRepoHeaderData(
 
 export type Milestone = NonNullable<PullsGetResponseData["milestone"]>;
 
-export type RepoMilestone =
-    RestEndpointMethodTypes["issues"]["listMilestones"]["response"]["data"][number];
-
 export const listMilestonesForRepo = async (
     accessToken: string,
     owner: string,
@@ -1248,9 +1169,6 @@ export const getIssue = cache(
 
 export type IssueGetResponseData =
     RestEndpointMethodTypes["issues"]["get"]["response"]["data"];
-
-export type RepoLabel =
-    RestEndpointMethodTypes["issues"]["listLabelsForRepo"]["response"]["data"][number];
 
 export const listLabelsForRepo = async (
     accessToken: string,
@@ -1710,7 +1628,7 @@ export const unresolveReviewThread = async (
     }
 };
 
-export const getFileContentFromBranch = async (
+const getFileContentFromBranch = async (
     accessToken: string,
     owner: string,
     repo: string,

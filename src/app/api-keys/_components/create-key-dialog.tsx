@@ -33,7 +33,7 @@ export function PermissionBadge({
     );
 }
 
-export function ProviderIcon({ provider }: { provider: string }) {
+function ProviderIcon({ provider }: { provider: string }) {
     if (provider === "codeberg") {
         return (
             <img

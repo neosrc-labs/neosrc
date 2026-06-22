@@ -25,7 +25,7 @@ export const TABS: { key: FilterState; label: string }[] = [
     { key: "merged", label: "Merged" },
 ];
 
-export const PR_QUALIFIERS = [
+const PR_QUALIFIERS = [
     "author",
     "label",
     "assignee",
