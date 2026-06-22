@@ -304,7 +304,7 @@ export const getRepo = cache(
     },
 );
 
-export const getRepoCounts = cache(
+const getRepoCounts = cache(
     async (
         accessToken: string,
         owner: string,

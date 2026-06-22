@@ -13,7 +13,7 @@ import type { GQLCommitWithAuthors } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 
-export function CommitHoverCardContent({
+function CommitHoverCardContent({
     commit,
     baseUrl,
 }: {
