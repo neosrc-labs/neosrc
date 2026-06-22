@@ -384,7 +384,7 @@ const COMMIT_BY_OID_QUERY = `
 ${SIMPLE_USER_FRAGMENT}
 ${COMMIT_FIELDS_FRAGMENT}
 
-query CommitByOid($owner: String!, $repo: String!, $oid: String!) {
+query CommitByOid($owner: String!, $repo: String!, $oid: GitObjectID!) {
 	repository(owner: $owner, name: $repo) {
 		object(oid: $oid) {
 			... on Commit { ...CommitFields }

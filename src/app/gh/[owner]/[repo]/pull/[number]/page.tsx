@@ -77,6 +77,7 @@ export default async function PullRequestPage({ params }: PageProps) {
                 owner={owner}
                 repo={repo}
                 number={number}
+                pullRequestPromise={pullRequestPromise}
                 timeline={
                     <Suspense
                         fallback={
