@@ -37,7 +37,7 @@ const stateSchema = z.object({
     state: z.enum(["VALID", "OUTDATED"]),
 });
 
-export async function authenticateRequest(
+async function authenticateRequest(
     request: Request,
     provider: "github" | "codeberg",
     repository: string,
