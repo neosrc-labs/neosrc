@@ -2,7 +2,8 @@
     "$schema": "https://unpkg.com/knip@6/schema.json",
     "entry": ["scripts/generate-icon-map.ts", "src/env.js"],
     "project": ["src/**/*.{ts,tsx}", "scripts/**/*.ts"],
-    "ignore": ["src/server/github-graphql.ts"],
+    "ignore": ["src/server/api/trpc.ts"],
+    "ignoreExportsUsedInFile": true,
     "ignoreDependencies": [
         "shadcn",
         "tw-animate-css",

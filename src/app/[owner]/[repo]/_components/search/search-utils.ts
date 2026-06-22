@@ -1,4 +1,4 @@
-export interface Qualifier {
+interface Qualifier {
     key: string;
     value: string;
 }

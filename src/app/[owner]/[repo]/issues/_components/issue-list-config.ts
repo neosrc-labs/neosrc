@@ -1,5 +1,3 @@
-export type FilterState = "open" | "closed";
-
 export const ISSUE_QUALIFIERS = ["author", "label", "assignee", "sort", "is"];
 
 export const ISSUE_AUTOCOMPLETE_OPTIONS: Record<

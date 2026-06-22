@@ -7,6 +7,7 @@ export type LabelChange = {
     createdAt: string;
 };
 
+/* @knip-ignore */
 export type AggregatedLabelEvent = {
     type: "aggregated-label";
     changes: LabelChange[];

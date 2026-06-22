@@ -167,16 +167,18 @@ export const listPullRequests = cache(
     },
 );
 
-export const getUser = cache(async (accessToken: string) => {
-    const res = await fetch(`${CODEBERG_API}/api/v1/user`, {
-        headers: {
-            Authorization: `token ${accessToken}`,
-            Accept: "application/json",
-        },
-    });
-    if (!res.ok) return null;
-    return res.json() as Promise<CodebergUser>;
-});
+export const getUser = cache(
+    async (accessToken: string): Promise<CodebergUser | null> => {
+        const res = await fetch(`${CODEBERG_API}/api/v1/user`, {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        });
+        if (!res.ok) return null;
+        return res.json();
+    },
+);
 
 export type CodebergLabel = {
     id: number;
@@ -189,7 +191,7 @@ export const listLabels = async (
     accessToken: string,
     owner: string,
     repo: string,
-) => {
+): Promise<CodebergLabel[]> => {
     const res = await fetch(
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/labels`,
         {
@@ -200,7 +202,7 @@ export const listLabels = async (
         },
     );
     if (!res.ok) return [];
-    return res.json() as Promise<CodebergLabel[]>;
+    return res.json();
 };
 
 export type CodebergMilestone = {
@@ -213,7 +215,11 @@ export type CodebergMilestone = {
 };
 
 export const listMilestones = cache(
-    async (accessToken: string, owner: string, repo: string) => {
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+    ): Promise<CodebergMilestone[]> => {
         const res = await fetch(
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/milestones?state=open`,
             {
@@ -224,7 +230,7 @@ export const listMilestones = cache(
             },
         );
         if (!res.ok) return [];
-        return res.json() as Promise<CodebergMilestone[]>;
+        return res.json();
     },
 );
 
@@ -235,7 +241,11 @@ export type CodebergAssignee = {
 };
 
 export const listAssignees = cache(
-    async (accessToken: string, owner: string, repo: string) => {
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+    ): Promise<CodebergAssignee[]> => {
         const res = await fetch(
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/assignees`,
             {
@@ -246,7 +256,7 @@ export const listAssignees = cache(
             },
         );
         if (!res.ok) return [];
-        return res.json() as Promise<CodebergAssignee[]>;
+        return res.json();
     },
 );
 
@@ -264,7 +274,10 @@ export type CodebergUserByUsername = {
 };
 
 export const getUserByUsername = cache(
-    async (accessToken: string, username: string) => {
+    async (
+        accessToken: string,
+        username: string,
+    ): Promise<CodebergUserByUsername | null> => {
         const res = await fetch(`${CODEBERG_API}/api/v1/users/${username}`, {
             headers: {
                 Authorization: `token ${accessToken}`,
@@ -272,7 +285,7 @@ export const getUserByUsername = cache(
             },
         });
         if (!res.ok) return null;
-        return res.json() as Promise<CodebergUserByUsername>;
+        return res.json();
     },
 );
 
@@ -289,7 +302,11 @@ export type CodebergRepo = {
 };
 
 export const getRepo = cache(
-    async (accessToken: string, owner: string, repo: string) => {
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+    ): Promise<CodebergRepo | null> => {
         const res = await fetch(
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}`,
             {
@@ -300,7 +317,7 @@ export const getRepo = cache(
             },
         );
         if (!res.ok) return null;
-        return res.json() as Promise<CodebergRepo>;
+        return res.json();
     },
 );
 
