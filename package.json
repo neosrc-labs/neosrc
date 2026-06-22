@@ -15,6 +15,7 @@
         "db:studio": "drizzle-kit studio",
         "dev": "next dev --turbo",
         "generate:icon-map": "pnpx tsx scripts/generate-icon-map.ts",
+        "knip": "SKIP_ENV_VALIDATION=1 knip",
         "preview": "next build && next start",
         "start": "next start",
         "typecheck": "tsc --noEmit"
@@ -72,6 +73,7 @@
         "@vitejs/plugin-react": "^6.0.2",
         "drizzle-kit": "^0.30.5",
         "jsdom": "^29.1.1",
+        "knip": "^6.17.1",
         "postcss": "^8.5.3",
         "react-syntax-highlighter": "^16.1.1",
         "tailwindcss": "^4.0.15",
