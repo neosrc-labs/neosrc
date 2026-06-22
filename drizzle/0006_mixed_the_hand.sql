@@ -1,0 +1,1 @@
+ALTER TABLE "pull_request_report" ADD COLUMN "state" varchar(16) DEFAULT 'VALID' NOT NULL;

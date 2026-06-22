@@ -22,7 +22,104 @@ const reportSchema = z.object({
     sourceUrl: z.string().optional(),
 });
 
-export async function POST(request: Request) {
+const identifySchema = z.object({
+    provider: z.enum(["github", "codeberg"]),
+    repository: z.string(),
+    prNumber: z.number(),
+    name: z.string(),
+});
+
+const stateSchema = z.object({
+    provider: z.enum(["github", "codeberg"]),
+    repository: z.string(),
+    prNumber: z.number(),
+    name: z.string(),
+    state: z.enum(["VALID", "OUTDATED"]),
+});
+
+export async function authenticateRequest(
+    request: Request,
+    provider: "github" | "codeberg",
+    repository: string,
+): Promise<Response | null> {
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.startsWith("Bearer ")
+        ? authHeader.slice(7)
+        : null;
+
+    if (token?.startsWith(KEY_PREFIX)) {
+        const verified = await verifyApiKey(token);
+        if (!verified) {
+            return Response.json(
+                { error: "Invalid or expired API key" },
+                { status: 401 },
+            );
+        }
+        if (
+            !checkReportPermission(verified.permissions, provider, repository)
+        ) {
+            return Response.json(
+                {
+                    error: `API key does not have permission for ${repository}`,
+                },
+                { status: 403 },
+            );
+        }
+        return null;
+    }
+
+    if (provider === "github") {
+        if (!token) {
+            if (process.env.NODE_ENV !== "development") {
+                return Response.json(
+                    { error: "Missing bearer token" },
+                    { status: 401 },
+                );
+            }
+            return null;
+        }
+        try {
+            const claims = await verifyGitHubOIDCToken(token);
+            if (claims.repository !== repository) {
+                return Response.json(
+                    {
+                        error: `Token repository mismatch: ${claims.repository} vs ${repository}`,
+                    },
+                    { status: 403 },
+                );
+            }
+            return null;
+        } catch {
+            return Response.json({ error: "Invalid token" }, { status: 401 });
+        }
+    }
+
+    return null;
+}
+
+async function getLatestRow(
+    provider: string,
+    repository: string,
+    prNumber: number,
+    name: string,
+) {
+    const [latest] = await db
+        .select()
+        .from(pullRequestReport)
+        .where(
+            and(
+                eq(pullRequestReport.provider, provider),
+                eq(pullRequestReport.repositorySlug, repository),
+                eq(pullRequestReport.prNumber, prNumber),
+                eq(pullRequestReport.name, name),
+            ),
+        )
+        .orderBy(desc(pullRequestReport.revision))
+        .limit(1);
+    return latest ?? null;
+}
+
+export async function PUT(request: Request) {
     let json: unknown;
     try {
         json = await request.json();
@@ -42,78 +139,21 @@ export async function POST(request: Request) {
     }
 
     const parsed = result.data;
-    console.log("Got report", parsed);
 
-    const authHeader = request.headers.get("authorization");
-    const token = authHeader?.startsWith("Bearer ")
-        ? authHeader.slice(7)
-        : null;
+    const authError = await authenticateRequest(
+        request,
+        parsed.provider,
+        parsed.repository,
+    );
+    if (authError) return authError;
 
-    if (token?.startsWith(KEY_PREFIX)) {
-        const verified = await verifyApiKey(token);
-        if (!verified) {
-            return Response.json(
-                { error: "Invalid or expired API key" },
-                { status: 401 },
-            );
-        }
-        if (
-            !checkReportPermission(
-                verified.permissions,
-                parsed.provider,
-                parsed.repository,
-            )
-        ) {
-            return Response.json(
-                {
-                    error: `API key does not have permission to upload to ${parsed.repository}`,
-                },
-                { status: 403 },
-            );
-        }
-    } else if (parsed.provider === "github") {
-        if (!token) {
-            if (process.env.NODE_ENV !== "development") {
-                return Response.json(
-                    { error: "Missing bearer token" },
-                    { status: 401 },
-                );
-            }
-        } else {
-            try {
-                const claims = await verifyGitHubOIDCToken(token);
-                if (claims.repository !== parsed.repository) {
-                    return Response.json(
-                        {
-                            error: `Repository mismatch: token is for ${claims.repository}, payload is for ${parsed.repository}`,
-                        },
-                        { status: 403 },
-                    );
-                }
-            } catch {
-                return Response.json(
-                    { error: "Invalid token" },
-                    { status: 401 },
-                );
-            }
-        }
-    }
-
-    const [latestRevision] = await db
-        .select({ revision: pullRequestReport.revision })
-        .from(pullRequestReport)
-        .where(
-            and(
-                eq(pullRequestReport.provider, parsed.provider),
-                eq(pullRequestReport.repositorySlug, parsed.repository),
-                eq(pullRequestReport.prNumber, parsed.prNumber),
-                eq(pullRequestReport.name, parsed.name),
-            ),
-        )
-        .orderBy(desc(pullRequestReport.revision))
-        .limit(1);
-
-    const revision = (latestRevision?.revision ?? 0) + 1;
+    const latest = await getLatestRow(
+        parsed.provider,
+        parsed.repository,
+        parsed.prNumber,
+        parsed.name,
+    );
+    const revision = (latest?.revision ?? 0) + 1;
 
     await db.insert(pullRequestReport).values({
         provider: parsed.provider,
@@ -130,8 +170,116 @@ export async function POST(request: Request) {
     });
 
     return new Response("ok", {
-        headers: {
-            "Content-Type": "text/plain",
-        },
+        headers: { "Content-Type": "text/plain" },
+    });
+}
+
+export async function POST(request: Request) {
+    let json: unknown;
+    try {
+        json = await request.json();
+    } catch {
+        return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const result = stateSchema.safeParse(json);
+    if (!result.success) {
+        return Response.json(
+            {
+                error: "Validation failed",
+                issues: result.error.flatten().fieldErrors,
+            },
+            { status: 400 },
+        );
+    }
+
+    const parsed = result.data;
+
+    const authError = await authenticateRequest(
+        request,
+        parsed.provider,
+        parsed.repository,
+    );
+    if (authError) return authError;
+
+    const latest = await getLatestRow(
+        parsed.provider,
+        parsed.repository,
+        parsed.prNumber,
+        parsed.name,
+    );
+    if (!latest) {
+        return Response.json({ error: "Report not found" }, { status: 404 });
+    }
+
+    await db
+        .update(pullRequestReport)
+        .set({ state: parsed.state })
+        .where(
+            and(
+                eq(pullRequestReport.provider, latest.provider),
+                eq(pullRequestReport.repositorySlug, latest.repositorySlug),
+                eq(pullRequestReport.prNumber, latest.prNumber),
+                eq(pullRequestReport.name, latest.name),
+                eq(pullRequestReport.revision, latest.revision),
+            ),
+        );
+
+    return new Response("ok", {
+        headers: { "Content-Type": "text/plain" },
+    });
+}
+
+export async function DELETE(request: Request) {
+    let json: unknown;
+    try {
+        json = await request.json();
+    } catch {
+        return Response.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const result = identifySchema.safeParse(json);
+    if (!result.success) {
+        return Response.json(
+            {
+                error: "Validation failed",
+                issues: result.error.flatten().fieldErrors,
+            },
+            { status: 400 },
+        );
+    }
+
+    const parsed = result.data;
+
+    const authError = await authenticateRequest(
+        request,
+        parsed.provider,
+        parsed.repository,
+    );
+    if (authError) return authError;
+
+    const latest = await getLatestRow(
+        parsed.provider,
+        parsed.repository,
+        parsed.prNumber,
+        parsed.name,
+    );
+    if (!latest) {
+        return Response.json({ error: "Report not found" }, { status: 404 });
+    }
+
+    await db.insert(pullRequestReport).values({
+        provider: parsed.provider,
+        repositorySlug: parsed.repository,
+        prNumber: parsed.prNumber,
+        revision: latest.revision + 1,
+        name: parsed.name,
+        title: latest.title,
+        state: "REMOVED",
+        type: "tombstone",
+    });
+
+    return new Response("ok", {
+        headers: { "Content-Type": "text/plain" },
     });
 }

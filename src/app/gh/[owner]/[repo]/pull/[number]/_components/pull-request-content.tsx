@@ -48,17 +48,24 @@ export function PullRequestContent({
                 timeline
             ) : activeReport ? (
                 <div className="relative rounded-b-lg border-gray-200 border-x border-b bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
-                    {activeReport.sourceUrl && (
-                        <a
-                            href={activeReport.sourceUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="absolute top-3 right-4 inline-flex items-center gap-1 text-gray-500 text-xs hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                        >
-                            <ExternalLink className="size-3" />
-                            Source
-                        </a>
-                    )}
+                    <div className="absolute top-3 right-4 flex items-center gap-2">
+                        {activeReport.state === "OUTDATED" && (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700 text-xs dark:bg-amber-900/30 dark:text-amber-400">
+                                Outdated
+                            </span>
+                        )}
+                        {activeReport.sourceUrl && (
+                            <a
+                                href={activeReport.sourceUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-gray-500 text-xs hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            >
+                                <ExternalLink className="size-3" />
+                                Source
+                            </a>
+                        )}
+                    </div>
                     <div className="prose prose-sm max-w-none">
                         <MarkdownRenderer
                             content={activeReport.data ?? ""}

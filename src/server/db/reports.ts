@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns, max } from "drizzle-orm";
+import { and, eq, getTableColumns, max, ne } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 import type { pullRequestReport } from "~/server/db/schema";
@@ -60,7 +60,8 @@ export async function getReportsByPullRequest(
                     latestRevision.maxRevision,
                 ),
             ),
-        );
+        )
+        .where(ne(schema.pullRequestReport.state, "REMOVED"));
 
     return rows;
 }
