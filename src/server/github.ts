@@ -245,6 +245,73 @@ export const markPullRequestAsReady = async (
     return pr;
 };
 
+export type RevertPullRequestResult = {
+    number: number;
+    url: string;
+};
+
+export const revertPullRequest = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    title?: string,
+    body?: string,
+    draft?: boolean,
+): Promise<RevertPullRequestResult> => {
+    const octokit = createOctokit(accessToken);
+    const { data: pr } = await octokit.pulls.get({
+        owner,
+        repo,
+        pull_number: pullNumber,
+    });
+
+    const response = await fetch("https://api.github.com/graphql", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            query: `
+				mutation($input: RevertPullRequestInput!) {
+					revertPullRequest(input: $input) {
+						revertPullRequest {
+							number
+							url
+						}
+					}
+				}
+			`,
+            variables: {
+                input: {
+                    pullRequestId: pr.node_id,
+                    title: title ?? undefined,
+                    body: body ?? undefined,
+                    draft: draft ?? undefined,
+                },
+            },
+        }),
+    });
+
+    const result = await response.json();
+    if (result.errors) {
+        throw new Error(
+            `Failed to revert pull request: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
+        );
+    }
+
+    const revertPr = result.data?.revertPullRequest?.revertPullRequest;
+    if (!revertPr) {
+        throw new Error("Failed to revert pull request: no revert PR returned");
+    }
+
+    return {
+        number: revertPr.number as number,
+        url: revertPr.url as string,
+    };
+};
+
 export type MergeMethod = "merge" | "squash" | "rebase";
 
 export const mergePullRequest = async (
