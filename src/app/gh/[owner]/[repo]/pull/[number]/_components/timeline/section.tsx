@@ -13,6 +13,7 @@ import type {
 import { api } from "~/trpc/react";
 import { CommentForm } from "../comment-form";
 import { TimelineEvent } from "./event";
+import { RevertedBanner, type RevertedByEntry } from "./reverted-banner";
 import { aggregateEvents, filterTimelineEvents } from "./utils";
 
 export function TimelineSkeleton() {
@@ -223,11 +224,44 @@ export function TimelineSection({
     const mergeQueueEntry = data?.pages[0]?.mergeQueueEntry ?? null;
     const filteredEvents = filterTimelineEvents(allEvents);
 
+    const revertedBy = (() => {
+        const revertRe = /^Reverts\s+([\w.-]+\/[\w.-]+)#(\d+)\b/i;
+        const found = new Map<number, RevertedByEntry>();
+        for (const ev of filteredEvents) {
+            if (ev.__typename !== "CrossReferencedEvent") continue;
+            const source = ev.source;
+            if (!source || source.__typename !== "PullRequest") continue;
+            const match = source.body?.match(revertRe);
+            if (!match) continue;
+            const refRepo = match[1];
+            const refNum = Number(match[2]);
+            if (refNum !== number) continue;
+            if (refRepo !== `${owner}/${repo}`) continue;
+            const srcOwner = source.repository.owner.login;
+            const srcRepoName = source.repository.name;
+            if (`${srcOwner}/${srcRepoName}` !== `${owner}/${repo}`) continue;
+            if (found.has(source.number)) continue;
+            found.set(source.number, {
+                number: source.number,
+                title: source.title,
+                url: source.url,
+                owner: srcOwner,
+                repo: srcRepoName,
+                state: source.state,
+            });
+        }
+        return [...found.values()];
+    })();
+
     const wrappers = aggregateEvents(filteredEvents);
 
     return (
         <div className="mt-5">
             {mergeQueueEntry && <MergeQueueBanner entry={mergeQueueEntry} />}
+
+            {revertedBy.map((revert) => (
+                <RevertedBanner key={revert.number} revert={revert} />
+            ))}
 
             {wrappers.length === 0 && (
                 <p className="text-gray-500 text-sm dark:text-gray-400">

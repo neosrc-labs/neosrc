@@ -29,6 +29,7 @@ import {
     removeLabelFromIssue,
     removeReviewersFromPullRequest,
     reopenPullRequest,
+    revertPullRequest,
     updateIssueComment,
     updateIssueMilestone,
     updatePullRequest,
@@ -633,6 +634,46 @@ export const pullsRouter = createTRPCRouter({
                 success: true as const,
                 sha: result.sha,
                 merged: result.merged,
+            };
+        }),
+
+    revert: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+                title: z.string().optional(),
+                body: z.string().optional(),
+                draft: z.boolean().optional(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            const result = await revertPullRequest(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+                input.title,
+                input.body,
+                input.draft,
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
+            return {
+                success: true as const,
+                revertPullRequest: {
+                    number: result.number,
+                    url: result.url,
+                },
             };
         }),
 

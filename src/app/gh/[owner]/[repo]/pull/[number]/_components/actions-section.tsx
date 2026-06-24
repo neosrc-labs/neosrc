@@ -7,6 +7,7 @@ import {
     FilePen,
     GitMerge,
     GitPullRequest,
+    Undo2,
     X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -51,6 +52,10 @@ export function ActionSection({
     const [isCancelPopoverOpen, setIsCancelPopoverOpen] = useState(false);
     const [isClosePopoverOpen, setIsClosePopoverOpen] = useState(false);
     const [isMergeOptionsOpen, setIsMergeOptionsOpen] = useState(false);
+    const [isRevertPopoverOpen, setIsRevertPopoverOpen] = useState(false);
+    const [revertTitle, setRevertTitle] = useState("");
+    const [revertBody, setRevertBody] = useState("");
+    const [revertDraft, setRevertDraft] = useState(false);
     const [mergeMode, setMergeMode] = useLocalStorage<MergeMethod>(
         "neosrc-merge-mode",
         "merge",
@@ -141,6 +146,17 @@ export function ActionSection({
         },
     });
 
+    const revertMutation = api.pulls.revert.useMutation({
+        onSuccess: (data) => {
+            setIsRevertPopoverOpen(false);
+            utils.timeline.list.invalidate();
+            utils.reviews.getPending.invalidate();
+            router.push(
+                `/gh/${owner}/${repo}/pull/${data.revertPullRequest.number}`,
+            );
+        },
+    });
+
     const handleSubmitAction = useCallback(
         (event: "APPROVE" | "COMMENT" | "REQUEST_CHANGES") => {
             const cleanup = () => {
@@ -215,6 +231,35 @@ export function ActionSection({
     const handleMerge = useCallback(() => {
         mergeMutation.mutate({ owner, repo, number, mergeMethod: mergeMode });
     }, [owner, repo, number, mergeMode, mergeMutation]);
+
+    const openRevertDialog = useCallback(
+        (pullRequest: PullsGetResponseData) => {
+            setRevertTitle(`Revert "${pullRequest.title}"`);
+            setRevertBody(`Reverts ${owner}/${repo}#${number}`);
+            setRevertDraft(false);
+            setIsRevertPopoverOpen(true);
+        },
+        [owner, repo, number],
+    );
+
+    const handleRevert = useCallback(() => {
+        revertMutation.mutate({
+            owner,
+            repo,
+            number,
+            title: revertTitle || undefined,
+            body: revertBody || undefined,
+            draft: revertDraft || undefined,
+        });
+    }, [
+        owner,
+        repo,
+        number,
+        revertTitle,
+        revertBody,
+        revertDraft,
+        revertMutation,
+    ]);
 
     const skeleton = (
         <>
@@ -454,14 +499,119 @@ export function ActionSection({
                     ) : null}
                 </div>
                 {effectiveMerged && (
-                    <div className="flex items-center justify-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-3 py-2.5 dark:border-violet-900/50 dark:bg-violet-950/30">
-                        <GitMerge
-                            size={16}
-                            className="text-violet-600 dark:text-violet-400"
-                        />
-                        <span className="font-medium text-sm text-violet-700 dark:text-violet-300">
-                            Merged
-                        </span>
+                    <div className="flex items-center gap-2">
+                        <div className="flex flex-1 items-center justify-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-3 py-2.5 dark:border-violet-900/50 dark:bg-violet-950/30">
+                            <GitMerge
+                                size={16}
+                                className="text-violet-600 dark:text-violet-400"
+                            />
+                            <span className="font-medium text-sm text-violet-700 dark:text-violet-300">
+                                Merged
+                            </span>
+                        </div>
+                        {canWrite && canInteract ? (
+                            <Popover
+                                open={isRevertPopoverOpen}
+                                onOpenChange={setIsRevertPopoverOpen}
+                            >
+                                <PopoverTrigger asChild>
+                                    <button
+                                        className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2.5 text-gray-600 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                        disabled={revertMutation.isPending}
+                                        onClick={() =>
+                                            openRevertDialog(pullRequest)
+                                        }
+                                        type="button"
+                                    >
+                                        <Undo2 size={14} />
+                                        {revertMutation.isPending
+                                            ? "Reverting..."
+                                            : "Revert"}
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    align="end"
+                                    className="w-[42rem] bg-white p-4 dark:bg-zinc-950"
+                                    side="top"
+                                    sideOffset={8}
+                                >
+                                    <div className="mb-3 flex items-center gap-1.5">
+                                        <Undo2
+                                            size={14}
+                                            className="text-gray-700 dark:text-zinc-300"
+                                        />
+                                        <span className="font-medium text-gray-900 text-sm dark:text-gray-100">
+                                            Revert this pull request
+                                        </span>
+                                    </div>
+                                    <p className="mb-3 text-gray-600 text-xs dark:text-gray-400">
+                                        A new pull request will be created that
+                                        reverts the changes from{" "}
+                                        <span className="font-mono">
+                                            #{number}
+                                        </span>
+                                        .
+                                    </p>
+                                    <label
+                                        className="mb-1 block font-medium text-gray-700 text-xs dark:text-gray-300"
+                                        htmlFor="revert-title-input"
+                                    >
+                                        Title
+                                    </label>
+                                    <input
+                                        className="mb-3 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-gray-100"
+                                        disabled={revertMutation.isPending}
+                                        id="revert-title-input"
+                                        onChange={(e) =>
+                                            setRevertTitle(e.target.value)
+                                        }
+                                        type="text"
+                                        value={revertTitle}
+                                    />
+                                    <label
+                                        className="mb-1 block font-medium text-gray-700 text-xs dark:text-gray-300"
+                                        htmlFor="revert-body-input"
+                                    >
+                                        Body
+                                    </label>
+                                    <MarkdownEditor
+                                        disabled={revertMutation.isPending}
+                                        minHeight="120px"
+                                        onChange={setRevertBody}
+                                        onCancel={() =>
+                                            setIsRevertPopoverOpen(false)
+                                        }
+                                        owner={owner}
+                                        placeholder="Describe the revert"
+                                        repo={repo}
+                                        cancelLabel="Cancel"
+                                        value={revertBody}
+                                        footerActions={[
+                                            {
+                                                label: revertMutation.isPending
+                                                    ? "Reverting..."
+                                                    : "Revert",
+                                                onClick: () => handleRevert(),
+                                                variant: "neutral",
+                                                disabled:
+                                                    revertMutation.isPending,
+                                            },
+                                        ]}
+                                    />
+                                    <label className="mt-2 flex items-center gap-2 text-gray-600 text-xs dark:text-gray-400">
+                                        <input
+                                            checked={revertDraft}
+                                            disabled={revertMutation.isPending}
+                                            onChange={(e) =>
+                                                setRevertDraft(e.target.checked)
+                                            }
+                                            type="checkbox"
+                                        />
+                                        Create as draft
+                                    </label>
+                                </PopoverContent>
+                            </Popover>
+                        ) : null}
                     </div>
                 )}
                 {markAsDraftMutation.isError && (
@@ -707,6 +857,11 @@ export function ActionSection({
                 {mergeMutation.isError && (
                     <p className="text-red-600 text-xs">
                         Failed to merge. Please try again.
+                    </p>
+                )}
+                {revertMutation.isError && (
+                    <p className="text-red-600 text-xs">
+                        Failed to revert. Please try again.
                     </p>
                 )}
                 {approveMutation.isError && (

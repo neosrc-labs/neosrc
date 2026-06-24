@@ -155,6 +155,7 @@ query PullRequestTimeline(
 								title
 								url
 								state
+								body
 								repository { name owner { login } }
 							}
 						}
@@ -474,6 +475,7 @@ export type GQLCrossReferencedEvent = {
         title: string;
         url: string;
         state: string;
+        body?: string;
         repository: { name: string; owner: { login: string } };
     } | null;
 };
