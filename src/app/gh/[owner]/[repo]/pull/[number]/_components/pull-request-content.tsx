@@ -4,6 +4,7 @@ import { ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Async } from "~/components/async";
+import { CommitSubject } from "~/components/commit-subject";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import {
     HoverCard,
@@ -102,11 +103,15 @@ export function PullRequestContent({
                                                         {sha.slice(0, 7)}
                                                     </div>
                                                     <div className="truncate text-gray-600 text-xs dark:text-gray-400">
-                                                        {
-                                                            reportCommit?.commit.message.split(
-                                                                "\n",
-                                                            )[0]
-                                                        }
+                                                        <CommitSubject
+                                                            message={
+                                                                reportCommit
+                                                                    ?.commit
+                                                                    .message ??
+                                                                ""
+                                                            }
+                                                            className="truncate"
+                                                        />
                                                     </div>
                                                     {reportCommit?.commit
                                                         .authors[0] && (

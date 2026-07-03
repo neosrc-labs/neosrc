@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type ReactNode, useState } from "react";
 import { CommitAuthors } from "~/components/commit-authors";
+import { CommitSubject } from "~/components/commit-subject";
 import {
     HoverCard,
     HoverCardContent,
@@ -21,11 +22,8 @@ function CommitHoverCardContent({
     baseUrl: string;
 }) {
     const shortSha = commit.oid.slice(0, 7);
-    const message = commit.message;
-    const subject = message.split("\n")[0];
-    const body = message.split("\n").slice(1).join("\n").trim();
+    const body = commit.message.split("\n").slice(1).join("\n").trim();
     const primaryAuthor = commit.authors[0];
-
     return (
         <div>
             <div className="flex items-start gap-3 border-gray-200 border-b p-3 dark:border-zinc-800">
@@ -54,7 +52,7 @@ function CommitHoverCardContent({
             </div>
             <div className="flex flex-col gap-1.5 p-3 pt-2.5">
                 <p className="font-semibold text-gray-900 text-sm dark:text-gray-100">
-                    {subject}
+                    <CommitSubject message={commit.message} />
                 </p>
                 {body && (
                     <p className="whitespace-pre-wrap break-words text-gray-500 text-xs leading-relaxed dark:text-gray-400">
