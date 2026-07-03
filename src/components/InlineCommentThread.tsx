@@ -19,6 +19,10 @@ import {
     PopoverTrigger,
 } from "~/components/ui/popover";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
+import {
+    applyReviewThreadOperations,
+    useReviewThreadOperations,
+} from "~/hooks/use-review-thread-operations";
 import type { ReactionContent } from "~/lib/reactions";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -132,30 +136,29 @@ export function InlineCommentThread({
         { staleTime: 30_000 },
     );
 
+    const resolveOps = useReviewThreadOperations({ owner, repo, number });
+    const displayThreads = applyReviewThreadOperations(
+        threads,
+        resolveOps.operations,
+    );
+
     const threadInfo = useMemo(() => {
-        if (!threads) return null;
+        if (!displayThreads) return null;
         return (
-            threads.find((t) =>
+            displayThreads.find((t) =>
                 t.comments.some((c) => c.id === parentComment.id),
             ) ?? null
         );
-    }, [threads, parentComment.id]);
-
-    const resolveMutation = api.reviewComments.resolveThread.useMutation({
-        onSuccess: () => {
-            setExpandedResolved(false);
-            utils.reviewComments.threads.invalidate();
-            utils.reviewComments.list.invalidate({ owner, repo, number });
-        },
-    });
+    }, [displayThreads, parentComment.id]);
 
     const handleResolve = useCallback(() => {
         if (!threadInfo) return;
-        resolveMutation.mutate({
+        setExpandedResolved(false);
+        resolveOps.resolve({
             threadId: threadInfo.id,
             resolve: !threadInfo.isResolved,
         });
-    }, [threadInfo, resolveMutation]);
+    }, [threadInfo, resolveOps.resolve]);
 
     const handleDelete = useCallback(
         (commentId: number) => {
@@ -285,7 +288,11 @@ export function InlineCommentThread({
                         </div>
                         <ResolveButton
                             onClick={handleResolve}
-                            isPending={resolveMutation.isPending}
+                            isPending={
+                                threadInfo
+                                    ? resolveOps.isPending(threadInfo.id)
+                                    : false
+                            }
                             isUnresolve={threadInfo?.isResolved ?? false}
                         />
                     </div>
