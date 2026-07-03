@@ -88,6 +88,11 @@ export function useReviewThreadOperations({
                 return next;
             });
             utils.reviewComments.threads.invalidate({ owner, repo, number });
+            utils.reviewComments.threadsPage.invalidate({
+                owner,
+                repo,
+                number,
+            });
             utils.reviewComments.list.invalidate({ owner, repo, number });
         },
     });
