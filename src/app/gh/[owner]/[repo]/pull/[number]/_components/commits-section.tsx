@@ -6,6 +6,7 @@ import type React from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { Async, AsyncLink } from "~/components/async";
 import { CommitAuthors } from "~/components/commit-authors";
+import { CommitSubject } from "~/components/commit-subject";
 import { CommitHoverCard } from "~/components/hovercards/commit-hover-card";
 import type { PullsGetResponseData } from "~/server/github";
 import type { GQLCommitWithAuthors } from "~/server/github-graphql";
@@ -167,7 +168,10 @@ function CommitsList({
                                             href={`${baseUrl}/${commit.oid}`}
                                         >
                                             <p className="truncate text-inherit">
-                                                {commit.message.split("\n")[0]}
+                                                <CommitSubject
+                                                    message={commit.message}
+                                                    className="truncate"
+                                                />
                                             </p>
                                         </AsyncLink>
                                         {commit.authors[0] && (

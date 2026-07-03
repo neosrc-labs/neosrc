@@ -2,6 +2,7 @@
 
 import NextLink from "next/link";
 import { CommitAuthors } from "~/components/commit-authors";
+import { CommitSubject } from "~/components/commit-subject";
 import { VerifiedBadge } from "~/components/verified-badge";
 import type { GQLPullRequestCommit } from "~/server/github-graphql";
 
@@ -30,7 +31,10 @@ export function PullRequestCommitContent({
                     href={`/gh/${owner}/${repo}/pull/${number}/files/${commit?.oid}`}
                     className="truncate hover:text-blue-600 hover:underline dark:hover:text-blue-400"
                 >
-                    {commit?.message.split("\n")[0]}
+                    <CommitSubject
+                        message={commit?.message ?? ""}
+                        className="truncate"
+                    />
                 </NextLink>
             </div>
             <div className="flex shrink-0 items-center gap-2">

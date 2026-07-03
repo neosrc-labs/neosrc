@@ -1,3 +1,4 @@
+import { CommitSubject } from "~/components/commit-subject";
 import type { CommitData, PullsListCommitsResponseData } from "~/server/github";
 
 interface CommitHeaderProps {
@@ -34,7 +35,7 @@ export async function CommitHeader({
         <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
             <div className="mb-3 flex items-center justify-between">
                 <h2 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
-                    {commit.commit.message.split("\n")[0]}
+                    <CommitSubject message={commit.commit.message} />
                 </h2>
                 <div className="flex gap-2">
                     {prevCommit ? (
