@@ -61,11 +61,19 @@ export default async function PullRequestPage({ params }: PageProps) {
         pullRequestPromise,
         userId,
     );
+    const canEditPromise = computeCanEdit(
+        accessToken,
+        owner,
+        repo,
+        pullRequestPromise,
+        userId,
+    );
 
     return (
         <div className="px-6 py-8">
             <PullRequestTitleSetter pullRequestPromise={pullRequestPromise} />
             <PullRequestDescriptionSection
+                canEditPromise={canEditPromise}
                 canInteractPromise={canInteractPromise}
                 pullRequestPromise={pullRequestPromise}
                 owner={owner}
@@ -128,6 +136,42 @@ async function computeCanInteract(
 
     return (
         !pr.locked ||
+        userPermission === "admin" ||
+        userPermission === "write" ||
+        currentUser === pr.user?.login
+    );
+}
+
+/**
+ * Strict capability check for edit-class operations on the PR body (e.g.
+ * clicking a task-list checkbox). Unlike {@link computeCanInteract}, this is
+ * not granted for read-only viewers on unlocked PRs — only repo maintainers
+ * (write/admin) or the PR author may edit. Anonymous users never have edit
+ * capability. The locked state is not modeled here because GitHub itself
+ * permits body edits on locked PRs by maintainers, and the permission/author
+ * checks already cover who can edit.
+ */
+async function computeCanEdit(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullRequestPromise: Promise<PullsGetResponseData>,
+    userId: string | undefined,
+) {
+    const session = await getSession();
+    const currentUser = session?.user.githubUsername;
+    if (!currentUser || !userId) return false;
+    const [pr, userPermission] = await Promise.all([
+        pullRequestPromise,
+        getUserRepoPermission(
+            accessToken,
+            owner,
+            repo,
+            currentUser,
+            userId,
+        ).catch(() => null),
+    ]);
+    return (
         userPermission === "admin" ||
         userPermission === "write" ||
         currentUser === pr.user?.login

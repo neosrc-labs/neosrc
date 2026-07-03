@@ -6,10 +6,10 @@ import {
     type CSSProperties,
     createContext,
     isValidElement,
+    type ReactElement,
     type ReactNode,
     useContext,
     useEffect,
-    useRef,
     useState,
 } from "react";
 import ReactMarkdown from "react-markdown";
@@ -121,6 +121,13 @@ interface MarkdownRendererProps {
     commentStartLine?: number | null;
     commentThreadId?: string;
     onToggleTask?: (content: string) => void;
+    /**
+     * Whether task-list checkboxes should be interactive. When `false`
+     * (or when `onToggleTask` is absent) they render as disabled inputs.
+     * Defaults to `true` so existing callers (e.g. {@link MarkdownEditor}
+     * preview) keep interactive checkboxes.
+     */
+    canToggleTasks?: boolean;
 }
 
 const schema = {
@@ -141,16 +148,36 @@ const schema = {
     },
 };
 
-function toggleCheckboxInContent(content: string, targetIndex: number): string {
-    const taskRegex = /- \[([ x])\]/g;
-    let count = 0;
-    return content.replace(taskRegex, (match, state) => {
-        if (count === targetIndex) {
-            return `- [${state === " " ? "x" : " "}]`;
-        }
-        count++;
-        return match;
-    });
+type HastNode = {
+    type?: string;
+    tagName?: string;
+    position?: {
+        start?: { line?: number };
+    } | null;
+};
+
+/**
+ * Toggle the `[ ]`/`[x]` marker on the 1-based `lineNumber` of the source
+ * content. The line is identified by the hast `<li>` element's
+ * `position.start.line` (preserved by remark-rehype from the original mdast
+ * listItem position), which react-markdown passes to the `li` component
+ * override via the `node` prop. Because each `<li>` directly knows its own
+ * source line, no global index/positional-ref matching is needed — every
+ * checkbox toggles itself regardless of document structure (blockquotes,
+ * ordered lists, nested lists, headings before the list, etc).
+ */
+function toggleCheckboxAtLine(content: string, lineNumber: number): string {
+    if (lineNumber < 1) return content;
+    const lines = content.split("\n");
+    const line = lines[lineNumber - 1];
+    if (line === undefined) return content;
+    const toggled = line.replace(
+        /^(\s*(?:>\s*)*(?:[-*+]|\d+\.)\s+)\[([ xX])\]/,
+        (_match, prefix: string, state: string) =>
+            `${prefix}[${state === " " ? "x" : " "}]`,
+    );
+    lines[lineNumber - 1] = toggled;
+    return lines.join("\n");
 }
 
 function getPlainText(children: ReactNode): string {
@@ -170,9 +197,8 @@ export function MarkdownRenderer({
     commentStartLine,
     commentThreadId,
     onToggleTask,
+    canToggleTasks = true,
 }: MarkdownRendererProps) {
-    const checkboxIndexRef = useRef(0);
-
     if (!content) {
         return (
             <p className="text-gray-500 italic dark:text-gray-400">
@@ -182,7 +208,7 @@ export function MarkdownRenderer({
     }
 
     const stripped = content.replace(/<!--[\s\S]*?-->/g, "");
-    checkboxIndexRef.current = 0;
+    const interactive = canToggleTasks && Boolean(onToggleTask);
     return (
         <ReactMarkdown
             remarkPlugins={[
@@ -341,16 +367,55 @@ export function MarkdownRenderer({
                         </ul>
                     );
                 },
-                li({ children, className, ...props }) {
+                li({ children, className, node, ...props }) {
                     const childrenArray = Children.toArray(children);
                     const firstChild = childrenArray[0];
                     const isTaskItem =
                         isValidElement<{ type?: string }>(firstChild) &&
                         firstChild.props.type === "checkbox";
                     if (isTaskItem) {
+                        // Each task-list <li> knows its own source line via
+                        // the hast `node.position.start.line` (preserved from
+                        // the mdast listItem by remark-rehype). We replace
+                        // the gfm-injected <input> child with our own
+                        // controlled checkbox whose onChange bakes in this
+                        // line — no global index/ref positional matching, so
+                        // toggles are robust to any document structure
+                        // (blockquotes, ordered lists, nested lists,
+                        // preceding headings, etc).
+                        const line = (node as HastNode | undefined)?.position
+                            ?.start?.line;
+                        const inputEl = firstChild as ReactElement<{
+                            checked?: boolean;
+                        }>;
+                        const replacement = (
+                            <input
+                                checked={inputEl.props.checked === true}
+                                className="size-4 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-500 dark:bg-zinc-700 dark:focus:ring-blue-400"
+                                disabled={!interactive}
+                                onChange={
+                                    interactive
+                                        ? () => {
+                                              if (typeof line !== "number")
+                                                  return;
+                                              const newContent =
+                                                  toggleCheckboxAtLine(
+                                                      stripped,
+                                                      line,
+                                                  );
+                                              onToggleTask?.(newContent);
+                                          }
+                                        : undefined
+                                }
+                                type="checkbox"
+                            />
+                        );
+                        const newChildren = childrenArray.map((c, i) =>
+                            i === 0 ? replacement : c,
+                        );
                         return (
                             <li className="list-none" {...props}>
-                                {children}
+                                {newChildren}
                             </li>
                         );
                     }
@@ -399,25 +464,6 @@ export function MarkdownRenderer({
                         >
                             {children}
                         </td>
-                    );
-                },
-                input({ checked, disabled: _disabled, ...props }) {
-                    const index = checkboxIndexRef.current++;
-                    const isChecked = checked === true;
-                    return (
-                        <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => {
-                                const newContent = toggleCheckboxInContent(
-                                    stripped,
-                                    index,
-                                );
-                                onToggleTask?.(newContent);
-                            }}
-                            className="size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-500 dark:bg-zinc-700 dark:focus:ring-blue-400"
-                            {...props}
-                        />
                     );
                 },
             }}

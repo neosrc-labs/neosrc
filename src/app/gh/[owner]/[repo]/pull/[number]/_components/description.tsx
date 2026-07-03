@@ -20,6 +20,7 @@ import type { PullsGetResponseData } from "~/server/github";
 
 type SimpleUser = components["schemas"]["nullable-simple-user"];
 
+import { useTaskToggle } from "~/hooks/use-task-toggle";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 
@@ -29,6 +30,7 @@ interface PullRequestDescriptionSectionProps {
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData>;
     canInteractPromise: Promise<boolean>;
+    canEditPromise: Promise<boolean>;
 }
 
 export function PullRequestDescriptionSection({
@@ -37,6 +39,7 @@ export function PullRequestDescriptionSection({
     number,
     pullRequestPromise,
     canInteractPromise,
+    canEditPromise,
 }: PullRequestDescriptionSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editBody, setEditBody] = useState("");
@@ -50,6 +53,20 @@ export function PullRequestDescriptionSection({
             setSavedBody(null);
             setIsEditing(true);
         },
+    });
+
+    // Toggle instance for task-list checkbox clicks. Separate from
+    // `updateMutation` because its onMutate/onError contract mirrors the
+    // toggle flow rather than the edit-mode flow. Both share `savedBody` as
+    // the optimistic overlay over `pullRequest.body`; the two flows are never
+    // active at the same time (toggles only fire while `!isEditing`).
+    const taskToggleMutation = api.pulls.updateBody.useMutation({
+        onMutate: ({ body }) => setSavedBody(body),
+        onError: () => setSavedBody(null),
+    });
+    const { onToggleTask } = useTaskToggle({
+        mutation: taskToggleMutation,
+        staticInput: { owner, repo, number },
     });
 
     const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -419,11 +436,28 @@ export function PullRequestDescriptionSection({
                                 ) : (
                                     <div className="prose prose-sm max-w-none">
                                         {displayBody ? (
-                                            <MarkdownRenderer
-                                                content={displayBody}
-                                                owner={owner}
-                                                repo={repo}
-                                            />
+                                            <Async
+                                                fallback={
+                                                    <MarkdownRenderer
+                                                        content={displayBody}
+                                                        owner={owner}
+                                                        repo={repo}
+                                                    />
+                                                }
+                                                promise={canEditPromise}
+                                            >
+                                                {(canEdit) => (
+                                                    <MarkdownRenderer
+                                                        canToggleTasks={canEdit}
+                                                        content={displayBody}
+                                                        onToggleTask={
+                                                            onToggleTask
+                                                        }
+                                                        owner={owner}
+                                                        repo={repo}
+                                                    />
+                                                )}
+                                            </Async>
                                         ) : (
                                             <p className="text-gray-500 italic dark:text-zinc-400">
                                                 No description provided.
