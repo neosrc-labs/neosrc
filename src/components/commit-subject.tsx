@@ -1,3 +1,4 @@
+import { TriangleAlert } from "lucide-react";
 import { CommitTypeBadge } from "~/components/commit-type-badge";
 import { parseCommitMessage } from "~/utils/commit-message";
 
@@ -16,11 +17,19 @@ export function CommitSubject({
 
     return (
         <span
-            className={`inline-flex min-w-0 items-baseline gap-1.5 ${className ?? ""}`}
+            className={`inline-flex min-w-0 items-center gap-1.5 ${className ?? ""}`}
         >
             <CommitTypeBadge conventional={conventional} />
+            {conventional.breaking && (
+                <span title="Breaking change">
+                    <TriangleAlert
+                        aria-label="Breaking change"
+                        className="size-3.5 shrink-0 text-red-600 dark:text-red-400"
+                    />
+                </span>
+            )}
             {conventional.scope && (
-                <span className="shrink-0 text-gray-500 dark:text-gray-400">
+                <span className="shrink-0 opacity-60">
                     ({conventional.scope})
                 </span>
             )}
