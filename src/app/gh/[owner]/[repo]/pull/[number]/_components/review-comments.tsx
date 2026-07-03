@@ -12,6 +12,10 @@ import { ReactionBar } from "~/components/ReactionBar";
 import { ReactionPicker } from "~/components/ReactionPicker";
 import { ResolveButton } from "~/components/ResolvedThreadBanner";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
+import {
+    applyReviewThreadOperations,
+    useReviewThreadOperations,
+} from "~/hooks/use-review-thread-operations";
 import type { ReactionContent } from "~/lib/reactions";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -47,30 +51,31 @@ export function ReviewComments({
     const [expandedResolvedIds, setExpandedResolvedIds] = useState<Set<number>>(
         new Set(),
     );
-    const utils = api.useUtils();
 
     const { data: threads } = api.reviewComments.threads.useQuery(
         { owner, repo, number },
         { staleTime: 30_000 },
     );
 
+    const resolveOps = useReviewThreadOperations({ owner, repo, number });
+    const displayThreads = applyReviewThreadOperations(
+        threads,
+        resolveOps.operations,
+    );
+
     const threadByCommentId = useMemo(() => {
-        const map = new Map<number, NonNullable<typeof threads>[number]>();
-        if (!threads) return map;
-        for (const thread of threads) {
+        const map = new Map<
+            number,
+            NonNullable<typeof displayThreads>[number]
+        >();
+        if (!displayThreads) return map;
+        for (const thread of displayThreads) {
             for (const c of thread.comments) {
                 map.set(c.id, thread);
             }
         }
         return map;
-    }, [threads]);
-
-    const resolveMutation = api.reviewComments.resolveThread.useMutation({
-        onSuccess: () => {
-            utils.reviewComments.threads.invalidate();
-            utils.reviewComments.list.invalidate({ owner, repo, number });
-        },
-    });
+    }, [displayThreads]);
 
     const handleResolve = useCallback(
         (commentId: number, threadId: string, resolve: boolean) => {
@@ -79,12 +84,12 @@ export function ReviewComments({
                 next.delete(commentId);
                 return next;
             });
-            resolveMutation.mutate({
+            resolveOps.resolve({
                 threadId,
                 resolve,
             });
         },
-        [resolveMutation],
+        [resolveOps.resolve],
     );
 
     const allCommentIds = useMemo(() => {
@@ -260,6 +265,7 @@ export function ReviewComments({
                                         isResolved={isResolved}
                                         isExpanded={isExpanded}
                                         threadId={thread?.id ?? ""}
+                                        isResolvePending={resolveOps.isPending}
                                         onStartEdit={(id, body) => {
                                             setEditBody(body);
                                             setEditingCommentId(id);
@@ -299,6 +305,7 @@ function CommentBlock({
     isResolved,
     isExpanded,
     threadId,
+    isResolvePending,
     onStartEdit,
     onEditBodyChange,
     onCancelEdit,
@@ -321,6 +328,7 @@ function CommentBlock({
     isResolved: boolean;
     isExpanded: boolean;
     threadId: string;
+    isResolvePending: (threadId: string) => boolean;
     onStartEdit: (commentId: number, body: string) => void;
     onEditBodyChange: (body: string) => void;
     onCancelEdit: () => void;
@@ -552,7 +560,7 @@ function CommentBlock({
                             onClick={() =>
                                 onResolve(comment.id, threadId, !isResolved)
                             }
-                            isPending={false}
+                            isPending={isResolvePending(threadId)}
                             isUnresolve={isResolved}
                         />
                     </div>
