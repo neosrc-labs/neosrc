@@ -15,23 +15,20 @@ const TYPE_COLORS: Record<string, string> = {
     chore: "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-gray-400",
 };
 
-const BREAKING_COLOR =
-    "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 font-bold";
+const NEUTRAL_COLOR =
+    "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-gray-400";
 
 export function CommitTypeBadge({
     conventional,
 }: {
     conventional: ConventionalParts;
 }) {
-    const color = conventional.breaking
-        ? BREAKING_COLOR
-        : (TYPE_COLORS[conventional.type] ?? TYPE_COLORS.chore);
+    const color = TYPE_COLORS[conventional.type] ?? NEUTRAL_COLOR;
 
     return (
         <span
-            className={`inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0 font-mono text-[11px] leading-[1.4] ${color}`}
+            className={`inline-flex shrink-0 items-center rounded-full px-2 py-1 font-mono text-xs leading-none ${color}`}
         >
-            {conventional.breaking && <span aria-hidden="true">!</span>}
             {conventional.type}
         </span>
     );
