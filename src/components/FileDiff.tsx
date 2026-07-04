@@ -1,5 +1,6 @@
 "use client";
 
+import { FoldVertical, UnfoldVertical } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -62,6 +63,7 @@ export default function FileDiff({
         null,
     );
     const [commentBody, setCommentBody] = useState("");
+    const [expandedAll, setExpandedAll] = useState(false);
     const utils = api.useUtils();
     const headerRef = useRef<HTMLDivElement>(null);
 
@@ -224,6 +226,29 @@ export default function FileDiff({
         setIsCollapsed(!isCollapsed);
     };
 
+    const toggleExpandAll = () => {
+        const willCollapse = expandedAll;
+        if (willCollapse && headerRef.current) {
+            const stickyOffset = 56;
+            const headerTop = headerRef.current.getBoundingClientRect().top;
+            if (Math.abs(headerTop - stickyOffset) < 20) {
+                setExpandedAll(false);
+                setTimeout(() => {
+                    if (headerRef.current) {
+                        const newTop =
+                            headerRef.current.getBoundingClientRect().top;
+                        const delta = newTop - stickyOffset;
+                        if (Math.abs(delta) > 1) {
+                            window.scrollBy(0, delta);
+                        }
+                    }
+                }, 0);
+                return;
+            }
+        }
+        setExpandedAll(!expandedAll);
+    };
+
     const toggleViewed = () => {
         const key = getViewedKey(owner, repo, number);
         const viewed = getStoredSet(key);
@@ -294,13 +319,27 @@ export default function FileDiff({
                     </svg>
                 </button>
 
-                <button
-                    className="flex-1 cursor-pointer truncate text-left font-mono text-gray-700 text-sm dark:text-gray-300"
-                    onClick={toggleCollapsed}
-                    type="button"
-                >
-                    {file.filename}
-                </button>
+                <span className="flex min-w-0 flex-1 items-center gap-1">
+                    <button
+                        className="cursor-pointer truncate text-left font-mono text-gray-700 text-sm dark:text-gray-300"
+                        onClick={toggleCollapsed}
+                        type="button"
+                    >
+                        {file.filename}
+                    </button>
+                    <button
+                        className="ml-1 flex shrink-0 cursor-pointer items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        onClick={toggleExpandAll}
+                        type="button"
+                        title={expandedAll ? "Collapse all" : "Expand all"}
+                    >
+                        {expandedAll ? (
+                            <FoldVertical size={14} />
+                        ) : (
+                            <UnfoldVertical size={14} />
+                        )}
+                    </button>
+                </span>
 
                 <span className={`font-medium text-xs ${statusColor}`}>
                     {file.status}
@@ -419,6 +458,8 @@ export default function FileDiff({
                             owner={owner}
                             repo={repo}
                             pullNumber={number}
+                            headSha={headSha}
+                            expandAllContext={expandedAll}
                         />
                     ) : isImage && imageUrls ? (
                         <ImageDiff
