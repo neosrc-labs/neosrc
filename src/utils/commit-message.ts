@@ -11,20 +11,6 @@ export interface ParsedCommit {
     conventional: ConventionalParts | null;
 }
 
-export const CONVENTIONAL_COMMIT_TYPES = [
-    "feat",
-    "fix",
-    "perf",
-    "refactor",
-    "revert",
-    "docs",
-    "style",
-    "test",
-    "build",
-    "ci",
-    "chore",
-] as const;
-
 const SUBJECT_RE =
     /^(?<type>[a-zA-Z]+)(?:\((?<scope>[^)]+)\))?(?<breaking>!)?:\s*(?<description>.+)$/;
 

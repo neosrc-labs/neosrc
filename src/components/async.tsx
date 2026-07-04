@@ -30,36 +30,3 @@ function AsyncValue<T>({
     const value = use(promise); // suspends here
     return <>{children(value)}</>;
 }
-
-import Link from "next/link";
-import { useEffect, useState } from "react";
-
-interface AsyncLinkProps
-    extends Omit<React.ComponentProps<typeof Link>, "href"> {
-    href: string | Promise<string>;
-    pendingHref?: string; // fallback href while promise resolves
-}
-
-export function AsyncLink({
-    href,
-    pendingHref = "#",
-    children,
-    ...props
-}: AsyncLinkProps) {
-    const [resolvedHref, setResolvedHref] = useState<string>(
-        typeof href === "string" ? href : pendingHref,
-    );
-
-    useEffect(() => {
-        if (typeof href !== "string") {
-            console.log(typeof href);
-            href.then(setResolvedHref);
-        }
-    }, [href]);
-
-    return (
-        <Link href={resolvedHref} {...props}>
-            {children}
-        </Link>
-    );
-}
