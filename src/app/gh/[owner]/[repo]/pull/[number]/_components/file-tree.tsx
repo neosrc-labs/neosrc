@@ -1,9 +1,9 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { SquareDot } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { PullRequestFile } from "~/server/github";
-
 import iconMapData from "~/utils/iconMap.json";
 
 const iconMap: Record<string, string> = iconMapData as Record<string, string>;
@@ -210,25 +210,16 @@ function FileTreeNode({
                 />
                 <span className="flex-1 truncate">{node.name}</span>
                 {node.status === "added" ? (
-                    <span
-                        className="flex h-3 w-3 flex-shrink-0 items-center justify-center rounded border border-green-500"
-                        title={diffTooltip}
-                    >
-                        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    <span className="flex-shrink-0" title={diffTooltip}>
+                        <SquareDot className="h-3 w-3 text-green-500" />
                     </span>
                 ) : node.status === "modified" ? (
-                    <span
-                        className="flex h-3 w-3 flex-shrink-0 items-center justify-center rounded border border-orange-500"
-                        title={diffTooltip}
-                    >
-                        <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                    <span className="flex-shrink-0" title={diffTooltip}>
+                        <SquareDot className="h-3 w-3 text-orange-500" />
                     </span>
                 ) : node.status === "removed" ? (
-                    <span
-                        className="flex h-3 w-3 flex-shrink-0 items-center justify-center rounded border border-red-500"
-                        title={diffTooltip}
-                    >
-                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    <span className="flex-shrink-0" title={diffTooltip}>
+                        <SquareDot className="h-3 w-3 text-red-500" />
                     </span>
                 ) : null}
             </a>
