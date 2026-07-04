@@ -121,6 +121,12 @@ export function DiffView({
     }, []);
 
     useEffect(() => {
+        if (!expandAllContext) {
+            setExpandedGapKeys(new Set());
+        }
+    }, [expandAllContext]);
+
+    useEffect(() => {
         if (!diffRef.current || !language || !parsed) return;
         const lines =
             diffRef.current.querySelectorAll<HTMLElement>(".d2h-code-line-ctn");
