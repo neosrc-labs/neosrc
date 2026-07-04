@@ -8,10 +8,11 @@ export function PullRequestTitleSetter({
 }: {
     pullRequestPromise: Promise<PullsGetResponseData>;
 }) {
+    // biome-ignore lint/correctness/useExhaustiveDependencies: promise is stable across renders
     useEffect(() => {
         pullRequestPromise.then((pr) => {
             document.title = `${pr.title} - ${pr.base.repo.full_name} #${pr.number}`;
         });
-    }, [pullRequestPromise]);
+    }, []);
     return null;
 }
