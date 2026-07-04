@@ -287,9 +287,9 @@ export function PullRequestDescriptionSection({
                                                     {displayTitle}
                                                 </CodeTitle>
                                             </h1>
-                                            <h1 className="text-2xl text-gray-400 dark:text-zinc-500">
+                                            <span className="text-2xl text-gray-400 dark:text-zinc-500">
                                                 #{number}
-                                            </h1>
+                                            </span>
                                             <Async
                                                 fallback={null}
                                                 promise={canInteractPromise}
