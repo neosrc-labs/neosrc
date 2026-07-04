@@ -184,7 +184,7 @@ export function ActionSection({
             pendingReview,
             body,
             approveMutation,
-        
+
             submitReviewMutation,
         ],
     );

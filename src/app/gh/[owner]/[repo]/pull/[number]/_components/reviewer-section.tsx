@@ -271,10 +271,7 @@ function ReviewerSectionContent({
                             />
                         )}
                         {state === "CHANGES_REQUESTED" && (
-                            <X
-                                className="ml-auto text-red-600"
-                                size={16}
-                            />
+                            <X className="ml-auto text-red-600" size={16} />
                         )}
                         {state === "COMMENTED" && (
                             <MessageSquare
