@@ -52,10 +52,7 @@ export function PullRequestToolbar({
             <div className="flex items-center justify-between px-4">
                 <div className="flex items-center">
                     {TABS.map((tab) => {
-                        const count =
-                            tab.key !== "merged"
-                                ? stateCounts?.[tab.key]
-                                : undefined;
+                        const count = stateCounts?.[tab.key];
                         return (
                             <button
                                 key={tab.key}
