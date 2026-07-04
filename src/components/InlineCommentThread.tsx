@@ -384,6 +384,7 @@ function Comment({
                             <PopoverTrigger asChild>
                                 <button
                                     type="button"
+                                    aria-label="More options"
                                     className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
                                 >
                                     <MoreVertical size={14} />
