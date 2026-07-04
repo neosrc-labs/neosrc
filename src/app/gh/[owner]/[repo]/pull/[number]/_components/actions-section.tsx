@@ -565,6 +565,7 @@ export function ActionSection({
                                         Body
                                     </label>
                                     <MarkdownEditor
+                                        autoFocus
                                         disabled={revertMutation.isPending}
                                         minHeight="120px"
                                         onChange={setRevertBody}
@@ -644,6 +645,7 @@ export function ActionSection({
                                     sideOffset={8}
                                 >
                                     <MarkdownEditor
+                                        autoFocus
                                         disabled={isPending}
                                         minHeight="150px"
                                         onChange={setBody}

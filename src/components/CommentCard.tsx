@@ -131,6 +131,7 @@ export function CommentCard({
             <div className="prose prose-sm dark:prose-invert mx-6 max-w-none px-4 py-2">
                 {isEditing ? (
                     <MarkdownEditor
+                        autoFocus
                         value={editBody}
                         onChange={onEditBodyChange ?? (() => {})}
                         onCancel={onCancelEdit ?? (() => {})}
