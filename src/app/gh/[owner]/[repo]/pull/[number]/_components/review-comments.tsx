@@ -183,12 +183,10 @@ export function ReviewComments({
                 const resolvedInFile = fileComments.filter(
                     (c) => threadByCommentId.get(c.id)?.isResolved,
                 );
-                const outdatedInFile = fileComments.some(
-                    (c) => {
-                        const t = threadByCommentId.get(c.id);
-                        return t?.isOutdated && !t.isResolved;
-                    },
-                );
+                const outdatedInFile = fileComments.some((c) => {
+                    const t = threadByCommentId.get(c.id);
+                    return t?.isOutdated && !t.isResolved;
+                });
 
                 return (
                     <div
