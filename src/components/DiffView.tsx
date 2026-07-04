@@ -203,24 +203,48 @@ export function DiffView({
                 <table className="d2h-diff-table relative">
                     <tbody className="d2h-diff-tbody">
                         {renderItems.map((item, idx) => {
-                            if (item.type === "gap") return null;
+                            if (item.type === "gap") {
+                                if (item.endLine !== -1) {
+                                    // Leading/between gaps handled via next block
+                                    return null;
+                                }
+                                // Trailing gap: render standalone expandable row
+                                const gapKey = `gap-${item.startLine}`;
+                                const isExpanded =
+                                    expandAllContext ||
+                                    expandedGapKeys.has(gapKey);
+                                return (
+                                    <GapRow
+                                        key={gapKey}
+                                        startLine={item.startLine}
+                                        isExpanded={isExpanded}
+                                        onExpand={handleGapExpand}
+                                        gapKey={gapKey}
+                                        owner={owner}
+                                        repo={repo}
+                                        headSha={headSha}
+                                        filename={filename}
+                                    />
+                                );
+                            }
 
                             const prevItem =
                                 idx > 0 ? renderItems[idx - 1] : null;
                             const prevGap =
                                 prevItem?.type === "gap" ? prevItem : null;
-                            const isEdgeGap =
-                                prevGap !== null &&
-                                (prevGap.startLine === 1 ||
-                                    prevGap.endLine === -1);
-                            const shouldShowGap =
-                                prevGap && (!isEdgeGap || expandAllContext);
-                            const prevGapKey =
-                                shouldShowGap && prevGap
-                                    ? `gap-${prevGap.startLine}`
+                            // Only pass gap info if it's not a trailing gap (handled separately)
+                            const prevGapForBlock: Gap | undefined =
+                                prevGap && prevGap.endLine !== -1
+                                    ? {
+                                          startLine: prevGap.startLine,
+                                          endLine: prevGap.endLine,
+                                      }
                                     : undefined;
+                            const prevGapKey = prevGapForBlock
+                                ? `gap-${prevGapForBlock.startLine}`
+                                : undefined;
                             const isGapExpanded =
-                                shouldShowGap === true &&
+                                prevGapForBlock !== null &&
                                 prevGapKey !== undefined &&
                                 (expandAllContext ||
                                     expandedGapKeys.has(prevGapKey));
@@ -230,7 +254,7 @@ export function DiffView({
                                     key={`block-${item.block.newStartLine}`}
                                     block={item.block}
                                     hideHeader={isGapExpanded}
-                                    gap={shouldShowGap ? prevGap : undefined}
+                                    gap={prevGapForBlock}
                                     gapKey={prevGapKey}
                                     isGapExpanded={isGapExpanded}
                                     onGapExpand={handleGapExpand}
@@ -563,6 +587,107 @@ function BlockRows({
                             </tr>
                         )}
                     </Fragment>
+                );
+            })}
+        </>
+    );
+}
+
+interface GapRowProps {
+    startLine: number;
+    isExpanded: boolean;
+    onExpand: (key: string) => void;
+    gapKey: string;
+    owner: string | undefined;
+    repo: string | undefined;
+    headSha: string | undefined;
+    filename: string;
+}
+
+function GapRow({
+    startLine,
+    isExpanded,
+    onExpand,
+    gapKey,
+    owner,
+    repo,
+    headSha,
+    filename,
+}: GapRowProps) {
+    const { lines, isLoading, error } = useFileContent({
+        owner: owner ?? "",
+        repo: repo ?? "",
+        sha: headSha ?? "",
+        path: filename,
+    });
+
+    const endLine = lines?.length ?? -1;
+    const gapSize = endLine - startLine + 1;
+
+    if (!isExpanded) {
+        if (gapSize <= 0) return null;
+        return (
+            <tr
+                className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                onClick={() => onExpand(gapKey)}
+            >
+                <td className="d2h-code-linenumber d2h-info">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <UnfoldVertical
+                            size={14}
+                            className="text-gray-500 dark:text-gray-400"
+                        />
+                    </div>
+                </td>
+                <td className="d2h-info">
+                    <div className="d2h-code-line" />
+                </td>
+            </tr>
+        );
+    }
+
+    if (isLoading) {
+        return (
+            <tr>
+                <td className="d2h-code-linenumber d2h-info" />
+                <td className="d2h-info">
+                    <div className="d2h-code-line text-gray-400 text-xs">
+                        Loading...
+                    </div>
+                </td>
+            </tr>
+        );
+    }
+
+    if (error || !lines || gapSize <= 0) {
+        return null;
+    }
+
+    const gapLines = lines.slice(startLine - 1, endLine);
+
+    return (
+        <>
+            {gapLines.map((lineContent, idx) => {
+                const lineNum = startLine + idx;
+                return (
+                    <tr key={`gap-${lineNum}`}>
+                        <td className="d2h-code-linenumber d2h-cntx">
+                            <div className="absolute">
+                                <div className="line-num1">{lineNum}</div>
+                                <div className="line-num2">{lineNum}</div>
+                            </div>
+                        </td>
+                        <td className="d2h-cntx">
+                            <div
+                                className="d2h-code-line"
+                                style={{ display: "flex" }}
+                            >
+                                <span className="d2h-code-line-ctn">
+                                    {lineContent || <br />}
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
                 );
             })}
         </>
