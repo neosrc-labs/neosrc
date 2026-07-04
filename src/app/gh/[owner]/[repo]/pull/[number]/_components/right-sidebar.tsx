@@ -176,15 +176,7 @@ function ChecksSection({ checks }: ChecksSectionProps) {
 
     return (
         <div className="space-y-2">
-            {checks
-
-                .map((a) => {
-                    {
-                        /* console.log(a) */
-                    }
-                    return a;
-                })
-                .map((check: CheckRun) => (
+            {checks.map((check: CheckRun) => (
                     <CheckHoverCard
                         check={check}
                         key={check.html_url ?? check.name}
