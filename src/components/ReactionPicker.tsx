@@ -61,6 +61,7 @@ export function ReactionPicker({
                         <button
                             key={content}
                             type="button"
+                            aria-label={content}
                             onClick={() => {
                                 onReact(content);
                                 setOpen(false);
