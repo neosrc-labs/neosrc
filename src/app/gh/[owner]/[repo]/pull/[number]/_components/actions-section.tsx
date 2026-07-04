@@ -78,14 +78,6 @@ export function ActionSection({
         },
     });
 
-    const requestChangesMutation = api.pulls.approve.useMutation({
-        onSuccess: () => {
-            utils.timeline.list.invalidate();
-            utils.reviews.getPending.invalidate();
-            navigateAndScroll();
-        },
-    });
-
     const submitReviewMutation = api.reviews.submit.useMutation({
         onSuccess: () => {
             utils.reviews.getPending.invalidate();
@@ -178,13 +170,8 @@ export function ActionSection({
                         onSuccess: cleanup,
                     },
                 );
-            } else if (event === "APPROVE") {
-                approveMutation.mutate(
-                    { owner, repo, number, event, body: body || undefined },
-                    { onSuccess: cleanup },
-                );
             } else {
-                requestChangesMutation.mutate(
+                approveMutation.mutate(
                     { owner, repo, number, event, body: body || undefined },
                     { onSuccess: cleanup },
                 );
@@ -197,7 +184,7 @@ export function ActionSection({
             pendingReview,
             body,
             approveMutation,
-            requestChangesMutation,
+        
             submitReviewMutation,
         ],
     );
@@ -359,7 +346,7 @@ export function ActionSection({
         const isPending =
             submitReviewMutation.isPending ||
             approveMutation.isPending ||
-            requestChangesMutation.isPending;
+            approveMutation.isPending;
 
         const canWrite =
             userPermission === "admin" || userPermission === "write";
@@ -872,11 +859,6 @@ export function ActionSection({
                 {approveMutation.isError && (
                     <p className="text-red-600 text-xs">
                         Failed to approve. Please try again.
-                    </p>
-                )}
-                {requestChangesMutation.isError && (
-                    <p className="text-red-600 text-xs">
-                        Failed to request changes. Please try again.
                     </p>
                 )}
                 {markReadyMutation.isError && (
