@@ -204,6 +204,9 @@ export function ReviewComments({
                                         <button
                                             key={c.id}
                                             type="button"
+                                            aria-expanded={expandedResolvedIds.has(
+                                                c.id,
+                                            )}
                                             onClick={() =>
                                                 setExpandedResolvedIds(
                                                     (prev) => {
