@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clock, MessageSquare, MinusCircle, X } from "lucide-react";
+import { Check, Circle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
@@ -270,25 +270,10 @@ function ReviewerSectionContent({
                                 size={16}
                             />
                         )}
-                        {state === "CHANGES_REQUESTED" && (
-                            <X className="ml-auto text-red-600" size={16} />
-                        )}
-                        {state === "COMMENTED" && (
-                            <MessageSquare
-                                className="ml-auto text-blue-500"
-                                size={14}
-                            />
-                        )}
-                        {state === "DISMISSED" && (
-                            <MinusCircle
-                                className="ml-auto text-gray-400"
-                                size={16}
-                            />
-                        )}
                         {state === "PENDING" && (
-                            <Clock
-                                className="ml-auto text-yellow-500"
-                                size={14}
+                            <Circle
+                                className="ml-auto fill-yellow-500 text-yellow-500"
+                                size={16}
                             />
                         )}
                     </li>
