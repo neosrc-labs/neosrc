@@ -5,9 +5,11 @@ import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 import { isGeneratedFile } from "~/utils/generated-files";
 import { isImageFile } from "~/utils/image-file";
+import { isSvgFile } from "~/utils/svg-file";
 import { getStoredSet, getViewedKey, setStoredSet } from "~/utils/viewed-files";
 import { type ActiveComment, DiffView } from "./DiffView";
 import ImageDiff from "./ImageDiff";
+import SvgDiff from "./SvgDiff";
 
 interface FileDiffProps {
     file: {
@@ -66,6 +68,33 @@ export default function FileDiff({
     const generated = isGeneratedFile(file.filename);
 
     const isImage = isImageFile(file.filename) && !file.patch && baseSha;
+
+    const isSvg = isSvgFile(file.filename) && !!file.patch;
+
+    const svgContentUrls = useMemo(() => {
+        if (!isSvg) return null;
+        const oldFilename = file.previous_filename ?? file.filename;
+        const params = (sha: string, path: string) =>
+            `/api/raw?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&sha=${encodeURIComponent(sha)}&path=${encodeURIComponent(path)}`;
+        const newUrl =
+            file.status !== "removed" && headSha
+                ? params(headSha, file.filename)
+                : null;
+        const oldUrl =
+            file.status !== "added" && baseSha
+                ? params(baseSha, oldFilename)
+                : null;
+        return { oldUrl, newUrl };
+    }, [
+        isSvg,
+        file.status,
+        file.filename,
+        file.previous_filename,
+        owner,
+        repo,
+        baseSha,
+        headSha,
+    ]);
 
     const imageUrls = useMemo(() => {
         if (!isImage) return null;
@@ -331,6 +360,37 @@ export default function FileDiff({
                                 Show changes
                             </button>
                         </div>
+                    ) : isSvg && svgContentUrls ? (
+                        <SvgDiff
+                            patch={file.patch as string}
+                            filename={file.filename}
+                            oldContentUrl={svgContentUrls.oldUrl}
+                            newContentUrl={svgContentUrls.newUrl}
+                            comments={showComments ? comments : undefined}
+                            showComments={showComments}
+                            showCommentButton={showComments}
+                            activeComment={activeComment}
+                            onStartComment={setActiveComment}
+                            commentBody={commentBody}
+                            onCommentBodyChange={setCommentBody}
+                            commentPending={
+                                createMutation.isPending ||
+                                startReviewMutation.isPending
+                            }
+                            commentError={
+                                createMutation.isError ||
+                                startReviewMutation.isError
+                            }
+                            onCancelComment={() => {
+                                setActiveComment(null);
+                                setCommentBody("");
+                            }}
+                            footerActions={footerActions}
+                            pendingReviewId={pendingReviewId}
+                            owner={owner}
+                            repo={repo}
+                            pullNumber={number}
+                        />
                     ) : file.patch ? (
                         <DiffView
                             patch={file.patch}
