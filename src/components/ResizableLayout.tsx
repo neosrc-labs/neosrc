@@ -1,6 +1,12 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+    type ReactNode,
+    useCallback,
+    useLayoutEffect,
+    useRef,
+    useState,
+} from "react";
 import { useSidebar } from "./sidebar-context";
 
 const LEFT_STORAGE_KEY = "neosrc-sidebar-width";
@@ -26,23 +32,37 @@ export function ResizableLayout({
     const { isLeftOpen, isRightOpen, toggleLeft, toggleRight } = useSidebar();
     const [leftWidth, setLeftWidth] = useState(DEFAULT_LEFT_WIDTH);
     const [rightWidth, setRightWidth] = useState(DEFAULT_RIGHT_WIDTH);
-    const [sidebarTopPx, setSidebarTopPx] = useState(0);
+    const [sidebarTopPx, setSidebarTopPx] = useState<number>();
 
-    useEffect(() => {
-        const handleScroll = () => {
-            const headerHeight = parseFloat(
-                getComputedStyle(document.documentElement).getPropertyValue(
-                    "--header-height",
-                ) || "0",
-            );
-            setSidebarTopPx(Math.max(0, headerHeight - window.scrollY));
-        };
-        handleScroll();
-        window.addEventListener("scroll", handleScroll, { passive: true });
-        return () => window.removeEventListener("scroll", handleScroll);
+    const recalcSidebarTop = useCallback(() => {
+        const headerHeight = parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue(
+                "--header-height",
+            ) || "0",
+        );
+        setSidebarTopPx(Math.max(0, headerHeight - window.scrollY));
     }, []);
 
-    const sidebarTop = `${sidebarTopPx}px`;
+    useLayoutEffect(() => {
+        recalcSidebarTop();
+        window.addEventListener("scroll", recalcSidebarTop, { passive: true });
+
+        const observer = new MutationObserver(recalcSidebarTop);
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["style"],
+        });
+
+        return () => {
+            window.removeEventListener("scroll", recalcSidebarTop);
+            observer.disconnect();
+        };
+    }, [recalcSidebarTop]);
+
+    const sidebarTop =
+        sidebarTopPx !== undefined
+            ? `${sidebarTopPx}px`
+            : "var(--header-height)";
 
     const isDraggingRef = useRef(false);
     const dragSideRef = useRef<"left" | "right">("left");
