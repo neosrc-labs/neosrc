@@ -34,6 +34,7 @@ interface CommentCardProps {
     createdAt: string;
     authorAssociation?: string | null;
     isPending?: boolean;
+    isOutdated?: boolean;
     isEditing?: boolean;
     editBody?: string;
     onEditBodyChange?: (body: string) => void;
@@ -53,6 +54,7 @@ export function CommentCard({
     createdAt,
     authorAssociation,
     isPending,
+    isOutdated,
     isEditing,
     editBody = "",
     onEditBodyChange,
@@ -108,6 +110,11 @@ export function CommentCard({
                     {isPending && (
                         <span className="whitespace-nowrap rounded-full bg-yellow-100 px-2 py-0.5 font-medium text-xs text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
                             Pending
+                        </span>
+                    )}
+                    {isOutdated && (
+                        <span className="whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800 text-xs dark:bg-amber-900/30 dark:text-amber-400">
+                            Outdated
                         </span>
                     )}
                     {authorAssociation && authorAssociation !== "NONE" && (
