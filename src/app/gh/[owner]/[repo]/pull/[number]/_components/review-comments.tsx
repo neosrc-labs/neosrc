@@ -356,7 +356,7 @@ function CommentBlock({
     }
 
     if (isResolved && !isExpanded) {
-        return null;
+        return <div id={`review-thread-${comment.id}`} />;
     }
 
     const parentReactions = reactionMap[comment.id] ?? [];
