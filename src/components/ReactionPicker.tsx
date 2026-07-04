@@ -30,49 +30,56 @@ export function ReactionPicker({
 }: ReactionPickerProps) {
     const [open, setOpen] = useState(false);
 
-    if (!currentUserLogin || disabled) return null;
+    const canInteract = !!currentUserLogin && !disabled;
 
-    const availableReactions = ALL_REACTIONS.filter(
-        (c) =>
-            !reactions.some(
-                (r) => r.user?.login === currentUserLogin && r.content === c,
-            ),
-    );
+    const availableReactions = canInteract
+        ? ALL_REACTIONS.filter(
+              (c) =>
+                  !reactions.some(
+                      (r) =>
+                          r.user?.login === currentUserLogin && r.content === c,
+                  ),
+          )
+        : [];
 
-    if (availableReactions.length === 0) return null;
+    // No reactions left to add — nothing to show
+    if (canInteract && availableReactions.length === 0) return null;
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={canInteract ? setOpen : undefined}>
             <PopoverTrigger asChild>
                 <button
                     type="button"
                     aria-label="Add reaction"
+                    tabIndex={canInteract ? 0 : -1}
                     className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
                 >
                     <SmilePlus size={14} />
                 </button>
             </PopoverTrigger>
-            <PopoverContent
-                className="w-fit bg-white p-2 dark:bg-zinc-950"
-                align="end"
-            >
-                <div className="flex gap-1">
-                    {availableReactions.map((content) => (
-                        <button
-                            key={content}
-                            type="button"
-                            aria-label={content}
-                            onClick={() => {
-                                onReact(content);
-                                setOpen(false);
-                            }}
-                            className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
-                        >
-                            {REACTION_EMOJIS[content] ?? content}
-                        </button>
-                    ))}
-                </div>
-            </PopoverContent>
+            {canInteract && (
+                <PopoverContent
+                    className="w-fit bg-white p-2 dark:bg-zinc-950"
+                    align="end"
+                >
+                    <div className="flex gap-1">
+                        {availableReactions.map((content) => (
+                            <button
+                                key={content}
+                                type="button"
+                                aria-label={content}
+                                onClick={() => {
+                                    onReact(content);
+                                    setOpen(false);
+                                }}
+                                className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+                            >
+                                {REACTION_EMOJIS[content] ?? content}
+                            </button>
+                        ))}
+                    </div>
+                </PopoverContent>
+            )}
         </Popover>
     );
 }

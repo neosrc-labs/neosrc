@@ -51,8 +51,6 @@ export function ReactionBar({
         counts ? (counts[content] ?? 0) > 0 : rs.length > 0,
     );
 
-    if (entries.length === 0) return null;
-
     return (
         <div className="flex flex-wrap items-center gap-1.5">
             {entries.map(([content, rs]) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { Lock, SquarePen } from "lucide-react";
+import { Lock, SmilePlus, SquarePen } from "lucide-react";
 import NextLink from "next/link";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
@@ -467,10 +467,20 @@ export function PullRequestDescriptionSection({
                                     </div>
                                 )}
                             </div>
-
                             {!isEditing && (
                                 <Async
-                                    fallback={null}
+                                    fallback={
+                                        <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                                            <button
+                                                type="button"
+                                                aria-hidden="true"
+                                                tabIndex={-1}
+                                                className="rounded p-1 opacity-0"
+                                            >
+                                                <SmilePlus size={14} />
+                                            </button>
+                                        </div>
+                                    }
                                     promise={canInteractPromise}
                                 >
                                     {(canInteract) => {
@@ -496,27 +506,20 @@ export function PullRequestDescriptionSection({
                                                           .eyes,
                                                   }
                                                 : undefined;
-                                        const hasReactions = reactionsData
-                                            ? (reactionsData.counts
-                                                  ?.total_count ?? 0) > 0 ||
-                                              reactionsData.reactions.length > 0
-                                            : false;
                                         return (
                                             <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                                                {hasReactions && (
-                                                    <ReactionBar
-                                                        disabled={!canInteract}
-                                                        reactions={
-                                                            reactionsData?.reactions ??
-                                                            []
-                                                        }
-                                                        counts={reactionCounts}
-                                                        currentUserLogin={
-                                                            currentUserData?.login
-                                                        }
-                                                        onReact={handleReact}
-                                                    />
-                                                )}
+                                                <ReactionBar
+                                                    disabled={!canInteract}
+                                                    reactions={
+                                                        reactionsData?.reactions ??
+                                                        []
+                                                    }
+                                                    counts={reactionCounts}
+                                                    currentUserLogin={
+                                                        currentUserData?.login
+                                                    }
+                                                    onReact={handleReact}
+                                                />
                                                 <ReactionPicker
                                                     disabled={!canInteract}
                                                     reactions={
