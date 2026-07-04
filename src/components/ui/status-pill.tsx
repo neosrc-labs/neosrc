@@ -15,7 +15,7 @@ export function StatusPill({ state }: { state: PullRequestState }) {
             break;
         case "draft":
             statusText = "Draft";
-            statusColor = "bg-zinc-200 text-zinc-700";
+            statusColor = "bg-zinc-500 text-white";
             break;
         case "closed":
             statusText = "Closed";
