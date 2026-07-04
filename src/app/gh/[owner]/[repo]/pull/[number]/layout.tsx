@@ -34,9 +34,9 @@ export default async function PullRequestLayout({
     const { owner, repo, number: numberStr } = await params;
     const number = parseInt(numberStr, 10);
     let pullRequest: Promise<PullsGetResponseData> | null = null;
-    let checks: Promise<Array<CheckRun>> | null = new Promise(() => {});
-    let conflictedFiles: Promise<string[]> | null = new Promise(() => {});
-    let userPermission: Promise<string | null> | null = new Promise(() => {});
+    let checks: Promise<Array<CheckRun>> | null = Promise.resolve<CheckRun[]>([]);
+    let conflictedFiles: Promise<string[]> | null = Promise.resolve<string[]>([]);
+    let userPermission: Promise<string | null> | null = Promise.resolve<string | null>(null);
     let currentUserLogin: string | undefined;
 
     const account = await getAccount();
