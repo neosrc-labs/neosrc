@@ -702,6 +702,12 @@ export function ActionSection({
                                     ? "Marking..."
                                     : "Mark as ready for review"}
                             </button>
+                        ) : markedReady ? (
+                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-green-200 bg-green-50 px-3 py-2 dark:border-green-900/50 dark:bg-green-950/30">
+                                <span className="font-medium text-green-700 text-sm dark:text-green-400">
+                                    Marked as ready for review!
+                                </span>
+                            </div>
                         ) : pullRequest.mergeable_state === "dirty" ? (
                             <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
                                 <GitMerge size={14} className="text-red-500" />
