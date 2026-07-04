@@ -61,6 +61,11 @@ export function PullRequestToolbar({
                                 key={tab.key}
                                 type="button"
                                 onClick={() => onTabChange(tab.key)}
+                                aria-label={
+                                    count !== undefined
+                                        ? `${tab.label} (${count.toLocaleString()})`
+                                        : tab.label
+                                }
                                 className={`relative -mb-px cursor-pointer px-4 py-3 font-medium text-sm transition-colors ${
                                     activeTab === tab.key
                                         ? "border-blue-500 border-b-2 text-gray-900 dark:text-gray-100"
@@ -69,7 +74,7 @@ export function PullRequestToolbar({
                             >
                                 {tab.label}
                                 {count !== undefined && (
-                                    <span className="ml-1.5 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs tabular-nums dark:bg-zinc-700">
+                                    <span aria-hidden="true" className="ml-1.5 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs tabular-nums dark:bg-zinc-700">
                                         {count.toLocaleString()}
                                     </span>
                                 )}
