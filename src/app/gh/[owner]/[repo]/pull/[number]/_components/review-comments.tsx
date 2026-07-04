@@ -191,17 +191,17 @@ export function ReviewComments({
                 return (
                     <div
                         key={path}
-                        className="mt-3 overflow-hidden rounded border border-gray-200 dark:border-zinc-700"
+                        className="mt-3 rounded border border-gray-200 dark:border-zinc-700"
                     >
-                        <div className="flex items-center justify-between border-gray-200 border-b bg-gray-50 px-3 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800">
-                            <div className="flex items-center gap-2 font-mono text-gray-600 dark:text-zinc-400">
-                                <span>{path}</span>
-                                {resolvedInFile.length > 0 && (
-                                    <span className="font-sans text-gray-500 dark:text-zinc-400">
-                                        Resolved
-                                    </span>
-                                )}
-                            </div>
+                        <div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900">
+                            <span className="flex-1 truncate font-mono text-gray-700 text-xs dark:text-gray-300">
+                                {path}
+                            </span>
+                            {resolvedInFile.length > 0 && (
+                                <span className="font-sans text-gray-500 text-xs dark:text-zinc-400">
+                                    Resolved
+                                </span>
+                            )}
                             <div className="flex items-center gap-2">
                                 {outdatedInFile && (
                                     <span className="whitespace-nowrap rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-[10px] text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
@@ -254,7 +254,7 @@ export function ReviewComments({
                                 )}
                             </div>
                         </div>
-                        <div className="divide-y divide-gray-200 dark:divide-zinc-700">
+                        <div className="divide-y divide-gray-200 overflow-hidden rounded-b dark:divide-zinc-700">
                             {fileComments.map((comment) => {
                                 const thread = threadByCommentId.get(
                                     comment.id,
