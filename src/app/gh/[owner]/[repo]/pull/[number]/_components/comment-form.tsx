@@ -1,6 +1,7 @@
 "use client";
 
 import { Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { api } from "~/trpc/react";
@@ -19,12 +20,14 @@ export function CommentForm({
     disabled,
 }: CommentFormProps) {
     const [body, setBody] = useState("");
+    const router = useRouter();
     const utils = api.useUtils();
 
     const addComment = api.pulls.addComment.useMutation({
         onSuccess: () => {
             setBody("");
             utils.timeline.list.invalidate();
+            router.refresh();
         },
     });
 
