@@ -138,6 +138,7 @@ async function computeCanInteract(
         !pr.locked ||
         userPermission === "admin" ||
         userPermission === "write" ||
+        userPermission === "read" ||
         currentUser === pr.user?.login
     );
 }

@@ -341,17 +341,23 @@ function EventContent({
                         if (!old) return old;
                         return {
                             ...old,
-                            pages: old.pages.map((page) => ({
-                                ...page,
-                                commentReactions: {
-                                    ...page.commentReactions,
-                                    [commentId]: toggleReactionInList(
-                                        page.commentReactions[commentId] ?? [],
-                                        currentUserLogin,
-                                        content,
-                                    ),
-                                },
-                            })),
+                            pages: old.pages.map((page) => {
+                                if (!(commentId in page.commentReactions)) {
+                                    return page;
+                                }
+                                return {
+                                    ...page,
+                                    commentReactions: {
+                                        ...page.commentReactions,
+                                        [commentId]: toggleReactionInList(
+                                            page.commentReactions[commentId] ??
+                                                [],
+                                            currentUserLogin,
+                                            content,
+                                        ),
+                                    },
+                                };
+                            }),
                         };
                     },
                 );
@@ -397,20 +403,25 @@ function EventContent({
                     { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
                     (old) => {
                         if (!old || !databaseId) return old;
-                        const updatedReactions = toggleReactionInList(
-                            commentReactions[databaseId] ?? [],
-                            currentUserLogin,
-                            content,
-                        );
                         return {
                             ...old,
-                            pages: old.pages.map((page) => ({
-                                ...page,
-                                commentReactions: {
-                                    ...page.commentReactions,
-                                    [databaseId]: updatedReactions,
-                                },
-                            })),
+                            pages: old.pages.map((page) => {
+                                if (!(databaseId in page.commentReactions)) {
+                                    return page;
+                                }
+                                return {
+                                    ...page,
+                                    commentReactions: {
+                                        ...page.commentReactions,
+                                        [databaseId]: toggleReactionInList(
+                                            page.commentReactions[databaseId] ??
+                                                [],
+                                            currentUserLogin,
+                                            content,
+                                        ),
+                                    },
+                                };
+                            }),
                         };
                     },
                 );
