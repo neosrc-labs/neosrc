@@ -127,6 +127,7 @@ export function ReportTabsBar({
                 <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                     <PopoverTrigger asChild>
                         <button
+                            suppressHydrationWarning
                             ref={moreRef}
                             type="button"
                             className={`cursor-pointer whitespace-nowrap rounded-t-md px-3 py-1.5 font-medium text-sm transition-colors ${
