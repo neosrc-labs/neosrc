@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { CheckCircle, Circle, MessageSquare } from "lucide-react";
+import { CheckCircle, Circle, Code2, MessageSquare } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { SCROLL_TARGET_EVENT } from "~/components/LazyRenderItem";
 import type { ReviewThreadData } from "~/server/github";
@@ -19,6 +19,10 @@ function truncateBody(body: string, maxLen = 80): string {
     const firstLine = body.split("\n")[0] ?? "";
     if (firstLine.length <= maxLen) return firstLine;
     return `${firstLine.slice(0, maxLen).trim()}…`;
+}
+
+function isSuggestionBody(body: string): boolean {
+    return /```suggestion\b/.test(body);
 }
 
 function scrollToComment(commentId: number) {
@@ -69,9 +73,18 @@ function ThreadCard({ thread }: ThreadCardProps) {
             />
 
             <div className="min-w-0 flex-1">
-                <p className="truncate text-gray-700 text-sm dark:text-zinc-300">
-                    {truncateBody(root.body)}
-                </p>
+                {isSuggestionBody(root.body) ? (
+                    <span className="flex items-center gap-1.5 text-gray-600 text-sm dark:text-zinc-400">
+                        <Code2 className="size-3.5 shrink-0" />
+                        <span className="truncate">
+                            Suggestion{thread.path ? ` in ${thread.path}` : ""}
+                        </span>
+                    </span>
+                ) : (
+                    <p className="truncate text-gray-700 text-sm dark:text-zinc-300">
+                        {truncateBody(root.body)}
+                    </p>
+                )}
                 <div className="mt-0.5 flex items-center gap-2">
                     {thread.isResolved ? (
                         <CheckCircle className="size-3 text-green-500" />
