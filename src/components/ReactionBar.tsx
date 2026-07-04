@@ -65,6 +65,8 @@ export function ReactionBar({
                         <HoverCardTrigger asChild>
                             <button
                                 type="button"
+                                aria-pressed={isActive}
+                                aria-label={`${REACTION_EMOJIS[content] ?? content} (${counts?.[content] ?? rs.length})`}
                                 onClick={() => !disabled && onReact(content)}
                                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium text-xs transition-colors ${
                                     isActive
