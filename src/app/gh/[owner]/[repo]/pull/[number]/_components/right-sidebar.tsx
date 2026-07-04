@@ -177,52 +177,52 @@ function ChecksSection({ checks }: ChecksSectionProps) {
     return (
         <div className="space-y-2">
             {checks.map((check: CheckRun) => (
-                    <CheckHoverCard
-                        check={check}
-                        key={check.html_url ?? check.name}
+                <CheckHoverCard
+                    check={check}
+                    key={check.html_url ?? check.name}
+                >
+                    <a
+                        className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800"
+                        href={check.html_url}
+                        rel="noopener noreferrer"
+                        target="_blank"
                     >
-                        <a
-                            className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800"
-                            href={check.html_url}
-                            rel="noopener noreferrer"
-                            target="_blank"
-                        >
-                            <span className="flex shrink-0 items-center gap-1">
-                                {check.conclusion === "success" ? (
-                                    <Check className="h-3.5 w-3.5 text-green-600" />
-                                ) : check.conclusion === "failure" ? (
-                                    <XCircle className="h-3.5 w-3.5 text-red-600" />
-                                ) : check.status === "in_progress" ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-yellow-500" />
-                                ) : (
-                                    <Circle className="h-3.5 w-3.5 text-gray-400" />
-                                )}
-                                {check.creator?.avatar_url ? (
-                                    <img
-                                        src={check.creator.avatar_url}
-                                        alt=""
-                                        className="h-5 w-5 rounded-full"
-                                    />
-                                ) : check.app?.owner?.avatar_url ? (
-                                    <img
-                                        src={check.app.owner.avatar_url}
-                                        alt=""
-                                        className="h-5 w-5 rounded-full"
-                                    />
-                                ) : null}
-                            </span>
-                            <span className="min-w-0 truncate text-gray-700 text-sm dark:text-zinc-300">
-                                {check.name}
-                                {check.description && (
-                                    <span className="text-gray-500 dark:text-gray-400">
-                                        {" "}
-                                        - {check.description}
-                                    </span>
-                                )}
-                            </span>
-                        </a>
-                    </CheckHoverCard>
-                ))}
+                        <span className="flex shrink-0 items-center gap-1">
+                            {check.conclusion === "success" ? (
+                                <Check className="h-3.5 w-3.5 text-green-600" />
+                            ) : check.conclusion === "failure" ? (
+                                <XCircle className="h-3.5 w-3.5 text-red-600" />
+                            ) : check.status === "in_progress" ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-yellow-500" />
+                            ) : (
+                                <Circle className="h-3.5 w-3.5 text-gray-400" />
+                            )}
+                            {check.creator?.avatar_url ? (
+                                <img
+                                    src={check.creator.avatar_url}
+                                    alt=""
+                                    className="h-5 w-5 rounded-full"
+                                />
+                            ) : check.app?.owner?.avatar_url ? (
+                                <img
+                                    src={check.app.owner.avatar_url}
+                                    alt=""
+                                    className="h-5 w-5 rounded-full"
+                                />
+                            ) : null}
+                        </span>
+                        <span className="min-w-0 truncate text-gray-700 text-sm dark:text-zinc-300">
+                            {check.name}
+                            {check.description && (
+                                <span className="text-gray-500 dark:text-gray-400">
+                                    {" "}
+                                    - {check.description}
+                                </span>
+                            )}
+                        </span>
+                    </a>
+                </CheckHoverCard>
+            ))}
         </div>
     );
 }
