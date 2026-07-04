@@ -255,13 +255,13 @@ function BlockRows({
                     <Fragment
                         key={`${oldNum ?? ""}-${newNum ?? ""}-${line.content}`}
                     >
-                        <tr>
+                        <tr className="group">
                             <td className={`d2h-code-linenumber ${typeClass}`}>
-                                <div className="group absolute">
+                                <div className="absolute">
                                     {showCommentButton && onStartComment && (
                                         <Plus
                                             size={24}
-                                            className="absolute -right-5 z-10 hidden rounded-full bg-blue-500 p-1.5 text-white group-hover:block"
+                                            className="absolute -right-5 z-10 hidden rounded-md bg-blue-500 p-0.5 text-white group-hover:block"
                                             onClick={() =>
                                                 onStartComment(
                                                     isActive
