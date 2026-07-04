@@ -508,6 +508,17 @@ export function PullRequestDescriptionSection({
                                                 : undefined;
                                         return (
                                             <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                                                <ReactionPicker
+                                                    disabled={!canInteract}
+                                                    reactions={
+                                                        reactionsData?.reactions ??
+                                                        []
+                                                    }
+                                                    currentUserLogin={
+                                                        currentUserData?.login
+                                                    }
+                                                    onReact={handleReact}
+                                                />
                                                 <ReactionBar
                                                     disabled={!canInteract}
                                                     reactions={
@@ -515,17 +526,6 @@ export function PullRequestDescriptionSection({
                                                         []
                                                     }
                                                     counts={reactionCounts}
-                                                    currentUserLogin={
-                                                        currentUserData?.login
-                                                    }
-                                                    onReact={handleReact}
-                                                />
-                                                <ReactionPicker
-                                                    disabled={!canInteract}
-                                                    reactions={
-                                                        reactionsData?.reactions ??
-                                                        []
-                                                    }
                                                     currentUserLogin={
                                                         currentUserData?.login
                                                     }
