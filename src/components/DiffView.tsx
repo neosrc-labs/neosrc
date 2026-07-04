@@ -3,10 +3,19 @@
 import { defaultDiff2HtmlConfig, parse } from "diff2html";
 import type { ColorSchemeType } from "diff2html/lib/types";
 import "diff2html/bundles/css/diff2html.min.css";
+import type { DiffBlock } from "diff2html/lib/types";
 import hljs from "highlight.js";
-import { Plus } from "lucide-react";
+import { SquarePlus, UnfoldVertical } from "lucide-react";
 import { useTheme } from "next-themes";
-import { Fragment, useEffect, useMemo, useRef } from "react";
+import {
+    Fragment,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import { useFileContent } from "~/hooks/useFileContent";
 import type { ReviewComment } from "~/server/github";
 import { InlineCommentThread } from "./InlineCommentThread";
 import type { FooterAction } from "./markdown/MarkdownEditor";
@@ -35,6 +44,8 @@ interface DiffViewProps {
     repo?: string;
     pullNumber?: number | string;
     pendingReviewId?: number | null;
+    headSha?: string;
+    expandAllContext?: boolean;
 }
 
 export function DiffView({
@@ -55,6 +66,8 @@ export function DiffView({
     repo,
     pullNumber,
     pendingReviewId,
+    headSha,
+    expandAllContext = false,
 }: DiffViewProps) {
     const { resolvedTheme } = useTheme();
 
@@ -120,6 +133,60 @@ export function DiffView({
         return map;
     }, [comments]);
 
+    const renderItems = useMemo(() => {
+        if (!parsed?.blocks) return [];
+        const items: Array<
+            { type: "block"; block: DiffBlock } | ({ type: "gap" } & Gap)
+        > = [];
+
+        for (let i = 0; i < parsed.blocks.length; i++) {
+            const block = parsed.blocks[i];
+            if (!block) continue;
+
+            if (i === 0 && block.newStartLine > 1) {
+                items.push({
+                    type: "gap",
+                    startLine: 1,
+                    endLine: block.newStartLine - 1,
+                });
+            }
+
+            if (i > 0) {
+                const prevBlock = parsed.blocks[i - 1];
+                if (!prevBlock) continue;
+                const g = computeBetweenGap(prevBlock, block);
+                if (g) {
+                    items.push({ type: "gap", ...g });
+                }
+            }
+
+            items.push({ type: "block", block });
+
+            if (i === parsed.blocks.length - 1) {
+                const leading = getLastNewLine(block) + 1;
+                items.push({
+                    type: "gap",
+                    startLine: leading,
+                    endLine: -1,
+                });
+            }
+        }
+
+        return items;
+    }, [parsed]);
+
+    const [expandedGapKeys, setExpandedGapKeys] = useState<Set<string>>(
+        () => new Set(),
+    );
+
+    const handleGapExpand = useCallback((key: string) => {
+        setExpandedGapKeys((prev) => {
+            const next = new Set(prev);
+            next.add(key);
+            return next;
+        });
+    }, []);
+
     if (!parsed) {
         return null;
     }
@@ -132,32 +199,88 @@ export function DiffView({
             >
                 <table className="d2h-diff-table relative">
                     <tbody className="d2h-diff-tbody">
-                        {parsed.blocks.map((block) => (
-                            <BlockRows
-                                key={`${block.oldStartLine}-${block.newStartLine}-${block.header}`}
-                                block={block}
-                                commentsByLine={commentsByLine}
-                                activeComment={activeComment}
-                                onStartComment={onStartComment}
-                                owner={owner}
-                                repo={repo}
-                                pullNumber={pullNumber}
-                                commentBody={commentBody}
-                                onCommentBodyChange={onCommentBodyChange}
-                                footerActions={footerActions}
-                                commentPending={commentPending}
-                                commentError={commentError}
-                                onCancelComment={onCancelComment}
-                                showComments={showComments}
-                                showCommentButton={showCommentButton}
-                                pendingReviewId={pendingReviewId}
-                            />
-                        ))}
+                        {renderItems.map((item, idx) => {
+                            if (item.type === "gap") return null;
+
+                            const prevItem =
+                                idx > 0 ? renderItems[idx - 1] : null;
+                            const prevGap =
+                                prevItem?.type === "gap" ? prevItem : null;
+                            const isEdgeGap =
+                                prevGap !== null &&
+                                (prevGap.startLine === 1 ||
+                                    prevGap.endLine === -1);
+                            const shouldShowGap =
+                                prevGap && (!isEdgeGap || expandAllContext);
+                            const prevGapKey =
+                                shouldShowGap && prevGap
+                                    ? `gap-${prevGap.startLine}`
+                                    : undefined;
+                            const isGapExpanded =
+                                shouldShowGap === true &&
+                                prevGapKey !== undefined &&
+                                (expandAllContext ||
+                                    expandedGapKeys.has(prevGapKey));
+
+                            return (
+                                <BlockRows
+                                    key={`block-${item.block.newStartLine}`}
+                                    block={item.block}
+                                    hideHeader={isGapExpanded}
+                                    gap={shouldShowGap ? prevGap : undefined}
+                                    gapKey={prevGapKey}
+                                    isGapExpanded={isGapExpanded}
+                                    onGapExpand={handleGapExpand}
+                                    headSha={headSha}
+                                    filename={filename}
+                                    commentsByLine={commentsByLine}
+                                    activeComment={activeComment}
+                                    onStartComment={onStartComment}
+                                    owner={owner}
+                                    repo={repo}
+                                    pullNumber={pullNumber}
+                                    commentBody={commentBody}
+                                    onCommentBodyChange={onCommentBodyChange}
+                                    footerActions={footerActions}
+                                    commentPending={commentPending}
+                                    commentError={commentError}
+                                    onCancelComment={onCancelComment}
+                                    showComments={showComments}
+                                    showCommentButton={showCommentButton}
+                                    pendingReviewId={pendingReviewId}
+                                />
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
         </div>
     );
+}
+
+type Gap = { startLine: number; endLine: number };
+
+function getLastNewLine(block: DiffBlock): number {
+    let last = block.newStartLine;
+    for (const line of block.lines) {
+        if (line.newNumber !== undefined) {
+            last = line.newNumber;
+        }
+    }
+    return last;
+}
+
+function computeBetweenGap(
+    prevBlock: DiffBlock,
+    curBlock: DiffBlock,
+): Gap | null {
+    const prevLastNew = getLastNewLine(prevBlock);
+    const gapStart = prevLastNew + 1;
+    const gapEnd = curBlock.newStartLine - 1;
+    if (gapStart <= gapEnd) {
+        return { startLine: gapStart, endLine: gapEnd };
+    }
+    return null;
 }
 
 function groupThreads(
@@ -193,6 +316,13 @@ interface BlockRowsProps {
     showComments: boolean;
     showCommentButton: boolean;
     pendingReviewId?: number | null;
+    hideHeader?: boolean;
+    gap?: Gap;
+    gapKey?: string;
+    isGapExpanded?: boolean;
+    onGapExpand?: (key: string) => void;
+    headSha?: string;
+    filename?: string;
 }
 
 function BlockRows({
@@ -212,15 +342,104 @@ function BlockRows({
     showComments,
     showCommentButton,
     pendingReviewId,
+    hideHeader,
+    gap,
+    gapKey,
+    isGapExpanded,
+    onGapExpand,
+    headSha,
+    filename,
 }: BlockRowsProps) {
+    const {
+        lines: fileLines,
+        isLoading,
+        error,
+    } = useFileContent({
+        owner: owner ?? "",
+        repo: repo ?? "",
+        sha: headSha ?? "",
+        path: filename ?? "",
+    });
+
+    const gapEnd =
+        gap?.endLine === -1 ? (fileLines?.length ?? -1) : (gap?.endLine ?? -1);
+    const gapSize = gap ? gapEnd - gap.startLine + 1 : 0;
+
     return (
         <>
-            <tr>
-                <td className="d2h-code-linenumber d2h-info" />
-                <td className="d2h-info">
-                    <div className="d2h-code-line">{block.header}</div>
-                </td>
-            </tr>
+            {isGapExpanded && gap && isLoading && (
+                <tr>
+                    <td className="d2h-code-linenumber d2h-info" />
+                    <td className="d2h-info">
+                        <div className="d2h-code-line text-gray-400 text-xs">
+                            Loading...
+                        </div>
+                    </td>
+                </tr>
+            )}
+            {isGapExpanded &&
+                gap &&
+                !isLoading &&
+                !error &&
+                fileLines &&
+                gapSize > 0 &&
+                fileLines
+                    .slice(gap.startLine - 1, gapEnd)
+                    .map((lineContent, idx) => {
+                        const lineNum = gap.startLine + idx;
+                        return (
+                            <tr key={`gap-${lineNum}`}>
+                                <td className="d2h-code-linenumber d2h-cntx">
+                                    <div className="absolute">
+                                        <div className="line-num1">
+                                            {lineNum}
+                                        </div>
+                                        <div className="line-num2">
+                                            {lineNum}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td className="d2h-cntx">
+                                    <div
+                                        className="d2h-code-line"
+                                        style={{ display: "flex" }}
+                                    >
+                                        <span className="d2h-code-line-ctn">
+                                            {lineContent || <br />}
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })}
+            {!hideHeader && (
+                <tr
+                    className={
+                        gap && !isGapExpanded && gapSize > 0
+                            ? "cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                            : ""
+                    }
+                    onClick={() => {
+                        if (gap && !isGapExpanded && gapSize > 0) {
+                            onGapExpand?.(gapKey ?? "");
+                        }
+                    }}
+                >
+                    <td className="d2h-code-linenumber d2h-info">
+                        {gap && !isGapExpanded && gapSize > 0 && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <UnfoldVertical
+                                    size={14}
+                                    className="text-gray-500 dark:text-gray-400"
+                                />
+                            </div>
+                        )}
+                    </td>
+                    <td className="d2h-info">
+                        <div className="d2h-code-line">{block.header}</div>
+                    </td>
+                </tr>
+            )}
             {block.lines.map((line) => {
                 const type = line.type;
                 const typeClass =
@@ -259,7 +478,7 @@ function BlockRows({
                             <td className={`d2h-code-linenumber ${typeClass}`}>
                                 <div className="absolute">
                                     {showCommentButton && onStartComment && (
-                                        <Plus
+                                        <SquarePlus
                                             size={24}
                                             className="absolute -right-5 z-10 hidden rounded-md bg-blue-500 p-0.5 text-white group-hover:block"
                                             onClick={() =>
