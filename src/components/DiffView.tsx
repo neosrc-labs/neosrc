@@ -108,6 +108,18 @@ export function DiffView({
         }
     }, [filename]);
 
+    const [expandedGapKeys, setExpandedGapKeys] = useState<Set<string>>(
+        () => new Set(),
+    );
+
+    const handleGapExpand = useCallback((key: string) => {
+        setExpandedGapKeys((prev) => {
+            const next = new Set(prev);
+            next.add(key);
+            return next;
+        });
+    }, []);
+
     useEffect(() => {
         if (!diffRef.current || !language || !parsed) return;
         const lines =
@@ -118,7 +130,10 @@ export function DiffView({
             const result = hljs.highlight(text, { language });
             el.innerHTML = result.value;
         });
-    }, [language, parsed]);
+        // Re-run when gap expansions add new .d2h-code-line-ctn elements to the DOM
+        void expandedGapKeys;
+        void expandAllContext;
+    }, [language, parsed, expandedGapKeys, expandAllContext]);
 
     const commentsByLine = useMemo(() => {
         const map = new Map<string, ReviewComment[]>();
@@ -174,18 +189,6 @@ export function DiffView({
 
         return items;
     }, [parsed]);
-
-    const [expandedGapKeys, setExpandedGapKeys] = useState<Set<string>>(
-        () => new Set(),
-    );
-
-    const handleGapExpand = useCallback((key: string) => {
-        setExpandedGapKeys((prev) => {
-            const next = new Set(prev);
-            next.add(key);
-            return next;
-        });
-    }, []);
 
     if (!parsed) {
         return null;
