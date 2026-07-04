@@ -185,6 +185,7 @@ export function InlineCommentThread({
                     pendingReviewId != null &&
                     parentComment.pull_request_review_id === pendingReviewId
                 }
+                isOutdated={threadInfo?.isOutdated ?? false}
                 isAuthor={parentComment.user?.login === currentUserLogin}
                 isEditing={editingCommentId === parentComment.id}
                 editBody={editingCommentId === parentComment.id ? editBody : ""}
@@ -221,6 +222,7 @@ export function InlineCommentThread({
                             pendingReviewId != null &&
                             comment.pull_request_review_id === pendingReviewId
                         }
+                        isOutdated={threadInfo?.isOutdated ?? false}
                         isAuthor={comment.user?.login === currentUserLogin}
                         isEditing={editingCommentId === comment.id}
                         editBody={
@@ -306,6 +308,7 @@ export function InlineCommentThread({
 function Comment({
     comment,
     isPending,
+    isOutdated,
     isAuthor,
     isEditing,
     editBody,
@@ -327,6 +330,7 @@ function Comment({
 }: {
     comment: ReviewComment;
     isPending: boolean;
+    isOutdated: boolean;
     isAuthor: boolean;
     isEditing: boolean;
     editBody: string;
@@ -354,6 +358,7 @@ function Comment({
             createdAt={comment.created_at}
             authorAssociation={comment.author_association}
             isPending={isPending}
+            isOutdated={isOutdated}
             isEditing={isEditing}
             editBody={editBody}
             onEditBodyChange={onEditBodyChange}

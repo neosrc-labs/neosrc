@@ -82,6 +82,11 @@ function ThreadCard({ thread }: ThreadCardProps) {
                         <MessageSquare className="size-3" />
                         {thread.comments.length}
                     </span>
+                    {thread.isOutdated && (
+                        <span className="whitespace-nowrap rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-[10px] text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                            Outdated
+                        </span>
+                    )}
                 </div>
             </div>
         </button>

@@ -183,6 +183,12 @@ export function ReviewComments({
                 const resolvedInFile = fileComments.filter(
                     (c) => threadByCommentId.get(c.id)?.isResolved,
                 );
+                const outdatedInFile = fileComments.some(
+                    (c) => {
+                        const t = threadByCommentId.get(c.id);
+                        return t?.isOutdated && !t.isResolved;
+                    },
+                );
 
                 return (
                     <div
@@ -198,47 +204,57 @@ export function ReviewComments({
                                     </span>
                                 )}
                             </div>
-                            {resolvedInFile.length > 0 && (
-                                <div className="flex gap-1">
-                                    {resolvedInFile.map((c) => (
-                                        <button
-                                            key={c.id}
-                                            type="button"
-                                            aria-expanded={expandedResolvedIds.has(
-                                                c.id,
-                                            )}
-                                            onClick={() =>
-                                                setExpandedResolvedIds(
-                                                    (prev) => {
-                                                        const next = new Set(
-                                                            prev,
-                                                        );
-                                                        if (next.has(c.id)) {
-                                                            next.delete(c.id);
-                                                        } else {
-                                                            next.add(c.id);
-                                                        }
-                                                        return next;
-                                                    },
-                                                )
-                                            }
-                                            className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-gray-500 text-xs transition-colors hover:bg-gray-200 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
-                                        >
-                                            <ChevronDown
-                                                size={14}
-                                                className={
-                                                    expandedResolvedIds.has(
-                                                        c.id,
+                            <div className="flex items-center gap-2">
+                                {outdatedInFile && (
+                                    <span className="whitespace-nowrap rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-[10px] text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                                        Outdated
+                                    </span>
+                                )}
+                                {resolvedInFile.length > 0 && (
+                                    <div className="flex gap-1">
+                                        {resolvedInFile.map((c) => (
+                                            <button
+                                                key={c.id}
+                                                type="button"
+                                                aria-expanded={expandedResolvedIds.has(
+                                                    c.id,
+                                                )}
+                                                onClick={() =>
+                                                    setExpandedResolvedIds(
+                                                        (prev) => {
+                                                            const next =
+                                                                new Set(prev);
+                                                            if (
+                                                                next.has(c.id)
+                                                            ) {
+                                                                next.delete(
+                                                                    c.id,
+                                                                );
+                                                            } else {
+                                                                next.add(c.id);
+                                                            }
+                                                            return next;
+                                                        },
                                                     )
-                                                        ? "rotate-180"
-                                                        : ""
                                                 }
-                                            />
-                                            Show thread
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                                                className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-gray-500 text-xs transition-colors hover:bg-gray-200 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
+                                            >
+                                                <ChevronDown
+                                                    size={14}
+                                                    className={
+                                                        expandedResolvedIds.has(
+                                                            c.id,
+                                                        )
+                                                            ? "rotate-180"
+                                                            : ""
+                                                    }
+                                                />
+                                                Show thread
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <div className="divide-y divide-gray-200 dark:divide-zinc-700">
                             {fileComments.map((comment) => {
