@@ -748,6 +748,7 @@ export function MarkdownEditor({
                                                 }}
                                                 onClick={btn.onClick}
                                                 title={btn.title}
+                                                aria-label={btn.title}
                                                 type="button"
                                             >
                                                 <Icon className="size-4" />
