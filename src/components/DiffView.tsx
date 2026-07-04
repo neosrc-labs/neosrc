@@ -130,7 +130,7 @@ export function DiffView({
                 className={`d2h-wrapper ${resolvedTheme === "light" ? "d2h-light-color-scheme" : "d2h-dark-color-scheme"}`}
                 ref={diffRef}
             >
-                <table className="d2h-diff-table">
+                <table className="d2h-diff-table relative">
                     <tbody className="d2h-diff-tbody">
                         {parsed.blocks.map((block) => (
                             <BlockRows

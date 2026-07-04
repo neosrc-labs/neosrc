@@ -67,3 +67,27 @@ html {
 .prose tbody tr:nth-child(even) {
     background: var(--color-surface-secondary);
 }
+
+/* Override diff2html: line number cells use position:absolute and overlap content cells.
+   Both have rgba backgrounds with alpha, creating a double-alpha compositing artifact.
+   Let the content cell's background show through consistently by removing the extra layer. */
+.d2h-code-linenumber.d2h-ins,
+.d2h-code-linenumber.d2h-del,
+.d2h-code-linenumber.d2h-ins.d2h-change,
+.d2h-code-linenumber.d2h-del.d2h-change {
+    background: none;
+}
+
+.d2h-dark-color-scheme .d2h-code-linenumber.d2h-ins,
+.d2h-dark-color-scheme .d2h-code-linenumber.d2h-del {
+    background: none;
+}
+
+/* Diff2html sets background-color on .d2h-dark-color-scheme (wrapper),
+   but the wrapper is constrained to the viewport width. The table
+   extends beyond it when lines are long. Give the table the same
+   background so alpha-composited cell colors are consistent across
+   the full scrollable width. */
+.d2h-dark-color-scheme .d2h-diff-table {
+    background-color: #0d1117;
+}
