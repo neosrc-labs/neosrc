@@ -438,7 +438,7 @@ function HeaderContent({
                                           aria-hidden
                                       >
                                           <div
-                                              className="h-4 animate-pulse rounded bg-gray-200 dark:bg-zinc-700"
+                                              className="h-5 animate-pulse rounded bg-gray-200 dark:bg-zinc-700"
                                               style={{ width: `${w}px` }}
                                           />
                                       </div>
