@@ -71,7 +71,10 @@ export function PullRequestToolbar({
                             >
                                 {tab.label}
                                 {count !== undefined && (
-                                    <span aria-hidden="true" className="ml-1.5 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs tabular-nums dark:bg-zinc-700">
+                                    <span
+                                        aria-hidden="true"
+                                        className="ml-1.5 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs tabular-nums dark:bg-zinc-700"
+                                    >
                                         {count.toLocaleString()}
                                     </span>
                                 )}

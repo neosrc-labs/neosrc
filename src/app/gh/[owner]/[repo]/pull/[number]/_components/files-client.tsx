@@ -227,8 +227,10 @@ export function FilesSection({
                                     style={{
                                         width: `${
                                             allFiles.length > 0
-                                                ? (viewedCount / allFiles.length) *
-                                                  100
+                                                ? (
+                                                      viewedCount /
+                                                          allFiles.length
+                                                  ) * 100
                                                 : 0
                                         }%`,
                                     }}
