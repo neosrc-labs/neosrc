@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, Clock, MessageSquare, MinusCircle, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
@@ -264,11 +264,34 @@ function ReviewerSectionContent({
                                 </span>
                             </a>
                         </UserHoverCard>
-                        {/* FIXME:  Handle other states. Also I think that the state is not fully correct, e.g. Re-Review requested */}
                         {state === "APPROVED" && (
                             <Check
                                 className="ml-auto text-green-600"
                                 size={16}
+                            />
+                        )}
+                        {state === "CHANGES_REQUESTED" && (
+                            <X
+                                className="ml-auto text-red-600"
+                                size={16}
+                            />
+                        )}
+                        {state === "COMMENTED" && (
+                            <MessageSquare
+                                className="ml-auto text-blue-500"
+                                size={14}
+                            />
+                        )}
+                        {state === "DISMISSED" && (
+                            <MinusCircle
+                                className="ml-auto text-gray-400"
+                                size={16}
+                            />
+                        )}
+                        {state === "PENDING" && (
+                            <Clock
+                                className="ml-auto text-yellow-500"
+                                size={14}
                             />
                         )}
                     </li>
