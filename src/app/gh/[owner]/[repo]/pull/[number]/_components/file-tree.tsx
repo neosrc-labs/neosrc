@@ -204,7 +204,8 @@ function FileTreeNode({
                     loading="lazy"
                     src={`/material-icons/${iconName}.svg`}
                     onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/material-icons/file.svg";
+                        (e.target as HTMLImageElement).src =
+                            "/material-icons/file.svg";
                     }}
                 />
                 <span className="flex-1 truncate">{node.name}</span>
