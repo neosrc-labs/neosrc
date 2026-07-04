@@ -429,7 +429,9 @@ export default function FileDiff({
                         <div className="px-4 py-3 text-gray-500 text-sm italic dark:text-gray-400">
                             {file.status === "renamed"
                                 ? `File renamed from ${file.previous_filename} without changes`
-                                : "Binary file not shown"}
+                                : file.additions === 0 && file.deletions === 0
+                                  ? "Whitespace-only changes."
+                                  : "Binary file not shown"}
                         </div>
                     ))}
             </div>
