@@ -283,6 +283,7 @@ export function ActionSection({
                 >
                     <PopoverTrigger asChild>
                         <button
+                            suppressHydrationWarning
                             className="cursor-pointer text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
                             disabled={dismissReviewMutation.isPending}
                             type="button"
@@ -433,6 +434,7 @@ export function ActionSection({
                         >
                             <PopoverTrigger asChild>
                                 <button
+                                    suppressHydrationWarning
                                     className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-gray-600 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
                                     disabled={closeMutation.isPending}
                                     type="button"
@@ -516,6 +518,7 @@ export function ActionSection({
                             >
                                 <PopoverTrigger asChild>
                                     <button
+                                        suppressHydrationWarning
                                         className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2.5 text-gray-600 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
                                         disabled={revertMutation.isPending}
                                         onClick={() =>
@@ -640,6 +643,7 @@ export function ActionSection({
                             >
                                 <PopoverTrigger asChild>
                                     <button
+                                        suppressHydrationWarning
                                         className="w-full cursor-pointer rounded-md bg-[#0969da] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#0860ca]"
                                         type="button"
                                     >
@@ -762,6 +766,7 @@ export function ActionSection({
                                 >
                                     <PopoverTrigger asChild>
                                         <button
+                                            suppressHydrationWarning
                                             className="cursor-pointer rounded-r-md border-[#1a7f37] border-l bg-[#2da44e] px-2 py-2 text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
                                             disabled={mergeMutation.isPending}
                                             type="button"
