@@ -28,6 +28,7 @@ export function LazyRenderItem({
     const [isVisible, setIsVisible] = useState(true);
     const ref = useRef<HTMLDivElement>(null);
     const height = heightMap.get(itemKey);
+    const wasEverIntersecting = useRef(false);
 
     useEffect(() => {
         const el = ref.current;
@@ -36,7 +37,13 @@ export function LazyRenderItem({
         const observer = new IntersectionObserver(
             (entries) => {
                 const entry = entries[0];
-                if (entry) setIsVisible(entry.isIntersecting);
+                if (!entry) return;
+                if (entry.isIntersecting) {
+                    wasEverIntersecting.current = true;
+                    setIsVisible(true);
+                } else if (wasEverIntersecting.current) {
+                    setIsVisible(false);
+                }
             },
             { rootMargin },
         );
@@ -73,13 +80,24 @@ export function LazyRenderItem({
         return () => observer.disconnect();
     }, [isVisible, itemKey, heightMap]);
 
-    if (!isVisible && height !== undefined) {
+    useEffect(() => {
+        return () => {
+            heightMap.delete(itemKey);
+        };
+    }, [itemKey, heightMap]);
+
+    if (!isVisible) {
         return (
             <div
                 className={className}
                 id={id}
                 ref={ref}
-                style={{ height: height + extraHeight }}
+                style={{
+                    height:
+                        height !== undefined
+                            ? height + extraHeight
+                            : Math.max(extraHeight, 64),
+                }}
             />
         );
     }

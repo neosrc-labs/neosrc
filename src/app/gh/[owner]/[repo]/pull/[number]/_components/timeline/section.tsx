@@ -272,11 +272,11 @@ export function TimelineSection({
             <div className="relative">
                 <div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200 dark:bg-zinc-700" />
 
-                {wrappers.map((wrapper, index) => {
+                {wrappers.map((wrapper) => {
                     const key =
                         wrapper.type === "raw"
-                            ? `raw-${wrapper.event.id}-${index}`
-                            : `label-${wrapper.createdAt}-${index}`;
+                            ? `raw-${wrapper.event.id}`
+                            : `label-${wrapper.createdAt}`;
 
                     let renderOnIds: string[] | undefined;
                     if (
