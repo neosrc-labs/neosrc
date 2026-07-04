@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import {
     createContext,
     type ReactNode,
@@ -25,8 +26,12 @@ const SidebarContext = createContext<SidebarContextValue>({
 });
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
+    const pathname = usePathname();
+    const isFilesPage =
+        pathname?.includes("/pull/") &&
+        (pathname.endsWith("/files") || pathname.includes("/files/"));
     const [isLeftOpen, setIsLeftOpen] = useState(true);
-    const [isRightOpen, setIsRightOpen] = useState(true);
+    const [isRightOpen, setIsRightOpen] = useState(!isFilesPage);
 
     const toggleLeft = useCallback(() => {
         setIsLeftOpen((prev) => !prev);
