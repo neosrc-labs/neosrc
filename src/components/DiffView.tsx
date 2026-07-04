@@ -319,6 +319,7 @@ function BlockRows({
                                     className="border-gray-200 border-t p-2 dark:border-gray-700"
                                 >
                                     <MarkdownEditor
+                                        autoFocus
                                         disabled={commentPending}
                                         onChange={
                                             onCommentBodyChange ?? (() => {})

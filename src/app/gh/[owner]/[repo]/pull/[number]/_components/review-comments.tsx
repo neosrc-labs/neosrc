@@ -520,6 +520,7 @@ function CommentBlock({
                 showReplyForm ? (
                     <div className="bg-gray-50 p-2 dark:bg-zinc-950">
                         <MarkdownEditor
+                            autoFocus
                             disabled={replyMutation.isPending}
                             onChange={setReplyBody}
                             onCancel={() => {

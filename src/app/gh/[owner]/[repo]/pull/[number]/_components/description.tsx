@@ -419,6 +419,7 @@ export function PullRequestDescriptionSection({
                             <div className="p-4">
                                 {isEditing ? (
                                     <MarkdownEditor
+                                        autoFocus
                                         onCancel={handleCancel}
                                         onChange={setEditBody}
                                         value={editBody}

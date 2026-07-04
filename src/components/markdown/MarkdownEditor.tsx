@@ -51,6 +51,7 @@ interface MarkdownEditorProps {
     disabled?: boolean;
     minHeight?: string;
     className?: string;
+    autoFocus?: boolean;
     owner?: string;
     repo?: string;
     footerActions?: FooterAction[];
@@ -65,6 +66,7 @@ export function MarkdownEditor({
     disabled = false,
     minHeight = "135px",
     className = "",
+    autoFocus = false,
     owner,
     repo,
     footerActions,
@@ -763,6 +765,7 @@ export function MarkdownEditor({
 
                 {mode === "write" ? (
                     <textarea
+                        autoFocus={autoFocus}
                         className="w-full resize-y border-0 bg-white px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder-zinc-500 disabled:dark:bg-zinc-800"
                         disabled={disabled}
                         onBlur={(e) => {
