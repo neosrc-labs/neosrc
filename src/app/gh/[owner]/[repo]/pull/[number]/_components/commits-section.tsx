@@ -1,10 +1,11 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type React from "react";
 import { useEffect, useMemo, useRef } from "react";
-import { Async, AsyncLink } from "~/components/async";
+import { Async } from "~/components/async";
 import { CommitAuthors } from "~/components/commit-authors";
 import { CommitSubject } from "~/components/commit-subject";
 import { CommitHoverCard } from "~/components/hovercards/commit-hover-card";
@@ -158,24 +159,27 @@ function CommitsList({
                                             : ""
                                     }`}
                                 >
-                                    <CommitAuthors
-                                        authors={commit.authors}
-                                        size={20}
-                                    />
-                                    <div className="min-w-0">
-                                        <AsyncLink
-                                            className="font-medium text-gray-900 text-sm dark:text-gray-100"
-                                            href={`${baseUrl}/${commit.oid}`}
-                                        >
-                                            <p className="truncate text-inherit">
-                                                <CommitSubject
-                                                    message={commit.message}
-                                                    className="truncate"
-                                                />
-                                            </p>
-                                        </AsyncLink>
+                                    <span
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="contents"
+                                    >
+                                        <CommitAuthors
+                                            authors={commit.authors}
+                                            size={20}
+                                        />
+                                    </span>
+                                    <Link
+                                        className="min-w-0 flex-1 font-medium text-gray-900 text-sm no-underline dark:text-gray-100"
+                                        href={`${baseUrl}/${commit.oid}`}
+                                    >
+                                        <p className="truncate">
+                                            <CommitSubject
+                                                message={commit.message}
+                                                className="truncate"
+                                            />
+                                        </p>
                                         {commit.authors[0] && (
-                                            <p className="mt-0.5 text-gray-500 text-xs dark:text-gray-400">
+                                            <p className="mt-0.5 font-normal text-gray-500 text-xs dark:text-gray-400">
                                                 {commit.authors[0]?.user
                                                     ?.login ??
                                                     commit.authors[0]?.name ??
@@ -186,7 +190,7 @@ function CommitsList({
                                                 )}
                                             </p>
                                         )}
-                                    </div>
+                                    </Link>
                                 </div>
                             </CommitHoverCard>
                         </div>
