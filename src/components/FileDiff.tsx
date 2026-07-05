@@ -1,15 +1,29 @@
 "use client";
 
-import { FoldVertical, UnfoldVertical } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { FoldVertical, MessageSquare, UnfoldVertical } from "lucide-react";
+import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 import type { ReviewComment } from "~/server/github";
+
+function isFileLevelComment(c: ReviewComment): boolean {
+    const maybe = c as Record<string, unknown>;
+    return (
+        maybe.subject_type === "file" || (c.line == null && c.position == null)
+    );
+}
+
+function isLineComment(c: ReviewComment): boolean {
+    return !isFileLevelComment(c);
+}
+
 import { api } from "~/trpc/react";
 import { isGeneratedFile } from "~/utils/generated-files";
 import { isImageFile } from "~/utils/image-file";
 import { isSvgFile } from "~/utils/svg-file";
 import { getStoredSet, getViewedKey, setStoredSet } from "~/utils/viewed-files";
-import { type ActiveComment, DiffView } from "./DiffView";
+import { type ActiveComment, DiffView, groupThreads } from "./DiffView";
 import ImageDiff from "./ImageDiff";
+import { InlineCommentThread } from "./InlineCommentThread";
+import { MarkdownEditor } from "./markdown/MarkdownEditor";
 import SvgDiff from "./SvgDiff";
 
 interface FileDiffProps {
@@ -123,6 +137,18 @@ export default function FileDiff({
         headSha,
     ]);
 
+    const fileLevelComments = useMemo(() => {
+        return showComments
+            ? comments.filter(
+                  (c) => c.path === file.filename && isFileLevelComment(c),
+              )
+            : [];
+    }, [showComments, comments, file.filename]);
+
+    const lineComments = useMemo(() => {
+        return showComments ? comments.filter(isLineComment) : [];
+    }, [showComments, comments]);
+
     const createMutation = api.reviewComments.create.useMutation({
         onSuccess: () => {
             setCommentBody("");
@@ -141,15 +167,19 @@ export default function FileDiff({
     const handleAddComment = useCallback(
         (isReview: boolean) => {
             if (!commentBody.trim() || !activeComment) return;
-            const args = {
+            const args: Parameters<typeof createMutation.mutate>[0] = {
                 owner,
                 repo,
                 number: Number(number),
                 filePath: file.filename,
-                lineNumber: activeComment.line,
-                side: activeComment.side,
                 body: commentBody,
                 asReview: isReview,
+                ...(activeComment.type === "line"
+                    ? {
+                          lineNumber: activeComment.line,
+                          side: activeComment.side,
+                      }
+                    : {}),
             };
 
             const doCreateComment = () => {
@@ -339,6 +369,24 @@ export default function FileDiff({
                             <UnfoldVertical size={14} />
                         )}
                     </button>
+                    <button
+                        className="flex shrink-0 cursor-pointer items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        onClick={() =>
+                            setActiveComment(
+                                activeComment?.type === "file"
+                                    ? null
+                                    : { type: "file" },
+                            )
+                        }
+                        type="button"
+                        title={
+                            activeComment?.type === "file"
+                                ? "Cancel"
+                                : "Comment on file"
+                        }
+                    >
+                        <MessageSquare size={14} />
+                    </button>
                 </span>
 
                 <span className={`font-medium text-xs ${statusColor}`}>
@@ -366,6 +414,48 @@ export default function FileDiff({
                     Viewed
                 </label>
             </div>
+
+            {activeComment?.type === "file" && (
+                <div className="border-gray-200 border-b p-2 dark:border-zinc-700">
+                    <MarkdownEditor
+                        autoFocus
+                        disabled={
+                            createMutation.isPending ||
+                            startReviewMutation.isPending
+                        }
+                        onChange={setCommentBody}
+                        onCancel={() => {
+                            setActiveComment(null);
+                            setCommentBody("");
+                        }}
+                        placeholder="Leave a comment on this file..."
+                        value={commentBody}
+                        owner={owner}
+                        repo={repo}
+                        footerActions={footerActions}
+                    />
+                    {(createMutation.isError ||
+                        startReviewMutation.isError) && (
+                        <p className="mt-1 text-red-600 text-xs">
+                            Failed to post comment. Please try again.
+                        </p>
+                    )}
+                </div>
+            )}
+
+            {fileLevelComments.length > 0 &&
+                groupThreads(fileLevelComments).map((thread) => (
+                    <Fragment key={`file-thread-${thread.parent.id}`}>
+                        <InlineCommentThread
+                            parentComment={thread.parent}
+                            replies={thread.replies}
+                            owner={owner}
+                            repo={repo}
+                            number={Number(number)}
+                            pendingReviewId={pendingReviewId}
+                        />
+                    </Fragment>
+                ))}
 
             <div className="overflow-hidden rounded-b">
                 {!isCollapsed &&
@@ -405,7 +495,7 @@ export default function FileDiff({
                             filename={file.filename}
                             oldContentUrl={svgContentUrls.oldUrl}
                             newContentUrl={svgContentUrls.newUrl}
-                            comments={showComments ? comments : undefined}
+                            comments={showComments ? lineComments : undefined}
                             showComments={showComments}
                             showCommentButton={showComments}
                             activeComment={activeComment}
@@ -434,7 +524,7 @@ export default function FileDiff({
                         <DiffView
                             patch={file.patch}
                             filename={file.filename}
-                            comments={showComments ? comments : undefined}
+                            comments={showComments ? lineComments : undefined}
                             showComments={showComments}
                             showCommentButton={showComments}
                             activeComment={activeComment}

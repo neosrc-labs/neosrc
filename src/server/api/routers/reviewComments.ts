@@ -6,6 +6,7 @@ import { deleteCache, prCacheKey } from "~/server/cache";
 import {
     applySuggestion,
     createPullRequestReviewComment,
+    createStandaloneFileComment,
     createStandaloneReviewComment,
     deleteReviewComment,
     getAuthenticatedUser,
@@ -78,8 +79,8 @@ export const reviewCommentsRouter = createTRPCRouter({
                 repo: z.string(),
                 number: z.number(),
                 filePath: z.string(),
-                lineNumber: z.number(),
-                side: z.enum(["LEFT", "RIGHT"]),
+                lineNumber: z.number().optional(),
+                side: z.enum(["LEFT", "RIGHT"]).optional(),
                 body: z.string().min(1),
                 asReview: z.boolean().optional().default(false),
             }),
@@ -97,29 +98,49 @@ export const reviewCommentsRouter = createTRPCRouter({
                 input.number,
             );
 
-            if (input.asReview) {
-                const currentUser = await getAuthenticatedUser(accessToken);
-                const reviews = await getPullRequestReviews(
+            if (input.lineNumber && input.side) {
+                if (input.asReview) {
+                    const currentUser = await getAuthenticatedUser(accessToken);
+                    const reviews = await getPullRequestReviews(
+                        accessToken,
+                        input.owner,
+                        input.repo,
+                        input.number,
+                    );
+
+                    const pendingReview = reviews.find(
+                        (r) =>
+                            r.state === "PENDING" &&
+                            r.user?.login === currentUser.login,
+                    );
+
+                    const comment = await createPullRequestReviewComment(
+                        accessToken,
+                        pr.node_id,
+                        input.filePath,
+                        input.lineNumber,
+                        input.side,
+                        input.body,
+                        pendingReview?.node_id,
+                    );
+
+                    await deleteCache(
+                        prCacheKey(input.owner, input.repo, input.number),
+                    );
+
+                    return { success: true as const, id: comment.id };
+                }
+
+                const comment = await createStandaloneReviewComment(
                     accessToken,
                     input.owner,
                     input.repo,
                     input.number,
-                );
-
-                const pendingReview = reviews.find(
-                    (r) =>
-                        r.state === "PENDING" &&
-                        r.user?.login === currentUser.login,
-                );
-
-                const comment = await createPullRequestReviewComment(
-                    accessToken,
-                    pr.node_id,
+                    input.body,
+                    pr.head.sha,
                     input.filePath,
                     input.lineNumber,
                     input.side,
-                    input.body,
-                    pendingReview?.node_id,
                 );
 
                 await deleteCache(
@@ -129,7 +150,8 @@ export const reviewCommentsRouter = createTRPCRouter({
                 return { success: true as const, id: comment.id };
             }
 
-            const comment = await createStandaloneReviewComment(
+            // File-level comment (no line number)
+            const comment = await createStandaloneFileComment(
                 accessToken,
                 input.owner,
                 input.repo,
@@ -137,8 +159,6 @@ export const reviewCommentsRouter = createTRPCRouter({
                 input.body,
                 pr.head.sha,
                 input.filePath,
-                input.lineNumber,
-                input.side,
             );
 
             await deleteCache(

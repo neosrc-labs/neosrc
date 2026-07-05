@@ -21,10 +21,9 @@ import { InlineCommentThread } from "./InlineCommentThread";
 import type { FooterAction } from "./markdown/MarkdownEditor";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
 
-export interface ActiveComment {
-    line: number;
-    side: "LEFT" | "RIGHT";
-}
+export type ActiveComment =
+    | { type: "line"; line: number; side: "LEFT" | "RIGHT" }
+    | { type: "file" };
 
 interface DiffViewProps {
     patch: string;
@@ -316,7 +315,7 @@ function computeBetweenGap(
     return null;
 }
 
-function groupThreads(
+export function groupThreads(
     comments: ReviewComment[],
 ): Array<{ parent: ReviewComment; replies: ReviewComment[] }> {
     const threads = new Map<number, ReviewComment[]>();
@@ -497,8 +496,9 @@ function BlockRows({
                 const lineComments =
                     commentsByLine.get(`${commentLine}-${side}`) ?? [];
                 const isActive =
-                    activeComment?.line === commentLine &&
-                    activeComment?.side === side;
+                    activeComment?.type === "line" &&
+                    activeComment.line === commentLine &&
+                    activeComment.side === side;
                 const hasComments = lineComments.length > 0;
 
                 const content = line.content.slice(1);
@@ -519,6 +519,7 @@ function BlockRows({
                                                     isActive
                                                         ? null
                                                         : {
+                                                              type: "line",
                                                               line: commentLine,
                                                               side,
                                                           },
