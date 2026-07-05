@@ -476,21 +476,21 @@ function BlockRows({
                             </tr>
                         );
                     })}
-            {!hideHeader && (
+            {!hideHeader && headSha && (
                 <tr
                     className={
-                        gap && !isGapExpanded && gapSize > 0 && headSha
+                        gap && !isGapExpanded && gapSize > 0
                             ? "cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30"
                             : ""
                     }
                     onClick={() => {
-                        if (gap && !isGapExpanded && gapSize > 0 && headSha) {
+                        if (gap && !isGapExpanded && gapSize > 0) {
                             onGapExpand?.(gapKey ?? "");
                         }
                     }}
                 >
                     <td className="d2h-code-linenumber d2h-info">
-                        {gap && !isGapExpanded && gapSize > 0 && headSha && (
+                        {gap && !isGapExpanded && gapSize > 0 && (
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <UnfoldVertical
                                     size={14}
