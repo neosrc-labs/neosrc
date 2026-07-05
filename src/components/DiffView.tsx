@@ -195,7 +195,6 @@ export function DiffView({
             }
             isDragging.current = true;
             dragStartRef.current = { line: lineNum, side };
-            mouseAnchorRef.current = { line: lineNum, side };
             updateSelection(lineNum, lineNum, side);
         },
         [activeComment, updateSelection],
