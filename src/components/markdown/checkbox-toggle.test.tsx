@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { MarkdownRenderer } from "./MarkdownRenderer";
@@ -17,7 +17,7 @@ describe("checkbox index mapping", () => {
         const inputs = container.querySelectorAll('input[type="checkbox"]');
         expect(inputs.length).toBe(2);
         // Click the FIRST checkbox
-        inputs[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        fireEvent.click(inputs[0]!);
         expect(toggled.length).toBe(1);
         // The first task should now be checked, the second unchanged
         expect(toggled[0]).toBe("- [x] task one\n- [ ] task two");
@@ -42,7 +42,7 @@ describe("checkbox index mapping", () => {
         const inputs = container.querySelectorAll('input[type="checkbox"]');
         // Only the two real task items should render checkboxes
         expect(inputs.length).toBe(2);
-        inputs[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        fireEvent.click(inputs[0]!);
         expect(toggled[0]).toBe(
             [
                 "```",
@@ -67,7 +67,7 @@ describe("checkbox index mapping", () => {
         );
         const inputs = container.querySelectorAll('input[type="checkbox"]');
         expect(inputs.length).toBe(3);
-        inputs[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        fireEvent.click(inputs[1]!);
         expect(toggled[0]).toBe(
             "> - [ ] quoted task\n- [x] real task one\n- [ ] real task two",
         );
@@ -85,7 +85,7 @@ describe("checkbox index mapping", () => {
         );
         const inputs = container.querySelectorAll('input[type="checkbox"]');
         expect(inputs.length).toBe(2);
-        inputs[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        fireEvent.click(inputs[1]!);
         expect(toggled[0]).toBe("1. [ ] ordered task\n- [x] real task one");
     });
 
@@ -118,21 +118,15 @@ describe("checkbox index mapping", () => {
             container.querySelectorAll('input[type="checkbox"]');
 
         // Click the FIRST checkbox
-        getInputs()[0]?.dispatchEvent(
-            new MouseEvent("click", { bubbles: true }),
-        );
+        fireEvent.click(getInputs()[0]!);
         expect(events[0]?.result).toBe("- [x] one\n- [ ] two\n- [ ] three");
 
         // After re-render, click the THIRD checkbox
-        getInputs()[2]?.dispatchEvent(
-            new MouseEvent("click", { bubbles: true }),
-        );
+        fireEvent.click(getInputs()[2]!);
         expect(events[1]?.result).toBe("- [x] one\n- [ ] two\n- [x] three");
 
         // Click the SECOND checkbox
-        getInputs()[1]?.dispatchEvent(
-            new MouseEvent("click", { bubbles: true }),
-        );
+        fireEvent.click(getInputs()[1]!);
         expect(events[2]?.result).toBe("- [x] one\n- [x] two\n- [x] three");
     });
 });
