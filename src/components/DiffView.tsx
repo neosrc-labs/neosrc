@@ -125,6 +125,17 @@ export function DiffView({
     const isDragging = useRef(false);
     const dragStartRef = useRef<{ line: number; side: string } | null>(null);
 
+    const [commentDragRange, setCommentDragRange] = useState<{
+        startLine: number;
+        endLine: number;
+        side: "LEFT" | "RIGHT";
+    } | null>(null);
+    const commentDragAnchor = useRef<{
+        line: number;
+        side: "LEFT" | "RIGHT";
+    } | null>(null);
+    const commentDragInProgress = useRef(false);
+
     const updateSelection = useCallback(
         (startLine: number, endLine: number, side: string) => {
             const lo = Math.min(startLine, endLine);
@@ -171,16 +182,52 @@ export function DiffView({
 
     const handleLineMouseDown = useCallback(
         (lineNum: number, side: string) => {
+            if (activeComment?.type === "line" && activeComment.side === side) {
+                commentDragInProgress.current = true;
+                commentDragAnchor.current = {
+                    line: activeComment.line,
+                    side: activeComment.side,
+                };
+                const startLine = Math.min(activeComment.line, lineNum);
+                const endLine = Math.max(activeComment.line, lineNum);
+                setCommentDragRange({ startLine, endLine, side });
+                return;
+            }
             isDragging.current = true;
             dragStartRef.current = { line: lineNum, side };
             mouseAnchorRef.current = { line: lineNum, side };
             updateSelection(lineNum, lineNum, side);
+        },
+        [activeComment, updateSelection],
+    );
+
+    const handleCommentDragStart = useCallback(
+        (line: number, side: "LEFT" | "RIGHT") => {
+            commentDragInProgress.current = true;
+            commentDragAnchor.current = { line, side };
+            setCommentDragRange({ startLine: line, endLine: line, side });
+            updateSelection(line, line, side);
         },
         [updateSelection],
     );
 
     const handleTableMouseOver = useCallback(
         (e: React.MouseEvent) => {
+            if (commentDragInProgress.current && commentDragAnchor.current) {
+                const tr = (e.target as HTMLElement).closest(
+                    'tr[id^="diff-"]',
+                ) as HTMLElement | null;
+                if (!tr) return;
+                const lineMatch = tr.id.match(/(\d+)$/);
+                if (!lineMatch) return;
+                const lineNum = parseInt(lineMatch[1] ?? "0", 10);
+                const anchor = commentDragAnchor.current;
+                const startLine = Math.min(anchor.line, lineNum);
+                const endLine = Math.max(anchor.line, lineNum);
+                setCommentDragRange({ startLine, endLine, side: anchor.side });
+                updateSelection(anchor.line, lineNum, anchor.side);
+                return;
+            }
             if (!isDragging.current || !dragStartRef.current) return;
             const tr = (e.target as HTMLElement).closest(
                 'tr[id^="diff-"]',
@@ -198,6 +245,22 @@ export function DiffView({
 
     useEffect(() => {
         const handleMouseUp = () => {
+            if (commentDragInProgress.current) {
+                commentDragInProgress.current = false;
+                const range = commentDragRange;
+                if (range && range.startLine !== range.endLine) {
+                    onStartComment?.({
+                        type: "line",
+                        line: range.endLine,
+                        side: range.side,
+                        startLine: range.startLine,
+                        startSide: range.side,
+                    });
+                }
+                commentDragAnchor.current = null;
+                setCommentDragRange(null);
+                return;
+            }
             if (!isDragging.current) return;
             isDragging.current = false;
             if (dragStartRef.current) {
@@ -213,7 +276,13 @@ export function DiffView({
         };
         document.addEventListener("mouseup", handleMouseUp);
         return () => document.removeEventListener("mouseup", handleMouseUp);
-    }, [selectedRange, commitRangeUrl, commitSingleUrl]);
+    }, [
+        selectedRange,
+        commitRangeUrl,
+        commitSingleUrl,
+        commentDragRange,
+        onStartComment,
+    ]);
 
     const [expandedGapKeys, setExpandedGapKeys] = useState<Set<string>>(
         () => new Set(),
@@ -518,6 +587,8 @@ export function DiffView({
                                     onCancelComment={onCancelComment}
                                     showComments={showComments}
                                     showCommentButton={showCommentButton}
+                                    commentDragRange={commentDragRange}
+                                    onCommentDragStart={handleCommentDragStart}
                                     pendingReviewId={pendingReviewId}
                                 />
                             );
@@ -587,6 +658,12 @@ interface BlockRowsProps {
     onCancelComment: (() => void) | undefined;
     showComments: boolean;
     showCommentButton: boolean;
+    commentDragRange: {
+        startLine: number;
+        endLine: number;
+        side: "LEFT" | "RIGHT";
+    } | null;
+    onCommentDragStart?: (line: number, side: "LEFT" | "RIGHT") => void;
     pendingReviewId?: number | null;
     hideHeader?: boolean;
     gap?: Gap;
@@ -622,6 +699,8 @@ function BlockRows({
     onCancelComment,
     showComments,
     showCommentButton,
+    commentDragRange,
+    onCommentDragStart,
     pendingReviewId,
     hideHeader,
     gap,
@@ -762,11 +841,15 @@ function BlockRows({
                 const hasComments = lineComments.length > 0;
 
                 const isInActiveRange =
-                    activeComment?.type === "line" &&
-                    activeComment.startLine != null &&
-                    activeComment.side === side &&
-                    commentLine >= activeComment.startLine &&
-                    commentLine <= activeComment.line;
+                    (activeComment?.type === "line" &&
+                        activeComment.startLine != null &&
+                        activeComment.side === side &&
+                        commentLine >= activeComment.startLine &&
+                        commentLine <= activeComment.line) ||
+                    (commentDragRange != null &&
+                        commentDragRange.side === side &&
+                        commentLine >= commentDragRange.startLine &&
+                        commentLine <= commentDragRange.endLine);
 
                 const hasMultiLineRange =
                     (multiLineRanges.get(`${commentLine}-${side}`)?.length ??
@@ -818,6 +901,13 @@ function BlockRows({
                                         <SquarePlus
                                             size={24}
                                             className="absolute -right-5 z-10 hidden rounded-md bg-blue-500 p-0.5 text-white group-hover:block"
+                                            onMouseDown={(e) => {
+                                                e.stopPropagation();
+                                                onCommentDragStart?.(
+                                                    commentLine,
+                                                    side as "LEFT" | "RIGHT",
+                                                );
+                                            }}
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 if (
