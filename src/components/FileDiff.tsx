@@ -178,6 +178,8 @@ export default function FileDiff({
                     ? {
                           lineNumber: activeComment.line,
                           side: activeComment.side,
+                          startLineNumber: activeComment.startLine,
+                          startSide: activeComment.startSide,
                       }
                     : {}),
             };

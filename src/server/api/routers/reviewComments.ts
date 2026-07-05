@@ -81,6 +81,8 @@ export const reviewCommentsRouter = createTRPCRouter({
                 filePath: z.string(),
                 lineNumber: z.number().optional(),
                 side: z.enum(["LEFT", "RIGHT"]).optional(),
+                startLineNumber: z.number().optional(),
+                startSide: z.enum(["LEFT", "RIGHT"]).optional(),
                 body: z.string().min(1),
                 asReview: z.boolean().optional().default(false),
             }),
@@ -122,6 +124,8 @@ export const reviewCommentsRouter = createTRPCRouter({
                         input.side,
                         input.body,
                         pendingReview?.node_id,
+                        input.startLineNumber,
+                        input.startSide,
                     );
 
                     await deleteCache(
@@ -141,6 +145,8 @@ export const reviewCommentsRouter = createTRPCRouter({
                     input.filePath,
                     input.lineNumber,
                     input.side,
+                    input.startLineNumber,
+                    input.startSide,
                 );
 
                 await deleteCache(
