@@ -78,6 +78,7 @@ export default function FileDiff({
     );
     const [commentBody, setCommentBody] = useState("");
     const [expandedAll, setExpandedAll] = useState(false);
+    const recentlyAddedIds = useRef(new Set<number>());
     const utils = api.useUtils();
     const headerRef = useRef<HTMLDivElement>(null);
 
@@ -137,22 +138,40 @@ export default function FileDiff({
         headSha,
     ]);
 
+    const allFileLevelComments = useMemo(() => {
+        return comments.filter(
+            (c) => c.path === file.filename && isFileLevelComment(c),
+        );
+    }, [comments, file.filename]);
+
+    const allLineComments = useMemo(() => {
+        return comments.filter(isLineComment);
+    }, [comments]);
+
     const fileLevelComments = useMemo(() => {
-        return showComments
-            ? comments.filter(
-                  (c) => c.path === file.filename && isFileLevelComment(c),
-              )
-            : [];
-    }, [showComments, comments, file.filename]);
+        if (showComments) return allFileLevelComments;
+        return allFileLevelComments.filter((c) =>
+            recentlyAddedIds.current.has(c.id),
+        );
+    }, [showComments, allFileLevelComments]);
 
     const lineComments = useMemo(() => {
-        return showComments ? comments.filter(isLineComment) : [];
-    }, [showComments, comments]);
+        if (showComments) return allLineComments;
+        return allLineComments.filter((c) =>
+            recentlyAddedIds.current.has(c.id),
+        );
+    }, [showComments, allLineComments]);
+
+    const effectiveShowComments =
+        showComments || recentlyAddedIds.current.size > 0;
 
     const createMutation = api.reviewComments.create.useMutation({
-        onSuccess: () => {
+        onSuccess: (data) => {
             setCommentBody("");
             setActiveComment(null);
+            if (!showComments && data?.id) {
+                recentlyAddedIds.current.add(data.id);
+            }
             utils.reviewComments.list.invalidate();
             utils.reviews.getPending.invalidate();
         },
@@ -497,9 +516,9 @@ export default function FileDiff({
                             filename={file.filename}
                             oldContentUrl={svgContentUrls.oldUrl}
                             newContentUrl={svgContentUrls.newUrl}
-                            comments={showComments ? lineComments : undefined}
-                            showComments={showComments}
-                            showCommentButton={showComments}
+                            comments={lineComments}
+                            showComments={effectiveShowComments}
+                            showCommentButton={true}
                             activeComment={activeComment}
                             onStartComment={setActiveComment}
                             commentBody={commentBody}
@@ -526,9 +545,9 @@ export default function FileDiff({
                         <DiffView
                             patch={file.patch}
                             filename={file.filename}
-                            comments={showComments ? lineComments : undefined}
-                            showComments={showComments}
-                            showCommentButton={showComments}
+                            comments={lineComments}
+                            showComments={effectiveShowComments}
+                            showCommentButton={true}
                             activeComment={activeComment}
                             onStartComment={setActiveComment}
                             commentBody={commentBody}
