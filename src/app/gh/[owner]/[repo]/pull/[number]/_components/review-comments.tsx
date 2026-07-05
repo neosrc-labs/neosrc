@@ -459,7 +459,10 @@ function CommentBlock({
                     <DiffView
                         patch={truncateDiffToRange(
                             comment.diff_hunk,
-                            comment.start_line,
+                            comment.start_line ??
+                                (comment.line != null
+                                    ? Math.max(1, comment.line - 5)
+                                    : null),
                             comment.line,
                         )}
                         filename={comment.path}
