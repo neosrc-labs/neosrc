@@ -378,18 +378,20 @@ export default function FileDiff({
                     >
                         {file.filename}
                     </button>
-                    <button
-                        className="ml-1 flex shrink-0 cursor-pointer items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                        onClick={toggleExpandAll}
-                        type="button"
-                        title={expandedAll ? "Collapse all" : "Expand all"}
-                    >
-                        {expandedAll ? (
-                            <FoldVertical size={14} />
-                        ) : (
-                            <UnfoldVertical size={14} />
-                        )}
-                    </button>
+                    {file.status === "modified" && (
+                        <button
+                            className="ml-1 flex shrink-0 cursor-pointer items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            onClick={toggleExpandAll}
+                            type="button"
+                            title={expandedAll ? "Collapse all" : "Expand all"}
+                        >
+                            {expandedAll ? (
+                                <FoldVertical size={14} />
+                            ) : (
+                                <UnfoldVertical size={14} />
+                            )}
+                        </button>
+                    )}
                     <button
                         className="flex shrink-0 cursor-pointer items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                         onClick={() =>
