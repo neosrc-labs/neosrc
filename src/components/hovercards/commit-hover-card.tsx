@@ -76,27 +76,6 @@ function CommitHoverCardContent({
     );
 }
 
-interface CommitHoverCardProps {
-    commit: GQLCommitWithAuthors;
-    baseUrl: string;
-    children: ReactNode;
-}
-
-export function CommitHoverCard({
-    commit,
-    baseUrl,
-    children,
-}: CommitHoverCardProps) {
-    return (
-        <HoverCard openDelay={300}>
-            <HoverCardTrigger asChild>{children}</HoverCardTrigger>
-            <HoverCardContent className="w-80 bg-white p-0 dark:bg-zinc-950">
-                <CommitHoverCardContent commit={commit} baseUrl={baseUrl} />
-            </HoverCardContent>
-        </HoverCard>
-    );
-}
-
 interface MarkdownCommitHoverCardProps {
     owner: string;
     repo: string;

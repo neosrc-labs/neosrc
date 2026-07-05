@@ -8,7 +8,6 @@ import { useEffect, useMemo, useRef } from "react";
 import { Async } from "~/components/async";
 import { CommitAuthors } from "~/components/commit-authors";
 import { CommitSubject } from "~/components/commit-subject";
-import { CommitHoverCard } from "~/components/hovercards/commit-hover-card";
 import type { PullsGetResponseData } from "~/server/github";
 import type { GQLCommitWithAuthors } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
@@ -151,48 +150,45 @@ function CommitsList({
                                 transform: `translateY(${virtualItem.start}px)`,
                             }}
                         >
-                            <CommitHoverCard baseUrl={baseUrl} commit={commit}>
-                                <div
-                                    className={`flex items-start gap-2 rounded-md px-2 py-1 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800 ${
-                                        isCurrent
-                                            ? "border-blue-500 border-l-2 bg-blue-50 dark:bg-blue-950"
-                                            : ""
-                                    }`}
+                            <div
+                                className={`flex items-start gap-2 rounded-md px-2 py-1 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800 ${
+                                    isCurrent
+                                        ? "border-blue-500 border-l-2 bg-blue-50 dark:bg-blue-950"
+                                        : ""
+                                }`}
+                            >
+                                <span
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="contents"
                                 >
-                                    <span
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="contents"
-                                    >
-                                        <CommitAuthors
-                                            authors={commit.authors}
-                                            size={20}
+                                    <CommitAuthors
+                                        authors={commit.authors}
+                                        size={20}
+                                    />
+                                </span>
+                                <Link
+                                    className="min-w-0 flex-1 font-medium text-gray-900 text-sm no-underline dark:text-gray-100"
+                                    href={`${baseUrl}/${commit.oid}`}
+                                >
+                                    <p className="truncate">
+                                        <CommitSubject
+                                            message={commit.message}
+                                            className="truncate"
                                         />
-                                    </span>
-                                    <Link
-                                        className="min-w-0 flex-1 font-medium text-gray-900 text-sm no-underline dark:text-gray-100"
-                                        href={`${baseUrl}/${commit.oid}`}
-                                    >
-                                        <p className="truncate">
-                                            <CommitSubject
-                                                message={commit.message}
-                                                className="truncate"
-                                            />
+                                    </p>
+                                    {commit.authors[0] && (
+                                        <p className="mt-0.5 font-normal text-gray-500 text-xs dark:text-gray-400">
+                                            {commit.authors[0]?.user?.login ??
+                                                commit.authors[0]?.name ??
+                                                "Unknown"}{" "}
+                                            committed{" "}
+                                            {formatRelativeTime(
+                                                commit.committedDate ?? "",
+                                            )}
                                         </p>
-                                        {commit.authors[0] && (
-                                            <p className="mt-0.5 font-normal text-gray-500 text-xs dark:text-gray-400">
-                                                {commit.authors[0]?.user
-                                                    ?.login ??
-                                                    commit.authors[0]?.name ??
-                                                    "Unknown"}{" "}
-                                                committed{" "}
-                                                {formatRelativeTime(
-                                                    commit.committedDate ?? "",
-                                                )}
-                                            </p>
-                                        )}
-                                    </Link>
-                                </div>
-                            </CommitHoverCard>
+                                    )}
+                                </Link>
+                            </div>
                         </div>
                     );
                 })}
