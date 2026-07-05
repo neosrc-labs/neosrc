@@ -1028,6 +1028,43 @@ export const createStandaloneReviewComment = async (
     return { id: response.data.id };
 };
 
+export const createStandaloneFileComment = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    body: string,
+    commitId: string,
+    path: string,
+) => {
+    const response = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/pulls/${pullNumber}/comments`,
+        {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                body,
+                commit_id: commitId,
+                path,
+                subject_type: "file",
+            }),
+        },
+    );
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(
+            `Failed to create file comment: ${response.status} ${text}`,
+        );
+    }
+
+    const data = await response.json();
+    return { id: data.id as number };
+};
+
 export const replyToPullRequestReviewComment = async (
     accessToken: string,
     owner: string,
