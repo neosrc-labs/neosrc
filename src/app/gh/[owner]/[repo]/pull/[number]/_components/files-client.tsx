@@ -11,6 +11,7 @@ import {
 import { useFiles } from "~/hooks/files";
 import type { PullsGetResponseData, ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
+import { filenameHash } from "~/utils/filename-hash";
 import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
 
 function FileDiffSkeleton() {
@@ -146,6 +147,16 @@ export function FilesSection({
         }
     }, [allFiles]);
 
+    const fileHashToId = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const file of allFiles) {
+            const hash = filenameHash(file.filename);
+            const id = file.filename.replace(/\//g, "-");
+            map.set(hash, id);
+        }
+        return map;
+    }, [allFiles]);
+
     useEffect(() => {
         if (allCommentsAll.length === 0) return;
         const hash = window.location.hash;
@@ -161,33 +172,22 @@ export function FilesSection({
         }
     }, [allCommentsAll]);
 
+    // Force LazyRenderItem to render the file when navigating via hash
     useEffect(() => {
-        if (isLoading || allFiles.length === 0) return;
         const hash = window.location.hash;
-        if (!hash || hash.startsWith("#review-thread-")) return;
-
-        const id = hash.slice(1);
-
-        window.dispatchEvent(
-            new CustomEvent(SCROLL_TARGET_EVENT, { detail: id }),
-        );
-
-        const el = document.getElementById(id);
-        if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
-            return;
-        }
-
-        const observer = new MutationObserver(() => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.scrollIntoView({ behavior: "smooth", block: "center" });
-                observer.disconnect();
-            }
+        if (!hash?.startsWith("#diff-")) return;
+        const rawHash = hash.match(/^#diff-([0-9a-f]+)/)?.[1];
+        if (!rawHash) return;
+        const resolvedFileId = fileHashToId.get(rawHash);
+        if (!resolvedFileId) return;
+        queueMicrotask(() => {
+            window.dispatchEvent(
+                new CustomEvent(SCROLL_TARGET_EVENT, {
+                    detail: resolvedFileId,
+                }),
+            );
         });
-        observer.observe(document.body, { childList: true, subtree: true });
-        setTimeout(() => observer.disconnect(), 15000);
-    }, [allFiles, isLoading]);
+    }, [fileHashToId]);
 
     return (
         <div>
