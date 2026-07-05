@@ -22,7 +22,13 @@ import type { FooterAction } from "./markdown/MarkdownEditor";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
 
 export type ActiveComment =
-    | { type: "line"; line: number; side: "LEFT" | "RIGHT" }
+    | {
+          type: "line";
+          line: number;
+          side: "LEFT" | "RIGHT";
+          startLine?: number;
+          startSide?: "LEFT" | "RIGHT";
+      }
     | { type: "file" };
 
 interface DiffViewProps {
@@ -143,14 +149,37 @@ export function DiffView({
     const commentsByLine = useMemo(() => {
         const map = new Map<string, ReviewComment[]>();
         for (const comment of comments) {
-            const line = comment.line ?? comment.position ?? 0;
             const side = comment.side ?? "RIGHT";
-            const key = `${line}-${side}`;
-            const existing = map.get(key) ?? [];
-            existing.push(comment);
-            map.set(key, existing);
+            const endLine = comment.line ?? comment.position ?? 0;
+            const startLine = comment.start_line ?? endLine;
+            for (let line = startLine; line <= endLine; line++) {
+                const key = `${line}-${side}`;
+                const existing = map.get(key) ?? [];
+                existing.push(comment);
+                map.set(key, existing);
+            }
         }
         return map;
+    }, [comments]);
+
+    const multiLineRanges = useMemo(() => {
+        const ranges = new Map<string, string[]>();
+        for (const comment of comments) {
+            const side = comment.side ?? "RIGHT";
+            const endLine = comment.line ?? comment.position ?? 0;
+            const startLine = comment.start_line;
+            if (startLine == null || startLine === endLine) continue;
+            for (let line = startLine; line <= endLine; line++) {
+                const key = `${line}-${side}`;
+                const existing = ranges.get(key) ?? [];
+                const rangeId = `${comment.id}`;
+                if (!existing.includes(rangeId)) {
+                    existing.push(rangeId);
+                    ranges.set(key, existing);
+                }
+            }
+        }
+        return ranges;
     }, [comments]);
 
     const renderItems = useMemo(() => {
@@ -266,6 +295,7 @@ export function DiffView({
                                     headSha={headSha}
                                     filename={filename}
                                     commentsByLine={commentsByLine}
+                                    multiLineRanges={multiLineRanges}
                                     activeComment={activeComment}
                                     onStartComment={onStartComment}
                                     owner={owner}
@@ -334,6 +364,7 @@ export function groupThreads(
 interface BlockRowsProps {
     block: NonNullable<ReturnType<typeof parse>>[number]["blocks"][number];
     commentsByLine: Map<string, ReviewComment[]>;
+    multiLineRanges: Map<string, string[]>;
     activeComment: ActiveComment | null;
     onStartComment: ((ac: ActiveComment | null) => void) | undefined;
     owner: string | undefined;
@@ -360,6 +391,7 @@ interface BlockRowsProps {
 function BlockRows({
     block,
     commentsByLine,
+    multiLineRanges,
     activeComment,
     onStartComment,
     owner,
@@ -447,18 +479,18 @@ function BlockRows({
             {!hideHeader && (
                 <tr
                     className={
-                        gap && !isGapExpanded && gapSize > 0
+                        gap && !isGapExpanded && gapSize > 0 && headSha
                             ? "cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30"
                             : ""
                     }
                     onClick={() => {
-                        if (gap && !isGapExpanded && gapSize > 0) {
+                        if (gap && !isGapExpanded && gapSize > 0 && headSha) {
                             onGapExpand?.(gapKey ?? "");
                         }
                     }}
                 >
                     <td className="d2h-code-linenumber d2h-info">
-                        {gap && !isGapExpanded && gapSize > 0 && (
+                        {gap && !isGapExpanded && gapSize > 0 && headSha && (
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <UnfoldVertical
                                     size={14}
@@ -501,30 +533,71 @@ function BlockRows({
                     activeComment.side === side;
                 const hasComments = lineComments.length > 0;
 
+                const isInActiveRange =
+                    activeComment?.type === "line" &&
+                    activeComment.startLine != null &&
+                    activeComment.side === side &&
+                    commentLine >= activeComment.startLine &&
+                    commentLine <= activeComment.line;
+
+                const hasMultiLineRange =
+                    (multiLineRanges.get(`${commentLine}-${side}`)?.length ??
+                        0) > 0;
+
+                const showRangeIndicator = isInActiveRange || hasMultiLineRange;
+
                 const content = line.content.slice(1);
+
+                const isLastLineOfRange = (c: ReviewComment) =>
+                    (c.line ?? c.position ?? 0) === commentLine;
 
                 return (
                     <Fragment
                         key={`${oldNum ?? ""}-${newNum ?? ""}-${line.content}`}
                     >
                         <tr className="group">
-                            <td className={`d2h-code-linenumber ${typeClass}`}>
+                            <td
+                                className={`d2h-code-linenumber ${typeClass} ${showRangeIndicator ? "border-blue-400 border-l-4" : ""}`}
+                            >
                                 <div className="absolute">
                                     {showCommentButton && onStartComment && (
                                         <SquarePlus
                                             size={24}
                                             className="absolute -right-5 z-10 hidden rounded-md bg-blue-500 p-0.5 text-white group-hover:block"
-                                            onClick={() =>
-                                                onStartComment(
-                                                    isActive
-                                                        ? null
-                                                        : {
-                                                              type: "line",
-                                                              line: commentLine,
-                                                              side,
-                                                          },
-                                                )
-                                            }
+                                            onClick={(e) => {
+                                                if (
+                                                    e.shiftKey &&
+                                                    activeComment?.type ===
+                                                        "line" &&
+                                                    activeComment.side === side
+                                                ) {
+                                                    const start = Math.min(
+                                                        activeComment.line,
+                                                        commentLine,
+                                                    );
+                                                    const end = Math.max(
+                                                        activeComment.line,
+                                                        commentLine,
+                                                    );
+                                                    onStartComment({
+                                                        type: "line",
+                                                        line: end,
+                                                        side,
+                                                        startLine: start,
+                                                        startSide: side,
+                                                    });
+                                                } else {
+                                                    onStartComment(
+                                                        isActive
+                                                            ? null
+                                                            : {
+                                                                  type: "line",
+                                                                  line: commentLine,
+                                                                  side,
+                                                              },
+                                                    );
+                                                }
+                                            }}
                                         />
                                     )}
                                     <div className="line-num1">
@@ -548,23 +621,29 @@ function BlockRows({
                         </tr>
                         {showComments &&
                             hasComments &&
-                            groupThreads(lineComments).map((thread) => (
-                                <tr key={`thread-${thread.parent.id}`}>
-                                    <td
-                                        colSpan={2}
-                                        className="p-0 dark:bg-zinc-950"
-                                    >
-                                        <InlineCommentThread
-                                            parentComment={thread.parent}
-                                            replies={thread.replies}
-                                            owner={owner ?? ""}
-                                            repo={repo ?? ""}
-                                            number={Number(pullNumber ?? 0)}
-                                            pendingReviewId={pendingReviewId}
-                                        />
-                                    </td>
-                                </tr>
-                            ))}
+                            groupThreads(lineComments)
+                                .filter((thread) =>
+                                    isLastLineOfRange(thread.parent),
+                                )
+                                .map((thread) => (
+                                    <tr key={`thread-${thread.parent.id}`}>
+                                        <td
+                                            colSpan={2}
+                                            className="p-0 dark:bg-zinc-950"
+                                        >
+                                            <InlineCommentThread
+                                                parentComment={thread.parent}
+                                                replies={thread.replies}
+                                                owner={owner ?? ""}
+                                                repo={repo ?? ""}
+                                                number={Number(pullNumber ?? 0)}
+                                                pendingReviewId={
+                                                    pendingReviewId
+                                                }
+                                            />
+                                        </td>
+                                    </tr>
+                                ))}
                         {isActive && (
                             <tr>
                                 <td
@@ -633,6 +712,8 @@ function GapRow({
 
     if (!isExpanded) {
         if (gapSize <= 0) return null;
+        // Don't show expandable gap rows in contexts without headSha (e.g. timeline)
+        if (!headSha) return null;
         return (
             <tr
                 className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30"

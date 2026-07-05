@@ -957,9 +957,22 @@ export const createPullRequestReviewComment = async (
     side: "LEFT" | "RIGHT",
     body: string,
     pullRequestReviewNodeId?: string,
+    startLine?: number,
+    startSide?: "LEFT" | "RIGHT",
 ) => {
     // NOTE: Okay, I am really sad about this, but it seems that REST API just does not support adding comments to unsubmitted reviews...
     // https://docs.github.com/en/graphql/reference/mutations#addpullrequestreviewthread
+    const variables: Record<string, unknown> = {
+        pullRequestId: pullRequestNodeId,
+        pullRequestReviewId: pullRequestReviewNodeId,
+        body,
+        path,
+        line,
+        side,
+    };
+    if (startLine != null) variables.startLine = startLine;
+    if (startSide != null) variables.startSide = startSide;
+
     const response = await fetch("https://api.github.com/graphql", {
         method: "POST",
         headers: {
@@ -968,8 +981,8 @@ export const createPullRequestReviewComment = async (
         },
         body: JSON.stringify({
             query: `
-				mutation($pullRequestId: ID!, $pullRequestReviewId: ID, $body: String!, $path: String!, $line: Int!, $side: DiffSide!) {
-					addPullRequestReviewThread(input: { pullRequestId: $pullRequestId, pullRequestReviewId: $pullRequestReviewId, body: $body, path: $path, line: $line, side: $side }) {
+				mutation($pullRequestId: ID!, $pullRequestReviewId: ID, $body: String!, $path: String!, $line: Int!, $side: DiffSide!, $startLine: Int, $startSide: DiffSide) {
+					addPullRequestReviewThread(input: { pullRequestId: $pullRequestId, pullRequestReviewId: $pullRequestReviewId, body: $body, path: $path, line: $line, side: $side, startLine: $startLine, startSide: $startSide }) {
 						thread {
 							comments(first: 1) {
 								nodes {
@@ -980,14 +993,7 @@ export const createPullRequestReviewComment = async (
 					}
 				}
 			`,
-            variables: {
-                pullRequestId: pullRequestNodeId,
-                pullRequestReviewId: pullRequestReviewNodeId,
-                body,
-                path,
-                line,
-                side,
-            },
+            variables,
         }),
     });
 
@@ -1013,6 +1019,8 @@ export const createStandaloneReviewComment = async (
     path: string,
     line: number,
     side: "LEFT" | "RIGHT",
+    startLine?: number,
+    startSide?: "LEFT" | "RIGHT",
 ) => {
     const octokit = createOctokit(accessToken);
     const response = await octokit.pulls.createReviewComment({
@@ -1024,6 +1032,8 @@ export const createStandaloneReviewComment = async (
         path,
         line,
         side,
+        ...(startLine != null ? { start_line: startLine } : {}),
+        ...(startSide != null ? { start_side: startSide } : {}),
     });
     return { id: response.data.id };
 };
