@@ -24,12 +24,9 @@
     },
     "content_scripts": [
         {
-            "matches": [
-                "https://github.com/*/*/pull/*",
-                "https://github.com/*/*/pull/*/*",
-                "https://github.com/*/*/pull/*/*/*"
-            ],
-            "js": ["content.js"]
+            "matches": ["https://github.com/*"],
+            "js": ["content.js"],
+            "run_at": "document_start"
         }
     ]
 }

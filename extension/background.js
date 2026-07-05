@@ -64,6 +64,18 @@ function buildDnrRule(neosrcUrl, excludedOwners) {
     };
 }
 
+async function syncSession(enabled, neosrcUrl, excludedOwners) {
+    try {
+        await chrome.storage.session.set({
+            enabled: enabled === true,
+            neosrcUrl: neosrcUrl || DEFAULT_NEOSRC_URL,
+            excludedOwners: excludedOwners || DEFAULT_EXCLUDED_OWNERS,
+        });
+    } catch (err) {
+        console.error("[Neosrc BG] failed to sync session:", err);
+    }
+}
+
 function setBadge(enabled) {
     if (enabled) {
         chrome.action.setBadgeText({ text: "ON" });
@@ -99,6 +111,7 @@ async function updateRules(enabled, neosrcUrl, excludedOwners) {
     } catch (err) {
         console.error("[Neosrc BG] failed to update DNR rules:", err);
     }
+    syncSession(enabled, neosrcUrl, excludedOwners);
 }
 
 async function init() {
