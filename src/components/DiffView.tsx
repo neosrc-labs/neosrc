@@ -495,6 +495,17 @@ export function DiffView({
                 tr.line-highlighted td {
                     background-color: rgba(251, 146, 60, 0.2) !important;
                 }
+                .d2h-code-line {
+                    white-space: pre-wrap;
+                }
+                .d2h-code-line-ctn {
+                    white-space: pre-wrap;
+                }
+                .d2h-ins,
+                .d2h-del,
+                .d2h-cntx {
+                    word-break: break-all;
+                }
             `}</style>
             <div
                 className={`d2h-wrapper ${resolvedTheme === "light" ? "d2h-light-color-scheme" : "d2h-dark-color-scheme"}`}
