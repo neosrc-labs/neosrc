@@ -388,8 +388,10 @@ export function MarkdownRenderer({
                         const inputEl = firstChild as ReactElement<{
                             checked?: boolean;
                         }>;
+                        const originalKey = (firstChild as ReactElement).key;
                         const replacement = (
                             <input
+                                key={originalKey ?? "task-checkbox-input"}
                                 checked={inputEl.props.checked === true}
                                 className="size-4 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-500 dark:bg-zinc-700 dark:focus:ring-blue-400"
                                 disabled={!interactive}
