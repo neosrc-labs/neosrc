@@ -17,6 +17,7 @@ import {
 } from "react";
 import { useFileContent } from "~/hooks/useFileContent";
 import type { ReviewComment } from "~/server/github";
+import { filenameHash } from "~/utils/filename-hash";
 import { InlineCommentThread } from "./InlineCommentThread";
 import type { FooterAction } from "./markdown/MarkdownEditor";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
@@ -112,6 +113,107 @@ export function DiffView({
             return null;
         }
     }, [filename]);
+
+    const fileHash = useMemo(() => filenameHash(filename), [filename]);
+
+    const [selectedRange, setSelectedRange] = useState<{
+        startLine: number;
+        endLine: number;
+        side: string;
+    } | null>(null);
+    const mouseAnchorRef = useRef<{ line: number; side: string } | null>(null);
+    const isDragging = useRef(false);
+    const dragStartRef = useRef<{ line: number; side: string } | null>(null);
+
+    const updateSelection = useCallback(
+        (startLine: number, endLine: number, side: string) => {
+            const lo = Math.min(startLine, endLine);
+            const hi = Math.max(startLine, endLine);
+            setSelectedRange({ startLine: lo, endLine: hi, side });
+        },
+        [],
+    );
+
+    const commitRangeUrl = useCallback(
+        (startLine: number, endLine: number, side: string) => {
+            const lo = Math.min(startLine, endLine);
+            const hi = Math.max(startLine, endLine);
+            const url = `${window.location.pathname}#diff-${fileHash}${side === "RIGHT" ? "R" : "L"}${lo}-${side === "RIGHT" ? "R" : "L"}${hi}`;
+            history.replaceState(null, "", url);
+        },
+        [fileHash],
+    );
+
+    const commitSingleUrl = useCallback(
+        (lineNum: number, side: string) => {
+            const url = `${window.location.pathname}#diff-${fileHash}${side === "RIGHT" ? "R" : "L"}${lineNum}`;
+            history.replaceState(null, "", url);
+        },
+        [fileHash],
+    );
+
+    const handleLineSelect = useCallback(
+        (lineNum: number, side: string, shiftKey: boolean) => {
+            if (shiftKey && mouseAnchorRef.current) {
+                const start = Math.min(mouseAnchorRef.current.line, lineNum);
+                const end = Math.max(mouseAnchorRef.current.line, lineNum);
+                commitRangeUrl(start, end, side);
+                updateSelection(start, end, side);
+                mouseAnchorRef.current = null;
+            } else {
+                commitSingleUrl(lineNum, side);
+                updateSelection(lineNum, lineNum, side);
+                mouseAnchorRef.current = { line: lineNum, side };
+            }
+        },
+        [commitRangeUrl, commitSingleUrl, updateSelection],
+    );
+
+    const handleLineMouseDown = useCallback(
+        (lineNum: number, side: string) => {
+            isDragging.current = true;
+            dragStartRef.current = { line: lineNum, side };
+            mouseAnchorRef.current = { line: lineNum, side };
+            updateSelection(lineNum, lineNum, side);
+        },
+        [updateSelection],
+    );
+
+    const handleTableMouseOver = useCallback(
+        (e: React.MouseEvent) => {
+            if (!isDragging.current || !dragStartRef.current) return;
+            const tr = (e.target as HTMLElement).closest(
+                'tr[id^="diff-"]',
+            ) as HTMLElement | null;
+            if (!tr) return;
+            const lineMatch = tr.id.match(/(\d+)$/);
+            if (!lineMatch) return;
+            const lineNum = parseInt(lineMatch[1] ?? "0", 10);
+            const anchor = dragStartRef.current;
+            if (!anchor) return;
+            updateSelection(anchor.line, lineNum, anchor.side);
+        },
+        [updateSelection],
+    );
+
+    useEffect(() => {
+        const handleMouseUp = () => {
+            if (!isDragging.current) return;
+            isDragging.current = false;
+            if (dragStartRef.current) {
+                const anchor = dragStartRef.current;
+                const range = selectedRange;
+                if (range && range.startLine !== range.endLine) {
+                    commitRangeUrl(range.startLine, range.endLine, range.side);
+                } else {
+                    commitSingleUrl(anchor.line, anchor.side);
+                }
+            }
+            dragStartRef.current = null;
+        };
+        document.addEventListener("mouseup", handleMouseUp);
+        return () => document.removeEventListener("mouseup", handleMouseUp);
+    }, [selectedRange, commitRangeUrl, commitSingleUrl]);
 
     const [expandedGapKeys, setExpandedGapKeys] = useState<Set<string>>(
         () => new Set(),
@@ -224,18 +326,117 @@ export function DiffView({
         return items;
     }, [parsed]);
 
+    const renderItemsRef = useRef(renderItems);
+    renderItemsRef.current = renderItems;
+
+    // Scroll to line targeted by URL hash; expand only the gap containing the target
+    useEffect(() => {
+        if (!diffRef.current) return;
+        const hash = window.location.hash;
+        if (!hash?.startsWith(`#diff-${fileHash}`)) return;
+        const targetMatch = hash.match(/^#(diff-[0-9a-f]+[RL]\d+)/);
+        const targetId = targetMatch?.[1];
+        if (!targetId) return;
+
+        const lineMatch = hash.match(/[RL](\d+)/g);
+        const startLine = lineMatch
+            ? parseInt(lineMatch[0]?.slice(1) ?? "0", 10)
+            : 0;
+        const endLine = lineMatch?.[1]
+            ? parseInt(lineMatch[1].slice(1), 10)
+            : startLine;
+        const side = hash.includes("R") ? "RIGHT" : "LEFT";
+
+        // Expand only the gap containing the target line, not all gaps
+        const targetLine = startLine;
+        const items = renderItemsRef.current;
+        if (items) {
+            for (const item of items) {
+                if (item.type === "gap") {
+                    const gapStart = item.startLine;
+                    const gapEnd =
+                        item.endLine === -1 ? Infinity : item.endLine;
+                    if (targetLine >= gapStart && targetLine <= gapEnd) {
+                        const gapKey = `gap-${gapStart}`;
+                        setExpandedGapKeys((prev) => {
+                            if (prev.has(gapKey)) return prev;
+                            const next = new Set(prev);
+                            next.add(gapKey);
+                            return next;
+                        });
+                        break;
+                    }
+                }
+            }
+        }
+
+        const scrollToLine = () => {
+            const el = document.getElementById(targetId);
+            if (el) {
+                const rect = el.getBoundingClientRect();
+                window.scrollTo({
+                    top: rect.top + window.scrollY - window.innerHeight / 2,
+                    behavior: "smooth",
+                });
+                setSelectedRange({ startLine, endLine, side });
+                return true;
+            }
+            return false;
+        };
+
+        if (scrollToLine()) return;
+
+        let rafId: number;
+        const poll = () => {
+            if (scrollToLine()) return;
+            rafId = requestAnimationFrame(poll);
+        };
+        rafId = requestAnimationFrame(poll);
+
+        const observer = new MutationObserver(() => {
+            if (scrollToLine()) {
+                observer.disconnect();
+                cancelAnimationFrame(rafId);
+            }
+        });
+        observer.observe(diffRef.current, {
+            childList: true,
+            subtree: true,
+        });
+
+        const timeout = setTimeout(() => {
+            observer.disconnect();
+            cancelAnimationFrame(rafId);
+        }, 15000);
+
+        return () => {
+            observer.disconnect();
+            cancelAnimationFrame(rafId);
+            clearTimeout(timeout);
+        };
+    }, [fileHash]);
+
     if (!parsed) {
         return null;
     }
 
     return (
         <div className="overflow-x-auto">
+            <style>{`
+                tr.line-highlighted td {
+                    background-color: rgba(251, 146, 60, 0.2) !important;
+                }
+            `}</style>
             <div
                 className={`d2h-wrapper ${resolvedTheme === "light" ? "d2h-light-color-scheme" : "d2h-dark-color-scheme"}`}
                 ref={diffRef}
             >
                 <table className="d2h-diff-table relative">
-                    <tbody className="d2h-diff-tbody">
+                    <tbody
+                        className="d2h-diff-tbody"
+                        onMouseOver={handleTableMouseOver}
+                        onFocus={() => {}}
+                    >
                         {renderItems.map((item, idx) => {
                             if (item.type === "gap") {
                                 if (item.endLine !== -1) {
@@ -258,6 +459,10 @@ export function DiffView({
                                         repo={repo}
                                         headSha={headSha}
                                         filename={filename}
+                                        fileHash={fileHash}
+                                        selectedRange={selectedRange}
+                                        onLineSelect={handleLineSelect}
+                                        onLineMouseDown={handleLineMouseDown}
                                     />
                                 );
                             }
@@ -294,6 +499,10 @@ export function DiffView({
                                     onGapExpand={handleGapExpand}
                                     headSha={headSha}
                                     filename={filename}
+                                    fileHash={fileHash}
+                                    selectedRange={selectedRange}
+                                    onLineSelect={handleLineSelect}
+                                    onLineMouseDown={handleLineMouseDown}
                                     commentsByLine={commentsByLine}
                                     multiLineRanges={multiLineRanges}
                                     activeComment={activeComment}
@@ -386,6 +595,14 @@ interface BlockRowsProps {
     onGapExpand?: (key: string) => void;
     headSha?: string;
     filename?: string;
+    fileHash?: string;
+    selectedRange?: {
+        startLine: number;
+        endLine: number;
+        side: string;
+    } | null;
+    onLineSelect?: (lineNum: number, side: string, shiftKey: boolean) => void;
+    onLineMouseDown?: (lineNum: number, side: string) => void;
 }
 
 function BlockRows({
@@ -413,6 +630,10 @@ function BlockRows({
     onGapExpand,
     headSha,
     filename,
+    fileHash,
+    selectedRange,
+    onLineSelect,
+    onLineMouseDown,
 }: BlockRowsProps) {
     const {
         lines: fileLines,
@@ -428,6 +649,13 @@ function BlockRows({
     const gapEnd =
         gap?.endLine === -1 ? (fileLines?.length ?? -1) : (gap?.endLine ?? -1);
     const gapSize = gap ? gapEnd - gap.startLine + 1 : 0;
+
+    const handleLineClick = useCallback(
+        (lineNum: number, side: string, e: React.MouseEvent) => {
+            onLineSelect?.(lineNum, side, e.shiftKey);
+        },
+        [onLineSelect],
+    );
 
     return (
         <>
@@ -551,13 +779,39 @@ function BlockRows({
                 const isLastLineOfRange = (c: ReviewComment) =>
                     (c.line ?? c.position ?? 0) === commentLine;
 
+                const lineId = fileHash
+                    ? `diff-${fileHash}${newNum != null ? `R${newNum}` : `L${oldNum}`}`
+                    : undefined;
+                const lineNum = newNum ?? oldNum ?? 0;
+                const lineSide = type === "delete" ? "LEFT" : "RIGHT";
+                const isHighlighted =
+                    selectedRange != null &&
+                    selectedRange.side === lineSide &&
+                    commentLine >= selectedRange.startLine &&
+                    commentLine <= selectedRange.endLine;
+
                 return (
                     <Fragment
                         key={`${oldNum ?? ""}-${newNum ?? ""}-${line.content}`}
                     >
-                        <tr className="group">
+                        <tr
+                            className={`group ${isHighlighted ? "line-highlighted" : ""}`}
+                            id={lineId}
+                        >
                             <td
                                 className={`d2h-code-linenumber ${typeClass} ${showRangeIndicator ? "border-blue-400 border-l-4" : ""}`}
+                                onMouseDown={() =>
+                                    onLineMouseDown?.(lineNum, lineSide)
+                                }
+                                onClick={(e) => {
+                                    const num = newNum ?? oldNum ?? 0;
+                                    handleLineClick(
+                                        num,
+                                        type === "delete" ? "LEFT" : "RIGHT",
+                                        e,
+                                    );
+                                }}
+                                title="Copy permalink"
                             >
                                 <div className="absolute">
                                     {showCommentButton && onStartComment && (
@@ -565,6 +819,7 @@ function BlockRows({
                                             size={24}
                                             className="absolute -right-5 z-10 hidden rounded-md bg-blue-500 p-0.5 text-white group-hover:block"
                                             onClick={(e) => {
+                                                e.stopPropagation();
                                                 if (
                                                     e.shiftKey &&
                                                     activeComment?.type ===
@@ -688,6 +943,14 @@ interface GapRowProps {
     repo: string | undefined;
     headSha: string | undefined;
     filename: string;
+    fileHash?: string;
+    selectedRange?: {
+        startLine: number;
+        endLine: number;
+        side: string;
+    } | null;
+    onLineSelect?: (lineNum: number, side: string, shiftKey: boolean) => void;
+    onLineMouseDown?: (lineNum: number, side: string) => void;
 }
 
 function GapRow({
@@ -699,6 +962,10 @@ function GapRow({
     repo,
     headSha,
     filename,
+    fileHash,
+    selectedRange,
+    onLineSelect,
+    onLineMouseDown,
 }: GapRowProps) {
     const { lines, isLoading, error } = useFileContent({
         owner: owner ?? "",
@@ -710,9 +977,11 @@ function GapRow({
     const endLine = lines?.length ?? -1;
     const gapSize = endLine - startLine + 1;
 
+    const isGapHighlighted =
+        selectedRange != null && selectedRange.side === "RIGHT";
+
     if (!isExpanded) {
         if (gapSize <= 0) return null;
-        // Don't show expandable gap rows in contexts without headSha (e.g. timeline)
         if (!headSha) return null;
         return (
             <tr
@@ -757,9 +1026,27 @@ function GapRow({
         <>
             {gapLines.map((lineContent, idx) => {
                 const lineNum = startLine + idx;
+                const lineHighlighted =
+                    selectedRange != null &&
+                    isGapHighlighted &&
+                    lineNum >= selectedRange.startLine &&
+                    lineNum <= selectedRange.endLine;
                 return (
-                    <tr key={`gap-${lineNum}`}>
-                        <td className="d2h-code-linenumber d2h-cntx">
+                    <tr
+                        key={`gap-${lineNum}`}
+                        id={`diff-${fileHash}R${lineNum}`}
+                        className={lineHighlighted ? "line-highlighted" : ""}
+                    >
+                        <td
+                            className="d2h-code-linenumber d2h-cntx"
+                            onMouseDown={() =>
+                                onLineMouseDown?.(lineNum, "RIGHT")
+                            }
+                            onClick={(e) =>
+                                onLineSelect?.(lineNum, "RIGHT", e.shiftKey)
+                            }
+                            title="Copy permalink"
+                        >
                             <div className="absolute">
                                 <div className="line-num1">{lineNum}</div>
                                 <div className="line-num2">{lineNum}</div>
