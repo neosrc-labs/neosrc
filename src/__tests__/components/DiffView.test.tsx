@@ -84,7 +84,7 @@ vi.mock("~/components/markdown/MarkdownEditor", () => ({
 }));
 
 vi.mock("lucide-react", () => ({
-    SquarePlus: (props: Record<string, unknown>) => (
+    Plus: (props: Record<string, unknown>) => (
         <button
             type="button"
             data-testid="square-plus"
@@ -303,7 +303,7 @@ describe("DiffView rendering", () => {
     });
 
     describe("comment button interactions", () => {
-        it("clicking SquarePlus calls onStartComment with single line", () => {
+        it("clicking Plus calls onStartComment with single line", () => {
             const onStartComment = vi.fn();
             const lines = [mc(" line1", 1, 1), mc("+line2", 2)];
             mockParse.mockReturnValue([
@@ -338,7 +338,7 @@ describe("DiffView rendering", () => {
             });
         });
 
-        it("clicking SquarePlus when activeComment is active toggles it off", () => {
+        it("clicking Plus when activeComment is active toggles it off", () => {
             const onStartComment = vi.fn();
             const lines = [mc(" line1", 1, 1)];
             mockParse.mockReturnValue([
@@ -368,7 +368,7 @@ describe("DiffView rendering", () => {
             expect(onStartComment).toHaveBeenCalledWith(null);
         });
 
-        it("shift+click SquarePlus with active comment extends range", () => {
+        it("shift+click Plus with active comment extends range", () => {
             const onStartComment = vi.fn();
             const lines = [
                 mc(" line1", 1, 1),
@@ -458,7 +458,7 @@ describe("DiffView rendering", () => {
     });
 
     describe("drag-to-select multi-line comments", () => {
-        it("mouseDown on SquarePlus, mouseOver on different line, mouseUp calls onStartComment with range", () => {
+        it("mouseDown on Plus, mouseOver on different line, mouseUp calls onStartComment with range", () => {
             const onStartComment = vi.fn();
             const lines = [mc(" line1", 1, 1), mc("+line2", 2)];
             mockParse.mockReturnValue([

@@ -5,7 +5,7 @@ import type { ColorSchemeType } from "diff2html/lib/types";
 import "diff2html/bundles/css/diff2html.min.css";
 import type { DiffBlock } from "diff2html/lib/types";
 import hljs from "highlight.js";
-import { SquarePlus, UnfoldVertical } from "lucide-react";
+import { Plus, UnfoldVertical } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
     Fragment,
@@ -908,7 +908,7 @@ function BlockRows({
                             >
                                 <div className="absolute">
                                     {showCommentButton && onStartComment && (
-                                        <SquarePlus
+                                        <Plus
                                             size={24}
                                             className="absolute -right-5 z-10 hidden rounded-md bg-blue-500 p-0.5 text-white group-hover:block"
                                             onMouseDown={(e) => {
