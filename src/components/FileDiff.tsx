@@ -392,24 +392,6 @@ export default function FileDiff({
                             )}
                         </button>
                     )}
-                    <button
-                        className="flex shrink-0 cursor-pointer items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                        onClick={() =>
-                            setActiveComment(
-                                activeComment?.type === "file"
-                                    ? null
-                                    : { type: "file" },
-                            )
-                        }
-                        type="button"
-                        title={
-                            activeComment?.type === "file"
-                                ? "Cancel"
-                                : "Comment on file"
-                        }
-                    >
-                        <MessageSquare size={14} />
-                    </button>
                 </span>
 
                 <span className={`font-medium text-xs ${statusColor}`}>
@@ -436,6 +418,25 @@ export default function FileDiff({
                     />
                     Viewed
                 </label>
+
+                <button
+                    className="flex shrink-0 cursor-pointer items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    onClick={() =>
+                        setActiveComment(
+                            activeComment?.type === "file"
+                                ? null
+                                : { type: "file" },
+                        )
+                    }
+                    type="button"
+                    title={
+                        activeComment?.type === "file"
+                            ? "Cancel"
+                            : "Comment on file"
+                    }
+                >
+                    <MessageSquare size={14} />
+                </button>
             </div>
 
             {activeComment?.type === "file" && (
