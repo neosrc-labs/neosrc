@@ -1,10 +1,16 @@
 "use client";
 
-import { SquarePen } from "lucide-react";
+import { Check, Link, MoreVertical, SquarePen } from "lucide-react";
+import { useCallback, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { ReactionBar } from "~/components/ReactionBar";
 import { ReactionPicker } from "~/components/ReactionPicker";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "~/components/ui/popover";
 import { UserLink } from "~/components/user-link";
 import type { ReactionContent } from "~/lib/reactions";
 import type { ReviewComment } from "~/server/github";
@@ -56,6 +62,16 @@ export function PullRequestReviewContent({
     onSaveEdit,
     onReactToReview,
 }: PullRequestReviewContentProps) {
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    const handleCopyLink = useCallback(async () => {
+        const url = `${window.location.origin}${window.location.pathname}#pullrequestreview-${event.databaseId}`;
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    }, [event.databaseId]);
+
     const isEditing = editingCommentId === event.databaseId;
     const isAuthor = event.author?.login === currentUserLogin;
     const displayBody = savedBodies[event.databaseId] ?? event.body;
@@ -79,6 +95,7 @@ export function PullRequestReviewContent({
             {event.body && (
                 <div className="mt-2">
                     <CommentCard
+                        id={`pullrequestreview-${event.databaseId}`}
                         user={
                             event.author
                                 ? {
@@ -116,20 +133,59 @@ export function PullRequestReviewContent({
                                         }
                                     />
                                 )}
-                                {isAuthor && canInteract && (
-                                    <button
-                                        type="button"
-                                        aria-label="Edit comment"
-                                        className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
-                                        onClick={() => {
-                                            onStartEdit(
-                                                event.databaseId,
-                                                displayBody,
-                                            );
-                                        }}
+                                {event.body && !isEditing && (
+                                    <Popover
+                                        open={menuOpen}
+                                        onOpenChange={setMenuOpen}
                                     >
-                                        <SquarePen size={14} />
-                                    </button>
+                                        <PopoverTrigger asChild>
+                                            <button
+                                                type="button"
+                                                aria-label="More options"
+                                                className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                            >
+                                                <MoreVertical size={14} />
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                            className="w-44 bg-white p-1 dark:bg-zinc-950"
+                                            align="end"
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    handleCopyLink();
+                                                    setMenuOpen(false);
+                                                }}
+                                                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+                                            >
+                                                {copied ? (
+                                                    <Check size={14} />
+                                                ) : (
+                                                    <Link size={14} />
+                                                )}
+                                                {copied
+                                                    ? "Copied"
+                                                    : "Copy link"}
+                                            </button>
+                                            {isAuthor && canInteract && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        onStartEdit(
+                                                            event.databaseId,
+                                                            displayBody,
+                                                        );
+                                                        setMenuOpen(false);
+                                                    }}
+                                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+                                                >
+                                                    <SquarePen size={14} />
+                                                    Edit
+                                                </button>
+                                            )}
+                                        </PopoverContent>
+                                    </Popover>
                                 )}
                             </div>
                         }

@@ -91,3 +91,7 @@ html {
 .d2h-dark-color-scheme .d2h-diff-table {
     background-color: #0d1117;
 }
+
+.comment-highlight {
+    box-shadow: 0 0 6px 3px rgba(96, 165, 250, 0.5);
+}

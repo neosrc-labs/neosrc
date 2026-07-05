@@ -2,7 +2,10 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
-import { LazyRenderItem } from "~/components/LazyRenderItem";
+import {
+    LazyRenderItem,
+    SCROLL_TARGET_EVENT,
+} from "~/components/LazyRenderItem";
 import { UserLink } from "~/components/user-link";
 import type { ReviewComment } from "~/server/github";
 import type {
@@ -124,6 +127,100 @@ export function TimelineSection({
 
         return () => clearTimeout(timer);
     }, [searchParams, data, owner, repo, number, timelineRouter]);
+
+    const scrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+        null,
+    );
+    const adjustIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+        null,
+    );
+    const handledHashRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (!data) return;
+
+        const scrollToHash = () => {
+            const hash = window.location.hash;
+            if (!hash) return;
+            const targetId = hash.slice(1);
+            if (!/^(issuecomment|pullrequestreview)-\d+$/.test(targetId)) {
+                return;
+            }
+
+            if (handledHashRef.current === targetId) return;
+            handledHashRef.current = targetId;
+
+            if (adjustIntervalRef.current) {
+                clearInterval(adjustIntervalRef.current);
+                adjustIntervalRef.current = null;
+            }
+
+            window.dispatchEvent(
+                new CustomEvent(SCROLL_TARGET_EVENT, { detail: targetId }),
+            );
+
+            if (scrollIntervalRef.current) {
+                clearInterval(scrollIntervalRef.current);
+            }
+
+            scrollIntervalRef.current = setInterval(() => {
+                const el = document.getElementById(targetId);
+                if (el) {
+                    if (scrollIntervalRef.current) {
+                        clearInterval(scrollIntervalRef.current);
+                        scrollIntervalRef.current = null;
+                    }
+                    el.classList.add("comment-highlight");
+
+                    const scrollToTarget = () => {
+                        const rect = el.getBoundingClientRect();
+                        window.scrollTo({
+                            top:
+                                rect.top +
+                                window.scrollY -
+                                window.innerHeight * 0.3,
+                        });
+                    };
+
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(scrollToTarget);
+                    });
+
+                    let adjustCount = 0;
+                    adjustIntervalRef.current = setInterval(() => {
+                        const rect = el.getBoundingClientRect();
+                        const drift = rect.top - window.innerHeight * 0.3;
+                        if (Math.abs(drift) > 30) {
+                            window.scrollBy({
+                                top: drift,
+                            });
+                        }
+                        adjustCount++;
+                        if (adjustCount >= 15) {
+                            if (adjustIntervalRef.current) {
+                                clearInterval(adjustIntervalRef.current);
+                                adjustIntervalRef.current = null;
+                            }
+                        }
+                    }, 300);
+                }
+            }, 200);
+        };
+
+        scrollToHash();
+        window.addEventListener("hashchange", scrollToHash);
+        return () => {
+            window.removeEventListener("hashchange", scrollToHash);
+            if (scrollIntervalRef.current) {
+                clearInterval(scrollIntervalRef.current);
+                scrollIntervalRef.current = null;
+            }
+            if (adjustIntervalRef.current) {
+                clearInterval(adjustIntervalRef.current);
+                adjustIntervalRef.current = null;
+            }
+        };
+    }, [data]);
 
     const reviewThreadIds = useMemo(() => {
         const map = new Map<number, string[]>();
@@ -279,13 +376,19 @@ export function TimelineSection({
                             : `label-${wrapper.createdAt}`;
 
                     let renderOnIds: string[] | undefined;
-                    if (
-                        wrapper.type === "raw" &&
-                        wrapper.event.__typename === "PullRequestReview"
-                    ) {
-                        renderOnIds = reviewThreadIds.get(
-                            wrapper.event.databaseId,
-                        );
+                    if (wrapper.type === "raw") {
+                        const ids: string[] = [];
+                        const event = wrapper.event;
+                        if (event.__typename === "PullRequestReview") {
+                            const threadIds = reviewThreadIds.get(
+                                event.databaseId,
+                            );
+                            if (threadIds) ids.push(...threadIds);
+                            ids.push(`pullrequestreview-${event.databaseId}`);
+                        } else if (event.__typename === "IssueComment") {
+                            ids.push(`issuecomment-${event.databaseId}`);
+                        }
+                        if (ids.length > 0) renderOnIds = ids;
                     }
 
                     return (

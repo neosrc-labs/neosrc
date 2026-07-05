@@ -46,6 +46,7 @@ interface CommentCardProps {
     repo: string;
     children?: ReactNode;
     variant?: "default" | "nested" | "standalone";
+    id?: string;
 }
 
 export function CommentCard({
@@ -66,6 +67,7 @@ export function CommentCard({
     repo,
     children,
     variant = "default",
+    id,
 }: CommentCardProps) {
     const userElement = user && (
         <>
@@ -82,6 +84,7 @@ export function CommentCard({
 
     return (
         <div
+            id={id}
             className={
                 variant === "default"
                     ? "border-b-1 border-b-gray-200 border-solid bg-white dark:border-b-zinc-700 dark:bg-zinc-900"
