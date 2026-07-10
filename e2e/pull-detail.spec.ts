@@ -6,7 +6,7 @@ const [OWNER, REPO] = TEST_REPO.split("/") as [string, string];
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 test.describe
-    .serial("Pull request detail", () => {
+    .serial("Pull request detail", { tag: ["@github"] }, () => {
         let prNumber: number;
         let prTitle: string;
         let authorLogin: string;
@@ -104,9 +104,7 @@ test.describe
         }) => {
             await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`);
 
-            await expect(
-                page.getByText("Open", { exact: true }),
-            ).toBeVisible();
+            await expect(page.getByText("Open", { exact: true })).toBeVisible();
 
             await expect(page.getByRole("heading", { level: 1 })).toHaveText(
                 prTitle,
