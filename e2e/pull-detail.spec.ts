@@ -9,6 +9,7 @@ test.describe
     .serial("Pull request detail", () => {
         let prNumber: number;
         let prTitle: string;
+        let authorLogin: string;
 
         test.beforeAll(async () => {
             test.skip(
@@ -22,6 +23,9 @@ test.describe
                 owner: OWNER,
                 repo: REPO,
             });
+
+            const { data: user } = await octokit.rest.users.getAuthenticated();
+            authorLogin = user.login;
 
             const branchName = `e2e-test-${Date.now()}`;
             const filePath = `e2e-${Date.now()}.md`;
@@ -58,6 +62,25 @@ test.describe
                 body: "Created by e2e test.",
             });
             prNumber = pr.number;
+
+            try {
+                await octokit.rest.issues.createLabel({
+                    owner: OWNER,
+                    repo: REPO,
+                    name: "e2e",
+                    color: "FF0000",
+                    description: "E2E test label",
+                });
+            } catch {
+                // Label may already exist from a previous run
+            }
+
+            await octokit.rest.issues.addLabels({
+                owner: OWNER,
+                repo: REPO,
+                issue_number: prNumber,
+                labels: ["e2e"],
+            });
         });
 
         test.afterAll(async () => {
@@ -72,17 +95,36 @@ test.describe
                     state: "closed",
                 });
             } catch {
-                // Best-effort cleanup — branch may be auto-deleted by repo settings
+                // Best-effort cleanup
             }
         });
 
-        test("loads the pull request page with the correct title", async ({
+        test("shows state, title, author, description, and labels", async ({
             page,
         }) => {
             await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`);
 
+            await expect(
+                page.getByText("Open", { exact: true }),
+            ).toBeVisible();
+
             await expect(page.getByRole("heading", { level: 1 })).toHaveText(
                 prTitle,
             );
+
+            await expect(page.getByText("opened by")).toBeVisible();
+            await expect(
+                page.locator("main").getByText(authorLogin),
+            ).toBeVisible();
+
+            await expect(
+                page.locator("h3").filter({ hasText: "Description" }),
+            ).toBeVisible();
+            await expect(page.getByText("Created by e2e test.")).toBeVisible();
+
+            await expect(
+                page.locator("aside h3").filter({ hasText: "Labels" }),
+            ).toBeVisible();
+            await expect(page.locator("aside").getByText("e2e")).toBeVisible();
         });
     });
