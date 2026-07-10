@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const TEST_REPO = process.env.E2E_TEST_REPO ?? "neosrc-labs/test-repo";
 
-test.describe("Pull request list", () => {
+test.describe("Pull request list", { tag: ["@github"] }, () => {
     test("loads the pull request list page", async ({ page }) => {
         await page.goto(`/${TEST_REPO}/pulls`);
 
