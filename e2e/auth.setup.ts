@@ -1,26 +1,29 @@
 import fs from "node:fs";
 import path from "node:path";
-import { test as setup } from "@playwright/test";
+import { chromium, test as setup } from "@playwright/test";
 
 const AUTH_FILE = path.join(import.meta.dirname, ".auth", "user.json");
 
 setup("authenticate", async ({ browser }) => {
     if (fs.existsSync(AUTH_FILE)) {
-        const context = await browser.newContext({
-            storageState: AUTH_FILE,
-        });
+        const headless = await chromium.launch({ headless: true });
         try {
+            const context = await headless.newContext({
+                storageState: AUTH_FILE,
+            });
             const page = await context.newPage();
             await page.goto("/profile");
             await page.waitForLoadState("networkidle");
             if (page.url().includes("/profile")) {
                 await context.close();
+                await headless.close();
                 return;
             }
+            await context.close();
         } catch {
             // Session expired — re-authenticate
         }
-        await context.close();
+        await headless.close();
         fs.unlinkSync(AUTH_FILE);
     }
 
