@@ -192,12 +192,13 @@ test.describe
         });
 
         test("should allow ability to comment", async ({ page }) => {
+            const commentText = `E2E test comment ${Date.now()}`;
+
             await test.step("Navigate to the pull request page", async () => {
                 await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`);
             });
 
             await test.step("Verify ability to comment from the timeline", async () => {
-                const commentText = `E2E test comment ${Date.now()}`;
                 await test.step("Type a comment in the comment form", async () => {
                     const textarea = page.getByPlaceholder("Leave a comment");
                     await textarea.scrollIntoViewIfNeeded();
@@ -216,6 +217,38 @@ test.describe
                     await expect(
                         page.getByTestId("timeline").getByText(commentText),
                     ).toBeVisible();
+                });
+            });
+
+            await test.step("Verify ability to add and remove reactions", async () => {
+                const commentCard = page
+                    .getByTestId("timeline")
+                    .locator('[id^="issuecomment-"]')
+                    .filter({ hasText: commentText });
+
+                await test.step("Add a reaction", async () => {
+                    await commentCard
+                        .locator('button[aria-label="Add reaction"]')
+                        .click();
+
+                    await page
+                        .locator("[data-radix-popper-content-wrapper]")
+                        .locator('button[aria-label="+1"]')
+                        .click();
+
+                    await expect(
+                        commentCard.locator('button[aria-label="👍 (1)"]'),
+                    ).toBeVisible();
+                });
+
+                await test.step("Remove the reaction", async () => {
+                    await commentCard
+                        .locator('button[aria-label="👍 (1)"]')
+                        .click();
+
+                    await expect(
+                        commentCard.locator('button[aria-label="👍 (1)"]'),
+                    ).not.toBeVisible();
                 });
             });
         });
