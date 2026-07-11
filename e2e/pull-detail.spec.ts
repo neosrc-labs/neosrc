@@ -101,31 +101,7 @@ test.describe
             }
         });
 
-        test("shows the first commit message in the sidebar and timeline", async ({
-            page,
-        }) => {
-            await test.step("Navigate to the pull request page", async () => {
-                await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`);
-            });
-
-            await test.step("Verify the commit message appears in the timeline", async () => {
-                await expect(
-                    page.locator("main").getByText(commitMessage),
-                ).toBeVisible();
-            });
-
-            await test.step("Switch to the commits tab in the sidebar", async () => {
-                await page.getByRole("button", { name: /Commits/ }).click();
-            });
-
-            await test.step("Verify the commit message appears in the sidebar commits list", async () => {
-                await expect(
-                    page.locator("aside").getByText(commitMessage),
-                ).toBeVisible();
-            });
-        });
-
-        test("shows state, title, author, description, and labels", async ({
+        test("should render basic PR details correctly", async ({
             page,
         }) => {
             await test.step("Navigate to the pull request page", async () => {
@@ -166,6 +142,22 @@ test.describe
                 ).toBeVisible();
                 await expect(
                     page.locator("aside").getByText("e2e"),
+                ).toBeVisible();
+            });
+
+            await test.step("Verify the commit message appears in the timeline", async () => {
+                await expect(
+                    page.locator("main").getByText(commitMessage),
+                ).toBeVisible();
+            });
+
+            await test.step("Switch to the commits tab in the sidebar", async () => {
+                await page.getByRole("button", { name: /Commits/ }).click();
+            });
+
+            await test.step("Verify the commit message appears in the sidebar commits list", async () => {
+                await expect(
+                    page.locator("aside").getByText(commitMessage),
                 ).toBeVisible();
             });
         });
