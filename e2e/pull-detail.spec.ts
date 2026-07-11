@@ -104,43 +104,69 @@ test.describe
         test("shows the first commit message in the sidebar and timeline", async ({
             page,
         }) => {
-            await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`);
+            await test.step("Navigate to the pull request page", async () => {
+                await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`);
+            });
 
-            await expect(
-                page.locator("main").getByText(commitMessage),
-            ).toBeVisible();
+            await test.step("Verify the commit message appears in the timeline", async () => {
+                await expect(
+                    page.locator("main").getByText(commitMessage),
+                ).toBeVisible();
+            });
 
-            await page.getByRole("button", { name: /Commits/ }).click();
+            await test.step("Switch to the commits tab in the sidebar", async () => {
+                await page.getByRole("button", { name: /Commits/ }).click();
+            });
 
-            await expect(
-                page.locator("aside").getByText(commitMessage),
-            ).toBeVisible();
+            await test.step("Verify the commit message appears in the sidebar commits list", async () => {
+                await expect(
+                    page.locator("aside").getByText(commitMessage),
+                ).toBeVisible();
+            });
         });
 
         test("shows state, title, author, description, and labels", async ({
             page,
         }) => {
-            await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`);
+            await test.step("Navigate to the pull request page", async () => {
+                await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`);
+            });
 
-            await expect(page.getByText("Open", { exact: true })).toBeVisible();
+            await test.step("Verify the PR state badge is visible", async () => {
+                await expect(
+                    page.getByText("Open", { exact: true }),
+                ).toBeVisible();
+            });
 
-            await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-                prTitle,
-            );
+            await test.step("Verify the PR title is correct", async () => {
+                await expect(
+                    page.getByRole("heading", { level: 1 }),
+                ).toHaveText(prTitle);
+            });
 
-            await expect(page.getByText("opened by")).toBeVisible();
-            await expect(
-                page.locator("main").getByText(authorLogin),
-            ).toBeVisible();
+            await test.step("Verify the author is displayed", async () => {
+                await expect(page.getByText("opened by")).toBeVisible();
+                await expect(
+                    page.locator("main").getByText(authorLogin),
+                ).toBeVisible();
+            });
 
-            await expect(
-                page.locator("h3").filter({ hasText: "Description" }),
-            ).toBeVisible();
-            await expect(page.getByText("Created by e2e test.")).toBeVisible();
+            await test.step("Verify the description section and body text", async () => {
+                await expect(
+                    page.locator("h3").filter({ hasText: "Description" }),
+                ).toBeVisible();
+                await expect(
+                    page.getByText("Created by e2e test."),
+                ).toBeVisible();
+            });
 
-            await expect(
-                page.locator("aside h3").filter({ hasText: "Labels" }),
-            ).toBeVisible();
-            await expect(page.locator("aside").getByText("e2e")).toBeVisible();
+            await test.step("Verify labels are shown in the sidebar", async () => {
+                await expect(
+                    page.locator("aside h3").filter({ hasText: "Labels" }),
+                ).toBeVisible();
+                await expect(
+                    page.locator("aside").getByText("e2e"),
+                ).toBeVisible();
+            });
         });
     });
