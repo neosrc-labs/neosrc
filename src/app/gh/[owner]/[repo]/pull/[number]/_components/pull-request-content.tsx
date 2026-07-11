@@ -49,11 +49,15 @@ export function PullRequestContent({
     );
 
     if (!reports || reports.length === 0) {
-        return <div className="mt-4">{timeline}</div>;
+        return (
+            <div className="mt-4" data-testid="timeline">
+                {timeline}
+            </div>
+        );
     }
 
     return (
-        <div className="mt-4">
+        <div className="mt-4" data-testid="timeline">
             <ReportTabsBar
                 reports={reports}
                 activeTab={activeTab}

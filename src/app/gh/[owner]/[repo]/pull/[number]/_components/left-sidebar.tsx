@@ -26,7 +26,10 @@ export default function LeftSidebar({
     currentUserLogin,
 }: LeftSidebarProps) {
     return (
-        <aside className="flex h-full flex-col border-gray-200 border-r bg-white px-4 py-6 pr-1 dark:border-zinc-800 dark:bg-zinc-950">
+        <aside
+            className="flex h-full flex-col border-gray-200 border-r bg-white px-4 py-6 pr-1 dark:border-zinc-800 dark:bg-zinc-950"
+            data-testid="left-sidebar"
+        >
             <SidebarNavMenu
                 number={number}
                 owner={owner}

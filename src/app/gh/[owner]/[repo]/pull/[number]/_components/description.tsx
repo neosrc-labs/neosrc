@@ -212,7 +212,7 @@ export function PullRequestDescriptionSection({
     }, [editTitle, owner, repo, number, updateTitleMutation]);
 
     return (
-        <div>
+        <div data-testid="pr-description">
             {/* PR Header */}
             <div className="mb-6">
                 <div className="mb-2 flex items-center gap-2">

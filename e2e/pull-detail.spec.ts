@@ -130,20 +130,20 @@ test.describe
 
             await test.step("Verify the base branch is visible", async () => {
                 await expect(
-                    page.locator("main").getByText(baseBranch),
+                    page.getByTestId("pr-description").getByText(baseBranch),
                 ).toBeVisible();
             });
 
             await test.step("Verify the head branch is visible", async () => {
                 await expect(
-                    page.locator("main").getByText(headBranch),
+                    page.getByTestId("pr-description").getByText(headBranch),
                 ).toBeVisible();
             });
 
             await test.step("Verify the author is displayed", async () => {
                 await expect(page.getByText("opened by")).toBeVisible();
                 await expect(
-                    page.locator("main").getByText(authorLogin),
+                    page.getByTestId("pr-description").getByText(authorLogin),
                 ).toBeVisible();
             });
 
@@ -158,22 +158,25 @@ test.describe
 
             await test.step("Verify labels are shown in the sidebar", async () => {
                 await expect(
-                    page.locator("aside h3").filter({ hasText: "Labels" }),
+                    page
+                        .getByTestId("right-sidebar")
+                        .getByRole("heading")
+                        .filter({ hasText: "Labels" }),
                 ).toBeVisible();
                 await expect(
-                    page.locator("aside").getByText("e2e"),
+                    page.getByTestId("right-sidebar").getByText("e2e"),
                 ).toBeVisible();
             });
 
             await test.step("Verify files changed count in the left sidebar", async () => {
                 await expect(
-                    page.locator("aside").getByText("Files Changed"),
+                    page.getByTestId("left-sidebar").getByText("Files Changed"),
                 ).toBeVisible();
             });
 
             await test.step("Verify the commit message appears in the timeline", async () => {
                 await expect(
-                    page.locator("main").getByText(commitMessage),
+                    page.getByTestId("timeline").getByText(commitMessage),
                 ).toBeVisible();
             });
 
@@ -183,7 +186,7 @@ test.describe
 
             await test.step("Verify the commit message appears in the sidebar commits list", async () => {
                 await expect(
-                    page.locator("aside").getByText(commitMessage),
+                    page.getByTestId("right-sidebar").getByText(commitMessage),
                 ).toBeVisible();
             });
         });

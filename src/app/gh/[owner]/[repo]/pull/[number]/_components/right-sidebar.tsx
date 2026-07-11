@@ -85,7 +85,10 @@ export default function RightSidebar({
 
     if (!pullRequestPromise) {
         return (
-            <aside className="border-gray-200 border-l bg-white px-4 py-6 dark:border-zinc-800 dark:bg-zinc-950">
+            <aside
+                className="border-gray-200 border-l bg-white px-4 py-6 dark:border-zinc-800 dark:bg-zinc-950"
+                data-testid="right-sidebar"
+            >
                 <p className="text-gray-500 text-sm dark:text-gray-400">
                     No pull request data available.
                 </p>
@@ -115,7 +118,10 @@ export default function RightSidebar({
     ];
 
     return (
-        <aside className="flex h-full flex-col border-gray-200 border-l bg-white px-4 py-6 dark:border-zinc-800 dark:bg-zinc-950">
+        <aside
+            className="flex h-full flex-col border-gray-200 border-l bg-white px-4 py-6 dark:border-zinc-800 dark:bg-zinc-950"
+            data-testid="right-sidebar"
+        >
             <div className="sticky top-0 z-10 space-y-4 bg-white pb-4 dark:bg-zinc-950">
                 <MetadataSection
                     userPermission={userPermission}
