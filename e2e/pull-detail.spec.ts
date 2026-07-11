@@ -11,6 +11,8 @@ test.describe
         let prTitle: string;
         let authorLogin: string;
         let commitMessage: string;
+        let baseBranch: string;
+        let headBranch: string;
 
         test.beforeAll(async () => {
             test.skip(
@@ -29,6 +31,8 @@ test.describe
             authorLogin = user.login;
 
             const branchName = `e2e-test-${Date.now()}`;
+            headBranch = branchName;
+            baseBranch = repo.default_branch;
             const filePath = `e2e-${Date.now()}.md`;
             commitMessage = "e2e test commit";
 
@@ -101,9 +105,7 @@ test.describe
             }
         });
 
-        test("should render basic PR details correctly", async ({
-            page,
-        }) => {
+        test("should render basic PR details correctly", async ({ page }) => {
             await test.step("Navigate to the pull request page", async () => {
                 await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`);
             });
@@ -118,6 +120,24 @@ test.describe
                 await expect(
                     page.getByRole("heading", { level: 1 }),
                 ).toHaveText(prTitle);
+            });
+
+            await test.step("Verify the PR number is visible", async () => {
+                await expect(
+                    page.getByText(`#${prNumber}`, { exact: true }),
+                ).toBeVisible();
+            });
+
+            await test.step("Verify the base branch is visible", async () => {
+                await expect(
+                    page.locator("main").getByText(baseBranch),
+                ).toBeVisible();
+            });
+
+            await test.step("Verify the head branch is visible", async () => {
+                await expect(
+                    page.locator("main").getByText(headBranch),
+                ).toBeVisible();
             });
 
             await test.step("Verify the author is displayed", async () => {
@@ -142,6 +162,12 @@ test.describe
                 ).toBeVisible();
                 await expect(
                     page.locator("aside").getByText("e2e"),
+                ).toBeVisible();
+            });
+
+            await test.step("Verify files changed count in the left sidebar", async () => {
+                await expect(
+                    page.locator("aside").getByText("Files Changed"),
                 ).toBeVisible();
             });
 
