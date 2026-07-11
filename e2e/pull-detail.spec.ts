@@ -10,6 +10,7 @@ test.describe
         let prNumber: number;
         let prTitle: string;
         let authorLogin: string;
+        let commitMessage: string;
 
         test.beforeAll(async () => {
             test.skip(
@@ -29,6 +30,7 @@ test.describe
 
             const branchName = `e2e-test-${Date.now()}`;
             const filePath = `e2e-${Date.now()}.md`;
+            commitMessage = "e2e test commit";
 
             const { data: baseRef } = await octokit.rest.git.getRef({
                 owner: OWNER,
@@ -47,7 +49,7 @@ test.describe
                 owner: OWNER,
                 repo: REPO,
                 path: filePath,
-                message: "e2e test commit",
+                message: commitMessage,
                 content: Buffer.from("# E2E Test\n").toString("base64"),
                 branch: branchName,
             });
@@ -97,6 +99,22 @@ test.describe
             } catch {
                 // Best-effort cleanup
             }
+        });
+
+        test("shows the first commit message in the sidebar and timeline", async ({
+            page,
+        }) => {
+            await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`);
+
+            await expect(
+                page.locator("main").getByText(commitMessage),
+            ).toBeVisible();
+
+            await page.getByRole("button", { name: /Commits/ }).click();
+
+            await expect(
+                page.locator("aside").getByText(commitMessage),
+            ).toBeVisible();
         });
 
         test("shows state, title, author, description, and labels", async ({
