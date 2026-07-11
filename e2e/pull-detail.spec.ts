@@ -190,4 +190,33 @@ test.describe
                 ).toBeVisible();
             });
         });
+
+        test("should allow ability to comment", async ({ page }) => {
+            await test.step("Navigate to the pull request page", async () => {
+                await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`);
+            });
+
+            await test.step("Verify ability to comment from the timeline", async () => {
+                const commentText = `E2E test comment ${Date.now()}`;
+                await test.step("Type a comment in the comment form", async () => {
+                    const textarea = page.getByPlaceholder("Leave a comment");
+                    await textarea.scrollIntoViewIfNeeded();
+                    await textarea.fill(commentText);
+                });
+
+                await test.step("Submit the comment", async () => {
+                    const commentButton = page
+                        .getByTestId("timeline")
+                        .getByRole("button", { name: "Comment" });
+                    await expect(commentButton).toBeEnabled();
+                    await commentButton.click();
+                });
+
+                await test.step("Verify the comment appears in the timeline", async () => {
+                    await expect(
+                        page.getByTestId("timeline").getByText(commentText),
+                    ).toBeVisible();
+                });
+            });
+        });
     });
