@@ -93,7 +93,7 @@ export function PullRequestReviewContent({
                 {` ${stateLabel} ${timestamp}`}
             </p>
             {event.body && (
-                <div className="mt-2">
+                <div className="mt-3">
                     <CommentCard
                         id={`pullrequestreview-${event.databaseId}`}
                         user={
@@ -105,6 +105,8 @@ export function PullRequestReviewContent({
                                 : null
                         }
                         variant="standalone"
+                        hideAvatar
+                        tailDirection="up"
                         userHref={event.author?.url}
                         createdAt={event.submittedAt ?? event.createdAt}
                         authorAssociation={event.authorAssociation}

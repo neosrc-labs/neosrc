@@ -122,6 +122,7 @@ export function IssueCommentContent({
             }
             variant="standalone"
             hideAvatar
+            tailDirection="left"
             userHref={event.author?.url}
             createdAt={event.createdAt}
             authorAssociation={event.authorAssociation}
