@@ -46,6 +46,7 @@ interface CommentCardProps {
     repo: string;
     children?: ReactNode;
     variant?: "default" | "nested" | "standalone";
+    hideAvatar?: boolean;
     id?: string;
 }
 
@@ -67,15 +68,18 @@ export function CommentCard({
     repo,
     children,
     variant = "default",
+    hideAvatar = false,
     id,
 }: CommentCardProps) {
     const userElement = user && (
         <>
-            <img
-                alt={user.login ?? "user"}
-                className="h-5 w-5 flex-shrink-0 rounded-full"
-                src={user.avatar_url ?? ""}
-            />
+            {!hideAvatar && (
+                <img
+                    alt={user.login ?? "user"}
+                    className="h-5 w-5 flex-shrink-0 rounded-full"
+                    src={user.avatar_url ?? ""}
+                />
+            )}
             <span className="truncate font-medium text-gray-900 text-sm dark:text-gray-100">
                 {user.login ?? "unknown"}
             </span>
@@ -87,13 +91,33 @@ export function CommentCard({
             id={id}
             className={
                 variant === "default"
-                    ? "border-b-1 border-b-gray-200 border-solid bg-white dark:border-b-zinc-700 dark:bg-zinc-900"
+                    ? "relative border-b-1 border-b-gray-200 border-solid bg-white dark:border-b-zinc-700 dark:bg-zinc-900"
                     : variant === "standalone"
-                      ? "rounded border-1 border-gray-200 border-solid bg-white dark:border-zinc-700 dark:bg-zinc-900"
-                      : "bg-gray-50 dark:bg-zinc-950"
+                      ? "relative rounded border-1 border-gray-200 border-solid bg-white dark:border-zinc-700 dark:bg-zinc-900"
+                      : "relative bg-gray-50 dark:bg-zinc-950"
             }
         >
-            <div className="flex items-center justify-between gap-2 px-4 pt-3">
+            {hideAvatar && (
+                <svg
+                    width="8"
+                    height="16"
+                    viewBox="0 0 8 16"
+                    className="absolute top-[9px] -left-2"
+                    aria-hidden="true"
+                >
+                    <path
+                        d="M 8,0 L 0,8 L 8,16"
+                        className="stroke-gray-200 dark:stroke-zinc-700"
+                        fill="none"
+                        strokeWidth="1"
+                    />
+                    <polygon
+                        points="8,0 0,8 8,16"
+                        className="fill-white dark:fill-zinc-900"
+                    />
+                </svg>
+            )}
+            <div className="flex items-center justify-between gap-2 px-4 pt-2">
                 <div className="flex min-w-0 items-center gap-2">
                     {user && userHref ? (
                         <UserHoverCard login={user.login}>
@@ -138,7 +162,11 @@ export function CommentCard({
                     </div>
                 )}
             </div>
-            <div className="prose prose-sm dark:prose-invert mx-6 max-w-none px-4 py-2">
+            <div
+                className={`prose prose-sm dark:prose-invert max-w-none py-2 ${
+                    hideAvatar ? "px-4" : "mx-6 px-4"
+                }`}
+            >
                 {isEditing ? (
                     <MarkdownEditor
                         autoFocus
