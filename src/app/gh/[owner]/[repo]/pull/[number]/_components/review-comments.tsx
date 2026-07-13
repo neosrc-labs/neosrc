@@ -178,7 +178,7 @@ export function ReviewComments({
     }
 
     return (
-        <div className="space-y-3 pt-3">
+        <div className="pt-1">
             {Object.entries(byPath).map(([path, fileComments]) => {
                 const resolvedInFile = fileComments.filter(
                     (c) => threadByCommentId.get(c.id)?.isResolved,
