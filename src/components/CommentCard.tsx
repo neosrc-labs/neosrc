@@ -139,7 +139,13 @@ export function CommentCard({
                     />
                 </svg>
             )}
-            <div className="flex items-center justify-between gap-2 border-gray-200 border-b px-4 pt-2 pb-2 dark:border-zinc-700">
+            <div
+                className={`flex items-center justify-between gap-2 px-4 pt-2 pb-2 ${
+                    variant === "standalone"
+                        ? "border-gray-200 border-b dark:border-zinc-700"
+                        : ""
+                }`}
+            >
                 <div className="flex min-w-0 items-center gap-2">
                     {user && userHref ? (
                         <UserHoverCard login={user.login}>
@@ -166,6 +172,8 @@ export function CommentCard({
                             Outdated
                         </span>
                     )}
+                </div>
+                <div className="flex flex-shrink-0 items-center gap-0.5">
                     {authorAssociation && authorAssociation !== "NONE" && (
                         <span
                             className={`whitespace-nowrap rounded-full px-2 py-0.5 font-medium text-xs ${
@@ -177,12 +185,8 @@ export function CommentCard({
                                 authorAssociation}
                         </span>
                     )}
+                    {!isEditing && headerActions}
                 </div>
-                {!isEditing && headerActions && (
-                    <div className="flex flex-shrink-0 items-center gap-0.5">
-                        {headerActions}
-                    </div>
-                )}
             </div>
             <div
                 className={`prose prose-sm dark:prose-invert max-w-none py-2 ${
