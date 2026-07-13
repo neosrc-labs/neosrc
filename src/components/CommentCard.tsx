@@ -78,7 +78,7 @@ export function CommentCard({
             {!hideAvatar && (
                 <img
                     alt={user.login ?? "user"}
-                    className="h-5 w-5 flex-shrink-0 rounded-full"
+                    className="h-5 w-5 flex-shrink-0 self-center rounded-full"
                     src={user.avatar_url ?? ""}
                 />
             )}
@@ -146,7 +146,7 @@ export function CommentCard({
                         : ""
                 }`}
             >
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="flex min-w-0 items-baseline gap-2">
                     {user && userHref ? (
                         <UserHoverCard login={user.login}>
                             <a
