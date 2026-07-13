@@ -30,6 +30,7 @@ export function LazyRenderItem({
     const height = heightMap.get(itemKey);
     const wasEverIntersecting = useRef(false);
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: isVisible is needed to re-run after DOM visibility toggle
     useEffect(() => {
         const el = ref.current;
         if (!el) return;
@@ -49,7 +50,7 @@ export function LazyRenderItem({
         );
         observer.observe(el);
         return () => observer.disconnect();
-    }, [rootMargin]);
+    }, [rootMargin, isVisible]);
 
     useEffect(() => {
         if (!renderOnIds || renderOnIds.length === 0) return;
