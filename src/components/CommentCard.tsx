@@ -47,6 +47,7 @@ interface CommentCardProps {
     children?: ReactNode;
     variant?: "default" | "nested" | "standalone";
     hideAvatar?: boolean;
+    tailDirection?: "left" | "up";
     id?: string;
 }
 
@@ -69,6 +70,7 @@ export function CommentCard({
     children,
     variant = "default",
     hideAvatar = false,
+    tailDirection,
     id,
 }: CommentCardProps) {
     const userElement = user && (
@@ -97,7 +99,7 @@ export function CommentCard({
                       : "relative bg-gray-50 dark:bg-zinc-950"
             }
         >
-            {hideAvatar && (
+            {hideAvatar && tailDirection === "left" && (
                 <svg
                     width="8"
                     height="16"
@@ -113,6 +115,26 @@ export function CommentCard({
                     />
                     <polygon
                         points="8,0 0,8 8,16"
+                        className="fill-white dark:fill-zinc-900"
+                    />
+                </svg>
+            )}
+            {hideAvatar && tailDirection === "up" && (
+                <svg
+                    width="16"
+                    height="8"
+                    viewBox="0 0 16 8"
+                    className="absolute -top-2 left-1"
+                    aria-hidden="true"
+                >
+                    <path
+                        d="M 0,8 L 8,0 L 16,8"
+                        className="stroke-gray-200 dark:stroke-zinc-700"
+                        fill="none"
+                        strokeWidth="1"
+                    />
+                    <polygon
+                        points="0,8 8,0 16,8"
                         className="fill-white dark:fill-zinc-900"
                     />
                 </svg>
