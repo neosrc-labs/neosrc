@@ -139,7 +139,7 @@ export function CommentCard({
                     />
                 </svg>
             )}
-            <div className="flex items-center justify-between gap-2 px-4 pt-2">
+            <div className="flex items-center justify-between gap-2 border-gray-200 border-b px-4 pt-2 pb-2 dark:border-zinc-700">
                 <div className="flex min-w-0 items-center gap-2">
                     {user && userHref ? (
                         <UserHoverCard login={user.login}>
