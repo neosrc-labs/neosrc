@@ -121,6 +121,7 @@ export function IssueCommentContent({
                     : null
             }
             variant="standalone"
+            hideAvatar
             userHref={event.author?.url}
             createdAt={event.createdAt}
             authorAssociation={event.authorAssociation}
@@ -210,7 +211,7 @@ export function IssueCommentContent({
             footer={
                 !isEditing &&
                 commentReactionsArr.length > 0 && (
-                    <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                    <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
                         <ReactionBar
                             disabled={!canInteract}
                             reactions={commentReactionsArr}

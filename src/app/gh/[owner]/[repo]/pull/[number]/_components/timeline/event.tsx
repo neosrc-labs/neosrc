@@ -16,7 +16,6 @@ import {
     ListOrdered,
     Lock,
     LockOpen,
-    MessageSquare,
     Pencil,
     RefreshCw,
     Rocket,
@@ -27,6 +26,7 @@ import {
     X,
 } from "lucide-react";
 import { useState } from "react";
+import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { Label } from "~/components/ui/label";
 import { UserLink } from "~/components/user-link";
 import type { ReactionContent } from "~/lib/reactions";
@@ -186,8 +186,24 @@ export function EventRow({ children }: { children: React.ReactNode }) {
 }
 
 function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
+    if (event.__typename === "IssueComment" && event.author) {
+        return (
+            <UserHoverCard login={event.author.login} provider="gh">
+                <a
+                    className="absolute -left-[52px] h-10 w-10 overflow-hidden rounded-full ring-1 ring-gray-200 dark:ring-zinc-700"
+                    href={event.author.url}
+                >
+                    <img
+                        alt={event.author.login}
+                        className="h-10 w-10 rounded-full"
+                        src={event.author.avatarUrl}
+                    />
+                </a>
+            </UserHoverCard>
+        );
+    }
+
     const iconMap: Record<string, React.ReactNode> = {
-        IssueComment: <MessageSquare size={ICON_SIZE} />,
         PullRequestReview: <Eye size={ICON_SIZE} />,
         ClosedEvent: (
             <Circle className="fill-red-500/20 text-red-500" size={ICON_SIZE} />
