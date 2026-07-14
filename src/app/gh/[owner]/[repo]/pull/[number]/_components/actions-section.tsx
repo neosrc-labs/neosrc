@@ -368,10 +368,10 @@ export function ActionSection({
                         {conflictedFiles.map((file) => (
                             <li
                                 key={file}
-                                className="flex items-center gap-1.5 font-mono text-xs text-yellow-700 dark:text-yellow-500"
+                                className="flex min-w-0 items-center gap-1.5 font-mono text-xs text-yellow-700 dark:text-yellow-500"
                             >
                                 <File size={12} className="shrink-0" />
-                                {file}
+                                <span className="truncate">{file}</span>
                             </li>
                         ))}
                     </ul>
