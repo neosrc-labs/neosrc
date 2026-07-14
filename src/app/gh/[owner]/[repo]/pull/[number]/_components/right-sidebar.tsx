@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Circle, CircleX, Loader2, X, XCircle } from "lucide-react";
+import { Check, Circle, CircleX, X, XCircle } from "lucide-react";
 import { use, useRef, useState } from "react";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
@@ -33,7 +33,9 @@ function RollupIcon({ rollup }: { rollup: CheckStatusRollup | null }) {
         return <CircleX className="size-3.5 text-gray-400" />;
     }
     if (rollup === "IN_PROGRESS" || rollup === "PENDING") {
-        return <Loader2 className="size-3.5 animate-spin text-yellow-500" />;
+        return (
+            <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
+        );
     }
     return <Circle className="size-3.5 text-gray-400" />;
 }
@@ -199,7 +201,7 @@ function ChecksSection({ checks }: ChecksSectionProps) {
                             ) : check.conclusion === "failure" ? (
                                 <XCircle className="h-3.5 w-3.5 text-red-600" />
                             ) : check.status === "in_progress" ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin text-yellow-500" />
+                                <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
                             ) : (
                                 <Circle className="h-3.5 w-3.5 text-gray-400" />
                             )}

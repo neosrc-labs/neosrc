@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Circle, Clock, Loader2, XCircle } from "lucide-react";
+import { Check, Circle, Clock, XCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import {
     HoverCard,
@@ -62,7 +62,9 @@ function StatusIcon({ check }: { check: CheckRun }) {
         return <XCircle className="h-3.5 w-3.5 text-red-600" />;
     }
     if (check.status === "in_progress") {
-        return <Loader2 className="h-3.5 w-3.5 animate-spin text-yellow-500" />;
+        return (
+            <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
+        );
     }
     return <Circle className="h-3.5 w-3.5 text-gray-400" />;
 }

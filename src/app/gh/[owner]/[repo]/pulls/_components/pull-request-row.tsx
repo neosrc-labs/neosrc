@@ -6,7 +6,6 @@ import {
     GitPullRequest,
     GitPullRequestClosed,
     GitPullRequestDraft,
-    Loader2,
     MessageSquare,
     X,
     XCircle,
@@ -76,9 +75,7 @@ function StatusCheckIcon({
         state === "QUEUED"
     ) {
         return (
-            <Loader2
-                className={cn(className, "animate-spin text-yellow-500")}
-            />
+            <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
         );
     }
     return <Circle className={cn(className, "text-gray-400")} />;

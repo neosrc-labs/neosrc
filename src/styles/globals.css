@@ -18,6 +18,15 @@
     --color-text-muted: #9ca3af;
 }
 
+.check-pending-dot {
+    background: radial-gradient(
+        circle,
+        #eab308 35%,
+        rgba(234, 179, 8, 0.25) 65%,
+        transparent 100%
+    );
+}
+
 .dark {
     --color-surface: #09090b;
     --color-surface-secondary: #18181b;
