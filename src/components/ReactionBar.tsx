@@ -76,6 +76,31 @@ export function ReactionBar({
                                     {REACTION_EMOJIS[content] ?? content}
                                 </span>
                                 <span>{counts?.[content] ?? rs.length}</span>
+                                {rs
+                                    .filter(
+                                        (r) =>
+                                            r.user?.login !==
+                                                currentUserLogin &&
+                                            (r.user?.avatar_url ||
+                                                r.user?.avatarUrl),
+                                    )
+                                    .slice(0, 4)
+                                    .map((r, i, arr) => (
+                                        <img
+                                            key={r.id ?? r.databaseId}
+                                            src={
+                                                r.user?.avatar_url ??
+                                                r.user?.avatarUrl
+                                            }
+                                            alt={r.user?.login ?? ""}
+                                            className={`h-4 w-4 rounded-full ring-1 ring-white dark:ring-zinc-800 ${
+                                                i === 0 ? "ml-0.5" : "-ml-1.5"
+                                            }`}
+                                            style={{
+                                                zIndex: arr.length - i,
+                                            }}
+                                        />
+                                    ))}
                             </button>
                         </HoverCardTrigger>
                         <HoverCardContent className="w-56 bg-white p-3 dark:bg-zinc-950">
