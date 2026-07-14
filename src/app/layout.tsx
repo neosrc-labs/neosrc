@@ -9,6 +9,7 @@ import { Header } from "~/components/header/header";
 import { SidebarProvider } from "~/components/sidebar-context";
 import { ThemeProvider } from "~/components/ThemeProvider";
 import { ThemeStylesheets } from "~/components/ThemeStylesheets";
+import { TooltipProvider } from "~/components/ui/tooltip";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
@@ -32,19 +33,21 @@ export default function RootLayout({
             suppressHydrationWarning
         >
             <body className="bg-white dark:bg-zinc-950">
-                <ThemeProvider
-                    attribute="class"
-                    defaultTheme="system"
-                    enableSystem
-                >
-                    <SidebarProvider>
-                        <ThemeStylesheets />
-                        <TRPCReactProvider>
-                            <Header />
-                            {children}
-                        </TRPCReactProvider>
-                    </SidebarProvider>
-                </ThemeProvider>
+                <TooltipProvider>
+                    <ThemeProvider
+                        attribute="class"
+                        defaultTheme="system"
+                        enableSystem
+                    >
+                        <SidebarProvider>
+                            <ThemeStylesheets />
+                            <TRPCReactProvider>
+                                <Header />
+                                {children}
+                            </TRPCReactProvider>
+                        </SidebarProvider>
+                    </ThemeProvider>
+                </TooltipProvider>
             </body>
         </html>
     );

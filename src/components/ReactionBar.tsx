@@ -2,10 +2,10 @@
 
 import { useMemo } from "react";
 import {
-    HoverCard,
-    HoverCardContent,
-    HoverCardTrigger,
-} from "~/components/ui/hover-card";
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "~/components/ui/tooltip";
 import type { ReactionContent } from "~/lib/reactions";
 import { REACTION_EMOJIS, REACTION_ORDER } from "~/lib/reactions";
 
@@ -59,8 +59,8 @@ export function ReactionBar({
                     : false;
 
                 return (
-                    <HoverCard key={content} openDelay={300}>
-                        <HoverCardTrigger asChild>
+                    <Tooltip key={content}>
+                        <TooltipTrigger asChild>
                             <button
                                 type="button"
                                 aria-pressed={isActive}
@@ -102,36 +102,14 @@ export function ReactionBar({
                                         />
                                     ))}
                             </button>
-                        </HoverCardTrigger>
-                        <HoverCardContent className="w-56 bg-white p-3 dark:bg-zinc-950">
-                            <div className="flex flex-col gap-2">
-                                {rs.map((r) => (
-                                    <div
-                                        key={r.id ?? r.databaseId}
-                                        className="flex items-center gap-2 text-gray-700 text-sm dark:text-gray-300"
-                                    >
-                                        {(r.user?.avatar_url ||
-                                            r.user?.avatarUrl) && (
-                                            <img
-                                                src={
-                                                    r.user?.avatar_url ??
-                                                    r.user?.avatarUrl
-                                                }
-                                                alt={r.user?.login ?? ""}
-                                                className="h-5 w-5 rounded-full"
-                                            />
-                                        )}
-                                        <span className="font-medium">
-                                            {r.user?.login}
-                                        </span>
-                                        <span className="ml-auto">
-                                            {REACTION_EMOJIS[r.content]}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </HoverCardContent>
-                    </HoverCard>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-64 text-center">
+                            {rs
+                                .map((r) => r.user?.login)
+                                .filter(Boolean)
+                                .join(", ")}
+                        </TooltipContent>
+                    </Tooltip>
                 );
             })}
         </div>
