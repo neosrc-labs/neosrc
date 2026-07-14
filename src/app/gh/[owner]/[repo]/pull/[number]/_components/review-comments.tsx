@@ -1,7 +1,7 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { ChevronDown, SquarePen } from "lucide-react";
+import { ChevronDown, MoreVertical, SquarePen } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import { DiffView } from "~/components/DiffView";
@@ -11,6 +11,11 @@ import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { ReactionBar } from "~/components/ReactionBar";
 import { ReactionPicker } from "~/components/ReactionPicker";
 import { ResolveButton } from "~/components/ResolvedThreadBanner";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "~/components/ui/popover";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
 import {
     applyReviewThreadOperations,
@@ -429,6 +434,9 @@ function CommentBlock({
 }) {
     const [showReplyForm, setShowReplyForm] = useState(false);
     const [replyBody, setReplyBody] = useState("");
+    const [menuOpenCommentId, setMenuOpenCommentId] = useState<number | null>(
+        null,
+    );
     const utils = api.useUtils();
 
     const replyMutation = api.reviewComments.reply.useMutation({
@@ -491,20 +499,44 @@ function CommentBlock({
                         />
                         {comment.user?.login === currentUserLogin &&
                             canInteract && (
-                                <button
-                                    type="button"
-                                    aria-label="Edit comment"
-                                    className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
-                                    onClick={() =>
-                                        onStartEdit(
-                                            comment.id,
-                                            savedBodies[comment.id] ??
-                                                comment.body,
+                                <Popover
+                                    open={menuOpenCommentId === comment.id}
+                                    onOpenChange={(open) =>
+                                        setMenuOpenCommentId(
+                                            open ? comment.id : null,
                                         )
                                     }
                                 >
-                                    <SquarePen size={14} />
-                                </button>
+                                    <PopoverTrigger asChild>
+                                        <button
+                                            type="button"
+                                            aria-label="More options"
+                                            className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                        >
+                                            <MoreVertical size={14} />
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                        className="w-44 bg-white p-1 dark:bg-zinc-950"
+                                        align="end"
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                onStartEdit(
+                                                    comment.id,
+                                                    savedBodies[comment.id] ??
+                                                        comment.body,
+                                                );
+                                                setMenuOpenCommentId(null);
+                                            }}
+                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+                                        >
+                                            <SquarePen size={14} />
+                                            Edit
+                                        </button>
+                                    </PopoverContent>
+                                </Popover>
                             )}
                     </>
                 }
@@ -565,20 +597,52 @@ function CommentBlock({
                                     />
                                     {reply.user?.login === currentUserLogin &&
                                         canInteract && (
-                                            <button
-                                                type="button"
-                                                aria-label="Edit comment"
-                                                className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
-                                                onClick={() =>
-                                                    onStartEdit(
-                                                        reply.id,
-                                                        savedBodies[reply.id] ??
-                                                            reply.body,
+                                            <Popover
+                                                open={
+                                                    menuOpenCommentId ===
+                                                    reply.id
+                                                }
+                                                onOpenChange={(open) =>
+                                                    setMenuOpenCommentId(
+                                                        open ? reply.id : null,
                                                     )
                                                 }
                                             >
-                                                <SquarePen size={14} />
-                                            </button>
+                                                <PopoverTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        aria-label="More options"
+                                                        className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                                    >
+                                                        <MoreVertical
+                                                            size={14}
+                                                        />
+                                                    </button>
+                                                </PopoverTrigger>
+                                                <PopoverContent
+                                                    className="w-44 bg-white p-1 dark:bg-zinc-950"
+                                                    align="end"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            onStartEdit(
+                                                                reply.id,
+                                                                savedBodies[
+                                                                    reply.id
+                                                                ] ?? reply.body,
+                                                            );
+                                                            setMenuOpenCommentId(
+                                                                null,
+                                                            );
+                                                        }}
+                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+                                                    >
+                                                        <SquarePen size={14} />
+                                                        Edit
+                                                    </button>
+                                                </PopoverContent>
+                                            </Popover>
                                         )}
                                 </>
                             }
