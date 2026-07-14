@@ -103,7 +103,10 @@ export function ReactionBar({
                                     ))}
                             </button>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-64 text-center">
+                        <TooltipContent
+                            side="top"
+                            className="max-w-64 text-center"
+                        >
                             {rs
                                 .map((r) => r.user?.login)
                                 .filter(Boolean)
