@@ -16,7 +16,7 @@ const authorAssociationLabels: Record<string, string> = {
 };
 
 const neutralBadge =
-    "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-gray-400";
+    "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400";
 
 const authorAssociationStyles: Record<string, string> = {
     OWNER: neutralBadge,
@@ -82,7 +82,7 @@ export function CommentCard({
                     src={user.avatar_url ?? ""}
                 />
             )}
-            <span className="truncate font-medium text-gray-900 text-sm dark:text-gray-100">
+            <span className="truncate font-medium text-gray-900 text-sm dark:text-zinc-100">
                 {user.login ?? "unknown"}
             </span>
         </>

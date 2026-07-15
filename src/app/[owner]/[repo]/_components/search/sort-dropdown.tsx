@@ -51,7 +51,7 @@ export function SortDropdown({
             <button
                 type="button"
                 onClick={() => setOpen(!open)}
-                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
                 <ListOrdered className="size-4" />
                 {currentLabel}
@@ -71,8 +71,8 @@ export function SortDropdown({
                                 "flex w-full cursor-pointer items-center rounded-md px-3 py-1.5 text-sm transition-colors",
                                 opt.sort === currentSort &&
                                     opt.order === currentOrder
-                                    ? "bg-gray-100 font-medium text-gray-900 dark:bg-zinc-800 dark:text-gray-100"
-                                    : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800",
+                                    ? "bg-gray-100 font-medium text-gray-900 dark:bg-zinc-800 dark:text-zinc-100"
+                                    : "text-gray-700 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800",
                             )}
                         >
                             {opt.label}

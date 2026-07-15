@@ -12,24 +12,24 @@ export function IssueEmptyState({
             {searchQuery ? (
                 <>
                     <GitPullRequest className="size-8 text-gray-400" />
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
+                    <p className="font-medium text-gray-900 dark:text-zinc-100">
                         No issues match your search
                     </p>
-                    <p className="text-gray-500 text-sm dark:text-gray-400">
+                    <p className="text-gray-500 text-sm dark:text-zinc-400">
                         Try a different search or clear filters
                     </p>
                 </>
             ) : activeTab === "open" ? (
                 <>
                     <CircleCheck className="size-8 text-gray-400" />
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
+                    <p className="font-medium text-gray-900 dark:text-zinc-100">
                         No open issues
                     </p>
                 </>
             ) : (
                 <>
                     <Circle className="size-8 text-gray-400" />
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
+                    <p className="font-medium text-gray-900 dark:text-zinc-100">
                         No closed issues
                     </p>
                 </>

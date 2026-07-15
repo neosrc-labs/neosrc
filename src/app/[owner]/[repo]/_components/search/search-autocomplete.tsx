@@ -291,7 +291,7 @@ export const SearchAutocomplete = forwardRef<
                                     {suggestion.label}
                                 </Label>
                                 {suggestion.subtitle && (
-                                    <span className="truncate text-gray-400 text-xs dark:text-gray-500">
+                                    <span className="truncate text-gray-400 text-xs dark:text-zinc-500">
                                         {suggestion.subtitle}
                                     </span>
                                 )}
@@ -307,15 +307,15 @@ export const SearchAutocomplete = forwardRef<
                             <span className="flex min-w-0 flex-1 flex-col text-left">
                                 {suggestion.name ? (
                                     <>
-                                        <span className="truncate font-medium text-gray-900 text-sm dark:text-gray-100">
+                                        <span className="truncate font-medium text-gray-900 text-sm dark:text-zinc-100">
                                             {suggestion.name}
                                         </span>
-                                        <span className="truncate text-gray-500 text-xs dark:text-gray-400">
+                                        <span className="truncate text-gray-500 text-xs dark:text-zinc-400">
                                             {suggestion.label}
                                         </span>
                                     </>
                                 ) : (
-                                    <span className="truncate text-gray-900 text-sm dark:text-gray-100">
+                                    <span className="truncate text-gray-900 text-sm dark:text-zinc-100">
                                         {suggestion.subtitle ??
                                             suggestion.label}
                                     </span>

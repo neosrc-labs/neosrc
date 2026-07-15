@@ -74,7 +74,7 @@ export function IssueSearchBar({
                                     ) : (
                                         <span
                                             key={key}
-                                            className="text-gray-900 dark:text-gray-100"
+                                            className="text-gray-900 dark:text-zinc-100"
                                         >
                                             {seg.text}
                                         </span>
@@ -110,7 +110,7 @@ export function IssueSearchBar({
                             setCursorPos(e.currentTarget.selectionStart ?? 0);
                         }}
                         placeholder="Search issues by title, body, or comments"
-                        className="relative w-full rounded-md border border-gray-300 bg-transparent px-3 py-1.5 pr-12 text-sm text-transparent placeholder-gray-500 caret-gray-900 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:placeholder-gray-500 dark:caret-gray-100 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+                        className="relative w-full rounded-md border border-gray-300 bg-transparent px-3 py-1.5 pr-12 text-sm text-transparent placeholder-gray-500 caret-gray-900 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:placeholder-zinc-500 dark:caret-zinc-100 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                     />
                     {autocompleteMatch && (
                         <SearchAutocomplete
@@ -148,7 +148,7 @@ export function IssueSearchBar({
 
                 <a
                     href={`https://${host}/${owner}/${repo}/labels`}
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                 >
                     <Tag className="size-4" />
                     Labels
@@ -156,7 +156,7 @@ export function IssueSearchBar({
 
                 <a
                     href={`https://${host}/${owner}/${repo}/milestones`}
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                 >
                     <Milestone className="size-4" />
                     Milestones

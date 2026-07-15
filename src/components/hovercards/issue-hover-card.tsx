@@ -43,16 +43,16 @@ function IssueHoverCardContent({
                                     ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                                     : issue.state === "closed"
                                       ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                      : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                                      : "bg-gray-100 text-gray-800 dark:bg-zinc-800 dark:text-zinc-300"
                             }`}
                         >
                             {issue.state === "open" ? "Open" : "Closed"}
                         </span>
-                        <span className="text-gray-500 text-xs dark:text-gray-400">
+                        <span className="text-gray-500 text-xs dark:text-zinc-400">
                             {isPR ? "Pull Request" : "Issue"}
                         </span>
                     </div>
-                    <p className="mt-1 font-semibold text-gray-900 text-sm leading-snug dark:text-gray-100">
+                    <p className="mt-1 font-semibold text-gray-900 text-sm leading-snug dark:text-zinc-100">
                         <CodeTitle>{issue.title}</CodeTitle>
                     </p>
                     {issue.user && (
@@ -62,7 +62,7 @@ function IssueHoverCardContent({
                                 className="h-4 w-4 rounded-full"
                                 src={issue.user.avatar_url}
                             />
-                            <span className="text-gray-500 text-xs dark:text-gray-400">
+                            <span className="text-gray-500 text-xs dark:text-zinc-400">
                                 {issue.user.login}
                             </span>
                         </div>
@@ -71,7 +71,7 @@ function IssueHoverCardContent({
             </div>
             {truncatedBody && (
                 <div className="border-gray-200 border-b p-3 dark:border-zinc-800">
-                    <p className="line-clamp-3 whitespace-pre-wrap break-words text-gray-600 text-xs leading-relaxed dark:text-gray-400">
+                    <p className="line-clamp-3 whitespace-pre-wrap break-words text-gray-600 text-xs leading-relaxed dark:text-zinc-400">
                         {truncatedBody}
                     </p>
                 </div>
@@ -105,7 +105,7 @@ function IssueHoverCardContent({
                             ))}
                     </div>
                 )}
-                <div className="flex items-center gap-3 text-gray-500 text-xs dark:text-gray-400">
+                <div className="flex items-center gap-3 text-gray-500 text-xs dark:text-zinc-400">
                     {issue.comments > 0 && (
                         <span className="flex items-center gap-1">
                             <MessageSquare className="h-3 w-3" />

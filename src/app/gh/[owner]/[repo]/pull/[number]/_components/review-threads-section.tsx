@@ -223,7 +223,7 @@ export function ReviewThreadsSection({
             </div>
             {hasNextPage && <div ref={sentinelRef} style={{ height: 1 }} />}
             {isFetchingNextPage && (
-                <p className="py-2 text-center text-gray-500 text-xs dark:text-gray-400">
+                <p className="py-2 text-center text-gray-500 text-xs dark:text-zinc-400">
                     Loading more threads...
                 </p>
             )}

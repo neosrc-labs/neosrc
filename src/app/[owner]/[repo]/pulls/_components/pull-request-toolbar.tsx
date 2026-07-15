@@ -65,8 +65,8 @@ export function PullRequestToolbar({
                                 }
                                 className={`relative -mb-px cursor-pointer px-4 py-3 font-medium text-sm transition-colors ${
                                     activeTab === tab.key
-                                        ? "border-blue-500 border-b-2 text-gray-900 dark:text-gray-100"
-                                        : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                                        ? "border-blue-500 border-b-2 text-gray-900 dark:text-zinc-100"
+                                        : "text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-gray-100"
                                 }`}
                             >
                                 {tab.label}
@@ -260,7 +260,7 @@ function StatusFilterDropdown({
             trigger={
                 <button
                     type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                 >
                     <CircleCheck className="size-4" />
                     Checks
@@ -319,7 +319,7 @@ function ReviewFilterDropdown({
             trigger={
                 <button
                     type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-800"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                 >
                     <Eye className="size-4" />
                     Review

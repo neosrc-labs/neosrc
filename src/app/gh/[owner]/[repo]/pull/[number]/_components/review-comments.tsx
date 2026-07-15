@@ -199,7 +199,7 @@ export function ReviewComments({
                         className="mt-3 rounded border border-gray-200 dark:border-zinc-700"
                     >
                         <div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900">
-                            <span className="flex-1 truncate font-mono text-gray-700 text-xs dark:text-gray-300">
+                            <span className="flex-1 truncate font-mono text-gray-700 text-xs dark:text-zinc-300">
                                 {path}
                             </span>
                             {resolvedInFile.length > 0 && (
@@ -530,7 +530,7 @@ function CommentBlock({
                                                 );
                                                 setMenuOpenCommentId(null);
                                             }}
-                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
                                         >
                                             <SquarePen size={14} />
                                             Edit
@@ -636,7 +636,7 @@ function CommentBlock({
                                                                 null,
                                                             );
                                                         }}
-                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
                                                     >
                                                         <SquarePen size={14} />
                                                         Edit

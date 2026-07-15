@@ -91,30 +91,30 @@ function CheckHoverCardContent({ check }: { check: CheckRun }) {
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                         <StatusIcon check={check} />
-                        <span className="truncate font-semibold text-gray-900 text-sm dark:text-gray-100">
+                        <span className="truncate font-semibold text-gray-900 text-sm dark:text-zinc-100">
                             {check.name}
                         </span>
                     </div>
                     {check.app?.name && (
-                        <p className="mt-0.5 text-gray-500 text-xs dark:text-gray-400">
+                        <p className="mt-0.5 text-gray-500 text-xs dark:text-zinc-400">
                             {check.app.name}
                         </p>
                     )}
                     {!check.app?.name && check.description && (
-                        <p className="mt-0.5 line-clamp-2 text-gray-500 text-xs dark:text-gray-400">
+                        <p className="mt-0.5 line-clamp-2 text-gray-500 text-xs dark:text-zinc-400">
                             {check.description}
                         </p>
                     )}
                 </div>
             </div>
             <div className="flex flex-col gap-1.5 p-3 pt-2.5">
-                <div className="flex items-center gap-2 text-gray-700 text-xs dark:text-gray-300">
+                <div className="flex items-center gap-2 text-gray-700 text-xs dark:text-zinc-300">
                     <span className={`font-medium ${labelColor}`}>
                         {statusLabel(check.status, check.conclusion)}
                     </span>
                 </div>
                 {check.started_at && (
-                    <div className="flex items-center gap-2 text-gray-500 text-xs dark:text-gray-400">
+                    <div className="flex items-center gap-2 text-gray-500 text-xs dark:text-zinc-400">
                         <Clock className="h-3.5 w-3.5 shrink-0" />
                         <span>
                             {check.status === "in_progress"

@@ -811,7 +811,7 @@ function BlockRows({
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <UnfoldVertical
                                     size={14}
-                                    className="text-gray-500 dark:text-gray-400"
+                                    className="text-gray-500 dark:text-zinc-400"
                                 />
                             </div>
                         )}
@@ -1003,7 +1003,7 @@ function BlockRows({
                             <tr>
                                 <td
                                     colSpan={2}
-                                    className="border-gray-200 border-t p-2 dark:border-gray-700"
+                                    className="border-gray-200 border-t p-2 dark:border-zinc-700"
                                 >
                                     <MarkdownEditor
                                         autoFocus
@@ -1092,7 +1092,7 @@ function GapRow({
                     <div className="absolute inset-0 flex items-center justify-center">
                         <UnfoldVertical
                             size={14}
-                            className="text-gray-500 dark:text-gray-400"
+                            className="text-gray-500 dark:text-zinc-400"
                         />
                     </div>
                 </td>

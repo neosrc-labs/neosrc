@@ -400,7 +400,7 @@ export function PullRequestDescriptionSection({
                                     {(canInteract) =>
                                         !isEditing && canInteract ? (
                                             <button
-                                                className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                                className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-gray-200"
                                                 onClick={() =>
                                                     handleStartEdit(
                                                         savedBody ??
