@@ -3,7 +3,7 @@ import "~/styles/github-alert.css";
 import "highlight.js/styles/github.min.css";
 
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Inter } from "next/font/google";
 
 import { Header } from "~/components/header/header";
 import { SidebarProvider } from "~/components/sidebar-context";
@@ -18,9 +18,9 @@ export const metadata: Metadata = {
     icons: [{ rel: "icon", type: "image/svg+xml", url: "/favicon.svg" }],
 };
 
-const geist = Geist({
+const font = Inter({
     subsets: ["latin"],
-    variable: "--font-geist-sans",
+    variable: "--font-inter-sans",
 });
 
 export default function RootLayout({
@@ -28,7 +28,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
     return (
         <html
-            className={`${geist.variable}`}
+            className={`${font.variable}`}
             lang="en"
             suppressHydrationWarning
         >
