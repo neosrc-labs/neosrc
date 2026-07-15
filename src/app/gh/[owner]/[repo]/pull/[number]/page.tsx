@@ -90,7 +90,7 @@ export default async function PullRequestPage({ params }: PageProps) {
                     <Suspense
                         fallback={
                             <div className="mt-4 border-gray-200 border-t pt-6 dark:border-zinc-700">
-                                <h2 className="mb-4 font-semibold text-gray-900 text-lg dark:text-gray-100">
+                                <h2 className="mb-4 text-gray-900 dark:text-gray-100">
                                     Timeline
                                 </h2>
                                 <TimelineSkeleton />

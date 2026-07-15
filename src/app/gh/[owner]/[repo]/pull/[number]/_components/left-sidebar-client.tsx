@@ -78,7 +78,7 @@ function SidebarFileTree({
 
     return (
         <div className="flex h-full flex-col">
-            <h3 className="mb-2 font-semibold text-gray-900 text-sm dark:text-zinc-100">
+            <h3 className="mb-2 text-gray-900 dark:text-zinc-100">
                 Files Changed{" "}
                 {filesChanged ? <span>({filesChanged})</span> : null}
             </h3>

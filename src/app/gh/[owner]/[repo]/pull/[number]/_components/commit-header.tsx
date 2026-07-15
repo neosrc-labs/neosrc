@@ -34,7 +34,7 @@ export async function CommitHeader({
     return (
         <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
             <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
+                <h2 className="text-gray-900 dark:text-gray-100">
                     <CommitSubject message={commit.commit.message} />
                 </h2>
                 <div className="flex gap-2">

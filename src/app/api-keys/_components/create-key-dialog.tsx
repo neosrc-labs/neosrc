@@ -173,7 +173,7 @@ export function CreateKeyDialog({
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                 <div className="mx-4 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-900">
-                    <h2 className="mb-4 font-semibold text-gray-900 text-lg dark:text-gray-100">
+                    <h2 className="mb-4 text-gray-900 dark:text-gray-100">
                         API Key Created
                     </h2>
                     <p className="mb-2 text-gray-600 text-sm dark:text-gray-400">
@@ -213,7 +213,7 @@ export function CreateKeyDialog({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-900">
-                <h2 className="mb-4 font-semibold text-gray-900 text-lg dark:text-gray-100">
+                <h2 className="mb-4 text-gray-900 dark:text-gray-100">
                     Create API Key
                 </h2>
 

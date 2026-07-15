@@ -282,7 +282,7 @@ export function PullRequestDescriptionSection({
                                         </>
                                     ) : (
                                         <>
-                                            <h1 className="font-bold text-2xl text-gray-900 dark:text-zinc-100">
+                                            <h1 className="text-gray-900 dark:text-zinc-100">
                                                 <CodeTitle>
                                                     {displayTitle}
                                                 </CodeTitle>
@@ -390,7 +390,7 @@ export function PullRequestDescriptionSection({
                     return (
                         <div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-900">
                             <div className="flex items-center justify-between border-gray-200 border-b px-4 py-1 dark:border-zinc-700">
-                                <h3 className="font-semibold text-gray-700 text-sm dark:text-zinc-300">
+                                <h3 className="text-gray-700 dark:text-zinc-300">
                                     Description
                                 </h3>
                                 <Async

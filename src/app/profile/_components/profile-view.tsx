@@ -147,7 +147,7 @@ function ProviderProfileCard({
 
 function SectionHeading({ provider }: { provider: "gh" | "cb" }) {
     return (
-        <h2 className="mb-4 font-semibold text-gray-900 text-lg dark:text-gray-100">
+        <h2 className="mb-4 text-gray-900 dark:text-gray-100">
             {provider === "cb" ? "Codeberg" : "GitHub"}
         </h2>
     );
@@ -179,9 +179,7 @@ export function ProfileView({
                     </div>
                 )}
                 <div>
-                    <h1 className="font-bold text-2xl text-gray-900 dark:text-gray-100">
-                        {name}
-                    </h1>
+                    <h1 className="text-gray-900 dark:text-gray-100">{name}</h1>
                 </div>
             </div>
 
@@ -207,7 +205,7 @@ export function ProfileView({
             </div>
 
             <section>
-                <h2 className="mb-4 font-semibold text-gray-900 text-lg dark:text-gray-100">
+                <h2 className="mb-4 text-gray-900 dark:text-gray-100">
                     Linked Accounts
                 </h2>
                 <AccountManager

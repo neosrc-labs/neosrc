@@ -52,7 +52,7 @@ export function CommentForm({
 
     return (
         <div className="mt-6 border-gray-200 border-t pt-6">
-            <h3 className="mb-3 font-semibold text-gray-900 text-sm dark:text-gray-300">
+            <h3 className="mb-3 text-gray-900 dark:text-gray-300">
                 Add a comment
             </h3>
             <MarkdownEditor

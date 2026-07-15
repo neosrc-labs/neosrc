@@ -21,7 +21,7 @@ export function ApiKeysView() {
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="font-bold text-2xl text-gray-900 dark:text-gray-100">
+                    <h1 className="text-gray-900 dark:text-gray-100">
                         API Keys
                     </h1>
                     <p className="mt-1 text-gray-500 text-sm dark:text-gray-400">
