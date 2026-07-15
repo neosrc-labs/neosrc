@@ -179,7 +179,7 @@ export function IssueCommentContent({
                                         handleCopyLink();
                                         setMenuOpen(false);
                                     }}
-                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
                                 >
                                     {copied ? (
                                         <Check size={14} />
@@ -198,7 +198,7 @@ export function IssueCommentContent({
                                             );
                                             setMenuOpen(false);
                                         }}
-                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
+                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
                                     >
                                         <SquarePen size={14} />
                                         Edit

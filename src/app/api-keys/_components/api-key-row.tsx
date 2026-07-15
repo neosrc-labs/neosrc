@@ -31,7 +31,7 @@ export function ApiKeyRow({
             <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900 text-sm dark:text-gray-100">
+                        <span className="font-medium text-gray-900 text-sm dark:text-zinc-100">
                             {apiKey.name}
                         </span>
                     </div>
@@ -43,7 +43,7 @@ export function ApiKeyRow({
                             />
                         ))}
                     </div>
-                    <div className="mt-1 flex items-center gap-3 text-gray-500 text-xs dark:text-gray-400">
+                    <div className="mt-1 flex items-center gap-3 text-gray-500 text-xs dark:text-zinc-400">
                         <span>
                             Created {apiKey.createdAt.toLocaleDateString()}
                         </span>
@@ -67,7 +67,7 @@ export function ApiKeyRow({
                         <button
                             type="button"
                             onClick={onCancelRevoke}
-                            className="cursor-pointer rounded px-2 py-1 text-gray-600 text-xs hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+                            className="cursor-pointer rounded px-2 py-1 text-gray-600 text-xs hover:text-gray-900 dark:text-zinc-400 dark:hover:text-gray-200"
                         >
                             Cancel
                         </button>

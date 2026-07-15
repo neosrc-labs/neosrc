@@ -70,10 +70,10 @@ function DiffSnippet({ patch }: { patch: string }) {
                                         : "bg-green-50 dark:bg-green-950"
                                 }
                             >
-                                <td className="w-9 select-none pr-1 text-right text-gray-400 dark:text-gray-500">
+                                <td className="w-9 select-none pr-1 text-right text-gray-400 dark:text-zinc-500">
                                     {row.oldN ?? ""}
                                 </td>
-                                <td className="w-9 select-none pr-1 text-right text-gray-400 dark:text-gray-500">
+                                <td className="w-9 select-none pr-1 text-right text-gray-400 dark:text-zinc-500">
                                     {row.newN ?? ""}
                                 </td>
                                 <td

@@ -65,15 +65,15 @@ function VerifiedBadgeHoverContent({
         <div className="flex flex-col gap-1.5 p-3">
             <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-green-600" />
-                <span className="font-semibold text-gray-900 text-sm dark:text-gray-100">
+                <span className="font-semibold text-gray-900 text-sm dark:text-zinc-100">
                     {signature.isValid ? "Verified" : "Unverified"} signature
                 </span>
             </div>
-            <p className="text-gray-600 text-xs dark:text-gray-400">
+            <p className="text-gray-600 text-xs dark:text-zinc-400">
                 This commit was signed with a {typeLabel} key.
             </p>
             {keyId && (
-                <div className="mt-1 rounded bg-gray-50 px-2 py-1 font-mono text-gray-700 text-xs dark:bg-zinc-900 dark:text-gray-300">
+                <div className="mt-1 rounded bg-gray-50 px-2 py-1 font-mono text-gray-700 text-xs dark:bg-zinc-900 dark:text-zinc-300">
                     Key ID: {keyId}
                 </div>
             )}

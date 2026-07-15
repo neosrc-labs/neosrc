@@ -123,7 +123,7 @@ export function IssueList({
                 onRemoveQualifier={list.handleRemoveQualifier}
             />
 
-            <div className="flex items-center gap-3 border-gray-200 border-b px-4 py-1.5 text-gray-400 text-xs dark:border-zinc-800 dark:text-gray-500">
+            <div className="flex items-center gap-3 border-gray-200 border-b px-4 py-1.5 text-gray-400 text-xs dark:border-zinc-800 dark:text-zinc-500">
                 <div className="size-4 shrink-0" />
                 <div className="flex-1" />
                 <div className="flex w-20 shrink-0 items-center justify-center">

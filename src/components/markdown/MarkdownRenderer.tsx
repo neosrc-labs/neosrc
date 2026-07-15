@@ -201,7 +201,7 @@ export function MarkdownRenderer({
 }: MarkdownRendererProps) {
     if (!content) {
         return (
-            <p className="text-gray-500 italic dark:text-gray-400">
+            <p className="text-gray-500 italic dark:text-zinc-400">
                 No description provided.
             </p>
         );

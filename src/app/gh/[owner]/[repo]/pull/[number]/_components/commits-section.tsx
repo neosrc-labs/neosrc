@@ -52,7 +52,7 @@ export function CommitsSection({
             {isLoading ? (
                 <CommitsSkeleton />
             ) : commits.length === 0 ? (
-                <p className="text-gray-500 text-sm dark:text-gray-400">
+                <p className="text-gray-500 text-sm dark:text-zinc-400">
                     No commits
                 </p>
             ) : (
@@ -167,7 +167,7 @@ function CommitsList({
                                     />
                                 </span>
                                 <Link
-                                    className="min-w-0 flex-1 font-medium text-gray-900 text-sm no-underline dark:text-gray-100"
+                                    className="min-w-0 flex-1 font-medium text-gray-900 text-sm no-underline dark:text-zinc-100"
                                     href={`${baseUrl}/${commit.oid}`}
                                 >
                                     <p className="truncate">
@@ -177,7 +177,7 @@ function CommitsList({
                                         />
                                     </p>
                                     {commit.authors[0] && (
-                                        <p className="mt-0.5 font-normal text-gray-500 text-xs dark:text-gray-400">
+                                        <p className="mt-0.5 font-normal text-gray-500 text-xs dark:text-zinc-400">
                                             {commit.authors[0]?.user?.login ??
                                                 commit.authors[0]?.name ??
                                                 "Unknown"}{" "}
@@ -195,7 +195,7 @@ function CommitsList({
             </div>
             {hasNextPage && <div ref={sentinelRef} style={{ height: 1 }} />}
             {isFetchingNextPage && (
-                <p className="py-2 text-center text-gray-500 text-xs dark:text-gray-400">
+                <p className="py-2 text-center text-gray-500 text-xs dark:text-zinc-400">
                     Loading more commits...
                 </p>
             )}

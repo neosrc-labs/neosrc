@@ -267,8 +267,8 @@ export function TimelineSection({
             dot: "bg-red-500",
         },
         LOCKED: {
-            bg: "bg-gray-50 border-gray-200 dark:bg-gray-900/30 dark:border-gray-700",
-            text: "text-gray-600 dark:text-gray-400",
+            bg: "bg-gray-50 border-gray-200 dark:bg-zinc-900/30 dark:border-zinc-700",
+            text: "text-gray-600 dark:text-zinc-400",
             dot: "bg-gray-400",
         },
     };
@@ -361,7 +361,7 @@ export function TimelineSection({
             ))}
 
             {wrappers.length === 0 && (
-                <p className="text-gray-500 text-sm dark:text-gray-400">
+                <p className="text-gray-500 text-sm dark:text-zinc-400">
                     No timeline events yet.
                 </p>
             )}
@@ -416,7 +416,7 @@ export function TimelineSection({
 
             {isFetchingNextPage && (
                 <div className="py-4 text-center">
-                    <p className="text-gray-500 text-sm dark:text-gray-400">
+                    <p className="text-gray-500 text-sm dark:text-zinc-400">
                         Loading more...
                     </p>
                 </div>

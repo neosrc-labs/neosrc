@@ -91,7 +91,7 @@ export default function RightSidebar({
                 className="border-gray-200 border-l bg-white px-4 py-6 dark:border-zinc-800 dark:bg-zinc-950"
                 data-testid="right-sidebar"
             >
-                <p className="text-gray-500 text-sm dark:text-gray-400">
+                <p className="text-gray-500 text-sm dark:text-zinc-400">
                     No pull request data available.
                 </p>
             </aside>
@@ -222,7 +222,7 @@ function ChecksSection({ checks }: ChecksSectionProps) {
                         <span className="min-w-0 truncate text-gray-700 text-sm dark:text-zinc-300">
                             {check.name}
                             {check.description && (
-                                <span className="text-gray-500 dark:text-gray-400">
+                                <span className="text-gray-500 dark:text-zinc-400">
                                     {" "}
                                     - {check.description}
                                 </span>

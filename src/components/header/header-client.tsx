@@ -327,18 +327,18 @@ function HeaderContent({
                                         )}
                                     </a>
                                     <a
-                                        className="font-medium text-gray-600 text-sm hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                                        className="font-medium text-gray-600 text-sm hover:text-gray-900 dark:text-zinc-400 dark:hover:text-gray-100"
                                         href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                     >
                                         {owner}
                                     </a>
-                                    <span className="text-gray-400 text-sm dark:text-gray-500">
+                                    <span className="text-gray-400 text-sm dark:text-zinc-500">
                                         /
                                     </span>
                                     <a
-                                        className="font-medium text-gray-600 text-sm hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                                        className="font-medium text-gray-600 text-sm hover:text-gray-900 dark:text-zinc-400 dark:hover:text-gray-100"
                                         href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
@@ -352,7 +352,7 @@ function HeaderContent({
                         <div className="flex items-center gap-1">
                             {(prMatch ?? pullsMatch ?? issuesMatch) && (
                                 <a
-                                    className="flex size-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
+                                    className="flex size-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
                                     href={
                                         prMatch
                                             ? `https://${provider === "cb" ? "codeberg.org" : "github.com"}/${prMatch[1]}/${prMatch[2]}/pull/${prMatch[3]}${provider === "gh" ? "?neosrc_exit=1" : ""}`
@@ -387,7 +387,7 @@ function HeaderContent({
                             )}
                             <ThemeToggle />
                             <a
-                                className="flex size-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
+                                className="flex size-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
                                 href="/profile"
                             >
                                 {currentUser?.avatarUrl ? (
@@ -418,14 +418,14 @@ function HeaderContent({
                                           className={cn(
                                               "flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 font-medium text-sm transition-colors",
                                               tab.isActive
-                                                  ? "border-blue-500 text-gray-900 dark:text-gray-100"
-                                                  : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900 dark:text-gray-400 dark:hover:border-zinc-600 dark:hover:text-gray-100",
+                                                  ? "border-blue-500 text-gray-900 dark:text-zinc-100"
+                                                  : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:text-gray-100",
                                           )}
                                       >
                                           <tab.icon className="size-4" />
                                           {tab.label}
                                           {tab.count != null && (
-                                              <span className="text-gray-400 dark:text-gray-500">
+                                              <span className="text-gray-400 dark:text-zinc-500">
                                                   {tab.count.toLocaleString()}
                                               </span>
                                           )}
@@ -451,7 +451,7 @@ function HeaderContent({
             {prMatch && !isLeftOpen && (
                 <button
                     ref={leftToggleRef}
-                    className="fixed left-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-r-md bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-700 dark:bg-zinc-950 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
+                    className="fixed left-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-r-md bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-700 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
                     style={{ top: "var(--header-height)" }}
                     onClick={toggleLeft}
                     title="Open left sidebar"
@@ -464,7 +464,7 @@ function HeaderContent({
             {prMatch && (
                 <button
                     ref={rightToggleRef}
-                    className="fixed right-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-l-md bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-700 dark:bg-zinc-950 dark:text-gray-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
+                    className="fixed right-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-l-md bg-white text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-700 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
                     style={{ top: "var(--header-height)" }}
                     onClick={toggleRight}
                     title={

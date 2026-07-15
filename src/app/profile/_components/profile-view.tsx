@@ -49,7 +49,7 @@ function ProviderProfileCard({
         return (
             <section className="rounded-lg border border-gray-200 p-6 dark:border-zinc-800">
                 <SectionHeading provider={provider} />
-                <p className="text-gray-500 text-sm dark:text-gray-400">
+                <p className="text-gray-500 text-sm dark:text-zinc-400">
                     Could not load profile information.
                 </p>
             </section>
@@ -70,7 +70,7 @@ function ProviderProfileCard({
                         <div className="flex flex-wrap items-baseline gap-x-2">
                             {user.name && (
                                 <a
-                                    className="font-semibold text-base text-gray-900 hover:underline dark:text-gray-100"
+                                    className="font-semibold text-base text-gray-900 hover:underline dark:text-zinc-100"
                                     href={profileUrl}
                                     rel="noreferrer"
                                     target="_blank"
@@ -78,24 +78,24 @@ function ProviderProfileCard({
                                     {user.name}
                                 </a>
                             )}
-                            <span className="text-gray-500 text-sm dark:text-gray-400">
+                            <span className="text-gray-500 text-sm dark:text-zinc-400">
                                 {user.login}
                             </span>
                         </div>
                         {user.bio && (
-                            <p className="mt-1 text-gray-600 text-sm leading-relaxed dark:text-gray-400">
+                            <p className="mt-1 text-gray-600 text-sm leading-relaxed dark:text-zinc-400">
                                 {user.bio}
                             </p>
                         )}
-                        <div className="mt-2 flex items-center gap-3 text-gray-600 text-xs dark:text-gray-400">
+                        <div className="mt-2 flex items-center gap-3 text-gray-600 text-xs dark:text-zinc-400">
                             <span>
-                                <strong className="font-semibold text-gray-900 dark:text-gray-100">
+                                <strong className="font-semibold text-gray-900 dark:text-zinc-100">
                                     {(user.followers ?? 0).toLocaleString()}
                                 </strong>{" "}
                                 followers
                             </span>
                             <span>
-                                <strong className="font-semibold text-gray-900 dark:text-gray-100">
+                                <strong className="font-semibold text-gray-900 dark:text-zinc-100">
                                     {(user.following ?? 0).toLocaleString()}
                                 </strong>{" "}
                                 following
@@ -103,7 +103,7 @@ function ProviderProfileCard({
                         </div>
                     </div>
                 </div>
-                <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-gray-600 text-xs dark:text-gray-400">
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-gray-600 text-xs dark:text-zinc-400">
                     {user.company && (
                         <span className="inline-flex items-center gap-1.5">
                             <Building2 className="h-3.5 w-3.5 shrink-0" />
@@ -147,7 +147,7 @@ function ProviderProfileCard({
 
 function SectionHeading({ provider }: { provider: "gh" | "cb" }) {
     return (
-        <h2 className="mb-4 text-gray-900 dark:text-gray-100">
+        <h2 className="mb-4 text-gray-900 dark:text-zinc-100">
             {provider === "cb" ? "Codeberg" : "GitHub"}
         </h2>
     );
@@ -174,12 +174,12 @@ export function ProfileView({
                         src={image}
                     />
                 ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-gray-500 text-xl dark:bg-zinc-700 dark:text-gray-400">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-gray-500 text-xl dark:bg-zinc-700 dark:text-zinc-400">
                         {name.charAt(0).toUpperCase()}
                     </div>
                 )}
                 <div>
-                    <h1 className="text-gray-900 dark:text-gray-100">{name}</h1>
+                    <h1 className="text-gray-900 dark:text-zinc-100">{name}</h1>
                 </div>
             </div>
 
@@ -197,7 +197,7 @@ export function ProfileView({
                     />
                 )}
                 {!githubUsername && !codebergUsername && (
-                    <p className="text-gray-500 text-sm dark:text-gray-400">
+                    <p className="text-gray-500 text-sm dark:text-zinc-400">
                         No accounts linked yet. Use the section below to connect
                         GitHub or Codeberg.
                     </p>
@@ -205,7 +205,7 @@ export function ProfileView({
             </div>
 
             <section>
-                <h2 className="mb-4 text-gray-900 dark:text-gray-100">
+                <h2 className="mb-4 text-gray-900 dark:text-zinc-100">
                     Linked Accounts
                 </h2>
                 <AccountManager

@@ -45,7 +45,7 @@ export function IssueAutocomplete({
                 data-autocomplete="true"
                 style={style}
             >
-                <div className="px-3 py-2 text-gray-500 text-sm dark:text-gray-400">
+                <div className="px-3 py-2 text-gray-500 text-sm dark:text-zinc-400">
                     Loading...
                 </div>
             </div>
@@ -73,7 +73,7 @@ export function IssueAutocomplete({
                 data-autocomplete="true"
                 style={style}
             >
-                <div className="px-3 py-2 text-gray-500 text-sm dark:text-gray-400">
+                <div className="px-3 py-2 text-gray-500 text-sm dark:text-zinc-400">
                     No issues found
                 </div>
             </div>
@@ -92,7 +92,7 @@ export function IssueAutocomplete({
                         className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm ${
                             index === selectedIndex
                                 ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                : "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-zinc-800"
+                                : "text-gray-700 hover:bg-gray-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
                         }`}
                         key={issue.number}
                         onClick={() => onSelect(issue.number)}

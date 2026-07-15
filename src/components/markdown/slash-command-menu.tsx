@@ -246,7 +246,7 @@ export function SlashCommandMenu({
                             className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm ${
                                 type === selectedAlertType
                                     ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                    : "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-zinc-800"
+                                    : "text-gray-700 hover:bg-gray-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
                             }`}
                             key={type}
                             onClick={() => onSelectAlertType(type)}
@@ -300,7 +300,7 @@ export function SlashCommandMenu({
                                 className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm ${
                                     index === selectedIndex
                                         ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                        : "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-zinc-800"
+                                        : "text-gray-700 hover:bg-gray-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
                                 }`}
                                 key={item.id}
                                 onClick={() => onCommandSelect(item.id)}

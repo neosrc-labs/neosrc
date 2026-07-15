@@ -70,8 +70,8 @@ export function Pagination({
     const btnBase =
         "inline-flex items-center justify-center rounded-md px-3 py-1.5 font-medium text-sm transition-colors";
     const btnActive =
-        "cursor-pointer text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-zinc-800 dark:hover:text-gray-100";
-    const btnDisabled = "cursor-not-allowed text-gray-400 dark:text-gray-600";
+        "cursor-pointer text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-gray-100";
+    const btnDisabled = "cursor-not-allowed text-gray-400 dark:text-zinc-600";
     const btnCurrent =
         "cursor-default bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300";
 
@@ -98,7 +98,7 @@ export function Pagination({
                     item.type === "ellipsis" ? (
                         <span
                             key={item.key}
-                            className="px-2 text-gray-400 text-sm dark:text-gray-500"
+                            className="px-2 text-gray-400 text-sm dark:text-zinc-500"
                         >
                             ...
                         </span>

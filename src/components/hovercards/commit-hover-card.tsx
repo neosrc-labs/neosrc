@@ -30,7 +30,7 @@ function CommitHoverCardContent({
                 <CommitAuthors authors={commit.authors} size={32} />
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                        <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-700 text-xs dark:bg-zinc-800 dark:text-gray-300">
+                        <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-700 text-xs dark:bg-zinc-800 dark:text-zinc-300">
                             {shortSha}
                         </code>
                         {commit.signature && (
@@ -42,7 +42,7 @@ function CommitHoverCardContent({
                         )}
                     </div>
                     {primaryAuthor && (
-                        <p className="mt-0.5 font-medium text-gray-900 text-sm dark:text-gray-100">
+                        <p className="mt-0.5 font-medium text-gray-900 text-sm dark:text-zinc-100">
                             {primaryAuthor.user?.login ??
                                 primaryAuthor.name ??
                                 "Unknown"}
@@ -51,16 +51,16 @@ function CommitHoverCardContent({
                 </div>
             </div>
             <div className="flex flex-col gap-1.5 p-3 pt-2.5">
-                <p className="font-semibold text-gray-900 text-sm dark:text-gray-100">
+                <p className="font-semibold text-gray-900 text-sm dark:text-zinc-100">
                     <CommitSubject message={commit.message} />
                 </p>
                 {body && (
-                    <p className="whitespace-pre-wrap break-words text-gray-500 text-xs leading-relaxed dark:text-gray-400">
+                    <p className="whitespace-pre-wrap break-words text-gray-500 text-xs leading-relaxed dark:text-zinc-400">
                         {body}
                     </p>
                 )}
                 {primaryAuthor?.name && commit.committedDate && (
-                    <p className="text-gray-500 text-xs dark:text-gray-400">
+                    <p className="text-gray-500 text-xs dark:text-zinc-400">
                         {primaryAuthor.name} authored{" "}
                         {formatRelativeTime(commit.committedDate)}
                     </p>

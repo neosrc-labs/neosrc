@@ -51,12 +51,12 @@ export function IssueRow({
                 <div className="flex items-center gap-2">
                     <a
                         href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues/${issue.number}`}
-                        className="font-medium text-gray-900 hover:text-blue-600 dark:text-gray-100 dark:hover:text-blue-400"
+                        className="font-medium text-gray-900 hover:text-blue-600 dark:text-zinc-100 dark:hover:text-blue-400"
                     >
                         <CodeTitle>{issue.title}</CodeTitle>
                     </a>
                 </div>
-                <div className="mt-1 flex items-center gap-1 text-gray-600 text-sm dark:text-gray-400">
+                <div className="mt-1 flex items-center gap-1 text-gray-600 text-sm dark:text-zinc-400">
                     <span>#{issue.number} opened </span>
                     <span title={new Date(issue.created_at).toLocaleString()}>
                         {formatRelativeTime(issue.created_at)}
@@ -124,7 +124,7 @@ export function IssueRow({
                 {issue.comments_count > 0 ? (
                     <a
                         href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues/${issue.number}`}
-                        className="flex items-center gap-1 text-gray-500 text-sm hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                        className="flex items-center gap-1 text-gray-500 text-sm hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400"
                     >
                         <MessageSquare className="size-4" />
                         <span>{issue.comments_count}</span>

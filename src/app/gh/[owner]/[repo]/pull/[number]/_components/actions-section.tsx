@@ -285,15 +285,15 @@ export function ActionSection({
                         side="top"
                         sideOffset={4}
                     >
-                        <p className="mb-3 font-medium text-gray-900 text-sm dark:text-gray-100">
+                        <p className="mb-3 font-medium text-gray-900 text-sm dark:text-zinc-100">
                             Delete this pending review?
                         </p>
-                        <p className="mb-4 text-gray-600 text-xs dark:text-gray-400">
+                        <p className="mb-4 text-gray-600 text-xs dark:text-zinc-400">
                             Your pending comments will be discarded.
                         </p>
                         <div className="flex justify-end gap-2">
                             <button
-                                className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-xs ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                                className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-xs ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
                                 onClick={() => setIsCancelPopoverOpen(false)}
                                 type="button"
                             >
@@ -441,15 +441,15 @@ export function ActionSection({
                                 side="top"
                                 sideOffset={4}
                             >
-                                <p className="mb-3 font-medium text-gray-900 text-sm dark:text-gray-100">
+                                <p className="mb-3 font-medium text-gray-900 text-sm dark:text-zinc-100">
                                     Close this pull request?
                                 </p>
-                                <p className="mb-4 text-gray-600 text-xs dark:text-gray-400">
+                                <p className="mb-4 text-gray-600 text-xs dark:text-zinc-400">
                                     This can be undone by reopening it later.
                                 </p>
                                 <div className="flex justify-end gap-2">
                                     <button
-                                        className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-xs ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                                        className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-xs ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
                                         onClick={() =>
                                             setIsClosePopoverOpen(false)
                                         }
@@ -530,11 +530,11 @@ export function ActionSection({
                                             size={14}
                                             className="text-gray-700 dark:text-zinc-300"
                                         />
-                                        <span className="font-medium text-gray-900 text-sm dark:text-gray-100">
+                                        <span className="font-medium text-gray-900 text-sm dark:text-zinc-100">
                                             Revert this pull request
                                         </span>
                                     </div>
-                                    <p className="mb-3 text-gray-600 text-xs dark:text-gray-400">
+                                    <p className="mb-3 text-gray-600 text-xs dark:text-zinc-400">
                                         A new pull request will be created that
                                         reverts the changes from{" "}
                                         <span className="font-mono">
@@ -543,13 +543,13 @@ export function ActionSection({
                                         .
                                     </p>
                                     <label
-                                        className="mb-1 block font-medium text-gray-700 text-xs dark:text-gray-300"
+                                        className="mb-1 block font-medium text-gray-700 text-xs dark:text-zinc-300"
                                         htmlFor="revert-title-input"
                                     >
                                         Title
                                     </label>
                                     <input
-                                        className="mb-3 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-gray-100"
+                                        className="mb-3 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
                                         disabled={revertMutation.isPending}
                                         id="revert-title-input"
                                         onChange={(e) =>
@@ -559,7 +559,7 @@ export function ActionSection({
                                         value={revertTitle}
                                     />
                                     <label
-                                        className="mb-1 block font-medium text-gray-700 text-xs dark:text-gray-300"
+                                        className="mb-1 block font-medium text-gray-700 text-xs dark:text-zinc-300"
                                         htmlFor="revert-body-input"
                                     >
                                         Body
@@ -589,7 +589,7 @@ export function ActionSection({
                                             },
                                         ]}
                                     />
-                                    <label className="mt-2 flex items-center gap-2 text-gray-600 text-xs dark:text-gray-400">
+                                    <label className="mt-2 flex items-center gap-2 text-gray-600 text-xs dark:text-zinc-400">
                                         <input
                                             checked={revertDraft}
                                             disabled={revertMutation.isPending}
@@ -829,13 +829,13 @@ export function ActionSection({
                                                             className={
                                                                 mergeMode ===
                                                                 option.value
-                                                                    ? "font-medium text-gray-900 dark:text-gray-100"
-                                                                    : "text-gray-700 dark:text-gray-300"
+                                                                    ? "font-medium text-gray-900 dark:text-zinc-100"
+                                                                    : "text-gray-700 dark:text-zinc-300"
                                                             }
                                                         >
                                                             {option.label}
                                                         </div>
-                                                        <div className="text-gray-500 text-xs dark:text-gray-400">
+                                                        <div className="text-gray-500 text-xs dark:text-zinc-400">
                                                             {option.description}
                                                         </div>
                                                     </div>
