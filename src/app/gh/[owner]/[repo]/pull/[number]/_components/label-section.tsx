@@ -75,7 +75,7 @@ export function LabelsSection({
     return (
         <>
             <div className="flex items-start justify-between">
-                <h3 className="text-gray-900 dark:text-zinc-100">Labels</h3>
+                <h3 className="text-text-primary">Labels</h3>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
                         <Async promise={userPermission} fallback={null}>
@@ -167,7 +167,7 @@ function LabelSectionSettings({
                         )}
                     </div>
                     {l.description && (
-                        <span className="truncate text-gray-400 text-xs">
+                        <span className="truncate text-text-muted text-xs">
                             {l.description}
                         </span>
                     )}
@@ -197,11 +197,7 @@ function LabelSectionContent({
     );
 
     if (displayLabels.length === 0) {
-        return (
-            <p className="text-gray-500 text-sm dark:text-zinc-400">
-                No labels
-            </p>
-        );
+        return <p className="text-sm text-text-tertiary">No labels</p>;
     }
 
     return (

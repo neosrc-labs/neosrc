@@ -228,7 +228,7 @@ export function PullRequestDescriptionSection({
                                 <>
                                     <StatusPill state={state} />
                                     {pullRequest.locked && (
-                                        <span className="flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-gray-500 text-xs dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+                                        <span className="flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-text-tertiary text-xs dark:border-zinc-700 dark:bg-zinc-900">
                                             <Lock size={12} />
                                             Locked
                                         </span>
@@ -256,7 +256,7 @@ export function PullRequestDescriptionSection({
                                                 onChange={(e) =>
                                                     setEditTitle(e.target.value)
                                                 }
-                                                className="flex-1 border-blue-500 border-b-2 bg-transparent font-bold text-2xl text-gray-900 outline-none dark:text-zinc-100"
+                                                className="flex-1 border-blue-500 border-b-2 bg-transparent font-bold text-2xl text-text-primary outline-none"
                                                 autoFocus
                                                 onKeyDown={(e) => {
                                                     if (e.key === "Enter")
@@ -273,7 +273,7 @@ export function PullRequestDescriptionSection({
                                                 Save
                                             </button>
                                             <button
-                                                className="cursor-pointer text-gray-400 text-xs hover:text-gray-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                                                className="cursor-pointer text-text-muted text-xs hover:text-text-secondary dark:hover:text-zinc-300"
                                                 onClick={handleCancelTitle}
                                                 type="button"
                                             >
@@ -282,12 +282,12 @@ export function PullRequestDescriptionSection({
                                         </>
                                     ) : (
                                         <>
-                                            <h1 className="text-gray-900 dark:text-zinc-100">
+                                            <h1 className="text-text-primary">
                                                 <CodeTitle>
                                                     {displayTitle}
                                                 </CodeTitle>
                                             </h1>
-                                            <span className="text-2xl text-gray-400 dark:text-zinc-500">
+                                            <span className="text-2xl text-text-muted">
                                                 #{number}
                                             </span>
                                             <Async
@@ -297,7 +297,7 @@ export function PullRequestDescriptionSection({
                                                 {(canInteract) =>
                                                     canInteract ? (
                                                         <button
-                                                            className="cursor-pointer text-gray-400 hover:text-gray-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                                                            className="cursor-pointer text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
                                                             onClick={() =>
                                                                 handleStartEditTitle(
                                                                     displayTitle,
@@ -328,7 +328,7 @@ export function PullRequestDescriptionSection({
                 >
                     {(pullRequest) => (
                         <div className="mt-2 flex items-center gap-2">
-                            <div className="text-gray-600 text-sm dark:text-zinc-400">
+                            <div className="text-sm text-text-secondary">
                                 <a
                                     href={`https://github.com/${owner}/${repo}/tree/${pullRequest.base.ref}`}
                                     className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs hover:bg-gray-200 dark:bg-zinc-700 dark:hover:bg-zinc-600"
@@ -343,7 +343,7 @@ export function PullRequestDescriptionSection({
                                     {pullRequest.head.ref}
                                 </a>
                             </div>
-                            <div className="flex items-center gap-2 text-gray-600 text-sm dark:text-zinc-400">
+                            <div className="flex items-center gap-2 text-sm text-text-secondary">
                                 opened by{" "}
                                 <UserHoverCard login={pullRequest.user.login}>
                                     <NextLink
@@ -390,9 +390,7 @@ export function PullRequestDescriptionSection({
                     return (
                         <div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-900">
                             <div className="flex items-center justify-between border-gray-200 border-b px-4 py-1 dark:border-zinc-700">
-                                <h3 className="text-gray-700 dark:text-zinc-300">
-                                    Description
-                                </h3>
+                                <h3 className="text-text-label">Description</h3>
                                 <Async
                                     fallback={null}
                                     promise={canInteractPromise}
@@ -400,7 +398,7 @@ export function PullRequestDescriptionSection({
                                     {(canInteract) =>
                                         !isEditing && canInteract ? (
                                             <button
-                                                className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-gray-200"
+                                                className="cursor-pointer text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
                                                 onClick={() =>
                                                     handleStartEdit(
                                                         savedBody ??
@@ -460,7 +458,7 @@ export function PullRequestDescriptionSection({
                                                 )}
                                             </Async>
                                         ) : (
-                                            <p className="text-gray-500 italic dark:text-zinc-400">
+                                            <p className="text-text-tertiary italic">
                                                 No description provided.
                                             </p>
                                         )}

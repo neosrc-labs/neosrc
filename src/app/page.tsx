@@ -86,7 +86,7 @@ export default async function Home() {
                     {session ? (
                         <div className="flex flex-col items-center gap-4">
                             <div className="flex flex-col items-center gap-2">
-                                <span className="text-gray-500 text-sm dark:text-zinc-400">
+                                <span className="text-sm text-text-tertiary">
                                     Linked accounts
                                 </span>
                                 <AccountManager

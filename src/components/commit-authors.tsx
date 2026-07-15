@@ -36,7 +36,7 @@ function PlaceholderAvatar({
 }) {
     return (
         <div
-            className="flex shrink-0 items-center justify-center rounded-full bg-gray-200 text-gray-500 ring-2 ring-white dark:bg-zinc-700 dark:text-zinc-400 dark:ring-zinc-950"
+            className="flex shrink-0 items-center justify-center rounded-full bg-gray-200 text-text-tertiary ring-2 ring-white dark:bg-zinc-700 dark:ring-zinc-950"
             style={{ width: size, height: size }}
             title={name ?? "Co-author"}
         >
@@ -99,7 +99,7 @@ export function CommitAuthors({ authors, size = 20 }: CommitAuthorsProps) {
             })}
             {overflow > 0 && (
                 <div
-                    className="ml-[-8px] flex shrink-0 items-center justify-center rounded-full bg-gray-100 font-medium text-gray-500 text-xs ring-2 ring-white dark:bg-zinc-700 dark:text-zinc-400 dark:ring-zinc-950"
+                    className="ml-[-8px] flex shrink-0 items-center justify-center rounded-full bg-gray-100 font-medium text-text-tertiary text-xs ring-2 ring-white dark:bg-zinc-700 dark:ring-zinc-950"
                     style={{ width: size, height: size, zIndex: 0 }}
                 >
                     +{overflow}

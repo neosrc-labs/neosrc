@@ -39,15 +39,15 @@ export function TeamHoverCard({ org, teamSlug, children }: TeamHoverCardProps) {
                         />
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-baseline gap-x-2">
-                                <span className="font-semibold text-base text-gray-900 dark:text-zinc-100">
+                                <span className="font-semibold text-base text-text-primary">
                                     {team.name}
                                 </span>
-                                <span className="text-gray-500 text-sm dark:text-zinc-400">
+                                <span className="text-sm text-text-tertiary">
                                     @{org}/{team.slug}
                                 </span>
                             </div>
                             {team.description && (
-                                <p className="mt-1 text-gray-600 text-xs leading-relaxed dark:text-zinc-400">
+                                <p className="mt-1 text-text-secondary text-xs leading-relaxed">
                                     {team.description}
                                 </p>
                             )}
@@ -55,7 +55,7 @@ export function TeamHoverCard({ org, teamSlug, children }: TeamHoverCardProps) {
                     </div>
                     <div className="flex flex-col gap-1.5 p-4 pt-3">
                         {team.privacy && (
-                            <div className="flex items-center gap-2 text-gray-600 text-xs dark:text-zinc-400">
+                            <div className="flex items-center gap-2 text-text-secondary text-xs">
                                 {team.privacy === "closed" ? (
                                     <Lock className="h-3.5 w-3.5 shrink-0" />
                                 ) : (
@@ -66,20 +66,20 @@ export function TeamHoverCard({ org, teamSlug, children }: TeamHoverCardProps) {
                                 </span>
                             </div>
                         )}
-                        <div className="flex items-center gap-2 text-gray-600 text-xs dark:text-zinc-400">
+                        <div className="flex items-center gap-2 text-text-secondary text-xs">
                             <Users className="h-3.5 w-3.5 shrink-0" />
                             <span>
-                                <strong className="font-semibold text-gray-900 dark:text-zinc-100">
+                                <strong className="font-semibold text-text-primary">
                                     {team.members_count}
                                 </strong>{" "}
                                 members
                             </span>
                         </div>
                         {team.repos_count > 0 && (
-                            <div className="flex items-center gap-2 text-gray-600 text-xs dark:text-zinc-400">
+                            <div className="flex items-center gap-2 text-text-secondary text-xs">
                                 <Building2 className="h-3.5 w-3.5 shrink-0" />
                                 <span>
-                                    <strong className="font-semibold text-gray-900 dark:text-zinc-100">
+                                    <strong className="font-semibold text-text-primary">
                                         {team.repos_count}
                                     </strong>{" "}
                                     repositories

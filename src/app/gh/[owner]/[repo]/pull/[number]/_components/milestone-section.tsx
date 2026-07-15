@@ -53,7 +53,7 @@ export function MilestoneSection({
     return (
         <>
             <div className="flex items-start justify-between">
-                <h3 className="text-gray-900 dark:text-zinc-100">Milestone</h3>
+                <h3 className="text-text-primary">Milestone</h3>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
                         <Async promise={userPermission} fallback={null}>
@@ -121,11 +121,9 @@ function MilestoneSectionSettings({
             searchFn={(m, q) => m.title.toLowerCase().includes(q)}
             renderItem={(m, selected) => (
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="truncate text-gray-700 dark:text-zinc-300">
-                        {m.title}
-                    </span>
+                    <span className="truncate text-text-label">{m.title}</span>
                     {m.description && (
-                        <span className="truncate text-gray-400 text-xs">
+                        <span className="truncate text-text-muted text-xs">
                             {m.description}
                         </span>
                     )}
@@ -155,7 +153,7 @@ function MilestoneSectionSettings({
                     role="option"
                     aria-selected={currentNumber === null}
                 >
-                    <span className="flex-1 text-gray-500 italic dark:text-zinc-400">
+                    <span className="flex-1 text-text-tertiary italic">
                         No milestone
                     </span>
                     {currentNumber === null && (
@@ -179,16 +177,12 @@ function MilestoneSectionContent({
     const currentMilestone = applyOperations(milestone, operations);
 
     if (!currentMilestone) {
-        return (
-            <p className="text-gray-500 text-sm dark:text-zinc-400">
-                No milestone
-            </p>
-        );
+        return <p className="text-sm text-text-tertiary">No milestone</p>;
     }
 
     return (
         <a
-            className="text-gray-600 text-sm hover:underline dark:text-zinc-400"
+            className="text-sm text-text-secondary hover:underline"
             href={currentMilestone.html_url}
             target="_blank"
             rel="noreferrer"

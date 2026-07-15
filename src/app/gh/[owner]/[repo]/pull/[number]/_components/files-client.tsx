@@ -192,7 +192,7 @@ export function FilesSection({
     return (
         <div>
             <div className="sticky top-0 z-10 flex items-center justify-between bg-white py-4 pr-2 dark:bg-zinc-950">
-                <h2 className="text-gray-900 dark:text-zinc-100">
+                <h2 className="text-text-primary">
                     Files Changed{!isLoading && ` (${allFiles.length})`}
                 </h2>
                 <div className="flex items-center gap-3">
@@ -215,7 +215,7 @@ export function FilesSection({
                         )}
                     </Async>
                     {allFiles.length > 0 && (
-                        <div className="flex flex-col gap-0.5 text-gray-600 text-xs dark:text-zinc-400">
+                        <div className="flex flex-col gap-0.5 text-text-secondary text-xs">
                             <div className="flex items-center gap-1.5">
                                 <span>
                                     {viewedCount}/{allFiles.length} files viewed
@@ -239,7 +239,7 @@ export function FilesSection({
                         </div>
                     )}
                     <button
-                        className="flex cursor-pointer items-center gap-2 rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                        className="flex cursor-pointer items-center gap-2 rounded-md bg-white px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:hover:bg-zinc-700"
                         onClick={() => setShowComments(!showComments)}
                         title={showComments ? "Hide comments" : "Show comments"}
                         type="button"

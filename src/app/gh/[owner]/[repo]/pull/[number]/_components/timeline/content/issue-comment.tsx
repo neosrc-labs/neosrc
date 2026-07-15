@@ -80,13 +80,13 @@ export function IssueCommentContent({
         return (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-900/50">
                 <div className="flex items-center justify-between">
-                    <p className="text-gray-500 text-sm dark:text-zinc-400">
+                    <p className="text-sm text-text-tertiary">
                         A comment by{" "}
-                        <span className="font-medium text-gray-700 dark:text-zinc-300">
+                        <span className="font-medium text-text-label">
                             {event.author?.login ?? "unknown"}
                         </span>{" "}
                         was minimized as{" "}
-                        <span className="font-medium text-gray-700 dark:text-zinc-300">
+                        <span className="font-medium text-text-label">
                             {event.minimizedReason
                                 ? formatReason(event.minimizedReason)
                                 : "outdated"}
@@ -97,7 +97,7 @@ export function IssueCommentContent({
                         onClick={() =>
                             onToggleMinimized(event.databaseId, true)
                         }
-                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-gray-500 text-xs transition-colors hover:bg-gray-200 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
+                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-gray-200 hover:text-text-label dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
                     >
                         <ChevronDown size={14} />
                         Show comment
@@ -153,7 +153,7 @@ export function IssueCommentContent({
                             onClick={() =>
                                 onToggleMinimized(event.databaseId, false)
                             }
-                            className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-gray-400 text-xs transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                            className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
                         >
                             Hide comment
                         </button>
@@ -164,7 +164,7 @@ export function IssueCommentContent({
                                 <button
                                     type="button"
                                     aria-label="More options"
-                                    className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
                                 >
                                     <MoreVertical size={14} />
                                 </button>
@@ -179,7 +179,7 @@ export function IssueCommentContent({
                                         handleCopyLink();
                                         setMenuOpen(false);
                                     }}
-                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
                                 >
                                     {copied ? (
                                         <Check size={14} />
@@ -198,7 +198,7 @@ export function IssueCommentContent({
                                             );
                                             setMenuOpen(false);
                                         }}
-                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
                                     >
                                         <SquarePen size={14} />
                                         Edit

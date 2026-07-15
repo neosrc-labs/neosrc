@@ -58,8 +58,8 @@ export function IssueToolbar({
                                 onClick={() => onTabChange(tab.key)}
                                 className={`relative -mb-px cursor-pointer px-4 py-3 font-medium text-sm transition-colors ${
                                     activeTab === tab.key
-                                        ? "border-blue-500 border-b-2 text-gray-900 dark:text-zinc-100"
-                                        : "text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-gray-100"
+                                        ? "border-blue-500 border-b-2 text-text-primary"
+                                        : "text-text-secondary hover:text-text-primary dark:hover:text-zinc-100"
                                 }`}
                             >
                                 {tab.label}

@@ -379,7 +379,7 @@ function Comment({
                         <button
                             type="button"
                             aria-label="Edit comment"
-                            className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                            className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
                             onClick={onStartEdit}
                         >
                             <SquarePen size={14} />
@@ -391,7 +391,7 @@ function Comment({
                                 <button
                                     type="button"
                                     aria-label="More options"
-                                    className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
                                 >
                                     <MoreVertical size={14} />
                                 </button>
@@ -406,7 +406,7 @@ function Comment({
                                         onDelete();
                                         setMenuOpen(false);
                                     }}
-                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-red-50 hover:text-red-600 dark:text-zinc-300 dark:hover:bg-red-950 dark:hover:text-red-400"
+                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
                                 >
                                     <Trash2 size={14} />
                                     Delete comment
@@ -445,7 +445,7 @@ export function ReplyTextboxButton({ onClick }: { onClick: () => void }) {
     return (
         <button
             type="button"
-            className="flex w-full cursor-text items-center rounded-md border border-gray-200 bg-white px-3 py-1.5 text-gray-400 text-xs transition-colors duration-200 hover:border-gray-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-500 dark:hover:border-zinc-400"
+            className="flex w-full cursor-text items-center rounded-md border border-gray-200 bg-white px-3 py-1.5 text-text-muted text-xs transition-colors duration-200 hover:border-gray-400 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:border-zinc-400"
             onClick={onClick}
         >
             Reply...

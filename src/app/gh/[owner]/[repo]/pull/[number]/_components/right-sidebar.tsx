@@ -30,14 +30,14 @@ function RollupIcon({ rollup }: { rollup: CheckStatusRollup | null }) {
         return <X className="size-3.5 text-red-600" />;
     }
     if (rollup === "CANCELLED") {
-        return <CircleX className="size-3.5 text-gray-400" />;
+        return <CircleX className="size-3.5 text-text-muted" />;
     }
     if (rollup === "IN_PROGRESS" || rollup === "PENDING") {
         return (
             <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
         );
     }
-    return <Circle className="size-3.5 text-gray-400" />;
+    return <Circle className="size-3.5 text-text-muted" />;
 }
 
 export default function RightSidebar({
@@ -91,7 +91,7 @@ export default function RightSidebar({
                 className="border-gray-200 border-l bg-white px-4 py-6 dark:border-zinc-800 dark:bg-zinc-950"
                 data-testid="right-sidebar"
             >
-                <p className="text-gray-500 text-sm dark:text-zinc-400">
+                <p className="text-sm text-text-tertiary">
                     No pull request data available.
                 </p>
             </aside>
@@ -140,8 +140,8 @@ export default function RightSidebar({
                             onClick={() => setTab(key)}
                             className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 font-medium text-sm transition-colors ${
                                 tab === key
-                                    ? "bg-gray-100 text-gray-900 dark:bg-zinc-800 dark:text-zinc-100"
-                                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                                    ? "bg-gray-100 text-text-primary dark:bg-zinc-800"
+                                    : "text-text-secondary hover:bg-gray-50 hover:text-text-primary dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                             }`}
                         >
                             {icon}
@@ -175,11 +175,7 @@ interface ChecksSectionProps {
 
 function ChecksSection({ checks }: ChecksSectionProps) {
     if (!checks || checks.length === 0) {
-        return (
-            <p className="text-gray-500 text-sm dark:text-zinc-400">
-                No checks
-            </p>
-        );
+        return <p className="text-sm text-text-tertiary">No checks</p>;
     }
 
     return (
@@ -203,7 +199,7 @@ function ChecksSection({ checks }: ChecksSectionProps) {
                             ) : check.status === "in_progress" ? (
                                 <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
                             ) : (
-                                <Circle className="h-3.5 w-3.5 text-gray-400" />
+                                <Circle className="h-3.5 w-3.5 text-text-muted" />
                             )}
                             {check.creator?.avatar_url ? (
                                 <img
@@ -219,10 +215,10 @@ function ChecksSection({ checks }: ChecksSectionProps) {
                                 />
                             ) : null}
                         </span>
-                        <span className="min-w-0 truncate text-gray-700 text-sm dark:text-zinc-300">
+                        <span className="min-w-0 truncate text-sm text-text-label">
                             {check.name}
                             {check.description && (
-                                <span className="text-gray-500 dark:text-zinc-400">
+                                <span className="text-text-tertiary">
                                     {" "}
                                     - {check.description}
                                 </span>

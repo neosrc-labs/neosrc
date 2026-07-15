@@ -9,7 +9,7 @@ export function ReviewDismissedContent({
 }) {
     if (event.dismissalMessage) {
         return (
-            <p className="text-gray-600 text-sm dark:text-zinc-400">
+            <p className="text-sm text-text-secondary">
                 {event.dismissalMessage}
             </p>
         );

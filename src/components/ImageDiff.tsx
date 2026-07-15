@@ -24,7 +24,7 @@ function ImageWithFallback({
     if (error) {
         return (
             <div
-                className={`flex items-center justify-center bg-gray-100 text-gray-500 text-sm dark:bg-zinc-800 dark:text-zinc-400 ${className ?? ""}`}
+                className={`flex items-center justify-center bg-gray-100 text-sm text-text-tertiary dark:bg-zinc-800 ${className ?? ""}`}
             >
                 Failed to load image
             </div>
@@ -80,7 +80,7 @@ function TwoUpView({
                 </div>
             ) : null}
             {!oldUrl && !newUrl && (
-                <div className="px-4 py-3 text-gray-500 text-sm italic dark:text-zinc-400">
+                <div className="px-4 py-3 text-sm text-text-tertiary italic">
                     No image available
                 </div>
             )}
@@ -152,7 +152,7 @@ function SwipeView({
                     />
                 )}
                 {!oldUrl && !newUrl && (
-                    <span className="text-gray-500 text-sm">
+                    <span className="text-sm text-text-tertiary">
                         No image available
                     </span>
                 )}
@@ -207,7 +207,7 @@ function SwipeView({
                     }}
                 >
                     <div className="absolute top-1/2 left-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md">
-                        <ArrowLeftRight className="h-4 w-4 text-gray-600" />
+                        <ArrowLeftRight className="h-4 w-4 text-text-secondary" />
                     </div>
                 </div>
             </div>
@@ -242,7 +242,7 @@ function OnionSkinView({
                     />
                 )}
                 {!oldUrl && !newUrl && (
-                    <span className="text-gray-500 text-sm">
+                    <span className="text-sm text-text-tertiary">
                         No image available
                     </span>
                 )}
@@ -337,7 +337,7 @@ export default function ImageDiff({ oldUrl, newUrl }: ImageDiffProps) {
                             className={`cursor-pointer rounded px-2 py-1 font-medium text-xs transition-colors ${
                                 mode === value
                                     ? "bg-gray-200 text-gray-800 dark:bg-zinc-700 dark:text-zinc-200"
-                                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
+                                    : "text-text-tertiary hover:bg-gray-100 hover:text-text-label dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
                             }`}
                             key={value}
                             onClick={() => setMode(value)}

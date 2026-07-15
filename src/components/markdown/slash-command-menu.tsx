@@ -143,10 +143,10 @@ export function SlashCommandMenu({
         return (
             <div className={baseStyle} data-autocomplete="true" style={style}>
                 <div className="flex items-center justify-between px-3 py-2">
-                    <span className="font-medium text-gray-700 text-sm dark:text-zinc-200">
+                    <span className="font-medium text-sm text-text-label dark:text-zinc-200">
                         Insert table
                     </span>
-                    <span className="font-medium text-gray-500 text-xs tabular-nums dark:text-zinc-400">
+                    <span className="font-medium text-text-tertiary text-xs tabular-nums">
                         {gridCol} &times; {gridRow}
                     </span>
                 </div>
@@ -213,7 +213,7 @@ export function SlashCommandMenu({
                 </div>
                 <div className="flex items-center justify-between border-gray-200 border-t px-3 py-2 dark:border-zinc-700">
                     <button
-                        className="cursor-pointer text-gray-500 text-xs hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                        className="cursor-pointer text-text-tertiary text-xs hover:text-text-label dark:hover:text-zinc-200"
                         onClick={onBackToMenu}
                         type="button"
                     >
@@ -237,7 +237,7 @@ export function SlashCommandMenu({
                 }}
                 style={style}
             >
-                <div className="px-3 py-2 font-medium text-gray-700 text-sm dark:text-zinc-200">
+                <div className="px-3 py-2 font-medium text-sm text-text-label dark:text-zinc-200">
                     Choose alert type
                 </div>
                 <ul ref={listRef} className="max-h-60 overflow-y-auto py-1">
@@ -246,7 +246,7 @@ export function SlashCommandMenu({
                             className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm ${
                                 type === selectedAlertType
                                     ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                    : "text-gray-700 hover:bg-gray-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                                    : "text-text-label hover:bg-gray-50 dark:hover:bg-zinc-800"
                             }`}
                             key={type}
                             onClick={() => onSelectAlertType(type)}
@@ -258,7 +258,7 @@ export function SlashCommandMenu({
                 </ul>
                 <div className="border-gray-200 border-t px-3 py-2 dark:border-zinc-700">
                     <button
-                        className="cursor-pointer text-gray-500 text-xs hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                        className="cursor-pointer text-text-tertiary text-xs hover:text-text-label dark:hover:text-zinc-200"
                         onClick={onBackToMenu}
                         type="button"
                     >
@@ -272,10 +272,10 @@ export function SlashCommandMenu({
     return (
         <div className={baseStyle} data-autocomplete="true" style={style}>
             <div className="relative border-gray-200 border-b dark:border-zinc-700">
-                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-text-muted" />
                 <input
                     autoFocus
-                    className="w-full bg-transparent px-3 py-2.5 pl-9 text-sm outline-none placeholder:text-gray-400 dark:text-zinc-100"
+                    className="w-full bg-transparent px-3 py-2.5 pl-9 text-sm outline-none placeholder:text-text-muted dark:text-zinc-100"
                     onChange={(e) => {
                         setSearch(e.target.value);
                         setSelectedIndex(0);
@@ -288,7 +288,7 @@ export function SlashCommandMenu({
                 />
             </div>
             {filteredItems.length === 0 ? (
-                <div className="px-3 py-4 text-center text-gray-500 text-xs dark:text-zinc-500">
+                <div className="px-3 py-4 text-center text-text-tertiary text-xs">
                     No commands found
                 </div>
             ) : (
@@ -300,7 +300,7 @@ export function SlashCommandMenu({
                                 className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm ${
                                     index === selectedIndex
                                         ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                        : "text-gray-700 hover:bg-gray-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                                        : "text-text-label hover:bg-gray-50 dark:hover:bg-zinc-800"
                                 }`}
                                 key={item.id}
                                 onClick={() => onCommandSelect(item.id)}
@@ -312,7 +312,7 @@ export function SlashCommandMenu({
                                     <span className="font-medium">
                                         {item.label}
                                     </span>
-                                    <span className="text-gray-500 text-xs dark:text-zinc-500">
+                                    <span className="text-text-tertiary text-xs">
                                         {item.description}
                                     </span>
                                 </div>

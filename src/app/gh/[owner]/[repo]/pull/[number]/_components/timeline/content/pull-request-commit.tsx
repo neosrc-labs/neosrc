@@ -19,7 +19,7 @@ export function PullRequestCommitContent({
 }) {
     const commit = event.commit;
     return (
-        <div className="item-center flex justify-between text-gray-600 text-sm dark:text-zinc-400">
+        <div className="item-center flex justify-between text-sm text-text-secondary">
             <div className="item-center flex min-w-0 gap-2">
                 {commit && (
                     <CommitAuthors
@@ -43,7 +43,7 @@ export function PullRequestCommitContent({
                 )}
                 <NextLink
                     href={`/gh/${owner}/${repo}/pull/${number}/files/${commit?.oid}`}
-                    className="font-mono text-gray-600 text-xs hover:text-blue-600 hover:underline dark:text-zinc-400 dark:hover:text-blue-400"
+                    className="font-mono text-text-secondary text-xs hover:text-blue-600 hover:underline dark:hover:text-blue-400"
                 >
                     {commit?.oid.slice(0, 7)}
                 </NextLink>

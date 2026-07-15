@@ -34,20 +34,20 @@ export async function CommitHeader({
     return (
         <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
             <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-gray-900 dark:text-zinc-100">
+                <h2 className="text-text-primary">
                     <CommitSubject message={commit.commit.message} />
                 </h2>
                 <div className="flex gap-2">
                     {prevCommit ? (
                         <a
-                            className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                            className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:hover:bg-zinc-700"
                             href={`/gh/${owner}/${repo}/pull/${number}/files/${prevCommit.sha}`}
                         >
                             ← Previous
                         </a>
                     ) : (
                         <button
-                            className="cursor-not-allowed rounded-md bg-gray-100 px-3 py-1.5 font-medium text-gray-400 text-sm ring-1 ring-gray-200 dark:bg-zinc-800 dark:text-zinc-500 dark:ring-zinc-700"
+                            className="cursor-not-allowed rounded-md bg-gray-100 px-3 py-1.5 font-medium text-sm text-text-muted ring-1 ring-gray-200 dark:bg-zinc-800 dark:ring-zinc-700"
                             disabled
                             type="button"
                         >
@@ -56,14 +56,14 @@ export async function CommitHeader({
                     )}
                     {nextCommit ? (
                         <a
-                            className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-sm ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                            className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:hover:bg-zinc-700"
                             href={`/gh/${owner}/${repo}/pull/${number}/files/${nextCommit.sha}`}
                         >
                             Next →
                         </a>
                     ) : (
                         <button
-                            className="cursor-not-allowed rounded-md bg-gray-100 px-3 py-1.5 font-medium text-gray-400 text-sm ring-1 ring-gray-200 dark:bg-zinc-800 dark:text-zinc-500 dark:ring-zinc-700"
+                            className="cursor-not-allowed rounded-md bg-gray-100 px-3 py-1.5 font-medium text-sm text-text-muted ring-1 ring-gray-200 dark:bg-zinc-800 dark:ring-zinc-700"
                             disabled
                             type="button"
                         >
@@ -73,7 +73,7 @@ export async function CommitHeader({
                 </div>
             </div>
             {commit.commit.message.split("\n").length > 1 && (
-                <p className="whitespace-pre-wrap text-gray-600 text-sm dark:text-zinc-400">
+                <p className="whitespace-pre-wrap text-sm text-text-secondary">
                     {commit.commit.message
                         .split("\n")
                         .slice(1)
@@ -103,11 +103,11 @@ export async function CommitHeader({
                             rel="noopener noreferrer"
                             target="_blank"
                         >
-                            <span className="text-gray-600 text-sm hover:text-gray-900 dark:text-zinc-400 dark:hover:text-gray-200">
+                            <span className="text-sm text-text-secondary hover:text-text-primary dark:hover:text-zinc-200">
                                 {commit.author.login}
                             </span>
                         </a>
-                        <span className="text-gray-600 text-sm dark:text-zinc-400">
+                        <span className="text-sm text-text-secondary">
                             committed{" "}
                             {new Date(
                                 commit.commit.committer?.date || "",
@@ -115,14 +115,14 @@ export async function CommitHeader({
                         </span>
                     </>
                 ) : (
-                    <span className="text-gray-600 text-sm">
+                    <span className="text-sm text-text-secondary">
                         {commit.commit.author?.name} committed{" "}
                         {new Date(
                             commit.commit.committer?.date || "",
                         ).toLocaleDateString()}
                     </span>
                 )}
-                <code className="ml-2 font-mono text-gray-500 text-xs dark:text-zinc-400">
+                <code className="ml-2 font-mono text-text-tertiary text-xs">
                     {commit.sha.slice(0, 7)}
                 </code>
             </div>

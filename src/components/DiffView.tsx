@@ -752,7 +752,7 @@ function BlockRows({
                 <tr>
                     <td className="d2h-code-linenumber d2h-info" />
                     <td className="d2h-info">
-                        <div className="d2h-code-line text-gray-400 text-xs">
+                        <div className="d2h-code-line text-text-muted text-xs">
                             Loading...
                         </div>
                     </td>
@@ -811,7 +811,7 @@ function BlockRows({
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <UnfoldVertical
                                     size={14}
-                                    className="text-gray-500 dark:text-zinc-400"
+                                    className="text-text-tertiary"
                                 />
                             </div>
                         )}
@@ -1092,7 +1092,7 @@ function GapRow({
                     <div className="absolute inset-0 flex items-center justify-center">
                         <UnfoldVertical
                             size={14}
-                            className="text-gray-500 dark:text-zinc-400"
+                            className="text-text-tertiary"
                         />
                     </div>
                 </td>
@@ -1108,7 +1108,7 @@ function GapRow({
             <tr>
                 <td className="d2h-code-linenumber d2h-info" />
                 <td className="d2h-info">
-                    <div className="d2h-code-line text-gray-400 text-xs">
+                    <div className="d2h-code-line text-text-muted text-xs">
                         Loading...
                     </div>
                 </td>

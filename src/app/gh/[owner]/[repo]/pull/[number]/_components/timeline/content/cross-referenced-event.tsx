@@ -22,7 +22,7 @@ export function CrossReferencedEventContent({
     const isPR = source?.__typename === "PullRequest";
 
     return (
-        <div className="text-gray-600 text-sm dark:text-zinc-400">
+        <div className="text-sm text-text-secondary">
             <div className="flex items-center gap-2">
                 <UserLink actor={actor} />
                 <span>
@@ -41,7 +41,7 @@ export function CrossReferencedEventContent({
                         {sourceTitle}
                     </span>
                     {repoFullName && sourceNumber && (
-                        <span className="text-gray-400 text-xs dark:text-zinc-500">
+                        <span className="text-text-muted text-xs">
                             {repoFullName}#{sourceNumber}
                         </span>
                     )}

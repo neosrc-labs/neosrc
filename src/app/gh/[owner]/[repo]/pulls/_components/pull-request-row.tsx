@@ -66,7 +66,7 @@ function StatusCheckIcon({
         return <X className={cn(className, "text-red-600")} />;
     }
     if (state === "CANCELLED") {
-        return <CircleX className={cn(className, "text-gray-400")} />;
+        return <CircleX className={cn(className, "text-text-muted")} />;
     }
     if (
         state === "IN_PROGRESS" ||
@@ -78,7 +78,7 @@ function StatusCheckIcon({
             <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
         );
     }
-    return <Circle className={cn(className, "text-gray-400")} />;
+    return <Circle className={cn(className, "text-text-muted")} />;
 }
 
 function formatDuration(
@@ -143,10 +143,10 @@ function StatusContextRow({
                 className="size-3.5 shrink-0"
             />
             <div className="min-w-0 flex-1">
-                <div className="truncate font-medium text-gray-900 dark:text-zinc-100">
+                <div className="truncate font-medium text-text-primary">
                     {context.name}
                 </div>
-                <div className="flex items-center gap-1 text-gray-500 dark:text-zinc-400">
+                <div className="flex items-center gap-1 text-text-tertiary">
                     {label && <span className="capitalize">{label}</span>}
                     {duration && (
                         <>
@@ -171,7 +171,7 @@ const STATUS_CONFIG: Record<
 > = {
     draft: {
         icon: GitPullRequestDraft,
-        color: "text-gray-500 dark:text-zinc-400",
+        color: "text-text-tertiary",
     },
     open: { icon: GitPullRequest, color: "text-green-600 dark:text-green-500" },
     closed: {
@@ -218,13 +218,13 @@ export function PullRequestRow({
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                     {pr.draft && (
-                        <span className="inline-flex items-center rounded-full border border-gray-300 px-2 py-0.5 font-medium text-[10px] text-gray-600 uppercase tracking-wide dark:border-zinc-600 dark:text-zinc-400">
+                        <span className="inline-flex items-center rounded-full border border-gray-300 px-2 py-0.5 font-medium text-[10px] text-text-secondary uppercase tracking-wide dark:border-zinc-600">
                             Draft
                         </span>
                     )}
                     <Link
                         href={prHref}
-                        className="font-medium text-gray-900 hover:text-blue-600 dark:text-zinc-100 dark:hover:text-blue-400"
+                        className="font-medium text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                     >
                         <CodeTitle>{pr.title}</CodeTitle>
                     </Link>
@@ -312,7 +312,7 @@ export function PullRequestRow({
                                                         : "Some checks were not successful"}
                                                 </div>
                                                 {summary && (
-                                                    <div className="mt-0.5 text-[11px] text-gray-500 dark:text-zinc-400">
+                                                    <div className="mt-0.5 text-[11px] text-text-tertiary">
                                                         {summary}
                                                     </div>
                                                 )}
@@ -334,7 +334,7 @@ export function PullRequestRow({
                         </HoverCard>
                     )}
                 </div>
-                <div className="mt-1 flex items-center gap-1 text-gray-600 text-sm dark:text-zinc-400">
+                <div className="mt-1 flex items-center gap-1 text-sm text-text-secondary">
                     <span>#{pr.number} opened </span>
                     <span title={new Date(pr.created_at).toLocaleString()}>
                         {formatRelativeTime(pr.created_at)}
@@ -423,7 +423,7 @@ export function PullRequestRow({
                 {pr.comments_count > 0 ? (
                     <a
                         href={`${prHref}#issuecomment`}
-                        className="flex items-center gap-1 text-gray-500 text-sm hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400"
+                        className="flex items-center gap-1 text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
                     >
                         <MessageSquare className="size-4" />
                         <span>{pr.comments_count}</span>

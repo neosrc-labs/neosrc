@@ -74,7 +74,7 @@ export function IssueSearchBar({
                                     ) : (
                                         <span
                                             key={key}
-                                            className="text-gray-900 dark:text-zinc-100"
+                                            className="text-text-primary"
                                         >
                                             {seg.text}
                                         </span>
@@ -130,7 +130,7 @@ export function IssueSearchBar({
                             <button
                                 type="button"
                                 onClick={onClear}
-                                className="flex size-4 cursor-pointer items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                className="flex size-4 cursor-pointer items-center justify-center rounded-full text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
                             >
                                 <X className="size-3" />
                             </button>
@@ -139,7 +139,7 @@ export function IssueSearchBar({
                             type="button"
                             aria-label="Search"
                             onClick={onSearch}
-                            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-text-muted hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
                         >
                             <Search className="size-4" />
                         </button>
@@ -148,7 +148,7 @@ export function IssueSearchBar({
 
                 <a
                     href={`https://${host}/${owner}/${repo}/labels`}
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
                 >
                     <Tag className="size-4" />
                     Labels
@@ -156,7 +156,7 @@ export function IssueSearchBar({
 
                 <a
                     href={`https://${host}/${owner}/${repo}/milestones`}
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
                 >
                     <Milestone className="size-4" />
                     Milestones

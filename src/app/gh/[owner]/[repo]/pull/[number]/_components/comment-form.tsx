@@ -39,7 +39,7 @@ export function CommentForm({
     if (disabled) {
         return (
             <div className="mt-6 border-gray-200 border-t pt-6">
-                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-text-tertiary dark:border-zinc-700 dark:bg-zinc-900">
                     <Lock size={14} />
                     <span>
                         This pull request is locked. Only collaborators can
@@ -52,9 +52,7 @@ export function CommentForm({
 
     return (
         <div className="mt-6 border-gray-200 border-t pt-6">
-            <h3 className="mb-3 text-gray-900 dark:text-zinc-300">
-                Add a comment
-            </h3>
+            <h3 className="mb-3 text-text-primary">Add a comment</h3>
             <MarkdownEditor
                 disabled={addComment.isPending}
                 onChange={setBody}

@@ -78,7 +78,7 @@ export function AssigneeSection({
     return (
         <>
             <div className="flex items-start justify-between">
-                <h3 className="text-gray-900 dark:text-zinc-100">Assignees</h3>
+                <h3 className="text-text-primary">Assignees</h3>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
                         <Async promise={userPermission} fallback={null}>
@@ -163,7 +163,7 @@ function AssigneeSectionSettings({
                         alt=""
                         className="h-5 w-5 shrink-0 rounded-full"
                     />
-                    <span className="flex-1 truncate text-gray-700 dark:text-zinc-300">
+                    <span className="flex-1 truncate text-text-label">
                         {a.login}
                     </span>
                     {selected && (
@@ -195,11 +195,7 @@ function AssigneeSectionContent({
     const displayAssignees = applyOperations(assignees, operations);
 
     if (displayAssignees.length === 0) {
-        return (
-            <p className="text-gray-500 text-sm dark:text-zinc-400">
-                No assignees
-            </p>
-        );
+        return <p className="text-sm text-text-tertiary">No assignees</p>;
     }
 
     return (
@@ -219,14 +215,14 @@ function AssigneeSectionContent({
                                 className="h-5 w-5 rounded-full"
                                 src={assignee.avatar_url}
                             />
-                            <span className="text-gray-600 dark:text-zinc-400">
+                            <span className="text-text-secondary">
                                 {assignee.login}
                             </span>
                         </a>
                     </UserHoverCard>
                     {canEdit && (
                         <button
-                            className="ml-auto inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded text-gray-400 opacity-0 hover:text-gray-600 group-hover:opacity-100 dark:hover:text-zinc-300"
+                            className="ml-auto inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded text-text-muted opacity-0 hover:text-text-secondary group-hover:opacity-100 dark:hover:text-zinc-300"
                             onClick={() => onRemoveAssignee(assignee)}
                             type="button"
                             aria-label={`Remove ${assignee.login}`}

@@ -91,7 +91,7 @@ export function SearchableDropdown<T>({
                 <div onClick={() => setOpen(!open)}>{trigger}</div>
             ) : (
                 <button
-                    className="cursor-pointer rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300"
+                    className="cursor-pointer rounded p-0.5 text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
                     onClick={() => setOpen(!open)}
                     type="button"
                     aria-label={ariaLabel}
@@ -103,7 +103,7 @@ export function SearchableDropdown<T>({
                 <div className="absolute right-0 z-20 mt-1 w-64 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
                     <input
                         autoFocus
-                        className="w-full border-gray-200 border-b px-3 py-2 text-sm outline-none placeholder:text-gray-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                        className="w-full border-gray-200 border-b px-3 py-2 text-sm outline-none placeholder:text-text-muted dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                         onChange={(e) => {
                             setSearch(e.target.value);
                             onSearchChangeRef.current?.(e.target.value);
@@ -114,7 +114,7 @@ export function SearchableDropdown<T>({
                     <ul className="max-h-60 overflow-y-auto py-1">
                         {beforeItems}
                         {filteredItems.length === 0 ? (
-                            <li className="px-3 py-2 text-gray-400 text-xs">
+                            <li className="px-3 py-2 text-text-muted text-xs">
                                 {emptyText}
                             </li>
                         ) : (

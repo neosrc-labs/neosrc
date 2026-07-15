@@ -268,7 +268,7 @@ export function TimelineSection({
         },
         LOCKED: {
             bg: "bg-gray-50 border-gray-200 dark:bg-zinc-900/30 dark:border-zinc-700",
-            text: "text-gray-600 dark:text-zinc-400",
+            text: "text-text-secondary",
             dot: "bg-gray-400",
         },
     };
@@ -296,7 +296,7 @@ export function TimelineSection({
                         {label}
                     </span>
                 </div>
-                <div className="mt-1 flex items-center gap-1 text-gray-500 text-xs dark:text-zinc-400">
+                <div className="mt-1 flex items-center gap-1 text-text-tertiary text-xs">
                     <UserLink actor={entry.enqueuer} />
                     <span>queued this PR</span>
                     {entry.headCommit && (
@@ -361,7 +361,7 @@ export function TimelineSection({
             ))}
 
             {wrappers.length === 0 && (
-                <p className="text-gray-500 text-sm dark:text-zinc-400">
+                <p className="text-sm text-text-tertiary">
                     No timeline events yet.
                 </p>
             )}
@@ -416,7 +416,7 @@ export function TimelineSection({
 
             {isFetchingNextPage && (
                 <div className="py-4 text-center">
-                    <p className="text-gray-500 text-sm dark:text-zinc-400">
+                    <p className="text-sm text-text-tertiary">
                         Loading more...
                     </p>
                 </div>

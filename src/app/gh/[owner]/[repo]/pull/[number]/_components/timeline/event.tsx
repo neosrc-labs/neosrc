@@ -128,7 +128,7 @@ function AggregatedLabel({
             <div className="absolute -left-12 flex h-8 w-8 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700">
                 <Tag size={ICON_SIZE} />
             </div>
-            <div className="flex flex-wrap items-center gap-1.5 text-gray-600 text-sm dark:text-zinc-400">
+            <div className="flex flex-wrap items-center gap-1.5 text-sm text-text-secondary">
                 <UserLink actor={actor} />
                 {added.length > 0 && (
                     <>
@@ -179,7 +179,7 @@ const ICON_SIZE = 16;
 
 export function EventRow({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex items-center gap-1 text-gray-600 text-sm dark:text-zinc-400">
+        <div className="flex items-center gap-1 text-sm text-text-secondary">
             {children}
         </div>
     );
