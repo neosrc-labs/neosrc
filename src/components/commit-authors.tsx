@@ -36,7 +36,7 @@ function PlaceholderAvatar({
 }) {
     return (
         <div
-            className="flex shrink-0 items-center justify-center rounded-full bg-gray-200 text-text-tertiary ring-2 ring-white dark:bg-zinc-700 dark:ring-zinc-950"
+            className="flex shrink-0 items-center justify-center rounded-full bg-surface-selected text-text-tertiary ring-2 ring-white dark:ring-zinc-950"
             style={{ width: size, height: size }}
             title={name ?? "Co-author"}
         >

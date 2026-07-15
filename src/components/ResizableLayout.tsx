@@ -159,7 +159,7 @@ export function ResizableLayout({
                 {isLeftOpen && (
                     <>
                         <div
-                            className="fixed bottom-0 overflow-y-auto border-gray-200 border-r bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                            className="fixed bottom-0 overflow-y-auto border-border-subtle border-r bg-surface"
                             style={{
                                 left: 0,
                                 width: leftWidth,
@@ -169,7 +169,7 @@ export function ResizableLayout({
                             {leftSidebar}
                         </div>
                         <div
-                            className="fixed z-10 w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600 dark:bg-zinc-700"
+                            className="fixed z-10 w-1 cursor-col-resize bg-surface-selected transition-colors hover:bg-blue-500 active:bg-blue-600"
                             style={{
                                 left: leftWidth - 4,
                                 top: sidebarTop,
@@ -182,7 +182,7 @@ export function ResizableLayout({
             </div>
 
             {/* Middle Section - PR Content */}
-            <main className="min-w-0 border-gray-200 border-r bg-white dark:border-zinc-800 dark:bg-zinc-950">
+            <main className="min-w-0 border-border-subtle border-r bg-surface">
                 {children}
             </main>
 
@@ -191,7 +191,7 @@ export function ResizableLayout({
                 {isRightOpen && (
                     <>
                         <div
-                            className="fixed bottom-0 overflow-y-auto border-gray-200 border-l bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                            className="fixed bottom-0 overflow-y-auto border-border-subtle border-l bg-surface"
                             style={{
                                 right: 0,
                                 width: rightWidth,
@@ -201,7 +201,7 @@ export function ResizableLayout({
                             {rightSidebar}
                         </div>
                         <div
-                            className="fixed z-10 w-1 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 active:bg-blue-600 dark:bg-zinc-700"
+                            className="fixed z-10 w-1 cursor-col-resize bg-surface-selected transition-colors hover:bg-blue-500 active:bg-blue-600"
                             style={{
                                 right: rightWidth - 4,
                                 top: sidebarTop,

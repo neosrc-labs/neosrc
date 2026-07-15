@@ -16,21 +16,21 @@ import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
 
 function FileDiffSkeleton() {
     return (
-        <div className="mb-6 overflow-hidden rounded border border-gray-200 dark:border-zinc-700">
-            <div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900">
-                <div className="h-4 w-1/3 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+        <div className="mb-6 overflow-hidden rounded border border-border">
+            <div className="flex items-center gap-2 border-border border-b bg-surface-secondary px-4 py-3">
+                <div className="h-4 w-1/3 animate-pulse rounded bg-surface-selected" />
             </div>
-            <div className="bg-white p-5 dark:bg-zinc-950">
+            <div className="bg-surface p-5">
                 <div className="space-y-2">
-                    <div className="h-4 w-5/6 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
-                    <div className="h-4 w-2/3 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
-                    <div className="h-4 w-3/4 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
-                    <div className="h-4 w-1/2 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
-                    <div className="h-4 w-2/5 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
-                    <div className="h-4 w-4/5 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
-                    <div className="h-4 w-3/5 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
-                    <div className="h-4 w-1/3 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
-                    <div className="h-4 w-2/3 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
+                    <div className="h-4 w-5/6 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-4 w-2/3 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-4 w-3/4 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-4 w-1/2 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-4 w-2/5 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-4 w-4/5 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-4 w-3/5 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-4 w-1/3 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-4 w-2/3 animate-pulse rounded bg-surface-tertiary" />
                 </div>
             </div>
         </div>
@@ -191,7 +191,7 @@ export function FilesSection({
 
     return (
         <div>
-            <div className="sticky top-0 z-10 flex items-center justify-between bg-white py-4 pr-2 dark:bg-zinc-950">
+            <div className="sticky top-0 z-10 flex items-center justify-between bg-surface py-4 pr-2">
                 <h2 className="text-text-primary">
                     Files Changed{!isLoading && ` (${allFiles.length})`}
                 </h2>
@@ -221,7 +221,7 @@ export function FilesSection({
                                     {viewedCount}/{allFiles.length} files viewed
                                 </span>
                             </div>
-                            <div className="h-1 w-24 overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700">
+                            <div className="h-1 w-24 overflow-hidden rounded-full bg-surface-selected">
                                 <div
                                     className="h-full rounded-full bg-blue-400 transition-all"
                                     style={{
@@ -239,7 +239,7 @@ export function FilesSection({
                         </div>
                     )}
                     <button
-                        className="flex cursor-pointer items-center gap-2 rounded-md bg-white px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                        className="flex cursor-pointer items-center gap-2 rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
                         onClick={() => setShowComments(!showComments)}
                         title={showComments ? "Hide comments" : "Show comments"}
                         type="button"

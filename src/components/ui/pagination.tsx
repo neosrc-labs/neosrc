@@ -70,7 +70,7 @@ export function Pagination({
     const btnBase =
         "inline-flex items-center justify-center rounded-md px-3 py-1.5 font-medium text-sm transition-colors";
     const btnActive =
-        "cursor-pointer text-text-label hover:bg-gray-100 hover:text-text-primary dark:hover:bg-zinc-800 dark:hover:text-zinc-100";
+        "cursor-pointer text-text-label hover:bg-surface-tertiary hover:text-text-primary dark:hover:text-zinc-100";
     const btnDisabled = "cursor-not-allowed text-text-muted";
     const btnCurrent =
         "cursor-default bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300";
@@ -78,7 +78,7 @@ export function Pagination({
     return (
         <nav
             aria-label="Pagination"
-            className="flex items-center justify-center gap-2 border-gray-200 border-t px-4 py-3 dark:border-zinc-800"
+            className="flex items-center justify-center gap-2 border-border-subtle border-t px-4 py-3"
         >
             <button
                 type="button"

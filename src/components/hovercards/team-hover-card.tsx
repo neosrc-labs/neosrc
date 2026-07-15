@@ -29,9 +29,9 @@ export function TeamHoverCard({ org, teamSlug, children }: TeamHoverCardProps) {
     return (
         <HoverCard>
             <HoverCardTrigger asChild>{children}</HoverCardTrigger>
-            <HoverCardContent className="w-80 bg-white p-0 dark:bg-zinc-950">
+            <HoverCardContent className="w-80 bg-surface p-0">
                 <div>
-                    <div className="flex items-start gap-4 border-gray-200 border-b p-4 dark:border-zinc-800">
+                    <div className="flex items-start gap-4 border-border-subtle border-b p-4">
                         <img
                             alt={team.organization.login}
                             className="h-16 w-16 rounded-full"

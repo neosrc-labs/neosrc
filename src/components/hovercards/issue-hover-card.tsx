@@ -34,7 +34,7 @@ function IssueHoverCardContent({
 
     return (
         <div>
-            <div className="flex items-start gap-3 border-gray-200 border-b p-3 dark:border-zinc-800">
+            <div className="flex items-start gap-3 border-border-subtle border-b p-3">
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                         <span
@@ -43,7 +43,7 @@ function IssueHoverCardContent({
                                     ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                                     : issue.state === "closed"
                                       ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                      : "bg-gray-100 text-gray-800 dark:bg-zinc-800 dark:text-zinc-300"
+                                      : "bg-surface-tertiary text-gray-800 dark:text-zinc-300"
                             }`}
                         >
                             {issue.state === "open" ? "Open" : "Closed"}
@@ -70,7 +70,7 @@ function IssueHoverCardContent({
                 </div>
             </div>
             {truncatedBody && (
-                <div className="border-gray-200 border-b p-3 dark:border-zinc-800">
+                <div className="border-border-subtle border-b p-3">
                     <p className="line-clamp-3 whitespace-pre-wrap break-words text-text-secondary text-xs leading-relaxed">
                         {truncatedBody}
                     </p>
@@ -166,7 +166,7 @@ export function IssueHoverCard({
             }}
         >
             <HoverCardTrigger asChild>{children}</HoverCardTrigger>
-            <HoverCardContent className="w-80 bg-white p-0 dark:bg-zinc-950">
+            <HoverCardContent className="w-80 bg-surface p-0">
                 {data && (
                     <IssueHoverCardContent
                         issue={data as IssueGetResponseData}

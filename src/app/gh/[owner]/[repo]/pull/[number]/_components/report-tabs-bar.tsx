@@ -103,14 +103,14 @@ export function ReportTabsBar({
     const tabClassName = (isActive: boolean) =>
         `cursor-pointer rounded-t-md px-3 py-1.5 font-medium text-sm transition-colors whitespace-nowrap ${
             isActive
-                ? "border-gray-200 border-x border-t bg-white text-text-primary dark:border-zinc-700 dark:bg-zinc-900"
+                ? "border-border border-x border-t bg-surface-elevated text-text-primary"
                 : "text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
         }`;
 
     return (
         <div
             ref={containerRef}
-            className="flex gap-1 overflow-hidden border-gray-200 border-b dark:border-zinc-700"
+            className="flex gap-1 overflow-hidden border-border border-b"
         >
             {visibleTabs.map((tab) => (
                 <button
@@ -132,7 +132,7 @@ export function ReportTabsBar({
                             type="button"
                             className={`cursor-pointer whitespace-nowrap rounded-t-md px-3 py-1.5 font-medium text-sm transition-colors ${
                                 activeOverflowed
-                                    ? "border-gray-200 border-x border-t bg-white text-text-primary dark:border-zinc-700 dark:bg-zinc-900"
+                                    ? "border-border border-x border-t bg-surface-elevated text-text-primary"
                                     : "text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
                             }`}
                         >
@@ -148,7 +148,7 @@ export function ReportTabsBar({
                     <PopoverContent
                         align="start"
                         sideOffset={8}
-                        className="w-52 space-y-0.5 bg-white p-1 dark:bg-zinc-900"
+                        className="w-52 space-y-0.5 bg-surface-elevated p-1"
                     >
                         {overflowTabs.map((tab) => (
                             <button
@@ -160,8 +160,8 @@ export function ReportTabsBar({
                                 }}
                                 className={`block w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
                                     activeTab === tab.key
-                                        ? "bg-gray-100 text-text-primary dark:bg-zinc-800"
-                                        : "text-text-label hover:bg-gray-50 dark:hover:bg-zinc-800"
+                                        ? "bg-surface-tertiary text-text-primary"
+                                        : "text-text-label hover:bg-surface-tertiary"
                                 }`}
                             >
                                 {tab.title}

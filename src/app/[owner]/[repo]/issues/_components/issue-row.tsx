@@ -39,7 +39,7 @@ export function IssueRow({
     onLabelFilter?: (name: string) => void;
 }) {
     return (
-        <div className="flex items-start gap-3 border-gray-200 border-b px-4 py-3 transition-colors hover:bg-gray-50 dark:border-zinc-800 dark:hover:bg-zinc-900/50">
+        <div className="flex items-start gap-3 border-border-subtle border-b px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-zinc-900/50">
             <div className="mt-0.5 shrink-0">
                 {issue.state === "open" ? (
                     <CircleCheck className="size-4 text-green-600 dark:text-green-500" />

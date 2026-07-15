@@ -85,7 +85,7 @@ export function AccountManager({
                 {providers.map((provider) => (
                     <div
                         key={provider.providerId}
-                        className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 px-4 py-3 dark:border-zinc-800"
+                        className="flex flex-col items-center gap-2 rounded-lg border border-border-subtle px-4 py-3"
                     >
                         <span className="font-medium text-sm text-text-label">
                             {provider.label}
@@ -121,7 +121,7 @@ export function AccountManager({
                                 type="button"
                                 disabled={loading === provider.providerId}
                                 onClick={() => handleLink(provider.providerId)}
-                                className="cursor-pointer rounded-md border border-gray-300 px-3 py-1 text-text-label text-xs transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                                className="cursor-pointer rounded-md border border-gray-300 px-3 py-1 text-text-label text-xs transition-colors hover:bg-surface-tertiary disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700"
                             >
                                 {loading === provider.providerId
                                     ? "Linking..."

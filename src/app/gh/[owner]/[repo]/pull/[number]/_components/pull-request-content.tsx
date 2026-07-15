@@ -67,7 +67,7 @@ export function PullRequestContent({
             {activeTab === TIMELINE_TAB ? (
                 timeline
             ) : activeReport ? (
-                <div className="relative rounded-b-lg border-gray-200 border-x border-b bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                <div className="relative rounded-b-lg border-border border-x border-b bg-surface-elevated p-4">
                     <div className="absolute top-3 right-4 flex items-center gap-2">
                         {isManuallyOutdated && (
                             <HoverCard>
@@ -76,7 +76,7 @@ export function PullRequestContent({
                                         Outdated
                                     </span>
                                 </HoverCardTrigger>
-                                <HoverCardContent className="w-72 space-y-2 bg-white text-text-primary dark:bg-zinc-900">
+                                <HoverCardContent className="w-72 space-y-2 bg-surface-elevated text-text-primary">
                                     <p className="text-text-secondary text-xs">
                                         This report was manually marked as
                                         outdated
@@ -98,7 +98,7 @@ export function PullRequestContent({
                                                     Outdated
                                                 </span>
                                             </HoverCardTrigger>
-                                            <HoverCardContent className="w-72 space-y-2 bg-white text-text-primary dark:bg-zinc-900">
+                                            <HoverCardContent className="w-72 space-y-2 bg-surface-elevated text-text-primary">
                                                 <div>
                                                     <div className="mb-1 font-medium text-text-tertiary text-xs uppercase tracking-wide">
                                                         Report commit

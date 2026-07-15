@@ -69,7 +69,7 @@ export function ReactionBar({
                                 className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 font-medium text-xs transition-colors ${
                                     isActive
                                         ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
-                                        : "border-gray-200 bg-gray-100 text-text-secondary hover:bg-gray-200 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                                        : "border-border bg-surface-tertiary text-text-secondary hover:bg-surface-selected"
                                 }`}
                             >
                                 <span>

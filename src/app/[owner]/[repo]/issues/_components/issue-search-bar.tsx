@@ -50,7 +50,7 @@ export function IssueSearchBar({
     const host = provider === "cb" ? "codeberg.org" : "github.com";
 
     return (
-        <div className="border-gray-200 border-b dark:border-zinc-800">
+        <div className="border-border-subtle border-b">
             <div className="flex items-center gap-1 px-4 py-2">
                 <div
                     ref={searchBarRef}
@@ -139,7 +139,7 @@ export function IssueSearchBar({
                             type="button"
                             aria-label="Search"
                             onClick={onSearch}
-                            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-text-muted hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-text-muted hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
                         >
                             <Search className="size-4" />
                         </button>
@@ -148,7 +148,7 @@ export function IssueSearchBar({
 
                 <a
                     href={`https://${host}/${owner}/${repo}/labels`}
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
                 >
                     <Tag className="size-4" />
                     Labels
@@ -156,7 +156,7 @@ export function IssueSearchBar({
 
                 <a
                     href={`https://${host}/${owner}/${repo}/milestones`}
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
                 >
                     <Milestone className="size-4" />
                     Milestones

@@ -39,7 +39,7 @@ export function CommentForm({
     if (disabled) {
         return (
             <div className="mt-6 border-gray-200 border-t pt-6">
-                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-text-tertiary dark:border-zinc-700 dark:bg-zinc-900">
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-secondary px-4 py-3 text-sm text-text-tertiary">
                     <Lock size={14} />
                     <span>
                         This pull request is locked. Only collaborators can

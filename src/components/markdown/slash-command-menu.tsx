@@ -114,7 +114,7 @@ export function SlashCommandMenu({
     }, [selectedIndex]);
 
     const baseStyle =
-        "absolute z-50 w-72 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900";
+        "absolute z-50 w-72 rounded-lg border border-border bg-surface-elevated shadow-lg";
 
     function handleMenuKeyDown(e: React.KeyboardEvent) {
         if (e.key === "ArrowDown") {
@@ -193,7 +193,7 @@ export function SlashCommandMenu({
                                         className={`h-4 w-4 rounded-sm border transition-colors ${
                                             active
                                                 ? "border-blue-500 bg-blue-500/20 dark:border-blue-400 dark:bg-blue-400/20"
-                                                : "border-gray-300 bg-white hover:border-gray-400 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:border-zinc-500"
+                                                : "border-gray-300 bg-surface-elevated hover:border-gray-400 dark:border-zinc-600 dark:hover:border-zinc-500"
                                         }`}
                                         // biome-ignore lint/suspicious/noArrayIndexKey: grid is static
                                         key={`${r}-${c}`}
@@ -211,7 +211,7 @@ export function SlashCommandMenu({
                         )}
                     </div>
                 </div>
-                <div className="flex items-center justify-between border-gray-200 border-t px-3 py-2 dark:border-zinc-700">
+                <div className="flex items-center justify-between border-border border-t px-3 py-2">
                     <button
                         className="cursor-pointer text-text-tertiary text-xs hover:text-text-label dark:hover:text-zinc-200"
                         onClick={onBackToMenu}
@@ -246,7 +246,7 @@ export function SlashCommandMenu({
                             className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm ${
                                 type === selectedAlertType
                                     ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                    : "text-text-label hover:bg-gray-50 dark:hover:bg-zinc-800"
+                                    : "text-text-label hover:bg-surface-tertiary"
                             }`}
                             key={type}
                             onClick={() => onSelectAlertType(type)}
@@ -256,7 +256,7 @@ export function SlashCommandMenu({
                         </li>
                     ))}
                 </ul>
-                <div className="border-gray-200 border-t px-3 py-2 dark:border-zinc-700">
+                <div className="border-border border-t px-3 py-2">
                     <button
                         className="cursor-pointer text-text-tertiary text-xs hover:text-text-label dark:hover:text-zinc-200"
                         onClick={onBackToMenu}
@@ -271,7 +271,7 @@ export function SlashCommandMenu({
 
     return (
         <div className={baseStyle} data-autocomplete="true" style={style}>
-            <div className="relative border-gray-200 border-b dark:border-zinc-700">
+            <div className="relative border-border border-b">
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-text-muted" />
                 <input
                     autoFocus
@@ -300,7 +300,7 @@ export function SlashCommandMenu({
                                 className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm ${
                                     index === selectedIndex
                                         ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                        : "text-text-label hover:bg-gray-50 dark:hover:bg-zinc-800"
+                                        : "text-text-label hover:bg-surface-tertiary"
                                 }`}
                                 key={item.id}
                                 onClick={() => onCommandSelect(item.id)}

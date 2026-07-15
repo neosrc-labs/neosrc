@@ -73,7 +73,7 @@ export function MetadataSection({
 export function FieldSkeleton() {
     return (
         <section>
-            <div className="mb-3 h-5 w-24 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+            <div className="mb-3 h-5 w-24 animate-pulse rounded bg-surface-selected" />
         </section>
     );
 }

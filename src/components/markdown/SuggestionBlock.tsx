@@ -188,8 +188,8 @@ export function SuggestionBlock({
     const patch = patchData?.patch;
 
     return (
-        <div className="my-2 max-w-3xl overflow-hidden rounded-lg border border-gray-200 dark:border-zinc-700">
-            <div className="flex items-center justify-between border-gray-200 border-b bg-gray-50 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="my-2 max-w-3xl overflow-hidden rounded-lg border border-border">
+            <div className="flex items-center justify-between border-border border-b bg-surface-secondary px-2 py-1">
                 <span className="flex items-center gap-1.5 font-medium text-text-secondary text-xs">
                     <Code2 size={14} />
                     Suggested changes
@@ -201,8 +201,8 @@ export function SuggestionBlock({
                         disabled={isPending || applied}
                         className={`flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 font-medium text-xs transition-colors ${
                             applied
-                                ? "border-gray-300 bg-gray-200 text-text-tertiary dark:border-zinc-600 dark:bg-zinc-700"
-                                : "border-gray-300 bg-white text-text-label hover:bg-gray-100 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                                ? "border-gray-300 bg-surface-selected text-text-tertiary dark:border-zinc-600"
+                                : "border-gray-300 bg-white text-text-label hover:bg-surface-tertiary dark:border-zinc-600 dark:hover:bg-zinc-700"
                         }`}
                     >
                         {applied ? (

@@ -41,7 +41,7 @@ export function ApiKeysView() {
                     {[1, 2, 3].map((i) => (
                         <div
                             key={i}
-                            className="h-16 animate-pulse rounded-lg bg-gray-100 dark:bg-zinc-800"
+                            className="h-16 animate-pulse rounded-lg bg-surface-tertiary"
                         />
                     ))}
                 </div>

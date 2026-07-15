@@ -48,7 +48,7 @@ export function PullRequestToolbar({
     onRemoveQualifier: (key: string, value: string) => void;
 }) {
     return (
-        <div className="border-gray-200 border-b dark:border-zinc-800">
+        <div className="border-border-subtle border-b">
             <div className="flex items-center justify-between px-4">
                 <div className="flex items-center">
                     {TABS.map((tab) => {
@@ -73,7 +73,7 @@ export function PullRequestToolbar({
                                 {count !== undefined && (
                                     <span
                                         aria-hidden="true"
-                                        className="ml-1.5 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs tabular-nums dark:bg-zinc-700"
+                                        className="ml-1.5 rounded-full bg-surface-selected px-1.5 py-0.5 text-xs tabular-nums"
                                     >
                                         {count.toLocaleString()}
                                     </span>
@@ -260,7 +260,7 @@ function StatusFilterDropdown({
             trigger={
                 <button
                     type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
                 >
                     <CircleCheck className="size-4" />
                     Checks
@@ -319,7 +319,7 @@ function ReviewFilterDropdown({
             trigger={
                 <button
                     type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
                 >
                     <Eye className="size-4" />
                     Review

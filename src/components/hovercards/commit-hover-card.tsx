@@ -26,11 +26,11 @@ function CommitHoverCardContent({
     const primaryAuthor = commit.authors[0];
     return (
         <div>
-            <div className="flex items-start gap-3 border-gray-200 border-b p-3 dark:border-zinc-800">
+            <div className="flex items-start gap-3 border-border-subtle border-b p-3">
                 <CommitAuthors authors={commit.authors} size={32} />
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                        <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-text-label text-xs dark:bg-zinc-800">
+                        <code className="rounded bg-surface-tertiary px-1.5 py-0.5 font-mono text-text-label text-xs">
                             {shortSha}
                         </code>
                         {commit.signature && (
@@ -113,7 +113,7 @@ export function MarkdownCommitHoverCard({
             }}
         >
             <HoverCardTrigger asChild>{children}</HoverCardTrigger>
-            <HoverCardContent className="w-80 bg-white p-0 dark:bg-zinc-950">
+            <HoverCardContent className="w-80 bg-surface p-0">
                 {data && (
                     <CommitHoverCardContent
                         commit={data.commit}

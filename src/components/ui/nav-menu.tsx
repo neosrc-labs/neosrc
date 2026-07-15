@@ -8,7 +8,7 @@ export function NavMenu({ className, children }: NavMenuProps) {
     return (
         <nav
             className={cn(
-                "sticky top-0 z-10 space-y-1 bg-white pr-4 pb-4 dark:bg-zinc-950",
+                "sticky top-0 z-10 space-y-1 bg-surface pr-4 pb-4",
                 className,
             )}
         >
@@ -29,8 +29,8 @@ export function NavItem({ href, label, isActive, count }: NavItemProps) {
         <Link
             className={`block rounded-md px-3 py-2 font-medium text-sm transition-colors ${
                 isActive
-                    ? "bg-gray-100 text-text-primary dark:bg-zinc-800"
-                    : "text-text-secondary hover:bg-gray-50 hover:text-text-primary dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                    ? "bg-surface-tertiary text-text-primary"
+                    : "text-text-secondary hover:bg-surface-tertiary hover:text-text-primary dark:hover:text-zinc-100"
             }`}
             href={href}
         >

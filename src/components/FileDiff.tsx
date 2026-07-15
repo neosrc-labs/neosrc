@@ -328,10 +328,10 @@ export default function FileDiff({
                 : "text-yellow-600";
 
     return (
-        <div className="rounded border border-gray-200 dark:border-zinc-700">
+        <div className="rounded border border-border">
             <div
                 ref={headerRef}
-                className="sticky top-[56px] z-[1] flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                className="sticky top-[56px] z-[1] flex items-center gap-2 border-border border-b bg-surface-secondary px-4 py-2"
             >
                 <button
                     className="cursor-pointer text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
@@ -440,7 +440,7 @@ export default function FileDiff({
             </div>
 
             {activeComment?.type === "file" && (
-                <div className="border-gray-200 border-b p-2 dark:border-zinc-700">
+                <div className="border-border border-b p-2">
                     <MarkdownEditor
                         autoFocus
                         disabled={
@@ -484,7 +484,7 @@ export default function FileDiff({
             <div className="overflow-hidden rounded-b">
                 {!isCollapsed &&
                     (performanceHidden && !showPerformanceDiff ? (
-                        <div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-sm text-text-tertiary dark:border-zinc-700">
+                        <div className="flex flex-col items-center gap-2 border-border border-t px-4 py-6 text-sm text-text-tertiary">
                             <span>
                                 {file.status === "removed"
                                     ? "This file was deleted."
@@ -501,7 +501,7 @@ export default function FileDiff({
                             </button>
                         </div>
                     ) : generated && !showGeneratedDiff ? (
-                        <div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-sm text-text-tertiary dark:border-zinc-700">
+                        <div className="flex flex-col items-center gap-2 border-border border-t px-4 py-6 text-sm text-text-tertiary">
                             <span>
                                 This file is generated and hidden by default.
                             </span>

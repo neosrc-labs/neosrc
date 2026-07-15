@@ -41,7 +41,7 @@ export function IssueAutocomplete({
     if (loading) {
         return (
             <div
-                className="absolute z-50 w-96 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+                className="absolute z-50 w-96 rounded-lg border border-border bg-surface-elevated shadow-lg"
                 data-autocomplete="true"
                 style={style}
             >
@@ -55,7 +55,7 @@ export function IssueAutocomplete({
     if (error) {
         return (
             <div
-                className="absolute z-50 w-96 rounded-lg border border-red-200 bg-white shadow-lg dark:border-red-800 dark:bg-zinc-900"
+                className="absolute z-50 w-96 rounded-lg border border-red-200 bg-surface-elevated shadow-lg dark:border-red-800"
                 data-autocomplete="true"
                 style={style}
             >
@@ -69,7 +69,7 @@ export function IssueAutocomplete({
     if (issues.length === 0) {
         return (
             <div
-                className="absolute z-50 w-96 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+                className="absolute z-50 w-96 rounded-lg border border-border bg-surface-elevated shadow-lg"
                 data-autocomplete="true"
                 style={style}
             >
@@ -82,7 +82,7 @@ export function IssueAutocomplete({
 
     return (
         <div
-            className="absolute z-50 w-96 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+            className="absolute z-50 w-96 rounded-lg border border-border bg-surface-elevated shadow-lg"
             data-autocomplete="true"
             style={style}
         >
@@ -92,7 +92,7 @@ export function IssueAutocomplete({
                         className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm ${
                             index === selectedIndex
                                 ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                : "text-text-label hover:bg-gray-50 dark:hover:bg-zinc-800"
+                                : "text-text-label hover:bg-surface-tertiary"
                         }`}
                         key={issue.number}
                         onClick={() => onSelect(issue.number)}

@@ -281,7 +281,7 @@ export function ActionSection({
                     </PopoverTrigger>
                     <PopoverContent
                         align="end"
-                        className="w-64 bg-white p-4 dark:bg-zinc-950"
+                        className="w-64 bg-surface p-4"
                         side="top"
                         sideOffset={4}
                     >
@@ -293,7 +293,7 @@ export function ActionSection({
                         </p>
                         <div className="flex justify-end gap-2">
                             <button
-                                className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-text-label text-xs ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                                className="cursor-pointer rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-text-label text-xs ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
                                 onClick={() => setIsCancelPopoverOpen(false)}
                                 type="button"
                             >
@@ -401,7 +401,7 @@ export function ActionSection({
                         !convertedToDraft &&
                         pullRequest.state === "open" && (
                             <button
-                                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-tertiary dark:border-zinc-600"
                                 disabled={markAsDraftMutation.isPending}
                                 onClick={() => handleMarkAsDraft()}
                                 type="button"
@@ -422,7 +422,7 @@ export function ActionSection({
                             <PopoverTrigger asChild>
                                 <button
                                     suppressHydrationWarning
-                                    className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                                    className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-tertiary dark:border-zinc-600"
                                     disabled={closeMutation.isPending}
                                     type="button"
                                 >
@@ -437,7 +437,7 @@ export function ActionSection({
                             </PopoverTrigger>
                             <PopoverContent
                                 align="end"
-                                className="w-64 bg-white p-4 dark:bg-zinc-950"
+                                className="w-64 bg-surface p-4"
                                 side="top"
                                 sideOffset={4}
                             >
@@ -449,7 +449,7 @@ export function ActionSection({
                                 </p>
                                 <div className="flex justify-end gap-2">
                                     <button
-                                        className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-text-label text-xs ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                                        className="cursor-pointer rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-text-label text-xs ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
                                         onClick={() =>
                                             setIsClosePopoverOpen(false)
                                         }
@@ -506,7 +506,7 @@ export function ActionSection({
                                 <PopoverTrigger asChild>
                                     <button
                                         suppressHydrationWarning
-                                        className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                                        className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-surface-tertiary dark:border-zinc-600"
                                         disabled={revertMutation.isPending}
                                         onClick={() =>
                                             openRevertDialog(pullRequest)
@@ -521,7 +521,7 @@ export function ActionSection({
                                 </PopoverTrigger>
                                 <PopoverContent
                                     align="end"
-                                    className="w-[42rem] bg-white p-4 dark:bg-zinc-950"
+                                    className="w-[42rem] bg-surface p-4"
                                     side="top"
                                     sideOffset={8}
                                 >
@@ -549,7 +549,7 @@ export function ActionSection({
                                         Title
                                     </label>
                                     <input
-                                        className="mb-3 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-900"
+                                        className="mb-3 w-full rounded-md border border-gray-300 bg-surface-elevated px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-zinc-600"
                                         disabled={revertMutation.isPending}
                                         id="revert-title-input"
                                         onChange={(e) =>
@@ -640,7 +640,7 @@ export function ActionSection({
                                 </PopoverTrigger>
                                 <PopoverContent
                                     align="end"
-                                    className="w-[42rem] bg-white p-4 dark:bg-zinc-950"
+                                    className="w-[42rem] bg-surface p-4"
                                     side="top"
                                     sideOffset={8}
                                 >
@@ -705,14 +705,14 @@ export function ActionSection({
                                     : "Mark as ready for review"}
                             </button>
                         ) : pullRequest.mergeable_state === "dirty" ? (
-                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
+                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
                                 <GitMerge size={14} className="text-red-500" />
                                 <span className="font-medium text-sm text-text-secondary">
                                     Conflicts
                                 </span>
                             </div>
                         ) : isMergeBlocked ? (
-                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
+                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
                                 <GitMerge
                                     size={14}
                                     className="text-text-muted"
@@ -722,7 +722,7 @@ export function ActionSection({
                                 </span>
                             </div>
                         ) : isMergeStateUnknown ? (
-                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
+                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
                                 <GitMerge
                                     size={14}
                                     className="text-text-muted"
@@ -732,7 +732,7 @@ export function ActionSection({
                                 </span>
                             </div>
                         ) : !canMerge ? (
-                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
+                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
                                 <GitMerge
                                     size={14}
                                     className="text-text-muted"
@@ -775,7 +775,7 @@ export function ActionSection({
                                     </PopoverTrigger>
                                     <PopoverContent
                                         align="end"
-                                        className="w-72 bg-white p-2 dark:bg-zinc-950"
+                                        className="w-72 bg-surface p-2"
                                         side="left"
                                         sideOffset={8}
                                     >
@@ -807,8 +807,8 @@ export function ActionSection({
                                                     className={`flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
                                                         mergeMode ===
                                                         option.value
-                                                            ? "bg-gray-100 dark:bg-zinc-800"
-                                                            : "hover:bg-gray-50 dark:hover:bg-zinc-900"
+                                                            ? "bg-surface-tertiary"
+                                                            : "hover:bg-surface-secondary"
                                                     }`}
                                                     onClick={() => {
                                                         setMergeMode(
@@ -882,7 +882,7 @@ export function ActionSection({
     };
 
     return (
-        <div className="sticky bottom-0 z-10 space-y-2 border-gray-200 border-t bg-white pt-6 pr-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="sticky bottom-0 z-10 space-y-2 border-border-subtle border-t bg-surface pt-6 pr-4">
             {pullRequestPromise ? (
                 <Async fallback={skeleton} promise={pullRequestPromise}>
                     {(pullRequest) => (

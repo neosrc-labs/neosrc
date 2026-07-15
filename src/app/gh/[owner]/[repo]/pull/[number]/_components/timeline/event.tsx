@@ -125,7 +125,7 @@ function AggregatedLabel({
 
     return (
         <div className="relative mb-8 ml-14">
-            <div className="absolute -left-12 flex h-8 w-8 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700">
+            <div className="absolute -left-12 flex h-8 w-8 items-center justify-center rounded-full bg-surface ring-1 ring-border">
                 <Tag size={ICON_SIZE} />
             </div>
             <div className="flex flex-wrap items-center gap-1.5 text-sm text-text-secondary">
@@ -190,7 +190,7 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
         return (
             <UserHoverCard login={event.author.login} provider="gh">
                 <a
-                    className="absolute -left-[52px] h-10 w-10 overflow-hidden rounded-full ring-1 ring-gray-200 dark:ring-zinc-700"
+                    className="absolute -left-[52px] h-10 w-10 overflow-hidden rounded-full ring-1 ring-border"
                     href={event.author.url}
                 >
                     <img
@@ -261,7 +261,7 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
           ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-red-500"
           : isMerged
             ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-purple-500"
-            : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-white ring-1 ring-gray-200 dark:bg-zinc-950 dark:ring-zinc-700";
+            : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-surface ring-1 ring-border";
 
     let icon = iconMap[typename] ?? <Circle size={ICON_SIZE} />;
 

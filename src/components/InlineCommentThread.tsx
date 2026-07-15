@@ -215,7 +215,10 @@ export function InlineCommentThread({
             />
 
             {replies.map((comment) => (
-                <div className="bg-gray-50 dark:bg-zinc-950" key={comment.id}>
+                <div
+                    className="bg-surface-secondary dark:bg-zinc-950"
+                    key={comment.id}
+                >
                     <Comment
                         comment={comment}
                         isPending={
@@ -254,7 +257,7 @@ export function InlineCommentThread({
             ))}
             {canInteract ? (
                 showReplyForm ? (
-                    <div className="bg-gray-50 p-2 dark:bg-zinc-950">
+                    <div className="p-2">
                         <MarkdownEditor
                             autoFocus
                             disabled={replyMutation.isPending}
@@ -283,7 +286,7 @@ export function InlineCommentThread({
                         )}
                     </div>
                 ) : (
-                    <div className="flex w-full items-center gap-2 bg-gray-50 px-6 py-2 dark:bg-zinc-950">
+                    <div className="flex w-full items-center gap-2 px-6 py-2">
                         <div className="min-w-0 flex-1">
                             <ReplyTextboxButton
                                 onClick={() => setShowReplyForm(true)}
@@ -379,7 +382,7 @@ function Comment({
                         <button
                             type="button"
                             aria-label="Edit comment"
-                            className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                            className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
                             onClick={onStartEdit}
                         >
                             <SquarePen size={14} />
@@ -391,13 +394,13 @@ function Comment({
                                 <button
                                     type="button"
                                     aria-label="More options"
-                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
                                 >
                                     <MoreVertical size={14} />
                                 </button>
                             </PopoverTrigger>
                             <PopoverContent
-                                className="w-44 bg-white p-1 dark:bg-zinc-950"
+                                className="w-44 bg-surface p-1"
                                 align="end"
                             >
                                 <button
@@ -445,7 +448,7 @@ export function ReplyTextboxButton({ onClick }: { onClick: () => void }) {
     return (
         <button
             type="button"
-            className="flex w-full cursor-text items-center rounded-md border border-gray-200 bg-white px-3 py-1.5 text-text-muted text-xs transition-colors duration-200 hover:border-gray-400 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:border-zinc-400"
+            className="flex w-full cursor-text items-center rounded-md border border-gray-200 bg-surface-elevated px-3 py-1.5 text-text-muted text-xs transition-colors duration-200 hover:border-gray-400 dark:border-zinc-600 dark:hover:border-zinc-400"
             onClick={onClick}
         >
             Reply...

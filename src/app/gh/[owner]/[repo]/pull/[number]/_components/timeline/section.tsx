@@ -27,23 +27,23 @@ export function TimelineSkeleton() {
     ];
     return (
         <div className="relative">
-            <div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200 dark:bg-zinc-700" />
+            <div className="absolute top-0 bottom-0 left-6 w-px bg-surface-selected" />
             <div className="space-y-6 pl-14">
                 {items.map((item) => (
                     <div key={item.key}>
                         <div className="flex items-center gap-2">
                             <div
-                                className="h-2.5 animate-pulse rounded bg-gray-200 dark:bg-zinc-700"
+                                className="h-2.5 animate-pulse rounded bg-surface-selected"
                                 style={{ width: "40px" }}
                             />
                             <div
-                                className={`h-4 animate-pulse rounded bg-gray-200 dark:bg-zinc-700 ${item.text}`}
+                                className={`h-4 animate-pulse rounded bg-surface-selected ${item.text}`}
                             />
                         </div>
                         {item.body && (
                             <div className="mt-2 space-y-1.5">
-                                <div className="h-3.5 w-full animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
-                                <div className="h-3.5 w-3/4 animate-pulse rounded bg-gray-100 dark:bg-zinc-800" />
+                                <div className="h-3.5 w-full animate-pulse rounded bg-surface-tertiary" />
+                                <div className="h-3.5 w-3/4 animate-pulse rounded bg-surface-tertiary" />
                             </div>
                         )}
                     </div>
@@ -267,7 +267,7 @@ export function TimelineSection({
             dot: "bg-red-500",
         },
         LOCKED: {
-            bg: "bg-gray-50 border-gray-200 dark:bg-zinc-900/30 dark:border-zinc-700",
+            bg: "bg-surface-secondary border-border /30",
             text: "text-text-secondary",
             dot: "bg-gray-400",
         },
@@ -367,7 +367,7 @@ export function TimelineSection({
             )}
 
             <div className="relative">
-                <div className="absolute top-0 bottom-0 left-6 w-px bg-gray-200 dark:bg-zinc-700" />
+                <div className="absolute top-0 bottom-0 left-6 w-px bg-surface-selected" />
 
                 {wrappers.map((wrapper) => {
                     const key =
