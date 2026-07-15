@@ -76,8 +76,8 @@ export function PullRequestContent({
                                         Outdated
                                     </span>
                                 </HoverCardTrigger>
-                                <HoverCardContent className="w-72 space-y-2 bg-white text-gray-900 dark:bg-zinc-900 dark:text-zinc-100">
-                                    <p className="text-gray-600 text-xs dark:text-zinc-400">
+                                <HoverCardContent className="w-72 space-y-2 bg-white text-text-primary dark:bg-zinc-900">
+                                    <p className="text-text-secondary text-xs">
                                         This report was manually marked as
                                         outdated
                                     </p>
@@ -98,15 +98,15 @@ export function PullRequestContent({
                                                     Outdated
                                                 </span>
                                             </HoverCardTrigger>
-                                            <HoverCardContent className="w-72 space-y-2 bg-white text-gray-900 dark:bg-zinc-900 dark:text-zinc-100">
+                                            <HoverCardContent className="w-72 space-y-2 bg-white text-text-primary dark:bg-zinc-900">
                                                 <div>
-                                                    <div className="mb-1 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                                                    <div className="mb-1 font-medium text-text-tertiary text-xs uppercase tracking-wide">
                                                         Report commit
                                                     </div>
                                                     <div className="font-mono text-xs">
                                                         {sha.slice(0, 7)}
                                                     </div>
-                                                    <div className="truncate text-gray-600 text-xs dark:text-zinc-400">
+                                                    <div className="truncate text-text-secondary text-xs">
                                                         <CommitSubject
                                                             message={
                                                                 reportCommit
@@ -119,7 +119,7 @@ export function PullRequestContent({
                                                     </div>
                                                     {reportCommit?.commit
                                                         .authors[0] && (
-                                                        <div className="text-gray-500 text-xs">
+                                                        <div className="text-text-tertiary text-xs">
                                                             {
                                                                 reportCommit
                                                                     .commit
@@ -130,7 +130,7 @@ export function PullRequestContent({
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <div className="mb-1 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                                                    <div className="mb-1 font-medium text-text-tertiary text-xs uppercase tracking-wide">
                                                         Latest PR commit
                                                     </div>
                                                     <div className="font-mono text-xs">
@@ -139,7 +139,7 @@ export function PullRequestContent({
                                                             7,
                                                         )}
                                                     </div>
-                                                    <div className="text-gray-500 text-xs">
+                                                    <div className="text-text-tertiary text-xs">
                                                         This commit is newer
                                                         than the report
                                                     </div>
@@ -155,7 +155,7 @@ export function PullRequestContent({
                                 href={activeReport.sourceUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-gray-500 text-xs hover:text-gray-700 dark:text-zinc-400 dark:hover:text-gray-200"
+                                className="inline-flex items-center gap-1 text-text-tertiary text-xs hover:text-text-label dark:hover:text-zinc-200"
                             >
                                 <ExternalLink className="size-3" />
                                 Source

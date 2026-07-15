@@ -112,7 +112,7 @@ export function ReviewerSection({
     return (
         <>
             <div className="flex items-start justify-between">
-                <h3 className="text-gray-900 dark:text-zinc-100">Reviewers</h3>
+                <h3 className="text-text-primary">Reviewers</h3>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
                         <Async promise={userPermission} fallback={null}>
@@ -201,7 +201,7 @@ function ReviewerSectionSettings({
                         alt=""
                         className="h-5 w-5 shrink-0 rounded-full"
                     />
-                    <span className="flex-1 truncate text-gray-700 dark:text-zinc-300">
+                    <span className="flex-1 truncate text-text-label">
                         {r.login}
                     </span>
                     {selected && (
@@ -231,11 +231,7 @@ function ReviewerSectionContent({
     const displayReviewers = applyOperations(reviewers, operations);
 
     if (displayReviewers.length === 0) {
-        return (
-            <p className="text-gray-500 text-sm dark:text-zinc-400">
-                No reviewers
-            </p>
-        );
+        return <p className="text-sm text-text-tertiary">No reviewers</p>;
     }
 
     return (
@@ -257,7 +253,7 @@ function ReviewerSectionContent({
                                     className="h-5 w-5 rounded-full"
                                     src={reviewer.avatar_url}
                                 />
-                                <span className="text-gray-600 dark:text-zinc-400">
+                                <span className="text-text-secondary">
                                     {reviewer.login}
                                 </span>
                             </a>

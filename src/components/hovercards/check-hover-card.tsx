@@ -66,15 +66,15 @@ function StatusIcon({ check }: { check: CheckRun }) {
             <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
         );
     }
-    return <Circle className="h-3.5 w-3.5 text-gray-400" />;
+    return <Circle className="h-3.5 w-3.5 text-text-muted" />;
 }
 
 const statusColors: Record<string, string> = {
     success: "text-green-600",
     failure: "text-red-600",
     neutral: "text-gray-600",
-    cancelled: "text-gray-500",
-    skipped: "text-gray-500",
+    cancelled: "text-text-tertiary",
+    skipped: "text-text-tertiary",
     timed_out: "text-red-600",
     action_required: "text-yellow-600",
 };
@@ -91,30 +91,30 @@ function CheckHoverCardContent({ check }: { check: CheckRun }) {
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                         <StatusIcon check={check} />
-                        <span className="truncate font-semibold text-gray-900 text-sm dark:text-zinc-100">
+                        <span className="truncate font-semibold text-sm text-text-primary">
                             {check.name}
                         </span>
                     </div>
                     {check.app?.name && (
-                        <p className="mt-0.5 text-gray-500 text-xs dark:text-zinc-400">
+                        <p className="mt-0.5 text-text-tertiary text-xs">
                             {check.app.name}
                         </p>
                     )}
                     {!check.app?.name && check.description && (
-                        <p className="mt-0.5 line-clamp-2 text-gray-500 text-xs dark:text-zinc-400">
+                        <p className="mt-0.5 line-clamp-2 text-text-tertiary text-xs">
                             {check.description}
                         </p>
                     )}
                 </div>
             </div>
             <div className="flex flex-col gap-1.5 p-3 pt-2.5">
-                <div className="flex items-center gap-2 text-gray-700 text-xs dark:text-zinc-300">
+                <div className="flex items-center gap-2 text-text-label text-xs">
                     <span className={`font-medium ${labelColor}`}>
                         {statusLabel(check.status, check.conclusion)}
                     </span>
                 </div>
                 {check.started_at && (
-                    <div className="flex items-center gap-2 text-gray-500 text-xs dark:text-zinc-400">
+                    <div className="flex items-center gap-2 text-text-tertiary text-xs">
                         <Clock className="h-3.5 w-3.5 shrink-0" />
                         <span>
                             {check.status === "in_progress"

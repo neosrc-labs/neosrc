@@ -11,32 +11,32 @@ export function PullRequestEmptyState({
         <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
             {searchQuery ? (
                 <>
-                    <GitPullRequest className="size-8 text-gray-400" />
-                    <p className="font-medium text-gray-900 dark:text-zinc-100">
+                    <GitPullRequest className="size-8 text-text-muted" />
+                    <p className="font-medium text-text-primary">
                         No pull requests match your search
                     </p>
-                    <p className="text-gray-500 text-sm dark:text-zinc-400">
+                    <p className="text-sm text-text-tertiary">
                         Try a different search or clear filters
                     </p>
                 </>
             ) : activeTab === "open" ? (
                 <>
-                    <GitPullRequest className="size-8 text-gray-400" />
-                    <p className="font-medium text-gray-900 dark:text-zinc-100">
+                    <GitPullRequest className="size-8 text-text-muted" />
+                    <p className="font-medium text-text-primary">
                         No open pull requests
                     </p>
                 </>
             ) : activeTab === "closed" ? (
                 <>
-                    <GitPullRequestClosed className="size-8 text-gray-400" />
-                    <p className="font-medium text-gray-900 dark:text-zinc-100">
+                    <GitPullRequestClosed className="size-8 text-text-muted" />
+                    <p className="font-medium text-text-primary">
                         No closed pull requests
                     </p>
                 </>
             ) : (
                 <>
-                    <GitMerge className="size-8 text-gray-400" />
-                    <p className="font-medium text-gray-900 dark:text-zinc-100">
+                    <GitMerge className="size-8 text-text-muted" />
+                    <p className="font-medium text-text-primary">
                         No merged pull requests
                     </p>
                 </>

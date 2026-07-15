@@ -698,8 +698,8 @@ export function MarkdownEditor({
                         <button
                             className={`cursor-pointer border-b-2 pt-2 pb-1.5 font-medium text-sm transition-colors ${
                                 mode === "write"
-                                    ? "border-gray-900 text-gray-900 dark:border-zinc-100 dark:text-zinc-100"
-                                    : "border-transparent text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                                    ? "border-gray-900 text-text-primary dark:border-zinc-100"
+                                    : "border-transparent text-text-secondary hover:text-text-primary dark:hover:text-zinc-200"
                             }`}
                             onClick={() => setMode("write")}
                             type="button"
@@ -709,8 +709,8 @@ export function MarkdownEditor({
                         <button
                             className={`cursor-pointer border-b-2 pt-2 pb-1.5 font-medium text-sm transition-colors ${
                                 mode === "preview"
-                                    ? "border-gray-900 text-gray-900 dark:border-zinc-100 dark:text-zinc-100"
-                                    : "border-transparent text-gray-600 hover:text-gray-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+                                    ? "border-gray-900 text-text-primary dark:border-zinc-100"
+                                    : "border-transparent text-text-secondary hover:text-text-primary dark:hover:text-zinc-200"
                             }`}
                             onClick={() => setMode("preview")}
                             type="button"
@@ -733,7 +733,7 @@ export function MarkdownEditor({
                                         const Icon = btn.icon;
                                         return (
                                             <button
-                                                className="inline-flex cursor-pointer items-center justify-center rounded-md p-1 text-gray-600 hover:bg-gray-200 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+                                                className="inline-flex cursor-pointer items-center justify-center rounded-md p-1 text-text-secondary hover:bg-gray-200 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
                                                 disabled={disabled}
                                                 key={btn.key}
                                                 onMouseDown={(e) => {
@@ -766,7 +766,7 @@ export function MarkdownEditor({
                 {mode === "write" ? (
                     <textarea
                         autoFocus={autoFocus}
-                        className="w-full resize-y border-0 bg-white px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder-zinc-500 disabled:dark:bg-zinc-800"
+                        className="w-full resize-y border-0 bg-white px-3 py-2 text-sm text-text-primary placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-zinc-950 dark:placeholder-zinc-500 disabled:dark:bg-zinc-800"
                         disabled={disabled}
                         onBlur={(e) => {
                             savedSelectionRef.current = {
@@ -926,7 +926,7 @@ export function MarkdownEditor({
                     <div className="flex items-center justify-between gap-2 border-gray-300 border-t bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
                         {onCancel ? (
                             <button
-                                className="cursor-pointer rounded-md border border-gray-300 px-4 py-1.5 font-medium text-gray-600 text-sm transition-colors hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                                className="cursor-pointer rounded-md border border-gray-300 px-4 py-1.5 font-medium text-sm text-text-secondary transition-colors hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
                                 disabled={disabled}
                                 onClick={onCancel}
                                 type="button"

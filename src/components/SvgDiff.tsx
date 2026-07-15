@@ -163,7 +163,7 @@ export default function SvgDiff({
                 <div>
                     {loading && (
                         <div className="flex items-center justify-center bg-[#f0f0f0] px-4 py-12 dark:bg-zinc-900">
-                            <span className="text-gray-500 text-sm">
+                            <span className="text-sm text-text-tertiary">
                                 Loading SVG...
                             </span>
                         </div>
@@ -171,7 +171,7 @@ export default function SvgDiff({
                     {!loading && !hasBoth && newContent != null && (
                         <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
                             {newError ? (
-                                <span className="text-gray-500 text-sm">
+                                <span className="text-sm text-text-tertiary">
                                     Failed to load SVG
                                 </span>
                             ) : (
@@ -182,7 +182,7 @@ export default function SvgDiff({
                     {!loading && !hasBoth && oldContent != null && (
                         <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
                             {oldError ? (
-                                <span className="text-gray-500 text-sm">
+                                <span className="text-sm text-text-tertiary">
                                     Failed to load SVG
                                 </span>
                             ) : (
@@ -198,7 +198,7 @@ export default function SvgDiff({
                                 </div>
                                 <div className="flex flex-1 items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
                                     {oldError ? (
-                                        <span className="text-gray-500 text-sm">
+                                        <span className="text-sm text-text-tertiary">
                                             Failed to load SVG
                                         </span>
                                     ) : (
@@ -215,7 +215,7 @@ export default function SvgDiff({
                                 </div>
                                 <div className="flex flex-1 items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
                                     {newError ? (
-                                        <span className="text-gray-500 text-sm">
+                                        <span className="text-sm text-text-tertiary">
                                             Failed to load SVG
                                         </span>
                                     ) : (
@@ -236,7 +236,7 @@ export default function SvgDiff({
                         className={`cursor-pointer rounded px-2 py-1 font-medium text-xs transition-colors ${
                             mode === value
                                 ? "bg-gray-200 text-gray-800 dark:bg-zinc-700 dark:text-zinc-200"
-                                : "text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
+                                : "text-text-tertiary hover:bg-gray-100 hover:text-text-label dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
                         }`}
                         key={value}
                         onClick={() => setMode(value)}

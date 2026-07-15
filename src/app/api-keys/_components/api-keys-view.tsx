@@ -21,10 +21,8 @@ export function ApiKeysView() {
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-gray-900 dark:text-zinc-100">
-                        API Keys
-                    </h1>
-                    <p className="mt-1 text-gray-500 text-sm dark:text-zinc-400">
+                    <h1 className="text-text-primary">API Keys</h1>
+                    <p className="mt-1 text-sm text-text-tertiary">
                         Manage API keys for programmatic access.
                     </p>
                 </div>
@@ -49,8 +47,8 @@ export function ApiKeysView() {
                 </div>
             ) : keys?.length === 0 ? (
                 <div className="flex flex-col items-center gap-3 rounded-lg border border-gray-300 border-dashed p-12 dark:border-zinc-700">
-                    <Key className="h-8 w-8 text-gray-400" />
-                    <p className="text-gray-500 text-sm dark:text-zinc-400">
+                    <Key className="h-8 w-8 text-text-muted" />
+                    <p className="text-sm text-text-tertiary">
                         No API keys yet. Create one to get started.
                     </p>
                 </div>

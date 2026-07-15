@@ -199,11 +199,11 @@ export function ReviewComments({
                         className="mt-3 rounded border border-gray-200 dark:border-zinc-700"
                     >
                         <div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900">
-                            <span className="flex-1 truncate font-mono text-gray-700 text-xs dark:text-zinc-300">
+                            <span className="flex-1 truncate font-mono text-text-label text-xs">
                                 {path}
                             </span>
                             {resolvedInFile.length > 0 && (
-                                <span className="font-sans text-gray-500 text-xs dark:text-zinc-400">
+                                <span className="font-sans text-text-tertiary text-xs">
                                     Resolved
                                 </span>
                             )}
@@ -240,7 +240,7 @@ export function ReviewComments({
                                                         },
                                                     )
                                                 }
-                                                className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-gray-500 text-xs transition-colors hover:bg-gray-200 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
+                                                className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-gray-200 hover:text-text-label dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
                                             >
                                                 <ChevronDown
                                                     size={14}
@@ -511,7 +511,7 @@ function CommentBlock({
                                         <button
                                             type="button"
                                             aria-label="More options"
-                                            className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                            className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
                                         >
                                             <MoreVertical size={14} />
                                         </button>
@@ -530,7 +530,7 @@ function CommentBlock({
                                                 );
                                                 setMenuOpenCommentId(null);
                                             }}
-                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
                                         >
                                             <SquarePen size={14} />
                                             Edit
@@ -612,7 +612,7 @@ function CommentBlock({
                                                     <button
                                                         type="button"
                                                         aria-label="More options"
-                                                        className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                                        className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
                                                     >
                                                         <MoreVertical
                                                             size={14}
@@ -636,7 +636,7 @@ function CommentBlock({
                                                                 null,
                                                             );
                                                         }}
-                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
                                                     >
                                                         <SquarePen size={14} />
                                                         Edit

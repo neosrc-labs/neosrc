@@ -7,16 +7,15 @@ const TYPE_COLORS: Record<string, string> = {
     refactor:
         "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
     revert: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-    docs: "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400",
-    style: "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400",
+    docs: "bg-gray-100 text-text-secondary dark:bg-zinc-800",
+    style: "bg-gray-100 text-text-secondary dark:bg-zinc-800",
     test: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
     build: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
     ci: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
-    chore: "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400",
+    chore: "bg-gray-100 text-text-secondary dark:bg-zinc-800",
 };
 
-const NEUTRAL_COLOR =
-    "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400";
+const NEUTRAL_COLOR = "bg-gray-100 text-text-secondary dark:bg-zinc-800";
 
 export function CommitTypeBadge({
     conventional,

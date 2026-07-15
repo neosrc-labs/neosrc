@@ -31,7 +31,7 @@ export function ApiKeyRow({
             <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900 text-sm dark:text-zinc-100">
+                        <span className="font-medium text-sm text-text-primary">
                             {apiKey.name}
                         </span>
                     </div>
@@ -43,7 +43,7 @@ export function ApiKeyRow({
                             />
                         ))}
                     </div>
-                    <div className="mt-1 flex items-center gap-3 text-gray-500 text-xs dark:text-zinc-400">
+                    <div className="mt-1 flex items-center gap-3 text-text-tertiary text-xs">
                         <span>
                             Created {apiKey.createdAt.toLocaleDateString()}
                         </span>
@@ -67,7 +67,7 @@ export function ApiKeyRow({
                         <button
                             type="button"
                             onClick={onCancelRevoke}
-                            className="cursor-pointer rounded px-2 py-1 text-gray-600 text-xs hover:text-gray-900 dark:text-zinc-400 dark:hover:text-gray-200"
+                            className="cursor-pointer rounded px-2 py-1 text-text-secondary text-xs hover:text-text-primary dark:hover:text-zinc-200"
                         >
                             Cancel
                         </button>
@@ -83,7 +83,7 @@ export function ApiKeyRow({
                     <button
                         type="button"
                         onClick={onRevoke}
-                        className="cursor-pointer rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
+                        className="cursor-pointer rounded p-1.5 text-text-muted transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
                         title="Revoke key"
                     >
                         <Trash2 className="h-4 w-4" />

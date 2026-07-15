@@ -41,7 +41,7 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
     if (!accessToken) {
         return (
             <div className="px-6 py-8">
-                <p className="text-gray-600 dark:text-zinc-400">
+                <p className="text-text-secondary">
                     Please sign in to view this pull request.
                 </p>
             </div>

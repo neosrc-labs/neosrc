@@ -56,18 +56,18 @@ function UserHoverCardContent({
                     <div className="flex flex-wrap items-baseline gap-x-2">
                         {user.name && (
                             <a
-                                className="font-semibold text-base text-gray-900 hover:underline dark:text-zinc-100"
+                                className="font-semibold text-base text-text-primary hover:underline"
                                 href={profileUrl}
                             >
                                 {user.name}
                             </a>
                         )}
-                        <span className="text-gray-500 text-sm dark:text-zinc-400">
+                        <span className="text-sm text-text-tertiary">
                             {user.login}
                         </span>
                     </div>
                     {user.bio && (
-                        <p className="mt-1 text-gray-600 text-xs leading-relaxed dark:text-zinc-400">
+                        <p className="mt-1 text-text-secondary text-xs leading-relaxed">
                             {user.bio}
                         </p>
                     )}
@@ -75,19 +75,19 @@ function UserHoverCardContent({
             </div>
             <div className="flex flex-col gap-1.5 p-4 pt-3">
                 {user.company && (
-                    <div className="flex items-center gap-2 text-gray-600 text-xs dark:text-zinc-400">
+                    <div className="flex items-center gap-2 text-text-secondary text-xs">
                         <Building2 className="h-3.5 w-3.5 shrink-0" />
                         <span>{user.company}</span>
                     </div>
                 )}
                 {user.location && (
-                    <div className="flex items-center gap-2 text-gray-600 text-xs dark:text-zinc-400">
+                    <div className="flex items-center gap-2 text-text-secondary text-xs">
                         <MapPin className="h-3.5 w-3.5 shrink-0" />
                         <span>{user.location}</span>
                     </div>
                 )}
                 {user.blog && (
-                    <div className="flex items-center gap-2 text-gray-600 text-xs dark:text-zinc-400">
+                    <div className="flex items-center gap-2 text-text-secondary text-xs">
                         <LinkIcon className="h-3.5 w-3.5 shrink-0" />
                         <a
                             className="truncate text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400"
@@ -104,7 +104,7 @@ function UserHoverCardContent({
                     </div>
                 )}
                 {user.twitter_username && (
-                    <div className="flex items-center gap-2 text-gray-600 text-xs dark:text-zinc-400">
+                    <div className="flex items-center gap-2 text-text-secondary text-xs">
                         <svg
                             aria-label="Twitter"
                             className="h-3.5 w-3.5 shrink-0"
@@ -117,22 +117,22 @@ function UserHoverCardContent({
                     </div>
                 )}
                 {user.created_at && (
-                    <div className="flex items-center gap-2 text-gray-600 text-xs dark:text-zinc-400">
+                    <div className="flex items-center gap-2 text-text-secondary text-xs">
                         <CalendarDays className="h-3.5 w-3.5 shrink-0" />
                         <span>
                             Joined {formatRelativeTime(user.created_at)}
                         </span>
                     </div>
                 )}
-                <div className="mt-0.5 flex items-center gap-3 text-gray-600 text-xs dark:text-zinc-400">
+                <div className="mt-0.5 flex items-center gap-3 text-text-secondary text-xs">
                     <span>
-                        <strong className="font-semibold text-gray-900 dark:text-zinc-100">
+                        <strong className="font-semibold text-text-primary">
                             {(user.followers ?? 0).toLocaleString()}
                         </strong>{" "}
                         followers
                     </span>
                     <span>
-                        <strong className="font-semibold text-gray-900 dark:text-zinc-100">
+                        <strong className="font-semibold text-text-primary">
                             {(user.following ?? 0).toLocaleString()}
                         </strong>{" "}
                         following

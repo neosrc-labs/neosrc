@@ -47,7 +47,7 @@ function ProviderIcon({ provider }: { provider: string }) {
     return (
         <svg
             viewBox="0 0 24 24"
-            className="size-4 fill-current text-gray-500"
+            className="size-4 fill-current text-text-tertiary"
             aria-hidden="true"
         >
             <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
@@ -68,7 +68,7 @@ function CopyButton({ text }: { text: string }) {
         <button
             type="button"
             onClick={handleCopy}
-            className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-gray-500 text-xs transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-gray-200"
+            className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-text-tertiary text-xs transition-colors hover:bg-gray-100 hover:text-text-label dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
         >
             {copied ? (
                 <Check className="h-3 w-3" />
@@ -173,21 +173,19 @@ export function CreateKeyDialog({
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                 <div className="mx-4 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-900">
-                    <h2 className="mb-4 text-gray-900 dark:text-zinc-100">
-                        API Key Created
-                    </h2>
-                    <p className="mb-2 text-gray-600 text-sm dark:text-zinc-400">
+                    <h2 className="mb-4 text-text-primary">API Key Created</h2>
+                    <p className="mb-2 text-sm text-text-secondary">
                         Make sure to copy your API key now. You won&apos;t be
                         able to see it again.
                     </p>
                     <div className="mb-4 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
-                        <code className="flex-1 break-all font-mono text-gray-900 text-sm dark:text-zinc-100">
+                        <code className="flex-1 break-all font-mono text-sm text-text-primary">
                             {showKey ? createdKey : "••••••••••••••••"}
                         </code>
                         <button
                             type="button"
                             onClick={() => setShowKey(!showKey)}
-                            className="cursor-pointer p-1 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-gray-200"
+                            className="cursor-pointer p-1 text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
                             aria-label={showKey ? "Hide key" : "Show key"}
                         >
                             {showKey ? (
@@ -213,14 +211,12 @@ export function CreateKeyDialog({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-900">
-                <h2 className="mb-4 text-gray-900 dark:text-zinc-100">
-                    Create API Key
-                </h2>
+                <h2 className="mb-4 text-text-primary">Create API Key</h2>
 
                 <div className="mb-4">
                     <label
                         htmlFor="key-name"
-                        className="mb-1 block font-medium text-gray-700 text-sm dark:text-zinc-300"
+                        className="mb-1 block font-medium text-sm text-text-label"
                     >
                         Name
                     </label>
@@ -230,13 +226,13 @@ export function CreateKeyDialog({
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="My API Key"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 text-sm placeholder-gray-400 focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-text-primary placeholder-gray-400 focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:placeholder-zinc-500"
                     />
                 </div>
 
                 <div className="mb-4">
                     <fieldset>
-                        <legend className="mb-1 block font-medium text-gray-700 text-sm dark:text-zinc-300">
+                        <legend className="mb-1 block font-medium text-sm text-text-label">
                             Permissions
                         </legend>
                         <div className="flex flex-col gap-2">
@@ -264,7 +260,7 @@ export function CreateKeyDialog({
                                         </option>
                                     </select>
                                     {perm.kind === "UPLOAD_REPORT_OWNER" ? (
-                                        <span className="flex-1 text-gray-500 text-sm dark:text-zinc-400">
+                                        <span className="flex-1 text-sm text-text-tertiary">
                                             All linked providers
                                         </span>
                                     ) : (
@@ -302,7 +298,7 @@ export function CreateKeyDialog({
                                                         )
                                                 }
                                                 renderItem={(item) => (
-                                                    <span className="flex items-center gap-1.5 text-gray-900 text-sm dark:text-zinc-100">
+                                                    <span className="flex items-center gap-1.5 text-sm text-text-primary">
                                                         <ProviderIcon
                                                             provider={
                                                                 item.provider
@@ -315,9 +311,9 @@ export function CreateKeyDialog({
                                                 emptyText="No repos found"
                                                 ariaLabel="Select a repository"
                                                 trigger={
-                                                    <div className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 text-gray-900 text-sm hover:border-gray-400 dark:border-zinc-700 dark:text-zinc-100 dark:hover:border-zinc-600">
+                                                    <div className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 text-sm text-text-primary hover:border-gray-400 dark:border-zinc-700 dark:hover:border-zinc-600">
                                                         {perm.target ? (
-                                                            <span className="flex items-center gap-1.5 text-gray-900 text-sm dark:text-zinc-100">
+                                                            <span className="flex items-center gap-1.5 text-sm text-text-primary">
                                                                 <ProviderIcon
                                                                     provider={
                                                                         perm.target.split(
@@ -332,7 +328,7 @@ export function CreateKeyDialog({
                                                                     perm.target}
                                                             </span>
                                                         ) : (
-                                                            <span className="text-gray-400">
+                                                            <span className="text-text-muted">
                                                                 Select a repo...
                                                             </span>
                                                         )}
@@ -348,7 +344,7 @@ export function CreateKeyDialog({
                                             onClick={() =>
                                                 handleRemovePermission(perm.id)
                                             }
-                                            className="cursor-pointer p-1 text-gray-400 hover:text-red-500"
+                                            className="cursor-pointer p-1 text-text-muted hover:text-red-500"
                                             aria-label="Remove permission"
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -370,7 +366,7 @@ export function CreateKeyDialog({
                 <div className="mb-6">
                     <label
                         htmlFor="key-expiration"
-                        className="mb-1 block font-medium text-gray-700 text-sm dark:text-zinc-300"
+                        className="mb-1 block font-medium text-sm text-text-label"
                     >
                         Expiration (optional)
                     </label>
@@ -387,7 +383,7 @@ export function CreateKeyDialog({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 cursor-pointer rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        className="flex-1 cursor-pointer rounded-lg border border-gray-300 px-4 py-2 font-medium text-sm text-text-label transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
                     >
                         Cancel
                     </button>

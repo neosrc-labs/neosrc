@@ -38,7 +38,7 @@ export default async function PullRequestPage({ params }: PageProps) {
     if (!accessToken) {
         return (
             <div className="px-6 py-8">
-                <p className="text-gray-600 dark:text-zinc-400">
+                <p className="text-text-secondary">
                     Please sign in to view this pull request.
                 </p>
             </div>
@@ -90,7 +90,7 @@ export default async function PullRequestPage({ params }: PageProps) {
                     <Suspense
                         fallback={
                             <div className="mt-4 border-gray-200 border-t pt-6 dark:border-zinc-700">
-                                <h2 className="mb-4 text-gray-900 dark:text-zinc-100">
+                                <h2 className="mb-4 text-text-primary">
                                     Timeline
                                 </h2>
                                 <TimelineSkeleton />

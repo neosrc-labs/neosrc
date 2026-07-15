@@ -87,12 +87,12 @@ export function AccountManager({
                         key={provider.providerId}
                         className="flex flex-col items-center gap-2 rounded-lg border border-gray-200 px-4 py-3 dark:border-zinc-800"
                     >
-                        <span className="font-medium text-gray-700 text-sm dark:text-zinc-300">
+                        <span className="font-medium text-sm text-text-label">
                             {provider.label}
                         </span>
                         {provider.username ? (
                             <>
-                                <span className="text-gray-500 text-xs dark:text-zinc-400">
+                                <span className="text-text-tertiary text-xs">
                                     @{provider.username}
                                 </span>
                                 <button
@@ -121,7 +121,7 @@ export function AccountManager({
                                 type="button"
                                 disabled={loading === provider.providerId}
                                 onClick={() => handleLink(provider.providerId)}
-                                className="cursor-pointer rounded-md border border-gray-300 px-3 py-1 text-gray-700 text-xs transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                                className="cursor-pointer rounded-md border border-gray-300 px-3 py-1 text-text-label text-xs transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:hover:bg-zinc-800"
                             >
                                 {loading === provider.providerId
                                     ? "Linking..."

@@ -74,14 +74,14 @@ function ThreadCard({ thread }: ThreadCardProps) {
 
             <div className="min-w-0 flex-1">
                 {isSuggestionBody(root.body) ? (
-                    <span className="flex items-center gap-1.5 text-gray-600 text-sm dark:text-zinc-400">
+                    <span className="flex items-center gap-1.5 text-sm text-text-secondary">
                         <Code2 className="size-3.5 shrink-0" />
                         <span className="truncate">
                             Suggestion{thread.path ? ` in ${thread.path}` : ""}
                         </span>
                     </span>
                 ) : (
-                    <p className="truncate text-gray-700 text-sm dark:text-zinc-300">
+                    <p className="truncate text-sm text-text-label">
                         {truncateBody(root.body)}
                     </p>
                 )}
@@ -89,9 +89,9 @@ function ThreadCard({ thread }: ThreadCardProps) {
                     {thread.isResolved ? (
                         <CheckCircle className="size-3 text-green-500" />
                     ) : (
-                        <Circle className="size-3 text-gray-400" />
+                        <Circle className="size-3 text-text-muted" />
                     )}
-                    <span className="flex items-center gap-1 text-gray-400 text-xs">
+                    <span className="flex items-center gap-1 text-text-muted text-xs">
                         <MessageSquare className="size-3" />
                         {thread.comments.length}
                     </span>
@@ -182,11 +182,7 @@ export function ReviewThreadsSection({
     }
 
     if (threads.length === 0) {
-        return (
-            <p className="text-gray-500 text-sm dark:text-zinc-400">
-                No review threads
-            </p>
-        );
+        return <p className="text-sm text-text-tertiary">No review threads</p>;
     }
 
     return (
@@ -223,7 +219,7 @@ export function ReviewThreadsSection({
             </div>
             {hasNextPage && <div ref={sentinelRef} style={{ height: 1 }} />}
             {isFetchingNextPage && (
-                <p className="py-2 text-center text-gray-500 text-xs dark:text-zinc-400">
+                <p className="py-2 text-center text-text-tertiary text-xs">
                     Loading more threads...
                 </p>
             )}

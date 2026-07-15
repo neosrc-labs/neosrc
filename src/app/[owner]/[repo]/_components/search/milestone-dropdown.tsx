@@ -60,7 +60,7 @@ export function MilestoneDropdown({
                         )}
                     </div>
                     {m.description && (
-                        <span className="truncate text-gray-400 text-xs">
+                        <span className="truncate text-text-muted text-xs">
                             {m.description}
                         </span>
                     )}
@@ -72,11 +72,11 @@ export function MilestoneDropdown({
             trigger={
                 <button
                     type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
                 >
                     <Flag className="size-4" />
                     Milestone
-                    <ChevronDown className="size-3.5 text-gray-400" />
+                    <ChevronDown className="size-3.5 text-text-muted" />
                 </button>
             }
         />

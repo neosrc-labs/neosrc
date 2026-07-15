@@ -103,8 +103,8 @@ export function ReportTabsBar({
     const tabClassName = (isActive: boolean) =>
         `cursor-pointer rounded-t-md px-3 py-1.5 font-medium text-sm transition-colors whitespace-nowrap ${
             isActive
-                ? "border-gray-200 border-x border-t bg-white text-gray-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                : "text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                ? "border-gray-200 border-x border-t bg-white text-text-primary dark:border-zinc-700 dark:bg-zinc-900"
+                : "text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
         }`;
 
     return (
@@ -132,8 +132,8 @@ export function ReportTabsBar({
                             type="button"
                             className={`cursor-pointer whitespace-nowrap rounded-t-md px-3 py-1.5 font-medium text-sm transition-colors ${
                                 activeOverflowed
-                                    ? "border-gray-200 border-x border-t bg-white text-gray-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                                    : "text-gray-400 hover:text-gray-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                                    ? "border-gray-200 border-x border-t bg-white text-text-primary dark:border-zinc-700 dark:bg-zinc-900"
+                                    : "text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
                             }`}
                         >
                             <span className="flex items-center gap-0.5">
@@ -160,8 +160,8 @@ export function ReportTabsBar({
                                 }}
                                 className={`block w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
                                     activeTab === tab.key
-                                        ? "bg-gray-100 text-gray-900 dark:bg-zinc-800 dark:text-zinc-100"
-                                        : "text-gray-700 hover:bg-gray-50 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                                        ? "bg-gray-100 text-text-primary dark:bg-zinc-800"
+                                        : "text-text-label hover:bg-gray-50 dark:hover:bg-zinc-800"
                                 }`}
                             >
                                 {tab.title}

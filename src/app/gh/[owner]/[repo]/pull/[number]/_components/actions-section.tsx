@@ -285,15 +285,15 @@ export function ActionSection({
                         side="top"
                         sideOffset={4}
                     >
-                        <p className="mb-3 font-medium text-gray-900 text-sm dark:text-zinc-100">
+                        <p className="mb-3 font-medium text-sm text-text-primary">
                             Delete this pending review?
                         </p>
-                        <p className="mb-4 text-gray-600 text-xs dark:text-zinc-400">
+                        <p className="mb-4 text-text-secondary text-xs">
                             Your pending comments will be discarded.
                         </p>
                         <div className="flex justify-end gap-2">
                             <button
-                                className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-xs ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                                className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-text-label text-xs ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:hover:bg-zinc-700"
                                 onClick={() => setIsCancelPopoverOpen(false)}
                                 type="button"
                             >
@@ -401,7 +401,7 @@ export function ActionSection({
                         !convertedToDraft &&
                         pullRequest.state === "open" && (
                             <button
-                                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-gray-600 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
                                 disabled={markAsDraftMutation.isPending}
                                 onClick={() => handleMarkAsDraft()}
                                 type="button"
@@ -422,7 +422,7 @@ export function ActionSection({
                             <PopoverTrigger asChild>
                                 <button
                                     suppressHydrationWarning
-                                    className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-gray-600 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                    className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
                                     disabled={closeMutation.isPending}
                                     type="button"
                                 >
@@ -441,15 +441,15 @@ export function ActionSection({
                                 side="top"
                                 sideOffset={4}
                             >
-                                <p className="mb-3 font-medium text-gray-900 text-sm dark:text-zinc-100">
+                                <p className="mb-3 font-medium text-sm text-text-primary">
                                     Close this pull request?
                                 </p>
-                                <p className="mb-4 text-gray-600 text-xs dark:text-zinc-400">
+                                <p className="mb-4 text-text-secondary text-xs">
                                     This can be undone by reopening it later.
                                 </p>
                                 <div className="flex justify-end gap-2">
                                     <button
-                                        className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-gray-700 text-xs ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                                        className="cursor-pointer rounded-md bg-white px-3 py-1.5 font-medium text-text-label text-xs ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:hover:bg-zinc-700"
                                         onClick={() =>
                                             setIsClosePopoverOpen(false)
                                         }
@@ -506,7 +506,7 @@ export function ActionSection({
                                 <PopoverTrigger asChild>
                                     <button
                                         suppressHydrationWarning
-                                        className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2.5 text-gray-600 text-sm transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                        className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-gray-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
                                         disabled={revertMutation.isPending}
                                         onClick={() =>
                                             openRevertDialog(pullRequest)
@@ -528,13 +528,13 @@ export function ActionSection({
                                     <div className="mb-3 flex items-center gap-1.5">
                                         <Undo2
                                             size={14}
-                                            className="text-gray-700 dark:text-zinc-300"
+                                            className="text-text-label"
                                         />
-                                        <span className="font-medium text-gray-900 text-sm dark:text-zinc-100">
+                                        <span className="font-medium text-sm text-text-primary">
                                             Revert this pull request
                                         </span>
                                     </div>
-                                    <p className="mb-3 text-gray-600 text-xs dark:text-zinc-400">
+                                    <p className="mb-3 text-text-secondary text-xs">
                                         A new pull request will be created that
                                         reverts the changes from{" "}
                                         <span className="font-mono">
@@ -543,13 +543,13 @@ export function ActionSection({
                                         .
                                     </p>
                                     <label
-                                        className="mb-1 block font-medium text-gray-700 text-xs dark:text-zinc-300"
+                                        className="mb-1 block font-medium text-text-label text-xs"
                                         htmlFor="revert-title-input"
                                     >
                                         Title
                                     </label>
                                     <input
-                                        className="mb-3 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                                        className="mb-3 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-900"
                                         disabled={revertMutation.isPending}
                                         id="revert-title-input"
                                         onChange={(e) =>
@@ -559,7 +559,7 @@ export function ActionSection({
                                         value={revertTitle}
                                     />
                                     <label
-                                        className="mb-1 block font-medium text-gray-700 text-xs dark:text-zinc-300"
+                                        className="mb-1 block font-medium text-text-label text-xs"
                                         htmlFor="revert-body-input"
                                     >
                                         Body
@@ -589,7 +589,7 @@ export function ActionSection({
                                             },
                                         ]}
                                     />
-                                    <label className="mt-2 flex items-center gap-2 text-gray-600 text-xs dark:text-zinc-400">
+                                    <label className="mt-2 flex items-center gap-2 text-text-secondary text-xs">
                                         <input
                                             checked={revertDraft}
                                             disabled={revertMutation.isPending}
@@ -707,28 +707,37 @@ export function ActionSection({
                         ) : pullRequest.mergeable_state === "dirty" ? (
                             <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
                                 <GitMerge size={14} className="text-red-500" />
-                                <span className="font-medium text-gray-600 text-sm dark:text-zinc-400">
+                                <span className="font-medium text-sm text-text-secondary">
                                     Conflicts
                                 </span>
                             </div>
                         ) : isMergeBlocked ? (
                             <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
-                                <GitMerge size={14} className="text-gray-400" />
-                                <span className="font-medium text-gray-400 text-sm dark:text-zinc-500">
+                                <GitMerge
+                                    size={14}
+                                    className="text-text-muted"
+                                />
+                                <span className="font-medium text-sm text-text-muted">
                                     Merging is blocked
                                 </span>
                             </div>
                         ) : isMergeStateUnknown ? (
                             <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
-                                <GitMerge size={14} className="text-gray-400" />
-                                <span className="font-medium text-gray-400 text-sm dark:text-zinc-500">
+                                <GitMerge
+                                    size={14}
+                                    className="text-text-muted"
+                                />
+                                <span className="font-medium text-sm text-text-muted">
                                     Checking mergeability...
                                 </span>
                             </div>
                         ) : !canMerge ? (
                             <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
-                                <GitMerge size={14} className="text-gray-400" />
-                                <span className="font-medium text-gray-400 text-sm dark:text-zinc-500">
+                                <GitMerge
+                                    size={14}
+                                    className="text-text-muted"
+                                />
+                                <span className="font-medium text-sm text-text-muted">
                                     You don&apos;t have permission to merge
                                 </span>
                             </div>
@@ -829,13 +838,13 @@ export function ActionSection({
                                                             className={
                                                                 mergeMode ===
                                                                 option.value
-                                                                    ? "font-medium text-gray-900 dark:text-zinc-100"
-                                                                    : "text-gray-700 dark:text-zinc-300"
+                                                                    ? "font-medium text-text-primary"
+                                                                    : "text-text-label"
                                                             }
                                                         >
                                                             {option.label}
                                                         </div>
-                                                        <div className="text-gray-500 text-xs dark:text-zinc-400">
+                                                        <div className="text-text-tertiary text-xs">
                                                             {option.description}
                                                         </div>
                                                     </div>

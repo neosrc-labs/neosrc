@@ -15,8 +15,7 @@ const authorAssociationLabels: Record<string, string> = {
     OWNER: "Owner",
 };
 
-const neutralBadge =
-    "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400";
+const neutralBadge = "bg-gray-100 text-text-secondary dark:bg-zinc-800";
 
 const authorAssociationStyles: Record<string, string> = {
     OWNER: neutralBadge,
@@ -82,7 +81,7 @@ export function CommentCard({
                     src={user.avatar_url ?? ""}
                 />
             )}
-            <span className="truncate font-medium text-gray-900 text-sm dark:text-zinc-100">
+            <span className="truncate font-medium text-sm text-text-primary">
                 {user.login ?? "unknown"}
             </span>
         </>
@@ -159,7 +158,7 @@ export function CommentCard({
                     ) : (
                         userElement
                     )}
-                    <span className="whitespace-nowrap text-gray-500 text-xs">
+                    <span className="whitespace-nowrap text-text-tertiary text-xs">
                         {formatRelativeTime(createdAt)}
                     </span>
                     {isPending && (

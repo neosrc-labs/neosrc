@@ -334,7 +334,7 @@ export default function FileDiff({
                 className="sticky top-[56px] z-[1] flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900"
             >
                 <button
-                    className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-gray-200"
+                    className="cursor-pointer text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
                     onClick={toggleCollapsed}
                     type="button"
                 >
@@ -355,7 +355,7 @@ export default function FileDiff({
                 </button>
 
                 <button
-                    className="h-4 w-4 cursor-pointer text-gray-500 dark:text-zinc-400"
+                    className="h-4 w-4 cursor-pointer text-text-tertiary"
                     onClick={toggleCollapsed}
                     type="button"
                 >
@@ -372,7 +372,7 @@ export default function FileDiff({
 
                 <span className="flex min-w-0 flex-1 items-center gap-1">
                     <button
-                        className="cursor-pointer truncate text-left font-mono text-gray-700 text-sm dark:text-zinc-300"
+                        className="cursor-pointer truncate text-left font-mono text-sm text-text-label"
                         onClick={toggleCollapsed}
                         type="button"
                     >
@@ -380,7 +380,7 @@ export default function FileDiff({
                     </button>
                     {file.status === "modified" && (
                         <button
-                            className="ml-1 flex shrink-0 cursor-pointer items-center text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-gray-200"
+                            className="ml-1 flex shrink-0 cursor-pointer items-center text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
                             onClick={toggleExpandAll}
                             type="button"
                             title={expandedAll ? "Collapse all" : "Expand all"}
@@ -409,7 +409,7 @@ export default function FileDiff({
                     </span>
                 )}
 
-                <label className="flex cursor-pointer items-center gap-1 text-gray-600 text-xs hover:text-gray-800 dark:text-zinc-400 dark:hover:text-gray-200">
+                <label className="flex cursor-pointer items-center gap-1 text-text-secondary text-xs hover:text-gray-800 dark:hover:text-zinc-200">
                     <input
                         checked={isViewed}
                         className="cursor-pointer rounded border-gray-300 dark:border-zinc-600"
@@ -420,7 +420,7 @@ export default function FileDiff({
                 </label>
 
                 <button
-                    className="flex shrink-0 cursor-pointer items-center text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-gray-200"
+                    className="flex shrink-0 cursor-pointer items-center text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
                     onClick={() =>
                         setActiveComment(
                             activeComment?.type === "file"
@@ -484,7 +484,7 @@ export default function FileDiff({
             <div className="overflow-hidden rounded-b">
                 {!isCollapsed &&
                     (performanceHidden && !showPerformanceDiff ? (
-                        <div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-gray-500 text-sm dark:border-zinc-700 dark:text-zinc-400">
+                        <div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-sm text-text-tertiary dark:border-zinc-700">
                             <span>
                                 {file.status === "removed"
                                     ? "This file was deleted."
@@ -501,7 +501,7 @@ export default function FileDiff({
                             </button>
                         </div>
                     ) : generated && !showGeneratedDiff ? (
-                        <div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-gray-500 text-sm dark:border-zinc-700 dark:text-zinc-400">
+                        <div className="flex flex-col items-center gap-2 border-gray-200 border-t px-4 py-6 text-sm text-text-tertiary dark:border-zinc-700">
                             <span>
                                 This file is generated and hidden by default.
                             </span>
@@ -581,7 +581,7 @@ export default function FileDiff({
                             oldUrl={imageUrls.oldUrl}
                         />
                     ) : (
-                        <div className="px-4 py-3 text-gray-500 text-sm italic dark:text-zinc-400">
+                        <div className="px-4 py-3 text-sm text-text-tertiary italic">
                             {file.status === "renamed"
                                 ? `File renamed from ${file.previous_filename} without changes`
                                 : file.additions === 0 && file.deletions === 0

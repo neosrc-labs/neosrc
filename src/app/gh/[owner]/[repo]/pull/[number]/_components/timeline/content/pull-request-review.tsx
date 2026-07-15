@@ -88,7 +88,7 @@ export function PullRequestReviewContent({
 
     return (
         <>
-            <p className="flex items-center gap-1 text-gray-600 text-sm dark:text-zinc-400">
+            <p className="flex items-center gap-1 text-sm text-text-secondary">
                 <UserLink actor={event.author} />
                 {` ${stateLabel} ${timestamp}`}
             </p>
@@ -144,7 +144,7 @@ export function PullRequestReviewContent({
                                             <button
                                                 type="button"
                                                 aria-label="More options"
-                                                className="cursor-pointer rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-zinc-800 dark:hover:text-gray-300"
+                                                className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
                                             >
                                                 <MoreVertical size={14} />
                                             </button>
@@ -159,7 +159,7 @@ export function PullRequestReviewContent({
                                                     handleCopyLink();
                                                     setMenuOpen(false);
                                                 }}
-                                                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                                                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
                                             >
                                                 {copied ? (
                                                     <Check size={14} />
@@ -180,7 +180,7 @@ export function PullRequestReviewContent({
                                                         );
                                                         setMenuOpen(false);
                                                     }}
-                                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-gray-700 text-sm transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
                                                 >
                                                     <SquarePen size={14} />
                                                     Edit
