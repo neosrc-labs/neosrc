@@ -192,7 +192,7 @@ export function FilesSection({
     return (
         <div>
             <div className="sticky top-0 z-10 flex items-center justify-between bg-white py-4 pr-2 dark:bg-zinc-950">
-                <h2 className="font-semibold text-gray-900 text-lg dark:text-gray-100">
+                <h2 className="text-gray-900 dark:text-gray-100">
                     Files Changed{!isLoading && ` (${allFiles.length})`}
                 </h2>
                 <div className="flex items-center gap-3">

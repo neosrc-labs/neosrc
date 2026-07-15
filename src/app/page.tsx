@@ -21,7 +21,7 @@ function Step({
                 {number}
             </div>
             <div>
-                <h3 className="font-semibold text-text-primary">{title}</h3>
+                <h3 className="text-text-primary">{title}</h3>
                 <p className="mt-1 text-text-secondary">{children}</p>
             </div>
         </div>
@@ -47,7 +47,7 @@ export default async function Home() {
                         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 dark:bg-blue-500">
                             <GitPullRequest className="h-8 w-8 text-white" />
                         </div>
-                        <h1 className="font-bold text-4xl text-text-primary tracking-tight sm:text-5xl">
+                        <h1 className="text-4xl text-text-primary sm:text-5xl">
                             Review pull requests,
                             <br />
                             faster.
@@ -59,7 +59,7 @@ export default async function Home() {
                     </section>
 
                     <section className="flex flex-col gap-6">
-                        <h2 className="font-semibold text-2xl text-text-primary">
+                        <h2 className="text-2xl text-text-primary">
                             How to use Neosrc
                         </h2>
                         <div className="flex flex-col gap-6">

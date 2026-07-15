@@ -53,9 +53,7 @@ export function MilestoneSection({
     return (
         <>
             <div className="flex items-start justify-between">
-                <h3 className="font-semibold text-gray-900 text-sm dark:text-zinc-100">
-                    Milestone
-                </h3>
+                <h3 className="text-gray-900 dark:text-zinc-100">Milestone</h3>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
                         <Async promise={userPermission} fallback={null}>
