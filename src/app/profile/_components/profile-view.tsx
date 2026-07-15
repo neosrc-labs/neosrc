@@ -32,13 +32,13 @@ function ProviderProfileCard({
 
     if (isLoading) {
         return (
-            <section className="rounded-lg border border-gray-200 p-6 dark:border-zinc-800">
-                <div className="mb-4 h-5 w-32 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+            <section className="rounded-lg border border-border-subtle p-6">
+                <div className="mb-4 h-5 w-32 animate-pulse rounded bg-surface-selected" />
                 <div className="flex animate-pulse items-start gap-4">
-                    <div className="h-16 w-16 shrink-0 rounded-full bg-gray-200 dark:bg-zinc-700" />
+                    <div className="h-16 w-16 shrink-0 rounded-full bg-surface-selected" />
                     <div className="flex-1 space-y-2">
-                        <div className="h-4 w-40 rounded bg-gray-200 dark:bg-zinc-700" />
-                        <div className="h-3 w-24 rounded bg-gray-200 dark:bg-zinc-700" />
+                        <div className="h-4 w-40 rounded bg-surface-selected" />
+                        <div className="h-3 w-24 rounded bg-surface-selected" />
                     </div>
                 </div>
             </section>
@@ -47,7 +47,7 @@ function ProviderProfileCard({
 
     if (!user) {
         return (
-            <section className="rounded-lg border border-gray-200 p-6 dark:border-zinc-800">
+            <section className="rounded-lg border border-border-subtle p-6">
                 <SectionHeading provider={provider} />
                 <p className="text-sm text-text-tertiary">
                     Could not load profile information.
@@ -57,7 +57,7 @@ function ProviderProfileCard({
     }
 
     return (
-        <section className="rounded-lg border border-gray-200 p-6 dark:border-zinc-800">
+        <section className="rounded-lg border border-border-subtle p-6">
             <SectionHeading provider={provider} />
             <div className="flex flex-col gap-4">
                 <div className="flex items-start gap-4">
@@ -174,7 +174,7 @@ export function ProfileView({
                         src={image}
                     />
                 ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-text-tertiary text-xl dark:bg-zinc-700">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-selected text-text-tertiary text-xl">
                         {name.charAt(0).toUpperCase()}
                     </div>
                 )}

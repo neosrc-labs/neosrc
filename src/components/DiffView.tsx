@@ -1003,7 +1003,7 @@ function BlockRows({
                             <tr>
                                 <td
                                     colSpan={2}
-                                    className="border-gray-200 border-t p-2 dark:border-zinc-700"
+                                    className="border-border border-t p-2"
                                 >
                                     <MarkdownEditor
                                         autoFocus

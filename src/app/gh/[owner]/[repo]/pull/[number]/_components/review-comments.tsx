@@ -196,9 +196,9 @@ export function ReviewComments({
                 return (
                     <div
                         key={path}
-                        className="mt-3 rounded border border-gray-200 dark:border-zinc-700"
+                        className="mt-3 rounded border border-border"
                     >
-                        <div className="flex items-center gap-2 border-gray-200 border-b bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900">
+                        <div className="flex items-center gap-2 border-border border-b bg-surface-secondary px-4 py-2">
                             <span className="flex-1 truncate font-mono text-text-label text-xs">
                                 {path}
                             </span>
@@ -240,7 +240,7 @@ export function ReviewComments({
                                                         },
                                                     )
                                                 }
-                                                className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-gray-200 hover:text-text-label dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
+                                                className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label dark:hover:text-zinc-300"
                                             >
                                                 <ChevronDown
                                                     size={14}
@@ -460,7 +460,7 @@ function CommentBlock({
     return (
         <div
             id={`review-thread-${comment.id}`}
-            className="bg-gray-50 dark:bg-zinc-950"
+            className="bg-surface-secondary dark:bg-zinc-950"
         >
             {comment.diff_hunk && (
                 <div>
@@ -511,13 +511,13 @@ function CommentBlock({
                                         <button
                                             type="button"
                                             aria-label="More options"
-                                            className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                                            className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
                                         >
                                             <MoreVertical size={14} />
                                         </button>
                                     </PopoverTrigger>
                                     <PopoverContent
-                                        className="w-44 bg-white p-1 dark:bg-zinc-950"
+                                        className="w-44 bg-surface p-1"
                                         align="end"
                                     >
                                         <button
@@ -530,7 +530,7 @@ function CommentBlock({
                                                 );
                                                 setMenuOpenCommentId(null);
                                             }}
-                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
                                         >
                                             <SquarePen size={14} />
                                             Edit
@@ -612,7 +612,7 @@ function CommentBlock({
                                                     <button
                                                         type="button"
                                                         aria-label="More options"
-                                                        className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                                                        className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
                                                     >
                                                         <MoreVertical
                                                             size={14}
@@ -620,7 +620,7 @@ function CommentBlock({
                                                     </button>
                                                 </PopoverTrigger>
                                                 <PopoverContent
-                                                    className="w-44 bg-white p-1 dark:bg-zinc-950"
+                                                    className="w-44 bg-surface p-1"
                                                     align="end"
                                                 >
                                                     <button
@@ -636,7 +636,7 @@ function CommentBlock({
                                                                 null,
                                                             );
                                                         }}
-                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
                                                     >
                                                         <SquarePen size={14} />
                                                         Edit
@@ -677,7 +677,7 @@ function CommentBlock({
             })}
             {canInteract ? (
                 showReplyForm ? (
-                    <div className="bg-gray-50 p-2 dark:bg-zinc-950">
+                    <div className="p-2">
                         <MarkdownEditor
                             autoFocus
                             disabled={replyMutation.isPending}
@@ -715,7 +715,7 @@ function CommentBlock({
                         )}
                     </div>
                 ) : (
-                    <div className="flex w-full items-center gap-2 bg-gray-50 px-6 py-2 dark:bg-zinc-950">
+                    <div className="flex w-full items-center gap-2 px-6 py-2">
                         <div className="min-w-0 flex-1">
                             <ReplyTextboxButton
                                 onClick={() => setShowReplyForm(true)}

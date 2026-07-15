@@ -218,7 +218,7 @@ export function PullRequestDescriptionSection({
                 <div className="mb-2 flex items-center gap-2">
                     <Async
                         fallback={
-                            <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
+                            <div className="h-5 w-16 animate-pulse rounded-full bg-surface-selected" />
                         }
                         promise={pullRequestPromise}
                     >
@@ -228,7 +228,7 @@ export function PullRequestDescriptionSection({
                                 <>
                                     <StatusPill state={state} />
                                     {pullRequest.locked && (
-                                        <span className="flex items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-text-tertiary text-xs dark:border-zinc-700 dark:bg-zinc-900">
+                                        <span className="flex items-center gap-1 rounded-md border border-border bg-surface-secondary px-2 py-0.5 text-text-tertiary text-xs">
                                             <Lock size={12} />
                                             Locked
                                         </span>
@@ -239,7 +239,7 @@ export function PullRequestDescriptionSection({
                     </Async>
                     <Async
                         fallback={
-                            <div className="h-8 w-96 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+                            <div className="h-8 w-96 animate-pulse rounded bg-surface-selected" />
                         }
                         promise={pullRequestPromise}
                     >
@@ -322,7 +322,7 @@ export function PullRequestDescriptionSection({
 
                 <Async
                     fallback={
-                        <div className="h-5 w-104 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+                        <div className="h-5 w-104 animate-pulse rounded bg-surface-selected" />
                     }
                     promise={pullRequestPromise}
                 >
@@ -331,14 +331,14 @@ export function PullRequestDescriptionSection({
                             <div className="text-sm text-text-secondary">
                                 <a
                                     href={`https://github.com/${owner}/${repo}/tree/${pullRequest.base.ref}`}
-                                    className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs hover:bg-gray-200 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+                                    className="rounded bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs hover:bg-surface-selected dark:hover:bg-zinc-600"
                                 >
                                     {pullRequest.base.ref}
                                 </a>
                                 <span className="mx-2">←</span>
                                 <a
                                     href={`https://github.com/${owner}/${repo}/tree/${pullRequest.head.ref}`}
-                                    className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs hover:bg-gray-200 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+                                    className="rounded bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs hover:bg-surface-selected dark:hover:bg-zinc-600"
                                 >
                                     {pullRequest.head.ref}
                                 </a>
@@ -381,15 +381,15 @@ export function PullRequestDescriptionSection({
 
             <Async
                 fallback={
-                    <div className="h-48 w-fill animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+                    <div className="h-48 w-fill animate-pulse rounded bg-surface-selected" />
                 }
                 promise={pullRequestPromise}
             >
                 {(pullRequest) => {
                     const displayBody = savedBody ?? pullRequest.body;
                     return (
-                        <div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-900">
-                            <div className="flex items-center justify-between border-gray-200 border-b px-4 py-1 dark:border-zinc-700">
+                        <div className="rounded-lg border border-border bg-surface-secondary">
+                            <div className="flex items-center justify-between border-border border-b px-4 py-1">
                                 <h3 className="text-text-label">Description</h3>
                                 <Async
                                     fallback={null}

@@ -44,7 +44,7 @@ export function ThemeToggle() {
     return (
         <div className="relative" ref={menuRef}>
             <button
-                className="flex cursor-pointer items-center justify-center rounded-md p-2 text-text-tertiary transition-colors hover:bg-gray-100 hover:text-text-label dark:hover:bg-gray-800 dark:hover:text-zinc-200"
+                className="flex cursor-pointer items-center justify-center rounded-md p-2 text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
                 onClick={() => setOpen(!open)}
                 type="button"
                 title={mounted ? `Theme: ${selected.label}` : undefined}
@@ -52,18 +52,18 @@ export function ThemeToggle() {
                 {mounted ? (
                     <CurrentIcon />
                 ) : (
-                    <span className="h-5 w-5 rounded bg-gray-200 dark:bg-zinc-700" />
+                    <span className="h-5 w-5 rounded bg-surface-selected" />
                 )}
             </button>
 
             {open && (
-                <div className="absolute right-0 z-50 mt-1 min-w-32 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                <div className="absolute right-0 z-50 mt-1 min-w-32 overflow-hidden rounded-lg border border-border bg-surface-elevated py-1 shadow-lg">
                     {themes.map(({ key, label, icon: Icon }) => (
                         <button
                             className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm transition-colors ${
                                 theme === key
-                                    ? "bg-gray-100 text-text-primary dark:bg-zinc-800"
-                                    : "text-text-secondary hover:bg-gray-50 hover:text-text-primary dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                                    ? "bg-surface-tertiary text-text-primary"
+                                    : "text-text-secondary hover:bg-surface-tertiary hover:text-text-primary dark:hover:text-zinc-200"
                             }`}
                             key={key}
                             onClick={() => {

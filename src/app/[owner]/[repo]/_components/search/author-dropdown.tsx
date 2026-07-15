@@ -125,7 +125,7 @@ export function AuthorDropdown({
                             className="size-5 shrink-0 rounded-full"
                         />
                     ) : (
-                        <div className="size-5 shrink-0 rounded-full bg-gray-200 dark:bg-zinc-700" />
+                        <div className="size-5 shrink-0 rounded-full bg-surface-selected" />
                     )}
                     <span className="truncate">{u.login}</span>
                     {selected && (
@@ -147,7 +147,7 @@ export function AuthorDropdown({
             trigger={
                 <button
                     type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
                 >
                     <User className="size-4" />
                     Author

@@ -100,10 +100,10 @@ export function SearchableDropdown<T>({
                 </button>
             )}
             {open && (
-                <div className="absolute right-0 z-20 mt-1 w-64 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                <div className="absolute right-0 z-20 mt-1 w-64 rounded-lg border border-border bg-surface-elevated shadow-lg">
                     <input
                         autoFocus
-                        className="w-full border-gray-200 border-b px-3 py-2 text-sm outline-none placeholder:text-text-muted dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                        className="w-full border-border border-b px-3 py-2 text-sm outline-none placeholder:text-text-muted dark:bg-zinc-900 dark:text-zinc-100"
                         onChange={(e) => {
                             setSearch(e.target.value);
                             onSearchChangeRef.current?.(e.target.value);
@@ -123,7 +123,7 @@ export function SearchableDropdown<T>({
                                 return (
                                     <li
                                         className={cn(
-                                            "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800",
+                                            "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-surface-tertiary",
                                             selected &&
                                                 "bg-blue-50 dark:bg-blue-950/30",
                                         )}

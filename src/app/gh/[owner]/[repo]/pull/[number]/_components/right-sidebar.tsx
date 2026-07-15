@@ -88,7 +88,7 @@ export default function RightSidebar({
     if (!pullRequestPromise) {
         return (
             <aside
-                className="border-gray-200 border-l bg-white px-4 py-6 dark:border-zinc-800 dark:bg-zinc-950"
+                className="border-border-subtle border-l bg-surface px-4 py-6"
                 data-testid="right-sidebar"
             >
                 <p className="text-sm text-text-tertiary">
@@ -121,10 +121,10 @@ export default function RightSidebar({
 
     return (
         <aside
-            className="flex h-full flex-col border-gray-200 border-l bg-white px-4 py-6 dark:border-zinc-800 dark:bg-zinc-950"
+            className="flex h-full flex-col border-border-subtle border-l bg-surface px-4 py-6"
             data-testid="right-sidebar"
         >
-            <div className="sticky top-0 z-10 space-y-4 bg-white pb-4 dark:bg-zinc-950">
+            <div className="sticky top-0 z-10 space-y-4 bg-surface pb-4">
                 <MetadataSection
                     userPermission={userPermission}
                     pullRequestPromise={pullRequestPromise}
@@ -132,7 +132,7 @@ export default function RightSidebar({
                     repo={repo}
                     number={number}
                 />
-                <div className="flex gap-1 border-gray-200 border-b pb-2 dark:border-zinc-800">
+                <div className="flex gap-1 border-border-subtle border-b pb-2">
                     {tabs.map(({ key, icon, label }) => (
                         <button
                             key={key}
@@ -140,8 +140,8 @@ export default function RightSidebar({
                             onClick={() => setTab(key)}
                             className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 font-medium text-sm transition-colors ${
                                 tab === key
-                                    ? "bg-gray-100 text-text-primary dark:bg-zinc-800"
-                                    : "text-text-secondary hover:bg-gray-50 hover:text-text-primary dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                                    ? "bg-surface-tertiary text-text-primary"
+                                    : "text-text-secondary hover:bg-surface-tertiary hover:text-text-primary dark:hover:text-zinc-100"
                             }`}
                         >
                             {icon}
@@ -186,7 +186,7 @@ function ChecksSection({ checks }: ChecksSectionProps) {
                     key={check.html_url ?? check.name}
                 >
                     <a
-                        className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800"
+                        className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-surface-tertiary"
                         href={check.html_url}
                         rel="noopener noreferrer"
                         target="_blank"

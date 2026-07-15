@@ -64,7 +64,7 @@ function ThreadCard({ thread }: ThreadCardProps) {
         <button
             type="button"
             onClick={handleClick}
-            className="flex w-full cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-zinc-800"
+            className="flex w-full cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-surface-tertiary"
         >
             <img
                 alt={`${root.author?.login ?? "unknown"}'s avatar`}
@@ -109,10 +109,10 @@ function ThreadCard({ thread }: ThreadCardProps) {
 function ThreadSkeleton() {
     return (
         <div className="flex items-start gap-2 rounded-md px-2 py-1.5">
-            <div className="mt-0.5 size-5 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
+            <div className="mt-0.5 size-5 animate-pulse rounded-full bg-surface-selected" />
             <div className="min-w-0 flex-1">
-                <div className="h-4 w-full animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
-                <div className="mt-2 h-3 w-16 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+                <div className="h-4 w-full animate-pulse rounded bg-surface-selected" />
+                <div className="mt-2 h-3 w-16 animate-pulse rounded bg-surface-selected" />
             </div>
         </div>
     );

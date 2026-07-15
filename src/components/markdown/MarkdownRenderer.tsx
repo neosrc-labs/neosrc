@@ -441,7 +441,7 @@ export function MarkdownRenderer({
                 },
                 thead({ children }) {
                     return (
-                        <thead className="bg-gray-100 dark:bg-zinc-800">
+                        <thead className="bg-surface-tertiary">
                             {children}
                         </thead>
                     );

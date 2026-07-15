@@ -27,7 +27,7 @@ export default function LeftSidebar({
 }: LeftSidebarProps) {
     return (
         <aside
-            className="flex h-full flex-col border-gray-200 border-r bg-white px-4 py-6 pr-1 dark:border-zinc-800 dark:bg-zinc-950"
+            className="flex h-full flex-col border-border-subtle border-r bg-surface px-4 py-6 pr-1"
             data-testid="left-sidebar"
         >
             <SidebarNavMenu
@@ -42,7 +42,7 @@ export default function LeftSidebar({
                 )}
             />
 
-            <div className="min-h-0 flex-1 border-gray-200 border-t pt-4 pr-0 dark:border-zinc-800">
+            <div className="min-h-0 flex-1 border-border-subtle border-t pt-4 pr-0">
                 <Suspense>
                     <LeftSidebarContentSection
                         number={number}

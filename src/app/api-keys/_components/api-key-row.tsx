@@ -27,7 +27,7 @@ export function ApiKeyRow({
     isRevoking,
 }: ApiKeyRowProps) {
     return (
-        <div className="rounded-lg border border-gray-200 p-4 dark:border-zinc-800">
+        <div className="rounded-lg border border-border-subtle p-4">
             <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">

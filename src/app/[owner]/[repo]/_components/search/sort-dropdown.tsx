@@ -51,14 +51,14 @@ export function SortDropdown({
             <button
                 type="button"
                 onClick={() => setOpen(!open)}
-                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-gray-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
             >
                 <ListOrdered className="size-4" />
                 {currentLabel}
                 <ChevronDown className="size-3.5 text-text-muted" />
             </button>
             {open && (
-                <div className="absolute top-full right-0 z-50 mt-1 w-44 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+                <div className="absolute top-full right-0 z-50 mt-1 w-44 rounded-lg border border-border bg-surface-elevated p-1 shadow-lg">
                     {SORT_OPTIONS.map((opt) => (
                         <button
                             key={opt.label}
@@ -71,8 +71,8 @@ export function SortDropdown({
                                 "flex w-full cursor-pointer items-center rounded-md px-3 py-1.5 text-sm transition-colors",
                                 opt.sort === currentSort &&
                                     opt.order === currentOrder
-                                    ? "bg-gray-100 font-medium text-text-primary dark:bg-zinc-800"
-                                    : "text-text-label hover:bg-gray-100 dark:hover:bg-zinc-800",
+                                    ? "bg-surface-tertiary font-medium text-text-primary"
+                                    : "text-text-label hover:bg-surface-tertiary",
                             )}
                         >
                             {opt.label}

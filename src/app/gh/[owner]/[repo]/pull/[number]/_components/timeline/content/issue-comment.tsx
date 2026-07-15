@@ -78,7 +78,7 @@ export function IssueCommentContent({
 
     if (isMinimized) {
         return (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-900/50">
+            <div className="/50 rounded-lg border border-border bg-surface-secondary p-3">
                 <div className="flex items-center justify-between">
                     <p className="text-sm text-text-tertiary">
                         A comment by{" "}
@@ -97,7 +97,7 @@ export function IssueCommentContent({
                         onClick={() =>
                             onToggleMinimized(event.databaseId, true)
                         }
-                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-gray-200 hover:text-text-label dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
+                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label dark:hover:text-zinc-300"
                     >
                         <ChevronDown size={14} />
                         Show comment
@@ -153,7 +153,7 @@ export function IssueCommentContent({
                             onClick={() =>
                                 onToggleMinimized(event.databaseId, false)
                             }
-                            className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                            className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
                         >
                             Hide comment
                         </button>
@@ -164,13 +164,13 @@ export function IssueCommentContent({
                                 <button
                                     type="button"
                                     aria-label="More options"
-                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
                                 >
                                     <MoreVertical size={14} />
                                 </button>
                             </PopoverTrigger>
                             <PopoverContent
-                                className="w-44 bg-white p-1 dark:bg-zinc-950"
+                                className="w-44 bg-surface p-1"
                                 align="end"
                             >
                                 <button
@@ -179,7 +179,7 @@ export function IssueCommentContent({
                                         handleCopyLink();
                                         setMenuOpen(false);
                                     }}
-                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
                                 >
                                     {copied ? (
                                         <Check size={14} />
@@ -198,7 +198,7 @@ export function IssueCommentContent({
                                             );
                                             setMenuOpen(false);
                                         }}
-                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
                                     >
                                         <SquarePen size={14} />
                                         Edit

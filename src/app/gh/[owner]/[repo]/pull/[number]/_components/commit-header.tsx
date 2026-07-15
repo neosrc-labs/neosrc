@@ -32,7 +32,7 @@ export async function CommitHeader({
             ? commits[currentIndex + 1]
             : null;
     return (
-        <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="mb-6 rounded-lg border border-border bg-surface-secondary p-4">
             <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-text-primary">
                     <CommitSubject message={commit.commit.message} />
@@ -40,14 +40,14 @@ export async function CommitHeader({
                 <div className="flex gap-2">
                     {prevCommit ? (
                         <a
-                            className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                            className="whitespace-nowrap rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
                             href={`/gh/${owner}/${repo}/pull/${number}/files/${prevCommit.sha}`}
                         >
                             ← Previous
                         </a>
                     ) : (
                         <button
-                            className="cursor-not-allowed rounded-md bg-gray-100 px-3 py-1.5 font-medium text-sm text-text-muted ring-1 ring-gray-200 dark:bg-zinc-800 dark:ring-zinc-700"
+                            className="cursor-not-allowed rounded-md bg-surface-tertiary px-3 py-1.5 font-medium text-sm text-text-muted ring-1 ring-border"
                             disabled
                             type="button"
                         >
@@ -56,14 +56,14 @@ export async function CommitHeader({
                     )}
                     {nextCommit ? (
                         <a
-                            className="whitespace-nowrap rounded-md bg-white px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-gray-300 transition-colors hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:hover:bg-zinc-700"
+                            className="whitespace-nowrap rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
                             href={`/gh/${owner}/${repo}/pull/${number}/files/${nextCommit.sha}`}
                         >
                             Next →
                         </a>
                     ) : (
                         <button
-                            className="cursor-not-allowed rounded-md bg-gray-100 px-3 py-1.5 font-medium text-sm text-text-muted ring-1 ring-gray-200 dark:bg-zinc-800 dark:ring-zinc-700"
+                            className="cursor-not-allowed rounded-md bg-surface-tertiary px-3 py-1.5 font-medium text-sm text-text-muted ring-1 ring-border"
                             disabled
                             type="button"
                         >
@@ -132,11 +132,11 @@ export async function CommitHeader({
 
 export function CommitHeaderSkeleton() {
     return (
-        <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
-            <div className="mb-3 h-8 w-3/4 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+        <div className="mb-6 rounded-lg border border-border bg-surface-secondary p-4">
+            <div className="mb-3 h-8 w-3/4 animate-pulse rounded bg-surface-selected" />
             <div className="mt-3 flex items-center gap-2">
-                <div className="h-5 w-5 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
-                <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+                <div className="h-5 w-5 animate-pulse rounded-full bg-surface-selected" />
+                <div className="h-4 w-32 animate-pulse rounded bg-surface-selected" />
             </div>
         </div>
     );

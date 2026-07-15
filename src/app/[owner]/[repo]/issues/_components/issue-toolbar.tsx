@@ -46,7 +46,7 @@ export function IssueToolbar({
     onRemoveQualifier: (key: string, value: string) => void;
 }) {
     return (
-        <div className="border-gray-200 border-b dark:border-zinc-800">
+        <div className="border-border-subtle border-b">
             <div className="flex items-center justify-between px-4">
                 <div className="flex items-center">
                     {TABS.map((tab) => {
@@ -64,7 +64,7 @@ export function IssueToolbar({
                             >
                                 {tab.label}
                                 {count !== undefined && (
-                                    <span className="ml-1.5 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs tabular-nums dark:bg-zinc-700">
+                                    <span className="ml-1.5 rounded-full bg-surface-selected px-1.5 py-0.5 text-xs tabular-nums">
                                         {count.toLocaleString()}
                                     </span>
                                 )}

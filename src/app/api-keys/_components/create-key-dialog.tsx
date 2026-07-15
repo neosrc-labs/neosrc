@@ -68,7 +68,7 @@ function CopyButton({ text }: { text: string }) {
         <button
             type="button"
             onClick={handleCopy}
-            className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-text-tertiary text-xs transition-colors hover:bg-gray-100 hover:text-text-label dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-text-tertiary text-xs transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
         >
             {copied ? (
                 <Check className="h-3 w-3" />
@@ -172,13 +172,13 @@ export function CreateKeyDialog({
     if (createdKey) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                <div className="mx-4 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-900">
+                <div className="mx-4 w-full max-w-lg rounded-lg bg-surface-elevated p-6 shadow-xl">
                     <h2 className="mb-4 text-text-primary">API Key Created</h2>
                     <p className="mb-2 text-sm text-text-secondary">
                         Make sure to copy your API key now. You won&apos;t be
                         able to see it again.
                     </p>
-                    <div className="mb-4 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+                    <div className="mb-4 flex items-center gap-2 rounded-lg border border-border bg-surface-secondary p-3">
                         <code className="flex-1 break-all font-mono text-sm text-text-primary">
                             {showKey ? createdKey : "••••••••••••••••"}
                         </code>
@@ -199,7 +199,7 @@ export function CreateKeyDialog({
                     <button
                         type="button"
                         onClick={handleDone}
-                        className="w-full cursor-pointer rounded-lg bg-gray-900 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-gray-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-gray-200"
+                        className="w-full cursor-pointer rounded-lg bg-gray-900 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-gray-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
                     >
                         Done
                     </button>
@@ -210,7 +210,7 @@ export function CreateKeyDialog({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-900">
+            <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-surface-elevated p-6 shadow-xl">
                 <h2 className="mb-4 text-text-primary">Create API Key</h2>
 
                 <div className="mb-4">
@@ -383,7 +383,7 @@ export function CreateKeyDialog({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 cursor-pointer rounded-lg border border-gray-300 px-4 py-2 font-medium text-sm text-text-label transition-colors hover:bg-gray-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                        className="flex-1 cursor-pointer rounded-lg border border-gray-300 px-4 py-2 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
                     >
                         Cancel
                     </button>

@@ -52,16 +52,13 @@ export function ReactionPicker({
                     type="button"
                     aria-label="Add reaction"
                     tabIndex={canInteract ? 0 : -1}
-                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
                 >
                     <SmilePlus size={14} />
                 </button>
             </PopoverTrigger>
             {canInteract && (
-                <PopoverContent
-                    className="w-fit bg-white p-2 dark:bg-zinc-950"
-                    align="end"
-                >
+                <PopoverContent className="w-fit bg-surface p-2" align="end">
                     <div className="flex gap-1">
                         {availableReactions.map((content) => (
                             <button
@@ -72,7 +69,7 @@ export function ReactionPicker({
                                     onReact(content);
                                     setOpen(false);
                                 }}
-                                className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                className="cursor-pointer rounded p-1 text-lg transition-colors hover:bg-surface-tertiary"
                             >
                                 {REACTION_EMOJIS[content] ?? content}
                             </button>

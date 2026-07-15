@@ -291,7 +291,7 @@ function HeaderContent({
     return (
         <>
             <header
-                className="relative z-50 border-gray-200 border-b bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                className="relative z-50 border-border-subtle border-b bg-surface"
                 ref={headerRef}
             >
                 <div className="px-4 sm:px-6 lg:px-8">
@@ -323,7 +323,7 @@ function HeaderContent({
                                                 className="size-5 rounded-full"
                                             />
                                         ) : (
-                                            <div className="size-5 rounded-full bg-gray-200 dark:bg-zinc-700" />
+                                            <div className="size-5 rounded-full bg-surface-selected" />
                                         )}
                                     </a>
                                     <a
@@ -352,7 +352,7 @@ function HeaderContent({
                         <div className="flex items-center gap-1">
                             {(prMatch ?? pullsMatch ?? issuesMatch) && (
                                 <a
-                                    className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-gray-100 hover:text-text-label dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                                    className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
                                     href={
                                         prMatch
                                             ? `https://${provider === "cb" ? "codeberg.org" : "github.com"}/${prMatch[1]}/${prMatch[2]}/pull/${prMatch[3]}${provider === "gh" ? "?neosrc_exit=1" : ""}`
@@ -387,7 +387,7 @@ function HeaderContent({
                             )}
                             <ThemeToggle />
                             <a
-                                className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-gray-100 hover:text-text-label dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                                className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
                                 href="/profile"
                             >
                                 {currentUser?.avatarUrl ? (
@@ -438,7 +438,7 @@ function HeaderContent({
                                           aria-hidden
                                       >
                                           <div
-                                              className="h-5 animate-pulse rounded bg-gray-200 dark:bg-zinc-700"
+                                              className="h-5 animate-pulse rounded bg-surface-selected"
                                               style={{ width: `${w}px` }}
                                           />
                                       </div>
@@ -451,7 +451,7 @@ function HeaderContent({
             {prMatch && !isLeftOpen && (
                 <button
                     ref={leftToggleRef}
-                    className="fixed left-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-r-md bg-white text-text-tertiary shadow-sm transition-colors hover:bg-gray-100 hover:text-text-label dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                    className="fixed left-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-r-md bg-surface text-text-tertiary shadow-sm transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
                     style={{ top: "var(--header-height)" }}
                     onClick={toggleLeft}
                     title="Open left sidebar"
@@ -464,7 +464,7 @@ function HeaderContent({
             {prMatch && (
                 <button
                     ref={rightToggleRef}
-                    className="fixed right-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-l-md bg-white text-text-tertiary shadow-sm transition-colors hover:bg-gray-100 hover:text-text-label dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                    className="fixed right-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-l-md bg-surface text-text-tertiary shadow-sm transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
                     style={{ top: "var(--header-height)" }}
                     onClick={toggleRight}
                     title={

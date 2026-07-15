@@ -268,16 +268,14 @@ export const SearchAutocomplete = forwardRef<
     return (
         <div
             ref={listRef}
-            className="absolute top-full right-0 left-0 z-20 mt-1 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+            className="absolute top-full right-0 left-0 z-20 mt-1 rounded-lg border border-border bg-surface-elevated shadow-lg"
         >
             <ul className="max-h-60 overflow-y-auto py-1">
                 {suggestions.map((suggestion, i) => (
                     <li
                         key={suggestion.label}
-                        className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-zinc-800 ${
-                            i === selectedIndex
-                                ? "bg-gray-100 dark:bg-zinc-800"
-                                : ""
+                        className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-surface-tertiary ${
+                            i === selectedIndex ? "bg-surface-tertiary" : ""
                         }`}
                         onClick={() => handleSelect(suggestion)}
                         onMouseEnter={() => setSelectedIndex(i)}

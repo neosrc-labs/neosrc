@@ -194,7 +194,7 @@ function FileTreeNode({
             .join(" ");
         return (
             <a
-                className="flex items-center gap-1.5 truncate rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="flex items-center gap-1.5 truncate rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
                 href={`${basePath}/files#${fileId}`}
                 style={{ paddingLeft: `${paddingLeft}px` }}
             >
@@ -228,7 +228,7 @@ function FileTreeNode({
 
     return (
         <button
-            className="flex w-full cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+            className="flex w-full cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
             onClick={() => onToggle(node.path)}
             style={{ paddingLeft: `${paddingLeft}px` }}
             type="button"
@@ -280,8 +280,8 @@ export function FileTreeSkeleton() {
                         key={item.id}
                         style={{ paddingLeft: `${paddingLeft}px` }}
                     >
-                        <div className="h-4 w-4 flex-shrink-0 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
-                        <div className="h-4 flex-1 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+                        <div className="h-4 w-4 flex-shrink-0 animate-pulse rounded bg-surface-selected" />
+                        <div className="h-4 flex-1 animate-pulse rounded bg-surface-selected" />
                     </div>
                 );
             })}

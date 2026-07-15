@@ -15,7 +15,7 @@ const authorAssociationLabels: Record<string, string> = {
     OWNER: "Owner",
 };
 
-const neutralBadge = "bg-gray-100 text-text-secondary dark:bg-zinc-800";
+const neutralBadge = "bg-surface-tertiary text-text-secondary";
 
 const authorAssociationStyles: Record<string, string> = {
     OWNER: neutralBadge,
@@ -92,10 +92,10 @@ export function CommentCard({
             id={id}
             className={
                 variant === "default"
-                    ? "relative border-b-1 border-b-gray-200 border-solid bg-white dark:border-b-zinc-700 dark:bg-zinc-900"
+                    ? "relative border-b-1 border-b-gray-200 border-solid bg-surface-elevated dark:border-b-zinc-700"
                     : variant === "standalone"
-                      ? "relative rounded border-1 border-gray-200 border-solid bg-white dark:border-zinc-700 dark:bg-zinc-900"
-                      : "relative bg-gray-50 dark:bg-zinc-950"
+                      ? "relative rounded border-1 border-border border-solid bg-surface-elevated"
+                      : "relative bg-surface-secondary dark:bg-zinc-950"
             }
         >
             {hideAvatar && tailDirection === "left" && (
@@ -140,9 +140,7 @@ export function CommentCard({
             )}
             <div
                 className={`flex items-center justify-between gap-2 px-4 pt-2 pb-2 ${
-                    variant === "standalone"
-                        ? "border-gray-200 border-b dark:border-zinc-700"
-                        : ""
+                    variant === "standalone" ? "border-border border-b" : ""
                 }`}
             >
                 <div className="flex min-w-0 items-baseline gap-2">

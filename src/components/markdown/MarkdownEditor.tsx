@@ -693,7 +693,7 @@ export function MarkdownEditor({
             ref={containerRef}
         >
             <div className="overflow-hidden rounded-lg">
-                <div className="flex flex-wrap items-center gap-1 border-gray-300 border-b bg-gray-50 px-3 dark:border-zinc-600 dark:bg-zinc-900">
+                <div className="flex flex-wrap items-center gap-1 border-gray-300 border-b bg-surface-secondary px-3 dark:border-zinc-600">
                     <span className="flex items-center gap-3">
                         <button
                             className={`cursor-pointer border-b-2 pt-2 pb-1.5 font-medium text-sm transition-colors ${
@@ -733,7 +733,7 @@ export function MarkdownEditor({
                                         const Icon = btn.icon;
                                         return (
                                             <button
-                                                className="inline-flex cursor-pointer items-center justify-center rounded-md p-1 text-text-secondary hover:bg-gray-200 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+                                                className="inline-flex cursor-pointer items-center justify-center rounded-md p-1 text-text-secondary hover:bg-surface-selected hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:text-zinc-200"
                                                 disabled={disabled}
                                                 key={btn.key}
                                                 onMouseDown={(e) => {
@@ -766,7 +766,7 @@ export function MarkdownEditor({
                 {mode === "write" ? (
                     <textarea
                         autoFocus={autoFocus}
-                        className="w-full resize-y border-0 bg-white px-3 py-2 text-sm text-text-primary placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:bg-zinc-950 dark:placeholder-zinc-500 disabled:dark:bg-zinc-800"
+                        className="disabled: w-full resize-y border-0 bg-surface px-3 py-2 text-sm text-text-primary placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:placeholder-zinc-500"
                         disabled={disabled}
                         onBlur={(e) => {
                             savedSelectionRef.current = {
@@ -910,7 +910,7 @@ export function MarkdownEditor({
                     />
                 ) : (
                     <div
-                        className="prose prose-sm dark:prose-invert max-w-none bg-white px-3 py-2 dark:bg-zinc-950"
+                        className="prose prose-sm dark:prose-invert max-w-none bg-surface px-3 py-2"
                         style={{ minHeight }}
                     >
                         <MarkdownRenderer
@@ -923,10 +923,10 @@ export function MarkdownEditor({
                 )}
 
                 {(footerActions || onCancel) && (
-                    <div className="flex items-center justify-between gap-2 border-gray-300 border-t bg-gray-50 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-900">
+                    <div className="flex items-center justify-between gap-2 border-gray-300 border-t bg-surface-secondary px-3 py-2 dark:border-zinc-600">
                         {onCancel ? (
                             <button
-                                className="cursor-pointer rounded-md border border-gray-300 px-4 py-1.5 font-medium text-sm text-text-secondary transition-colors hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                                className="cursor-pointer rounded-md border border-gray-300 px-4 py-1.5 font-medium text-sm text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
                                 disabled={disabled}
                                 onClick={onCancel}
                                 type="button"

@@ -30,8 +30,8 @@ function UserHoverCardContent({
     if (isLoading) {
         return (
             <div className="flex items-start gap-3 p-4">
-                <div className="h-16 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-zinc-700" />
-                <div className="h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-zinc-700" />
+                <div className="h-16 w-16 animate-pulse rounded-full bg-surface-selected" />
+                <div className="h-4 w-24 animate-pulse rounded bg-surface-selected" />
             </div>
         );
     }
@@ -46,7 +46,7 @@ function UserHoverCardContent({
 
     return (
         <div>
-            <div className="flex items-start gap-4 border-gray-200 border-b p-4 dark:border-zinc-800">
+            <div className="flex items-start gap-4 border-border-subtle border-b p-4">
                 <img
                     alt={user.login}
                     className="h-16 w-16 rounded-full"
@@ -157,7 +157,7 @@ export function UserHoverCard({
     return (
         <HoverCard>
             <HoverCardTrigger asChild>{children}</HoverCardTrigger>
-            <HoverCardContent className="w-80 bg-white p-0 dark:bg-zinc-950">
+            <HoverCardContent className="w-80 bg-surface p-0">
                 <UserHoverCardContent login={login} provider={provider} />
             </HoverCardContent>
         </HoverCard>

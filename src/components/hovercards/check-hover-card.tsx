@@ -87,7 +87,7 @@ function CheckHoverCardContent({ check }: { check: CheckRun }) {
 
     return (
         <div>
-            <div className="flex items-start gap-3 border-gray-200 border-b p-3 dark:border-zinc-800">
+            <div className="flex items-start gap-3 border-border-subtle border-b p-3">
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                         <StatusIcon check={check} />
@@ -149,7 +149,7 @@ export function CheckHoverCard({ check, children }: CheckHoverCardProps) {
     return (
         <HoverCard openDelay={300}>
             <HoverCardTrigger asChild>{children}</HoverCardTrigger>
-            <HoverCardContent className="w-72 bg-white p-0 dark:bg-zinc-950">
+            <HoverCardContent className="w-72 bg-surface p-0">
                 <CheckHoverCardContent check={check} />
             </HoverCardContent>
         </HoverCard>

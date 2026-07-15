@@ -144,13 +144,13 @@ export function PullRequestReviewContent({
                                             <button
                                                 type="button"
                                                 aria-label="More options"
-                                                className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-gray-100 hover:text-text-secondary dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                                                className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
                                             >
                                                 <MoreVertical size={14} />
                                             </button>
                                         </PopoverTrigger>
                                         <PopoverContent
-                                            className="w-44 bg-white p-1 dark:bg-zinc-950"
+                                            className="w-44 bg-surface p-1"
                                             align="end"
                                         >
                                             <button
@@ -159,7 +159,7 @@ export function PullRequestReviewContent({
                                                     handleCopyLink();
                                                     setMenuOpen(false);
                                                 }}
-                                                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
                                             >
                                                 {copied ? (
                                                     <Check size={14} />
@@ -180,7 +180,7 @@ export function PullRequestReviewContent({
                                                         );
                                                         setMenuOpen(false);
                                                     }}
-                                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+                                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
                                                 >
                                                     <SquarePen size={14} />
                                                     Edit

@@ -24,7 +24,7 @@ function ImageWithFallback({
     if (error) {
         return (
             <div
-                className={`flex items-center justify-center bg-gray-100 text-sm text-text-tertiary dark:bg-zinc-800 ${className ?? ""}`}
+                className={`flex items-center justify-center bg-surface-tertiary text-sm text-text-tertiary ${className ?? ""}`}
             >
                 Failed to load image
             </div>
@@ -52,8 +52,8 @@ function TwoUpView({
     return (
         <div className="flex flex-col md:flex-row">
             {oldUrl ? (
-                <div className="flex flex-1 flex-col border-gray-200 border-b md:border-r md:border-b-0 dark:border-zinc-700">
-                    <div className="border-gray-200 border-b bg-gray-50 px-3 py-1.5 text-center font-medium text-red-600 text-xs uppercase tracking-wide dark:border-zinc-700 dark:bg-zinc-900 dark:text-red-400">
+                <div className="flex flex-1 flex-col border-border border-b md:border-r md:border-b-0">
+                    <div className="border-border border-b bg-surface-secondary px-3 py-1.5 text-center font-medium text-red-600 text-xs uppercase tracking-wide dark:text-red-400">
                         Deleted
                     </div>
                     <div className="flex flex-1 items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
@@ -67,7 +67,7 @@ function TwoUpView({
             ) : null}
             {newUrl ? (
                 <div className="flex flex-1 flex-col">
-                    <div className="border-gray-200 border-b bg-gray-50 px-3 py-1.5 text-center font-medium text-green-600 text-xs uppercase tracking-wide dark:border-zinc-700 dark:bg-zinc-900 dark:text-green-400">
+                    <div className="border-border border-b bg-surface-secondary px-3 py-1.5 text-center font-medium text-green-600 text-xs uppercase tracking-wide dark:text-green-400">
                         Added
                     </div>
                     <div className="flex flex-1 items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
@@ -266,12 +266,12 @@ function OnionSkinView({
                     style={{ opacity: opacity / 100 }}
                 />
             </div>
-            <div className="flex items-center gap-3 border-gray-200 border-t bg-gray-50 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-900">
+            <div className="flex items-center gap-3 border-border border-t bg-surface-secondary px-4 py-2">
                 <span className="text-red-600 text-xs dark:text-red-400">
                     Deleted
                 </span>
                 <input
-                    className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-gray-200 accent-gray-500 dark:bg-zinc-700 dark:accent-zinc-400"
+                    className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-surface-selected accent-gray-500 dark:accent-zinc-400"
                     max={100}
                     min={0}
                     onChange={(e) => setOpacity(Number(e.target.value))}
@@ -331,13 +331,13 @@ export default function ImageDiff({ oldUrl, newUrl }: ImageDiffProps) {
                 <OnionSkinView newUrl={newUrl} oldUrl={oldUrl} />
             )}
             {hasBoth && (
-                <div className="flex items-center justify-center gap-1 border-gray-200 border-t bg-gray-50 px-4 py-1.5 dark:border-zinc-700 dark:bg-zinc-900">
+                <div className="flex items-center justify-center gap-1 border-border border-t bg-surface-secondary px-4 py-1.5">
                     {modes.map(({ icon: Icon, label, value }) => (
                         <button
                             className={`cursor-pointer rounded px-2 py-1 font-medium text-xs transition-colors ${
                                 mode === value
-                                    ? "bg-gray-200 text-gray-800 dark:bg-zinc-700 dark:text-zinc-200"
-                                    : "text-text-tertiary hover:bg-gray-100 hover:text-text-label dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                                    ? "bg-surface-selected text-gray-800 dark:text-zinc-200"
+                                    : "text-text-tertiary hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
                             }`}
                             key={value}
                             onClick={() => setMode(value)}
