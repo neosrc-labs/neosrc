@@ -4,6 +4,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { CheckCircle, Circle, Code2, MessageSquare } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { SCROLL_TARGET_EVENT } from "~/components/LazyRenderItem";
+import { cn } from "~/lib/utils";
 import type { ReviewThreadData } from "~/server/github";
 import { api } from "~/trpc/react";
 
@@ -64,7 +65,12 @@ function ThreadCard({ thread }: ThreadCardProps) {
         <button
             type="button"
             onClick={handleClick}
-            className="flex w-full cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-surface-tertiary"
+            className={[
+                "flex w-full cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-surface-tertiary",
+                thread.isResolved && "opacity-60",
+            ]
+                .filter(Boolean)
+                .join(" ")}
         >
             <img
                 alt={`${root.author?.login ?? "unknown"}'s avatar`}
@@ -81,7 +87,12 @@ function ThreadCard({ thread }: ThreadCardProps) {
                         </span>
                     </span>
                 ) : (
-                    <p className="truncate text-sm text-text-label">
+                    <p
+                        className={cn(
+                            "truncate text-sm text-text-label",
+                            thread.isResolved ? "line-through" : "",
+                        )}
+                    >
                         {truncateBody(root.body)}
                     </p>
                 )}
@@ -91,7 +102,7 @@ function ThreadCard({ thread }: ThreadCardProps) {
                     ) : (
                         <Circle className="size-3 text-text-muted" />
                     )}
-                    <span className="flex items-center gap-1 text-text-muted text-xs">
+                    <span className="flex items-center gap-1 text-text-muted text-xs no-underline">
                         <MessageSquare className="size-3" />
                         {thread.comments.length}
                     </span>
