@@ -27,11 +27,7 @@ export default function RootLayout({
     children,
 }: Readonly<{ children: React.ReactNode }>) {
     return (
-        <html
-            className={`${font.variable}`}
-            lang="en"
-            suppressHydrationWarning
-        >
+        <html className={`${font.variable}`} lang="en" suppressHydrationWarning>
             <body className="bg-white dark:bg-zinc-950">
                 <TooltipProvider>
                     <ThemeProvider
