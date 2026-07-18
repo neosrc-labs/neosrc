@@ -1,4 +1,5 @@
 import { Octokit, type RestEndpointMethodTypes } from "@octokit/rest";
+import { notFound } from "next/navigation";
 import { cache } from "react";
 import {
     prCacheKey,
@@ -79,17 +80,33 @@ export async function getCachedPullRequest(
     pullNumber: number,
     userId?: string | null,
 ): Promise<PullsGetResponseData> {
+    const getOrThrow = async () => {
+        try {
+            return await getPullRequest(accessToken, owner, repo, pullNumber);
+        } catch (error: unknown) {
+            if (
+                error &&
+                typeof error === "object" &&
+                "status" in error &&
+                (error as { status: number }).status === 404
+            ) {
+                notFound();
+            }
+            throw error;
+        }
+    };
+
     const permission = userId
         ? await readCache<string>(`permission:${owner}:${repo}:${userId}`)
         : null;
 
     if (!permission || permission === "none") {
-        return getPullRequest(accessToken, owner, repo, pullNumber);
+        return getOrThrow();
     }
 
     return withStaleWhileRevalidate(
         prCacheKey(owner, repo, pullNumber),
-        () => getPullRequest(accessToken, owner, repo, pullNumber),
+        getOrThrow,
         {
             staleAfter: 5 * 1000,
             deleteAfter: 3 * 60 * 1000,
