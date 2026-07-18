@@ -337,8 +337,8 @@ function ReviewerSectionContent({
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <MessageSquare
-                                        className="ml-auto text-text-muted"
-                                        size={16}
+                                        className="mr-0.5 ml-auto text-text-muted"
+                                        size={13}
                                     />
                                 </TooltipTrigger>
                                 <TooltipContent side="left">

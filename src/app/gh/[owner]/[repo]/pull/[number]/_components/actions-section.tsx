@@ -66,10 +66,11 @@ export function ActionSection({
         { staleTime: 30_000 },
     );
 
-    const { data: repoData } = api.repos.getByOwnerAndRepo.useQuery(
-        { provider: "gh", owner, repo },
-        { staleTime: 60_000 },
-    );
+    const { data: repoData } = api.repos.getByOwnerAndRepo.useQuery({
+        provider: "gh",
+        owner,
+        repo,
+    });
 
     const navigateAndScroll = useCallback(() => {
         router.push(`/gh/${owner}/${repo}/pull/${number}?scrollTo=bottom`);
