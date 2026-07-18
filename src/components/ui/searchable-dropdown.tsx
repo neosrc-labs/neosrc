@@ -39,7 +39,9 @@ export function SearchableDropdown<T>({
 }: SearchableDropdownProps<T>) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
+    const [selectedIndex, setSelectedIndex] = useState(0);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const listRef = useRef<HTMLUListElement>(null);
     const onSearchChangeRef = useRef(onSearchChange);
     onSearchChangeRef.current = onSearchChange;
 
@@ -60,6 +62,13 @@ export function SearchableDropdown<T>({
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, [open]);
+
+    useEffect(() => {
+        const el = listRef.current?.children[selectedIndex] as
+            | HTMLElement
+            | undefined;
+        el?.scrollIntoView({ block: "nearest" });
+    }, [selectedIndex]);
 
     const sortedCache = useRef<T[] | null>(null);
     const prevItemsRef = useRef(items);
@@ -106,19 +115,46 @@ export function SearchableDropdown<T>({
                         className="w-full border-border border-b px-3 py-2 text-sm outline-none placeholder:text-text-muted dark:bg-zinc-900 dark:text-zinc-100"
                         onChange={(e) => {
                             setSearch(e.target.value);
+                            setSelectedIndex(0);
                             onSearchChangeRef.current?.(e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                            if (filteredItems.length === 0) return;
+                            if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                setSelectedIndex(
+                                    (i) => (i + 1) % filteredItems.length,
+                                );
+                            } else if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                setSelectedIndex(
+                                    (i) =>
+                                        (i - 1 + filteredItems.length) %
+                                        filteredItems.length,
+                                );
+                            } else if (e.key === "Enter") {
+                                e.preventDefault();
+                                const item = filteredItems[selectedIndex];
+                                if (item) {
+                                    onSelect(item);
+                                    if (closeOnSelect) setOpen(false);
+                                }
+                            } else if (e.key === "Escape") {
+                                e.preventDefault();
+                                setOpen(false);
+                            }
                         }}
                         placeholder={placeholder}
                         value={search}
                     />
-                    <ul className="max-h-60 overflow-y-auto py-1">
+                    <ul className="max-h-60 overflow-y-auto py-1" ref={listRef}>
                         {beforeItems}
                         {filteredItems.length === 0 ? (
                             <li className="px-3 py-2 text-text-muted text-xs">
                                 {emptyText}
                             </li>
                         ) : (
-                            filteredItems.map((item) => {
+                            filteredItems.map((item, idx) => {
                                 const selected = isSelected(item);
                                 return (
                                     <li
@@ -126,12 +162,18 @@ export function SearchableDropdown<T>({
                                             "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-surface-tertiary",
                                             selected &&
                                                 "bg-blue-50 dark:bg-blue-950/30",
+                                            idx === selectedIndex &&
+                                                !selected &&
+                                                "bg-surface-tertiary",
                                         )}
                                         key={keyFn(item)}
                                         onClick={() => {
                                             onSelect(item);
                                             if (closeOnSelect) setOpen(false);
                                         }}
+                                        onMouseEnter={() =>
+                                            setSelectedIndex(idx)
+                                        }
                                         role="option"
                                         aria-selected={selected}
                                     >
