@@ -252,4 +252,73 @@ test.describe
                 });
             });
         });
+
+        test("should collapse and expand sidebars", async ({ page }) => {
+            await test.step("Navigate to the pull request page", async () => {
+                await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`);
+                await page.waitForLoadState("networkidle");
+            });
+
+            await test.step("Verify initial state - both sidebars are visible", async () => {
+                await expect(page.getByTestId("left-sidebar")).toBeVisible();
+                await expect(page.getByTestId("right-sidebar")).toBeVisible();
+            });
+
+            await test.step("Collapse the right sidebar using its toggle button", async () => {
+                const closeBtn = page.getByTitle("Close right sidebar");
+                await expect(closeBtn).toBeVisible();
+                await closeBtn.click();
+            });
+
+            await test.step("Verify the right sidebar is collapsed", async () => {
+                await expect(
+                    page.getByTestId("right-sidebar"),
+                ).not.toBeAttached();
+                await expect(
+                    page.getByTitle("Open right sidebar"),
+                ).toBeVisible();
+            });
+
+            await test.step("Expand the right sidebar using its toggle button", async () => {
+                await page.getByTitle("Open right sidebar").click();
+            });
+
+            await test.step("Verify the right sidebar is expanded again", async () => {
+                await expect(page.getByTestId("right-sidebar")).toBeVisible();
+            });
+
+            await test.step("Collapse the left sidebar by dragging its resize handle", async () => {
+                const dragHandle = page.locator(".cursor-col-resize").first();
+                await expect(dragHandle).toBeVisible();
+                const box = await dragHandle.boundingBox();
+                if (!box)
+                    throw new Error("Could not find left sidebar drag handle");
+                await page.mouse.move(
+                    box.x + box.width / 2,
+                    box.y + box.height / 2,
+                );
+                await page.mouse.down();
+                await page.mouse.move(box.x - 300, box.y + box.height / 2, {
+                    steps: 10,
+                });
+                await page.mouse.up();
+            });
+
+            await test.step("Verify the left sidebar is collapsed", async () => {
+                await expect(
+                    page.getByTestId("left-sidebar"),
+                ).not.toBeAttached();
+                await expect(
+                    page.locator('button[title="Open left sidebar"]'),
+                ).toBeVisible();
+            });
+
+            await test.step("Expand the left sidebar using its toggle button", async () => {
+                await page.locator('button[title="Open left sidebar"]').click();
+            });
+
+            await test.step("Verify the left sidebar is expanded again", async () => {
+                await expect(page.getByTestId("left-sidebar")).toBeVisible();
+            });
+        });
     });
