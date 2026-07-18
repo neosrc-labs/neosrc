@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Circle } from "lucide-react";
+import { Check, Circle, MessageSquare, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
@@ -102,8 +102,15 @@ export function ReviewerSection({
     ): Map<string, string> {
         const map = new Map<string, string>();
         for (const review of reviews) {
-            if (review.user && !map.has(review.user.login)) {
-                map.set(review.user.login, review.state);
+            if (!review.user) continue;
+            const login = review.user.login;
+            const state = review.state;
+            if (state === "APPROVED" || state === "CHANGES_REQUESTED") {
+                map.set(login, state);
+            } else if (state === "DISMISSED") {
+                map.delete(login);
+            } else if (state === "COMMENTED" && !map.has(login)) {
+                map.set(login, "COMMENTED");
             }
         }
         return map;
@@ -261,6 +268,18 @@ function ReviewerSectionContent({
                         {state === "APPROVED" && (
                             <Check
                                 className="ml-auto text-green-600"
+                                size={16}
+                            />
+                        )}
+                        {state === "CHANGES_REQUESTED" && (
+                            <XCircle
+                                className="ml-auto text-red-600"
+                                size={16}
+                            />
+                        )}
+                        {state === "COMMENTED" && (
+                            <MessageSquare
+                                className="ml-auto text-text-muted"
                                 size={16}
                             />
                         )}
