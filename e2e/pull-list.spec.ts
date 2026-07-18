@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
-
-const TEST_REPO = process.env.E2E_TEST_REPO ?? "neosrc-labs/test-repo";
+import { TEST_REPO } from "./shared/helpers";
 
 test.describe("Pull request list", { tag: ["@github"] }, () => {
     test("loads the pull request list page", async ({ page }) => {
