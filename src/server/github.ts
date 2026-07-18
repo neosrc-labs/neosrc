@@ -456,13 +456,16 @@ export const getPullRequestReviews = cache(
         pullNumber: number,
     ) => {
         const octokit = createOctokit(accessToken);
-        const response = await octokit.pulls.listReviews({
-            owner,
-            repo,
-            pull_number: pullNumber,
-            per_page: 100,
-        });
-        return response.data;
+        const allReviews = await octokit.paginate(
+            octokit.rest.pulls.listReviews,
+            {
+                owner,
+                repo,
+                pull_number: pullNumber,
+                per_page: 100,
+            },
+        );
+        return allReviews;
     },
 );
 
