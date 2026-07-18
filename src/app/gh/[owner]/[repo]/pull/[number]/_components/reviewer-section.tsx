@@ -5,6 +5,11 @@ import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { applyArrayOperations, opId } from "~/lib/utils";
 import type { Assignee, PullsGetResponseData, Reviewer } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -266,28 +271,57 @@ function ReviewerSectionContent({
                             </a>
                         </UserHoverCard>
                         {state === "APPROVED" && (
-                            <Check
-                                className="ml-auto text-green-600"
-                                size={16}
-                            />
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Check
+                                        className="ml-auto text-green-600"
+                                        size={16}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                    {reviewer.login} approved these changes
+                                </TooltipContent>
+                            </Tooltip>
                         )}
                         {state === "CHANGES_REQUESTED" && (
-                            <XCircle
-                                className="ml-auto text-red-600"
-                                size={16}
-                            />
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <XCircle
+                                        className="ml-auto text-red-600"
+                                        size={16}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                    {reviewer.login} requested changes
+                                </TooltipContent>
+                            </Tooltip>
                         )}
                         {state === "COMMENTED" && (
-                            <MessageSquare
-                                className="ml-auto text-text-muted"
-                                size={16}
-                            />
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <MessageSquare
+                                        className="ml-auto text-text-muted"
+                                        size={16}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                    {reviewer.login} left review comments
+                                </TooltipContent>
+                            </Tooltip>
                         )}
                         {state === "PENDING" && (
-                            <Circle
-                                className="ml-auto fill-yellow-500 text-yellow-500"
-                                size={16}
-                            />
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Circle
+                                        className="ml-auto fill-yellow-500 text-yellow-500"
+                                        size={16}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                    Awaiting requested review from{" "}
+                                    {reviewer.login}
+                                </TooltipContent>
+                            </Tooltip>
                         )}
                     </li>
                 );
