@@ -25,15 +25,7 @@ import type { PullsGetResponseData } from "~/server/github";
 
 type SimpleUser = components["schemas"]["nullable-simple-user"];
 
-const authorAssociationLabels: Record<string, string> = {
-    COLLABORATOR: "Collaborator",
-    CONTRIBUTOR: "Contributor",
-    FIRST_TIMER: "First Timer",
-    FIRST_TIME_CONTRIBUTOR: "First-time Contributor",
-    MANNEQUIN: "Mannequin",
-    MEMBER: "Member",
-    OWNER: "Owner",
-};
+import { RoleBadge } from "~/components/RoleBadge";
 
 import { useTaskToggle } from "~/hooks/use-task-toggle";
 import { api } from "~/trpc/react";
@@ -410,17 +402,11 @@ export function PullRequestDescriptionSection({
                             <div className="flex items-center justify-between border-border border-b bg-surface-secondary px-4 py-2">
                                 <h3 className="text-text-label">Description</h3>
                                 <div className="flex items-center gap-0.5">
-                                    {pullRequest.author_association &&
-                                        pullRequest.author_association !==
-                                            "NONE" && (
-                                            <span className="whitespace-nowrap rounded-full bg-surface-tertiary px-2 py-0.5 font-medium text-text-secondary text-xs">
-                                                {authorAssociationLabels[
-                                                    pullRequest
-                                                        .author_association
-                                                ] ??
-                                                    pullRequest.author_association}
-                                            </span>
-                                        )}
+                                    <RoleBadge
+                                        authorAssociation={
+                                            pullRequest.author_association
+                                        }
+                                    />
                                     <Async
                                         fallback={null}
                                         promise={canInteractPromise}

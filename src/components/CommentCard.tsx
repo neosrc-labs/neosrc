@@ -3,29 +3,8 @@
 import type { ReactNode } from "react";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
+import { RoleBadge } from "~/components/RoleBadge";
 import { formatRelativeTime } from "~/utils";
-
-const authorAssociationLabels: Record<string, string> = {
-    COLLABORATOR: "Collaborator",
-    CONTRIBUTOR: "Contributor",
-    FIRST_TIMER: "First Timer",
-    FIRST_TIME_CONTRIBUTOR: "First-time Contributor",
-    MANNEQUIN: "Mannequin",
-    MEMBER: "Member",
-    OWNER: "Owner",
-};
-
-const neutralBadge = "bg-surface-tertiary text-text-secondary";
-
-const authorAssociationStyles: Record<string, string> = {
-    OWNER: neutralBadge,
-    MEMBER: neutralBadge,
-    COLLABORATOR: neutralBadge,
-    CONTRIBUTOR: neutralBadge,
-    FIRST_TIMER: neutralBadge,
-    FIRST_TIME_CONTRIBUTOR: neutralBadge,
-    MANNEQUIN: neutralBadge,
-};
 
 interface CommentCardProps {
     user: { login: string; avatar_url: string } | null;
@@ -173,17 +152,7 @@ export function CommentCard({
                     )}
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-0.5">
-                    {authorAssociation && authorAssociation !== "NONE" && (
-                        <span
-                            className={`whitespace-nowrap rounded-full px-2 py-0.5 font-medium text-xs ${
-                                authorAssociationStyles[authorAssociation] ??
-                                neutralBadge
-                            }`}
-                        >
-                            {authorAssociationLabels[authorAssociation] ??
-                                authorAssociation}
-                        </span>
-                    )}
+                    <RoleBadge authorAssociation={authorAssociation} />
                     {!isEditing && headerActions}
                 </div>
             </div>
