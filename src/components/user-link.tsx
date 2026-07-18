@@ -36,7 +36,7 @@ export function UserLink({
                 <img
                     src={actor.avatarUrl}
                     alt={actor.login}
-                    className="h-5 w-5 rounded-full"
+                    className="h-5 w-5 shrink-0 rounded-full object-cover"
                 />
                 {showUsername && (
                     <span className="font-medium text-gray-800 dark:text-zinc-200">

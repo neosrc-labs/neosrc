@@ -63,7 +63,7 @@ function ProviderProfileCard({
                 <div className="flex items-start gap-4">
                     <img
                         alt={user.login}
-                        className="h-16 w-16 rounded-full"
+                        className="h-16 w-16 shrink-0 rounded-full object-cover"
                         src={user.avatar_url}
                     />
                     <div className="min-w-0">
@@ -170,7 +170,7 @@ export function ProfileView({
                 {image ? (
                     <img
                         alt={name}
-                        className="h-16 w-16 rounded-full"
+                        className="h-16 w-16 shrink-0 rounded-full object-cover"
                         src={image}
                     />
                 ) : (
