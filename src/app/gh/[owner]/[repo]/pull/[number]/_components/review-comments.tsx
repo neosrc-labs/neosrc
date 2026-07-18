@@ -490,69 +490,61 @@ function CommentBlock({
                 onCancelEdit={onCancelEdit}
                 onSaveEdit={() => onSaveEdit(comment.id)}
                 headerActions={
-                    <>
+                    comment.user?.login === currentUserLogin &&
+                    canInteract && (
+                        <Popover
+                            open={menuOpenCommentId === comment.id}
+                            onOpenChange={(open) =>
+                                setMenuOpenCommentId(open ? comment.id : null)
+                            }
+                        >
+                            <PopoverTrigger asChild>
+                                <button
+                                    type="button"
+                                    aria-label="More options"
+                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                >
+                                    <MoreVertical size={14} />
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                className="w-44 bg-surface p-1"
+                                align="end"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        onStartEdit(
+                                            comment.id,
+                                            savedBodies[comment.id] ??
+                                                comment.body,
+                                        );
+                                        setMenuOpenCommentId(null);
+                                    }}
+                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                >
+                                    <SquarePen size={14} />
+                                    Edit
+                                </button>
+                            </PopoverContent>
+                        </Popover>
+                    )
+                }
+                footer={
+                    <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
                         <ReactionPicker
                             disabled={!canInteract}
                             reactions={parentReactions}
                             currentUserLogin={currentUserLogin}
                             onReact={(content) => onReact(comment.id, content)}
                         />
-                        {comment.user?.login === currentUserLogin &&
-                            canInteract && (
-                                <Popover
-                                    open={menuOpenCommentId === comment.id}
-                                    onOpenChange={(open) =>
-                                        setMenuOpenCommentId(
-                                            open ? comment.id : null,
-                                        )
-                                    }
-                                >
-                                    <PopoverTrigger asChild>
-                                        <button
-                                            type="button"
-                                            aria-label="More options"
-                                            className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
-                                        >
-                                            <MoreVertical size={14} />
-                                        </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent
-                                        className="w-44 bg-surface p-1"
-                                        align="end"
-                                    >
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                onStartEdit(
-                                                    comment.id,
-                                                    savedBodies[comment.id] ??
-                                                        comment.body,
-                                                );
-                                                setMenuOpenCommentId(null);
-                                            }}
-                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                        >
-                                            <SquarePen size={14} />
-                                            Edit
-                                        </button>
-                                    </PopoverContent>
-                                </Popover>
-                            )}
-                    </>
-                }
-                footer={
-                    parentReactions.length > 0 && (
-                        <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                            <ReactionBar
-                                disabled={!canInteract}
-                                reactions={parentReactions}
-                                currentUserLogin={currentUserLogin}
-                                onReact={(content) =>
-                                    onReact(comment.id, content)
-                                }
-                            />
-                        </div>
-                    )
+                        <ReactionBar
+                            disabled={!canInteract}
+                            reactions={parentReactions}
+                            currentUserLogin={currentUserLogin}
+                            onReact={(content) => onReact(comment.id, content)}
+                        />
+                    </div>
                 }
             >
                 <MarkdownRenderer
@@ -586,7 +578,50 @@ function CommentBlock({
                             onCancelEdit={onCancelEdit}
                             onSaveEdit={() => onSaveEdit(reply.id)}
                             headerActions={
-                                <>
+                                reply.user?.login === currentUserLogin &&
+                                canInteract && (
+                                    <Popover
+                                        open={menuOpenCommentId === reply.id}
+                                        onOpenChange={(open) =>
+                                            setMenuOpenCommentId(
+                                                open ? reply.id : null,
+                                            )
+                                        }
+                                    >
+                                        <PopoverTrigger asChild>
+                                            <button
+                                                type="button"
+                                                aria-label="More options"
+                                                className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                            >
+                                                <MoreVertical size={14} />
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                            className="w-44 bg-surface p-1"
+                                            align="end"
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    onStartEdit(
+                                                        reply.id,
+                                                        savedBodies[reply.id] ??
+                                                            reply.body,
+                                                    );
+                                                    setMenuOpenCommentId(null);
+                                                }}
+                                                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                            >
+                                                <SquarePen size={14} />
+                                                Edit
+                                            </button>
+                                        </PopoverContent>
+                                    </Popover>
+                                )
+                            }
+                            footer={
+                                <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
                                     <ReactionPicker
                                         disabled={!canInteract}
                                         reactions={replyReactions}
@@ -595,70 +630,15 @@ function CommentBlock({
                                             onReact(reply.id, content)
                                         }
                                     />
-                                    {reply.user?.login === currentUserLogin &&
-                                        canInteract && (
-                                            <Popover
-                                                open={
-                                                    menuOpenCommentId ===
-                                                    reply.id
-                                                }
-                                                onOpenChange={(open) =>
-                                                    setMenuOpenCommentId(
-                                                        open ? reply.id : null,
-                                                    )
-                                                }
-                                            >
-                                                <PopoverTrigger asChild>
-                                                    <button
-                                                        type="button"
-                                                        aria-label="More options"
-                                                        className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
-                                                    >
-                                                        <MoreVertical
-                                                            size={14}
-                                                        />
-                                                    </button>
-                                                </PopoverTrigger>
-                                                <PopoverContent
-                                                    className="w-44 bg-surface p-1"
-                                                    align="end"
-                                                >
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            onStartEdit(
-                                                                reply.id,
-                                                                savedBodies[
-                                                                    reply.id
-                                                                ] ?? reply.body,
-                                                            );
-                                                            setMenuOpenCommentId(
-                                                                null,
-                                                            );
-                                                        }}
-                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                                    >
-                                                        <SquarePen size={14} />
-                                                        Edit
-                                                    </button>
-                                                </PopoverContent>
-                                            </Popover>
-                                        )}
-                                </>
-                            }
-                            footer={
-                                replyReactions.length > 0 && (
-                                    <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                                        <ReactionBar
-                                            disabled={!canInteract}
-                                            reactions={replyReactions}
-                                            currentUserLogin={currentUserLogin}
-                                            onReact={(content) =>
-                                                onReact(reply.id, content)
-                                            }
-                                        />
-                                    </div>
-                                )
+                                    <ReactionBar
+                                        disabled={!canInteract}
+                                        reactions={replyReactions}
+                                        currentUserLogin={currentUserLogin}
+                                        onReact={(content) =>
+                                            onReact(reply.id, content)
+                                        }
+                                    />
+                                </div>
                             }
                         >
                             <MarkdownRenderer

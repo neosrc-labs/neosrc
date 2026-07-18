@@ -58,7 +58,11 @@ export function ReactionPicker({
                 </button>
             </PopoverTrigger>
             {canInteract && (
-                <PopoverContent className="w-fit bg-surface p-2" align="end">
+                <PopoverContent
+                    className="w-fit bg-surface p-2"
+                    side="top"
+                    align="center"
+                >
                     <div className="flex gap-1">
                         {availableReactions.map((content) => (
                             <button

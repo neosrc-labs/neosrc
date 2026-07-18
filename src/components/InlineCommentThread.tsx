@@ -372,12 +372,6 @@ function Comment({
             variant={variant === "parent" ? "default" : "nested"}
             headerActions={
                 <>
-                    <ReactionPicker
-                        disabled={!canInteract}
-                        reactions={reactions}
-                        currentUserLogin={currentUserLogin}
-                        onReact={onReact}
-                    />
                     {isAuthor && canInteract && (
                         <button
                             type="button"
@@ -421,6 +415,12 @@ function Comment({
             }
             footer={
                 <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                    <ReactionPicker
+                        disabled={!canInteract}
+                        reactions={reactions}
+                        currentUserLogin={currentUserLogin}
+                        onReact={onReact}
+                    />
                     <ReactionBar
                         disabled={!canInteract}
                         reactions={reactions}
