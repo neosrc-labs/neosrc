@@ -196,7 +196,7 @@ function HeaderContent({
         return () => window.removeEventListener("scroll", updateTogglePosition);
     }, [prMatch]);
 
-    const showRepoNav = !!owner && !!repo;
+    const showRepoNav = !!owner && !!repo && !!resolvedRepoData;
 
     const tabs = useMemo((): Tab[] => {
         if (!resolvedRepoData || !owner || !repo) return [];
