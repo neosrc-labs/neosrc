@@ -12,7 +12,8 @@ export function formatRelativeTime(
     if (diffHr < 24) return diffHr === 1 ? `1 hour ago` : `${diffHr} hours ago`;
 
     const diffDay = Math.floor(diffHr / 24);
-    if (diffDay < 7) return diffDay === 1 ? `1 day ago` : `${diffDay} days ago`;
+    if (diffDay === 1) return "yesterday";
+    if (diffDay < 7) return `${diffDay} days ago`;
 
     const diffWeek = Math.floor(diffDay / 7);
     if (diffDay < 31)

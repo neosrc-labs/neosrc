@@ -60,14 +60,16 @@ describe("formatRelativeTime", () => {
         });
     });
 
-    describe("days", () => {
-        it('returns "1 day ago" for exactly 1 day', () => {
+    describe("yesterday", () => {
+        it('returns "yesterday" for exactly 1 day', () => {
             const now = new Date("2025-01-16T12:00:00Z");
             expect(formatRelativeTime("2025-01-15T12:00:00Z", now)).toBe(
-                "1 day ago",
+                "yesterday",
             );
         });
+    });
 
+    describe("days", () => {
         it('returns "{n} days ago" for plural days', () => {
             const now = new Date("2025-01-18T12:00:00Z");
             expect(formatRelativeTime("2025-01-15T12:00:00Z", now)).toBe(
@@ -172,10 +174,10 @@ describe("formatRelativeTime", () => {
             );
         });
 
-        it("handles boundary: 24 hours -> 1 day", () => {
+        it("handles boundary: 24 hours -> yesterday", () => {
             const now = new Date("2025-01-16T12:00:00Z");
             expect(formatRelativeTime("2025-01-15T12:00:00Z", now)).toBe(
-                "1 day ago",
+                "yesterday",
             );
         });
 
