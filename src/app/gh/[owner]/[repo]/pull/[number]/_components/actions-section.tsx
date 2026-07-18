@@ -66,6 +66,11 @@ export function ActionSection({
         { staleTime: 30_000 },
     );
 
+    const { data: repoData } = api.repos.getByOwnerAndRepo.useQuery(
+        { provider: "gh", owner, repo },
+        { staleTime: 60_000 },
+    );
+
     const navigateAndScroll = useCallback(() => {
         router.push(`/gh/${owner}/${repo}/pull/${number}?scrollTo=bottom`);
     }, [router, owner, repo, number]);
@@ -215,10 +220,6 @@ export function ActionSection({
         markReadyMutation.mutate({ owner, repo, number });
     }, [owner, repo, number, markReadyMutation]);
 
-    const handleMerge = useCallback(() => {
-        mergeMutation.mutate({ owner, repo, number, mergeMethod: mergeMode });
-    }, [owner, repo, number, mergeMode, mergeMutation]);
-
     const openRevertDialog = useCallback(
         (pullRequest: PullsGetResponseData) => {
             setRevertTitle(`Revert "${pullRequest.title}"`);
@@ -355,6 +356,37 @@ export function ActionSection({
         const canInteract = !pullRequest.locked || canWrite || isAuthor;
         const isMergeBlocked = pullRequest.mergeable_state === "blocked";
         const isMergeStateUnknown = pullRequest.mergeable_state === "unknown";
+
+        const mergeOptionDefs = [
+            {
+                value: "merge" as const,
+                label: "Create a merge commit",
+                description:
+                    "All commits will be added to the base branch via a merge commit.",
+                allowed: repoData?.allowMergeCommit !== false,
+            },
+            {
+                value: "squash" as const,
+                label: "Squash and merge",
+                description:
+                    "All commits will be squashed into a single commit.",
+                allowed: repoData?.allowSquashMerge !== false,
+            },
+            {
+                value: "rebase" as const,
+                label: "Rebase and merge",
+                description:
+                    "All commits will be added to the base branch individually.",
+                allowed: repoData?.allowRebaseMerge !== false,
+            },
+        ];
+        const availableMergeOptions = mergeOptionDefs.filter((o) => o.allowed);
+        const noMergeMethodsAvailable = availableMergeOptions.length === 0;
+        const effectiveMergeMode = availableMergeOptions.some(
+            (o) => o.value === mergeMode,
+        )
+            ? mergeMode
+            : (availableMergeOptions[0]?.value ?? "merge");
 
         const conflictedFilesSection =
             conflictedFiles.length > 0 ? (
@@ -731,6 +763,16 @@ export function ActionSection({
                                     Checking mergeability...
                                 </span>
                             </div>
+                        ) : noMergeMethodsAvailable ? (
+                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
+                                <GitMerge
+                                    size={14}
+                                    className="text-text-muted"
+                                />
+                                <span className="font-medium text-sm text-text-muted">
+                                    Merging is not allowed for this repository
+                                </span>
+                            </div>
                         ) : !canMerge ? (
                             <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
                                 <GitMerge
@@ -746,15 +788,22 @@ export function ActionSection({
                                 <button
                                     className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-l-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
                                     disabled={mergeMutation.isPending}
-                                    onClick={handleMerge}
+                                    onClick={() => {
+                                        mergeMutation.mutate({
+                                            owner,
+                                            repo,
+                                            number,
+                                            mergeMethod: effectiveMergeMode,
+                                        });
+                                    }}
                                     type="button"
                                 >
                                     <GitMerge size={14} />
                                     {mergeMutation.isPending
                                         ? "Merging..."
-                                        : mergeMode === "squash"
+                                        : effectiveMergeMode === "squash"
                                           ? "Squash and merge"
-                                          : mergeMode === "rebase"
+                                          : effectiveMergeMode === "rebase"
                                             ? "Rebase and merge"
                                             : "Merge pull request"}
                                 </button>
@@ -780,76 +829,59 @@ export function ActionSection({
                                         sideOffset={8}
                                     >
                                         <div className="space-y-1">
-                                            {(
-                                                [
-                                                    {
-                                                        value: "merge" as const,
-                                                        label: "Create a merge commit",
-                                                        description:
-                                                            "All commits will be added to the base branch via a merge commit.",
-                                                    },
-                                                    {
-                                                        value: "squash" as const,
-                                                        label: "Squash and merge",
-                                                        description:
-                                                            "All commits will be squashed into a single commit.",
-                                                    },
-                                                    {
-                                                        value: "rebase" as const,
-                                                        label: "Rebase and merge",
-                                                        description:
-                                                            "All commits will be added to the base branch individually.",
-                                                    },
-                                                ] as const
-                                            ).map((option) => (
-                                                <button
-                                                    key={option.value}
-                                                    className={`flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                                                        mergeMode ===
-                                                        option.value
-                                                            ? "bg-surface-tertiary"
-                                                            : "hover:bg-surface-secondary"
-                                                    }`}
-                                                    onClick={() => {
-                                                        setMergeMode(
-                                                            option.value,
-                                                        );
-                                                        setIsMergeOptionsOpen(
-                                                            false,
-                                                        );
-                                                    }}
-                                                    type="button"
-                                                >
-                                                    <span
-                                                        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
-                                                            mergeMode ===
+                                            {availableMergeOptions.map(
+                                                (option) => (
+                                                    <button
+                                                        key={option.value}
+                                                        className={`flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                                                            effectiveMergeMode ===
                                                             option.value
-                                                                ? "border-[#2da44e]"
-                                                                : "border-gray-300 dark:border-zinc-600"
+                                                                ? "bg-surface-tertiary"
+                                                                : "hover:bg-surface-secondary"
                                                         }`}
+                                                        onClick={() => {
+                                                            setMergeMode(
+                                                                option.value,
+                                                            );
+                                                            setIsMergeOptionsOpen(
+                                                                false,
+                                                            );
+                                                        }}
+                                                        type="button"
                                                     >
-                                                        {mergeMode ===
-                                                            option.value && (
-                                                            <span className="flex h-2 w-2 rounded-full bg-[#2da44e]" />
-                                                        )}
-                                                    </span>
-                                                    <div>
-                                                        <div
-                                                            className={
-                                                                mergeMode ===
+                                                        <span
+                                                            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                                                                effectiveMergeMode ===
                                                                 option.value
-                                                                    ? "font-medium text-text-primary"
-                                                                    : "text-text-label"
-                                                            }
+                                                                    ? "border-[#2da44e]"
+                                                                    : "border-gray-300 dark:border-zinc-600"
+                                                            }`}
                                                         >
-                                                            {option.label}
+                                                            {effectiveMergeMode ===
+                                                                option.value && (
+                                                                <span className="flex h-2 w-2 rounded-full bg-[#2da44e]" />
+                                                            )}
+                                                        </span>
+                                                        <div>
+                                                            <div
+                                                                className={
+                                                                    effectiveMergeMode ===
+                                                                    option.value
+                                                                        ? "font-medium text-text-primary"
+                                                                        : "text-text-label"
+                                                                }
+                                                            >
+                                                                {option.label}
+                                                            </div>
+                                                            <div className="text-text-tertiary text-xs">
+                                                                {
+                                                                    option.description
+                                                                }
+                                                            </div>
                                                         </div>
-                                                        <div className="text-text-tertiary text-xs">
-                                                            {option.description}
-                                                        </div>
-                                                    </div>
-                                                </button>
-                                            ))}
+                                                    </button>
+                                                ),
+                                            )}
                                         </div>
                                     </PopoverContent>
                                 </Popover>

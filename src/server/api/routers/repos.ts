@@ -52,6 +52,9 @@ export const reposRouter = createTRPCRouter({
                     admin: data.permissions?.admin ?? false,
                 },
                 ownerAvatarUrl: data.owner.avatar_url,
+                allowSquashMerge: data.allow_squash_merge,
+                allowRebaseMerge: data.allow_rebase_merge,
+                allowMergeCommit: data.allow_merge_commit,
             };
         }),
     getCountsByOwnerAndRepo: protectedProcedure
