@@ -1,3 +1,9 @@
+import {
+    mapCbAssignee,
+    mapCbAuthor,
+    mapCbLabel,
+    nullSafe,
+} from "~/server/api/routers/mappers";
 import { getCodebergToken } from "~/server/auth";
 import {
     type CodebergIssue,
@@ -100,23 +106,9 @@ function mapCodebergIssue(issue: CodebergIssue): IssueSearchItem {
         state: issue.state.toUpperCase() as IssueSearchItem["state"],
         createdAt: issue.created_at,
         closedAt: issue.closed_at,
-        author: issue.user
-            ? {
-                  login: issue.user.login,
-                  avatarUrl: issue.user.avatar_url,
-                  url: "",
-              }
-            : null,
-        labels: (issue.labels ?? []).map((l) => ({
-            id: String(l.id),
-            name: l.name,
-            color: l.color,
-            description: l.description,
-        })),
-        assignees: (issue.assignees ?? []).map((a) => ({
-            login: a.login,
-            avatarUrl: a.avatar_url,
-        })),
+        author: mapCbAuthor(issue.user),
+        labels: nullSafe(issue.labels).map(mapCbLabel),
+        assignees: nullSafe(issue.assignees).map(mapCbAssignee),
         comments: issue.comments ?? 0,
     };
 }

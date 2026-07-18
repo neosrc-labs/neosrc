@@ -1,3 +1,8 @@
+import {
+    mapGqlAssignee,
+    mapGqlAuthor,
+    mapGqlLabel,
+} from "~/server/api/routers/mappers";
 import { getGitHubToken } from "~/server/auth";
 import { searchIssuesWithMetadata } from "~/server/github-graphql";
 import type { Ctx, IssueProvider } from "./provider";
@@ -65,23 +70,9 @@ function mapGqlItem(item: {
         state: item.state as IssueSearchItem["state"],
         createdAt: item.createdAt,
         closedAt: item.closedAt,
-        author: item.author
-            ? {
-                  login: item.author.login,
-                  avatarUrl: item.author.avatarUrl,
-                  url: item.author.url,
-              }
-            : null,
-        labels: item.labels.nodes.map((l) => ({
-            id: l.id,
-            name: l.name,
-            color: l.color,
-            description: l.description,
-        })),
-        assignees: item.assignees.nodes.map((a) => ({
-            login: a.login,
-            avatarUrl: a.avatarUrl,
-        })),
+        author: mapGqlAuthor(item.author),
+        labels: item.labels.nodes.map(mapGqlLabel),
+        assignees: item.assignees.nodes.map(mapGqlAssignee),
         comments: item.comments.totalCount,
     };
 }

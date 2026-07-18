@@ -1,3 +1,8 @@
+import {
+    mapGqlAssignee,
+    mapGqlAuthor,
+    mapGqlLabel,
+} from "~/server/api/routers/mappers";
 import { getGitHubToken } from "~/server/auth";
 import { searchPullRequestsWithStatus } from "~/server/github-graphql";
 import type { Ctx, PullRequestProvider } from "./provider";
@@ -73,23 +78,9 @@ function mapGqlItem(item: {
         isDraft: item.isDraft,
         createdAt: item.createdAt,
         mergedAt: item.mergedAt,
-        author: item.author
-            ? {
-                  login: item.author.login,
-                  avatarUrl: item.author.avatarUrl,
-                  url: item.author.url,
-              }
-            : null,
-        labels: item.labels.nodes.map((l) => ({
-            id: l.id,
-            name: l.name,
-            color: l.color,
-            description: l.description,
-        })),
-        assignees: item.assignees.nodes.map((a) => ({
-            login: a.login,
-            avatarUrl: a.avatarUrl,
-        })),
+        author: mapGqlAuthor(item.author),
+        labels: item.labels.nodes.map(mapGqlLabel),
+        assignees: item.assignees.nodes.map(mapGqlAssignee),
         comments: item.comments.totalCount,
         reviewDecision: item.reviewDecision,
     };
