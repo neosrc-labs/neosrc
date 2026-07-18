@@ -1,3 +1,9 @@
+import {
+    mapCbAssignee,
+    mapCbAuthor,
+    mapCbLabel,
+    nullSafe,
+} from "~/server/api/routers/mappers";
 import { getCodebergToken } from "~/server/auth";
 import {
     type CodebergPrListParams,
@@ -112,23 +118,9 @@ function mapCodebergPr(pr: CodebergPullRequest): PrSearchItem {
         isDraft: pr.draft,
         createdAt: pr.created_at,
         mergedAt: pr.merged_at,
-        author: pr.user
-            ? {
-                  login: pr.user.login,
-                  avatarUrl: pr.user.avatar_url,
-                  url: "",
-              }
-            : null,
-        labels: (pr.labels ?? []).map((l) => ({
-            id: String(l.id),
-            name: l.name,
-            color: l.color,
-            description: l.description,
-        })),
-        assignees: (pr.assignees ?? []).map((a) => ({
-            login: a.login,
-            avatarUrl: a.avatar_url,
-        })),
+        author: mapCbAuthor(pr.user),
+        labels: nullSafe(pr.labels).map(mapCbLabel),
+        assignees: nullSafe(pr.assignees).map(mapCbAssignee),
         comments: pr.comments ?? 0,
         reviewDecision: null,
     };
