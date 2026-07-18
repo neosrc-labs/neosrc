@@ -13,7 +13,6 @@ import {
     addAssigneesToIssue,
     addLabelsToIssue,
     addReviewersToPullRequest,
-    closePullRequest,
     createIssueComment,
     createPullRequestReview,
     getPullRequestReviews,
@@ -28,7 +27,6 @@ import {
     removeAssigneesFromIssue,
     removeLabelFromIssue,
     removeReviewersFromPullRequest,
-    reopenPullRequest,
     revertPullRequest,
     updateIssueComment,
     updateIssueMilestone,
@@ -691,11 +689,12 @@ export const pullsRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
 
-            await closePullRequest(
+            await updatePullRequest(
                 accessToken,
                 input.owner,
                 input.repo,
                 input.number,
+                { state: "closed" },
             );
 
             await deleteCache(
@@ -719,11 +718,12 @@ export const pullsRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
 
-            await reopenPullRequest(
+            await updatePullRequest(
                 accessToken,
                 input.owner,
                 input.repo,
                 input.number,
+                { state: "open" },
             );
 
             await deleteCache(

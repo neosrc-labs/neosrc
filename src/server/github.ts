@@ -143,7 +143,7 @@ export const updatePullRequest = async (
     owner: string,
     repo: string,
     pullNumber: number,
-    options: { body?: string; title?: string },
+    options: { body?: string; title?: string; state?: "open" | "closed" },
 ) => {
     const octokit = createOctokit(accessToken);
     const response = await octokit.pulls.update({
@@ -331,38 +331,6 @@ export const mergePullRequest = async (
         merge_method: mergeMethod,
         commit_title: commitTitle,
         commit_message: commitMessage,
-    });
-    return response.data;
-};
-
-export const closePullRequest = async (
-    accessToken: string,
-    owner: string,
-    repo: string,
-    pullNumber: number,
-) => {
-    const octokit = createOctokit(accessToken);
-    const response = await octokit.pulls.update({
-        owner,
-        repo,
-        pull_number: pullNumber,
-        state: "closed",
-    });
-    return response.data;
-};
-
-export const reopenPullRequest = async (
-    accessToken: string,
-    owner: string,
-    repo: string,
-    pullNumber: number,
-) => {
-    const octokit = createOctokit(accessToken);
-    const response = await octokit.pulls.update({
-        owner,
-        repo,
-        pull_number: pullNumber,
-        state: "open",
     });
     return response.data;
 };
