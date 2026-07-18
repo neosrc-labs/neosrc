@@ -103,7 +103,11 @@ export function ReviewerSection({
     }
 
     function buildReviewStateMap(
-        reviews: Array<{ user: { login: string } | null; state: string }>,
+        reviews: Array<{
+            user: { login: string } | null;
+            state: string;
+            submitted_at?: string | null;
+        }>,
     ): Map<string, string> {
         const map = new Map<string, string>();
         for (const review of reviews) {
@@ -116,6 +120,24 @@ export function ReviewerSection({
                 map.delete(login);
             } else if (state === "COMMENTED" && !map.has(login)) {
                 map.set(login, "COMMENTED");
+            }
+        }
+        return map;
+    }
+
+    function buildReviewSortMap(
+        reviews: Array<{
+            user: { login: string } | null;
+            submitted_at?: string | null;
+        }>,
+    ): Map<string, number> {
+        const map = new Map<string, number>();
+        for (const review of reviews) {
+            if (!review.user || !review.submitted_at) continue;
+            const ts = new Date(review.submitted_at).getTime();
+            const current = map.get(review.user.login);
+            if (current === undefined || ts > current) {
+                map.set(review.user.login, ts);
             }
         }
         return map;
@@ -160,6 +182,9 @@ export function ReviewerSection({
                     const reviewStateMap = buildReviewStateMap(
                         reviewsQuery.data ?? [],
                     );
+                    const reviewSortMap = buildReviewSortMap(
+                        reviewsQuery.data ?? [],
+                    );
                     return (
                         <ReviewerSectionContent
                             reviewers={mergeReviewers(
@@ -168,6 +193,7 @@ export function ReviewerSection({
                                 pullRequest.user.login,
                             )}
                             reviewStateMap={reviewStateMap}
+                            reviewSortMap={reviewSortMap}
                             operations={operations}
                         />
                     );
@@ -234,21 +260,32 @@ function ReviewerSectionSettings({
 function ReviewerSectionContent({
     reviewers,
     reviewStateMap,
+    reviewSortMap,
     operations,
 }: {
     reviewers: Reviewer[];
     reviewStateMap: Map<string, string>;
+    reviewSortMap: Map<string, number>;
     operations: ReviewerOperation[];
 }) {
     const displayReviewers = applyOperations(reviewers, operations);
 
-    if (displayReviewers.length === 0) {
+    const sortedReviewers = [...displayReviewers].sort((a, b) => {
+        const aTs = reviewSortMap.get(a.login);
+        const bTs = reviewSortMap.get(b.login);
+        if (aTs !== undefined && bTs !== undefined) return aTs - bTs;
+        if (aTs !== undefined) return -1;
+        if (bTs !== undefined) return 1;
+        return a.login.localeCompare(b.login);
+    });
+
+    if (sortedReviewers.length === 0) {
         return <p className="text-sm text-text-tertiary">No reviewers</p>;
     }
 
     return (
         <ul className="space-y-2">
-            {displayReviewers.map((reviewer) => {
+            {sortedReviewers.map((reviewer) => {
                 const state = reviewStateMap.get(reviewer.login) ?? "PENDING";
                 return (
                     <li
