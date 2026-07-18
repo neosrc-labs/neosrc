@@ -1,7 +1,7 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { Lock, SmilePlus, SquarePen } from "lucide-react";
+import { Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
 import NextLink from "next/link";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
@@ -12,6 +12,11 @@ import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { ReactionBar } from "~/components/ReactionBar";
 import { ReactionPicker } from "~/components/ReactionPicker";
 import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "~/components/ui/popover";
+import {
     extractPullRequestState,
     StatusPill,
 } from "~/components/ui/status-pill";
@@ -19,6 +24,16 @@ import type { ReactionContent } from "~/lib/reactions";
 import type { PullsGetResponseData } from "~/server/github";
 
 type SimpleUser = components["schemas"]["nullable-simple-user"];
+
+const authorAssociationLabels: Record<string, string> = {
+    COLLABORATOR: "Collaborator",
+    CONTRIBUTOR: "Contributor",
+    FIRST_TIMER: "First Timer",
+    FIRST_TIME_CONTRIBUTOR: "First-time Contributor",
+    MANNEQUIN: "Mannequin",
+    MEMBER: "Member",
+    OWNER: "Owner",
+};
 
 import { useTaskToggle } from "~/hooks/use-task-toggle";
 import { api } from "~/trpc/react";
@@ -72,6 +87,9 @@ export function PullRequestDescriptionSection({
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editTitle, setEditTitle] = useState("");
     const [savedTitle, setSavedTitle] = useState<string | null>(null);
+
+    const [menuOpen, setMenuOpen] = useState(false);
+
     const updateTitleMutation = api.pulls.updateTitle.useMutation({
         onMutate: () => {
             setSavedTitle(editTitle);
@@ -391,28 +409,68 @@ export function PullRequestDescriptionSection({
                         <div className="rounded-lg border border-border bg-surface-elevated">
                             <div className="flex items-center justify-between border-border border-b bg-surface-secondary px-4 py-2">
                                 <h3 className="text-text-label">Description</h3>
-                                <Async
-                                    fallback={null}
-                                    promise={canInteractPromise}
-                                >
-                                    {(canInteract) =>
-                                        !isEditing && canInteract ? (
-                                            <button
-                                                className="cursor-pointer text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
-                                                onClick={() =>
-                                                    handleStartEdit(
-                                                        savedBody ??
-                                                            pullRequest.body ??
-                                                            "",
-                                                    )
-                                                }
-                                                type="button"
-                                            >
-                                                <SquarePen size={16} />
-                                            </button>
-                                        ) : null
-                                    }
-                                </Async>
+                                <div className="flex items-center gap-0.5">
+                                    {pullRequest.author_association &&
+                                        pullRequest.author_association !==
+                                            "NONE" && (
+                                            <span className="whitespace-nowrap rounded-full bg-surface-tertiary px-2 py-0.5 font-medium text-text-secondary text-xs">
+                                                {authorAssociationLabels[
+                                                    pullRequest
+                                                        .author_association
+                                                ] ??
+                                                    pullRequest.author_association}
+                                            </span>
+                                        )}
+                                    <Async
+                                        fallback={null}
+                                        promise={canInteractPromise}
+                                    >
+                                        {(canInteract) =>
+                                            !isEditing && canInteract ? (
+                                                <Popover
+                                                    open={menuOpen}
+                                                    onOpenChange={setMenuOpen}
+                                                >
+                                                    <PopoverTrigger asChild>
+                                                        <button
+                                                            type="button"
+                                                            aria-label="More options"
+                                                            className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                                        >
+                                                            <MoreVertical
+                                                                size={14}
+                                                            />
+                                                        </button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent
+                                                        className="w-44 bg-surface p-1"
+                                                        align="end"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                handleStartEdit(
+                                                                    savedBody ??
+                                                                        pullRequest.body ??
+                                                                        "",
+                                                                );
+                                                                setMenuOpen(
+                                                                    false,
+                                                                );
+                                                            }}
+                                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                                        >
+                                                            <SquarePen
+                                                                size={14}
+                                                            />
+                                                            Edit
+                                                        </button>
+                                                    </PopoverContent>
+                                                </Popover>
+                                            ) : null
+                                        }
+                                    </Async>
+                                </div>
                             </div>
                             <div className="p-4">
                                 {isEditing ? (
