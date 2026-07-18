@@ -577,6 +577,9 @@ export interface CodebergRepoHeaderInfo {
     isPrivate: boolean;
     permissions: { admin: boolean };
     ownerAvatarUrl: string | null;
+    allowSquashMerge?: boolean;
+    allowRebaseMerge?: boolean;
+    allowMergeCommit?: boolean;
 }
 
 export async function getCachedRepoHeaderData(
