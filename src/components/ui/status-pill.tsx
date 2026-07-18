@@ -1,4 +1,9 @@
-export type PullRequestState = "draft" | "open" | "closed" | "merged";
+export type PullRequestState =
+    | "draft"
+    | "open"
+    | "closed"
+    | "merged"
+    | "queued";
 
 export function StatusPill({ state }: { state: PullRequestState }) {
     let statusText = "";
@@ -20,6 +25,10 @@ export function StatusPill({ state }: { state: PullRequestState }) {
         case "closed":
             statusText = "Closed";
             statusColor = "bg-red-600 text-white";
+            break;
+        case "queued":
+            statusText = "Queued";
+            statusColor = "bg-yellow-700 text-white";
             break;
     }
     return (
