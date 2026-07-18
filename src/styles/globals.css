@@ -138,3 +138,16 @@ html {
 .comment-highlight {
     box-shadow: 0 0 6px 3px rgba(96, 165, 250, 0.5);
 }
+
+.review-thread-highlight {
+    animation: review-thread-flash 2s ease-out;
+}
+
+@keyframes review-thread-flash {
+    0% {
+        background-color: rgba(96, 165, 250, 0.18);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
