@@ -16,6 +16,7 @@ export interface PrSearchItem {
     assignees: Array<{ login: string; avatarUrl: string }>;
     comments: number;
     reviewDecision: string | null;
+    mergeable?: string;
 }
 
 export interface PrSearchResult {

@@ -76,6 +76,7 @@ function normalizeSearchItem(item: PrSearchItem): PrRowData {
         status_state: null,
         status_contexts: [],
         review_decision: item.reviewDecision,
+        mergeable: item.mergeable ?? null,
     };
 }
 

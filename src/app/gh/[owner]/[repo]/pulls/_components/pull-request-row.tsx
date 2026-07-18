@@ -7,6 +7,7 @@ import {
     GitPullRequestClosed,
     GitPullRequestDraft,
     MessageSquare,
+    TriangleAlert,
     X,
     XCircle,
 } from "lucide-react";
@@ -19,6 +20,11 @@ import {
     HoverCardTrigger,
 } from "~/components/ui/hover-card";
 import { Label } from "~/components/ui/label";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { UserLink } from "~/components/user-link";
 import { cn } from "~/lib/utils";
 import { formatRelativeTime } from "~/utils";
@@ -50,6 +56,7 @@ export interface PrRowData {
         completedAt?: string | null;
     }>;
     review_decision: string | null;
+    mergeable?: string | null;
 }
 
 function StatusCheckIcon({
@@ -228,6 +235,21 @@ export function PullRequestRow({
                     >
                         <CodeTitle>{pr.title}</CodeTitle>
                     </Link>
+                    {pr.mergeable === "DIRTY" && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Link
+                                    href={prHref}
+                                    className="flex items-center"
+                                >
+                                    <TriangleAlert className="size-4 text-amber-500" />
+                                </Link>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                                This PR has conflicts
+                            </TooltipContent>
+                        </Tooltip>
+                    )}
                     {pr.status_state && (
                         <HoverCard openDelay={200}>
                             <HoverCardTrigger asChild>

@@ -69,6 +69,7 @@ function mapGqlItem(item: {
     };
     comments: { totalCount: number };
     reviewDecision: string | null;
+    mergeStateStatus: string;
 }): PrSearchItem {
     return {
         id: item.databaseId,
@@ -83,5 +84,6 @@ function mapGqlItem(item: {
         assignees: item.assignees.nodes.map(mapGqlAssignee),
         comments: item.comments.totalCount,
         reviewDecision: item.reviewDecision,
+        mergeable: item.mergeStateStatus,
     };
 }

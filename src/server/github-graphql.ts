@@ -1042,6 +1042,7 @@ export interface GqlPrSearchItem {
     assignees: { nodes: Array<{ login: string; avatarUrl: string }> };
     comments: { totalCount: number };
     reviewDecision: string | null;
+    mergeStateStatus: string;
     // commits: {
     // 	nodes: Array<{
     // 		commit: {
@@ -1113,6 +1114,7 @@ query SearchPRs($searchQuery: String!, $first: Int!, $after: String) {
         }
         comments { totalCount }
         reviewDecision
+        mergeStateStatus
       }
     }
   }
