@@ -121,20 +121,6 @@ export function PullRequestReviewContent({
                         repo={repo}
                         headerActions={
                             <div className="flex items-center gap-1">
-                                {!isEditing && currentUserLogin && (
-                                    <ReactionPicker
-                                        disabled={!canInteract}
-                                        reactions={reviewReactionsArr}
-                                        currentUserLogin={currentUserLogin}
-                                        onReact={(content) =>
-                                            onReactToReview(
-                                                event.id,
-                                                event.databaseId,
-                                                content,
-                                            )
-                                        }
-                                    />
-                                )}
                                 {event.body && !isEditing && (
                                     <Popover
                                         open={menuOpen}
@@ -192,9 +178,20 @@ export function PullRequestReviewContent({
                             </div>
                         }
                         footer={
-                            !isEditing &&
-                            reviewReactionsArr.length > 0 && (
-                                <div className="px-3 pb-3">
+                            !isEditing && (
+                                <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                                    <ReactionPicker
+                                        disabled={!canInteract}
+                                        reactions={reviewReactionsArr}
+                                        currentUserLogin={currentUserLogin}
+                                        onReact={(content) =>
+                                            onReactToReview(
+                                                event.id,
+                                                event.databaseId,
+                                                content,
+                                            )
+                                        }
+                                    />
                                     <ReactionBar
                                         disabled={!canInteract}
                                         reactions={reviewReactionsArr}

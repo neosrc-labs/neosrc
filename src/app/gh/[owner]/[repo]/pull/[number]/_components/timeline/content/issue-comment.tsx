@@ -137,16 +137,6 @@ export function IssueCommentContent({
             repo={repo}
             headerActions={
                 <>
-                    {!isEditing && currentUserLogin && (
-                        <ReactionPicker
-                            disabled={!canInteract}
-                            reactions={commentReactionsArr}
-                            currentUserLogin={currentUserLogin}
-                            onReact={(content) =>
-                                onReactToComment(event.databaseId, content)
-                            }
-                        />
-                    )}
                     {event.isMinimized && (
                         <button
                             type="button"
@@ -210,9 +200,16 @@ export function IssueCommentContent({
                 </>
             }
             footer={
-                !isEditing &&
-                commentReactionsArr.length > 0 && (
+                !isEditing && (
                     <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                        <ReactionPicker
+                            disabled={!canInteract}
+                            reactions={commentReactionsArr}
+                            currentUserLogin={currentUserLogin}
+                            onReact={(content) =>
+                                onReactToComment(event.databaseId, content)
+                            }
+                        />
                         <ReactionBar
                             disabled={!canInteract}
                             reactions={commentReactionsArr}
