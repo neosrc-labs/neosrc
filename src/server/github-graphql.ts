@@ -1433,3 +1433,56 @@ export async function getCommitGraphQL(
         signature: commit.signature,
     };
 }
+
+const TOP_REPOS_QUERY = `
+query TopRepositories($first: Int!) {
+    viewer {
+        topRepositories(first: $first, orderBy: { field: UPDATED_AT, direction: DESC }) {
+            nodes {
+                name
+                nameWithOwner
+                isPrivate
+                description
+                owner {
+                    login
+                    avatarUrl
+                }
+            }
+        }
+    }
+}
+`;
+
+export interface GqlTopRepo {
+    name: string;
+    nameWithOwner: string;
+    isPrivate: boolean;
+    description: string | null;
+    owner: {
+        login: string;
+        avatarUrl: string;
+    };
+}
+
+interface GqlTopReposResult {
+    viewer: {
+        topRepositories: {
+            nodes: (GqlTopRepo | null)[];
+        } | null;
+    };
+}
+
+export async function getTopRepositories(
+    accessToken: string,
+): Promise<GqlTopRepo[]> {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const result = await graphql<GqlTopReposResult>(TOP_REPOS_QUERY, {
+        first: 10,
+    });
+
+    const nodes = result.viewer.topRepositories?.nodes ?? [];
+    return nodes.filter((n): n is GqlTopRepo => n !== null);
+}

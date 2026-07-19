@@ -12,6 +12,7 @@ import {
     getUserRepos as getGitHubUserRepos,
     getRepo,
 } from "~/server/github";
+import { getTopRepositories } from "~/server/github-graphql";
 
 export const reposRouter = createTRPCRouter({
     getByOwnerAndRepo: protectedProcedure
@@ -88,6 +89,10 @@ export const reposRouter = createTRPCRouter({
                 input.repo,
             );
         }),
+    getTopRepos: protectedProcedure.query(async ({ ctx }) => {
+        const accessToken = await getGitHubToken(ctx.db, ctx.session.user.id);
+        return getTopRepositories(accessToken);
+    }),
     getAllMyRepos: protectedProcedure.query(async ({ ctx }) => {
         const results: {
             provider: "github" | "codeberg";
