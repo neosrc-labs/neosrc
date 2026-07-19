@@ -1875,3 +1875,96 @@ export async function getUserRepos(
     }
     return results;
 }
+
+export interface RepoContentItem {
+    type: "file" | "dir" | "submodule" | "symlink";
+    name: string;
+    path: string;
+    sha: string;
+    size: number;
+    htmlUrl: string | null;
+}
+
+export async function getRepoContents(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    path?: string,
+    ref?: string,
+): Promise<RepoContentItem[]> {
+    const octokit = createOctokit(accessToken);
+    const { data } = await octokit.repos.getContent({
+        owner,
+        repo,
+        path: path ?? "",
+        ref,
+    });
+
+    if (Array.isArray(data)) {
+        return data.map((item) => ({
+            type: item.type as RepoContentItem["type"],
+            name: item.name,
+            path: item.path,
+            sha: item.sha,
+            size: item.size,
+            htmlUrl: item.html_url ?? null,
+        }));
+    }
+
+    return [
+        {
+            type: data.type as RepoContentItem["type"],
+            name: data.name,
+            path: data.path,
+            sha: data.sha,
+            size: data.size,
+            htmlUrl: data.html_url ?? null,
+        },
+    ];
+}
+
+export async function getRepoReadme(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    ref?: string,
+): Promise<{ content: string }> {
+    const octokit = createOctokit(accessToken);
+    const { data } = await octokit.rest.repos.getReadme({
+        owner,
+        repo,
+        ref,
+    });
+
+    return {
+        content: Buffer.from(data.content, "base64").toString("utf-8"),
+    };
+}
+
+export interface RepoBranch {
+    name: string;
+    sha: string;
+}
+
+export async function getRepoBranches(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<RepoBranch[]> {
+    const octokit = createOctokit(accessToken);
+    const iterator = octokit.paginate.iterator(
+        octokit.rest.repos.listBranches,
+        { owner, repo, per_page: 100 },
+    );
+
+    const results: RepoBranch[] = [];
+    for await (const { data } of iterator) {
+        for (const branch of data) {
+            results.push({
+                name: branch.name,
+                sha: branch.commit.sha,
+            });
+        }
+    }
+    return results;
+}
