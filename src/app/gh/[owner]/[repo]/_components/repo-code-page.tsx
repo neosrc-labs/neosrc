@@ -31,6 +31,11 @@ interface RepoCodePageProps {
     repo: string;
     repoDataPromise: Promise<RepoData>;
     contributorsPromise: Promise<Contributor[]>;
+    starredPromise: Promise<boolean>;
+    subscriptionPromise: Promise<{
+        subscribed: boolean;
+        ignored: boolean;
+    } | null>;
 }
 
 export function RepoCodePage({
@@ -38,6 +43,8 @@ export function RepoCodePage({
     repo,
     repoDataPromise,
     contributorsPromise,
+    starredPromise,
+    subscriptionPromise,
 }: RepoCodePageProps) {
     return (
         <main className="min-h-[calc(100svh-var(--header-height))] min-w-0 border-border-subtle border-r bg-surface">
@@ -47,6 +54,8 @@ export function RepoCodePage({
                         owner={owner}
                         repo={repo}
                         repoDataPromise={repoDataPromise}
+                        starredPromise={starredPromise}
+                        subscriptionPromise={subscriptionPromise}
                     />
                 </div>
 
