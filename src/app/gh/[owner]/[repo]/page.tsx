@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { HydrateClient } from "~/trpc/server";
+import { api } from "~/trpc/server";
+import type { RepoData } from "./_components/repo-code-page";
 import { RepoCodePage } from "./_components/repo-code-page";
 
 export async function generateMetadata({
@@ -18,9 +19,19 @@ export default async function CodePage({
 }) {
     const { owner, repo } = await params;
 
+    const repoDataPromise = api.repos.getByOwnerAndRepo({
+        provider: "gh",
+        owner,
+        repo,
+    }) as Promise<RepoData>;
+    const contributorsPromise = api.repos.getContributors({ owner, repo });
+
     return (
-        <HydrateClient>
-            <RepoCodePage owner={owner} repo={repo} />
-        </HydrateClient>
+        <RepoCodePage
+            owner={owner}
+            repo={repo}
+            repoDataPromise={repoDataPromise}
+            contributorsPromise={contributorsPromise}
+        />
     );
 }

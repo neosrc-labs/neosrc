@@ -175,3 +175,23 @@ function getFileIconName(filename: string): string {
     }
     return "file";
 }
+
+export function RepoFileTableSkeleton() {
+    return (
+        <div className="rounded-xl border border-border bg-surface">
+            <div className="flex items-center gap-4 border-border border-b px-4 py-3">
+                <div className="h-5 w-32 animate-pulse rounded bg-surface-secondary" />
+            </div>
+            <div className="p-4">
+                <div className="space-y-2">
+                    {["f1", "f2", "f3", "f4", "f5"].map((key) => (
+                        <div
+                            key={key}
+                            className="h-6 animate-pulse rounded bg-surface-secondary"
+                        />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
