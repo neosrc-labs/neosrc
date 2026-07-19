@@ -8,6 +8,7 @@ import {
     getUserRepos as getCodebergUserRepos,
 } from "~/server/codeberg";
 import {
+    checkRepoStarred,
     getCachedRepoIssuePullCounts,
     getUserRepos as getGitHubUserRepos,
     getRepo,
@@ -15,6 +16,10 @@ import {
     getRepoContents,
     getRepoContributors,
     getRepoReadme,
+    getRepoSubscription,
+    setRepoSubscription,
+    starRepo,
+    unstarRepo,
 } from "~/server/github";
 import { getTopRepositories } from "~/server/github-graphql";
 
@@ -182,6 +187,84 @@ export const reposRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
             return getRepoContributors(accessToken, input.owner, input.repo);
+        }),
+    getStarred: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            return checkRepoStarred(accessToken, input.owner, input.repo);
+        }),
+    star: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            await starRepo(accessToken, input.owner, input.repo);
+        }),
+    unstar: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            await unstarRepo(accessToken, input.owner, input.repo);
+        }),
+    getSubscription: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            return getRepoSubscription(accessToken, input.owner, input.repo);
+        }),
+    setSubscription: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                subscribed: z.boolean(),
+                ignored: z.boolean(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            await setRepoSubscription(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.subscribed,
+                input.ignored,
+            );
         }),
     getAllMyRepos: protectedProcedure.query(async ({ ctx }) => {
         const results: {

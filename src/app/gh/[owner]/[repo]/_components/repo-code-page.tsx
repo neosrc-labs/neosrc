@@ -2,7 +2,7 @@
 
 import { Async } from "~/components/async";
 import { RepoFileTable, RepoFileTableSkeleton } from "./repo-file-table";
-import { RepoHeader, RepoHeaderSkeleton } from "./repo-header";
+import { RepoHeader } from "./repo-header";
 import { RepoReadme } from "./repo-readme";
 import { RepoSidebar, RepoSidebarSkeleton } from "./repo-sidebar";
 
@@ -41,24 +41,13 @@ export function RepoCodePage({
 }: RepoCodePageProps) {
     return (
         <main className="min-h-[calc(100svh-var(--header-height))] min-w-0 border-border-subtle border-r bg-surface">
-            <div className="mx-auto max-w-7xl px-6 py-8">
-                <div className="mb-6">
-                    <Async
-                        promise={repoDataPromise}
-                        fallback={<RepoHeaderSkeleton />}
-                    >
-                        {(repoData) => (
-                            <RepoHeader
-                                owner={owner}
-                                repo={repo}
-                                ownerAvatarUrl={repoData.ownerAvatarUrl}
-                                isPrivate={repoData.isPrivate}
-                                stars={repoData.stars}
-                                forks={repoData.forks}
-                                watchers={repoData.watchers}
-                            />
-                        )}
-                    </Async>
+            <div className="mx-auto max-w-7xl px-6 py-6">
+                <div className="mb-4">
+                    <RepoHeader
+                        owner={owner}
+                        repo={repo}
+                        repoDataPromise={repoDataPromise}
+                    />
                 </div>
 
                 <div className="flex gap-8">
