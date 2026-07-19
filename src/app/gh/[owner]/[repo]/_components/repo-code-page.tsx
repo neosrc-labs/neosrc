@@ -3,6 +3,7 @@
 import type { RouterOutputs } from "~/trpc/react";
 
 import { api } from "~/trpc/react";
+import { RepoFileTable } from "./repo-file-table";
 import { RepoHeader } from "./repo-header";
 
 type RepoData = Extract<
@@ -48,24 +49,31 @@ export function RepoCodePage({ owner, repo }: RepoCodePageProps) {
 
                 <div className="flex gap-8">
                     <div className="min-w-0 flex-1">
-                        {/* File table area */}
-                        <div className="rounded-xl border border-border bg-surface">
-                            <div className="flex items-center gap-4 border-border border-b px-4 py-3">
-                                <div className="h-5 w-32 animate-pulse rounded bg-surface-secondary" />
-                            </div>
-                            <div className="p-4">
-                                <div className="space-y-2">
-                                    {["f1", "f2", "f3", "f4", "f5"].map(
-                                        (key) => (
-                                            <div
-                                                key={key}
-                                                className="h-6 animate-pulse rounded bg-surface-secondary"
-                                            />
-                                        ),
-                                    )}
+                        {isLoading || !repoData ? (
+                            <div className="rounded-xl border border-border bg-surface">
+                                <div className="flex items-center gap-4 border-border border-b px-4 py-3">
+                                    <div className="h-5 w-32 animate-pulse rounded bg-surface-secondary" />
+                                </div>
+                                <div className="p-4">
+                                    <div className="space-y-2">
+                                        {["f1", "f2", "f3", "f4", "f5"].map(
+                                            (key) => (
+                                                <div
+                                                    key={key}
+                                                    className="h-6 animate-pulse rounded bg-surface-secondary"
+                                                />
+                                            ),
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        ) : (
+                            <RepoFileTable
+                                owner={owner}
+                                repo={repo}
+                                defaultBranch={repoData.defaultBranch}
+                            />
+                        )}
 
                         {/* README placeholder */}
                         <div className="mt-6 rounded-xl border border-border bg-surface p-6">
