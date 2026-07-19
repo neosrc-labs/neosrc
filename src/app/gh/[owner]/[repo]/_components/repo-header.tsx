@@ -7,7 +7,7 @@ import {
     GitForkIcon,
     StarIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Async } from "~/components/async";
 import {
     Popover,
@@ -18,13 +18,28 @@ import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import type { RepoData } from "./repo-code-page";
 
+// ---------------------------------------------------------------------------
+// RepoHeader
+// ---------------------------------------------------------------------------
+
 interface RepoHeaderProps {
     owner: string;
     repo: string;
     repoDataPromise: Promise<RepoData>;
+    starredPromise: Promise<boolean>;
+    subscriptionPromise: Promise<{
+        subscribed: boolean;
+        ignored: boolean;
+    } | null>;
 }
 
-export function RepoHeader({ owner, repo, repoDataPromise }: RepoHeaderProps) {
+export function RepoHeader({
+    owner,
+    repo,
+    repoDataPromise,
+    starredPromise,
+    subscriptionPromise,
+}: RepoHeaderProps) {
     return (
         <div className="flex flex-wrap items-center gap-3">
             <h1 className="whitespace-nowrap text-text-primary text-xl">
@@ -34,10 +49,14 @@ export function RepoHeader({ owner, repo, repoDataPromise }: RepoHeaderProps) {
             </h1>
 
             <Async
-                promise={repoDataPromise}
+                promise={combine(
+                    repoDataPromise,
+                    starredPromise,
+                    subscriptionPromise,
+                )}
                 fallback={<HeaderActionsSkeleton />}
             >
-                {(repoData) => (
+                {([repoData, starred, subscription]) => (
                     <>
                         {repoData.ownerAvatarUrl && (
                             <img
@@ -54,6 +73,7 @@ export function RepoHeader({ owner, repo, repoDataPromise }: RepoHeaderProps) {
                                 owner={owner}
                                 repo={repo}
                                 watchers={repoData.watchers}
+                                initialSubscription={subscription}
                             />
                             <ForkButton
                                 owner={owner}
@@ -64,6 +84,7 @@ export function RepoHeader({ owner, repo, repoDataPromise }: RepoHeaderProps) {
                                 owner={owner}
                                 repo={repo}
                                 stars={repoData.stars}
+                                initialStarred={starred}
                             />
                         </div>
                     </>
@@ -71,6 +92,14 @@ export function RepoHeader({ owner, repo, repoDataPromise }: RepoHeaderProps) {
             </Async>
         </div>
     );
+}
+
+function combine<A, B, C>(
+    a: Promise<A>,
+    b: Promise<B>,
+    c: Promise<C>,
+): Promise<[A, B, C]> {
+    return Promise.all([a, b, c]);
 }
 
 // ---------------------------------------------------------------------------
@@ -92,36 +121,45 @@ function HeaderActionsSkeleton() {
 }
 
 // ---------------------------------------------------------------------------
-// Action buttons
+// Watch dropdown
 // ---------------------------------------------------------------------------
+
+interface SubscriptionState {
+    subscribed: boolean;
+    ignored: boolean;
+}
 
 function WatchDropdown({
     owner,
     repo,
     watchers,
+    initialSubscription,
 }: {
     owner: string;
     repo: string;
     watchers: number;
+    initialSubscription: SubscriptionState | null;
 }) {
     const [open, setOpen] = useState(false);
+    const [subscription, setSubscription] = useState(initialSubscription);
+    const confirmed = useRef(initialSubscription);
     const utils = api.useUtils();
 
-    const { data: subscription } = api.repos.getSubscription.useQuery({
-        owner,
-        repo,
-    });
-
     const setSub = api.repos.setSubscription.useMutation({
-        onSuccess: () => {
+        onMutate: ({ subscribed, ignored }) => {
+            confirmed.current = subscription;
+            setSubscription({ subscribed, ignored });
+        },
+        onError: () => {
+            setSubscription(confirmed.current);
+        },
+        onSettled: () => {
             utils.repos.getSubscription.invalidate({ owner, repo });
         },
     });
 
     const isWatching =
         !!subscription && subscription.subscribed && !subscription.ignored;
-
-    const currentMode = subscription?.ignored ? "ignoring" : "participating";
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -156,7 +194,7 @@ function WatchDropdown({
                     <WatchOption
                         label="Participating"
                         description="Only receive notifications from threads you participated in"
-                        selected={currentMode === "participating" && isWatching}
+                        selected={isWatching}
                         onClick={() => {
                             setSub.mutate({
                                 owner,
@@ -184,7 +222,7 @@ function WatchDropdown({
                     <WatchOption
                         label="Ignore"
                         description="Never be notified"
-                        selected={currentMode === "ignoring"}
+                        selected={!!subscription && subscription.ignored}
                         onClick={() => {
                             setSub.mutate({
                                 owner,
@@ -258,53 +296,66 @@ function WatchOption({
     );
 }
 
+// ---------------------------------------------------------------------------
+// Star button
+// ---------------------------------------------------------------------------
+
 function StarButton({
     owner,
     repo,
     stars,
+    initialStarred,
 }: {
     owner: string;
     repo: string;
     stars: number;
+    initialStarred: boolean;
 }) {
+    const [starred, setStarred] = useState(initialStarred);
+    const [count, setCount] = useState(stars);
+    const [pending, setPending] = useState(false);
+    const confirmed = useRef({ starred, count });
     const utils = api.useUtils();
-    const { data: starred } = api.repos.getStarred.useQuery({ owner, repo });
-    const [pending, setPending] = useState<"star" | "unstar" | null>(null);
-
-    const displayedStarred =
-        pending === "star"
-            ? true
-            : pending === "unstar"
-              ? false
-              : (starred ?? false);
-    const displayedCount =
-        pending === "star"
-            ? stars + 1
-            : pending === "unstar"
-              ? stars - 1
-              : stars;
 
     const starMutation = api.repos.star.useMutation({
-        onMutate: () => setPending("star"),
-        onError: () => setPending(null),
+        onMutate: () => {
+            confirmed.current = { starred, count };
+            setStarred(true);
+            setCount((c) => c + 1);
+            setPending(true);
+        },
+        onError: () => {
+            setStarred(confirmed.current.starred);
+            setCount(confirmed.current.count);
+            setPending(false);
+        },
         onSettled: () => {
-            setPending(null);
+            setPending(false);
             utils.repos.getStarred.invalidate({ owner, repo });
         },
     });
 
     const unstarMutation = api.repos.unstar.useMutation({
-        onMutate: () => setPending("unstar"),
-        onError: () => setPending(null),
+        onMutate: () => {
+            confirmed.current = { starred, count };
+            setStarred(false);
+            setCount((c) => c - 1);
+            setPending(true);
+        },
+        onError: () => {
+            setStarred(confirmed.current.starred);
+            setCount(confirmed.current.count);
+            setPending(false);
+        },
         onSettled: () => {
-            setPending(null);
+            setPending(false);
             utils.repos.getStarred.invalidate({ owner, repo });
         },
     });
 
     const handleClick = () => {
         if (pending) return;
-        if (displayedStarred) {
+        if (starred) {
             unstarMutation.mutate({ owner, repo });
         } else {
             starMutation.mutate({ owner, repo });
@@ -320,21 +371,25 @@ function StarButton({
                 pending && "cursor-wait opacity-70",
             )}
             onClick={handleClick}
-            disabled={!!pending}
+            disabled={pending}
         >
             <StarIcon
                 className={cn(
                     "h-3.5 w-3.5",
-                    displayedStarred && "fill-[#e3b341] stroke-[#e3b341]",
+                    starred && "fill-[#e3b341] stroke-[#e3b341]",
                 )}
             />
             <span className="font-semibold text-text-primary">
-                {formatCount(displayedCount)}
+                {formatCount(count)}
             </span>
-            <span>{displayedStarred ? "Starred" : "Star"}</span>
+            <span>{starred ? "Starred" : "Star"}</span>
         </button>
     );
 }
+
+// ---------------------------------------------------------------------------
+// Fork button
+// ---------------------------------------------------------------------------
 
 function ForkButton({
     owner,
