@@ -31,6 +31,11 @@ export function HomePage() {
                                     href={`/${repo.nameWithOwner}`}
                                     className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text-primary transition hover:bg-surface-secondary"
                                 >
+                                    <img
+                                        src={repo.owner.avatarUrl}
+                                        alt=""
+                                        className="h-5 w-5 shrink-0 rounded-full"
+                                    />
                                     <span className="truncate">
                                         {repo.nameWithOwner}
                                     </span>
