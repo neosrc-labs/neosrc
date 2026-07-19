@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { getAccount, getSession } from "~/server/auth";
+import { getSession, githubAccessToken } from "~/server/auth";
 import {
     type CheckRun,
     getCachedPullRequest,
@@ -45,11 +45,16 @@ export default async function PullRequestLayout({
     >(null);
     let currentUserLogin: string | undefined;
 
-    const account = await getAccount();
+    const accessToken = await githubAccessToken();
+    const session = await getSession();
 
-    if (account?.accessToken) {
-        const accessToken = account.accessToken;
-        const userId = account.userId;
+    if (accessToken && session?.user) {
+        const userId = session.user.id;
+        currentUserLogin = session.user.githubUsername ?? undefined;
+        if (!currentUserLogin) {
+            throw new Error("github username name not found");
+        }
+
         pullRequest = getCachedPullRequest(
             accessToken,
             owner,
@@ -57,12 +62,6 @@ export default async function PullRequestLayout({
             number,
             userId,
         );
-        const session = await getSession();
-
-        currentUserLogin = session?.user.githubUsername ?? undefined;
-        if (!currentUserLogin) {
-            throw new Error("github username name not found");
-        }
 
         userPermission = getUserRepoPermission(
             accessToken,
