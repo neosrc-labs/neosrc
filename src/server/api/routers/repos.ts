@@ -13,6 +13,7 @@ import {
     getRepo,
     getRepoBranches,
     getRepoContents,
+    getRepoContributors,
     getRepoReadme,
 } from "~/server/github";
 import { getTopRepositories } from "~/server/github-graphql";
@@ -61,6 +62,7 @@ export const reposRouter = createTRPCRouter({
                 allowMergeCommit: data.allow_merge_commit,
                 description: data.description ?? "",
                 defaultBranch: data.default_branch,
+                homepage: data.homepage ?? null,
                 stars: data.stargazers_count,
                 forks: data.forks_count,
                 watchers: data.subscribers_count,
@@ -68,11 +70,12 @@ export const reposRouter = createTRPCRouter({
                 topics: data.topics ?? [],
                 license: data.license
                     ? {
-                          spdxId: data.license.spdx_id,
+                          spdxId: data.license.spdx_id ?? null,
                           name: data.license.name,
                           url: data.license.url ?? null,
                       }
                     : null,
+                createdAt: data.created_at,
             };
         }),
     getCountsByOwnerAndRepo: protectedProcedure
@@ -165,6 +168,20 @@ export const reposRouter = createTRPCRouter({
                 input.repo,
                 input.ref,
             );
+        }),
+    getContributors: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            return getRepoContributors(accessToken, input.owner, input.repo);
         }),
     getAllMyRepos: protectedProcedure.query(async ({ ctx }) => {
         const results: {
