@@ -213,7 +213,7 @@ function HeaderContent({
                 path:
                     provider === "cb"
                         ? `https://codeberg.org/${owner}/${repo}`
-                        : `https://github.com/${owner}/${repo}`,
+                        : `/${provider}/${owner}/${repo}`,
                 show: true,
                 isActive: isCode,
                 icon: Code2,
@@ -350,7 +350,7 @@ function HeaderContent({
                         </div>
 
                         <div className="flex items-center gap-1">
-                            {(prMatch ?? pullsMatch ?? issuesMatch) && (
+                            {!!repoMatch && (
                                 <a
                                     className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
                                     href={
@@ -358,7 +358,9 @@ function HeaderContent({
                                             ? `https://${provider === "cb" ? "codeberg.org" : "github.com"}/${prMatch[1]}/${prMatch[2]}/pull/${prMatch[3]}${provider === "gh" ? "?neosrc_exit=1" : ""}`
                                             : issuesMatch
                                               ? `https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues`
-                                              : `https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/pulls`
+                                              : pullsMatch
+                                                ? `https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/pulls`
+                                                : `https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}`
                                     }
                                     target="_blank"
                                     rel="noopener noreferrer"
