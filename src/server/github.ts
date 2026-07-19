@@ -1968,3 +1968,28 @@ export async function getRepoBranches(
     }
     return results;
 }
+
+export interface RepoContributor {
+    login: string;
+    avatarUrl: string;
+    contributions: number;
+}
+
+export async function getRepoContributors(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<RepoContributor[]> {
+    const octokit = createOctokit(accessToken);
+    const { data } = await octokit.rest.repos.listContributors({
+        owner,
+        repo,
+        per_page: 20,
+    });
+
+    return (data ?? []).map((contributor) => ({
+        login: contributor.login ?? "",
+        avatarUrl: contributor.avatar_url ?? "",
+        contributions: contributor.contributions,
+    }));
+}
