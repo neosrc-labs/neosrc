@@ -1,4 +1,4 @@
-import { getAccount } from "~/server/auth";
+import { githubAccessToken } from "~/server/auth";
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -11,8 +11,8 @@ export async function GET(request: Request) {
         return new Response("Missing required parameters", { status: 400 });
     }
 
-    const account = await getAccount();
-    if (!account?.accessToken) {
+    const accessToken = await githubAccessToken();
+    if (!accessToken) {
         return new Response(null, { status: 401 });
     }
 
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
         `https://raw.githubusercontent.com/${owner}/${repo}/${sha}/${path}`,
         {
             headers: {
-                Authorization: `Bearer ${account.accessToken}`,
+                Authorization: `Bearer ${accessToken}`,
             },
         },
     );

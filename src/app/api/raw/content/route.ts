@@ -1,5 +1,5 @@
 import { Octokit } from "@octokit/rest";
-import { getAccount } from "~/server/auth";
+import { githubAccessToken } from "~/server/auth";
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -12,12 +12,12 @@ export async function GET(request: Request) {
         return new Response("Missing required parameters", { status: 400 });
     }
 
-    const account = await getAccount();
-    if (!account?.accessToken) {
+    const accessToken = await githubAccessToken();
+    if (!accessToken) {
         return new Response(null, { status: 401 });
     }
 
-    const octokit = new Octokit({ auth: account.accessToken });
+    const octokit = new Octokit({ auth: accessToken });
 
     try {
         const response = await octokit.repos.getContent({

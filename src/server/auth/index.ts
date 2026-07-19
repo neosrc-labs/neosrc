@@ -199,36 +199,6 @@ const getUserId = async (userId?: string) => {
     return session?.user?.id ?? null;
 };
 
-export const getAccount = cache(
-    async (opts?: { db?: typeof db; userId?: string }) => {
-        const uid = await getUserId(opts?.userId);
-        if (!uid) return null;
-
-        const database = opts?.db ?? db;
-
-        const [account] = await database
-            .select()
-            .from(betterAuthAccount)
-            .where(eq(betterAuthAccount.userId, uid))
-            .limit(1);
-
-        if (!account) return null;
-
-        return {
-            ...account,
-            accessToken: account.accessToken
-                ? decrypt(account.accessToken)
-                : account.accessToken,
-            refreshToken: account.refreshToken
-                ? decrypt(account.refreshToken)
-                : account.refreshToken,
-            idToken: account.idToken
-                ? decrypt(account.idToken)
-                : account.idToken,
-        };
-    },
-);
-
 export const getGitHubToken = async (database: typeof db, userId: string) => {
     const [account] = await database
         .select({
