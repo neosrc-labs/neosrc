@@ -11,6 +11,9 @@ import {
     getCachedRepoIssuePullCounts,
     getUserRepos as getGitHubUserRepos,
     getRepo,
+    getRepoBranches,
+    getRepoContents,
+    getRepoReadme,
 } from "~/server/github";
 import { getTopRepositories } from "~/server/github-graphql";
 
@@ -56,6 +59,20 @@ export const reposRouter = createTRPCRouter({
                 allowSquashMerge: data.allow_squash_merge,
                 allowRebaseMerge: data.allow_rebase_merge,
                 allowMergeCommit: data.allow_merge_commit,
+                description: data.description ?? "",
+                defaultBranch: data.default_branch,
+                stars: data.stargazers_count,
+                forks: data.forks_count,
+                watchers: data.subscribers_count,
+                language: data.language ?? null,
+                topics: data.topics ?? [],
+                license: data.license
+                    ? {
+                          spdxId: data.license.spdx_id,
+                          name: data.license.name,
+                          url: data.license.url ?? null,
+                      }
+                    : null,
             };
         }),
     getCountsByOwnerAndRepo: protectedProcedure
@@ -93,6 +110,62 @@ export const reposRouter = createTRPCRouter({
         const accessToken = await getGitHubToken(ctx.db, ctx.session.user.id);
         return getTopRepositories(accessToken);
     }),
+    getBranches: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            return getRepoBranches(accessToken, input.owner, input.repo);
+        }),
+    getContents: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                path: z.string().optional(),
+                ref: z.string().optional(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            return getRepoContents(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.path,
+                input.ref,
+            );
+        }),
+    getReadme: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                ref: z.string().optional(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            return getRepoReadme(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.ref,
+            );
+        }),
     getAllMyRepos: protectedProcedure.query(async ({ ctx }) => {
         const results: {
             provider: "github" | "codeberg";
