@@ -1993,3 +1993,86 @@ export async function getRepoContributors(
         contributions: contributor.contributions,
     }));
 }
+
+export interface RepoSubscription {
+    subscribed: boolean;
+    ignored: boolean;
+}
+
+export async function checkRepoStarred(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<boolean> {
+    const octokit = createOctokit(accessToken);
+    try {
+        await octokit.rest.activity.checkRepoIsStarredByAuthenticatedUser({
+            owner,
+            repo,
+        });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+export async function starRepo(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<void> {
+    const octokit = createOctokit(accessToken);
+    await octokit.rest.activity.starRepoForAuthenticatedUser({ owner, repo });
+}
+
+export async function unstarRepo(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<void> {
+    const octokit = createOctokit(accessToken);
+    await octokit.rest.activity.unstarRepoForAuthenticatedUser({
+        owner,
+        repo,
+    });
+}
+
+export async function getRepoSubscription(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<RepoSubscription | null> {
+    const octokit = createOctokit(accessToken);
+    try {
+        const { data } = await octokit.rest.activity.getRepoSubscription({
+            owner,
+            repo,
+        });
+        return {
+            subscribed: data.subscribed,
+            ignored: data.ignored,
+        };
+    } catch {
+        return null;
+    }
+}
+
+export async function setRepoSubscription(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    subscribed: boolean,
+    ignored: boolean,
+): Promise<void> {
+    const octokit = createOctokit(accessToken);
+    if (!subscribed && !ignored) {
+        await octokit.rest.activity.deleteRepoSubscription({ owner, repo });
+        return;
+    }
+    await octokit.rest.activity.setRepoSubscription({
+        owner,
+        repo,
+        subscribed,
+        ignored,
+    });
+}
