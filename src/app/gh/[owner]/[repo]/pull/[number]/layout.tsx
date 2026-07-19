@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { ResizableLayout } from "~/components/ResizableLayout";
 import { getAccount, getSession } from "~/server/auth";
 import {
     type CheckRun,
@@ -17,6 +16,7 @@ import {
 } from "~/utils/status-checks";
 import LeftSidebar from "./_components/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
+import { PullRequestClientLayout } from "./layout-client";
 
 interface LayoutProps {
     children: ReactNode;
@@ -93,7 +93,7 @@ export default async function PullRequestLayout({
     }
 
     return (
-        <ResizableLayout
+        <PullRequestClientLayout
             leftSidebar={
                 <LeftSidebar
                     currentUserLogin={currentUserLogin}
@@ -117,7 +117,7 @@ export default async function PullRequestLayout({
             }
         >
             {children}
-        </ResizableLayout>
+        </PullRequestClientLayout>
     );
 }
 

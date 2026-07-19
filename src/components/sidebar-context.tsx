@@ -8,6 +8,7 @@ import {
     useContext,
     useState,
 } from "react";
+import { isFilesPage } from "~/utils/route";
 
 interface SidebarContextValue {
     isLeftOpen: boolean;
@@ -27,11 +28,8 @@ const SidebarContext = createContext<SidebarContextValue>({
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
     const pathname = usePathname();
-    const isFilesPage =
-        pathname?.includes("/pull/") &&
-        (pathname.endsWith("/files") || pathname.includes("/files/"));
     const [isLeftOpen, setIsLeftOpen] = useState(true);
-    const [isRightOpen, setIsRightOpen] = useState(!isFilesPage);
+    const [isRightOpen, setIsRightOpen] = useState(!isFilesPage(pathname));
 
     const toggleLeft = useCallback(() => {
         setIsLeftOpen((prev) => !prev);

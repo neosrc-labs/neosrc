@@ -22,12 +22,14 @@ interface ResizableLayoutProps {
     leftSidebar: ReactNode;
     children: ReactNode;
     rightSidebar: ReactNode;
+    boxed?: boolean;
 }
 
 export function ResizableLayout({
     leftSidebar,
     children,
     rightSidebar,
+    boxed = true,
 }: ResizableLayoutProps) {
     const { isLeftOpen, isRightOpen, toggleLeft, toggleRight } = useSidebar();
     const [leftWidth, setLeftWidth] = useState(DEFAULT_LEFT_WIDTH);
@@ -183,7 +185,9 @@ export function ResizableLayout({
 
             {/* Middle Section - PR Content */}
             <main className="min-w-0 border-border-subtle border-r bg-surface">
-                {children}
+                <div className={boxed ? "mx-auto w-full max-w-7xl" : ""}>
+                    {children}
+                </div>
             </main>
 
             {/* Right sidebar spacer for grid layout */}
