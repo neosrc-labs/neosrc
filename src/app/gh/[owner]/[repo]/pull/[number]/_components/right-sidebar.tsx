@@ -132,7 +132,7 @@ export default function RightSidebar({
                     repo={repo}
                     number={number}
                 />
-                <div className="flex gap-1 border-border-subtle border-b pb-2">
+                <div className="mt-10 flex gap-1 border-border-subtle border-b pb-2">
                     {tabs.map(({ key, icon, label }) => (
                         <button
                             key={key}
