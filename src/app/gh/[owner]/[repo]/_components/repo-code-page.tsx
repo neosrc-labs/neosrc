@@ -5,6 +5,7 @@ import type { RouterOutputs } from "~/trpc/react";
 import { api } from "~/trpc/react";
 import { RepoFileTable } from "./repo-file-table";
 import { RepoHeader } from "./repo-header";
+import { RepoReadme } from "./repo-readme";
 import { RepoSidebar } from "./repo-sidebar";
 
 type RepoData = Extract<
@@ -81,15 +82,13 @@ export function RepoCodePage({ owner, repo }: RepoCodePageProps) {
                             />
                         )}
 
-                        {/* README placeholder */}
-                        <div className="mt-6 rounded-xl border border-border bg-surface p-6">
-                            <div className="h-4 w-24 animate-pulse rounded bg-surface-secondary" />
-                            <div className="mt-4 space-y-2">
-                                <div className="h-3 w-full animate-pulse rounded bg-surface-secondary" />
-                                <div className="h-3 w-3/4 animate-pulse rounded bg-surface-secondary" />
-                                <div className="h-3 w-1/2 animate-pulse rounded bg-surface-secondary" />
-                            </div>
-                        </div>
+                        {repoData && (
+                            <RepoReadme
+                                owner={owner}
+                                repo={repo}
+                                ref={repoData.defaultBranch}
+                            />
+                        )}
                     </div>
 
                     {/* Right sidebar metadata */}
