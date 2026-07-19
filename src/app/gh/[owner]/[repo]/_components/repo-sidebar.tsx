@@ -216,3 +216,17 @@ const languageColors: Record<string, string> = {
     Nim: "#ffc200",
     OCaml: "#3be133",
 };
+
+export function RepoSidebarSkeleton() {
+    return (
+        <aside className="w-72 shrink-0">
+            <div className="rounded-xl border border-border bg-surface p-6">
+                <div className="mb-4 h-4 w-16 animate-pulse rounded bg-surface-secondary" />
+                <div className="space-y-2">
+                    <div className="h-3 w-full animate-pulse rounded bg-surface-secondary" />
+                    <div className="h-3 w-2/3 animate-pulse rounded bg-surface-secondary" />
+                </div>
+            </div>
+        </aside>
+    );
+}

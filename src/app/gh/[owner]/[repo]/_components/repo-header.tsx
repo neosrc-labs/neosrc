@@ -89,3 +89,12 @@ function formatCount(count: number): string {
     }
     return String(count);
 }
+
+export function RepoHeaderSkeleton() {
+    return (
+        <div className="space-y-3">
+            <div className="h-8 w-64 animate-pulse rounded bg-surface-secondary" />
+            <div className="h-4 w-96 animate-pulse rounded bg-surface-secondary" />
+        </div>
+    );
+}
