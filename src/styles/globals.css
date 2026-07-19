@@ -43,6 +43,8 @@
     --color-text-tertiary: #6b7280;
     --color-text-muted: #9ca3af;
     --color-text-label: #374151;
+    --color-popover: #ffffff;
+    --color-popover-foreground: #111827;
 }
 
 .check-pending-dot {
@@ -68,6 +70,8 @@
     --color-text-tertiary: #a1a1aa;
     --color-text-muted: #71717a;
     --color-text-label: #d4d4d8;
+    --color-popover: #18181b;
+    --color-popover-foreground: #f4f4f5;
 }
 
 html {

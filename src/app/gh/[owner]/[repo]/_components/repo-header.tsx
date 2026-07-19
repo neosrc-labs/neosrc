@@ -1,6 +1,7 @@
 "use client";
 
 import {
+    BellOffIcon,
     CheckIcon,
     ChevronDownIcon,
     EyeIcon,
@@ -160,6 +161,7 @@ function WatchDropdown({
 
     const isWatching =
         !!subscription && subscription.subscribed && !subscription.ignored;
+    const isIgnoring = !!subscription && subscription.ignored;
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -173,8 +175,18 @@ function WatchDropdown({
                             : "border-border bg-surface text-text-secondary hover:bg-surface-secondary",
                     )}
                 >
-                    <EyeIcon className="h-3.5 w-3.5" />
-                    <span>{isWatching ? "Watching" : "Watch"}</span>
+                    {isIgnoring ? (
+                        <BellOffIcon className="h-3.5 w-3.5" />
+                    ) : (
+                        <EyeIcon className="h-3.5 w-3.5" />
+                    )}
+                    <span>
+                        {isIgnoring
+                            ? "Stop ignoring"
+                            : isWatching
+                              ? "Watching"
+                              : "Watch"}
+                    </span>
                     <span className="font-semibold text-text-primary">
                         {formatCount(watchers)}
                     </span>
@@ -233,12 +245,6 @@ function WatchDropdown({
                             setOpen(false);
                         }}
                     />
-                    <WatchOption
-                        label="Custom"
-                        description="Select events to be notified of"
-                        selected={false}
-                        href={`https://github.com/${owner}/${repo}/notifications`}
-                    />
                 </div>
             </PopoverContent>
         </Popover>
@@ -278,7 +284,7 @@ function WatchOption({
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block transition-colors hover:bg-surface-secondary"
+                className="block cursor-pointer transition-colors hover:bg-surface-secondary"
             >
                 {content}
             </a>
@@ -288,7 +294,7 @@ function WatchOption({
     return (
         <button
             type="button"
-            className="block w-full text-left transition-colors hover:bg-surface-secondary"
+            className="block w-full cursor-pointer text-left transition-colors hover:bg-surface-secondary"
             onClick={onClick}
         >
             {content}
