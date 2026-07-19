@@ -50,9 +50,11 @@ function fetchFiles(
                     (commitSha ? `&commitSha=${commitSha}` : ""),
                 { signal: controller.signal },
             );
+
+            if (!res.ok) return;
+
             const reader = res.body?.getReader();
-            if (!reader)
-                throw new Error("body reader was null when loading files");
+            if (!reader) return;
 
             const decoder = new TextDecoder();
             let buffer = "";
@@ -71,7 +73,6 @@ function fetchFiles(
         } catch (err) {
             if (err instanceof DOMException && err.name === "AbortError")
                 return;
-            throw err;
         } finally {
             if (!controller.signal.aborted) {
                 entry.isLoading = false;

@@ -1,4 +1,4 @@
-import { getAccount } from "~/server/auth";
+import { getSession, githubAccessToken } from "~/server/auth";
 import { getPullRequestFilesStream } from "~/server/github";
 
 export async function GET(request: Request) {
@@ -12,12 +12,14 @@ export async function GET(request: Request) {
         return new Response(null, { status: 400 });
     }
 
-    const account = await getAccount();
-    if (!account?.accessToken) {
+    const accessToken = await githubAccessToken();
+    if (!accessToken) {
         return new Response(null, { status: 401 });
     }
 
-    const { accessToken, userId } = account;
+    const session = await getSession();
+    const userId = session?.user?.id;
+
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
         async start(controller) {
