@@ -1,10 +1,11 @@
 "use client";
 
-import { ChevronDownIcon, GitBranchIcon, TagIcon } from "lucide-react";
+import { GitBranchIcon, TagIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "~/trpc/react";
 import iconMapData from "~/utils/iconMap.json";
 import { ClonePopover } from "./clone-popover";
+import { RefSelector } from "./ref-selector";
 
 const iconMap: Record<string, string> = iconMapData as Record<string, string>;
 
@@ -24,11 +25,6 @@ export function RepoFileTable({
     useEffect(() => {
         setSelectedRef(defaultBranch);
     }, [defaultBranch]);
-
-    const { data: branches } = api.repos.getBranches.useQuery({
-        owner,
-        repo,
-    });
 
     const { data: refCounts } = api.repos.getRefCounts.useQuery({
         owner,
@@ -55,32 +51,12 @@ export function RepoFileTable({
         <div className="rounded-xl border border-border bg-surface">
             <div className="flex items-center justify-between border-border border-b px-4 py-3">
                 <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm text-text-primary">
-                            <GitBranchIcon className="h-4 w-4 text-text-tertiary" />
-                            <select
-                                className="appearance-none bg-transparent outline-hidden"
-                                value={selectedRef}
-                                onChange={(e) => setSelectedRef(e.target.value)}
-                            >
-                                {branches && branches.length > 0 ? (
-                                    branches.map((branch) => (
-                                        <option
-                                            key={branch.name}
-                                            value={branch.name}
-                                        >
-                                            {branch.name}
-                                        </option>
-                                    ))
-                                ) : (
-                                    <option value={defaultBranch}>
-                                        {defaultBranch}
-                                    </option>
-                                )}
-                            </select>
-                            <ChevronDownIcon className="pointer-events-none absolute right-2 h-3 w-3 text-text-tertiary" />
-                        </div>
-                    </div>
+                    <RefSelector
+                        owner={owner}
+                        repo={repo}
+                        selectedRef={selectedRef}
+                        onSelect={setSelectedRef}
+                    />
                     {refCounts && (
                         <span className="inline-flex items-center gap-1 text-sm text-text-tertiary">
                             <a

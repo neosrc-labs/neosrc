@@ -19,6 +19,7 @@ import {
     getRepoReadme,
     getRepoRefCounts,
     getRepoSubscription,
+    getRepoTags,
     setRepoSubscription,
     starRepo,
     unstarRepo,
@@ -133,6 +134,20 @@ export const reposRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
             return getRepoBranches(accessToken, input.owner, input.repo);
+        }),
+    getTags: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            return getRepoTags(accessToken, input.owner, input.repo);
         }),
     getRefCounts: protectedProcedure
         .input(
