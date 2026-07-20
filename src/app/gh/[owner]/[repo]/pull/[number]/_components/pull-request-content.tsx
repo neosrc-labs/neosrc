@@ -162,7 +162,7 @@ export function PullRequestContent({
                             </a>
                         )}
                     </div>
-                    <div className="prose prose-sm max-w-none">
+                    <div>
                         <MarkdownRenderer
                             content={activeReport.data ?? ""}
                             owner={owner}

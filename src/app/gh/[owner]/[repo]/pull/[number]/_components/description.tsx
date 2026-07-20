@@ -477,7 +477,7 @@ export function PullRequestDescriptionSection({
                                         ]}
                                     />
                                 ) : (
-                                    <div className="prose prose-sm max-w-none">
+                                    <div>
                                         {displayBody ? (
                                             <Async
                                                 fallback={
