@@ -1,9 +1,9 @@
 "use client";
 
 import { Async } from "~/components/async";
+import { RepoDocFiles } from "./repo-doc-files";
 import { RepoFileTable, RepoFileTableSkeleton } from "./repo-file-table";
 import { RepoHeader } from "./repo-header";
-import { RepoReadme } from "./repo-readme";
 import { RepoSidebar, RepoSidebarSkeleton } from "./repo-sidebar";
 
 export interface RepoData {
@@ -76,7 +76,7 @@ export function RepoCodePage({
 
                         <Async promise={repoDataPromise} fallback={null}>
                             {(repoData) => (
-                                <RepoReadme
+                                <RepoDocFiles
                                     owner={owner}
                                     repo={repo}
                                     ref={repoData.defaultBranch}

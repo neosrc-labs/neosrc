@@ -1923,22 +1923,90 @@ export async function getRepoContents(
     ];
 }
 
-export async function getRepoReadme(
+export interface RepoDocFile {
+    name: string;
+    path: string;
+    content: string;
+}
+
+const DOC_FILE_PATTERNS = [
+    /^readme/i,
+    /^contributing\.md$/i,
+    /^code_of_conduct\.md$/i,
+    /^(licen[cs]e|copying)/i,
+];
+
+const PRIORITY_ORDER: Record<string, number> = {
+    readme: 0,
+    contributing: 1,
+    code_of_conduct: 2,
+};
+
+function getDocFileSortKey(name: string): string {
+    const base = name.replace(/\.[^.]+$/, "").toLowerCase();
+    const priority = PRIORITY_ORDER[base];
+    if (priority !== undefined) {
+        return String(priority).padStart(3, "0");
+    }
+    return `zzz${name.toLowerCase()}`;
+}
+
+export async function getRepoDocFiles(
     accessToken: string,
     owner: string,
     repo: string,
     ref?: string,
-): Promise<{ content: string }> {
+): Promise<RepoDocFile[]> {
     const octokit = createOctokit(accessToken);
-    const { data } = await octokit.rest.repos.getReadme({
+
+    const { data: rootData } = await octokit.rest.repos.getContent({
         owner,
         repo,
         ref,
+        path: "",
     });
 
-    return {
-        content: Buffer.from(data.content, "base64").toString("utf-8"),
-    };
+    const items = Array.isArray(rootData) ? rootData : [rootData];
+
+    const docItems = items.filter(
+        (item) =>
+            item.type === "file" &&
+            DOC_FILE_PATTERNS.some((p) => p.test(item.name)),
+    );
+
+    const results = await Promise.all(
+        docItems.map(async (item) => {
+            try {
+                const { data: fileData } = await octokit.rest.repos.getContent({
+                    owner,
+                    repo,
+                    path: item.path,
+                    ref,
+                });
+
+                if (Array.isArray(fileData)) return null;
+                if (fileData.type !== "file" || !fileData.content) return null;
+
+                const content = Buffer.from(
+                    fileData.content,
+                    "base64",
+                ).toString("utf-8");
+                return {
+                    name: fileData.name,
+                    path: fileData.path,
+                    content,
+                };
+            } catch {
+                return null;
+            }
+        }),
+    );
+
+    return results
+        .filter((f): f is RepoDocFile => f !== null)
+        .sort((a, b) =>
+            getDocFileSortKey(a.name).localeCompare(getDocFileSortKey(b.name)),
+        );
 }
 
 export interface RepoBranch {
