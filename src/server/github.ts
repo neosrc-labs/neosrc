@@ -1969,6 +1969,35 @@ export async function getRepoBranches(
     return results;
 }
 
+export interface RepoTag {
+    name: string;
+    sha: string;
+}
+
+export async function getRepoTags(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<RepoTag[]> {
+    const octokit = createOctokit(accessToken);
+    const iterator = octokit.paginate.iterator(octokit.rest.repos.listTags, {
+        owner,
+        repo,
+        per_page: 100,
+    });
+
+    const results: RepoTag[] = [];
+    for await (const { data } of iterator) {
+        for (const tag of data) {
+            results.push({
+                name: tag.name,
+                sha: tag.commit.sha,
+            });
+        }
+    }
+    return results;
+}
+
 export interface RepoContributor {
     login: string;
     avatarUrl: string;
