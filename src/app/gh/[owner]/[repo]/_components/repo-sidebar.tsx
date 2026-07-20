@@ -3,18 +3,31 @@
 import {
     ActivityIcon,
     BookOpenIcon,
+    Check,
+    Circle,
     ExternalLinkIcon,
     HandshakeIcon,
+    Loader2,
     ScaleIcon,
     UsersIcon,
+    X,
 } from "lucide-react";
 
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import { cn } from "~/lib/utils";
+import { formatRelativeTime } from "~/utils";
 import type { DocFileName } from "./repo-code-page";
 
 interface Contributor {
     login: string;
     avatarUrl: string;
+}
+
+interface Deployment {
+    id: number;
+    environment: string;
+    state: string;
+    createdAt: string;
 }
 
 interface RepoSidebarProps {
@@ -27,6 +40,7 @@ interface RepoSidebarProps {
     contributors: Contributor[];
     docFileNames: DocFileName[];
     languages: Record<string, number>;
+    deployments: Deployment[];
 }
 
 export function RepoSidebar({
@@ -39,6 +53,7 @@ export function RepoSidebar({
     contributors,
     docFileNames,
     languages,
+    deployments,
 }: RepoSidebarProps) {
     const licenseFiles = docFileNames.filter(
         (f) => getDocFileHashName(f.name) === "license",
@@ -145,6 +160,46 @@ export function RepoSidebar({
                 </div>
             </div>
 
+            {deployments.length > 0 && (
+                <div className="mt-3 border-border border-t pt-3">
+                    <a
+                        href={`https://github.com/${owner}/${repo}/deployments`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-sm text-text-secondary uppercase hover:text-text-primary hover:underline"
+                    >
+                        Deployments
+                    </a>
+                    <div className="mt-3 space-y-2">
+                        {deployments.map((deployment) => (
+                            <a
+                                key={deployment.id}
+                                href={`https://github.com/${owner}/${repo}/deployments/${deployment.environment}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-sm hover:underline"
+                            >
+                                <DeployStatusIcon
+                                    state={deployment.state}
+                                    className="h-3.5 w-3.5 shrink-0"
+                                />
+                                <span className="flex-1 font-semibold text-text-primary">
+                                    {deployment.environment}
+                                </span>
+                                <span
+                                    className="shrink-0 text-text-tertiary text-xs"
+                                    title={new Date(
+                                        deployment.createdAt,
+                                    ).toLocaleString()}
+                                >
+                                    {formatRelativeTime(deployment.createdAt)}
+                                </span>
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {contributors.length > 0 && (
                 <div className="mt-3 border-border border-t pt-3">
                     <a
@@ -221,6 +276,25 @@ export function RepoSidebar({
             )}
         </aside>
     );
+}
+
+function DeployStatusIcon({
+    state,
+    className,
+}: {
+    state: string;
+    className?: string;
+}) {
+    if (state === "success") {
+        return <Check className={cn(className, "text-green-600")} />;
+    }
+    if (state === "failure" || state === "error") {
+        return <X className={cn(className, "text-red-600")} />;
+    }
+    if (state === "in_progress" || state === "pending" || state === "queued") {
+        return <Loader2 className={cn(className, "text-amber-500")} />;
+    }
+    return <Circle className={cn(className, "text-text-muted")} />;
 }
 
 function getDocFileHashName(name: string): string {
