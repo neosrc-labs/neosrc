@@ -113,10 +113,6 @@ function HeaderActionsSkeleton() {
     );
 }
 
-// ---------------------------------------------------------------------------
-// Watch dropdown
-// ---------------------------------------------------------------------------
-
 interface SubscriptionState {
     subscribed: boolean;
     ignored: boolean;
@@ -136,15 +132,26 @@ function WatchDropdown({
     const [open, setOpen] = useState(false);
     const [subscription, setSubscription] = useState(initialSubscription);
     const confirmed = useRef(initialSubscription);
+    const [watcherCount, setWatcherCount] = useState(watchers);
+    const countRef = useRef(watchers);
     const utils = api.useUtils();
 
     const setSub = api.repos.setSubscription.useMutation({
         onMutate: ({ subscribed, ignored }) => {
             confirmed.current = subscription;
+            countRef.current = watcherCount;
+            const wasWatching =
+                !!subscription &&
+                subscription.subscribed &&
+                !subscription.ignored;
             setSubscription({ subscribed, ignored });
+            const nowWatching = subscribed && !ignored;
+            if (!wasWatching && nowWatching) setWatcherCount((c) => c + 1);
+            if (wasWatching && !nowWatching) setWatcherCount((c) => c - 1);
         },
         onError: () => {
             setSubscription(confirmed.current);
+            setWatcherCount(countRef.current);
         },
         onSettled: () => {
             utils.repos.getSubscription.invalidate({ owner, repo });
@@ -154,10 +161,17 @@ function WatchDropdown({
     const deleteSub = api.repos.deleteSubscription.useMutation({
         onMutate: () => {
             confirmed.current = subscription;
+            countRef.current = watcherCount;
+            const wasWatching =
+                !!subscription &&
+                subscription.subscribed &&
+                !subscription.ignored;
             setSubscription(null);
+            if (wasWatching) setWatcherCount((c) => c - 1);
         },
         onError: () => {
             setSubscription(confirmed.current);
+            setWatcherCount(countRef.current);
         },
         onSettled: () => {
             utils.repos.getSubscription.invalidate({ owner, repo });
@@ -193,7 +207,7 @@ function WatchDropdown({
                               : "Watch"}
                     </span>
                     <span className="font-semibold text-text-primary">
-                        {formatCount(watchers)}
+                        {formatCount(watcherCount)}
                     </span>
                     <ChevronDownIcon className="h-3 w-3 text-text-tertiary" />
                 </button>
@@ -297,10 +311,6 @@ function WatchOption({
     );
 }
 
-// ---------------------------------------------------------------------------
-// Star button
-// ---------------------------------------------------------------------------
-
 function StarButton({
     owner,
     repo,
@@ -388,10 +398,6 @@ function StarButton({
     );
 }
 
-// ---------------------------------------------------------------------------
-// Fork button
-// ---------------------------------------------------------------------------
-
 function ForkButton({
     owner,
     repo,
@@ -416,10 +422,6 @@ function ForkButton({
         </a>
     );
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function formatCount(count: number): string {
     if (count >= 1000) {
