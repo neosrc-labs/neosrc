@@ -1,8 +1,10 @@
 "use client";
 
-import { GitBranchIcon, TagIcon } from "lucide-react";
+import { GitBranchIcon, HistoryIcon, TagIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { UserLink } from "~/components/user-link";
 import { api } from "~/trpc/react";
+import { formatRelativeTime } from "~/utils";
 import iconMapData from "~/utils/iconMap.json";
 import { ClonePopover } from "./clone-popover";
 import { RefSelector } from "./ref-selector";
@@ -29,6 +31,12 @@ export function RepoFileTable({
     const { data: refCounts } = api.repos.getRefCounts.useQuery({
         owner,
         repo,
+    });
+
+    const { data: latestCommit } = api.repos.getLatestCommit.useQuery({
+        owner,
+        repo,
+        ref: selectedRef,
     });
 
     const { data: contents, isLoading: contentsLoading } =
@@ -107,62 +115,110 @@ export function RepoFileTable({
                         This directory is empty.
                     </div>
                 ) : (
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-border border-b">
-                                <th className="px-4 py-2 text-left font-medium text-text-tertiary text-xs">
-                                    Name
-                                </th>
-                                <th className="px-4 py-2 text-right font-medium text-text-tertiary text-xs">
-                                    Type
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedContents.map((item) => {
-                                const isDir = item.type === "dir";
-                                const href = isDir
-                                    ? `https://github.com/${owner}/${repo}/tree/${selectedRef}/${item.path}`
-                                    : `https://github.com/${owner}/${repo}/blob/${selectedRef}/${item.path}`;
-                                const iconName = isDir
-                                    ? "folder"
-                                    : getFileIconName(item.name);
-
-                                return (
-                                    <tr
-                                        key={item.path}
-                                        className="transition-colors hover:bg-surface-secondary"
+                    <>
+                        {latestCommit && (
+                            <div className="flex items-center gap-3 border-border border-b px-4 py-2">
+                                <div className="[&_img]:h-4 [&_img]:w-4 [&_span]:text-xs">
+                                    <UserLink
+                                        actor={
+                                            latestCommit.author
+                                                ? {
+                                                      ...latestCommit.author,
+                                                      url: `https://github.com/${latestCommit.author.login}`,
+                                                  }
+                                                : null
+                                        }
+                                    />
+                                </div>
+                                <a
+                                    href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="min-w-0 flex-1 truncate text-text-tertiary text-xs hover:text-blue-600"
+                                >
+                                    {latestCommit.message}
+                                </a>
+                                <a
+                                    href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="ml-auto shrink-0 pt-px font-mono text-text-tertiary text-xs hover:text-blue-600"
+                                >
+                                    {latestCommit.sha.slice(0, 7)}
+                                </a>
+                                {latestCommit.committedDate && (
+                                    <span
+                                        className="shrink-0 text-text-tertiary text-xs"
+                                        title={new Date(
+                                            latestCommit.committedDate,
+                                        ).toLocaleString()}
                                     >
-                                        <td className="px-4 py-2">
-                                            <a
-                                                href={href}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600"
-                                            >
-                                                <img
-                                                    alt=""
-                                                    className="h-4 w-4 shrink-0"
-                                                    src={`/material-icons/${iconName}.svg`}
-                                                    onError={(e) => {
-                                                        (
-                                                            e.target as HTMLImageElement
-                                                        ).src = isDir
-                                                            ? "/material-icons/folder.svg"
-                                                            : "/material-icons/file.svg";
-                                                    }}
-                                                />
-                                                <span>{item.name}</span>
-                                            </a>
-                                        </td>
-                                        <td className="px-4 py-2 text-right text-text-tertiary text-xs">
-                                            {isDir ? "Directory" : "File"}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                        {formatRelativeTime(
+                                            latestCommit.committedDate,
+                                        )}
+                                    </span>
+                                )}
+                                <a
+                                    href={`https://github.com/${owner}/${repo}/commits/${selectedRef}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex shrink-0 items-center gap-1 text-text-primary text-xs hover:text-blue-600"
+                                >
+                                    <HistoryIcon className="h-3.5 w-3.5" />
+                                    {latestCommit.commitCount.toLocaleString()}{" "}
+                                    {latestCommit.commitCount === 1
+                                        ? "commit"
+                                        : "commits"}
+                                </a>
+                            </div>
+                        )}
+                        <table className="w-full">
+                            <tbody>
+                                {sortedContents.map((item) => {
+                                    const isDir = item.type === "dir";
+                                    const href = isDir
+                                        ? `https://github.com/${owner}/${repo}/tree/${selectedRef}/${item.path}`
+                                        : `https://github.com/${owner}/${repo}/blob/${selectedRef}/${item.path}`;
+                                    const iconName = isDir
+                                        ? "folder"
+                                        : getFileIconName(item.name);
+
+                                    return (
+                                        <tr
+                                            key={item.path}
+                                            className="transition-colors hover:bg-surface-secondary"
+                                        >
+                                            <td className="px-4 py-2">
+                                                <a
+                                                    href={href}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600"
+                                                >
+                                                    <img
+                                                        alt=""
+                                                        className="h-4 w-4 shrink-0"
+                                                        src={`/material-icons/${iconName}.svg`}
+                                                        onError={(e) => {
+                                                            (
+                                                                e.target as HTMLImageElement
+                                                            ).src = isDir
+                                                                ? "/material-icons/folder.svg"
+                                                                : "/material-icons/file.svg";
+                                                        }}
+                                                    />
+                                                    <span>{item.name}</span>
+                                                </a>
+                                            </td>
+                                            <td className="px-4 py-2 text-right text-text-tertiary text-xs">
+                                                {isDir ? "Directory" : "File"}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </>
                 )}
             </div>
         </div>
@@ -183,6 +239,12 @@ export function RepoFileTableSkeleton() {
         <div className="rounded-xl border border-border bg-surface">
             <div className="flex items-center gap-4 border-border border-b px-4 py-3">
                 <div className="h-5 w-32 animate-pulse rounded bg-surface-secondary" />
+            </div>
+            <div className="flex items-center gap-3 border-border border-b px-4 py-2">
+                <div className="h-5 w-5 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
+                <div className="h-3 w-24 animate-pulse rounded bg-surface-secondary" />
+                <div className="h-3 flex-1 animate-pulse rounded bg-surface-secondary" />
+                <div className="ml-auto h-3 w-28 animate-pulse rounded bg-surface-secondary" />
             </div>
             <div className="p-4">
                 <div className="space-y-2">
