@@ -910,7 +910,7 @@ export function MarkdownEditor({
                     />
                 ) : (
                     <div
-                        className="prose prose-sm dark:prose-invert max-w-none bg-surface px-3 py-2"
+                        className="max-w-none bg-surface px-3 py-2"
                         style={{ minHeight }}
                     >
                         <MarkdownRenderer
