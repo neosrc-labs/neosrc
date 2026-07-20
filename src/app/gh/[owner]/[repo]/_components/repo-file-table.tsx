@@ -72,8 +72,8 @@ export function RepoFileTable({
         );
 
     return (
-        <div className="rounded-xl border border-border bg-surface">
-            <div className="flex items-center justify-between border-border border-b px-4 py-3">
+        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+            <div className="flex items-center justify-between border-border border-b bg-surface-elevated px-4 py-3">
                 <div className="flex items-center gap-2">
                     <RefSelector
                         owner={owner}
@@ -133,7 +133,7 @@ export function RepoFileTable({
                 ) : (
                     <>
                         {latestCommit && (
-                            <div className="flex items-center gap-3 border-border border-b px-4 py-2">
+                            <div className="flex items-center gap-3 border-border border-b px-4 py-3">
                                 <div className="[&_img]:h-4 [&_img]:w-4 [&_span]:text-xs">
                                     <UserLink
                                         actor={
