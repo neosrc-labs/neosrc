@@ -2160,3 +2160,54 @@ function parseRefCountFromLinkHeader(
     if (maxPage <= 1) return currentCount;
     return maxPage;
 }
+
+export interface RepoLatestCommit {
+    sha: string;
+    message: string;
+    author: {
+        login: string;
+        avatarUrl: string;
+    } | null;
+    committedDate: string;
+    commitCount: number;
+}
+
+export async function getRepoLatestCommit(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    ref?: string,
+): Promise<RepoLatestCommit> {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.rest.repos.listCommits({
+        owner,
+        repo,
+        sha: ref,
+        per_page: 1,
+    });
+
+    const commit = response.data[0];
+    if (!commit) {
+        throw new Error(`No commits found for ${owner}/${repo}`);
+    }
+    const commitCount = parseRefCountFromLinkHeader(
+        response.headers.link,
+        response.data.length,
+    );
+
+    const message = commit.commit.message.split("\n")[0] ?? "";
+
+    return {
+        sha: commit.sha,
+        message,
+        author: commit.author
+            ? {
+                  login: commit.author.login,
+                  avatarUrl: commit.author.avatar_url,
+              }
+            : null,
+        committedDate:
+            commit.commit.committer?.date ?? commit.commit.author?.date ?? "",
+        commitCount,
+    };
+}
