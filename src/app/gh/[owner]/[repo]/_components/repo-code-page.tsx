@@ -38,6 +38,7 @@ interface RepoCodePageProps {
     repoDataPromise: Promise<RepoData>;
     contributorsPromise: Promise<Contributor[]>;
     docFileNamesPromise: Promise<DocFileName[]>;
+    languagesPromise: Promise<Record<string, number>>;
     starredPromise: Promise<boolean>;
     subscriptionPromise: Promise<{
         subscribed: boolean;
@@ -51,6 +52,7 @@ export function RepoCodePage({
     repoDataPromise,
     contributorsPromise,
     docFileNamesPromise,
+    languagesPromise,
     starredPromise,
     subscriptionPromise,
 }: RepoCodePageProps) {
@@ -98,20 +100,26 @@ export function RepoCodePage({
                             repoDataPromise,
                             contributorsPromise,
                             docFileNamesPromise,
+                            languagesPromise,
                         ])}
                         fallback={<RepoSidebarSkeleton />}
                     >
-                        {([repoData, contributors, docFileNames]) => (
+                        {([
+                            repoData,
+                            contributors,
+                            docFileNames,
+                            languages,
+                        ]) => (
                             <RepoSidebar
                                 owner={owner}
                                 repo={repo}
                                 description={repoData.description}
                                 homepage={repoData.homepage}
-                                language={repoData.language}
                                 topics={repoData.topics}
                                 createdAt={repoData.createdAt}
                                 contributors={contributors}
                                 docFileNames={docFileNames}
+                                languages={languages}
                             />
                         )}
                     </Async>

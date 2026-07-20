@@ -26,6 +26,7 @@ export default async function CodePage({
     }) as Promise<RepoData>;
     const contributorsPromise = api.repos.getContributors({ owner, repo });
     const docFileNamesPromise = api.repos.getDocFileNames({ owner, repo });
+    const languagesPromise = api.repos.getRepoLanguages({ owner, repo });
     const starredPromise = api.repos.getStarred({ owner, repo });
     const subscriptionPromise = api.repos.getSubscription({ owner, repo });
 
@@ -36,6 +37,7 @@ export default async function CodePage({
             repoDataPromise={repoDataPromise}
             contributorsPromise={contributorsPromise}
             docFileNamesPromise={docFileNamesPromise}
+            languagesPromise={languagesPromise}
             starredPromise={starredPromise}
             subscriptionPromise={subscriptionPromise}
         />

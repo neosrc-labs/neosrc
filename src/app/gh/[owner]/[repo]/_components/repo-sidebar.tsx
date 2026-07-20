@@ -19,11 +19,11 @@ interface RepoSidebarProps {
     repo: string;
     description: string;
     homepage: string | null;
-    language: string | null;
     topics: string[];
     createdAt: string;
     contributors: Contributor[];
     docFileNames: DocFileName[];
+    languages: Record<string, number>;
 }
 
 export function RepoSidebar({
@@ -31,11 +31,11 @@ export function RepoSidebar({
     repo,
     description,
     homepage,
-    language,
     topics,
     createdAt,
     contributors,
     docFileNames,
+    languages,
 }: RepoSidebarProps) {
     const licenseFiles = docFileNames.filter(
         (f) => getDocFileHashName(f.name) === "license",
@@ -44,6 +44,17 @@ export function RepoSidebar({
         (f) => getDocFileHashName(f.name) !== "license",
     );
     const firstLicense = licenseFiles[0];
+
+    const allLangEntries = Object.entries(languages)
+        .filter(([, bytes]) => bytes > 0)
+        .sort(([, a], [, b]) => b - a);
+    const langTotal = allLangEntries.reduce((sum, [, b]) => sum + b, 0);
+    const langEntries =
+        allLangEntries.length > 6 &&
+        allLangEntries[6] &&
+        (allLangEntries[6][1] / langTotal) * 100 < 1
+            ? allLangEntries.slice(0, 6)
+            : allLangEntries;
 
     return (
         <aside className="w-72 shrink-0">
@@ -84,18 +95,6 @@ export function RepoSidebar({
                 )}
 
                 <div className="space-y-1.5">
-                    {language && (
-                        <div className="flex items-center gap-2 text-sm text-text-secondary">
-                            <span
-                                className="h-3 w-3 rounded-full"
-                                style={{
-                                    backgroundColor:
-                                        languageColors[language] ?? "#6e7681",
-                                }}
-                            />
-                            {language}
-                        </div>
-                    )}
                     {otherFiles.map((file) => {
                         const hashName = getDocFileHashName(file.name);
                         const Icon =
@@ -168,6 +167,45 @@ export function RepoSidebar({
                     </div>
                 </div>
             )}
+
+            {langEntries.length > 0 && (
+                <div className="mt-3 border-border border-t pt-3">
+                    <h2 className="mb-3 flex items-center gap-1.5 font-semibold text-sm text-text-secondary uppercase">
+                        Languages
+                    </h2>
+                    <div className="flex h-2 overflow-hidden rounded-full">
+                        {langEntries.map(([name, bytes]) => (
+                            <span
+                                key={name}
+                                className="h-full"
+                                style={{
+                                    width: `${((bytes / langTotal) * 100).toFixed(1)}%`,
+                                    backgroundColor:
+                                        languageColors[name] ?? hashColor(name),
+                                }}
+                            />
+                        ))}
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                        {langEntries.map(([name, bytes]) => (
+                            <span
+                                key={name}
+                                className="flex items-center gap-1 text-text-secondary text-xs"
+                            >
+                                <span
+                                    className="h-2.5 w-2.5 rounded-full"
+                                    style={{
+                                        backgroundColor:
+                                            languageColors[name] ??
+                                            hashColor(name),
+                                    }}
+                                />
+                                {name} {((bytes / langTotal) * 100).toFixed(1)}%
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
         </aside>
     );
 }
@@ -178,6 +216,14 @@ function getDocFileHashName(name: string): string {
     if (/^code_of_conduct/i.test(name)) return "code-of-conduct";
     if (/^(licen[cs]e|copying)/i.test(name)) return "license";
     return name.toLowerCase().replace(/\.[^.]+$/, "");
+}
+
+function hashColor(name: string): string {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return `hsl(${hash % 360}, 55%, 55%)`;
 }
 
 function getAgeText(createdAt: string): string {
