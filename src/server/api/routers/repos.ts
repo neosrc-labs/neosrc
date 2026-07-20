@@ -17,8 +17,8 @@ import {
     getRepoBranches,
     getRepoContents,
     getRepoContributors,
+    getRepoDocFiles,
     getRepoLatestCommit,
-    getRepoReadme,
     getRepoRefCounts,
     getRepoSubscription,
     getRepoTags,
@@ -229,7 +229,7 @@ export const reposRouter = createTRPCRouter({
                 input.ref,
             );
         }),
-    getReadme: protectedProcedure
+    getDocFiles: protectedProcedure
         .input(
             z.object({
                 owner: z.string(),
@@ -242,7 +242,7 @@ export const reposRouter = createTRPCRouter({
                 ctx.db,
                 ctx.session.user.id,
             );
-            return getRepoReadme(
+            return getRepoDocFiles(
                 accessToken,
                 input.owner,
                 input.repo,
