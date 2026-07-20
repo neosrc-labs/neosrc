@@ -1,4 +1,4 @@
-import { BookOpenIcon, ExternalLinkIcon, GitForkIcon } from "lucide-react";
+import { ActivityIcon, ExternalLinkIcon } from "lucide-react";
 
 interface Contributor {
     login: string;
@@ -6,11 +6,11 @@ interface Contributor {
 }
 
 interface RepoSidebarProps {
+    owner: string;
+    repo: string;
     description: string;
     homepage: string | null;
     language: string | null;
-    forks: number;
-    watchers: number;
     topics: string[];
     license: { spdxId: string | null; name: string; url: string | null } | null;
     createdAt: string;
@@ -18,19 +18,19 @@ interface RepoSidebarProps {
 }
 
 export function RepoSidebar({
+    owner,
+    repo,
     description,
     homepage,
     language,
-    forks,
-    watchers,
     topics,
     license,
     createdAt,
     contributors,
 }: RepoSidebarProps) {
     return (
-        <aside className="w-72 shrink-0 space-y-4">
-            <div className="rounded-xl border border-border bg-surface p-4">
+        <aside className="w-72 shrink-0">
+            <div>
                 <h2 className="mb-3 font-semibold text-sm text-text-secondary uppercase">
                     About
                 </h2>
@@ -53,6 +53,19 @@ export function RepoSidebar({
                     </a>
                 )}
 
+                {topics.length > 0 && (
+                    <div className="mb-3 flex flex-wrap gap-1.5">
+                        {topics.map((topic) => (
+                            <span
+                                key={topic}
+                                className="inline-block rounded-full bg-blue-500/10 px-2.5 py-0.5 text-blue-600 text-xs"
+                            >
+                                {topic}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
                 <div className="space-y-1.5">
                     {language && (
                         <div className="flex items-center gap-2 text-sm text-text-secondary">
@@ -66,46 +79,23 @@ export function RepoSidebar({
                             {language}
                         </div>
                     )}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-secondary">
-                        {forks > 0 && (
-                            <div className="flex items-center gap-1">
-                                <GitForkIcon className="h-3.5 w-3.5" />
-                                {formatCount(forks)}
-                            </div>
-                        )}
-                        {watchers > 0 && (
-                            <div className="flex items-center gap-1">
-                                <BookOpenIcon className="h-3.5 w-3.5" />
-                                {formatCount(watchers)}
-                            </div>
-                        )}
-                    </div>
+                    <a
+                        href={`https://github.com/${owner}/${repo}/activity`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary hover:underline"
+                    >
+                        <ActivityIcon className="h-3.5 w-3.5" />
+                        Activity
+                    </a>
                     <p className="text-sm text-text-secondary">
                         {getAgeText(createdAt)}
                     </p>
                 </div>
             </div>
 
-            {topics.length > 0 && (
-                <div className="rounded-xl border border-border bg-surface p-4">
-                    <h2 className="mb-3 font-semibold text-sm text-text-secondary uppercase">
-                        Topics
-                    </h2>
-                    <div className="flex flex-wrap gap-1.5">
-                        {topics.map((topic) => (
-                            <span
-                                key={topic}
-                                className="inline-block rounded-full bg-blue-500/10 px-2.5 py-0.5 text-blue-600 text-xs"
-                            >
-                                {topic}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            )}
-
             {license && (
-                <div className="rounded-xl border border-border bg-surface p-4">
+                <div className="mt-3 border-border border-t pt-3">
                     <h2 className="mb-2 font-semibold text-sm text-text-secondary uppercase">
                         License
                     </h2>
@@ -116,7 +106,7 @@ export function RepoSidebar({
             )}
 
             {contributors.length > 0 && (
-                <div className="rounded-xl border border-border bg-surface p-4">
+                <div className="mt-3 border-border border-t pt-3">
                     <h2 className="mb-3 font-semibold text-sm text-text-secondary uppercase">
                         Contributors
                     </h2>
@@ -155,17 +145,7 @@ function getAgeText(createdAt: string): string {
         return `${months} month${months > 1 ? "s" : ""} old`;
     }
     const years = Math.floor(diffDays / 365);
-    const remainingMonths = Math.floor((diffDays % 365) / 30);
-    if (remainingMonths === 0)
-        return `${years} year${years > 1 ? "s" : ""} old`;
-    return `${years} year${years > 1 ? "s" : ""}, ${remainingMonths} month${remainingMonths > 1 ? "s" : ""} old`;
-}
-
-function formatCount(count: number): string {
-    if (count >= 1000) {
-        return `${(count / 1000).toFixed(1)}k`;
-    }
-    return String(count);
+    return `${years} year${years > 1 ? "s" : ""} old`;
 }
 
 const languageColors: Record<string, string> = {
@@ -220,7 +200,7 @@ const languageColors: Record<string, string> = {
 export function RepoSidebarSkeleton() {
     return (
         <aside className="w-72 shrink-0">
-            <div className="rounded-xl border border-border bg-surface p-6">
+            <div>
                 <div className="mb-4 h-4 w-16 animate-pulse rounded bg-surface-secondary" />
                 <div className="space-y-2">
                     <div className="h-3 w-full animate-pulse rounded bg-surface-secondary" />

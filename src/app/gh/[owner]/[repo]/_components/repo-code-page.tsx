@@ -91,11 +91,11 @@ export function RepoCodePage({
                     >
                         {([repoData, contributors]) => (
                             <RepoSidebar
+                                owner={owner}
+                                repo={repo}
                                 description={repoData.description}
                                 homepage={repoData.homepage}
                                 language={repoData.language}
-                                forks={repoData.forks}
-                                watchers={repoData.watchers}
                                 topics={repoData.topics}
                                 license={repoData.license}
                                 createdAt={repoData.createdAt}
