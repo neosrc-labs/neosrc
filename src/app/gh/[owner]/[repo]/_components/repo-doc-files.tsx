@@ -93,7 +93,7 @@ export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
                     ))}
                 </div>
             </div>
-            <div className="p-6">
+            <div className="prose prose-sm max-w-none p-6">
                 {activeFile &&
                     (activeFile.name.endsWith(".md") ? (
                         <MarkdownRenderer
