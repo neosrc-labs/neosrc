@@ -210,7 +210,10 @@ export function RepoSidebar({
                                             hashColor(name),
                                     }}
                                 />
-                                {name} {((bytes / langTotal) * 100).toFixed(1)}%
+                                <span className="font-semibold text-text-primary">
+                                    {name}
+                                </span>{" "}
+                                {((bytes / langTotal) * 100).toFixed(1)}%
                             </span>
                         ))}
                     </div>
