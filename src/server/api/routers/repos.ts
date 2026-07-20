@@ -9,6 +9,7 @@ import {
 } from "~/server/codeberg";
 import {
     checkRepoStarred,
+    deleteRepoSubscription,
     getCachedRepoIssuePullCounts,
     getUserRepos as getGitHubUserRepos,
     getRepo,
@@ -265,6 +266,20 @@ export const reposRouter = createTRPCRouter({
                 input.subscribed,
                 input.ignored,
             );
+        }),
+    deleteSubscription: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            await deleteRepoSubscription(accessToken, input.owner, input.repo);
         }),
     getAllMyRepos: protectedProcedure.query(async ({ ctx }) => {
         const results: {

@@ -19,10 +19,6 @@ import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import type { RepoData } from "./repo-code-page";
 
-// ---------------------------------------------------------------------------
-// RepoHeader
-// ---------------------------------------------------------------------------
-
 interface RepoHeaderProps {
     owner: string;
     repo: string;
@@ -103,10 +99,6 @@ function combine<A, B, C>(
     return Promise.all([a, b, c]);
 }
 
-// ---------------------------------------------------------------------------
-// Skeletons
-// ---------------------------------------------------------------------------
-
 function HeaderActionsSkeleton() {
     return (
         <>
@@ -159,6 +151,19 @@ function WatchDropdown({
         },
     });
 
+    const deleteSub = api.repos.deleteSubscription.useMutation({
+        onMutate: () => {
+            confirmed.current = subscription;
+            setSubscription(null);
+        },
+        onError: () => {
+            setSubscription(confirmed.current);
+        },
+        onSettled: () => {
+            utils.repos.getSubscription.invalidate({ owner, repo });
+        },
+    });
+
     const isWatching =
         !!subscription && subscription.subscribed && !subscription.ignored;
     const isIgnoring = !!subscription && subscription.ignored;
@@ -194,25 +199,15 @@ function WatchDropdown({
                 </button>
             </PopoverTrigger>
             <PopoverContent className="w-72 p-0" align="start">
-                <div className="border-border border-b px-3 py-2.5">
-                    <p className="font-semibold text-sm text-text-primary">
-                        Notifications
-                    </p>
-                    <p className="mt-0.5 text-text-tertiary text-xs">
-                        Receive notifications for this repository
-                    </p>
-                </div>
                 <div className="py-1">
                     <WatchOption
-                        label="Participating"
-                        description="Only receive notifications from threads you participated in"
-                        selected={isWatching}
+                        label="Participating and @mentions"
+                        description="Only receive notifications from threads you participated in or @mentioned"
+                        selected={subscription === null}
                         onClick={() => {
-                            setSub.mutate({
+                            deleteSub.mutate({
                                 owner,
                                 repo,
-                                subscribed: true,
-                                ignored: false,
                             });
                             setOpen(false);
                         }}
@@ -220,7 +215,7 @@ function WatchDropdown({
                     <WatchOption
                         label="All Activity"
                         description="Receive notifications for all conversations"
-                        selected={false}
+                        selected={isWatching}
                         onClick={() => {
                             setSub.mutate({
                                 owner,
@@ -234,7 +229,7 @@ function WatchDropdown({
                     <WatchOption
                         label="Ignore"
                         description="Never be notified"
-                        selected={!!subscription && subscription.ignored}
+                        selected={isIgnoring}
                         onClick={() => {
                             setSub.mutate({
                                 owner,

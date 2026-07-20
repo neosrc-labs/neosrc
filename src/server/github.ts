@@ -2076,3 +2076,12 @@ export async function setRepoSubscription(
         ignored,
     });
 }
+
+export async function deleteRepoSubscription(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<void> {
+    const octokit = createOctokit(accessToken);
+    await octokit.rest.activity.deleteRepoSubscription({ owner, repo });
+}
