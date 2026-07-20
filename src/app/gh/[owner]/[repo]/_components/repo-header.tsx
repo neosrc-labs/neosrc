@@ -39,19 +39,13 @@ export function RepoHeader({
 }: RepoHeaderProps) {
     return (
         <div className="flex flex-wrap items-center gap-3">
-            <h1 className="whitespace-nowrap text-text-primary text-xl">
-                <span className="text-text-tertiary">{owner}</span>
-                <span className="text-text-tertiary"> / </span>
-                <span className="font-semibold">{repo}</span>
-            </h1>
-
             <Async
                 promise={combine(
                     repoDataPromise,
                     starredPromise,
                     subscriptionPromise,
                 )}
-                fallback={<HeaderActionsSkeleton />}
+                fallback={<HeaderActionsSkeleton owner={owner} repo={repo} />}
             >
                 {([repoData, starred, subscription]) => (
                     <>
@@ -62,6 +56,11 @@ export function RepoHeader({
                                 className="size-6 rounded-full"
                             />
                         )}
+                        <h1 className="whitespace-nowrap text-text-primary text-xl">
+                            <span className="text-text-tertiary">{owner}</span>
+                            <span className="text-text-tertiary"> / </span>
+                            <span className="font-semibold">{repo}</span>
+                        </h1>
                         <span className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 font-medium text-text-tertiary text-xs">
                             {repoData.isPrivate ? "Private" : "Public"}
                         </span>
@@ -99,10 +98,21 @@ function combine<A, B, C>(
     return Promise.all([a, b, c]);
 }
 
-function HeaderActionsSkeleton() {
+function HeaderActionsSkeleton({
+    owner,
+    repo,
+}: {
+    owner: string;
+    repo: string;
+}) {
     return (
         <>
             <div className="size-6 animate-pulse rounded-full bg-surface-secondary" />
+            <h1 className="whitespace-nowrap text-text-primary text-xl">
+                <span className="text-text-tertiary">{owner}</span>
+                <span className="text-text-tertiary"> / </span>
+                <span className="font-semibold">{repo}</span>
+            </h1>
             <div className="h-5 w-14 animate-pulse rounded-full bg-surface-secondary" />
             <div className="ml-auto flex items-center gap-2">
                 <div className="h-8 w-[5.25rem] animate-pulse rounded-lg bg-surface-secondary" />
