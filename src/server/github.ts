@@ -2066,6 +2066,16 @@ export async function getRepoDocFiles(
         );
 }
 
+export async function getRepoLanguages(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<Record<string, number>> {
+    const octokit = createOctokit(accessToken);
+    const { data } = await octokit.rest.repos.listLanguages({ owner, repo });
+    return data;
+}
+
 export interface RepoBranch {
     name: string;
     sha: string;
