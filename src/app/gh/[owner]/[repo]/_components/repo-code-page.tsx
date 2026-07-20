@@ -26,11 +26,18 @@ interface Contributor {
     avatarUrl: string;
 }
 
+export interface DocFileName {
+    name: string;
+    path: string;
+    displayName: string;
+}
+
 interface RepoCodePageProps {
     owner: string;
     repo: string;
     repoDataPromise: Promise<RepoData>;
     contributorsPromise: Promise<Contributor[]>;
+    docFileNamesPromise: Promise<DocFileName[]>;
     starredPromise: Promise<boolean>;
     subscriptionPromise: Promise<{
         subscribed: boolean;
@@ -43,6 +50,7 @@ export function RepoCodePage({
     repo,
     repoDataPromise,
     contributorsPromise,
+    docFileNamesPromise,
     starredPromise,
     subscriptionPromise,
 }: RepoCodePageProps) {
@@ -86,10 +94,14 @@ export function RepoCodePage({
                     </div>
 
                     <Async
-                        promise={combine(repoDataPromise, contributorsPromise)}
+                        promise={Promise.all([
+                            repoDataPromise,
+                            contributorsPromise,
+                            docFileNamesPromise,
+                        ])}
                         fallback={<RepoSidebarSkeleton />}
                     >
-                        {([repoData, contributors]) => (
+                        {([repoData, contributors, docFileNames]) => (
                             <RepoSidebar
                                 owner={owner}
                                 repo={repo}
@@ -97,9 +109,9 @@ export function RepoCodePage({
                                 homepage={repoData.homepage}
                                 language={repoData.language}
                                 topics={repoData.topics}
-                                license={repoData.license}
                                 createdAt={repoData.createdAt}
                                 contributors={contributors}
+                                docFileNames={docFileNames}
                             />
                         )}
                     </Async>
@@ -107,8 +119,4 @@ export function RepoCodePage({
             </div>
         </main>
     );
-}
-
-function combine<A, B>(a: Promise<A>, b: Promise<B>): Promise<[A, B]> {
-    return Promise.all([a, b]);
 }
