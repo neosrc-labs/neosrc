@@ -1,3 +1,5 @@
+"use client";
+
 import {
     ActivityIcon,
     BookOpenIcon,
@@ -7,6 +9,7 @@ import {
     UsersIcon,
 } from "lucide-react";
 
+import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import type { DocFileName } from "./repo-code-page";
 
 interface Contributor {
@@ -144,25 +147,32 @@ export function RepoSidebar({
 
             {contributors.length > 0 && (
                 <div className="mt-3 border-border border-t pt-3">
-                    <h2 className="mb-3 flex items-center gap-1.5 font-semibold text-sm text-text-secondary uppercase">
-                        <UsersIcon className="h-3.5 w-3.5" />
+                    <a
+                        href={`https://github.com/${owner}/${repo}/graphs/contributors`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-sm text-text-secondary uppercase hover:text-text-primary hover:underline"
+                    >
                         Contributors
-                    </h2>
-                    <div className="flex flex-wrap gap-1.5">
+                    </a>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
                         {contributors.map((contributor) => (
-                            <a
+                            <UserHoverCard
                                 key={contributor.login}
-                                href={`https://github.com/${contributor.login}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title={contributor.login}
+                                login={contributor.login}
                             >
-                                <img
-                                    src={contributor.avatarUrl}
-                                    alt={contributor.login}
-                                    className="h-8 w-8 rounded-full"
-                                />
-                            </a>
+                                <a
+                                    href={`https://github.com/${contributor.login}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <img
+                                        src={contributor.avatarUrl}
+                                        alt={contributor.login}
+                                        className="h-8 w-8 rounded-full"
+                                    />
+                                </a>
+                            </UserHoverCard>
                         ))}
                     </div>
                 </div>
