@@ -11,6 +11,7 @@ import {
     checkRepoStarred,
     deleteRepoSubscription,
     getCachedRepoIssuePullCounts,
+    getFileLatestCommits,
     getUserRepos as getGitHubUserRepos,
     getRepo,
     getRepoBranches,
@@ -182,6 +183,28 @@ export const reposRouter = createTRPCRouter({
                 input.owner,
                 input.repo,
                 input.ref,
+            );
+        }),
+    getFileLatestCommits: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                ref: z.string(),
+                paths: z.array(z.string()),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            return getFileLatestCommits(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.ref,
+                input.paths,
             );
         }),
     getContents: protectedProcedure
