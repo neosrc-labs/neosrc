@@ -2158,6 +2158,58 @@ export async function getRepoContributors(
     }));
 }
 
+export interface RepoDeployment {
+    id: number;
+    environment: string;
+    state: string;
+    createdAt: string;
+}
+
+export async function getRepoDeployments(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<RepoDeployment[]> {
+    const octokit = createOctokit(accessToken);
+    const { data: deployments } = await octokit.rest.repos.listDeployments({
+        owner,
+        repo,
+        per_page: 100,
+    });
+
+    if (!deployments || deployments.length === 0) return [];
+
+    const seen = new Set<string>();
+    const latestPerEnv: typeof deployments = [];
+    for (const d of deployments) {
+        const env = d.environment ?? "";
+        if (seen.has(env)) continue;
+        seen.add(env);
+        latestPerEnv.push(d);
+    }
+
+    const results = await Promise.all(
+        latestPerEnv.map(async (d) => {
+            const { data: statuses } =
+                await octokit.rest.repos.listDeploymentStatuses({
+                    owner,
+                    repo,
+                    deployment_id: d.id,
+                    per_page: 1,
+                });
+            const latestStatus = statuses[0];
+            return {
+                id: d.id,
+                environment: d.environment ?? "",
+                state: latestStatus?.state ?? "inactive",
+                createdAt: d.created_at,
+            };
+        }),
+    );
+
+    return results;
+}
+
 export interface RepoSubscription {
     subscribed: boolean;
     ignored: boolean;
