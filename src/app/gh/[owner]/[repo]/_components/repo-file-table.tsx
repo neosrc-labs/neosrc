@@ -1,14 +1,10 @@
 "use client";
 
-import {
-    ChevronDownIcon,
-    Code2Icon,
-    GitBranchIcon,
-    TagIcon,
-} from "lucide-react";
+import { ChevronDownIcon, GitBranchIcon, TagIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "~/trpc/react";
 import iconMapData from "~/utils/iconMap.json";
+import { ClonePopover } from "./clone-popover";
 
 const iconMap: Record<string, string> = iconMapData as Record<string, string>;
 
@@ -115,15 +111,7 @@ export function RepoFileTable({
                     )}
                 </div>
 
-                <a
-                    href={`https://github.com/${owner}/${repo}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-text-secondary text-xs transition hover:bg-surface-secondary"
-                >
-                    <Code2Icon className="h-3.5 w-3.5" />
-                    Code
-                </a>
+                <ClonePopover owner={owner} repo={repo} />
             </div>
 
             <div>
