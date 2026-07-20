@@ -1,6 +1,11 @@
 "use client";
 
-import { ChevronDownIcon, Code2Icon, GitBranchIcon } from "lucide-react";
+import {
+    ChevronDownIcon,
+    Code2Icon,
+    GitBranchIcon,
+    TagIcon,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "~/trpc/react";
 import iconMapData from "~/utils/iconMap.json";
@@ -29,6 +34,11 @@ export function RepoFileTable({
         repo,
     });
 
+    const { data: refCounts } = api.repos.getRefCounts.useQuery({
+        owner,
+        repo,
+    });
+
     const { data: contents, isLoading: contentsLoading } =
         api.repos.getContents.useQuery({
             owner,
@@ -48,7 +58,7 @@ export function RepoFileTable({
     return (
         <div className="rounded-xl border border-border bg-surface">
             <div className="flex items-center justify-between border-border border-b px-4 py-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     <div className="relative">
                         <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm text-text-primary">
                             <GitBranchIcon className="h-4 w-4 text-text-tertiary" />
@@ -75,6 +85,34 @@ export function RepoFileTable({
                             <ChevronDownIcon className="pointer-events-none absolute right-2 h-3 w-3 text-text-tertiary" />
                         </div>
                     </div>
+                    {refCounts && (
+                        <span className="inline-flex items-center gap-1 text-sm text-text-tertiary">
+                            <a
+                                href={`https://github.com/${owner}/${repo}/branches`}
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-surface-secondary"
+                            >
+                                <GitBranchIcon className="h-3 w-3" />
+                                <span className="font-semibold text-text-primary">
+                                    {refCounts.branchCount}
+                                </span>{" "}
+                                {refCounts.branchCount === 1
+                                    ? "branch"
+                                    : "branches"}
+                            </a>
+                            <a
+                                href={`https://github.com/${owner}/${repo}/tags`}
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-surface-secondary"
+                            >
+                                <TagIcon className="h-3 w-3" />
+                                <span className="font-semibold text-text-primary">
+                                    {refCounts.tagCount}
+                                </span>{" "}
+                                {refCounts.tagCount === 1 ? "tag" : "tags"}
+                            </a>
+                        </span>
+                    )}
                 </div>
 
                 <a

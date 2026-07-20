@@ -2085,3 +2085,49 @@ export async function deleteRepoSubscription(
     const octokit = createOctokit(accessToken);
     await octokit.rest.activity.deleteRepoSubscription({ owner, repo });
 }
+
+export interface RepoRefCounts {
+    branchCount: number;
+    tagCount: number;
+}
+
+export async function getRepoRefCounts(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<RepoRefCounts> {
+    const octokit = createOctokit(accessToken);
+
+    const [branchRes, tagRes] = await Promise.all([
+        octokit.rest.repos.listBranches({ owner, repo, per_page: 1 }),
+        octokit.rest.repos.listTags({ owner, repo, per_page: 1 }),
+    ]);
+
+    return {
+        branchCount: parseRefCountFromLinkHeader(
+            branchRes.headers.link,
+            branchRes.data.length,
+        ),
+        tagCount: parseRefCountFromLinkHeader(
+            tagRes.headers.link,
+            tagRes.data.length,
+        ),
+    };
+}
+
+function parseRefCountFromLinkHeader(
+    linkHeader: string | undefined,
+    currentCount: number,
+): number {
+    if (!linkHeader) return currentCount;
+
+    const linkPattern = /<[^>]*[?&]page=(\d+)[^>]*>;\s*rel="(\w+)"/g;
+    let maxPage = 1;
+    for (const m of linkHeader.matchAll(linkPattern)) {
+        const p = Number.parseInt(m[1] ?? "0", 10);
+        if (p > maxPage) maxPage = p;
+    }
+
+    if (maxPage <= 1) return currentCount;
+    return maxPage;
+}
