@@ -55,6 +55,22 @@ export function RepoFileTable({
         });
     }, [contents]);
 
+    const paths = useMemo(
+        () => sortedContents.map((c) => c.path),
+        [sortedContents],
+    );
+
+    const { data: fileCommits, isLoading: fileCommitsLoading } =
+        api.repos.getFileLatestCommits.useQuery(
+            {
+                owner,
+                repo,
+                ref: selectedRef,
+                paths,
+            },
+            { enabled: paths.length > 0 },
+        );
+
     return (
         <div className="rounded-xl border border-border bg-surface">
             <div className="flex items-center justify-between border-border border-b px-4 py-3">
@@ -132,7 +148,6 @@ export function RepoFileTable({
                                 </div>
                                 <a
                                     href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
-                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="min-w-0 flex-1 truncate text-text-tertiary text-xs hover:text-blue-600"
                                 >
@@ -140,7 +155,6 @@ export function RepoFileTable({
                                 </a>
                                 <a
                                     href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
-                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="ml-auto shrink-0 pt-px font-mono text-text-tertiary text-xs hover:text-blue-600"
                                 >
@@ -183,6 +197,9 @@ export function RepoFileTable({
                                         ? "folder"
                                         : getFileIconName(item.name);
 
+                                    const commit =
+                                        fileCommits?.[item.path] ?? null;
+
                                     return (
                                         <tr
                                             key={item.path}
@@ -210,8 +227,32 @@ export function RepoFileTable({
                                                     <span>{item.name}</span>
                                                 </a>
                                             </td>
-                                            <td className="px-4 py-2 text-right text-text-tertiary text-xs">
-                                                {isDir ? "Directory" : "File"}
+                                            <td className="px-4 py-2">
+                                                {fileCommitsLoading ? (
+                                                    <div className="h-3 w-full animate-pulse rounded bg-surface-secondary" />
+                                                ) : commit ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <a
+                                                            href={`https://github.com/${owner}/${repo}/commit/${commit.sha}`}
+                                                            rel="noopener noreferrer"
+                                                            className="min-w-0 flex-1 truncate text-text-tertiary text-xs hover:text-blue-600"
+                                                        >
+                                                            {commit.message}
+                                                        </a>
+                                                        {commit.committedDate && (
+                                                            <span
+                                                                className="shrink-0 text-text-tertiary text-xs"
+                                                                title={new Date(
+                                                                    commit.committedDate,
+                                                                ).toLocaleString()}
+                                                            >
+                                                                {formatRelativeTime(
+                                                                    commit.committedDate,
+                                                                )}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : null}
                                             </td>
                                         </tr>
                                     );

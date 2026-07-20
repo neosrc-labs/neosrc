@@ -2211,3 +2211,55 @@ export async function getRepoLatestCommit(
         commitCount,
     };
 }
+
+export interface FileLatestCommit {
+    sha: string;
+    message: string;
+    committedDate: string;
+}
+
+export async function getFileLatestCommits(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    ref: string,
+    paths: string[],
+): Promise<Record<string, FileLatestCommit | null>> {
+    const octokit = createOctokit(accessToken);
+
+    const results = await Promise.all(
+        paths.map(async (path) => {
+            try {
+                const response = await octokit.rest.repos.listCommits({
+                    owner,
+                    repo,
+                    sha: ref,
+                    path,
+                    per_page: 1,
+                });
+                const commit = response.data[0];
+                if (!commit) return { path, data: null };
+                const message = commit.commit.message.split("\n")[0] ?? "";
+                return {
+                    path,
+                    data: {
+                        sha: commit.sha,
+                        message,
+                        committedDate:
+                            commit.commit.committer?.date ??
+                            commit.commit.author?.date ??
+                            "",
+                    },
+                };
+            } catch {
+                return { path, data: null };
+            }
+        }),
+    );
+
+    const record: Record<string, FileLatestCommit | null> = {};
+    for (const { path, data } of results) {
+        record[path] = data;
+    }
+    return record;
+}
