@@ -1,4 +1,13 @@
-import { ActivityIcon, ExternalLinkIcon } from "lucide-react";
+import {
+    ActivityIcon,
+    BookOpenIcon,
+    ExternalLinkIcon,
+    HandshakeIcon,
+    ScaleIcon,
+    UsersIcon,
+} from "lucide-react";
+
+import type { DocFileName } from "./repo-code-page";
 
 interface Contributor {
     login: string;
@@ -12,9 +21,9 @@ interface RepoSidebarProps {
     homepage: string | null;
     language: string | null;
     topics: string[];
-    license: { spdxId: string | null; name: string; url: string | null } | null;
     createdAt: string;
     contributors: Contributor[];
+    docFileNames: DocFileName[];
 }
 
 export function RepoSidebar({
@@ -24,10 +33,18 @@ export function RepoSidebar({
     homepage,
     language,
     topics,
-    license,
     createdAt,
     contributors,
+    docFileNames,
 }: RepoSidebarProps) {
+    const licenseFiles = docFileNames.filter(
+        (f) => getDocFileHashName(f.name) === "license",
+    );
+    const otherFiles = docFileNames.filter(
+        (f) => getDocFileHashName(f.name) !== "license",
+    );
+    const firstLicense = licenseFiles[0];
+
     return (
         <aside className="w-72 shrink-0">
             <div>
@@ -79,13 +96,45 @@ export function RepoSidebar({
                             {language}
                         </div>
                     )}
+                    {otherFiles.map((file) => {
+                        const hashName = getDocFileHashName(file.name);
+                        const Icon =
+                            hashName === "code-of-conduct"
+                                ? HandshakeIcon
+                                : hashName === "contributing"
+                                  ? UsersIcon
+                                  : BookOpenIcon;
+                        return (
+                            <a
+                                key={file.path}
+                                href={`#${hashName}`}
+                                className="flex items-start gap-1.5 text-sm text-text-secondary hover:text-text-primary hover:underline"
+                            >
+                                <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                <span>{file.displayName}</span>
+                            </a>
+                        );
+                    })}
+                    {firstLicense && (
+                        <a
+                            href={`#${getDocFileHashName(firstLicense.name)}`}
+                            className="flex items-start gap-1.5 text-sm text-text-secondary hover:text-text-primary hover:underline"
+                        >
+                            <ScaleIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                            <span>
+                                {firstLicense.displayName}
+                                {licenseFiles.length > 1 &&
+                                    ` and ${licenseFiles.length - 1} other license${licenseFiles.length - 1 === 1 ? "" : "s"} found`}
+                            </span>
+                        </a>
+                    )}
                     <a
                         href={`https://github.com/${owner}/${repo}/activity`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary hover:underline"
+                        className="flex items-start gap-1.5 text-sm text-text-secondary hover:text-text-primary hover:underline"
                     >
-                        <ActivityIcon className="h-3.5 w-3.5" />
+                        <ActivityIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                         Activity
                     </a>
                     <p className="text-sm text-text-secondary">
@@ -94,20 +143,10 @@ export function RepoSidebar({
                 </div>
             </div>
 
-            {license && (
-                <div className="mt-3 border-border border-t pt-3">
-                    <h2 className="mb-2 font-semibold text-sm text-text-secondary uppercase">
-                        License
-                    </h2>
-                    <p className="text-sm text-text-primary">
-                        {license.spdxId ?? license.name}
-                    </p>
-                </div>
-            )}
-
             {contributors.length > 0 && (
                 <div className="mt-3 border-border border-t pt-3">
-                    <h2 className="mb-3 font-semibold text-sm text-text-secondary uppercase">
+                    <h2 className="mb-3 flex items-center gap-1.5 font-semibold text-sm text-text-secondary uppercase">
+                        <UsersIcon className="h-3.5 w-3.5" />
                         Contributors
                     </h2>
                     <div className="flex flex-wrap gap-1.5">
@@ -131,6 +170,14 @@ export function RepoSidebar({
             )}
         </aside>
     );
+}
+
+function getDocFileHashName(name: string): string {
+    if (/^readme/i.test(name)) return "readme";
+    if (/^contributing/i.test(name)) return "contributing";
+    if (/^code_of_conduct/i.test(name)) return "code-of-conduct";
+    if (/^(licen[cs]e|copying)/i.test(name)) return "license";
+    return name.toLowerCase().replace(/\.[^.]+$/, "");
 }
 
 function getAgeText(createdAt: string): string {

@@ -1929,6 +1929,12 @@ export interface RepoDocFile {
     content: string;
 }
 
+export interface RepoDocFileName {
+    name: string;
+    path: string;
+    displayName: string;
+}
+
 const DOC_FILE_PATTERNS = [
     /^readme/i,
     /^contributing\.md$/i,
@@ -1949,6 +1955,57 @@ function getDocFileSortKey(name: string): string {
         return String(priority).padStart(3, "0");
     }
     return `zzz${name.toLowerCase()}`;
+}
+
+function getDocFileDisplayName(name: string): string {
+    const base = name.replace(/\.[^.]+$/, "");
+    const lowerBase = base.toLowerCase();
+
+    if (/^readme/i.test(name)) return "README";
+    if (/^contributing/i.test(name)) return "Contributing";
+    if (/^code_of_conduct/i.test(name)) return "Code of Conduct";
+
+    if (/mit/i.test(lowerBase)) return "MIT License";
+    if (/apache/i.test(lowerBase)) return "Apache-2.0 License";
+    if (/gpl/i.test(lowerBase)) return "GPL License";
+    if (/bsd/i.test(lowerBase)) return "BSD License";
+    if (/mpl/i.test(lowerBase)) return "MPL License";
+
+    return base;
+}
+
+export async function getRepoDocFileNames(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    ref?: string,
+): Promise<RepoDocFileName[]> {
+    const octokit = createOctokit(accessToken);
+
+    const { data: rootData } = await octokit.rest.repos.getContent({
+        owner,
+        repo,
+        ref,
+        path: "",
+    });
+
+    const items = Array.isArray(rootData) ? rootData : [rootData];
+
+    const docItems = items.filter(
+        (item) =>
+            item.type === "file" &&
+            DOC_FILE_PATTERNS.some((p) => p.test(item.name)),
+    );
+
+    return docItems
+        .map((item) => ({
+            name: item.name,
+            path: item.path,
+            displayName: getDocFileDisplayName(item.name),
+        }))
+        .sort((a, b) =>
+            getDocFileSortKey(a.name).localeCompare(getDocFileSortKey(b.name)),
+        );
 }
 
 export async function getRepoDocFiles(

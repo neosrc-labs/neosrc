@@ -27,6 +27,14 @@ function getDisplayName(name: string): string {
     return base;
 }
 
+function getDocFileHashName(name: string): string {
+    if (/^readme/i.test(name)) return "readme";
+    if (/^contributing/i.test(name)) return "contributing";
+    if (/^code_of_conduct/i.test(name)) return "code-of-conduct";
+    if (/^(licen[cs]e|copying)/i.test(name)) return "license";
+    return name.toLowerCase().replace(/\.[^.]+$/, "");
+}
+
 export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
     const { data: docFiles, isLoading } = api.repos.getDocFiles.useQuery({
         owner,
@@ -37,9 +45,30 @@ export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
     const [activeTab, setActiveTab] = useState<string | null>(null);
 
     useEffect(() => {
-        if (docFiles && docFiles.length > 0 && !activeTab) {
+        if (!docFiles || docFiles.length === 0) return;
+
+        const handleHash = () => {
+            const hash = window.location.hash.slice(1);
+            if (hash) {
+                const match = docFiles.find(
+                    (f) => getDocFileHashName(f.name) === hash,
+                );
+                if (match) {
+                    setActiveTab(match.name);
+                    const el = document.getElementById("doc-files");
+                    if (el) el.scrollIntoView({ behavior: "smooth" });
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        if (!handleHash() && !activeTab) {
             setActiveTab(docFiles[0]?.name ?? null);
         }
+
+        window.addEventListener("hashchange", handleHash);
+        return () => window.removeEventListener("hashchange", handleHash);
     }, [docFiles, activeTab]);
 
     const activeFile = useMemo(() => {
@@ -65,7 +94,10 @@ export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
 
     if (!docFiles || docFiles.length === 0) {
         return (
-            <div className="mt-6 rounded-xl border border-border bg-surface">
+            <div
+                id="doc-files"
+                className="mt-6 rounded-xl border border-border bg-surface"
+            >
                 <div className="px-6 py-8 text-center text-sm text-text-tertiary">
                     No documentation found.
                 </div>
@@ -74,7 +106,10 @@ export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
     }
 
     return (
-        <div className="mt-6 rounded-xl border border-border bg-surface">
+        <div
+            id="doc-files"
+            className="mt-6 rounded-xl border border-border bg-surface"
+        >
             <div className="border-border border-b">
                 <div className="flex items-center px-2 py-1">
                     {docFiles.map((file) => (
