@@ -116,16 +116,25 @@ export function RepoFileTable({
 
             <div>
                 {contentsLoading ? (
-                    <div className="p-4">
-                        <div className="space-y-2">
-                            {["f1", "f2", "f3", "f4", "f5"].map((key) => (
-                                <div
-                                    key={key}
-                                    className="h-6 animate-pulse rounded bg-surface-secondary"
-                                />
-                            ))}
+                    <>
+                        <div className="flex items-center gap-3 border-border border-b px-4 py-3">
+                            <div className="h-4 w-4 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
+                            <div className="h-3 w-24 animate-pulse rounded bg-surface-secondary" />
+                            <div className="h-3 flex-1 animate-pulse rounded bg-surface-secondary" />
+                            <div className="ml-auto h-3 w-28 animate-pulse rounded bg-surface-secondary" />
+                            <div className="h-3 w-16 animate-pulse rounded bg-surface-secondary" />
                         </div>
-                    </div>
+                        <div className="p-4">
+                            <div className="space-y-2">
+                                {["f1", "f2", "f3", "f4", "f5"].map((key) => (
+                                    <div
+                                        key={key}
+                                        className="h-9 animate-pulse rounded bg-surface-secondary"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </>
                 ) : sortedContents.length === 0 ? (
                     <div className="p-8 text-center text-sm text-text-tertiary">
                         This directory is empty.
@@ -278,21 +287,23 @@ function getFileIconName(filename: string): string {
 export function RepoFileTableSkeleton() {
     return (
         <div className="rounded-xl border border-border bg-surface">
-            <div className="flex items-center gap-4 border-border border-b px-4 py-3">
-                <div className="h-5 w-32 animate-pulse rounded bg-surface-secondary" />
+            <div className="flex items-center justify-between border-border border-b bg-surface-elevated px-4 py-3">
+                <div className="h-8 w-32 animate-pulse rounded bg-surface-secondary" />
+                <div className="h-8 w-20 animate-pulse rounded-lg bg-surface-secondary" />
             </div>
-            <div className="flex items-center gap-3 border-border border-b px-4 py-2">
-                <div className="h-5 w-5 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
+            <div className="flex items-center gap-3 border-border border-b px-4 py-3">
+                <div className="h-4 w-4 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
                 <div className="h-3 w-24 animate-pulse rounded bg-surface-secondary" />
                 <div className="h-3 flex-1 animate-pulse rounded bg-surface-secondary" />
                 <div className="ml-auto h-3 w-28 animate-pulse rounded bg-surface-secondary" />
+                <div className="h-3 w-16 animate-pulse rounded bg-surface-secondary" />
             </div>
             <div className="p-4">
                 <div className="space-y-2">
                     {["f1", "f2", "f3", "f4", "f5"].map((key) => (
                         <div
                             key={key}
-                            className="h-6 animate-pulse rounded bg-surface-secondary"
+                            className="h-9 animate-pulse rounded bg-surface-secondary"
                         />
                     ))}
                 </div>
