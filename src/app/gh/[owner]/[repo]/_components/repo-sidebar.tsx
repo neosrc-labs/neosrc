@@ -101,8 +101,6 @@ export function RepoSidebar({
                 {homepage && (
                     <a
                         href={homepage}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="mb-3 inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 text-sm hover:underline"
                     >
                         <ExternalLinkIcon className="h-3.5 w-3.5" />
@@ -158,8 +156,6 @@ export function RepoSidebar({
                     )}
                     <a
                         href={`https://github.com/${owner}/${repo}/activity`}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="flex items-start gap-1.5 text-sm text-text-secondary hover:text-text-primary hover:underline"
                     >
                         <ActivityIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -176,8 +172,6 @@ export function RepoSidebar({
                 <div className="mt-3 border-border border-t pt-3">
                     <a
                         href={`https://github.com/${owner}/${repo}/releases`}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="font-semibold text-sm text-text-secondary uppercase hover:text-text-primary hover:underline"
                     >
                         Releases
@@ -185,8 +179,6 @@ export function RepoSidebar({
                     <div className="mt-3">
                         <a
                             href={latestRelease.htmlUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
                             className="block text-sm hover:underline"
                         >
                             <div className="flex items-center gap-1.5">
@@ -215,8 +207,6 @@ export function RepoSidebar({
                 <div className="mt-3 border-border border-t pt-3">
                     <a
                         href={`https://github.com/${owner}/${repo}/deployments`}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="font-semibold text-sm text-text-secondary uppercase hover:text-text-primary hover:underline"
                     >
                         Deployments
@@ -226,8 +216,6 @@ export function RepoSidebar({
                             <a
                                 key={deployment.id}
                                 href={`https://github.com/${owner}/${repo}/deployments/${deployment.environment}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
                                 className="flex items-center gap-1.5 text-sm hover:underline"
                             >
                                 <DeployStatusIcon
@@ -255,8 +243,6 @@ export function RepoSidebar({
                 <div className="mt-3 border-border border-t pt-3">
                     <a
                         href={`https://github.com/${owner}/${repo}/graphs/contributors`}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="font-semibold text-sm text-text-secondary uppercase hover:text-text-primary hover:underline"
                     >
                         Contributors
@@ -269,8 +255,6 @@ export function RepoSidebar({
                             >
                                 <a
                                     href={`https://github.com/${contributor.login}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
                                 >
                                     <img
                                         src={contributor.avatarUrl}
