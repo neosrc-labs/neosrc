@@ -47,6 +47,12 @@ interface RepoCodePageProps {
     docFileNamesPromise: Promise<DocFileName[]>;
     languagesPromise: Promise<Record<string, number>>;
     deploymentsPromise: Promise<Deployment[]>;
+    latestReleasePromise: Promise<{
+        name: string;
+        tagName: string;
+        createdAt: string;
+        htmlUrl: string;
+    } | null>;
     starredPromise: Promise<boolean>;
     subscriptionPromise: Promise<{
         subscribed: boolean;
@@ -62,6 +68,7 @@ export function RepoCodePage({
     docFileNamesPromise,
     languagesPromise,
     deploymentsPromise,
+    latestReleasePromise,
     starredPromise,
     subscriptionPromise,
 }: RepoCodePageProps) {
@@ -111,6 +118,7 @@ export function RepoCodePage({
                             docFileNamesPromise,
                             languagesPromise,
                             deploymentsPromise,
+                            latestReleasePromise,
                         ])}
                         fallback={<RepoSidebarSkeleton />}
                     >
@@ -120,6 +128,7 @@ export function RepoCodePage({
                             docFileNames,
                             languages,
                             deployments,
+                            latestRelease,
                         ]) => (
                             <RepoSidebar
                                 owner={owner}
@@ -132,6 +141,7 @@ export function RepoCodePage({
                                 docFileNames={docFileNames}
                                 languages={languages}
                                 deployments={deployments}
+                                latestRelease={latestRelease}
                             />
                         )}
                     </Async>

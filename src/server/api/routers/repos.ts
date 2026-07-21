@@ -13,6 +13,7 @@ import {
     getCachedRepoIssuePullCounts,
     getFileLatestCommits,
     getUserRepos as getGitHubUserRepos,
+    getLatestRelease,
     getRepo,
     getRepoBranches,
     getRepoContents,
@@ -313,6 +314,20 @@ export const reposRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
             return getRepoDeployments(accessToken, input.owner, input.repo);
+        }),
+    getLatestRelease: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            return getLatestRelease(accessToken, input.owner, input.repo);
         }),
     getStarred: protectedProcedure
         .input(

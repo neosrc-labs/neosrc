@@ -2210,6 +2210,35 @@ export async function getRepoDeployments(
     return results;
 }
 
+export interface RepoRelease {
+    name: string;
+    tagName: string;
+    createdAt: string;
+    htmlUrl: string;
+}
+
+export async function getLatestRelease(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<RepoRelease | null> {
+    const octokit = createOctokit(accessToken);
+    try {
+        const { data } = await octokit.rest.repos.getLatestRelease({
+            owner,
+            repo,
+        });
+        return {
+            name: data.name ?? data.tag_name,
+            tagName: data.tag_name,
+            createdAt: data.created_at,
+            htmlUrl: data.html_url,
+        };
+    } catch {
+        return null;
+    }
+}
+
 export interface RepoSubscription {
     subscribed: boolean;
     ignored: boolean;
