@@ -113,11 +113,11 @@ function HeaderActionsSkeleton({
                 <span className="text-text-tertiary"> / </span>
                 <span className="font-semibold">{repo}</span>
             </h1>
-            <div className="h-5 w-14 animate-pulse rounded-full bg-surface-secondary" />
+            <div className="h-[22px] w-14 animate-pulse rounded-full bg-surface-secondary" />
             <div className="ml-auto flex items-center gap-2">
-                <div className="h-8 w-[5.25rem] animate-pulse rounded-lg bg-surface-secondary" />
-                <div className="h-8 w-[4.5rem] animate-pulse rounded-lg bg-surface-secondary" />
-                <div className="h-8 w-16 animate-pulse rounded-lg bg-surface-secondary" />
+                <div className="h-[30px] w-[5.25rem] animate-pulse rounded-lg bg-surface-secondary" />
+                <div className="h-[30px] w-[4.5rem] animate-pulse rounded-lg bg-surface-secondary" />
+                <div className="h-[30px] w-16 animate-pulse rounded-lg bg-surface-secondary" />
             </div>
         </>
     );
