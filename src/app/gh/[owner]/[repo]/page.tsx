@@ -28,6 +28,7 @@ export default async function CodePage({
     const docFileNamesPromise = api.repos.getDocFileNames({ owner, repo });
     const languagesPromise = api.repos.getRepoLanguages({ owner, repo });
     const deploymentsPromise = api.repos.getDeployments({ owner, repo });
+    const latestReleasePromise = api.repos.getLatestRelease({ owner, repo });
     const starredPromise = api.repos.getStarred({ owner, repo });
     const subscriptionPromise = api.repos.getSubscription({ owner, repo });
 
@@ -40,6 +41,7 @@ export default async function CodePage({
             docFileNamesPromise={docFileNamesPromise}
             languagesPromise={languagesPromise}
             deploymentsPromise={deploymentsPromise}
+            latestReleasePromise={latestReleasePromise}
             starredPromise={starredPromise}
             subscriptionPromise={subscriptionPromise}
         />

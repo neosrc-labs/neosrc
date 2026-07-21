@@ -9,6 +9,7 @@ import {
     HandshakeIcon,
     Loader2,
     ScaleIcon,
+    TagIcon,
     UsersIcon,
     X,
 } from "lucide-react";
@@ -30,6 +31,13 @@ interface Deployment {
     createdAt: string;
 }
 
+interface Release {
+    name: string;
+    tagName: string;
+    createdAt: string;
+    htmlUrl: string;
+}
+
 interface RepoSidebarProps {
     owner: string;
     repo: string;
@@ -41,6 +49,7 @@ interface RepoSidebarProps {
     docFileNames: DocFileName[];
     languages: Record<string, number>;
     deployments: Deployment[];
+    latestRelease: Release | null;
 }
 
 export function RepoSidebar({
@@ -54,6 +63,7 @@ export function RepoSidebar({
     docFileNames,
     languages,
     deployments,
+    latestRelease,
 }: RepoSidebarProps) {
     const licenseFiles = docFileNames.filter(
         (f) => getDocFileHashName(f.name) === "license",
@@ -159,6 +169,45 @@ export function RepoSidebar({
                     </p>
                 </div>
             </div>
+
+            {latestRelease && (
+                <div className="mt-3 border-border border-t pt-3">
+                    <a
+                        href={`https://github.com/${owner}/${repo}/releases`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-sm text-text-secondary uppercase hover:text-text-primary hover:underline"
+                    >
+                        Releases
+                    </a>
+                    <div className="mt-3">
+                        <a
+                            href={latestRelease.htmlUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block text-sm hover:underline"
+                        >
+                            <div className="flex items-center gap-1.5">
+                                <TagIcon className="h-3.5 w-3.5 shrink-0 text-text-secondary" />
+                                <span className="truncate font-semibold text-text-primary">
+                                    {latestRelease.name}
+                                </span>
+                                <span className="inline-block shrink-0 rounded-full bg-green-500/10 px-2 py-0.5 text-green-600 text-xs no-underline">
+                                    Latest
+                                </span>
+                            </div>
+                            <p
+                                className="ml-5 text-text-tertiary text-xs"
+                                title={new Date(
+                                    latestRelease.createdAt,
+                                ).toLocaleString()}
+                            >
+                                {formatRelativeTime(latestRelease.createdAt)}
+                            </p>
+                        </a>
+                    </div>
+                </div>
+            )}
 
             {deployments.length > 0 && (
                 <div className="mt-3 border-border border-t pt-3">
