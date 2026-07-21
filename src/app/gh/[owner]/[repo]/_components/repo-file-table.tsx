@@ -85,7 +85,6 @@ export function RepoFileTable({
                         <span className="inline-flex items-center gap-1 text-sm text-text-tertiary">
                             <a
                                 href={`https://github.com/${owner}/${repo}/branches`}
-                                rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-surface-secondary"
                             >
                                 <GitBranchIcon className="h-3 w-3" />
@@ -98,7 +97,6 @@ export function RepoFileTable({
                             </a>
                             <a
                                 href={`https://github.com/${owner}/${repo}/tags`}
-                                rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-surface-secondary"
                             >
                                 <TagIcon className="h-3 w-3" />
@@ -157,14 +155,12 @@ export function RepoFileTable({
                                 </div>
                                 <a
                                     href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
-                                    rel="noopener noreferrer"
                                     className="min-w-0 flex-1 truncate text-text-tertiary text-xs hover:text-blue-600"
                                 >
                                     {latestCommit.message}
                                 </a>
                                 <a
                                     href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
-                                    rel="noopener noreferrer"
                                     className="ml-auto shrink-0 pt-px font-mono text-text-tertiary text-xs hover:text-blue-600"
                                 >
                                     {latestCommit.sha.slice(0, 7)}
@@ -183,8 +179,6 @@ export function RepoFileTable({
                                 )}
                                 <a
                                     href={`https://github.com/${owner}/${repo}/commits/${selectedRef}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
                                     className="inline-flex shrink-0 items-center gap-1 text-text-primary text-xs hover:text-blue-600"
                                 >
                                     <HistoryIcon className="h-3.5 w-3.5" />
@@ -217,8 +211,6 @@ export function RepoFileTable({
                                             <td className="px-4 py-2">
                                                 <a
                                                     href={href}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
                                                     className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600"
                                                 >
                                                     <img
@@ -243,7 +235,6 @@ export function RepoFileTable({
                                                     <div className="flex items-center gap-2">
                                                         <a
                                                             href={`https://github.com/${owner}/${repo}/commit/${commit.sha}`}
-                                                            rel="noopener noreferrer"
                                                             className="min-w-0 flex-1 truncate text-text-tertiary text-xs hover:text-blue-600"
                                                         >
                                                             {commit.message}
