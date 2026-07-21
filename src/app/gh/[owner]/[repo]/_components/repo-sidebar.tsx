@@ -3,6 +3,7 @@
 import {
     ActivityIcon,
     BookOpenIcon,
+    CakeIcon,
     Check,
     Circle,
     ExternalLinkIcon,
@@ -164,7 +165,8 @@ export function RepoSidebar({
                         <ActivityIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                         Activity
                     </a>
-                    <p className="text-sm text-text-secondary">
+                    <p className="flex items-center gap-1.5 text-sm text-text-secondary">
+                        <CakeIcon className="h-3.5 w-3.5 shrink-0" />
                         {getAgeText(createdAt)}
                     </p>
                 </div>
