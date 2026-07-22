@@ -19,6 +19,8 @@ export interface RepoData {
     topics: string[];
     license: { spdxId: string | null; name: string; url: string | null } | null;
     createdAt: string;
+    isFork: boolean;
+    parentFullName: string | null;
 }
 
 interface Contributor {
