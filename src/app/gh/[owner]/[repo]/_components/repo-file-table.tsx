@@ -166,7 +166,7 @@ export function RepoFileTable({
                             <button
                                 type="button"
                                 onClick={() => setSearchQuery("")}
-                                className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5 text-text-tertiary hover:text-text-primary"
+                                className="absolute top-1/2 right-1.5 -translate-y-1/2 cursor-pointer rounded p-0.5 text-text-tertiary hover:text-text-primary"
                             >
                                 <X className="h-3.5 w-3.5" />
                             </button>
