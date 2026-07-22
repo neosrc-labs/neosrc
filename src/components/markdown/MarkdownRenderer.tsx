@@ -1,5 +1,6 @@
 "use client";
 
+import { Link as LinkIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
     Children,
@@ -10,6 +11,7 @@ import {
     type ReactNode,
     useContext,
     useEffect,
+    useRef,
     useState,
 } from "react";
 import ReactMarkdown from "react-markdown";
@@ -32,86 +34,6 @@ import { remarkIssuePlugin } from "./plugins/remark-issue";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
 import { SuggestionBlock } from "./SuggestionBlock";
 
-const CodeBlockContext = createContext(false);
-
-function InlineCode({
-    children,
-    ...props
-}: {
-    children: React.ReactNode;
-    [key: string]: unknown;
-}) {
-    return (
-        <code
-            className="rounded bg-gray-100 px-1.25 py-0.5 font-mono text-sm before:content-none after:content-none dark:bg-zinc-700"
-            {...props}
-        >
-            {children}
-        </code>
-    );
-}
-
-function CodeElement({
-    children,
-    className,
-    ...props
-}: {
-    children: React.ReactNode;
-    className?: string;
-    [key: string]: unknown;
-}) {
-    const { resolvedTheme } = useTheme();
-    const inCodeBlock = useContext(CodeBlockContext);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    if (className || inCodeBlock) {
-        if (!mounted) {
-            return (
-                <pre className="overflow-x-auto rounded-lg bg-zinc-100 p-2 text-sm dark:bg-zinc-800">
-                    <code className={className}>{children}</code>
-                </pre>
-            );
-        }
-
-        const style = resolvedTheme === "dark" ? darkTheme : lightTheme;
-        const extraStyles: CSSProperties =
-            resolvedTheme === "dark" ? {} : { background: "#f0f0f0" };
-
-        let language = "";
-        switch (className) {
-            case "language-rust": {
-                language = "rust";
-                break;
-            }
-            case "language-js": {
-                language = "javascript";
-                break;
-            }
-            // TODO: Add other languages
-        }
-
-        const codeString = Array.isArray(children)
-            ? children.join("")
-            : String(children ?? "");
-
-        return (
-            <SyntaxHighlighter
-                language={language}
-                style={style}
-                customStyle={extraStyles}
-                {...props}
-            >
-                {codeString}
-            </SyntaxHighlighter>
-        );
-    }
-    return <InlineCode {...props}>{children}</InlineCode>;
-}
-
 interface MarkdownRendererProps {
     content: string;
     owner?: string;
@@ -130,6 +52,7 @@ interface MarkdownRendererProps {
      */
     canToggleTasks?: boolean;
     className?: string;
+    linkableHeadings?: boolean;
 }
 
 const schema = {
@@ -150,44 +73,7 @@ const schema = {
     },
 };
 
-type HastNode = {
-    type?: string;
-    tagName?: string;
-    position?: {
-        start?: { line?: number };
-    } | null;
-};
-
-/**
- * Toggle the `[ ]`/`[x]` marker on the 1-based `lineNumber` of the source
- * content. The line is identified by the hast `<li>` element's
- * `position.start.line` (preserved by remark-rehype from the original mdast
- * listItem position), which react-markdown passes to the `li` component
- * override via the `node` prop. Because each `<li>` directly knows its own
- * source line, no global index/positional-ref matching is needed — every
- * checkbox toggles itself regardless of document structure (blockquotes,
- * ordered lists, nested lists, headings before the list, etc).
- */
-function toggleCheckboxAtLine(content: string, lineNumber: number): string {
-    if (lineNumber < 1) return content;
-    const lines = content.split("\n");
-    const line = lines[lineNumber - 1];
-    if (line === undefined) return content;
-    const toggled = line.replace(
-        /^(\s*(?:>\s*)*(?:[-*+]|\d+\.)\s+)\[([ xX])\]/,
-        (_match, prefix: string, state: string) =>
-            `${prefix}[${state === " " ? "x" : " "}]`,
-    );
-    lines[lineNumber - 1] = toggled;
-    return lines.join("\n");
-}
-
-function getPlainText(children: ReactNode): string {
-    if (typeof children === "string") return children;
-    if (typeof children === "number") return String(children);
-    if (Array.isArray(children)) return children.map(getPlainText).join("");
-    return "";
-}
+const CodeBlockContext = createContext(false);
 
 export function MarkdownRenderer({
     content,
@@ -201,7 +87,13 @@ export function MarkdownRenderer({
     onToggleTask,
     canToggleTasks = true,
     className,
+    linkableHeadings = false,
 }: MarkdownRendererProps) {
+    const headingSlugsRef = useRef(new Map<string, number>());
+    useEffect(() => {
+        headingSlugsRef.current.clear();
+    }, []);
+
     if (!content) {
         return (
             <p className="text-text-tertiary italic">
@@ -231,6 +123,34 @@ export function MarkdownRenderer({
                 ]}
                 rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
                 components={{
+                    ...(linkableHeadings
+                        ? ({
+                              h1: createHeadingRenderer(
+                                  "h1",
+                                  headingSlugsRef.current,
+                              ),
+                              h2: createHeadingRenderer(
+                                  "h2",
+                                  headingSlugsRef.current,
+                              ),
+                              h3: createHeadingRenderer(
+                                  "h3",
+                                  headingSlugsRef.current,
+                              ),
+                              h4: createHeadingRenderer(
+                                  "h4",
+                                  headingSlugsRef.current,
+                              ),
+                              h5: createHeadingRenderer(
+                                  "h5",
+                                  headingSlugsRef.current,
+                              ),
+                              h6: createHeadingRenderer(
+                                  "h6",
+                                  headingSlugsRef.current,
+                              ),
+                          } as Record<string, unknown>)
+                        : {}),
                     a({ href, children, ...props }) {
                         const issueMatch = href?.match(
                             /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/(?:issues|pull)\/(\d+)$/,
@@ -493,4 +413,178 @@ export function MarkdownRenderer({
             </ReactMarkdown>
         </div>
     );
+}
+
+type HastNode = {
+    type?: string;
+    tagName?: string;
+    position?: {
+        start?: { line?: number };
+    } | null;
+};
+
+/**
+ * Toggle the `[ ]`/`[x]` marker on the 1-based `lineNumber` of the source
+ * content. The line is identified by the hast `<li>` element's
+ * `position.start.line` (preserved by remark-rehype from the original mdast
+ * listItem position), which react-markdown passes to the `li` component
+ * override via the `node` prop. Because each `<li>` directly knows its own
+ * source line, no global index/positional-ref matching is needed — every
+ * checkbox toggles itself regardless of document structure (blockquotes,
+ * ordered lists, nested lists, headings before the list, etc).
+ */
+function toggleCheckboxAtLine(content: string, lineNumber: number): string {
+    if (lineNumber < 1) return content;
+    const lines = content.split("\n");
+    const line = lines[lineNumber - 1];
+    if (line === undefined) return content;
+    const toggled = line.replace(
+        /^(\s*(?:>\s*)*(?:[-*+]|\d+\.)\s+)\[([ xX])\]/,
+        (_match, prefix: string, state: string) =>
+            `${prefix}[${state === " " ? "x" : " "}]`,
+    );
+    lines[lineNumber - 1] = toggled;
+    return lines.join("\n");
+}
+
+function getPlainText(children: ReactNode): string {
+    if (typeof children === "string") return children;
+    if (typeof children === "number") return String(children);
+    if (Array.isArray(children)) return children.map(getPlainText).join("");
+    return "";
+}
+
+function headingAnchorSlug(text: string): string {
+    return text
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+}
+
+type HeadingTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+
+function createHeadingRenderer(Tag: HeadingTag, slugs: Map<string, number>) {
+    return function HeadingRenderer({
+        children,
+        className,
+        ...props
+    }: {
+        children?: ReactNode;
+        className?: string;
+        [key: string]: unknown;
+    }) {
+        const text = getPlainText(children);
+        const baseSlug = headingAnchorSlug(text) || "heading";
+        const count = slugs.get(baseSlug);
+        let slug: string;
+        if (count === undefined) {
+            slugs.set(baseSlug, 1);
+            slug = baseSlug;
+        } else {
+            slug = `${baseSlug}-${count}`;
+            slugs.set(baseSlug, count + 1);
+        }
+
+        return (
+            <Tag
+                id={slug}
+                className={cn("group relative scroll-mt-[103px]", className)}
+                {...props}
+            >
+                {children}
+                <a
+                    href={`#${slug}`}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        window.location.hash = slug;
+                    }}
+                    className="absolute top-1/2 -left-5 -translate-y-1/2 text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100"
+                    aria-label={`Link to ${text}`}
+                >
+                    <LinkIcon className="h-4 w-4" />
+                </a>
+            </Tag>
+        );
+    };
+}
+
+function InlineCode({
+    children,
+    ...props
+}: {
+    children: React.ReactNode;
+    [key: string]: unknown;
+}) {
+    return (
+        <code
+            className="rounded bg-gray-100 px-1.25 py-0.5 font-mono text-sm before:content-none after:content-none dark:bg-zinc-700"
+            {...props}
+        >
+            {children}
+        </code>
+    );
+}
+
+function CodeElement({
+    children,
+    className,
+    ...props
+}: {
+    children: React.ReactNode;
+    className?: string;
+    [key: string]: unknown;
+}) {
+    const { resolvedTheme } = useTheme();
+    const inCodeBlock = useContext(CodeBlockContext);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (className || inCodeBlock) {
+        if (!mounted) {
+            return (
+                <pre className="overflow-x-auto rounded-lg bg-zinc-100 p-2 text-sm dark:bg-zinc-800">
+                    <code className={className}>{children}</code>
+                </pre>
+            );
+        }
+
+        const style = resolvedTheme === "dark" ? darkTheme : lightTheme;
+        const extraStyles: CSSProperties =
+            resolvedTheme === "dark" ? {} : { background: "#f0f0f0" };
+
+        let language = "";
+        switch (className) {
+            case "language-rust": {
+                language = "rust";
+                break;
+            }
+            case "language-js": {
+                language = "javascript";
+                break;
+            }
+            // TODO: Add other languages
+        }
+
+        const codeString = Array.isArray(children)
+            ? children.join("")
+            : String(children ?? "");
+
+        return (
+            <SyntaxHighlighter
+                language={language}
+                style={style}
+                customStyle={extraStyles}
+                {...props}
+            >
+                {codeString}
+            </SyntaxHighlighter>
+        );
+    }
+    return <InlineCode {...props}>{children}</InlineCode>;
 }
