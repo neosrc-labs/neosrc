@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { api } from "~/trpc/react";
 
@@ -42,34 +43,38 @@ export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
         ref,
     });
 
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState<string | null>(null);
+    const initializedRef = useRef(false);
 
     useEffect(() => {
         if (!docFiles || docFiles.length === 0) return;
 
-        const handleHash = () => {
-            const hash = window.location.hash.slice(1);
-            if (hash) {
-                const match = docFiles.find(
-                    (f) => getDocFileHashName(f.name) === hash,
-                );
-                if (match) {
-                    setActiveTab(match.name);
-                    const el = document.getElementById("doc-files");
-                    if (el) el.scrollIntoView({ behavior: "smooth" });
-                    return true;
+        const tabParam = searchParams.get("tab");
+        if (tabParam) {
+            const match = docFiles.find(
+                (f) => getDocFileHashName(f.name) === tabParam,
+            );
+            if (match) {
+                setActiveTab(match.name);
+                if (!initializedRef.current) {
+                    initializedRef.current = true;
+                    const hash = window.location.hash.slice(1);
+                    const el = hash
+                        ? document.getElementById(hash)
+                        : document.getElementById("doc-files");
+                    if (el) el.scrollIntoView();
                 }
+                return;
             }
-            return false;
-        };
-
-        if (!handleHash() && !activeTab) {
-            setActiveTab(docFiles[0]?.name ?? null);
         }
 
-        window.addEventListener("hashchange", handleHash);
-        return () => window.removeEventListener("hashchange", handleHash);
-    }, [docFiles, activeTab]);
+        if (!initializedRef.current) {
+            setActiveTab(docFiles[0]?.name ?? null);
+            initializedRef.current = true;
+        }
+    }, [docFiles, searchParams]);
 
     const activeFile = useMemo(() => {
         if (!docFiles || docFiles.length === 0) return null;
@@ -78,6 +83,30 @@ export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
         }
         return docFiles[0] ?? null;
     }, [docFiles, activeTab]);
+
+    const contentRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!activeFile?.name.endsWith(".md")) return;
+
+        const hash = window.location.hash.slice(1);
+        if (!hash) return;
+
+        const timer = setTimeout(() => {
+            const el = document.getElementById(hash);
+            if (el) {
+                el.scrollIntoView();
+            }
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, [activeFile]);
+
+    const handleTabClick = (fileName: string) => {
+        const hashName = getDocFileHashName(fileName);
+        setActiveTab(fileName);
+        router.replace(`?tab=${hashName}`, { scroll: false });
+    };
 
     if (isLoading) {
         return (
@@ -116,7 +145,7 @@ export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
                         <button
                             key={file.name}
                             type="button"
-                            onClick={() => setActiveTab(file.name)}
+                            onClick={() => handleTabClick(file.name)}
                             className={`relative -mb-px cursor-pointer px-3 py-1.5 font-medium text-xs transition-colors ${
                                 activeTab === file.name
                                     ? "border-blue-500 border-b-2 text-text-primary"
@@ -128,7 +157,7 @@ export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
                     ))}
                 </div>
             </div>
-            <div className="p-6">
+            <div ref={contentRef} className="p-6">
                 {activeFile &&
                     (activeFile.name.endsWith(".md") ? (
                         <MarkdownRenderer
@@ -136,6 +165,7 @@ export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
                             owner={owner}
                             repo={repo}
                             canToggleTasks={false}
+                            linkableHeadings
                         />
                     ) : (
                         <pre className="whitespace-pre-wrap text-sm">

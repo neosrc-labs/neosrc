@@ -14,6 +14,7 @@ import {
     UsersIcon,
     X,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { cn } from "~/lib/utils";
@@ -66,6 +67,7 @@ export function RepoSidebar({
     deployments,
     latestRelease,
 }: RepoSidebarProps) {
+    const router = useRouter();
     const licenseFiles = docFileNames.filter(
         (f) => getDocFileHashName(f.name) === "license",
     );
@@ -73,6 +75,13 @@ export function RepoSidebar({
         (f) => getDocFileHashName(f.name) !== "license",
     );
     const firstLicense = licenseFiles[0];
+
+    const handleDocFileClick = (hashName: string) => {
+        router.replace(`?tab=${hashName}`, { scroll: false });
+        setTimeout(() => {
+            document.getElementById("doc-files")?.scrollIntoView();
+        }, 50);
+    };
 
     const allLangEntries = Object.entries(languages)
         .filter(([, bytes]) => bytes > 0)
@@ -133,7 +142,11 @@ export function RepoSidebar({
                         return (
                             <a
                                 key={file.path}
-                                href={`#${hashName}`}
+                                href={`?tab=${hashName}`}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleDocFileClick(hashName);
+                                }}
                                 className="flex items-start gap-1.5 text-sm text-text-secondary hover:text-text-primary hover:underline"
                             >
                                 <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -143,7 +156,13 @@ export function RepoSidebar({
                     })}
                     {firstLicense && (
                         <a
-                            href={`#${getDocFileHashName(firstLicense.name)}`}
+                            href={`?tab=${getDocFileHashName(firstLicense.name)}`}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleDocFileClick(
+                                    getDocFileHashName(firstLicense.name),
+                                );
+                            }}
                             className="flex items-start gap-1.5 text-sm text-text-secondary hover:text-text-primary hover:underline"
                         >
                             <ScaleIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
