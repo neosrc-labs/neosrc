@@ -3,6 +3,10 @@
 import { Fzf } from "fzf";
 import { GitBranchIcon, HistoryIcon, Search, TagIcon, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+    mapChecksListToStatusContexts,
+    StatusChecksHoverCard,
+} from "~/components/ci-status";
 import { UserLink } from "~/components/user-link";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
@@ -42,6 +46,17 @@ export function RepoFileTable({
         repo,
         ref: selectedRef,
     });
+
+    const { data: checks, isFetching: checksFetching } =
+        api.checks.list.useQuery(
+            { owner, repo, sha: latestCommit?.sha ?? "" },
+            { enabled: !!latestCommit?.sha },
+        );
+
+    const statusContexts = useMemo(
+        () => (checks ? mapChecksListToStatusContexts(checks) : []),
+        [checks],
+    );
 
     const { data: contents, isLoading: contentsLoading } =
         api.repos.getContents.useQuery({
@@ -275,6 +290,17 @@ export function RepoFileTable({
                                         )}
                                     </span>
                                 )}
+                                {statusContexts.length > 0 ? (
+                                    <StatusChecksHoverCard
+                                        contexts={statusContexts}
+                                        className="size-3.5"
+                                    />
+                                ) : checksFetching ? (
+                                    <div
+                                        className="size-3.5 shrink-0"
+                                        aria-hidden
+                                    />
+                                ) : null}
                                 <a
                                     href={`https://github.com/${owner}/${repo}/commits/${selectedRef}`}
                                     className="inline-flex shrink-0 items-center gap-1 text-text-primary text-xs hover:text-blue-600"
