@@ -25,6 +25,7 @@ export function RepoFileTable({
 }: RepoFileTableProps) {
     const [selectedRef, setSelectedRef] = useState(defaultBranch);
     const [searchQuery, setSearchQuery] = useState("");
+    const [hasRequestedTree, setHasRequestedTree] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -76,11 +77,14 @@ export function RepoFileTable({
 
     const isSearchActive = searchQuery.length > 0;
 
-    const { data: fileTree } = api.repos.getFileTree.useQuery({
-        owner,
-        repo,
-        ref: selectedRef,
-    });
+    const { data: fileTree } = api.repos.getFileTree.useQuery(
+        {
+            owner,
+            repo,
+            ref: selectedRef,
+        },
+        { enabled: hasRequestedTree },
+    );
 
     const searchResults = useMemo(() => {
         if (!fileTree || !isSearchActive || !searchQuery) return null;
@@ -139,6 +143,7 @@ export function RepoFileTable({
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            onFocus={() => setHasRequestedTree(true)}
                             placeholder="Search files..."
                             className="h-8 w-48 rounded-md border border-border bg-transparent py-1 pr-7 pl-8 text-sm text-text-primary placeholder-text-tertiary focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                         />
