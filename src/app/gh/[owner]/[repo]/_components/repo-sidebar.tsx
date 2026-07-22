@@ -101,7 +101,7 @@ export function RepoSidebar({
                 {homepage && (
                     <a
                         href={homepage}
-                        className="mb-3 inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 text-sm hover:underline"
+                        className="mb-3 inline-flex items-center gap-1.5 text-blue-600 text-sm hover:underline dark:text-blue-400"
                     >
                         <ExternalLinkIcon className="h-3.5 w-3.5" />
                         {homepage.replace(/^https?:\/\//, "")}
@@ -113,7 +113,7 @@ export function RepoSidebar({
                         {topics.map((topic) => (
                             <span
                                 key={topic}
-                                className="inline-block rounded-full bg-blue-500/10 dark:bg-blue-400/10 px-2.5 py-0.5 text-blue-600 dark:text-blue-400 text-xs"
+                                className="inline-block rounded-full bg-blue-500/10 px-2.5 py-0.5 text-blue-600 text-xs dark:bg-blue-400/10 dark:text-blue-400"
                             >
                                 {topic}
                             </span>

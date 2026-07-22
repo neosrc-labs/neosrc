@@ -1,7 +1,8 @@
 "use client";
 
-import { GitBranchIcon, HistoryIcon, TagIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Fzf } from "fzf";
+import { GitBranchIcon, HistoryIcon, Search, TagIcon, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { UserLink } from "~/components/user-link";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
@@ -23,6 +24,8 @@ export function RepoFileTable({
     defaultBranch,
 }: RepoFileTableProps) {
     const [selectedRef, setSelectedRef] = useState(defaultBranch);
+    const [searchQuery, setSearchQuery] = useState("");
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setSelectedRef(defaultBranch);
@@ -71,6 +74,25 @@ export function RepoFileTable({
             { enabled: paths.length > 0 },
         );
 
+    const isSearchActive = searchQuery.length > 0;
+
+    const { data: fileTree } = api.repos.getFileTree.useQuery({
+        owner,
+        repo,
+        ref: selectedRef,
+    });
+
+    const searchResults = useMemo(() => {
+        if (!fileTree || !isSearchActive || !searchQuery) return null;
+
+        const fzf = new Fzf(fileTree, {
+            selector: (item) => item.path,
+            limit: 50,
+        });
+
+        return fzf.find(searchQuery).map((r) => r.item);
+    }, [fileTree, searchQuery, isSearchActive]);
+
     return (
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
             <div className="flex items-center justify-between border-border border-b bg-surface-elevated px-4 py-3">
@@ -109,11 +131,82 @@ export function RepoFileTable({
                     )}
                 </div>
 
-                <ClonePopover owner={owner} repo={repo} />
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search files..."
+                            className="h-8 w-48 rounded-md border border-border bg-transparent py-1 pr-7 pl-8 text-sm text-text-primary placeholder-text-tertiary focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                        />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchQuery("")}
+                                className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5 text-text-tertiary hover:text-text-primary"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        )}
+                    </div>
+                    <ClonePopover owner={owner} repo={repo} />
+                </div>
             </div>
 
             <div>
-                {contentsLoading ? (
+                {isSearchActive ? (
+                    !searchResults?.length ? (
+                        <div className="p-8 text-center text-sm text-text-tertiary">
+                            No files matching &quot;{searchQuery}&quot;
+                        </div>
+                    ) : (
+                        <table className="w-full">
+                            <tbody>
+                                {searchResults.map((item) => {
+                                    const isDir = item.type === "tree";
+                                    const iconName = isDir
+                                        ? "folder"
+                                        : getFileIconName(item.name);
+                                    return (
+                                        <tr
+                                            key={item.path}
+                                            className="transition-colors hover:bg-surface-secondary"
+                                        >
+                                            <td className="px-4 py-2">
+                                                <a
+                                                    href={item.htmlUrl}
+                                                    className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600"
+                                                >
+                                                    <img
+                                                        alt=""
+                                                        className="h-4 w-4 shrink-0"
+                                                        src={`/material-icons/${iconName}.svg`}
+                                                        onError={(e) => {
+                                                            (
+                                                                e.target as HTMLImageElement
+                                                            ).src = isDir
+                                                                ? "/material-icons/folder.svg"
+                                                                : "/material-icons/file.svg";
+                                                        }}
+                                                    />
+                                                    <div className="flex flex-col">
+                                                        <span>{item.name}</span>
+                                                        <span className="text-text-tertiary text-xs">
+                                                            {item.path}
+                                                        </span>
+                                                    </div>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    )
+                ) : contentsLoading ? (
                     <>
                         <div className="flex items-center gap-3 border-border border-b px-4 py-3">
                             <div className="h-4 w-4 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
@@ -280,7 +373,10 @@ export function RepoFileTableSkeleton() {
         <div className="rounded-xl border border-border bg-surface">
             <div className="flex items-center justify-between border-border border-b bg-surface-elevated px-4 py-3">
                 <div className="h-8 w-32 animate-pulse rounded bg-surface-secondary" />
-                <div className="h-8 w-20 animate-pulse rounded-lg bg-surface-secondary" />
+                <div className="flex items-center gap-2">
+                    <div className="h-8 w-48 animate-pulse rounded-md bg-surface-secondary" />
+                    <div className="h-8 w-20 animate-pulse rounded-lg bg-surface-secondary" />
+                </div>
             </div>
             <div className="flex items-center gap-3 border-border border-b px-4 py-3">
                 <div className="h-4 w-4 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
