@@ -10,6 +10,7 @@ import {
 import { useSearchList } from "~/app/[owner]/[repo]/_components/use-search-list";
 import type { PrRowData } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
 import { PullRequestRow } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
+import { computeStatusState } from "~/components/ci-status";
 import { Pagination } from "~/components/ui/pagination";
 import type { PrSearchItem } from "~/server/api/routers/pulls/types";
 import { api } from "~/trpc/react";
@@ -21,32 +22,6 @@ import type {
 import { PullRequestSearchBar } from "./pull-request-search-bar";
 import { PullRequestSkeleton } from "./pull-request-skeleton";
 import { PullRequestToolbar } from "./pull-request-toolbar";
-
-function computeStatusState(checks: Array<{ state: string }>): string | null {
-    if (checks.length === 0) return null;
-    if (
-        checks.some(
-            (c) =>
-                c.state === "FAILURE" ||
-                c.state === "ERROR" ||
-                c.state === "TIMED_OUT",
-        )
-    ) {
-        return "FAILURE";
-    }
-    if (
-        checks.some(
-            (c) =>
-                c.state === "IN_PROGRESS" ||
-                c.state === "QUEUED" ||
-                c.state === "PENDING" ||
-                c.state === "EXPECTED",
-        )
-    ) {
-        return "IN_PROGRESS";
-    }
-    return "SUCCESS";
-}
 
 function normalizeSearchItem(item: PrSearchItem): PrRowData {
     return {
