@@ -198,7 +198,7 @@ export function RepoFileTable({
                                             <td className="px-4 py-2">
                                                 <a
                                                     href={item.htmlUrl}
-                                                    className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600"
+                                                    className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                                                 >
                                                     <img
                                                         alt=""
@@ -268,13 +268,13 @@ export function RepoFileTable({
                                 </div>
                                 <a
                                     href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
-                                    className="min-w-0 flex-1 truncate text-text-tertiary text-xs hover:text-blue-600"
+                                    className="min-w-0 flex-1 truncate text-text-tertiary text-xs hover:text-blue-600 dark:hover:text-blue-400"
                                 >
                                     {latestCommit.message}
                                 </a>
                                 <a
                                     href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
-                                    className="ml-auto shrink-0 pt-px font-mono text-text-tertiary text-xs hover:text-blue-600"
+                                    className="ml-auto shrink-0 pt-px font-mono text-text-tertiary text-xs hover:text-blue-600 dark:hover:text-blue-400"
                                 >
                                     {latestCommit.sha.slice(0, 7)}
                                 </a>
@@ -303,7 +303,7 @@ export function RepoFileTable({
                                 ) : null}
                                 <a
                                     href={`https://github.com/${owner}/${repo}/commits/${selectedRef}`}
-                                    className="inline-flex shrink-0 items-center gap-1 text-text-primary text-xs hover:text-blue-600"
+                                    className="inline-flex shrink-0 items-center gap-1 text-text-primary text-xs hover:text-blue-600 dark:hover:text-blue-400"
                                 >
                                     <HistoryIcon className="h-3.5 w-3.5" />
                                     {latestCommit.commitCount.toLocaleString()}{" "}
@@ -335,7 +335,7 @@ export function RepoFileTable({
                                             <td className="px-4 py-2">
                                                 <a
                                                     href={href}
-                                                    className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600"
+                                                    className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                                                 >
                                                     <img
                                                         alt=""
@@ -359,7 +359,7 @@ export function RepoFileTable({
                                                     <div className="flex items-center gap-2">
                                                         <a
                                                             href={`https://github.com/${owner}/${repo}/commit/${commit.sha}`}
-                                                            className="min-w-0 flex-1 truncate text-text-tertiary text-xs hover:text-blue-600"
+                                                            className="min-w-0 flex-1 truncate text-text-tertiary text-xs hover:text-blue-600 dark:hover:text-blue-400"
                                                         >
                                                             {commit.message}
                                                         </a>
