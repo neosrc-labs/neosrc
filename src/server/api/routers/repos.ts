@@ -21,6 +21,7 @@ import {
     getRepoDeployments,
     getRepoDocFileNames,
     getRepoDocFiles,
+    getRepoFileTree,
     getRepoLanguages,
     getRepoLatestCommit,
     getRepoRefCounts,
@@ -230,6 +231,26 @@ export const reposRouter = createTRPCRouter({
                 input.owner,
                 input.repo,
                 input.path,
+                input.ref,
+            );
+        }),
+    getFileTree: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                ref: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            return getRepoFileTree(
+                accessToken,
+                input.owner,
+                input.repo,
                 input.ref,
             );
         }),

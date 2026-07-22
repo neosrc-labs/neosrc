@@ -2479,3 +2479,57 @@ export async function getFileLatestCommits(
     }
     return record;
 }
+
+export interface CodeSearchResultItem {
+    name: string;
+    path: string;
+    sha: string;
+    htmlUrl: string;
+    type: "blob" | "tree";
+}
+
+export async function getRepoFileTree(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    ref: string,
+): Promise<CodeSearchResultItem[]> {
+    const octokit = createOctokit(accessToken);
+
+    const { data: refData } = await octokit.rest.git.getRef({
+        owner,
+        repo,
+        ref: `heads/${ref}`,
+    });
+
+    const { data: commitData } = await octokit.rest.git.getCommit({
+        owner,
+        repo,
+        commit_sha: refData.object.sha,
+    });
+
+    const { data: treeData } = await octokit.rest.git.getTree({
+        owner,
+        repo,
+        tree_sha: commitData.tree.sha,
+        recursive: "true",
+    });
+
+    return treeData.tree
+        .filter(
+            (item): item is typeof item & { path: string; sha: string } =>
+                !!item.path &&
+                !!item.sha &&
+                (item.type === "blob" || item.type === "tree"),
+        )
+        .map((item) => ({
+            name: item.path.split("/").pop() ?? item.path,
+            path: item.path,
+            sha: item.sha,
+            htmlUrl:
+                item.type === "tree"
+                    ? `https://github.com/${owner}/${repo}/tree/${ref}/${item.path}`
+                    : `https://github.com/${owner}/${repo}/blob/${ref}/${item.path}`,
+            type: item.type as "blob" | "tree",
+        }));
+}

@@ -39,6 +39,7 @@
         "clsx": "^2.1.1",
         "diff2html": "^3.4.56",
         "drizzle-orm": "^0.41.0",
+        "fzf": "^0.5.2",
         "highlight.js": "^11.11.1",
         "jose": "^6.2.3",
         "lucide-react": "^1.14.0",
