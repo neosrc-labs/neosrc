@@ -38,7 +38,7 @@ export function RepoHeader({
     subscriptionPromise,
 }: RepoHeaderProps) {
     return (
-        <div className="flex flex-wrap items-center gap-3">
+        <div>
             <Async
                 promise={combine(
                     repoDataPromise,
@@ -49,40 +49,56 @@ export function RepoHeader({
             >
                 {([repoData, starred, subscription]) => (
                     <>
-                        {repoData.ownerAvatarUrl && (
-                            <img
-                                src={repoData.ownerAvatarUrl}
-                                alt=""
-                                className="size-6 rounded-full"
-                            />
-                        )}
-                        <h1 className="whitespace-nowrap text-text-primary text-xl">
-                            <span className="text-text-tertiary">{owner}</span>
-                            <span className="text-text-tertiary"> / </span>
-                            <span className="font-semibold">{repo}</span>
-                        </h1>
-                        <span className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 font-medium text-text-tertiary text-xs">
-                            {repoData.isPrivate ? "Private" : "Public"}
-                        </span>
-                        <div className="ml-auto flex items-center gap-2">
-                            <WatchDropdown
-                                owner={owner}
-                                repo={repo}
-                                watchers={repoData.watchers}
-                                initialSubscription={subscription}
-                            />
-                            <ForkButton
-                                owner={owner}
-                                repo={repo}
-                                forks={repoData.forks}
-                            />
-                            <StarButton
-                                owner={owner}
-                                repo={repo}
-                                stars={repoData.stars}
-                                initialStarred={starred}
-                            />
+                        <div className="flex flex-wrap items-center gap-3">
+                            {repoData.ownerAvatarUrl && (
+                                <img
+                                    src={repoData.ownerAvatarUrl}
+                                    alt=""
+                                    className="size-6 rounded-full"
+                                />
+                            )}
+                            <h1 className="whitespace-nowrap text-text-primary text-xl">
+                                <span className="text-text-tertiary">
+                                    {owner}
+                                </span>
+                                <span className="text-text-tertiary"> / </span>
+                                <span className="font-semibold">{repo}</span>
+                            </h1>
+                            <span className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 font-medium text-text-tertiary text-xs">
+                                {repoData.isPrivate ? "Private" : "Public"}
+                            </span>
+                            <div className="ml-auto flex items-center gap-2">
+                                <WatchDropdown
+                                    owner={owner}
+                                    repo={repo}
+                                    watchers={repoData.watchers}
+                                    initialSubscription={subscription}
+                                />
+                                <ForkButton
+                                    owner={owner}
+                                    repo={repo}
+                                    forks={repoData.forks}
+                                />
+                                <StarButton
+                                    owner={owner}
+                                    repo={repo}
+                                    stars={repoData.stars}
+                                    initialStarred={starred}
+                                />
+                            </div>
                         </div>
+                        {repoData.isFork && repoData.parentFullName && (
+                            <div className="mt-1 flex items-center gap-1 text-text-tertiary text-xs">
+                                <GitForkIcon className="h-3 w-3" />
+                                forked from{" "}
+                                <a
+                                    href={`/gh/${repoData.parentFullName}`}
+                                    className="text-blue-600 hover:underline dark:text-blue-400"
+                                >
+                                    {repoData.parentFullName}
+                                </a>
+                            </div>
+                        )}
                     </>
                 )}
             </Async>
@@ -106,7 +122,7 @@ function HeaderActionsSkeleton({
     repo: string;
 }) {
     return (
-        <>
+        <div className="flex flex-wrap items-center gap-3">
             <div className="size-6 animate-pulse rounded-full bg-surface-secondary" />
             <h1 className="whitespace-nowrap text-text-primary text-xl">
                 <span className="text-text-tertiary">{owner}</span>
@@ -119,7 +135,7 @@ function HeaderActionsSkeleton({
                 <div className="h-[30px] w-[4.5rem] animate-pulse rounded-lg bg-surface-secondary" />
                 <div className="h-[30px] w-16 animate-pulse rounded-lg bg-surface-secondary" />
             </div>
-        </>
+        </div>
     );
 }
 

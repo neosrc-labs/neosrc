@@ -91,6 +91,8 @@ export const reposRouter = createTRPCRouter({
                       }
                     : null,
                 createdAt: data.created_at,
+                isFork: data.fork,
+                parentFullName: data.parent?.full_name ?? null,
             };
         }),
     getCountsByOwnerAndRepo: protectedProcedure
