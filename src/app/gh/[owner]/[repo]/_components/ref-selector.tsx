@@ -92,7 +92,7 @@ export function RefSelector({
                 </button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-0" align="start">
-                <div className="border-border border-b p-3 pb-0">
+                <div className="border-border border-b p-3 pb-2">
                     <div className="relative">
                         <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
                         <input
