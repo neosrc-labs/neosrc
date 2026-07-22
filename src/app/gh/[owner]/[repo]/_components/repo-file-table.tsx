@@ -318,8 +318,8 @@ export function RepoFileTable({
                                 {sortedContents.map((item) => {
                                     const isDir = item.type === "dir";
                                     const href = isDir
-                                        ? `https://github.com/${owner}/${repo}/tree/${selectedRef}/${item.path}`
-                                        : `https://github.com/${owner}/${repo}/blob/${selectedRef}/${item.path}`;
+                                        ? `https://github.com/${owner}/${repo}/tree/${selectedRef}/${item.path.split("/").map(encodeURIComponent).join("/")}`
+                                        : `https://github.com/${owner}/${repo}/blob/${selectedRef}/${item.path.split("/").map(encodeURIComponent).join("/")}`;
                                     const iconName = isDir
                                         ? "folder"
                                         : getFileIconName(item.name);
