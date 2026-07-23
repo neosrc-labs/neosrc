@@ -113,12 +113,19 @@ export function RepoCodePage({
                             )}
                         </Async>
 
-                        <Async promise={repoDataPromise} fallback={null}>
-                            {(repoData) => (
+                        <Async
+                            promise={Promise.all([
+                                repoDataPromise,
+                                docFileNamesPromise,
+                            ])}
+                            fallback={null}
+                        >
+                            {([repoData, docFileNames]) => (
                                 <RepoDocFiles
                                     owner={owner}
                                     repo={repo}
                                     ref={repoData.defaultBranch}
+                                    fileNames={docFileNames}
                                 />
                             )}
                         </Async>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { api } from "~/trpc/react";
 
@@ -9,6 +9,7 @@ interface RepoDocFilesProps {
     owner: string;
     repo: string;
     ref: string;
+    fileNames?: { name: string; path: string }[];
 }
 
 function getDisplayName(name: string): string {
@@ -36,92 +37,92 @@ function getDocFileHashName(name: string): string {
     return name.toLowerCase().replace(/\.[^.]+$/, "");
 }
 
-export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
-    const { data: docFiles, isLoading } = api.repos.getDocFiles.useQuery({
-        owner,
-        repo,
-        ref,
-    });
-
+export function RepoDocFiles({
+    owner,
+    repo,
+    ref,
+    fileNames = [],
+}: RepoDocFilesProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState<string | null>(null);
-    const initializedRef = useRef(false);
-
-    useEffect(() => {
-        if (!docFiles || docFiles.length === 0) return;
-
-        const tabParam = searchParams.get("tab");
-        if (tabParam) {
-            const match = docFiles.find(
-                (f) => getDocFileHashName(f.name) === tabParam,
-            );
-            if (match) {
-                setActiveTab(match.name);
-                if (!initializedRef.current) {
-                    initializedRef.current = true;
-                    const hash = window.location.hash.slice(1);
-                    const el = hash
-                        ? document.getElementById(hash)
-                        : document.getElementById("doc-files");
-                    if (el) el.scrollIntoView();
-                }
-                return;
-            }
-        }
-
-        if (!initializedRef.current) {
-            setActiveTab(docFiles[0]?.name ?? null);
-            initializedRef.current = true;
-        }
-    }, [docFiles, searchParams]);
-
-    const activeFile = useMemo(() => {
-        if (!docFiles || docFiles.length === 0) return null;
-        if (activeTab && docFiles.some((f) => f.name === activeTab)) {
-            return docFiles.find((f) => f.name === activeTab) ?? null;
-        }
-        return docFiles[0] ?? null;
-    }, [docFiles, activeTab]);
-
+    const [fileContents, setFileContents] = useState<Record<string, string>>(
+        {},
+    );
+    const [loadingPath, setLoadingPath] = useState<string | null>(null);
+    const fileContentsRef = useRef(fileContents);
+    fileContentsRef.current = fileContents;
+    const initRef = useRef(false);
     const contentRef = useRef<HTMLDivElement>(null);
 
+    const trpcUtils = api.useUtils();
+
+    const loadContent = useCallback(
+        async (path: string) => {
+            if (fileContentsRef.current[path] !== undefined) return;
+            setLoadingPath(path);
+            try {
+                const data = await trpcUtils.repos.getDocFileContent.fetch({
+                    owner,
+                    repo,
+                    ref,
+                    path,
+                });
+                setFileContents((prev) => ({
+                    ...prev,
+                    [path]: data.content,
+                }));
+            } catch {
+                // file not found or API error
+            } finally {
+                setLoadingPath(null);
+            }
+        },
+        [owner, repo, ref, trpcUtils],
+    );
+
+    const activeFile = useMemo(() => {
+        if (!activeTab || fileNames.length === 0) return null;
+        return fileNames.find((f) => f.name === activeTab) ?? null;
+    }, [activeTab, fileNames]);
+
     useEffect(() => {
-        if (!activeFile?.name.endsWith(".md")) return;
+        if (fileNames.length === 0 || initRef.current) return;
+        initRef.current = true;
+
+        const tabParam = searchParams.get("tab");
+        let target = fileNames[0] ?? null;
+        if (tabParam) {
+            const match = fileNames.find(
+                (f) => getDocFileHashName(f.name) === tabParam,
+            );
+            if (match) target = match;
+        }
+
+        if (target) setActiveTab(target.name);
 
         const hash = window.location.hash.slice(1);
-        if (!hash) return;
+        const el = hash
+            ? document.getElementById(hash)
+            : document.getElementById("doc-files");
+        if (el) el.scrollIntoView();
+    }, [fileNames, searchParams]);
 
-        const timer = setTimeout(() => {
-            const el = document.getElementById(hash);
-            if (el) {
-                el.scrollIntoView();
-            }
-        }, 100);
+    useEffect(() => {
+        if (activeFile) loadContent(activeFile.path);
+    }, [activeFile, loadContent]);
 
-        return () => clearTimeout(timer);
-    }, [activeFile]);
+    const handleTabClick = useCallback(
+        (file: { name: string; path: string }) => {
+            const hashName = getDocFileHashName(file.name);
+            setActiveTab(file.name);
+            router.replace(`?tab=${hashName}`, { scroll: false });
+            loadContent(file.path);
+        },
+        [router, loadContent],
+    );
 
-    const handleTabClick = (fileName: string) => {
-        const hashName = getDocFileHashName(fileName);
-        setActiveTab(fileName);
-        router.replace(`?tab=${hashName}`, { scroll: false });
-    };
-
-    if (isLoading) {
-        return (
-            <div className="mt-6 rounded-xl border border-border bg-surface p-6">
-                <div className="mb-4 h-4 w-24 animate-pulse rounded bg-surface-secondary" />
-                <div className="space-y-2">
-                    <div className="h-3 w-full animate-pulse rounded bg-surface-secondary" />
-                    <div className="h-3 w-3/4 animate-pulse rounded bg-surface-secondary" />
-                    <div className="h-3 w-1/2 animate-pulse rounded bg-surface-secondary" />
-                </div>
-            </div>
-        );
-    }
-
-    if (!docFiles || docFiles.length === 0) {
+    if (fileNames.length === 0) {
         return (
             <div
                 id="doc-files"
@@ -134,6 +135,10 @@ export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
         );
     }
 
+    const currentContent = activeFile
+        ? fileContents[activeFile.path]
+        : undefined;
+
     return (
         <div
             id="doc-files"
@@ -141,11 +146,11 @@ export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
         >
             <div className="border-border border-b">
                 <div className="flex items-center px-2 py-1">
-                    {docFiles.map((file) => (
+                    {fileNames.map((file) => (
                         <button
                             key={file.name}
                             type="button"
-                            onClick={() => handleTabClick(file.name)}
+                            onClick={() => handleTabClick(file)}
                             className={`relative -mb-px cursor-pointer px-3 py-1.5 font-medium text-xs transition-colors ${
                                 activeTab === file.name
                                     ? "border-blue-500 border-b-2 text-text-primary"
@@ -158,10 +163,16 @@ export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
                 </div>
             </div>
             <div ref={contentRef} className="p-6">
-                {activeFile &&
-                    (activeFile.name.endsWith(".md") ? (
+                {loadingPath !== null ? (
+                    <div className="space-y-2">
+                        <div className="h-3 w-full animate-pulse rounded bg-surface-secondary" />
+                        <div className="h-3 w-3/4 animate-pulse rounded bg-surface-secondary" />
+                        <div className="h-3 w-1/2 animate-pulse rounded bg-surface-secondary" />
+                    </div>
+                ) : currentContent != null ? (
+                    activeFile?.name.endsWith(".md") ? (
                         <MarkdownRenderer
-                            content={activeFile.content}
+                            content={currentContent}
                             owner={owner}
                             repo={repo}
                             canToggleTasks={false}
@@ -169,9 +180,10 @@ export function RepoDocFiles({ owner, repo, ref }: RepoDocFilesProps) {
                         />
                     ) : (
                         <pre className="whitespace-pre-wrap text-sm">
-                            {activeFile.content}
+                            {currentContent}
                         </pre>
-                    ))}
+                    )
+                ) : null}
             </div>
         </div>
     );
