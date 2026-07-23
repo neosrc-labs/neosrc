@@ -92,7 +92,12 @@ export function RepoCodePage({
                     <div className="min-w-0 flex-1">
                         <Async
                             promise={repoDataPromise}
-                            fallback={<RepoFileTableSkeleton />}
+                            fallback={
+                                <RepoFileTableSkeleton
+                                    owner={owner}
+                                    repo={repo}
+                                />
+                            }
                         >
                             {(repoData) => (
                                 <RepoFileTable

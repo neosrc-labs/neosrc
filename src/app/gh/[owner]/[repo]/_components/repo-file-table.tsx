@@ -415,14 +415,36 @@ function getFileIconName(filename: string): string {
     return "file";
 }
 
-export function RepoFileTableSkeleton() {
+interface RepoFileTableSkeletonProps {
+    owner: string;
+    repo: string;
+}
+
+export function RepoFileTableSkeleton({
+    owner,
+    repo,
+}: RepoFileTableSkeletonProps) {
     return (
         <div className="rounded-xl border border-border bg-surface">
             <div className="flex items-center justify-between border-border border-b bg-surface-elevated px-4 py-3">
-                <div className="h-8 w-32 animate-pulse rounded bg-surface-secondary" />
                 <div className="flex items-center gap-2">
-                    <div className="h-8 w-48 animate-pulse rounded-md bg-surface-secondary" />
-                    <div className="h-8 w-20 animate-pulse rounded-lg bg-surface-secondary" />
+                    <div className="h-8 w-28 animate-pulse rounded-lg border border-border bg-surface-secondary" />
+                    <span className="inline-flex items-center gap-1">
+                        <div className="h-5 w-14 animate-pulse rounded bg-surface-secondary" />
+                        <div className="h-5 w-10 animate-pulse rounded bg-surface-secondary" />
+                    </span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
+                        <input
+                            type="text"
+                            disabled
+                            placeholder="Search files..."
+                            className="h-8 w-48 rounded-md border border-border bg-transparent py-1 pr-7 pl-8 text-sm text-text-primary placeholder-text-tertiary"
+                        />
+                    </div>
+                    <ClonePopover owner={owner} repo={repo} />
                 </div>
             </div>
             <div className="flex items-center gap-3 border-border border-b px-4 py-3">
