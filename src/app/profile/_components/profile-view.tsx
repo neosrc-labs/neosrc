@@ -4,10 +4,14 @@ import {
     Building2,
     CalendarDays,
     Link as LinkIcon,
+    LogOut,
     MapPin,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useState } from "react";
 
 import { AccountManager } from "~/app/_components/account-manager";
+import { authClient } from "~/lib/auth-client";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 
@@ -164,6 +168,16 @@ export function ProfileView({
     githubUsername: string | null;
     codebergUsername: string | null;
 }) {
+    const [loggingOut, setLoggingOut] = useState(false);
+    const router = useRouter();
+
+    const handleLogout = useCallback(async () => {
+        setLoggingOut(true);
+        await authClient.signOut();
+        setLoggingOut(false);
+        router.push("/");
+    }, []);
+
     return (
         <div className="flex flex-col gap-8">
             <div className="flex items-center gap-5">
@@ -210,6 +224,18 @@ export function ProfileView({
                     githubUsername={githubUsername}
                     codebergUsername={codebergUsername}
                 />
+            </section>
+
+            <section className="border-border-subtle border-t pt-6">
+                <button
+                    type="button"
+                    disabled={loggingOut}
+                    onClick={handleLogout}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-red-300 px-4 py-2 text-red-600 text-sm transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+                >
+                    <LogOut className="h-4 w-4" />
+                    {loggingOut ? "Signing out..." : "Sign out"}
+                </button>
             </section>
         </div>
     );
