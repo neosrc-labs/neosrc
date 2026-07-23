@@ -14,13 +14,13 @@ import {
 } from "~/server/codeberg";
 import {
     deleteRepoSubscription,
+    getCachedDocFileContent,
     getCachedRepoContributors,
     getCachedRepoDocFileNames,
     getCachedRepoIssuePullCounts,
     getCachedRepoLanguages,
     getCachedRepoStarred,
     getCachedRepoSubscription,
-    getDocFileContent,
     getFileLatestCommits,
     getForkComparison,
     getUserRepos as getGitHubUserRepos,
@@ -377,7 +377,7 @@ export const reposRouter = createTRPCRouter({
                 ctx.db,
                 ctx.session.user.id,
             );
-            return getDocFileContent(
+            return getCachedDocFileContent(
                 accessToken,
                 input.owner,
                 input.repo,
