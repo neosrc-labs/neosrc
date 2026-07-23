@@ -1,3 +1,4 @@
+import { graphql as octokitGraphql } from "@octokit/graphql";
 import { Octokit, type RestEndpointMethodTypes } from "@octokit/rest";
 import { notFound } from "next/navigation";
 import { cache } from "react";
@@ -2561,6 +2562,33 @@ export interface FileLatestCommit {
     committedDate: string;
 }
 
+interface GqlFileCommitNode {
+    oid: string;
+    messageHeadline: string;
+    committedDate: string;
+}
+
+const FILE_COMMITS_CHUNK_SIZE = 50;
+
+function buildFileCommitsBatchQuery(paths: string[]): string {
+    const aliases = paths.map(
+        (path, i) =>
+            `    f${i}: history(first: 1, path: ${JSON.stringify(path)}) {\n      nodes {\n        oid\n        messageHeadline\n        committedDate\n      }\n    }`,
+    );
+
+    return `query BatchFileCommits($owner: String!, $repo: String!, $qualifiedRef: String!) {
+  repository(owner: $owner, name: $repo) {
+    ref(qualifiedName: $qualifiedRef) {
+      target {
+        ... on Commit {
+${aliases.join("\n")}
+        }
+      }
+    }
+  }
+}`;
+}
+
 export async function getFileLatestCommits(
     accessToken: string,
     owner: string,
@@ -2568,42 +2596,54 @@ export async function getFileLatestCommits(
     ref: string,
     paths: string[],
 ): Promise<Record<string, FileLatestCommit | null>> {
-    const octokit = createOctokit(accessToken);
+    if (paths.length === 0) return {};
 
-    const results = await Promise.all(
-        paths.map(async (path) => {
-            try {
-                const response = await octokit.rest.repos.listCommits({
-                    owner,
-                    repo,
-                    sha: ref,
-                    path,
-                    per_page: 1,
-                });
-                const commit = response.data[0];
-                if (!commit) return { path, data: null };
-                const message = commit.commit.message.split("\n")[0] ?? "";
-                return {
-                    path,
-                    data: {
-                        sha: commit.sha,
-                        message,
-                        committedDate:
-                            commit.commit.committer?.date ??
-                            commit.commit.author?.date ??
-                            "",
-                    },
-                };
-            } catch {
-                return { path, data: null };
-            }
-        }),
-    );
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
 
+    const qualifiedRef = `refs/heads/${ref}`;
     const record: Record<string, FileLatestCommit | null> = {};
-    for (const { path, data } of results) {
-        record[path] = data;
+
+    for (let i = 0; i < paths.length; i += FILE_COMMITS_CHUNK_SIZE) {
+        const chunk = paths.slice(i, i + FILE_COMMITS_CHUNK_SIZE);
+        const query = buildFileCommitsBatchQuery(chunk);
+
+        const result = await graphql<{
+            repository?: {
+                ref?: {
+                    target?: Record<
+                        string,
+                        { nodes?: GqlFileCommitNode[] } | null
+                    > | null;
+                };
+            };
+        }>(query, {
+            owner,
+            repo,
+            qualifiedRef,
+        });
+
+        const target = result.repository?.ref?.target ?? null;
+
+        for (let j = 0; j < chunk.length; j++) {
+            const path = chunk[j];
+            if (!path) continue;
+            const alias = `f${j}`;
+            const history = target?.[alias] ?? null;
+            const node = history?.nodes?.[0];
+            if (node) {
+                record[path] = {
+                    sha: node.oid,
+                    message: node.messageHeadline,
+                    committedDate: node.committedDate,
+                };
+            } else {
+                record[path] = null;
+            }
+        }
     }
+
     return record;
 }
 
