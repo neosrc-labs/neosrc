@@ -2080,6 +2080,45 @@ export async function getRepoDocFileNames(
         );
 }
 
+export async function getDocFileContent(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    ref: string,
+    path: string,
+): Promise<{ content: string }> {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const query = `query GetDocFile($owner: String!, $repo: String!, $expression: String!) {
+  repository(owner: $owner, name: $repo) {
+    object(expression: $expression) {
+      ... on Blob {
+        text
+      }
+    }
+  }
+}`;
+
+    const result = await graphql<{
+        repository?: {
+            object?: { text?: string | null } | null;
+        };
+    }>(query, {
+        owner,
+        repo,
+        expression: `${ref}:${path}`,
+    });
+
+    const text = result.repository?.object?.text;
+    if (text == null) {
+        throw new Error(`File not found: ${path}`);
+    }
+
+    return { content: text };
+}
+
 export async function getRepoDocFiles(
     accessToken: string,
     owner: string,
