@@ -72,10 +72,12 @@ test.describe
                 await expect(page).toHaveTitle(new RegExp(`${OWNER}/${REPO}`));
             });
 
-            await test.step("Verify the repo header shows owner and repo name", async () => {
-                const h1 = page.getByRole("heading", {
-                    name: new RegExp(`${OWNER}\\s*/\\s*${REPO}`),
-                });
+            await test.step("Verify the repo header shows repo name", async () => {
+                const h1 = page
+                    .getByRole("heading", {
+                        name: new RegExp(REPO),
+                    })
+                    .first();
                 await expect(h1).toBeVisible();
             });
 

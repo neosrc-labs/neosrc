@@ -45,7 +45,7 @@ export function RepoHeader({
                     starredPromise,
                     subscriptionPromise,
                 )}
-                fallback={<HeaderActionsSkeleton owner={owner} repo={repo} />}
+                fallback={<HeaderActionsSkeleton repo={repo} />}
             >
                 {([repoData, starred, subscription]) => (
                     <>
@@ -57,12 +57,8 @@ export function RepoHeader({
                                     className="size-6 rounded-full"
                                 />
                             )}
-                            <h1 className="whitespace-nowrap text-text-primary text-xl">
-                                <span className="text-text-tertiary">
-                                    {owner}
-                                </span>
-                                <span className="text-text-tertiary"> / </span>
-                                <span className="font-semibold">{repo}</span>
+                            <h1 className="whitespace-nowrap font-semibold text-text-primary text-xl">
+                                {repo}
                             </h1>
                             <span className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 font-medium text-text-tertiary text-xs">
                                 {repoData.isPrivate ? "Private" : "Public"}
@@ -114,20 +110,12 @@ function combine<A, B, C>(
     return Promise.all([a, b, c]);
 }
 
-function HeaderActionsSkeleton({
-    owner,
-    repo,
-}: {
-    owner: string;
-    repo: string;
-}) {
+function HeaderActionsSkeleton({ repo }: { repo: string }) {
     return (
         <div className="flex flex-wrap items-center gap-3">
             <div className="size-6 animate-pulse rounded-full bg-surface-secondary" />
-            <h1 className="whitespace-nowrap text-text-primary text-xl">
-                <span className="text-text-tertiary">{owner}</span>
-                <span className="text-text-tertiary"> / </span>
-                <span className="font-semibold">{repo}</span>
+            <h1 className="whitespace-nowrap font-semibold text-text-primary text-xl">
+                {repo}
             </h1>
             <div className="h-[22px] w-14 animate-pulse rounded-full bg-surface-secondary" />
             <div className="ml-auto flex items-center gap-2">
