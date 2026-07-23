@@ -176,7 +176,7 @@ export function ProfileView({
         await authClient.signOut();
         setLoggingOut(false);
         router.push("/");
-    }, []);
+    }, [router.push]);
 
     return (
         <div className="flex flex-col gap-8">
