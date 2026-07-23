@@ -39,7 +39,7 @@ setup("authenticate", async ({ browser }) => {
     console.log("========================================\n");
 
     await page
-        .getByRole("button", { name: /Sign out/ })
+        .getByRole("heading", { name: /welcome/i })
         .waitFor({ timeout: 300_000 });
 
     const dir = path.dirname(AUTH_FILE);
