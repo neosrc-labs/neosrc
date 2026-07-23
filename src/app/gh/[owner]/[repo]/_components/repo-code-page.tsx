@@ -21,6 +21,7 @@ export interface RepoData {
     createdAt: string;
     isFork: boolean;
     parentFullName: string | null;
+    parentDefaultBranch: string | null;
 }
 
 interface Contributor {
@@ -98,6 +99,11 @@ export function RepoCodePage({
                                     owner={owner}
                                     repo={repo}
                                     defaultBranch={repoData.defaultBranch}
+                                    isFork={repoData.isFork}
+                                    parentFullName={repoData.parentFullName}
+                                    parentDefaultBranch={
+                                        repoData.parentDefaultBranch
+                                    }
                                 />
                             )}
                         </Async>

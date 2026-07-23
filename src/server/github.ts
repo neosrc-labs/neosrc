@@ -2428,6 +2428,63 @@ export async function getRepoLatestCommit(
     };
 }
 
+export interface ForkComparison {
+    aheadBy: number;
+    behindBy: number;
+}
+
+export async function getForkComparison(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    upstreamFullName: string,
+    forkBranch: string,
+    parentBranch: string,
+): Promise<ForkComparison> {
+    const octokit = createOctokit(accessToken);
+
+    const [parentOwner] = upstreamFullName.split("/");
+    if (!parentOwner) {
+        throw new Error(`Invalid upstream full name: ${upstreamFullName}`);
+    }
+
+    const comparison = await octokit.request(
+        "GET /repos/{owner}/{repo}/compare/{basehead}",
+        {
+            owner,
+            repo,
+            basehead: `${parentOwner}:${parentBranch}...${owner}:${forkBranch}`,
+        },
+    );
+
+    return {
+        aheadBy: comparison.data.ahead_by,
+        behindBy: comparison.data.behind_by,
+    };
+}
+
+export async function mergeForkUpstream(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    branch: string,
+): Promise<{ message: string; mergeType: string }> {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.request(
+        "POST /repos/{owner}/{repo}/merge-upstream",
+        {
+            owner,
+            repo,
+            branch,
+        },
+    );
+
+    return {
+        message: response.data.message ?? "",
+        mergeType: response.data.merge_type ?? "",
+    };
+}
+
 export interface FileLatestCommit {
     sha: string;
     message: string;

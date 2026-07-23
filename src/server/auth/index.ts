@@ -96,6 +96,7 @@ export const auth = betterAuth({
                 "read:project",
                 "read:org",
                 "read:discussion",
+                "workflow",
             ],
             redirectURI: `${env.BETTER_AUTH_URL}/api/auth/callback/github`,
             overrideUserInfoOnSignIn: true,

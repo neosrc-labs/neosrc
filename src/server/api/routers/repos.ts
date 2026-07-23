@@ -12,6 +12,7 @@ import {
     deleteRepoSubscription,
     getCachedRepoIssuePullCounts,
     getFileLatestCommits,
+    getForkComparison,
     getUserRepos as getGitHubUserRepos,
     getLatestRelease,
     getRepo,
@@ -27,6 +28,7 @@ import {
     getRepoRefCounts,
     getRepoSubscription,
     getRepoTags,
+    mergeForkUpstream,
     setRepoSubscription,
     starRepo,
     unstarRepo,
@@ -93,6 +95,7 @@ export const reposRouter = createTRPCRouter({
                 createdAt: data.created_at,
                 isFork: data.fork,
                 parentFullName: data.parent?.full_name ?? null,
+                parentDefaultBranch: data.parent?.default_branch ?? null,
             };
         }),
     getCountsByOwnerAndRepo: protectedProcedure
@@ -190,6 +193,50 @@ export const reposRouter = createTRPCRouter({
                 input.owner,
                 input.repo,
                 input.ref,
+            );
+        }),
+    getForkComparison: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                upstreamFullName: z.string(),
+                forkBranch: z.string(),
+                parentBranch: z.string(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            return getForkComparison(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.upstreamFullName,
+                input.forkBranch,
+                input.parentBranch,
+            );
+        }),
+    mergeUpstream: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                branch: z.string(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            return mergeForkUpstream(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.branch,
             );
         }),
     getFileLatestCommits: protectedProcedure

@@ -12,6 +12,7 @@ import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 import iconMapData from "~/utils/iconMap.json";
 import { ClonePopover } from "./clone-popover";
+import { ForkSyncRow } from "./fork-sync-row";
 import { RefSelector } from "./ref-selector";
 
 const iconMap: Record<string, string> = iconMapData as Record<string, string>;
@@ -20,12 +21,18 @@ interface RepoFileTableProps {
     owner: string;
     repo: string;
     defaultBranch: string;
+    isFork: boolean;
+    parentFullName: string | null;
+    parentDefaultBranch: string | null;
 }
 
 export function RepoFileTable({
     owner,
     repo,
     defaultBranch,
+    isFork,
+    parentFullName,
+    parentDefaultBranch,
 }: RepoFileTableProps) {
     const [selectedRef, setSelectedRef] = useState(defaultBranch);
     const [searchQuery, setSearchQuery] = useState("");
@@ -312,6 +319,15 @@ export function RepoFileTable({
                                         : "commits"}
                                 </a>
                             </div>
+                        )}
+                        {isFork && parentFullName && parentDefaultBranch && (
+                            <ForkSyncRow
+                                owner={owner}
+                                repo={repo}
+                                parentFullName={parentFullName}
+                                defaultBranch={defaultBranch}
+                                parentDefaultBranch={parentDefaultBranch}
+                            />
                         )}
                         <table className="w-full">
                             <tbody>
