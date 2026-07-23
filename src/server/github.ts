@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { graphql as octokitGraphql } from "@octokit/graphql";
 import { Octokit, type RestEndpointMethodTypes } from "@octokit/rest";
 import { notFound } from "next/navigation";
@@ -2589,6 +2590,17 @@ ${aliases.join("\n")}
 }`;
 }
 
+function fileCommitsCacheKey(
+    owner: string,
+    repo: string,
+    ref: string,
+    paths: string[],
+): string {
+    const sorted = [...paths].sort().join(",");
+    const hash = createHash("sha256").update(sorted).digest("hex").slice(0, 16);
+    return `file-commits:${owner}:${repo}:${ref}:${hash}`;
+}
+
 export async function getFileLatestCommits(
     accessToken: string,
     owner: string,
@@ -2598,6 +2610,23 @@ export async function getFileLatestCommits(
 ): Promise<Record<string, FileLatestCommit | null>> {
     if (paths.length === 0) return {};
 
+    return withStaleWhileRevalidate(
+        fileCommitsCacheKey(owner, repo, ref, paths),
+        () => fetchFileCommits(accessToken, owner, repo, ref, paths),
+        {
+            staleAfter: 24 * 60 * 60 * 1000,
+            deleteAfter: 7 * 24 * 60 * 60 * 1000,
+        },
+    );
+}
+
+async function fetchFileCommits(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    ref: string,
+    paths: string[],
+): Promise<Record<string, FileLatestCommit | null>> {
     const graphql = octokitGraphql.defaults({
         headers: { authorization: `bearer ${accessToken}` },
     });
