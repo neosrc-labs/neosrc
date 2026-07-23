@@ -54,7 +54,14 @@ export function ForkSyncRow({
             `${parentOwner}:${parentRepo}:${parentDefaultBranch}`,
         );
         return `https://github.com/${owner}/${repo}/compare/${forkRef}...${upstreamRef}`;
-    }, [parentOwner, parentRepo, parentDefaultBranch, owner, repo, defaultBranch]);
+    }, [
+        parentOwner,
+        parentRepo,
+        parentDefaultBranch,
+        owner,
+        repo,
+        defaultBranch,
+    ]);
 
     if (comparisonFetching || !comparison) {
         return (

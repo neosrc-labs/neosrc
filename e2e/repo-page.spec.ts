@@ -155,7 +155,9 @@ test.describe
                             name: "Contributors",
                         }),
                     ).toBeVisible();
-                    await expect(page.getByAltText(firstLogin).first()).toBeVisible();
+                    await expect(
+                        page.getByAltText(firstLogin).first(),
+                    ).toBeVisible();
                 });
             }
 
