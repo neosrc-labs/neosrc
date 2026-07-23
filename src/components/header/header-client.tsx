@@ -94,6 +94,7 @@ export function HeaderClient({
             promise={dataPromise}
             fallback={
                 <HeaderContent
+                    isLoading={true}
                     currentUser={cachedDataRef.current?.currentUser ?? null}
                     repoData={cachedDataRef.current?.repoData ?? null}
                     clientFetchedData={clientFetchedData}
@@ -106,6 +107,7 @@ export function HeaderClient({
                 cachedDataRef.current = { currentUser, repoData };
                 return (
                     <HeaderContent
+                        isLoading={false}
                         currentUser={currentUser}
                         repoData={repoData}
                         clientFetchedData={clientFetchedData}
@@ -119,12 +121,14 @@ export function HeaderClient({
 }
 
 function HeaderContent({
+    isLoading,
     currentUser,
     repoData: serverRepoData,
     clientFetchedData,
     initialOwner,
     initialRepo,
 }: {
+    isLoading: boolean;
     currentUser: { login: string; avatarUrl: string } | null;
     repoData: HeaderRepoData | null;
     clientFetchedData?: HeaderRepoData | null;
@@ -143,12 +147,10 @@ function HeaderContent({
     const provider = pathname.startsWith("/cb/") ? "cb" : "gh";
     const { isLeftOpen, isRightOpen, toggleLeft, toggleRight } = useSidebar();
 
-    const repoData =
+    const resolvedRepoData =
         owner === initialOwner && repo === initialRepo
             ? serverRepoData
             : clientFetchedData;
-
-    const resolvedRepoData = repoData;
 
     const headerRef = useRef<HTMLDivElement>(null);
     const leftToggleRef = useRef<HTMLButtonElement>(null);
@@ -196,7 +198,9 @@ function HeaderContent({
         return () => window.removeEventListener("scroll", updateTogglePosition);
     }, [prMatch]);
 
-    const showRepoNav = !!owner && !!repo && !!resolvedRepoData;
+    // Always show the repo nav when loading to minimize the layout shift on repo pages.
+    // We optimize for the happy path. 404 pages may have a bit of layout shift but oh well.
+    const showRepoNav = !!owner && !!repo && (isLoading || resolvedRepoData);
 
     const tabs = useMemo((): Tab[] => {
         if (!resolvedRepoData || !owner || !repo) return [];
