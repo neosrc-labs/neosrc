@@ -3,14 +3,23 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
 import {
+    deleteCache,
+    repoStarredCacheKey,
+    repoSubscriptionCacheKey,
+} from "~/server/cache";
+import {
     getCachedRepoHeaderData as getCachedCodebergRepoHeaderData,
     getCachedRepoCounts,
     getUserRepos as getCodebergUserRepos,
 } from "~/server/codeberg";
 import {
-    checkRepoStarred,
     deleteRepoSubscription,
+    getCachedRepoContributors,
+    getCachedRepoDocFileNames,
     getCachedRepoIssuePullCounts,
+    getCachedRepoLanguages,
+    getCachedRepoStarred,
+    getCachedRepoSubscription,
     getFileLatestCommits,
     getForkComparison,
     getUserRepos as getGitHubUserRepos,
@@ -18,15 +27,11 @@ import {
     getRepo,
     getRepoBranches,
     getRepoContents,
-    getRepoContributors,
     getRepoDeployments,
-    getRepoDocFileNames,
     getRepoDocFiles,
     getRepoFileTree,
-    getRepoLanguages,
     getRepoLatestCommit,
     getRepoRefCounts,
-    getRepoSubscription,
     getRepoTags,
     mergeForkUpstream,
     setRepoSubscription,
@@ -316,7 +321,7 @@ export const reposRouter = createTRPCRouter({
                 ctx.db,
                 ctx.session.user.id,
             );
-            return getRepoDocFileNames(
+            return getCachedRepoDocFileNames(
                 accessToken,
                 input.owner,
                 input.repo,
@@ -335,7 +340,7 @@ export const reposRouter = createTRPCRouter({
                 ctx.db,
                 ctx.session.user.id,
             );
-            return getRepoLanguages(accessToken, input.owner, input.repo);
+            return getCachedRepoLanguages(accessToken, input.owner, input.repo);
         }),
     getDocFiles: protectedProcedure
         .input(
@@ -369,7 +374,11 @@ export const reposRouter = createTRPCRouter({
                 ctx.db,
                 ctx.session.user.id,
             );
-            return getRepoContributors(accessToken, input.owner, input.repo);
+            return getCachedRepoContributors(
+                accessToken,
+                input.owner,
+                input.repo,
+            );
         }),
     getDeployments: protectedProcedure
         .input(
@@ -411,7 +420,12 @@ export const reposRouter = createTRPCRouter({
                 ctx.db,
                 ctx.session.user.id,
             );
-            return checkRepoStarred(accessToken, input.owner, input.repo);
+            return getCachedRepoStarred(
+                accessToken,
+                input.owner,
+                input.repo,
+                ctx.session.user.id,
+            );
         }),
     star: protectedProcedure
         .input(
@@ -426,6 +440,13 @@ export const reposRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
             await starRepo(accessToken, input.owner, input.repo);
+            await deleteCache(
+                repoStarredCacheKey(
+                    ctx.session.user.id,
+                    input.owner,
+                    input.repo,
+                ),
+            );
         }),
     unstar: protectedProcedure
         .input(
@@ -440,6 +461,13 @@ export const reposRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
             await unstarRepo(accessToken, input.owner, input.repo);
+            await deleteCache(
+                repoStarredCacheKey(
+                    ctx.session.user.id,
+                    input.owner,
+                    input.repo,
+                ),
+            );
         }),
     getSubscription: protectedProcedure
         .input(
@@ -453,7 +481,12 @@ export const reposRouter = createTRPCRouter({
                 ctx.db,
                 ctx.session.user.id,
             );
-            return getRepoSubscription(accessToken, input.owner, input.repo);
+            return getCachedRepoSubscription(
+                accessToken,
+                input.owner,
+                input.repo,
+                ctx.session.user.id,
+            );
         }),
     setSubscription: protectedProcedure
         .input(
@@ -476,6 +509,13 @@ export const reposRouter = createTRPCRouter({
                 input.subscribed,
                 input.ignored,
             );
+            await deleteCache(
+                repoSubscriptionCacheKey(
+                    ctx.session.user.id,
+                    input.owner,
+                    input.repo,
+                ),
+            );
         }),
     deleteSubscription: protectedProcedure
         .input(
@@ -490,6 +530,13 @@ export const reposRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
             await deleteRepoSubscription(accessToken, input.owner, input.repo);
+            await deleteCache(
+                repoSubscriptionCacheKey(
+                    ctx.session.user.id,
+                    input.owner,
+                    input.repo,
+                ),
+            );
         }),
     getAllMyRepos: protectedProcedure.query(async ({ ctx }) => {
         const results: {

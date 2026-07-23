@@ -107,6 +107,54 @@ export function prCacheKey(
     return `pr:${owner}:${repo}:${number}`;
 }
 
+export function repoHeaderDataCacheKey(
+    provider: "gh" | "cb",
+    owner: string,
+    repo: string,
+): string {
+    return `${provider}:repo-header:${owner}:${repo}`;
+}
+
+export function repoIssuePullCountsCacheKey(
+    provider: "gh" | "cb",
+    owner: string,
+    repo: string,
+): string {
+    return `${provider}:counts:${owner}:${repo}`;
+}
+
+export function repoLanguagesCacheKey(owner: string, repo: string): string {
+    return `gh:langs:${owner}:${repo}`;
+}
+
+export function repoContributorsCacheKey(owner: string, repo: string): string {
+    return `gh:contributors:${owner}:${repo}`;
+}
+
+export function repoDocFilesCacheKey(
+    owner: string,
+    repo: string,
+    ref?: string,
+): string {
+    return `gh:doc-files:${owner}:${repo}${ref ? `:${ref}` : ""}`;
+}
+
+export function repoStarredCacheKey(
+    userId: string,
+    owner: string,
+    repo: string,
+): string {
+    return `gh:starred:${userId}:${owner}:${repo}`;
+}
+
+export function repoSubscriptionCacheKey(
+    userId: string,
+    owner: string,
+    repo: string,
+): string {
+    return `gh:subscription:${userId}:${owner}:${repo}`;
+}
+
 export async function deleteCache(key: string): Promise<void> {
     try {
         await db.delete(cacheTable).where(eq(cacheTable.key, key));

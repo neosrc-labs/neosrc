@@ -4,6 +4,13 @@ import { cache } from "react";
 import {
     prCacheKey,
     readCache,
+    repoContributorsCacheKey,
+    repoDocFilesCacheKey,
+    repoHeaderDataCacheKey,
+    repoIssuePullCountsCacheKey,
+    repoLanguagesCacheKey,
+    repoStarredCacheKey,
+    repoSubscriptionCacheKey,
     withStaleWhileRevalidate,
 } from "~/server/cache";
 import type { GQLActor } from "~/server/github-graphql";
@@ -1164,7 +1171,7 @@ export async function getCachedRepoIssuePullCounts(
     repo: string,
 ): Promise<{ openIssuesCount: number; openPullRequestsCount: number }> {
     return withStaleWhileRevalidate(
-        `gh:counts:${owner}:${repo}`,
+        repoIssuePullCountsCacheKey("gh", owner, repo),
         () => getRepoIssuePullCounts(accessToken, owner, repo),
         { staleAfter: 3_000, deleteAfter: 24 * 60 * 60 * 1000 },
     );
@@ -1186,7 +1193,7 @@ export async function getCachedRepoHeaderData(
     repo: string,
 ): Promise<RepoHeaderInfo> {
     return withStaleWhileRevalidate(
-        `gh:repo-header:${owner}:${repo}`,
+        repoHeaderDataCacheKey("gh", owner, repo),
         async () => {
             const repoInfo = await getRepo(accessToken, owner, repo);
             return {
@@ -1200,6 +1207,69 @@ export async function getCachedRepoHeaderData(
             };
         },
         { staleAfter: 5 * 60 * 1000, deleteAfter: 24 * 60 * 60 * 1000 },
+    );
+}
+
+export async function getCachedRepoLanguages(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<Record<string, number>> {
+    return withStaleWhileRevalidate(
+        repoLanguagesCacheKey(owner, repo),
+        () => getRepoLanguages(accessToken, owner, repo),
+        { staleAfter: 5 * 60 * 1000, deleteAfter: 7 * 24 * 60 * 60 * 1000 },
+    );
+}
+
+export async function getCachedRepoContributors(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<RepoContributor[]> {
+    return withStaleWhileRevalidate(
+        repoContributorsCacheKey(owner, repo),
+        () => getRepoContributors(accessToken, owner, repo),
+        { staleAfter: 5 * 60 * 1000, deleteAfter: 7 * 24 * 60 * 60 * 1000 },
+    );
+}
+
+export async function getCachedRepoDocFileNames(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    ref?: string,
+): Promise<RepoDocFileName[]> {
+    return withStaleWhileRevalidate(
+        repoDocFilesCacheKey(owner, repo, ref),
+        () => getRepoDocFileNames(accessToken, owner, repo, ref),
+        { staleAfter: 5 * 60 * 1000, deleteAfter: 7 * 24 * 60 * 60 * 1000 },
+    );
+}
+
+export async function getCachedRepoStarred(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    userId: string,
+): Promise<boolean> {
+    return withStaleWhileRevalidate(
+        repoStarredCacheKey(userId, owner, repo),
+        () => checkRepoStarred(accessToken, owner, repo),
+        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    );
+}
+
+export async function getCachedRepoSubscription(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    userId: string,
+): Promise<RepoSubscription | null> {
+    return withStaleWhileRevalidate(
+        repoSubscriptionCacheKey(userId, owner, repo),
+        () => getRepoSubscription(accessToken, owner, repo),
+        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
     );
 }
 

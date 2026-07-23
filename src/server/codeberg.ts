@@ -1,5 +1,9 @@
 import { cache } from "react";
-import { withStaleWhileRevalidate } from "~/server/cache";
+import {
+    repoHeaderDataCacheKey,
+    repoIssuePullCountsCacheKey,
+    withStaleWhileRevalidate,
+} from "~/server/cache";
 
 const CODEBERG_API = "https://codeberg.org";
 
@@ -588,7 +592,7 @@ export async function getCachedRepoHeaderData(
     repo: string,
 ): Promise<CodebergRepoHeaderInfo> {
     return withStaleWhileRevalidate(
-        `cb:repo-header:${owner}:${repo}`,
+        repoHeaderDataCacheKey("cb", owner, repo),
         async () => {
             const repoInfo = await getRepo(accessToken, owner, repo);
             if (!repoInfo) throw new Error("Repo not found");
@@ -612,7 +616,7 @@ export async function getCachedRepoCounts(
     repo: string,
 ): Promise<{ openIssuesCount: number; openPullRequestsCount: number }> {
     return withStaleWhileRevalidate(
-        `cb:counts:${owner}:${repo}`,
+        repoIssuePullCountsCacheKey("cb", owner, repo),
         () => getRepoCounts(accessToken, owner, repo),
         { staleAfter: 3_000, deleteAfter: 24 * 60 * 60 * 1000 },
     );
