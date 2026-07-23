@@ -2119,6 +2119,23 @@ export async function getDocFileContent(
     return { content: text };
 }
 
+export async function getCachedDocFileContent(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    ref: string,
+    path: string,
+): Promise<{ content: string }> {
+    return withStaleWhileRevalidate(
+        `doc-file:${owner}:${repo}:${ref}:${path}`,
+        () => getDocFileContent(accessToken, owner, repo, ref, path),
+        {
+            staleAfter: 24 * 60 * 60 * 1000,
+            deleteAfter: 7 * 24 * 60 * 60 * 1000,
+        },
+    );
+}
+
 export async function getRepoDocFiles(
     accessToken: string,
     owner: string,
