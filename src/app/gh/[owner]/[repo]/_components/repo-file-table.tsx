@@ -504,6 +504,21 @@ function CommitRow({
             >
                 {latestCommit.message}
             </a>
+            {statusContexts.length > 0 ? (
+                <StatusChecksHoverCard
+                    items-center
+                    justify-between
+                    border-border
+                    border-b
+                    bg-surface-elevated
+                    px-4
+                    py-3
+                    contexts={statusContexts}
+                    className="size-3.5"
+                />
+            ) : checksFetching ? (
+                <div className="size-3.5 shrink-0" aria-hidden />
+            ) : null}
             <a
                 href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
                 className="ml-auto shrink-0 pt-px font-mono text-text-tertiary text-xs hover:text-blue-600 dark:hover:text-blue-400"
@@ -520,21 +535,6 @@ function CommitRow({
                     {formatRelativeTime(latestCommit.committedDate)}
                 </span>
             )}
-            {statusContexts.length > 0 ? (
-                <StatusChecksHoverCard
-                    items-center
-                    justify-between
-                    border-border
-                    border-b
-                    bg-surface-elevated
-                    px-4
-                    py-3
-                    contexts={statusContexts}
-                    className="size-3.5"
-                />
-            ) : checksFetching ? (
-                <div className="size-3.5 shrink-0" aria-hidden />
-            ) : null}
             <a
                 href={`https://github.com/${owner}/${repo}/commits/${selectedBranch}`}
                 className="inline-flex shrink-0 items-center gap-1 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
