@@ -121,7 +121,7 @@ export function RepoFileTable({
 
     return (
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
-            <div className="flex items-center justify-between border-border border-b bg-surface-elevated px-4 py-3">
+            <div className="flex items-center justify-between border-border border-b bg-surface-elevated px-4 py-3 min-h-16">
                 <div className="flex items-center gap-2">
                     <RefSelector
                         owner={owner}
@@ -235,12 +235,12 @@ export function RepoFileTable({
                     )
                 ) : contentsLoading ? (
                     <>
-                        <div className="flex items-center gap-3 border-border border-b px-4 py-3">
-                            <div className="h-4 w-4 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
-                            <div className="h-3 w-24 animate-pulse rounded bg-surface-secondary" />
-                            <div className="h-3 flex-1 animate-pulse rounded bg-surface-secondary" />
-                            <div className="ml-auto h-3 w-28 animate-pulse rounded bg-surface-secondary" />
-                            <div className="h-3 w-16 animate-pulse rounded bg-surface-secondary" />
+                        <div className="flex items-center gap-3 border-border border-b px-4 py-3 min-h-12">
+                            <div className="h-5 w-5 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
+                            <div className="h-4 w-24 animate-pulse rounded bg-surface-secondary" />
+                            <div className="h-5 flex-1 animate-pulse rounded bg-surface-secondary" />
+                            <div className="ml-auto h-4 w-28 animate-pulse rounded bg-surface-secondary" />
+                            <div className="h-4 w-16 animate-pulse rounded bg-surface-secondary" />
                         </div>
                         <div className="p-4">
                             <div className="space-y-2">
@@ -260,7 +260,7 @@ export function RepoFileTable({
                 ) : (
                     <>
                         {latestCommit && (
-                            <div className="flex items-center gap-3 border-border border-b px-4 py-3">
+                            <div className="flex items-center gap-3 border-border border-b px-4 py-3 min-h-12">
                                 <div className="[&_img]:h-5 [&_img]:w-5 [&_span]:text-sm">
                                     <UserLink
                                         actor={
@@ -370,7 +370,7 @@ export function RepoFileTable({
                                             </td>
                                             <td className="px-4 py-2">
                                                 {fileCommitsLoading ? (
-                                                    <div className="h-3 w-full animate-pulse rounded bg-surface-secondary" />
+                                                    <div className="h-5 w-full animate-pulse rounded bg-surface-secondary" />
                                                 ) : commit ? (
                                                     <div className="flex items-center gap-2">
                                                         <a
@@ -425,10 +425,10 @@ export function RepoFileTableSkeleton({
     repo,
 }: RepoFileTableSkeletonProps) {
     return (
-        <div className="rounded-xl border border-border bg-surface">
-            <div className="flex items-center justify-between border-border border-b bg-surface-elevated px-4 py-3">
+        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+            <div className="flex items-center justify-between border-border border-b bg-surface-elevated px-4 py-3 min-h-16">
                 <div className="flex items-center gap-2">
-                    <div className="h-8 w-28 animate-pulse rounded-lg border border-border bg-surface-secondary" />
+                    <div className="h-[34px] w-28 animate-pulse rounded-lg border border-border bg-surface-secondary" />
                     <span className="inline-flex items-center gap-1">
                         <div className="h-5 w-14 animate-pulse rounded bg-surface-secondary" />
                         <div className="h-5 w-10 animate-pulse rounded bg-surface-secondary" />
@@ -447,12 +447,12 @@ export function RepoFileTableSkeleton({
                     <ClonePopover owner={owner} repo={repo} />
                 </div>
             </div>
-            <div className="flex items-center gap-3 border-border border-b px-4 py-3">
-                <div className="h-4 w-4 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
-                <div className="h-3 w-24 animate-pulse rounded bg-surface-secondary" />
-                <div className="h-3 flex-1 animate-pulse rounded bg-surface-secondary" />
-                <div className="ml-auto h-3 w-28 animate-pulse rounded bg-surface-secondary" />
-                <div className="h-3 w-16 animate-pulse rounded bg-surface-secondary" />
+            <div className="flex items-center gap-3 border-border border-b px-4 py-3 min-h-12">
+                <div className="h-5 w-5 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
+                <div className="h-4 w-24 animate-pulse rounded bg-surface-secondary" />
+                <div className="h-5 flex-1 animate-pulse rounded bg-surface-secondary" />
+                <div className="ml-auto h-4 w-28 animate-pulse rounded bg-surface-secondary" />
+                <div className="h-4 w-16 animate-pulse rounded bg-surface-secondary" />
             </div>
             <div className="p-4">
                 <div className="space-y-2">
