@@ -8,7 +8,12 @@ import {
     StatusChecksHoverCard,
 } from "~/components/ci-status";
 import { UserLink } from "~/components/user-link";
-import type { CodeSearchResultItem, RepoLatestCommit } from "~/server/github";
+import type {
+    CodeSearchResultItem,
+    FileLatestCommit,
+    RepoContentItem,
+    RepoLatestCommit,
+} from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 import iconMapData from "~/utils/iconMap.json";
@@ -151,80 +156,105 @@ export function RepoFileTable({
                                 parentDefaultBranch={parentDefaultBranch}
                             />
                         )}
-                        <table className="w-full">
-                            <tbody>
-                                {sortedContents.map((item) => {
-                                    const isDir = item.type === "dir";
-                                    const href = isDir
-                                        ? `https://github.com/${owner}/${repo}/tree/${selectedBranchRef}/${item.path.split("/").map(encodeURIComponent).join("/")}`
-                                        : `https://github.com/${owner}/${repo}/blob/${selectedBranchRef}/${item.path.split("/").map(encodeURIComponent).join("/")}`;
-                                    const iconName = isDir
-                                        ? "folder"
-                                        : getFileIconName(item.name);
-
-                                    const commit =
-                                        fileCommits?.[item.path] ?? null;
-
-                                    return (
-                                        <tr
-                                            key={item.path}
-                                            className="h-9 transition-colors hover:bg-surface-secondary"
-                                        >
-                                            <td className="px-4 py-2">
-                                                <a
-                                                    href={href}
-                                                    className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
-                                                >
-                                                    <img
-                                                        alt=""
-                                                        className="h-4 w-4 shrink-0"
-                                                        src={`/material-icons/${iconName}.svg`}
-                                                        onError={(e) => {
-                                                            (
-                                                                e.target as HTMLImageElement
-                                                            ).src = isDir
-                                                                ? "/material-icons/folder.svg"
-                                                                : "/material-icons/file.svg";
-                                                        }}
-                                                    />
-                                                    <span>{item.name}</span>
-                                                </a>
-                                            </td>
-                                            <td className="px-4 py-2">
-                                                {fileCommitsLoading ? (
-                                                    <div className="h-5 w-full animate-pulse rounded bg-surface-secondary" />
-                                                ) : commit ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <a
-                                                            href={`https://github.com/${owner}/${repo}/commit/${commit.sha}`}
-                                                            className="min-w-0 flex-1 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-                                                        >
-                                                            {commit.message}
-                                                        </a>
-                                                        {commit.committedDate && (
-                                                            <span
-                                                                className="shrink-0 text-sm text-text-tertiary"
-                                                                title={new Date(
-                                                                    commit.committedDate,
-                                                                ).toLocaleString()}
-                                                            >
-                                                                {formatRelativeTime(
-                                                                    commit.committedDate,
-                                                                )}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                ) : null}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                        <FileTable
+                            owner={owner}
+                            repo={repo}
+                            selectedBranch={selectedBranchRef}
+                            sortedContents={sortedContents}
+                            fileCommits={fileCommits}
+                            fileCommitsLoading={fileCommitsLoading}
+                        />
                     </>
                 )}
             </div>
         </div>
+    );
+}
+
+function FileTable({
+    owner,
+    repo,
+    selectedBranch,
+    sortedContents,
+    fileCommits,
+    fileCommitsLoading,
+}: {
+    owner: string;
+    repo: string;
+    selectedBranch: string;
+    sortedContents: RepoContentItem[];
+    fileCommits: Record<string, FileLatestCommit | null> | undefined;
+    fileCommitsLoading: boolean;
+}) {
+    return (
+        <table className="w-full">
+            <tbody>
+                {sortedContents.map((item) => {
+                    const isDir = item.type === "dir";
+                    const href = isDir
+                        ? `https://github.com/${owner}/${repo}/tree/${selectedBranch}/${item.path.split("/").map(encodeURIComponent).join("/")}`
+                        : `https://github.com/${owner}/${repo}/blob/${selectedBranch}/${item.path.split("/").map(encodeURIComponent).join("/")}`;
+                    const iconName = isDir
+                        ? "folder"
+                        : getFileIconName(item.name);
+
+                    const commit = fileCommits?.[item.path] ?? null;
+
+                    return (
+                        <tr
+                            key={item.path}
+                            className="h-9 transition-colors hover:bg-surface-secondary"
+                        >
+                            <td className="px-4 py-2">
+                                <a
+                                    href={href}
+                                    className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+                                >
+                                    <img
+                                        alt=""
+                                        className="h-4 w-4 shrink-0"
+                                        src={`/material-icons/${iconName}.svg`}
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src =
+                                                isDir
+                                                    ? "/material-icons/folder.svg"
+                                                    : "/material-icons/file.svg";
+                                        }}
+                                    />
+                                    <span>{item.name}</span>
+                                </a>
+                            </td>
+                            <td className="px-4 py-2">
+                                {fileCommitsLoading ? (
+                                    <div className="h-5 w-full animate-pulse rounded bg-surface-secondary" />
+                                ) : commit ? (
+                                    <div className="flex items-center gap-2">
+                                        <a
+                                            href={`https://github.com/${owner}/${repo}/commit/${commit.sha}`}
+                                            className="min-w-0 flex-1 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
+                                        >
+                                            {commit.message}
+                                        </a>
+                                        {commit.committedDate && (
+                                            <span
+                                                className="shrink-0 text-sm text-text-tertiary"
+                                                title={new Date(
+                                                    commit.committedDate,
+                                                ).toLocaleString()}
+                                            >
+                                                {formatRelativeTime(
+                                                    commit.committedDate,
+                                                )}
+                                            </span>
+                                        )}
+                                    </div>
+                                ) : null}
+                            </td>
+                        </tr>
+                    );
+                })}
+            </tbody>
+        </table>
     );
 }
 
@@ -298,29 +328,41 @@ export function RepoFileTableSkeleton({
 }: RepoFileTableSkeletonProps) {
     return (
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
-            <div className="flex min-h-16 items-center justify-between border-border border-b bg-surface-elevated px-4 py-3">
-                <div className="flex items-center gap-2">
-                    <div className="h-[34px] w-28 animate-pulse rounded-lg border border-border bg-surface-secondary" />
-                    <span className="inline-flex items-center gap-1">
-                        <div className="h-5 w-14 animate-pulse rounded bg-surface-secondary" />
-                        <div className="h-5 w-10 animate-pulse rounded bg-surface-secondary" />
-                    </span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
-                        <input
-                            type="text"
-                            disabled
-                            placeholder="Search files..."
-                            className="h-8 w-48 rounded-md border border-border bg-transparent py-1 pr-7 pl-8 text-sm text-text-primary placeholder-text-tertiary"
-                        />
-                    </div>
-                    <ClonePopover owner={owner} repo={repo} />
-                </div>
-            </div>
+            <FileTableHeaderSkeleton owner={owner} repo={repo} />
             <CommitRowSkeleton />
             <TableSkeleton />
+        </div>
+    );
+}
+
+function FileTableHeaderSkeleton({
+    owner,
+    repo,
+}: {
+    owner: string;
+    repo: string;
+}) {
+    return (
+        <div className="flex min-h-16 items-center justify-between border-border border-b bg-surface-elevated px-4 py-3">
+            <div className="flex items-center gap-2">
+                <div className="h-8.5 w-28 animate-pulse rounded-lg border border-border bg-surface-secondary" />
+                <span className="inline-flex items-center gap-1">
+                    <div className="h-5 w-14 animate-pulse rounded bg-surface-secondary" />
+                    <div className="h-5 w-10 animate-pulse rounded bg-surface-secondary" />
+                </span>
+            </div>
+            <div className="flex items-center gap-2">
+                <div className="relative">
+                    <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
+                    <input
+                        type="text"
+                        disabled
+                        placeholder="Search files..."
+                        className="h-8 w-48 rounded-md border border-border bg-transparent py-1 pr-7 pl-8 text-sm text-text-primary placeholder-text-tertiary"
+                    />
+                </div>
+                <ClonePopover owner={owner} repo={repo} />
+            </div>
         </div>
     );
 }
