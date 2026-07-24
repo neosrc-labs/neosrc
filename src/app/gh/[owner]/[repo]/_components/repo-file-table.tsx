@@ -8,6 +8,7 @@ import {
     StatusChecksHoverCard,
 } from "~/components/ci-status";
 import { UserLink } from "~/components/user-link";
+import type { CodeSearchResultItem, RepoLatestCommit } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 import iconMapData from "~/utils/iconMap.json";
@@ -34,42 +35,25 @@ export function RepoFileTable({
     parentFullName,
     parentDefaultBranch,
 }: RepoFileTableProps) {
-    const [selectedRef, setSelectedRef] = useState(defaultBranch);
+    const [selectedBranchRef, setSelectedBranchRef] = useState(defaultBranch);
     const [searchQuery, setSearchQuery] = useState("");
     const [hasRequestedTree, setHasRequestedTree] = useState(false);
-    const searchInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        setSelectedRef(defaultBranch);
+        setSelectedBranchRef(defaultBranch);
     }, [defaultBranch]);
-
-    const { data: refCounts } = api.repos.getRefCounts.useQuery({
-        owner,
-        repo,
-    });
 
     const { data: latestCommit } = api.repos.getLatestCommit.useQuery({
         owner,
         repo,
-        ref: selectedRef,
+        ref: selectedBranchRef,
     });
-
-    const { data: checks, isFetching: checksFetching } =
-        api.checks.list.useQuery(
-            { owner, repo, sha: latestCommit?.sha ?? "" },
-            { enabled: !!latestCommit?.sha },
-        );
-
-    const statusContexts = useMemo(
-        () => (checks ? mapChecksListToStatusContexts(checks) : []),
-        [checks],
-    );
 
     const { data: contents, isLoading: contentsLoading } =
         api.repos.getContents.useQuery({
             owner,
             repo,
-            ref: selectedRef,
+            ref: selectedBranchRef,
         });
 
     const sortedContents = useMemo(() => {
@@ -91,7 +75,7 @@ export function RepoFileTable({
             {
                 owner,
                 repo,
-                ref: selectedRef,
+                ref: selectedBranchRef,
                 paths,
             },
             { enabled: paths.length > 0 },
@@ -103,7 +87,7 @@ export function RepoFileTable({
         {
             owner,
             repo,
-            ref: selectedRef,
+            ref: selectedBranchRef,
         },
         { enabled: hasRequestedTree },
     );
@@ -121,68 +105,15 @@ export function RepoFileTable({
 
     return (
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
-            <div className="flex items-center justify-between border-border border-b bg-surface-elevated px-4 py-3 min-h-16">
-                <div className="flex items-center gap-2">
-                    <RefSelector
-                        owner={owner}
-                        repo={repo}
-                        selectedRef={selectedRef}
-                        onSelect={setSelectedRef}
-                    />
-                    {refCounts && (
-                        <span className="inline-flex items-center gap-1 text-sm text-text-tertiary">
-                            <a
-                                href={`https://github.com/${owner}/${repo}/branches`}
-                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-surface-secondary"
-                            >
-                                <GitBranchIcon className="h-3 w-3" />
-                                <span className="font-semibold text-text-primary">
-                                    {refCounts.branchCount}
-                                </span>{" "}
-                                {refCounts.branchCount === 1
-                                    ? "branch"
-                                    : "branches"}
-                            </a>
-                            <a
-                                href={`https://github.com/${owner}/${repo}/tags`}
-                                className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-surface-secondary"
-                            >
-                                <TagIcon className="h-3 w-3" />
-                                <span className="font-semibold text-text-primary">
-                                    {refCounts.tagCount}
-                                </span>{" "}
-                                {refCounts.tagCount === 1 ? "tag" : "tags"}
-                            </a>
-                        </span>
-                    )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
-                        <input
-                            ref={searchInputRef}
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onFocus={() => setHasRequestedTree(true)}
-                            placeholder="Search files..."
-                            className="h-8 w-48 rounded-md border border-border bg-transparent py-1 pr-7 pl-8 text-sm text-text-primary placeholder-text-tertiary focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                        />
-                        {searchQuery && (
-                            <button
-                                type="button"
-                                onClick={() => setSearchQuery("")}
-                                className="absolute top-1/2 right-1.5 -translate-y-1/2 cursor-pointer rounded p-0.5 text-text-tertiary hover:text-text-primary"
-                            >
-                                <X className="h-3.5 w-3.5" />
-                            </button>
-                        )}
-                    </div>
-                    <ClonePopover owner={owner} repo={repo} />
-                </div>
-            </div>
-
+            <FileTableHeader
+                owner={owner}
+                repo={repo}
+                selectedBranch={selectedBranchRef}
+                setSelectedBranch={setSelectedBranchRef}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                setHasRequestedTree={setHasRequestedTree}
+            />
             <div>
                 {isSearchActive ? (
                     !searchResults?.length ? (
@@ -190,68 +121,12 @@ export function RepoFileTable({
                             No files matching &quot;{searchQuery}&quot;
                         </div>
                     ) : (
-                        <table className="w-full">
-                            <tbody>
-                                {searchResults.map((item) => {
-                                    const isDir = item.type === "tree";
-                                    const iconName = isDir
-                                        ? "folder"
-                                        : getFileIconName(item.name);
-                                    return (
-                                        <tr
-                                            key={item.path}
-                                            className="transition-colors hover:bg-surface-secondary"
-                                        >
-                                            <td className="px-4 py-2">
-                                                <a
-                                                    href={item.htmlUrl}
-                                                    className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
-                                                >
-                                                    <img
-                                                        alt=""
-                                                        className="h-4 w-4 shrink-0"
-                                                        src={`/material-icons/${iconName}.svg`}
-                                                        onError={(e) => {
-                                                            (
-                                                                e.target as HTMLImageElement
-                                                            ).src = isDir
-                                                                ? "/material-icons/folder.svg"
-                                                                : "/material-icons/file.svg";
-                                                        }}
-                                                    />
-                                                    <div className="flex flex-col">
-                                                        <span>{item.name}</span>
-                                                        <span className="text-text-tertiary text-xs">
-                                                            {item.path}
-                                                        </span>
-                                                    </div>
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                        <SearchResultsTable searchResults={searchResults} />
                     )
                 ) : contentsLoading ? (
                     <>
-                        <div className="flex items-center gap-3 border-border border-b px-4 py-3 min-h-12">
-                            <div className="h-5 w-5 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
-                            <div className="h-4 w-24 animate-pulse rounded bg-surface-secondary" />
-                            <div className="h-5 flex-1 animate-pulse rounded bg-surface-secondary" />
-                            <div className="ml-auto h-4 w-28 animate-pulse rounded bg-surface-secondary" />
-                            <div className="h-4 w-16 animate-pulse rounded bg-surface-secondary" />
-                        </div>
-                        <div className="p-4">
-                            <div className="space-y-2">
-                                {["f1", "f2", "f3", "f4", "f5"].map((key) => (
-                                    <div
-                                        key={key}
-                                        className="h-9 animate-pulse rounded bg-surface-secondary"
-                                    />
-                                ))}
-                            </div>
-                        </div>
+                        <CommitRowSkeleton />
+                        <TableSkeleton />
                     </>
                 ) : sortedContents.length === 0 ? (
                     <div className="p-8 text-center text-sm text-text-tertiary">
@@ -260,65 +135,12 @@ export function RepoFileTable({
                 ) : (
                     <>
                         {latestCommit && (
-                            <div className="flex items-center gap-3 border-border border-b px-4 py-3 min-h-12">
-                                <div className="[&_img]:h-5 [&_img]:w-5 [&_span]:text-sm">
-                                    <UserLink
-                                        actor={
-                                            latestCommit.author
-                                                ? {
-                                                      ...latestCommit.author,
-                                                      url: `https://github.com/${latestCommit.author.login}`,
-                                                  }
-                                                : null
-                                        }
-                                    />
-                                </div>
-                                <a
-                                    href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
-                                    className="min-w-0 flex-1 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-                                >
-                                    {latestCommit.message}
-                                </a>
-                                <a
-                                    href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
-                                    className="ml-auto shrink-0 pt-px font-mono text-text-tertiary text-xs hover:text-blue-600 dark:hover:text-blue-400"
-                                >
-                                    {latestCommit.sha.slice(0, 7)}
-                                </a>
-                                {latestCommit.committedDate && (
-                                    <span
-                                        className="shrink-0 text-text-tertiary text-xs"
-                                        title={new Date(
-                                            latestCommit.committedDate,
-                                        ).toLocaleString()}
-                                    >
-                                        {formatRelativeTime(
-                                            latestCommit.committedDate,
-                                        )}
-                                    </span>
-                                )}
-                                {statusContexts.length > 0 ? (
-                                    <StatusChecksHoverCard
-                                        contexts={statusContexts}
-                                        className="size-3.5"
-                                    />
-                                ) : checksFetching ? (
-                                    <div
-                                        className="size-3.5 shrink-0"
-                                        aria-hidden
-                                    />
-                                ) : null}
-                                <a
-                                    href={`https://github.com/${owner}/${repo}/commits/${selectedRef}`}
-                                    className="inline-flex shrink-0 items-center gap-1 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
-                                >
-                                    <HistoryIcon className="h-3.5 w-3.5" />
-                                    {latestCommit.commitCount.toLocaleString()}{" "}
-                                    {latestCommit.commitCount === 1
-                                        ? "commit"
-                                        : "commits"}
-                                </a>
-                            </div>
+                            <CommitRow
+                                owner={owner}
+                                repo={repo}
+                                latestCommit={latestCommit}
+                                selectedBranch={selectedBranchRef}
+                            />
                         )}
                         {isFork && parentFullName && parentDefaultBranch && (
                             <ForkSyncRow
@@ -334,8 +156,8 @@ export function RepoFileTable({
                                 {sortedContents.map((item) => {
                                     const isDir = item.type === "dir";
                                     const href = isDir
-                                        ? `https://github.com/${owner}/${repo}/tree/${selectedRef}/${item.path.split("/").map(encodeURIComponent).join("/")}`
-                                        : `https://github.com/${owner}/${repo}/blob/${selectedRef}/${item.path.split("/").map(encodeURIComponent).join("/")}`;
+                                        ? `https://github.com/${owner}/${repo}/tree/${selectedBranchRef}/${item.path.split("/").map(encodeURIComponent).join("/")}`
+                                        : `https://github.com/${owner}/${repo}/blob/${selectedBranchRef}/${item.path.split("/").map(encodeURIComponent).join("/")}`;
                                     const iconName = isDir
                                         ? "folder"
                                         : getFileIconName(item.name);
@@ -346,7 +168,7 @@ export function RepoFileTable({
                                     return (
                                         <tr
                                             key={item.path}
-                                            className="transition-colors hover:bg-surface-secondary"
+                                            className="h-9 transition-colors hover:bg-surface-secondary"
                                         >
                                             <td className="px-4 py-2">
                                                 <a
@@ -406,6 +228,56 @@ export function RepoFileTable({
     );
 }
 
+function SearchResultsTable({
+    searchResults,
+}: {
+    searchResults: CodeSearchResultItem[];
+}) {
+    return (
+        <table className="w-full">
+            <tbody>
+                {searchResults.map((item) => {
+                    const isDir = item.type === "tree";
+                    const iconName = isDir
+                        ? "folder"
+                        : getFileIconName(item.name);
+                    return (
+                        <tr
+                            key={item.path}
+                            className="transition-colors hover:bg-surface-secondary"
+                        >
+                            <td className="px-4 py-2">
+                                <a
+                                    href={item.htmlUrl}
+                                    className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+                                >
+                                    <img
+                                        alt=""
+                                        className="h-4 w-4 shrink-0"
+                                        src={`/material-icons/${iconName}.svg`}
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src =
+                                                isDir
+                                                    ? "/material-icons/folder.svg"
+                                                    : "/material-icons/file.svg";
+                                        }}
+                                    />
+                                    <div className="flex flex-col">
+                                        <span>{item.name}</span>
+                                        <span className="text-text-tertiary text-xs">
+                                            {item.path}
+                                        </span>
+                                    </div>
+                                </a>
+                            </td>
+                        </tr>
+                    );
+                })}
+            </tbody>
+        </table>
+    );
+}
+
 function getFileIconName(filename: string): string {
     const parts = filename.split(".");
     if (parts.length > 1) {
@@ -426,7 +298,7 @@ export function RepoFileTableSkeleton({
 }: RepoFileTableSkeletonProps) {
     return (
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
-            <div className="flex items-center justify-between border-border border-b bg-surface-elevated px-4 py-3 min-h-16">
+            <div className="flex min-h-16 items-center justify-between border-border border-b bg-surface-elevated px-4 py-3">
                 <div className="flex items-center gap-2">
                     <div className="h-[34px] w-28 animate-pulse rounded-lg border border-border bg-surface-secondary" />
                     <span className="inline-flex items-center gap-1">
@@ -447,23 +319,231 @@ export function RepoFileTableSkeleton({
                     <ClonePopover owner={owner} repo={repo} />
                 </div>
             </div>
-            <div className="flex items-center gap-3 border-border border-b px-4 py-3 min-h-12">
-                <div className="h-5 w-5 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
-                <div className="h-4 w-24 animate-pulse rounded bg-surface-secondary" />
-                <div className="h-5 flex-1 animate-pulse rounded bg-surface-secondary" />
-                <div className="ml-auto h-4 w-28 animate-pulse rounded bg-surface-secondary" />
-                <div className="h-4 w-16 animate-pulse rounded bg-surface-secondary" />
+            <CommitRowSkeleton />
+            <TableSkeleton />
+        </div>
+    );
+}
+
+function FileTableHeader({
+    owner,
+    repo,
+    selectedBranch,
+    setSelectedBranch,
+    searchQuery,
+    setSearchQuery,
+    setHasRequestedTree,
+}: {
+    owner: string;
+    repo: string;
+    selectedBranch: string;
+    setSelectedBranch: (b: string) => void;
+    searchQuery: string;
+    setSearchQuery: (b: string) => void;
+    setHasRequestedTree: (o: boolean) => void;
+}) {
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    const { data: refCounts } = api.repos.getRefCounts.useQuery({
+        owner,
+        repo,
+    });
+
+    return (
+        <div className="flex min-h-16 items-center justify-between border-border border-b bg-surface-elevated px-4 py-3">
+            <div className="flex items-center gap-2">
+                <RefSelector
+                    owner={owner}
+                    repo={repo}
+                    selectedRef={selectedBranch}
+                    onSelect={setSelectedBranch}
+                />
+                {refCounts && (
+                    <span className="inline-flex items-center gap-1 text-sm text-text-tertiary">
+                        <a
+                            href={`https://github.com/${owner}/${repo}/branches`}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-surface-secondary"
+                        >
+                            <GitBranchIcon className="h-3 w-3" />
+                            <span className="font-semibold text-text-primary">
+                                {refCounts.branchCount}
+                            </span>{" "}
+                            {refCounts.branchCount === 1
+                                ? "branch"
+                                : "branches"}
+                        </a>
+                        <a
+                            href={`https://github.com/${owner}/${repo}/tags`}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-surface-secondary"
+                        >
+                            <TagIcon className="h-3 w-3" />
+                            <span className="font-semibold text-text-primary">
+                                {refCounts.tagCount}
+                            </span>{" "}
+                            {refCounts.tagCount === 1 ? "tag" : "tags"}
+                        </a>
+                    </span>
+                )}
             </div>
-            <div className="p-4">
-                <div className="space-y-2">
-                    {["f1", "f2", "f3", "f4", "f5"].map((key) => (
-                        <div
-                            key={key}
-                            className="h-9 animate-pulse rounded bg-surface-secondary"
-                        />
-                    ))}
+
+            <div className="flex items-center gap-2">
+                <div className="relative">
+                    <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
+                    <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onFocus={() => setHasRequestedTree(true)}
+                        placeholder="Search files..."
+                        className="h-8 w-48 rounded-md border border-border bg-transparent py-1 pr-7 pl-8 text-sm text-text-primary placeholder-text-tertiary focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                    />
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            onClick={() => setSearchQuery("")}
+                            className="absolute top-1/2 right-1.5 -translate-y-1/2 cursor-pointer rounded p-0.5 text-text-tertiary hover:text-text-primary"
+                        >
+                            <X className="h-3.5 w-3.5" />
+                        </button>
+                    )}
                 </div>
+                <ClonePopover owner={owner} repo={repo} />
             </div>
         </div>
+    );
+}
+
+function CommitRow({
+    owner,
+    repo,
+    latestCommit,
+    selectedBranch,
+}: {
+    owner: string;
+    repo: string;
+    latestCommit: RepoLatestCommit;
+    selectedBranch: string;
+}) {
+    const { data: checks, isFetching: checksFetching } =
+        api.checks.list.useQuery(
+            { owner, repo, sha: latestCommit?.sha ?? "" },
+            { enabled: !!latestCommit?.sha },
+        );
+
+    const statusContexts = useMemo(
+        () => (checks ? mapChecksListToStatusContexts(checks) : []),
+        [checks],
+    );
+    return (
+        <div className="flex min-h-12 items-center gap-3 border-border border-b px-4 py-3">
+            <div className="[&_img]:h-5 [&_img]:w-5 [&_span]:text-sm">
+                <UserLink
+                    actor={
+                        latestCommit.author
+                            ? {
+                                  ...latestCommit.author,
+                                  url: `https://github.com/${latestCommit.author.login}`,
+                              }
+                            : null
+                    }
+                />
+            </div>
+            <a
+                href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
+                className="min-w-0 flex-1 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
+            >
+                {latestCommit.message}
+            </a>
+            <a
+                href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
+                className="ml-auto shrink-0 pt-px font-mono text-text-tertiary text-xs hover:text-blue-600 dark:hover:text-blue-400"
+            >
+                {latestCommit.sha.slice(0, 7)}
+            </a>
+            {latestCommit.committedDate && (
+                <span
+                    className="shrink-0 text-text-tertiary text-xs"
+                    title={new Date(
+                        latestCommit.committedDate,
+                    ).toLocaleString()}
+                >
+                    {formatRelativeTime(latestCommit.committedDate)}
+                </span>
+            )}
+            {statusContexts.length > 0 ? (
+                <StatusChecksHoverCard
+                    items-center
+                    justify-between
+                    border-border
+                    border-b
+                    bg-surface-elevated
+                    px-4
+                    py-3
+                    contexts={statusContexts}
+                    className="size-3.5"
+                />
+            ) : checksFetching ? (
+                <div className="size-3.5 shrink-0" aria-hidden />
+            ) : null}
+            <a
+                href={`https://github.com/${owner}/${repo}/commits/${selectedBranch}`}
+                className="inline-flex shrink-0 items-center gap-1 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+            >
+                <HistoryIcon className="h-3.5 w-3.5" />
+                {latestCommit.commitCount.toLocaleString()}{" "}
+                {latestCommit.commitCount === 1 ? "commit" : "commits"}
+            </a>
+        </div>
+    );
+}
+
+function CommitRowSkeleton() {
+    return (
+        <div className="flex min-h-12 items-center gap-3 border-border border-b px-4 py-3">
+            <div className="h-5 w-5 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
+            <div className="h-4 w-24 animate-pulse rounded bg-surface-secondary" />
+            <div className="h-5 flex-1 animate-pulse rounded bg-surface-secondary" />
+            <div className="ml-auto h-4 w-28 animate-pulse rounded bg-surface-secondary" />
+            <div className="h-4 w-16 animate-pulse rounded bg-surface-secondary" />
+        </div>
+    );
+}
+
+function TableSkeleton() {
+    return (
+        <table className="w-full">
+            <tbody>
+                {[
+                    "r1",
+                    "r2",
+                    "r3",
+                    "r4",
+                    "r5",
+                    "r6",
+                    "r7",
+                    "r8",
+                    "r9",
+                    "r10",
+                    "r11",
+                    "r12",
+                ].map((key) => (
+                    <tr key={key} className="h-9">
+                        <td className="px-4 py-2">
+                            <div className="flex items-center gap-2">
+                                <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-surface-secondary" />
+                                <div className="h-5 w-40 animate-pulse rounded bg-surface-secondary" />
+                            </div>
+                        </td>
+                        <td className="px-4 py-2">
+                            <div className="flex items-center gap-2">
+                                <div className="h-5 flex-1 animate-pulse rounded bg-surface-secondary" />
+                                <div className="h-5 w-20 shrink-0 animate-pulse rounded bg-surface-secondary" />
+                            </div>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
     );
 }
