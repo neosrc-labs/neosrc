@@ -210,12 +210,12 @@ function FileTable({
                     return (
                         <tr
                             key={item.path}
-                            className="h-9 transition-colors hover:bg-surface-secondary"
+                            className="h-10 transition-colors hover:bg-surface-secondary"
                         >
                             <td className="px-4 py-2">
                                 <a
                                     href={href}
-                                    className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+                                    className="flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                                 >
                                     <img
                                         alt=""
@@ -577,7 +577,7 @@ function TableSkeleton() {
                     "r11",
                     "r12",
                 ].map((key) => (
-                    <tr key={key} className="h-9">
+                    <tr key={key} className="h-10">
                         <td className="px-4 py-2">
                             <div className="flex items-center gap-2">
                                 <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-surface-secondary" />
