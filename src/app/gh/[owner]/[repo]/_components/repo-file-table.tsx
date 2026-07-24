@@ -552,7 +552,7 @@ function CommitRowSkeleton() {
         <div className="flex min-h-12 items-center gap-3 border-border border-b px-4 py-3">
             <div className="h-5 w-24 animate-pulse rounded bg-surface-secondary" />
             <div className="h-5 w-84 animate-pulse rounded bg-surface-secondary" />
-            <div className="flex-1 " />
+            <div className="flex-1" />
             <div className="ml-auto h-5 w-32 animate-pulse rounded bg-surface-secondary" />
             <div className="h-5 w-28 animate-pulse rounded bg-surface-secondary" />
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
@@ -100,12 +101,6 @@ export function RepoDocFiles({
         }
 
         if (target) setActiveTab(target.name);
-
-        const hash = window.location.hash.slice(1);
-        const el = hash
-            ? document.getElementById(hash)
-            : document.getElementById("doc-files");
-        if (el) el.scrollIntoView();
     }, [fileNames, searchParams]);
 
     useEffect(() => {
@@ -123,16 +118,7 @@ export function RepoDocFiles({
     );
 
     if (fileNames.length === 0) {
-        return (
-            <div
-                id="doc-files"
-                className="mt-6 rounded-xl border border-border bg-surface"
-            >
-                <div className="px-6 py-8 text-center text-sm text-text-tertiary">
-                    No documentation found.
-                </div>
-            </div>
-        );
+        return <EmptyReadmeSection />;
     }
 
     const currentContent = activeFile
@@ -145,7 +131,7 @@ export function RepoDocFiles({
             className="mt-6 rounded-xl border border-border bg-surface"
         >
             <div className="border-border border-b">
-                <div className="flex items-center px-2 py-1">
+                <div className="flex h-9 items-center px-2 py-1">
                     {fileNames.map((file) => (
                         <button
                             key={file.name}
@@ -162,28 +148,68 @@ export function RepoDocFiles({
                     ))}
                 </div>
             </div>
-            <div ref={contentRef} className="p-6">
+            <div ref={contentRef}>
                 {loadingPath !== null ? (
-                    <div className="space-y-2">
-                        <div className="h-3 w-full animate-pulse rounded bg-surface-secondary" />
-                        <div className="h-3 w-3/4 animate-pulse rounded bg-surface-secondary" />
-                        <div className="h-3 w-1/2 animate-pulse rounded bg-surface-secondary" />
-                    </div>
+                    <DocContentSkeleton />
                 ) : currentContent != null ? (
-                    activeFile?.name.endsWith(".md") ? (
-                        <MarkdownRenderer
-                            content={currentContent}
-                            owner={owner}
-                            repo={repo}
-                            canToggleTasks={false}
-                            linkableHeadings
-                        />
-                    ) : (
-                        <pre className="whitespace-pre-wrap text-sm">
-                            {currentContent}
-                        </pre>
-                    )
+                    <div className="p-6">
+                        {activeFile?.name.endsWith(".md") ? (
+                            <MarkdownRenderer
+                                content={currentContent}
+                                owner={owner}
+                                repo={repo}
+                                canToggleTasks={false}
+                                linkableHeadings
+                            />
+                        ) : (
+                            <pre className="whitespace-pre-wrap text-sm">
+                                {currentContent}
+                            </pre>
+                        )}
+                    </div>
                 ) : null}
+            </div>
+        </div>
+    );
+}
+
+export function RepoDocFilesSkeleton() {
+    return (
+        <div className="mt-6 rounded-xl border border-border bg-surface">
+            <div className="h-9 border-border border-b px-2 py-1">
+                <div className="flex h-full items-center gap-4">
+                    <div className="h-5 w-16 animate-pulse rounded bg-surface-secondary" />
+                    <div className="h-5 w-20 animate-pulse rounded bg-surface-secondary" />
+                    <div className="h-5 w-18 animate-pulse rounded bg-surface-secondary" />
+                </div>
+            </div>
+            <DocContentSkeleton />
+        </div>
+    );
+}
+
+function DocContentSkeleton() {
+    return (
+        <div className="space-y-2 p-6">
+            <div className="h-10 mb-4 w-1/3 animate-pulse rounded bg-surface-secondary" />
+            <div className="h-5 w-3/4 animate-pulse rounded bg-surface-secondary" />
+            <div className="h-5 w-1/2 animate-pulse rounded bg-surface-secondary" />
+            <div className="h-5 w-3/4 animate-pulse rounded bg-surface-secondary" />
+        </div>
+    );
+}
+
+function EmptyReadmeSection() {
+    return (
+        <div
+            id="doc-files"
+            className="mt-6 rounded-xl border border-border bg-surface"
+        >
+            <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
+                <BookOpen className="size-8 text-text-muted" />
+                <p className="font-medium text-base text-text-primary">
+                    Add a README with an overview of your project.
+                </p>
             </div>
         </div>
     );

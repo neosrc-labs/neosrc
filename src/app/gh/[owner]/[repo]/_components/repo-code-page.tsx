@@ -1,7 +1,7 @@
 "use client";
 
 import { Async } from "~/components/async";
-import { RepoDocFiles } from "./repo-doc-files";
+import { RepoDocFiles, RepoDocFilesSkeleton } from "./repo-doc-files";
 import { RepoFileTable, RepoFileTableSkeleton } from "./repo-file-table";
 import { RepoHeader } from "./repo-header";
 import { RepoSidebar, RepoSidebarSkeleton } from "./repo-sidebar";
@@ -118,7 +118,7 @@ export function RepoCodePage({
                                 repoDataPromise,
                                 docFileNamesPromise,
                             ])}
-                            fallback={null}
+                            fallback={<RepoDocFilesSkeleton />}
                         >
                             {([repoData, docFileNames]) => (
                                 <RepoDocFiles
