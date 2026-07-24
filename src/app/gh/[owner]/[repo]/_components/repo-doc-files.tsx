@@ -191,7 +191,7 @@ export function RepoDocFilesSkeleton() {
 function DocContentSkeleton() {
     return (
         <div className="space-y-2 p-6">
-            <div className="h-10 mb-4 w-1/3 animate-pulse rounded bg-surface-secondary" />
+            <div className="mb-4 h-10 w-1/3 animate-pulse rounded bg-surface-secondary" />
             <div className="h-5 w-3/4 animate-pulse rounded bg-surface-secondary" />
             <div className="h-5 w-1/2 animate-pulse rounded bg-surface-secondary" />
             <div className="h-5 w-3/4 animate-pulse rounded bg-surface-secondary" />

@@ -435,10 +435,49 @@ export function RepoSidebarSkeleton() {
     return (
         <aside className="w-72 shrink-0">
             <div>
-                <div className="mb-4 h-4 w-16 animate-pulse rounded bg-surface-secondary" />
+                <div className="mb-3 h-5 w-16 animate-pulse rounded bg-surface-secondary" />
                 <div className="space-y-2">
-                    <div className="h-3 w-full animate-pulse rounded bg-surface-secondary" />
-                    <div className="h-3 w-2/3 animate-pulse rounded bg-surface-secondary" />
+                    <div className="h-5 w-full animate-pulse rounded bg-surface-secondary" />
+                    <div className="h-5 w-3/4 animate-pulse rounded bg-surface-secondary" />
+                </div>
+                <div className="mt-2 space-y-1.5">
+                    <div className="h-5 w-1/2 animate-pulse rounded bg-surface-secondary" />
+                    <div className="h-5 w-1/2 animate-pulse rounded bg-surface-secondary" />
+                    <div className="h-5 w-1/2 animate-pulse rounded bg-surface-secondary" />
+                    <div className="h-5 w-1/2 animate-pulse rounded bg-surface-secondary" />
+                </div>
+            </div>
+
+            <div className="mt-3 border-border border-t pt-3">
+                <div className="mb-3 h-5 w-28 animate-pulse rounded bg-surface-secondary" />
+                <div className="mb-2 h-5 w-full animate-pulse rounded bg-surface-secondary" />
+                <div className="mb-2 h-5 w-full animate-pulse rounded bg-surface-secondary" />
+            </div>
+
+            <div className="mt-3 border-border border-t pt-3">
+                <div className="mb-3 h-5 w-28 animate-pulse rounded bg-surface-secondary" />
+                <div className="flex flex-wrap gap-1.5">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div
+                            key={i}
+                            className="h-8 w-8 animate-pulse rounded-full bg-surface-secondary"
+                        />
+                    ))}
+                </div>
+            </div>
+
+            <div className="mt-3 border-border border-t pt-3">
+                <div className="h-5 w-full animate-pulse rounded bg-surface-secondary" />
+                <div className="mt-2 space-y-1">
+                    <div className="flex items-center gap-1">
+                        <div className="h-4 w-20 animate-pulse rounded bg-surface-secondary" />
+                        <div className="h-4 w-24 animate-pulse rounded bg-surface-secondary" />
+                        <div className="h-4 w-20 animate-pulse rounded bg-surface-secondary" />
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <div className="h-4 w-24 animate-pulse rounded bg-surface-secondary" />
+                        <div className="h-4 w-20 animate-pulse rounded bg-surface-secondary" />
+                    </div>
                 </div>
             </div>
         </aside>
