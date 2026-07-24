@@ -40,25 +40,25 @@ export function RepoFileTable({
     parentFullName,
     parentDefaultBranch,
 }: RepoFileTableProps) {
-    const [selectedBranchRef, setSelectedBranchRef] = useState(defaultBranch);
+    const [selectedBranch, setSelectedBranch] = useState(defaultBranch);
     const [searchQuery, setSearchQuery] = useState("");
     const [hasRequestedTree, setHasRequestedTree] = useState(false);
 
     useEffect(() => {
-        setSelectedBranchRef(defaultBranch);
+        setSelectedBranch(defaultBranch);
     }, [defaultBranch]);
 
     const { data: latestCommit } = api.repos.getLatestCommit.useQuery({
         owner,
         repo,
-        ref: selectedBranchRef,
+        ref: selectedBranch,
     });
 
     const { data: contents, isLoading: contentsLoading } =
         api.repos.getContents.useQuery({
             owner,
             repo,
-            ref: selectedBranchRef,
+            ref: selectedBranch,
         });
 
     const sortedContents = useMemo(() => {
@@ -80,7 +80,7 @@ export function RepoFileTable({
             {
                 owner,
                 repo,
-                ref: selectedBranchRef,
+                ref: selectedBranch,
                 paths,
             },
             { enabled: paths.length > 0 },
@@ -92,7 +92,7 @@ export function RepoFileTable({
         {
             owner,
             repo,
-            ref: selectedBranchRef,
+            ref: selectedBranch,
         },
         { enabled: hasRequestedTree },
     );
@@ -113,8 +113,8 @@ export function RepoFileTable({
             <FileTableHeader
                 owner={owner}
                 repo={repo}
-                selectedBranch={selectedBranchRef}
-                setSelectedBranch={setSelectedBranchRef}
+                selectedBranch={selectedBranch}
+                setSelectedBranch={setSelectedBranch}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 setHasRequestedTree={setHasRequestedTree}
@@ -128,42 +128,49 @@ export function RepoFileTable({
                     ) : (
                         <SearchResultsTable searchResults={searchResults} />
                     )
-                ) : contentsLoading ? (
-                    <>
-                        <CommitRowSkeleton />
-                        <TableSkeleton />
-                    </>
-                ) : sortedContents.length === 0 ? (
-                    <div className="p-8 text-center text-sm text-text-tertiary">
-                        This directory is empty.
-                    </div>
                 ) : (
                     <>
-                        {latestCommit && (
+                        {latestCommit ? (
                             <CommitRow
                                 owner={owner}
                                 repo={repo}
                                 latestCommit={latestCommit}
-                                selectedBranch={selectedBranchRef}
+                                selectedBranch={selectedBranch}
                             />
+                        ) : (
+                            <CommitRowSkeleton />
                         )}
-                        {isFork && parentFullName && parentDefaultBranch && (
-                            <ForkSyncRow
-                                owner={owner}
-                                repo={repo}
-                                parentFullName={parentFullName}
-                                defaultBranch={defaultBranch}
-                                parentDefaultBranch={parentDefaultBranch}
-                            />
+                        {contentsLoading ? (
+                            <TableSkeleton />
+                        ) : sortedContents.length === 0 ? (
+                            <div className="p-8 text-center text-sm text-text-tertiary">
+                                This directory is empty.
+                            </div>
+                        ) : (
+                            <>
+                                {isFork &&
+                                    parentFullName &&
+                                    parentDefaultBranch && (
+                                        <ForkSyncRow
+                                            owner={owner}
+                                            repo={repo}
+                                            parentFullName={parentFullName}
+                                            defaultBranch={defaultBranch}
+                                            parentDefaultBranch={
+                                                parentDefaultBranch
+                                            }
+                                        />
+                                    )}
+                                <FileTable
+                                    owner={owner}
+                                    repo={repo}
+                                    selectedBranch={selectedBranch}
+                                    sortedContents={sortedContents}
+                                    fileCommits={fileCommits}
+                                    fileCommitsLoading={fileCommitsLoading}
+                                />
+                            </>
                         )}
-                        <FileTable
-                            owner={owner}
-                            repo={repo}
-                            selectedBranch={selectedBranchRef}
-                            sortedContents={sortedContents}
-                            fileCommits={fileCommits}
-                            fileCommitsLoading={fileCommitsLoading}
-                        />
                     </>
                 )}
             </div>
