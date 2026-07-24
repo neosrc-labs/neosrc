@@ -348,10 +348,7 @@ function FileTableHeaderSkeleton({
         <div className="flex min-h-16 items-center justify-between border-border border-b bg-surface-elevated px-4 py-3">
             <div className="flex items-center gap-2">
                 <div className="h-8.5 w-28 animate-pulse rounded-lg border border-border bg-surface-secondary" />
-                <span className="inline-flex items-center gap-1">
-                    <div className="ml-3 h-6 w-26 animate-pulse rounded bg-surface-secondary" />
-                    <div className="ml-3 h-6 w-20 animate-pulse rounded bg-surface-secondary" />
-                </span>
+                <BranchAndTagsSkeleton />
             </div>
             <div className="flex items-center gap-2">
                 <div className="relative">
@@ -366,6 +363,15 @@ function FileTableHeaderSkeleton({
                 <ClonePopover owner={owner} repo={repo} />
             </div>
         </div>
+    );
+}
+
+function BranchAndTagsSkeleton() {
+    return (
+        <span className="inline-flex items-center gap-1">
+            <div className="ml-3 h-6 w-26 animate-pulse rounded bg-surface-secondary" />
+            <div className="ml-3 h-6 w-20 animate-pulse rounded bg-surface-secondary" />
+        </span>
     );
 }
 
@@ -402,7 +408,7 @@ function FileTableHeader({
                     selectedRef={selectedBranch}
                     onSelect={setSelectedBranch}
                 />
-                {refCounts && (
+                {refCounts ? (
                     <span className="inline-flex items-center gap-1 text-sm text-text-tertiary">
                         <a
                             href={`https://github.com/${owner}/${repo}/branches`}
@@ -427,6 +433,8 @@ function FileTableHeader({
                             {refCounts.tagCount === 1 ? "tag" : "tags"}
                         </a>
                     </span>
+                ) : (
+                    <BranchAndTagsSkeleton />
                 )}
             </div>
 
