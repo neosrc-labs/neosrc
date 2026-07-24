@@ -140,7 +140,7 @@ export function RepoFileTable({
                         ) : (
                             <CommitRowSkeleton />
                         )}
-                        {contentsLoading ? (
+                        {contentsLoading || fileCommitsLoading ? (
                             <TableSkeleton />
                         ) : sortedContents.length === 0 ? (
                             <div className="p-8 text-center text-sm text-text-tertiary">
@@ -167,7 +167,6 @@ export function RepoFileTable({
                                     selectedBranch={selectedBranch}
                                     sortedContents={sortedContents}
                                     fileCommits={fileCommits}
-                                    fileCommitsLoading={fileCommitsLoading}
                                 />
                             </>
                         )}
@@ -184,14 +183,12 @@ function FileTable({
     selectedBranch,
     sortedContents,
     fileCommits,
-    fileCommitsLoading,
 }: {
     owner: string;
     repo: string;
     selectedBranch: string;
     sortedContents: RepoContentItem[];
     fileCommits: Record<string, FileLatestCommit | null> | undefined;
-    fileCommitsLoading: boolean;
 }) {
     return (
         <table className="w-full">
@@ -232,9 +229,7 @@ function FileTable({
                                 </a>
                             </td>
                             <td className="px-4 py-2">
-                                {fileCommitsLoading ? (
-                                    <div className="h-5 w-full animate-pulse rounded bg-surface-secondary" />
-                                ) : commit ? (
+                                {commit ? (
                                     <div className="flex items-center gap-2">
                                         <a
                                             href={`https://github.com/${owner}/${repo}/commit/${commit.sha}`}
@@ -579,15 +574,15 @@ function TableSkeleton() {
                 ].map((key) => (
                     <tr key={key} className="h-10">
                         <td className="px-4 py-2">
-                            <div className="flex items-center gap-2">
-                                <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-surface-secondary" />
-                                <div className="h-5 w-40 animate-pulse rounded bg-surface-secondary" />
+                            <div className="flex items-center gap-15">
+                                <div className="h-5 w-44 animate-pulse rounded bg-surface-secondary" />
+                                <div className="h-5 w-64 animate-pulse rounded bg-surface-secondary" />
                             </div>
                         </td>
                         <td className="px-4 py-2">
                             <div className="flex items-center gap-2">
-                                <div className="h-5 flex-1 animate-pulse rounded bg-surface-secondary" />
-                                <div className="h-5 w-20 shrink-0 animate-pulse rounded bg-surface-secondary" />
+                                <div className="flex-1" />
+                                <div className="h-5 w-24 shrink-0 animate-pulse rounded bg-surface-secondary" />
                             </div>
                         </td>
                     </tr>
