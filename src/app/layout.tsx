@@ -5,6 +5,7 @@ import "highlight.js/styles/github.min.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
+import { Footer } from "~/components/footer";
 import { Header } from "~/components/header/header";
 import { SidebarProvider } from "~/components/sidebar-context";
 import { ThemeProvider } from "~/components/ThemeProvider";
@@ -40,6 +41,7 @@ export default function RootLayout({
                             <TRPCReactProvider>
                                 <Header />
                                 {children}
+                                <Footer />
                             </TRPCReactProvider>
                         </SidebarProvider>
                     </ThemeProvider>
