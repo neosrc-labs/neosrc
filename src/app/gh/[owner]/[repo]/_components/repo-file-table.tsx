@@ -354,8 +354,8 @@ function FileTableHeaderSkeleton({
             <div className="flex items-center gap-2">
                 <div className="h-8.5 w-28 animate-pulse rounded-lg border border-border bg-surface-secondary" />
                 <span className="inline-flex items-center gap-1">
-                    <div className="h-5 w-14 animate-pulse rounded bg-surface-secondary" />
-                    <div className="h-5 w-10 animate-pulse rounded bg-surface-secondary" />
+                    <div className="ml-3 h-6 w-26 animate-pulse rounded bg-surface-secondary" />
+                    <div className="ml-3 h-6 w-20 animate-pulse rounded bg-surface-secondary" />
                 </span>
             </div>
             <div className="flex items-center gap-2">
@@ -550,11 +550,11 @@ function CommitRow({
 function CommitRowSkeleton() {
     return (
         <div className="flex min-h-12 items-center gap-3 border-border border-b px-4 py-3">
-            <div className="h-5 w-5 shrink-0 animate-pulse rounded-full bg-surface-secondary" />
-            <div className="h-4 w-24 animate-pulse rounded bg-surface-secondary" />
-            <div className="h-5 flex-1 animate-pulse rounded bg-surface-secondary" />
-            <div className="ml-auto h-4 w-28 animate-pulse rounded bg-surface-secondary" />
-            <div className="h-4 w-16 animate-pulse rounded bg-surface-secondary" />
+            <div className="h-5 w-24 animate-pulse rounded bg-surface-secondary" />
+            <div className="h-5 w-84 animate-pulse rounded bg-surface-secondary" />
+            <div className="flex-1 " />
+            <div className="ml-auto h-5 w-32 animate-pulse rounded bg-surface-secondary" />
+            <div className="h-5 w-28 animate-pulse rounded bg-surface-secondary" />
         </div>
     );
 }
