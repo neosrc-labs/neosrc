@@ -261,7 +261,7 @@ export function RepoFileTable({
                     <>
                         {latestCommit && (
                             <div className="flex items-center gap-3 border-border border-b px-4 py-3">
-                                <div className="[&_img]:h-4 [&_img]:w-4 [&_span]:text-xs">
+                                <div className="[&_img]:h-5 [&_img]:w-5 [&_span]:text-sm">
                                     <UserLink
                                         actor={
                                             latestCommit.author
@@ -275,7 +275,7 @@ export function RepoFileTable({
                                 </div>
                                 <a
                                     href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
-                                    className="min-w-0 flex-1 truncate text-text-tertiary text-xs hover:text-blue-600 dark:hover:text-blue-400"
+                                    className="min-w-0 flex-1 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
                                 >
                                     {latestCommit.message}
                                 </a>
@@ -310,7 +310,7 @@ export function RepoFileTable({
                                 ) : null}
                                 <a
                                     href={`https://github.com/${owner}/${repo}/commits/${selectedRef}`}
-                                    className="inline-flex shrink-0 items-center gap-1 text-text-primary text-xs hover:text-blue-600 dark:hover:text-blue-400"
+                                    className="inline-flex shrink-0 items-center gap-1 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                                 >
                                     <HistoryIcon className="h-3.5 w-3.5" />
                                     {latestCommit.commitCount.toLocaleString()}{" "}
@@ -375,13 +375,13 @@ export function RepoFileTable({
                                                     <div className="flex items-center gap-2">
                                                         <a
                                                             href={`https://github.com/${owner}/${repo}/commit/${commit.sha}`}
-                                                            className="min-w-0 flex-1 truncate text-text-tertiary text-xs hover:text-blue-600 dark:hover:text-blue-400"
+                                                            className="min-w-0 flex-1 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
                                                         >
                                                             {commit.message}
                                                         </a>
                                                         {commit.committedDate && (
                                                             <span
-                                                                className="shrink-0 text-text-tertiary text-xs"
+                                                                className="shrink-0 text-sm text-text-tertiary"
                                                                 title={new Date(
                                                                     commit.committedDate,
                                                                 ).toLocaleString()}
