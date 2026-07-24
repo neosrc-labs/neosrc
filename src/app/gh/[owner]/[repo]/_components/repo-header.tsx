@@ -45,7 +45,7 @@ export function RepoHeader({
                     starredPromise,
                     subscriptionPromise,
                 )}
-                fallback={<HeaderActionsSkeleton repo={repo} />}
+                fallback={<RepoHeaderLoading owner={owner} repo={repo} />}
             >
                 {([repoData, starred, subscription]) => (
                     <>
@@ -110,7 +110,7 @@ function combine<A, B, C>(
     return Promise.all([a, b, c]);
 }
 
-function HeaderActionsSkeleton({ repo }: { repo: string }) {
+function RepoHeaderLoading({ owner, repo }: { owner: string; repo: string }) {
     return (
         <div className="flex flex-wrap items-center gap-3">
             <div className="size-6 animate-pulse rounded-full bg-surface-secondary" />
@@ -119,9 +119,21 @@ function HeaderActionsSkeleton({ repo }: { repo: string }) {
             </h1>
             <div className="h-[22px] w-14 animate-pulse rounded-full bg-surface-secondary" />
             <div className="ml-auto flex items-center gap-2">
-                <div className="h-[30px] w-[5.25rem] animate-pulse rounded-lg bg-surface-secondary" />
-                <div className="h-[30px] w-[4.5rem] animate-pulse rounded-lg bg-surface-secondary" />
-                <div className="h-[30px] w-16 animate-pulse rounded-lg bg-surface-secondary" />
+                <WatchDropdown
+                    owner={owner}
+                    repo={repo}
+                    watchers={0}
+                    initialSubscription={null}
+                    disabled
+                />
+                <ForkButton owner={owner} repo={repo} forks={0} disabled />
+                <StarButton
+                    owner={owner}
+                    repo={repo}
+                    stars={0}
+                    initialStarred={false}
+                    disabled
+                />
             </div>
         </div>
     );
@@ -137,11 +149,13 @@ function WatchDropdown({
     repo,
     watchers,
     initialSubscription,
+    disabled = false,
 }: {
     owner: string;
     repo: string;
     watchers: number;
     initialSubscription: SubscriptionState | null;
+    disabled?: boolean;
 }) {
     const [open, setOpen] = useState(false);
     const [subscription, setSubscription] = useState(initialSubscription);
@@ -202,7 +216,7 @@ function WatchDropdown({
                 <button
                     type="button"
                     className={cn(
-                        "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition",
+                        "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition",
                         isWatching
                             ? "border-border bg-surface-secondary text-text-primary"
                             : "border-border bg-surface text-text-secondary hover:bg-surface-secondary",
@@ -220,8 +234,13 @@ function WatchDropdown({
                               ? "Watching"
                               : "Watch"}
                     </span>
-                    <span className="font-semibold text-text-primary">
-                        {formatCount(watcherCount)}
+                    <span
+                        className={cn(
+                            "font-semibold text-text-primary",
+                            disabled && "invisible",
+                        )}
+                    >
+                        {formatCount(disabled ? 0 : watcherCount)}
                     </span>
                     <ChevronDownIcon className="h-3 w-3 text-text-tertiary" />
                 </button>
@@ -322,17 +341,18 @@ function WatchOption({
         </button>
     );
 }
-
 function StarButton({
     owner,
     repo,
     stars,
     initialStarred,
+    disabled = false,
 }: {
     owner: string;
     repo: string;
     stars: number;
     initialStarred: boolean;
+    disabled?: boolean;
 }) {
     const [starred, setStarred] = useState(initialStarred);
     const [count, setCount] = useState(stars);
@@ -399,25 +419,31 @@ function StarButton({
             <StarIcon
                 className={cn(
                     "h-3.5 w-3.5",
-                    starred && "fill-[#e3b341] stroke-[#e3b341]",
+                    starred && !disabled && "fill-[#e3b341] stroke-[#e3b341]",
                 )}
             />
-            <span className="font-semibold text-text-primary">
-                {formatCount(count)}
+            <span
+                className={cn(
+                    "font-semibold text-text-primary",
+                    disabled && "invisible",
+                )}
+            >
+                {formatCount(disabled ? 0 : count)}
             </span>
-            <span>{starred ? "Starred" : "Star"}</span>
+            <span>{starred && !disabled ? "Starred" : "Star"}</span>
         </button>
     );
 }
-
 function ForkButton({
     owner,
     repo,
     forks,
+    disabled = false,
 }: {
     owner: string;
     repo: string;
     forks: number;
+    disabled?: boolean;
 }) {
     return (
         <a
@@ -425,8 +451,13 @@ function ForkButton({
             className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-text-secondary text-xs transition hover:bg-surface-secondary"
         >
             <GitForkIcon className="h-3.5 w-3.5" />
-            <span className="font-semibold text-text-primary">
-                {formatCount(forks)}
+            <span
+                className={cn(
+                    "font-semibold text-text-primary",
+                    disabled && "invisible",
+                )}
+            >
+                {formatCount(disabled ? 0 : forks)}
             </span>
             <span>Fork</span>
         </a>
