@@ -3,7 +3,6 @@
 import { UserLink } from "~/components/user-link";
 import type { GQLReferencedEvent } from "~/server/github-graphql";
 import { formatDateTime, formatRelativeTime } from "~/utils";
-import { EventRow } from "../event";
 
 export function ReferencedEventContent({
     event,
@@ -14,12 +13,14 @@ export function ReferencedEventContent({
     const fullDate = formatDateTime(event.createdAt);
     const sha = event.commit?.oid?.slice(0, 7);
     return (
-        <EventRow>
-            <UserLink actor={event.actor} />
-            <p>
-                {" referenced this "}
-                <span title={fullDate}>{timestamp}</span>
-            </p>
+        <div className="flex items-center justify-between text-sm text-text-secondary">
+            <div className="flex items-center gap-1">
+                <UserLink actor={event.actor} />
+                <span>
+                    {" referenced this "}
+                    <span title={fullDate}>{timestamp}</span>
+                </span>
+            </div>
             {sha && (
                 <a
                     href={event.commit?.commitUrl ?? undefined}
@@ -30,6 +31,6 @@ export function ReferencedEventContent({
                     {sha}
                 </a>
             )}
-        </EventRow>
+        </div>
     );
 }
