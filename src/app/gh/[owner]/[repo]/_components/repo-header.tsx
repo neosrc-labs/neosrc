@@ -19,9 +19,12 @@ import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import type { RepoData } from "./repo-code-page";
 
+type Provider = "gh" | "cb";
+
 interface RepoHeaderProps {
     owner: string;
     repo: string;
+    provider: Provider;
     repoDataPromise: Promise<RepoData>;
     starredPromise: Promise<boolean>;
     subscriptionPromise: Promise<{
@@ -33,6 +36,7 @@ interface RepoHeaderProps {
 export function RepoHeader({
     owner,
     repo,
+    provider,
     repoDataPromise,
     starredPromise,
     subscriptionPromise,
@@ -45,7 +49,13 @@ export function RepoHeader({
                     starredPromise,
                     subscriptionPromise,
                 )}
-                fallback={<RepoHeaderLoading owner={owner} repo={repo} />}
+                fallback={
+                    <RepoHeaderLoading
+                        owner={owner}
+                        repo={repo}
+                        provider={provider}
+                    />
+                }
             >
                 {([repoData, starred, subscription]) => (
                     <>
@@ -64,23 +74,27 @@ export function RepoHeader({
                                 {repoData.isPrivate ? "Private" : "Public"}
                             </span>
                             <div className="ml-auto flex items-center gap-2">
-                                <WatchDropdown
-                                    owner={owner}
-                                    repo={repo}
-                                    watchers={repoData.watchers}
-                                    initialSubscription={subscription}
-                                />
-                                <ForkButton
-                                    owner={owner}
-                                    repo={repo}
-                                    forks={repoData.forks}
-                                />
-                                <StarButton
-                                    owner={owner}
-                                    repo={repo}
-                                    stars={repoData.stars}
-                                    initialStarred={starred}
-                                />
+                                {provider !== "cb" && (
+                                    <>
+                                        <WatchDropdown
+                                            owner={owner}
+                                            repo={repo}
+                                            watchers={repoData.watchers}
+                                            initialSubscription={subscription}
+                                        />
+                                        <ForkButton
+                                            owner={owner}
+                                            repo={repo}
+                                            forks={repoData.forks}
+                                        />
+                                        <StarButton
+                                            owner={owner}
+                                            repo={repo}
+                                            stars={repoData.stars}
+                                            initialStarred={starred}
+                                        />
+                                    </>
+                                )}
                             </div>
                         </div>
                         {repoData.isFork && repoData.parentFullName && (
@@ -88,7 +102,7 @@ export function RepoHeader({
                                 <GitForkIcon className="h-3 w-3" />
                                 forked from{" "}
                                 <a
-                                    href={`/gh/${repoData.parentFullName}`}
+                                    href={`/${provider}/${repoData.parentFullName}`}
                                     className="text-blue-600 hover:underline dark:text-blue-400"
                                 >
                                     {repoData.parentFullName}
@@ -110,7 +124,15 @@ function combine<A, B, C>(
     return Promise.all([a, b, c]);
 }
 
-function RepoHeaderLoading({ owner, repo }: { owner: string; repo: string }) {
+function RepoHeaderLoading({
+    owner,
+    repo,
+    provider,
+}: {
+    owner: string;
+    repo: string;
+    provider: Provider;
+}) {
     return (
         <div className="flex flex-wrap items-center gap-3">
             <div className="size-6 animate-pulse rounded-full bg-surface-secondary" />
@@ -118,23 +140,25 @@ function RepoHeaderLoading({ owner, repo }: { owner: string; repo: string }) {
                 {repo}
             </h1>
             <div className="h-[22px] w-14 animate-pulse rounded-full bg-surface-secondary" />
-            <div className="ml-auto flex items-center gap-2">
-                <WatchDropdown
-                    owner={owner}
-                    repo={repo}
-                    watchers={0}
-                    initialSubscription={null}
-                    disabled
-                />
-                <ForkButton owner={owner} repo={repo} forks={0} disabled />
-                <StarButton
-                    owner={owner}
-                    repo={repo}
-                    stars={0}
-                    initialStarred={false}
-                    disabled
-                />
-            </div>
+            {provider !== "cb" && (
+                <div className="ml-auto flex items-center gap-2">
+                    <WatchDropdown
+                        owner={owner}
+                        repo={repo}
+                        watchers={0}
+                        initialSubscription={null}
+                        disabled
+                    />
+                    <ForkButton owner={owner} repo={repo} forks={0} disabled />
+                    <StarButton
+                        owner={owner}
+                        repo={repo}
+                        stars={0}
+                        initialStarred={false}
+                        disabled
+                    />
+                </div>
+            )}
         </div>
     );
 }

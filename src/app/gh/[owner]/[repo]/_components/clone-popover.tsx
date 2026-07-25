@@ -9,34 +9,52 @@ import {
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
 
+type Provider = "gh" | "cb";
+
 interface ClonePopoverProps {
     owner: string;
     repo: string;
+    provider?: Provider;
 }
 
 type CloneTab = "https" | "ssh" | "cli";
 
-const TAB_OPTIONS: { key: CloneTab; label: string }[] = [
-    { key: "https", label: "HTTPS" },
-    { key: "ssh", label: "SSH" },
-    { key: "cli", label: "GitHub CLI" },
-];
+function getTabOptions(provider: Provider): { key: CloneTab; label: string }[] {
+    return [
+        { key: "https", label: "HTTPS" },
+        { key: "ssh", label: "SSH" },
+        { key: "cli", label: provider === "cb" ? "CLI" : "GitHub CLI" },
+    ];
+}
 
-function getCloneUrl(owner: string, repo: string, tab: CloneTab): string {
+function getCloneUrl(
+    owner: string,
+    repo: string,
+    tab: CloneTab,
+    provider: Provider,
+): string {
+    const host = provider === "cb" ? "codeberg.org" : "github.com";
     switch (tab) {
         case "ssh":
-            return `git@github.com:${owner}/${repo}.git`;
+            return `git@${host}:${owner}/${repo}.git`;
         case "cli":
-            return `gh repo clone ${owner}/${repo}`;
+            return provider === "cb"
+                ? `git clone https://codeberg.org/${owner}/${repo}.git`
+                : `gh repo clone ${owner}/${repo}`;
         default:
-            return `https://github.com/${owner}/${repo}.git`;
+            return `https://${host}/${owner}/${repo}.git`;
     }
 }
 
-export function ClonePopover({ owner, repo }: ClonePopoverProps) {
+export function ClonePopover({
+    owner,
+    repo,
+    provider = "gh",
+}: ClonePopoverProps) {
     const [open, setOpen] = useState(false);
     const [tab, setTab] = useState<CloneTab>("https");
-    const url = getCloneUrl(owner, repo, tab);
+    const tabOptions = getTabOptions(provider);
+    const url = getCloneUrl(owner, repo, tab, provider);
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -58,7 +76,7 @@ export function ClonePopover({ owner, repo }: ClonePopoverProps) {
             <PopoverContent className="w-80 p-0" align="end">
                 <div className="border-border border-b p-3 pb-0">
                     <div className="flex gap-0.5 rounded-md bg-surface-secondary p-0.5">
-                        {TAB_OPTIONS.map((option) => (
+                        {tabOptions.map((option) => (
                             <button
                                 key={option.key}
                                 type="button"

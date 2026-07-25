@@ -16,9 +16,12 @@ import {
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
+type Provider = "gh" | "cb";
+
 interface RefSelectorProps {
     owner: string;
     repo: string;
+    provider: Provider;
     selectedRef: string;
     onSelect: (ref: string) => void;
 }
@@ -32,6 +35,7 @@ interface RefItem {
 export function RefSelector({
     owner,
     repo,
+    provider,
     selectedRef,
     onSelect,
 }: RefSelectorProps) {
@@ -41,11 +45,13 @@ export function RefSelector({
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     const { data: branches } = api.repos.getBranches.useQuery({
+        provider,
         owner,
         repo,
     });
 
     const { data: tags } = api.repos.getTags.useQuery({
+        provider,
         owner,
         repo,
     });
