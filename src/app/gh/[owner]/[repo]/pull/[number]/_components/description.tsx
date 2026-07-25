@@ -29,7 +29,7 @@ import { RoleBadge } from "~/components/RoleBadge";
 
 import { useTaskToggle } from "~/hooks/use-task-toggle";
 import { api } from "~/trpc/react";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 
 interface PullRequestDescriptionSectionProps {
     owner: string;
@@ -368,7 +368,13 @@ export function PullRequestDescriptionSection({
                                         {pullRequest.user?.login}{" "}
                                     </NextLink>
                                 </UserHoverCard>
-                                {formatRelativeTime(pullRequest.created_at)}
+                                <span
+                                    title={formatDateTime(
+                                        pullRequest.created_at,
+                                    )}
+                                >
+                                    {formatRelativeTime(pullRequest.created_at)}
+                                </span>
                             </div>
                             <div className="ml-auto flex items-center gap-1.5 text-sm">
                                 {pullRequest.additions > 0 && (
