@@ -63,7 +63,7 @@ function DiffSnippet({ patch }: { patch: string }) {
                         const isDel = row.type === "del";
                         return (
                             <tr
-                                key={`${row.oldN ?? ""}-${row.newN ?? ""}-${row.text}`}
+                                key={`${row.oldN}-${row.newN}-${row.text}`}
                                 className={
                                     isDel
                                         ? "bg-red-50 dark:bg-red-950"
@@ -71,10 +71,10 @@ function DiffSnippet({ patch }: { patch: string }) {
                                 }
                             >
                                 <td className="w-9 select-none pr-1 text-right text-text-muted">
-                                    {row.oldN ?? ""}
+                                    {row.oldN}
                                 </td>
                                 <td className="w-9 select-none pr-1 text-right text-text-muted">
-                                    {row.newN ?? ""}
+                                    {row.newN}
                                 </td>
                                 <td
                                     className={`pl-2 ${isDel ? "text-red-800 dark:text-red-300" : "text-green-900 dark:text-green-200"}`}
