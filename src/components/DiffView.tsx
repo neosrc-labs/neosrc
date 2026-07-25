@@ -503,7 +503,7 @@ export function DiffView({
                 .d2h-ins,
                 .d2h-del,
                 .d2h-cntx {
-                    word-break: break-all;
+                    word-break: break-word;
                 }
             `}</style>
             <div
@@ -966,7 +966,11 @@ function BlockRows({
                             <td className={typeClass}>
                                 <div
                                     className="d2h-code-line"
-                                    style={{ display: "flex" }}
+                                    style={{
+                                        display: "flex",
+                                        width: "100%",
+                                        paddingRight: "8px",
+                                    }}
                                 >
                                     <span className="d2h-code-line-ctn">
                                         {content || <br />}
