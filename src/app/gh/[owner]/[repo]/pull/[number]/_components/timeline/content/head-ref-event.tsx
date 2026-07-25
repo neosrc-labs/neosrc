@@ -5,7 +5,7 @@ import type {
     GQLHeadRefDeletedEvent,
     GQLHeadRefRestoredEvent,
 } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { EventRow } from "../event";
 
 export function HeadRefEventContent({
@@ -14,6 +14,7 @@ export function HeadRefEventContent({
     event: GQLHeadRefDeletedEvent | GQLHeadRefRestoredEvent;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     const verb =
         event.__typename === "HeadRefDeletedEvent" ? "deleted" : "restored";
     return (
@@ -24,7 +25,7 @@ export function HeadRefEventContent({
                 <span className="font-medium text-gray-800 dark:text-zinc-200">
                     branch
                 </span>
-                {` ${timestamp}`}
+                <span title={fullDate}>{` ${timestamp}`}</span>
             </p>
         </EventRow>
     );

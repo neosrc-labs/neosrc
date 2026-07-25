@@ -5,7 +5,7 @@ import type {
     GQLAutoMergeDisabledEvent,
     GQLAutoMergeEnabledEvent,
 } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { EventRow } from "../event";
 
 export function AutoMergeEventContent({
@@ -14,6 +14,7 @@ export function AutoMergeEventContent({
     event: GQLAutoMergeEnabledEvent | GQLAutoMergeDisabledEvent;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     const isEnabled = event.__typename === "AutoMergeEnabledEvent";
     if (isEnabled) {
         return (
@@ -21,7 +22,7 @@ export function AutoMergeEventContent({
                 <UserLink actor={event.actor} />
                 <p>
                     {" enabled auto-merge"}
-                    {` ${timestamp}`}
+                    <span title={fullDate}>{` ${timestamp}`}</span>
                 </p>
             </EventRow>
         );
@@ -35,7 +36,7 @@ export function AutoMergeEventContent({
             <p>
                 {" disabled auto-merge"}
                 {reasonDisplay ? ` — ${reasonDisplay}` : ""}
-                {` ${timestamp}`}
+                <span title={fullDate}>{` ${timestamp}`}</span>
             </p>
         </EventRow>
     );

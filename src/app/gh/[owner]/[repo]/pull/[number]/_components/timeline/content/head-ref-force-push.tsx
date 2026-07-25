@@ -3,7 +3,7 @@
 import NextLink from "next/link";
 import { UserLink } from "~/components/user-link";
 import type { GQLHeadRefForcePushedEvent } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { EventRow } from "../event";
 
 export function HeadRefForcePushContent({
@@ -18,6 +18,7 @@ export function HeadRefForcePushContent({
     number: number;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     const beforeShort = event.beforeCommit?.oid.slice(0, 7) ?? "unknown";
     const afterShort = event.afterCommit?.oid.slice(0, 7) ?? "unknown";
     const beforeHref = event.beforeCommit?.oid
@@ -57,7 +58,7 @@ export function HeadRefForcePushContent({
                     </code>
                 )}
             </p>
-            {timestamp}
+            <span title={fullDate}>{timestamp}</span>
         </EventRow>
     );
 }

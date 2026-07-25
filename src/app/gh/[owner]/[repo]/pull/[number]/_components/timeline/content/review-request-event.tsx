@@ -6,7 +6,7 @@ import type {
     GQLReviewRequestedEvent,
     GQLReviewRequestRemovedEvent,
 } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 
 export function ReviewRequestEventContent({
     event,
@@ -14,6 +14,7 @@ export function ReviewRequestEventContent({
     event: GQLReviewRequestedEvent | GQLReviewRequestRemovedEvent;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     const reviewer = event.requestedReviewer;
     const isUser = reviewer?.__typename === "User";
     const isTeam = reviewer?.__typename === "Team";
@@ -24,9 +25,13 @@ export function ReviewRequestEventContent({
         <div className="flex items-center gap-1 text-sm text-text-secondary">
             <UserLink actor={event.actor} />
             {isSelfRequest && isRequested ? (
-                <span>self-requested a review {timestamp}</span>
+                <span title={fullDate}>
+                    self-requested a review {timestamp}
+                </span>
             ) : isSelfRequest ? (
-                <span>removed their request for review {timestamp}</span>
+                <span title={fullDate}>
+                    removed their request for review {timestamp}
+                </span>
             ) : (
                 <>
                     <span>
@@ -54,7 +59,9 @@ export function ReviewRequestEventContent({
                             {reviewer.name ?? reviewer.slug}
                         </span>
                     )}
-                    <span className="whitespace-nowrap">{timestamp}</span>
+                    <span className="whitespace-nowrap" title={fullDate}>
+                        {timestamp}
+                    </span>
                 </>
             )}
         </div>

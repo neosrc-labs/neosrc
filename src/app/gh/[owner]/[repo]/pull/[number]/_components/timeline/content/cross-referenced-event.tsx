@@ -2,7 +2,7 @@
 
 import { UserLink } from "~/components/user-link";
 import type { GQLCrossReferencedEvent } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 
 export function CrossReferencedEventContent({
     event,
@@ -11,6 +11,7 @@ export function CrossReferencedEventContent({
 }) {
     const actor = event.actor;
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     const source = event.source;
     const repoName = source?.repository.name;
     const repoOwner = source?.repository.owner.login;
@@ -25,7 +26,7 @@ export function CrossReferencedEventContent({
         <div className="text-sm text-text-secondary">
             <div className="flex items-center gap-2">
                 <UserLink actor={actor} />
-                <span>
+                <span title={fullDate}>
                     {` mentioned this ${isPR ? "pull request" : "issue"} `}
                     {timestamp}
                 </span>

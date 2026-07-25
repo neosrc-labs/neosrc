@@ -2,7 +2,7 @@
 
 import { UserLink } from "~/components/user-link";
 import type { GQLBaseRefChangedEvent } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { EventRow } from "../event";
 
 export function BaseRefChangedContent({
@@ -11,6 +11,7 @@ export function BaseRefChangedContent({
     event: GQLBaseRefChangedEvent;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     return (
         <EventRow>
             <UserLink actor={event.actor} />
@@ -23,7 +24,7 @@ export function BaseRefChangedContent({
                 <span className="font-medium text-gray-800 dark:text-zinc-200">
                     {event.currentRefName}
                 </span>{" "}
-                {timestamp}
+                <span title={fullDate}>{timestamp}</span>
             </p>
         </EventRow>
     );

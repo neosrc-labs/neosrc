@@ -38,7 +38,7 @@ import type {
     GQLTimelineEvent,
 } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { AssignedEventContent } from "./content/assigned-event";
 import { AutoMergeEventContent } from "./content/auto-merge-event";
 import { BaseRefChangedContent } from "./content/base-ref-changed";
@@ -119,6 +119,7 @@ function AggregatedLabel({
 }) {
     const { actor, changes, createdAt } = wrapper;
     const timestamp = formatRelativeTime(createdAt);
+    const fullDate = formatDateTime(createdAt);
     const added = changes.filter((c) => c.event === "labeled");
     const removed = changes.filter((c) => c.event === "unlabeled");
     const total = changes.length;
@@ -169,7 +170,9 @@ function AggregatedLabel({
                         ))}
                     </>
                 )}
-                <span>{` ${total === 1 ? "label" : "labels"} ${timestamp}`}</span>
+                <span
+                    title={fullDate}
+                >{` ${total === 1 ? "label" : "labels"} ${timestamp}`}</span>
             </div>
         </div>
     );

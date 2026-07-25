@@ -5,7 +5,7 @@ import type {
     GQLAddedToProjectV2Event,
     GQLProjectV2ItemStatusChangedEvent,
 } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { EventRow } from "../event";
 
 export function ProjectEventContent({
@@ -14,6 +14,7 @@ export function ProjectEventContent({
     event: GQLAddedToProjectV2Event | GQLProjectV2ItemStatusChangedEvent;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     const isAdded = event.__typename === "AddedToProjectV2Event";
     return (
         <EventRow>
@@ -22,7 +23,7 @@ export function ProjectEventContent({
                 {isAdded
                     ? "Added this issue to a project "
                     : "changed the project status "}
-                {timestamp}
+                <span title={fullDate}>{timestamp}</span>
             </p>
         </EventRow>
     );

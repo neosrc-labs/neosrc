@@ -5,7 +5,7 @@ import type {
     GQLAssignedEvent,
     GQLUnassignedEvent,
 } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { EventRow } from "../event";
 
 export function AssignedEventContent({
@@ -14,6 +14,7 @@ export function AssignedEventContent({
     event: GQLAssignedEvent | GQLUnassignedEvent;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     const isSelfAssigned = event.actor?.login === event.assignee?.login;
     const isAssigned = event.__typename === "AssignedEvent";
 
@@ -21,7 +22,7 @@ export function AssignedEventContent({
         return (
             <EventRow>
                 <UserLink actor={event.assignee} />
-                <span>
+                <span title={fullDate}>
                     {isAssigned
                         ? " self-assigned this "
                         : " removed their assignment "}
@@ -35,7 +36,8 @@ export function AssignedEventContent({
             <UserLink actor={event.actor} />
             <div className="flex gap-1">
                 {isAssigned ? " assigned " : " unassigned "}
-                <UserLink actor={event.assignee} /> {timestamp}
+                <UserLink actor={event.assignee} />{" "}
+                <span title={fullDate}>{timestamp}</span>
             </div>
         </EventRow>
     );

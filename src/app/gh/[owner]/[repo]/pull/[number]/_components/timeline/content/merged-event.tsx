@@ -2,7 +2,7 @@
 
 import { UserLink } from "~/components/user-link";
 import type { GQLMergedEvent } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { EventRow } from "../event";
 
 export function MergedEventContent({
@@ -15,6 +15,7 @@ export function MergedEventContent({
     repo: string;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     const sha = event.commit?.abbreviatedOid;
     const commitUrl = event.commit?.commitUrl;
     return (
@@ -44,7 +45,7 @@ export function MergedEventContent({
                     {event.mergeRefName}
                 </a>
                 {" this "}
-                {timestamp}
+                <span title={fullDate}>{timestamp}</span>
             </p>
         </EventRow>
     );

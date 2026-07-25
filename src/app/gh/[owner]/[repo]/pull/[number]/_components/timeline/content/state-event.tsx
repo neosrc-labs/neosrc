@@ -7,7 +7,7 @@ import type {
     GQLReadyForReviewEvent,
     GQLReopenedEvent,
 } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { EventRow } from "../event";
 
 export function StateEventContent({
@@ -20,6 +20,7 @@ export function StateEventContent({
         | GQLReadyForReviewEvent;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     const verb =
         event.__typename === "ClosedEvent"
             ? "closed"
@@ -34,7 +35,7 @@ export function StateEventContent({
             <p>
                 {verb}
                 {" this "}
-                {timestamp}
+                <span title={fullDate}>{timestamp}</span>
             </p>
         </EventRow>
     );

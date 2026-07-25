@@ -18,7 +18,7 @@ import type {
     GQLPullRequestReview,
     GQLReactionNode,
 } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { ReviewComments } from "../../review-comments";
 
 interface PullRequestReviewContentProps {
@@ -78,6 +78,7 @@ export function PullRequestReviewContent({
     const reviewReactionsArr = commentReactions[event.databaseId] ?? [];
 
     const timestamp = formatRelativeTime(event.submittedAt ?? event.createdAt);
+    const fullDate = formatDateTime(event.submittedAt ?? event.createdAt);
     const state = event.state.toLowerCase();
     const STATE_LABELS: Record<string, string> = {
         pending: "started a review",
@@ -90,7 +91,8 @@ export function PullRequestReviewContent({
         <>
             <p className="flex items-center gap-1 text-sm text-text-secondary">
                 <UserLink actor={event.author} />
-                {` ${stateLabel} ${timestamp}`}
+                {` ${stateLabel} `}
+                <span title={fullDate}>{timestamp}</span>
             </p>
             {event.body && (
                 <div className="mt-3">

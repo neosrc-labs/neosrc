@@ -2,7 +2,7 @@
 
 import { UserLink } from "~/components/user-link";
 import type { GQLLockedEvent, GQLUnlockedEvent } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { EventRow, formatReason } from "../event";
 
 export function LockedEventContent({
@@ -11,13 +11,14 @@ export function LockedEventContent({
     event: GQLLockedEvent | GQLUnlockedEvent;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     if (event.__typename === "UnlockedEvent") {
         return (
             <EventRow>
                 <UserLink actor={event.actor} />
                 <p>
                     {" unlocked this "}
-                    {timestamp}
+                    <span title={fullDate}>{timestamp}</span>
                 </p>
             </EventRow>
         );
@@ -36,7 +37,7 @@ export function LockedEventContent({
                         {")"}
                     </>
                 )}
-                {` ${timestamp}`}
+                <span title={fullDate}>{` ${timestamp}`}</span>
             </p>
         </EventRow>
     );

@@ -1,3 +1,14 @@
+export function formatDateTime(isoDate: string): string {
+    const date = new Date(isoDate);
+    return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    });
+}
+
 export function formatRelativeTime(
     isoDate: string,
     now: Date = new Date(),

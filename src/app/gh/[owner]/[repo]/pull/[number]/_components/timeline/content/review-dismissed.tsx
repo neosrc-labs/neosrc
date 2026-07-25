@@ -2,7 +2,7 @@
 
 import { UserLink } from "~/components/user-link";
 import type { GQLReviewDismissedEvent } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { EventRow } from "../event";
 
 export function ReviewDismissedContent({
@@ -11,11 +11,15 @@ export function ReviewDismissedContent({
     event: GQLReviewDismissedEvent;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     return (
         <>
             <EventRow>
                 <UserLink actor={event.actor} />
-                <p>dismissed their review {timestamp}</p>
+                <p>
+                    dismissed their review{" "}
+                    <span title={fullDate}>{timestamp}</span>
+                </p>
             </EventRow>
             {event.dismissalMessage && (
                 <div className="relative mt-3 rounded-lg border border-border bg-surface-elevated px-4 py-3 text-sm text-text-primary">

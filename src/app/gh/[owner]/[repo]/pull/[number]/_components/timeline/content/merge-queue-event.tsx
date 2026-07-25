@@ -5,7 +5,7 @@ import type {
     GQLAddedToMergeQueueEvent,
     GQLRemovedFromMergeQueueEvent,
 } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { EventRow } from "../event";
 
 export function MergeQueueEventContent({
@@ -14,6 +14,7 @@ export function MergeQueueEventContent({
     event: GQLAddedToMergeQueueEvent | GQLRemovedFromMergeQueueEvent;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     const isAdded = event.__typename === "AddedToMergeQueueEvent";
     if (isAdded) {
         return (
@@ -21,7 +22,7 @@ export function MergeQueueEventContent({
                 <UserLink actor={event.actor} />
                 <p>
                     {" queued this PR in the merge queue"}
-                    {` ${timestamp}`}
+                    <span title={fullDate}>{` ${timestamp}`}</span>
                 </p>
             </EventRow>
         );

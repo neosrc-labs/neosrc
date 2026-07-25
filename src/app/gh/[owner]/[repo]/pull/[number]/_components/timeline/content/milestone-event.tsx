@@ -5,7 +5,7 @@ import type {
     GQLDemilestonedEvent,
     GQLMilestonedEvent,
 } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { EventRow } from "../event";
 
 export function MilestoneEventContent({
@@ -14,6 +14,7 @@ export function MilestoneEventContent({
     event: GQLMilestonedEvent | GQLDemilestonedEvent;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     const isAdded = event.__typename === "MilestonedEvent";
     return (
         <EventRow>
@@ -23,7 +24,7 @@ export function MilestoneEventContent({
                 <span className="font-medium text-gray-800 dark:text-zinc-200">
                     {event.milestoneTitle}
                 </span>
-                {` ${timestamp}`}
+                <span title={fullDate}>{` ${timestamp}`}</span>
             </p>
         </EventRow>
     );

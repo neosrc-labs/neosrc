@@ -2,11 +2,12 @@
 
 import { UserLink } from "~/components/user-link";
 import type { GQLDeployedEvent } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 import { EventRow } from "../event";
 
 export function DeployedEventContent({ event }: { event: GQLDeployedEvent }) {
     const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
     const environment = event.deployment?.environment ?? "a deployment";
     const refName = event.ref?.name ?? null;
     return (
@@ -26,7 +27,7 @@ export function DeployedEventContent({ event }: { event: GQLDeployedEvent }) {
                         {")"}
                     </>
                 ) : null}
-                {` ${timestamp}`}
+                <span title={fullDate}>{` ${timestamp}`}</span>
             </p>
         </EventRow>
     );
