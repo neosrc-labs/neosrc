@@ -142,7 +142,7 @@ export const reposRouter = createTRPCRouter({
                 allowSquashMerge: data.allow_squash_merge,
                 allowRebaseMerge: data.allow_rebase_merge,
                 allowMergeCommit: data.allow_merge_commit,
-                description: data.description ?? "",
+                description: data.description ?? null,
                 defaultBranch: data.default_branch,
                 homepage: data.homepage ?? null,
                 stars: data.stargazers_count,

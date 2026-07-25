@@ -168,7 +168,7 @@ export function generateCodeBlock(language?: string): {
     text: string;
     cursorPos: number;
 } {
-    const lang = language ?? "";
+    const lang = language;
     if (lang) {
         const text = `\`\`\`${lang}\n\n\`\`\``;
         return { text, cursorPos: text.length - 3 };

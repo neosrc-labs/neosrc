@@ -21,7 +21,7 @@ export function MilestoneEventContent({
             <p>
                 {isAdded ? " added the milestone " : " removed the milestone "}
                 <span className="font-medium text-gray-800 dark:text-zinc-200">
-                    {event.milestoneTitle ?? ""}
+                    {event.milestoneTitle}
                 </span>
                 {` ${timestamp}`}
             </p>

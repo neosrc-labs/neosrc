@@ -106,7 +106,7 @@ export function MarkdownEditor({
         {
             owner: owner as string,
             repo: repo as string,
-            query: autocompleteQuery ?? "",
+            query: autocompleteQuery as string,
         },
         {
             enabled: autocompleteQuery !== null && !!owner && !!repo,

@@ -884,9 +884,7 @@ function BlockRows({
                     commentLine <= selectedRange.endLine;
 
                 return (
-                    <Fragment
-                        key={`${oldNum ?? ""}-${newNum ?? ""}-${line.content}`}
-                    >
+                    <Fragment key={`${oldNum}-${newNum}-${line.content}`}>
                         <tr
                             className={`group ${isHighlighted ? "line-highlighted" : ""}`}
                             id={lineId}

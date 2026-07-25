@@ -973,7 +973,7 @@ export interface CodebergRepoHeaderInfo {
     allowRebaseMerge: boolean;
     allowMergeCommit: boolean;
     defaultBranch: string | null;
-    description: string;
+    description: string | null;
     stars: number;
     forks: number;
     language: string | null;
@@ -998,7 +998,7 @@ export async function getCachedRepoHeaderData(
         allowRebaseMerge: repoInfo.allow_rebase,
         allowMergeCommit: repoInfo.allow_merge_commits,
         defaultBranch: repoInfo.default_branch,
-        description: repoInfo.description ?? "",
+        description: repoInfo.description ?? null,
         stars: repoInfo.stars_count,
         forks: repoInfo.forks_count,
         language: repoInfo.language ?? null,
