@@ -347,10 +347,10 @@ export function PullRequestDescriptionSection({
                                 </a>
                                 <span className="mx-2">←</span>
                                 <a
-                                    href={`https://github.com/${owner}/${repo}/tree/${pullRequest.head.ref}`}
+                                    href={`https://github.com/${pullRequest.head.repo?.full_name ?? `${owner}/${repo}`}/tree/${pullRequest.head.ref}`}
                                     className="rounded bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs hover:bg-surface-selected dark:hover:bg-zinc-600"
                                 >
-                                    {pullRequest.head.ref}
+                                    {pullRequest.head.label}
                                 </a>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-text-secondary">
