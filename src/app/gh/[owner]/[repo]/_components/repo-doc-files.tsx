@@ -10,6 +10,7 @@ interface RepoDocFilesProps {
     owner: string;
     repo: string;
     ref: string;
+    provider?: "gh" | "cb";
     fileNames?: { name: string; path: string }[];
 }
 
@@ -42,6 +43,7 @@ export function RepoDocFiles({
     owner,
     repo,
     ref,
+    provider,
     fileNames = [],
 }: RepoDocFilesProps) {
     const router = useRouter();
@@ -68,6 +70,7 @@ export function RepoDocFiles({
                     repo,
                     ref,
                     path,
+                    provider: provider ?? "gh",
                 });
                 setFileContents((prev) => ({
                     ...prev,
@@ -79,7 +82,7 @@ export function RepoDocFiles({
                 setLoadingPath(null);
             }
         },
-        [owner, repo, ref, trpcUtils],
+        [owner, repo, ref, provider, trpcUtils],
     );
 
     const activeFile = useMemo(() => {

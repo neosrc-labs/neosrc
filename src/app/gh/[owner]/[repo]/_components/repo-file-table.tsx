@@ -23,9 +23,18 @@ import { RefSelector } from "./ref-selector";
 
 const iconMap: Record<string, string> = iconMapData as Record<string, string>;
 
+type Provider = "gh" | "cb";
+
+function repoUrl(provider: Provider, owner: string, repo: string): string {
+    return provider === "cb"
+        ? `https://codeberg.org/${owner}/${repo}`
+        : `https://github.com/${owner}/${repo}`;
+}
+
 interface RepoFileTableProps {
     owner: string;
     repo: string;
+    provider: Provider;
     defaultBranch: string;
     isFork: boolean;
     parentFullName: string | null;
@@ -35,6 +44,7 @@ interface RepoFileTableProps {
 export function RepoFileTable({
     owner,
     repo,
+    provider,
     defaultBranch,
     isFork,
     parentFullName,
@@ -49,6 +59,7 @@ export function RepoFileTable({
     }, [defaultBranch]);
 
     const { data: latestCommit } = api.repos.getLatestCommit.useQuery({
+        provider,
         owner,
         repo,
         ref: selectedBranch,
@@ -56,6 +67,7 @@ export function RepoFileTable({
 
     const { data: contents, isLoading: contentsLoading } =
         api.repos.getContents.useQuery({
+            provider,
             owner,
             repo,
             ref: selectedBranch,
@@ -78,6 +90,7 @@ export function RepoFileTable({
     const { data: fileCommits, isLoading: fileCommitsLoading } =
         api.repos.getFileLatestCommits.useQuery(
             {
+                provider,
                 owner,
                 repo,
                 ref: selectedBranch,
@@ -90,6 +103,7 @@ export function RepoFileTable({
 
     const { data: fileTree } = api.repos.getFileTree.useQuery(
         {
+            provider,
             owner,
             repo,
             ref: selectedBranch,
@@ -113,6 +127,7 @@ export function RepoFileTable({
             <FileTableHeader
                 owner={owner}
                 repo={repo}
+                provider={provider}
                 selectedBranch={selectedBranch}
                 setSelectedBranch={setSelectedBranch}
                 searchQuery={searchQuery}
@@ -134,6 +149,7 @@ export function RepoFileTable({
                             <CommitRow
                                 owner={owner}
                                 repo={repo}
+                                provider={provider}
                                 latestCommit={latestCommit}
                                 selectedBranch={selectedBranch}
                             />
@@ -150,7 +166,8 @@ export function RepoFileTable({
                             <>
                                 {isFork &&
                                     parentFullName &&
-                                    parentDefaultBranch && (
+                                    parentDefaultBranch &&
+                                    provider !== "cb" && (
                                         <ForkSyncRow
                                             owner={owner}
                                             repo={repo}
@@ -164,6 +181,7 @@ export function RepoFileTable({
                                 <FileTable
                                     owner={owner}
                                     repo={repo}
+                                    provider={provider}
                                     selectedBranch={selectedBranch}
                                     sortedContents={sortedContents}
                                     fileCommits={fileCommits}
@@ -180,12 +198,14 @@ export function RepoFileTable({
 function FileTable({
     owner,
     repo,
+    provider,
     selectedBranch,
     sortedContents,
     fileCommits,
 }: {
     owner: string;
     repo: string;
+    provider: Provider;
     selectedBranch: string;
     sortedContents: RepoContentItem[];
     fileCommits: Record<string, FileLatestCommit | null> | undefined;
@@ -195,9 +215,13 @@ function FileTable({
             <tbody>
                 {sortedContents.map((item) => {
                     const isDir = item.type === "dir";
+                    const encodedPath = item.path
+                        .split("/")
+                        .map(encodeURIComponent)
+                        .join("/");
                     const href = isDir
-                        ? `https://github.com/${owner}/${repo}/tree/${selectedBranch}/${item.path.split("/").map(encodeURIComponent).join("/")}`
-                        : `https://github.com/${owner}/${repo}/blob/${selectedBranch}/${item.path.split("/").map(encodeURIComponent).join("/")}`;
+                        ? `${repoUrl(provider, owner, repo)}/tree/${selectedBranch}/${encodedPath}`
+                        : `${repoUrl(provider, owner, repo)}/blob/${selectedBranch}/${encodedPath}`;
                     const iconName = isDir
                         ? "folder"
                         : getFileIconName(item.name);
@@ -232,7 +256,7 @@ function FileTable({
                                 {commit ? (
                                     <div className="flex items-center gap-2">
                                         <a
-                                            href={`https://github.com/${owner}/${repo}/commit/${commit.sha}`}
+                                            href={`${repoUrl(provider, owner, repo)}/commit/${commit.sha}`}
                                             className="min-w-0 flex-1 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
                                         >
                                             {commit.message}
@@ -378,6 +402,7 @@ function BranchAndTagsSkeleton() {
 function FileTableHeader({
     owner,
     repo,
+    provider,
     selectedBranch,
     setSelectedBranch,
     searchQuery,
@@ -386,6 +411,7 @@ function FileTableHeader({
 }: {
     owner: string;
     repo: string;
+    provider: Provider;
     selectedBranch: string;
     setSelectedBranch: (b: string) => void;
     searchQuery: string;
@@ -395,6 +421,7 @@ function FileTableHeader({
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     const { data: refCounts } = api.repos.getRefCounts.useQuery({
+        provider,
         owner,
         repo,
     });
@@ -405,13 +432,14 @@ function FileTableHeader({
                 <RefSelector
                     owner={owner}
                     repo={repo}
+                    provider={provider}
                     selectedRef={selectedBranch}
                     onSelect={setSelectedBranch}
                 />
                 {refCounts ? (
                     <span className="inline-flex items-center gap-1 text-sm text-text-tertiary">
                         <a
-                            href={`https://github.com/${owner}/${repo}/branches`}
+                            href={`${repoUrl(provider, owner, repo)}/branches`}
                             className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-surface-secondary"
                         >
                             <GitBranchIcon className="h-3 w-3" />
@@ -423,7 +451,7 @@ function FileTableHeader({
                                 : "branches"}
                         </a>
                         <a
-                            href={`https://github.com/${owner}/${repo}/tags`}
+                            href={`${repoUrl(provider, owner, repo)}/tags`}
                             className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-surface-secondary"
                         >
                             <TagIcon className="h-3 w-3" />
@@ -460,7 +488,7 @@ function FileTableHeader({
                         </button>
                     )}
                 </div>
-                <ClonePopover owner={owner} repo={repo} />
+                <ClonePopover owner={owner} repo={repo} provider={provider} />
             </div>
         </div>
     );
@@ -469,11 +497,13 @@ function FileTableHeader({
 function CommitRow({
     owner,
     repo,
+    provider,
     latestCommit,
     selectedBranch,
 }: {
     owner: string;
     repo: string;
+    provider: Provider;
     latestCommit: RepoLatestCommit;
     selectedBranch: string;
 }) {
@@ -487,6 +517,7 @@ function CommitRow({
         () => (checks ? mapChecksListToStatusContexts(checks) : []),
         [checks],
     );
+    const baseUrl = repoUrl(provider, owner, repo);
     return (
         <div className="flex min-h-12 items-center gap-3 border-border border-b px-4 py-3">
             <div className="[&_img]:h-5 [&_img]:w-5 [&_span]:text-sm">
@@ -495,14 +526,17 @@ function CommitRow({
                         latestCommit.author
                             ? {
                                   ...latestCommit.author,
-                                  url: `https://github.com/${latestCommit.author.login}`,
+                                  url:
+                                      provider === "cb"
+                                          ? `https://codeberg.org/${latestCommit.author.login}`
+                                          : `https://github.com/${latestCommit.author.login}`,
                               }
                             : null
                     }
                 />
             </div>
             <a
-                href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
+                href={`${baseUrl}/commit/${latestCommit.sha}`}
                 className="min-w-0 flex-1 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
             >
                 {latestCommit.message}
@@ -523,7 +557,7 @@ function CommitRow({
                 <div className="size-3.5 shrink-0" aria-hidden />
             ) : null}
             <a
-                href={`https://github.com/${owner}/${repo}/commit/${latestCommit.sha}`}
+                href={`${baseUrl}/commit/${latestCommit.sha}`}
                 className="ml-auto shrink-0 pt-px font-mono text-text-tertiary text-xs hover:text-blue-600 dark:hover:text-blue-400"
             >
                 {latestCommit.sha.slice(0, 7)}
@@ -539,7 +573,7 @@ function CommitRow({
                 </span>
             )}
             <a
-                href={`https://github.com/${owner}/${repo}/commits/${selectedBranch}`}
+                href={`${baseUrl}/commits/${selectedBranch}`}
                 className="inline-flex shrink-0 items-center gap-1 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
             >
                 <HistoryIcon className="h-3.5 w-3.5" />

@@ -34,6 +34,7 @@ export default async function CodePage({
 
     return (
         <RepoCodePage
+            provider="gh"
             owner={owner}
             repo={repo}
             repoDataPromise={repoDataPromise}

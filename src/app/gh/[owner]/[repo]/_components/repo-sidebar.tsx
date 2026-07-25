@@ -40,9 +40,12 @@ interface Release {
     htmlUrl: string;
 }
 
+type Provider = "gh" | "cb";
+
 interface RepoSidebarProps {
     owner: string;
     repo: string;
+    provider: Provider;
     description: string;
     homepage: string | null;
     topics: string[];
@@ -57,6 +60,7 @@ interface RepoSidebarProps {
 export function RepoSidebar({
     owner,
     repo,
+    provider,
     description,
     homepage,
     topics,
@@ -68,6 +72,8 @@ export function RepoSidebar({
     latestRelease,
 }: RepoSidebarProps) {
     const router = useRouter();
+    const host =
+        provider === "cb" ? "https://codeberg.org" : "https://github.com";
     const licenseFiles = docFileNames.filter(
         (f) => getDocFileHashName(f.name) === "license",
     );
@@ -174,7 +180,7 @@ export function RepoSidebar({
                         </a>
                     )}
                     <a
-                        href={`https://github.com/${owner}/${repo}/activity`}
+                        href={`${host}/${owner}/${repo}/activity`}
                         className="flex items-start gap-1.5 text-sm text-text-secondary hover:text-text-primary hover:underline"
                     >
                         <ActivityIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -190,7 +196,7 @@ export function RepoSidebar({
             {latestRelease && (
                 <div className="mt-3 border-border border-t pt-3">
                     <a
-                        href={`https://github.com/${owner}/${repo}/releases`}
+                        href={`${host}/${owner}/${repo}/releases`}
                         className="font-semibold text-sm text-text-secondary uppercase hover:text-text-primary hover:underline"
                     >
                         Releases
@@ -225,7 +231,7 @@ export function RepoSidebar({
             {deployments.length > 0 && (
                 <div className="mt-3 border-border border-t pt-3">
                     <a
-                        href={`https://github.com/${owner}/${repo}/deployments`}
+                        href={`${host}/${owner}/${repo}/deployments`}
                         className="font-semibold text-sm text-text-secondary uppercase hover:text-text-primary hover:underline"
                     >
                         Deployments
@@ -234,7 +240,7 @@ export function RepoSidebar({
                         {deployments.map((deployment) => (
                             <a
                                 key={deployment.id}
-                                href={`https://github.com/${owner}/${repo}/deployments/${deployment.environment}`}
+                                href={`${host}/${owner}/${repo}/deployments/${deployment.environment}`}
                                 className="flex items-center gap-1.5 text-sm hover:underline"
                             >
                                 <DeployStatusIcon
@@ -261,7 +267,7 @@ export function RepoSidebar({
             {contributors.length > 0 && (
                 <div className="mt-3 border-border border-t pt-3">
                     <a
-                        href={`https://github.com/${owner}/${repo}/graphs/contributors`}
+                        href={`${host}/${owner}/${repo}/graphs/contributors`}
                         className="font-semibold text-sm text-text-secondary uppercase hover:text-text-primary hover:underline"
                     >
                         Contributors
@@ -272,9 +278,7 @@ export function RepoSidebar({
                                 key={contributor.login}
                                 login={contributor.login}
                             >
-                                <a
-                                    href={`https://github.com/${contributor.login}`}
-                                >
+                                <a href={`${host}/${contributor.login}`}>
                                     <img
                                         src={contributor.avatarUrl}
                                         alt={contributor.login}

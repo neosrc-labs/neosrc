@@ -42,9 +42,12 @@ interface Deployment {
     createdAt: string;
 }
 
+type Provider = "gh" | "cb";
+
 interface RepoCodePageProps {
     owner: string;
     repo: string;
+    provider: Provider;
     repoDataPromise: Promise<RepoData>;
     contributorsPromise: Promise<Contributor[]>;
     docFileNamesPromise: Promise<DocFileName[]>;
@@ -66,6 +69,7 @@ interface RepoCodePageProps {
 export function RepoCodePage({
     owner,
     repo,
+    provider,
     repoDataPromise,
     contributorsPromise,
     docFileNamesPromise,
@@ -82,6 +86,7 @@ export function RepoCodePage({
                     <RepoHeader
                         owner={owner}
                         repo={repo}
+                        provider={provider}
                         repoDataPromise={repoDataPromise}
                         starredPromise={starredPromise}
                         subscriptionPromise={subscriptionPromise}
@@ -103,6 +108,7 @@ export function RepoCodePage({
                                 <RepoFileTable
                                     owner={owner}
                                     repo={repo}
+                                    provider={provider}
                                     defaultBranch={repoData.defaultBranch}
                                     isFork={repoData.isFork}
                                     parentFullName={repoData.parentFullName}
@@ -126,6 +132,7 @@ export function RepoCodePage({
                                     repo={repo}
                                     ref={repoData.defaultBranch}
                                     fileNames={docFileNames}
+                                    provider={provider}
                                 />
                             )}
                         </Async>
@@ -153,6 +160,7 @@ export function RepoCodePage({
                             <RepoSidebar
                                 owner={owner}
                                 repo={repo}
+                                provider={provider}
                                 description={repoData.description}
                                 homepage={repoData.homepage}
                                 topics={repoData.topics}
