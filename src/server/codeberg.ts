@@ -527,7 +527,7 @@ export const getLatestCommit = cache(
             committedDate:
                 commit.commit.committer?.date ??
                 commit.commit.author?.date ??
-                "",
+                null,
             commitCount,
         };
     },
@@ -567,7 +567,7 @@ export const getFileLatestCommit = cache(
             committedDate:
                 commit.commit.committer?.date ??
                 commit.commit.author?.date ??
-                "",
+                null,
         };
     },
 );

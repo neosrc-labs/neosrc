@@ -25,8 +25,8 @@ export interface RepoData {
 }
 
 interface Contributor {
-    login: string;
-    avatarUrl: string;
+    login: string | null;
+    avatarUrl: string | null;
 }
 
 export interface DocFileName {
