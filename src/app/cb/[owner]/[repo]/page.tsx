@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { api } from "~/trpc/server";
-import type { RepoData } from "../../../gh/[owner]/[repo]/_components/repo-code-page";
-import { RepoCodePage } from "../../../gh/[owner]/[repo]/_components/repo-code-page";
+import type { RepoData } from "../../../[owner]/[repo]/_components/repo-code-page";
+import { RepoCodePage } from "../../../[owner]/[repo]/_components/repo-code-page";
 
 export async function generateMetadata({
     params,
