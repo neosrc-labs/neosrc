@@ -57,7 +57,7 @@ export function CommentCard({
                 <img
                     alt={user.login ?? "user"}
                     className="h-5 w-5 flex-shrink-0 self-center rounded-full"
-                    src={user.avatar_url ?? ""}
+                    src={user.avatar_url ?? undefined}
                 />
             )}
             <span className="truncate font-medium text-sm text-text-primary">

@@ -90,7 +90,7 @@ export function AuthorDropdown({
             ? [
                   {
                       login: debouncedSearch,
-                      avatar_url: searchedUser?.avatar_url ?? "",
+                      avatar_url: searchedUser?.avatar_url,
                       isCustom: true as const,
                   },
               ]
