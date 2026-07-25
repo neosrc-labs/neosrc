@@ -215,10 +215,7 @@ function HeaderContent({
         const allTabs: Tab[] = [
             {
                 label: "Code",
-                path:
-                    provider === "cb"
-                        ? `https://codeberg.org/${owner}/${repo}`
-                        : `/${provider}/${owner}/${repo}`,
+                path: `/${provider}/${owner}/${repo}`,
                 show: true,
                 isActive: isCode,
                 icon: Code2,
