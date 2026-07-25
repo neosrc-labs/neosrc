@@ -219,9 +219,12 @@ function FileTable({
                         .split("/")
                         .map(encodeURIComponent)
                         .join("/");
-                    const href = isDir
-                        ? `${repoUrl(provider, owner, repo)}/tree/${selectedBranch}/${encodedPath}`
-                        : `${repoUrl(provider, owner, repo)}/blob/${selectedBranch}/${encodedPath}`;
+                    const href =
+                        provider === "cb"
+                            ? `${repoUrl(provider, owner, repo)}/src/branch/${selectedBranch}/${encodedPath}`
+                            : isDir
+                              ? `${repoUrl(provider, owner, repo)}/tree/${selectedBranch}/${encodedPath}`
+                              : `${repoUrl(provider, owner, repo)}/blob/${selectedBranch}/${encodedPath}`;
                     const iconName = isDir
                         ? "folder"
                         : getFileIconName(item.name);
