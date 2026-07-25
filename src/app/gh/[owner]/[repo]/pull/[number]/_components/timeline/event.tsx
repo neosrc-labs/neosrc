@@ -574,7 +574,13 @@ function EventContent({
             return <HeadRefEventContent event={event} />;
 
         case "CrossReferencedEvent":
-            return <CrossReferencedEventContent event={event} />;
+            return (
+                <CrossReferencedEventContent
+                    event={event}
+                    owner={owner}
+                    repo={repo}
+                />
+            );
 
         case "AssignedEvent":
         case "UnassignedEvent":
