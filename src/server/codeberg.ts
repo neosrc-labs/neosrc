@@ -635,6 +635,42 @@ export const getFileTree = cache(
     },
 );
 
+export const getFileContent = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        path: string,
+        ref?: string,
+    ) => {
+        const params = new URLSearchParams();
+        if (ref) params.set("ref", ref);
+
+        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/contents/${path}?${params}`;
+
+        const res = await fetch(url, {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        });
+        if (!res.ok) throw new Error(`File not found: ${path}`);
+
+        const data = (await res.json()) as {
+            encoding?: string | null;
+            content?: string | null;
+        };
+        if (!data.content) throw new Error(`File not found: ${path}`);
+
+        const decoded =
+            data.encoding === "base64"
+                ? Buffer.from(data.content, "base64").toString("utf-8")
+                : data.content;
+
+        return { content: decoded };
+    },
+);
+
 export const getRepoLanguages = cache(
     async (accessToken: string, owner: string, repo: string) => {
         const res = await fetch(
