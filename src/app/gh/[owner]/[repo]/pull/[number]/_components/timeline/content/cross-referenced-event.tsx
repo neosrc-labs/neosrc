@@ -1,5 +1,7 @@
 "use client";
 
+import type { PullRequestState } from "~/components/ui/status-pill";
+import { StatusPill } from "~/components/ui/status-pill";
 import { UserLink } from "~/components/user-link";
 import type { GQLCrossReferencedEvent } from "~/server/github-graphql";
 import { formatDateTime, formatRelativeTime } from "~/utils";
@@ -36,16 +38,21 @@ export function CrossReferencedEventContent({
                     href={sourceUrl ?? undefined}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-1 ml-7 flex w-fit items-center gap-1.5 hover:underline"
+                    className="mt-1 ml-7 flex w-full items-center justify-between gap-1.5 pr-4"
                 >
-                    <span className="font-medium text-gray-800 dark:text-zinc-200">
-                        {sourceTitle}
-                    </span>
-                    {repoFullName && sourceNumber && (
-                        <span className="text-text-muted text-xs">
-                            {repoFullName}#{sourceNumber}
+                    <span className="flex min-w-0 items-center gap-1.5 hover:underline">
+                        <span className="truncate font-medium text-gray-800 dark:text-zinc-200">
+                            {sourceTitle}
                         </span>
-                    )}
+                        {repoFullName && sourceNumber && (
+                            <span className="shrink-0 text-text-muted text-xs">
+                                {repoFullName}#{sourceNumber}
+                            </span>
+                        )}
+                    </span>
+                    <StatusPill
+                        state={source.state.toLowerCase() as PullRequestState}
+                    />
                 </a>
             )}
         </div>
