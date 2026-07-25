@@ -366,6 +366,315 @@ export async function getCachedRepo(
     );
 }
 
+type CodebergBranchRaw = {
+    name: string;
+    commit: { id: string };
+};
+
+type CodebergTagRaw = {
+    name: string;
+    commit: { sha: string };
+};
+
+type CodebergContentRaw = {
+    type: "file" | "dir" | "submodule" | "symlink";
+    name: string;
+    path: string;
+    sha: string;
+    size: number;
+    html_url: string | null;
+};
+
+type CodebergTreeItemRaw = {
+    path: string;
+    type: "blob" | "tree";
+    sha: string;
+    size: number;
+};
+
+type CodebergCommitRaw = {
+    sha: string;
+    commit: {
+        message: string;
+        author: { name: string; email: string; date: string };
+        committer: { name: string; email: string; date: string };
+    };
+    author: { login: string; avatar_url: string } | null;
+};
+
+type CodebergReleaseRaw = {
+    name: string;
+    tag_name: string;
+    created_at: string;
+    html_url: string;
+};
+
+export const getBranches = cache(
+    async (accessToken: string, owner: string, repo: string) => {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) return [];
+        const branches = (await res.json()) as CodebergBranchRaw[];
+        return branches.map((b) => ({ name: b.name, sha: b.commit.id }));
+    },
+);
+
+export const getTags = cache(
+    async (accessToken: string, owner: string, repo: string) => {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/tags`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) return [];
+        const tags = (await res.json()) as CodebergTagRaw[];
+        return tags.map((t) => ({ name: t.name, sha: t.commit.sha }));
+    },
+);
+
+export async function getRefCounts(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<{ branchCount: number; tagCount: number }> {
+    const [branchesRes, tagsRes] = await Promise.all([
+        fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches?limit=1`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        ),
+        fetch(`${CODEBERG_API}/api/v1/repos/${owner}/${repo}/tags?limit=1`, {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        }),
+    ]);
+
+    const parsePageCount = (res: Response): number => {
+        if (!res.ok) return 0;
+        const linkHeader = res.headers.get("Link");
+        if (!linkHeader) return 0;
+        const lastMatch = /<[^>]*[?&]page=(\d+)[^>]*>;\s*rel="last"/.exec(
+            linkHeader,
+        );
+        if (lastMatch?.[1]) return Number.parseInt(lastMatch[1], 10);
+        return 0;
+    };
+
+    return {
+        branchCount: parsePageCount(branchesRes),
+        tagCount: parsePageCount(tagsRes),
+    };
+}
+
+export const getLatestCommit = cache(
+    async (accessToken: string, owner: string, repo: string, ref?: string) => {
+        const params = new URLSearchParams({ limit: "1" });
+        if (ref) params.set("sha", ref);
+
+        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`;
+
+        const res = await fetch(url, {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        });
+        if (!res.ok) throw new Error(`No commits found for ${owner}/${repo}`);
+
+        const commits = (await res.json()) as CodebergCommitRaw[];
+        const commit = commits[0];
+        if (!commit) throw new Error(`No commits found for ${owner}/${repo}`);
+
+        const linkHeader = res.headers.get("Link");
+        let commitCount = 1;
+        if (linkHeader) {
+            const lastMatch = /<[^>]*[?&]page=(\d+)[^>]*>;\s*rel="last"/.exec(
+                linkHeader,
+            );
+            if (lastMatch?.[1]) commitCount = Number.parseInt(lastMatch[1], 10);
+        }
+
+        const message = commit.commit.message.split("\n")[0] ?? "";
+
+        return {
+            sha: commit.sha,
+            message,
+            author: commit.author
+                ? {
+                      login: commit.author.login,
+                      avatarUrl: commit.author.avatar_url,
+                  }
+                : null,
+            committedDate:
+                commit.commit.committer?.date ??
+                commit.commit.author?.date ??
+                "",
+            commitCount,
+        };
+    },
+);
+
+export const getFileLatestCommit = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        ref: string,
+        filePath: string,
+    ) => {
+        const params = new URLSearchParams({
+            limit: "1",
+            path: filePath,
+        });
+        if (ref) params.set("sha", ref);
+
+        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`;
+
+        const res = await fetch(url, {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        });
+        if (!res.ok) return null;
+
+        const commits = (await res.json()) as CodebergCommitRaw[];
+        const commit = commits[0];
+        if (!commit) return null;
+
+        return {
+            sha: commit.sha,
+            message: commit.commit.message.split("\n")[0] ?? "",
+            committedDate:
+                commit.commit.committer?.date ??
+                commit.commit.author?.date ??
+                "",
+        };
+    },
+);
+
+export const getRepoContents = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        path?: string,
+        ref?: string,
+    ) => {
+        const params = new URLSearchParams();
+        if (ref) params.set("ref", ref);
+
+        const urlPath = path ? `/${path}` : "";
+        const query = params.toString();
+        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/contents${urlPath}${query ? `?${query}` : ""}`;
+
+        const res = await fetch(url, {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        });
+        if (!res.ok) return [];
+
+        const data = (await res.json()) as
+            | CodebergContentRaw
+            | CodebergContentRaw[];
+        const items = Array.isArray(data) ? data : [data];
+
+        return items.map((item) => ({
+            type: item.type,
+            name: item.name,
+            path: item.path,
+            sha: item.sha,
+            size: item.size,
+            htmlUrl: item.html_url ?? null,
+        }));
+    },
+);
+
+export const getFileTree = cache(
+    async (accessToken: string, owner: string, repo: string, ref: string) => {
+        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
+
+        const res = await fetch(url, {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        });
+        if (!res.ok) return [];
+
+        const data = (await res.json()) as {
+            tree: CodebergTreeItemRaw[];
+        };
+
+        return data.tree.map((item) => ({
+            name: item.path.split("/").pop() ?? item.path,
+            path: item.path,
+            sha: item.sha,
+            htmlUrl: `https://codeberg.org/${owner}/${repo}/src/branch/${ref}/${item.path}`,
+            type: item.type,
+        }));
+    },
+);
+
+export const getRepoLanguages = cache(
+    async (accessToken: string, owner: string, repo: string) => {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/languages`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) return {};
+        return res.json() as Promise<Record<string, number>>;
+    },
+);
+
+export const getLatestRelease = cache(
+    async (accessToken: string, owner: string, repo: string) => {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/releases?limit=1`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) return null;
+        const releases = (await res.json()) as CodebergReleaseRaw[];
+        const release = releases[0];
+        if (!release) return null;
+        return {
+            name: release.name,
+            tagName: release.tag_name,
+            createdAt: release.created_at,
+            htmlUrl: release.html_url,
+        };
+    },
+);
+
 const getRepoCounts = cache(
     async (
         accessToken: string,
