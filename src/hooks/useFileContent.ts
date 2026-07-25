@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 
 interface UseFileContentParams {
-    owner: string;
-    repo: string;
-    sha: string;
-    path: string;
+    owner: string | undefined;
+    repo: string | undefined;
+    sha: string | undefined;
+    path: string | undefined;
 }
 
 interface CacheEntry {
@@ -32,6 +32,13 @@ export function useFileContent({
     const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
+        if (!owner || !repo || !sha || !path) {
+            setLines(null);
+            setIsLoading(false);
+            setError(null);
+            return;
+        }
+
         const key = getCacheKey(sha, path);
         let entry = cache.get(key);
 

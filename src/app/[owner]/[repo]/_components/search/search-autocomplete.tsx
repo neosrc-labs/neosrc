@@ -127,7 +127,10 @@ export const SearchAutocomplete = forwardRef<
         if (match.key === "author") {
             for (const u of recentAuthors ?? []) {
                 if (!map.has(u.login)) {
-                    map.set(u.login, u);
+                    map.set(u.login, {
+                        login: u.login,
+                        avatar_url: u.avatar_url ?? undefined,
+                    });
                 }
             }
         }

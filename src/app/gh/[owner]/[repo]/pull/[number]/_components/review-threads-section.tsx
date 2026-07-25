@@ -77,7 +77,7 @@ function ThreadCard({ thread }: ThreadCardProps) {
             <img
                 alt={`${root.author?.login ?? "unknown"}'s avatar`}
                 className="mt-0.5 size-5 shrink-0 rounded-full"
-                src={root.author?.avatarUrl ?? ""}
+                src={root.author?.avatarUrl ?? undefined}
             />
 
             <div className="min-w-0 flex-1">

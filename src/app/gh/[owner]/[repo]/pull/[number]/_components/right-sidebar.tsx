@@ -64,7 +64,7 @@ export default function RightSidebar({
     const sha = pullRequest?.head?.sha;
 
     const { data: checks } = api.checks.list.useQuery(
-        { owner, repo, sha: sha ?? "" },
+        { owner, repo, sha: sha as string },
         {
             enabled: !!sha && !!checksPromise,
             initialData: initialChecks ?? undefined,

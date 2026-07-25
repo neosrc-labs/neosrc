@@ -22,8 +22,8 @@ import { formatRelativeTime } from "~/utils";
 import type { DocFileName } from "./repo-code-page";
 
 interface Contributor {
-    login: string;
-    avatarUrl: string;
+    login: string | null;
+    avatarUrl: string | null;
 }
 
 interface Deployment {
@@ -46,7 +46,7 @@ interface RepoSidebarProps {
     owner: string;
     repo: string;
     provider: Provider;
-    description: string;
+    description: string | null;
     homepage: string | null;
     topics: string[];
     createdAt: string;
@@ -273,21 +273,27 @@ export function RepoSidebar({
                         Contributors
                     </a>
                     <div className="mt-3 flex flex-wrap gap-1.5">
-                        {contributors.map((contributor) => (
-                            <UserHoverCard
-                                key={contributor.login}
-                                login={contributor.login}
-                                provider={provider}
-                            >
-                                <a href={`${host}/${contributor.login}`}>
-                                    <img
-                                        src={contributor.avatarUrl}
-                                        alt={contributor.login}
-                                        className="h-8 w-8 rounded-full"
-                                    />
-                                </a>
-                            </UserHoverCard>
-                        ))}
+                        {contributors.map((contributor) => {
+                            const login = contributor.login ?? "unknown";
+                            return (
+                                <UserHoverCard
+                                    key={login}
+                                    login={login}
+                                    provider={provider}
+                                >
+                                    <a href={`${host}/${login}`}>
+                                        <img
+                                            src={
+                                                contributor.avatarUrl ??
+                                                undefined
+                                            }
+                                            alt={login}
+                                            className="h-8 w-8 rounded-full"
+                                        />
+                                    </a>
+                                </UserHoverCard>
+                            );
+                        })}
                     </div>
                 </div>
             )}

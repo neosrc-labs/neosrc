@@ -92,7 +92,7 @@ export function ReactionBar({
                                                 r.user?.avatar_url ??
                                                 r.user?.avatarUrl
                                             }
-                                            alt={r.user?.login ?? ""}
+                                            alt={r.user?.login ?? undefined}
                                             className={`h-4 w-4 rounded-full ring-1 ring-white dark:ring-zinc-800 ${
                                                 i === 0 ? "ml-0.5" : "-ml-1.5"
                                             }`}

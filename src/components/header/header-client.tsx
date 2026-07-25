@@ -69,6 +69,7 @@ export function HeaderClient({
     const repoMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)/);
     const owner = repoMatch?.[1] ?? "";
     const repo = repoMatch?.[2] ?? "";
+
     const provider = pathname.startsWith("/cb/") ? "cb" : "gh";
 
     const { data: clientRepoData } = api.repos.getByOwnerAndRepo.useQuery(

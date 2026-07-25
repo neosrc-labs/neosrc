@@ -12,7 +12,7 @@ export interface RepoData {
     stars: number;
     forks: number;
     watchers: number;
-    description: string;
+    description: string | null;
     defaultBranch: string;
     homepage: string | null;
     language: string | null;
@@ -25,8 +25,8 @@ export interface RepoData {
 }
 
 interface Contributor {
-    login: string;
-    avatarUrl: string;
+    login: string | null;
+    avatarUrl: string | null;
 }
 
 export interface DocFileName {

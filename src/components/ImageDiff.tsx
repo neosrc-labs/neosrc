@@ -2,6 +2,7 @@
 
 import { ArrowLeftRight, Columns2, Layers } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { cn } from "~/lib/utils";
 
 type DiffMode = "2up" | "swipe" | "onion";
 
@@ -24,7 +25,10 @@ function ImageWithFallback({
     if (error) {
         return (
             <div
-                className={`flex items-center justify-center bg-surface-tertiary text-sm text-text-tertiary ${className ?? ""}`}
+                className={cn(
+                    "flex items-center justify-center bg-surface-tertiary text-sm text-text-tertiary",
+                    className,
+                )}
             >
                 Failed to load image
             </div>

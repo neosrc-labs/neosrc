@@ -1446,13 +1446,13 @@ export const listRecentIssueAuthors = async (
         per_page: 100,
     });
     const seen = new Set<string>();
-    const authors: Array<{ login: string; avatar_url: string }> = [];
+    const authors: Array<{ login: string; avatar_url: string | null }> = [];
     for (const issue of response.data) {
         if (issue.user && !seen.has(issue.user.login)) {
             seen.add(issue.user.login);
             authors.push({
                 login: issue.user.login,
-                avatar_url: issue.user.avatar_url ?? "",
+                avatar_url: issue.user.avatar_url ?? null,
             });
         }
     }
@@ -2270,8 +2270,8 @@ export async function getRepoTags(
 }
 
 export interface RepoContributor {
-    login: string;
-    avatarUrl: string;
+    login: string | null;
+    avatarUrl: string | null;
     contributions: number;
 }
 
@@ -2288,8 +2288,8 @@ export async function getRepoContributors(
     });
 
     return (data ?? []).map((contributor) => ({
-        login: contributor.login ?? "",
-        avatarUrl: contributor.avatar_url ?? "",
+        login: contributor.login ?? null,
+        avatarUrl: contributor.avatar_url ?? null,
         contributions: contributor.contributions,
     }));
 }
@@ -2520,7 +2520,7 @@ export interface RepoLatestCommit {
         login: string;
         avatarUrl: string;
     } | null;
-    committedDate: string;
+    committedDate: string | null;
     commitCount: number;
 }
 
@@ -2559,7 +2559,7 @@ export async function getRepoLatestCommit(
               }
             : null,
         committedDate:
-            commit.commit.committer?.date ?? commit.commit.author?.date ?? "",
+            commit.commit.committer?.date ?? commit.commit.author?.date ?? null,
         commitCount,
     };
 }
@@ -2604,7 +2604,7 @@ export async function mergeForkUpstream(
     owner: string,
     repo: string,
     branch: string,
-): Promise<{ message: string; mergeType: string }> {
+): Promise<{ message: string | null; mergeType: string | null }> {
     const octokit = createOctokit(accessToken);
     const response = await octokit.request(
         "POST /repos/{owner}/{repo}/merge-upstream",
@@ -2616,15 +2616,15 @@ export async function mergeForkUpstream(
     );
 
     return {
-        message: response.data.message ?? "",
-        mergeType: response.data.merge_type ?? "",
+        message: response.data.message ?? null,
+        mergeType: response.data.merge_type ?? null,
     };
 }
 
 export interface FileLatestCommit {
     sha: string;
     message: string;
-    committedDate: string;
+    committedDate: string | null;
 }
 
 interface GqlFileCommitNode {

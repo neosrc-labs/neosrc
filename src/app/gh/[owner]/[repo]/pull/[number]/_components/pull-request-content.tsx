@@ -44,7 +44,7 @@ export function PullRequestContent({
     const isManuallyOutdated = activeReport?.state === "OUTDATED";
 
     const { data: reportCommit } = api.commits.getBySha.useQuery(
-        { owner, repo, sha: activeReport?.commitSha ?? "" },
+        { owner, repo, sha: activeReport?.commitSha as string },
         { enabled: !!activeReport?.commitSha },
     );
 
