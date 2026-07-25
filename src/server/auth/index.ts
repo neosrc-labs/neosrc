@@ -186,6 +186,24 @@ export const auth = betterAuth({
                             // silently fail; username will be fetched on demand
                         }
                     }
+                    if (
+                        account.providerId === "github" &&
+                        account.accessToken
+                    ) {
+                        try {
+                            const accessToken = decrypt(account.accessToken);
+                            const profile =
+                                await getAuthenticatedUser(accessToken);
+                            await db
+                                .update(betterAuthUser)
+                                .set({
+                                    githubUsername: profile.login,
+                                })
+                                .where(eq(betterAuthUser.id, account.userId));
+                        } catch {
+                            // silently fail; username will be fetched on demand
+                        }
+                    }
                 },
             },
             update: {
