@@ -7,7 +7,6 @@ import type {
     GQLReviewRequestRemovedEvent,
 } from "~/server/github-graphql";
 import { formatRelativeTime } from "~/utils";
-import { EventRow } from "../event";
 
 export function ReviewRequestEventContent({
     event,
@@ -21,34 +20,34 @@ export function ReviewRequestEventContent({
     const isRequested = event.__typename === "ReviewRequestedEvent";
 
     return (
-        <EventRow>
+        <div className="flex items-center gap-1 text-sm text-text-secondary">
             <UserLink actor={event.actor} />
-            <p>
+            <span>
                 {isRequested
-                    ? " requested a review from "
-                    : " removed the review request for "}
-                {isUser && reviewer && (
-                    <UserHoverCard login={reviewer.login}>
-                        <a
-                            className="inline-flex items-center gap-1 font-medium text-gray-800 dark:text-zinc-200"
-                            href={reviewer.url}
-                        >
-                            <img
-                                src={reviewer.avatarUrl}
-                                alt={reviewer.login}
-                                className="h-4 w-4 rounded-full"
-                            />
-                            {reviewer.login}
-                        </a>
-                    </UserHoverCard>
-                )}
-                {isTeam && reviewer && (
-                    <span className="font-medium text-gray-800 dark:text-zinc-200">
-                        {reviewer.name ?? reviewer.slug}
-                    </span>
-                )}
-                {` ${timestamp}`}
-            </p>
-        </EventRow>
+                    ? "requested a review from"
+                    : "removed the review request for"}
+            </span>
+            {isUser && reviewer && (
+                <UserHoverCard login={reviewer.login}>
+                    <a
+                        className="inline-flex items-center gap-1 font-medium text-gray-800 dark:text-zinc-200"
+                        href={reviewer.url}
+                    >
+                        <img
+                            src={reviewer.avatarUrl}
+                            alt={reviewer.login}
+                            className="h-4 w-4 rounded-full"
+                        />
+                        {reviewer.login}
+                    </a>
+                </UserHoverCard>
+            )}
+            {isTeam && reviewer && (
+                <span className="font-medium text-gray-800 dark:text-zinc-200">
+                    {reviewer.name ?? reviewer.slug}
+                </span>
+            )}
+            <span className="whitespace-nowrap">{timestamp}</span>
+        </div>
     );
 }
