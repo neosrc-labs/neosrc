@@ -104,8 +104,8 @@ export function MarkdownEditor({
         error: issuesErrorObj,
     } = api.issues.searchAutocomplete.useQuery(
         {
-            owner: owner ?? "",
-            repo: repo ?? "",
+            owner: owner as string,
+            repo: repo as string,
             query: autocompleteQuery ?? "",
         },
         {

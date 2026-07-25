@@ -729,10 +729,10 @@ function BlockRows({
         isLoading,
         error,
     } = useFileContent({
-        owner: owner ?? "",
-        repo: repo ?? "",
-        sha: headSha ?? "",
-        path: filename ?? "",
+        owner,
+        repo,
+        sha: headSha,
+        path: filename,
     });
 
     const gapEnd =
@@ -993,8 +993,8 @@ function BlockRows({
                                             <InlineCommentThread
                                                 parentComment={thread.parent}
                                                 replies={thread.replies}
-                                                owner={owner ?? ""}
-                                                repo={repo ?? ""}
+                                                owner={owner as string}
+                                                repo={repo as string}
                                                 number={Number(pullNumber ?? 0)}
                                                 pendingReviewId={
                                                     pendingReviewId
@@ -1018,8 +1018,8 @@ function BlockRows({
                                         onCancel={onCancelComment ?? (() => {})}
                                         placeholder="Add a comment..."
                                         value={commentBody}
-                                        owner={owner ?? ""}
-                                        repo={repo ?? ""}
+                                        owner={owner as string}
+                                        repo={repo as string}
                                         footerActions={footerActions}
                                     />
                                     {commentError && (
@@ -1072,9 +1072,9 @@ function GapRow({
     onLineMouseDown,
 }: GapRowProps) {
     const { lines, isLoading, error } = useFileContent({
-        owner: owner ?? "",
-        repo: repo ?? "",
-        sha: headSha ?? "",
+        owner,
+        repo,
+        sha: headSha,
         path: filename,
     });
 

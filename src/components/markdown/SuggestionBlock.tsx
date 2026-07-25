@@ -116,10 +116,10 @@ export function SuggestionBlock({
         {
             owner,
             repo,
-            number: pullNumber ?? 0,
-            path: path ?? "",
+            number: pullNumber as number,
+            path: path as string,
             suggestionCode: code,
-            line: line ?? 0,
+            line: line as number,
             startLine: startLine ?? null,
         },
         {

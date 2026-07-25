@@ -512,7 +512,7 @@ function CommitRow({
 }) {
     const { data: checks, isFetching: checksFetching } =
         api.checks.list.useQuery(
-            { owner, repo, sha: latestCommit?.sha ?? "" },
+            { owner, repo, sha: latestCommit?.sha as string },
             { enabled: !!latestCommit?.sha },
         );
 
