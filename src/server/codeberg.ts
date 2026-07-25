@@ -298,11 +298,35 @@ export type CodebergRepo = {
     owner: { login: string; avatar_url: string };
     name: string;
     full_name: string;
+    description: string | null;
     private: boolean;
+    fork: boolean;
+    parent: {
+        full_name: string;
+        default_branch: string | null;
+    } | null;
+    mirror: boolean;
+    stars_count: number;
+    forks_count: number;
+    watchers_count: number;
+    language: string | null;
+    topics: string[];
+    license: { name: string; url: string | null } | null;
+    default_branch: string | null;
+    website: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+    archived: boolean;
     has_issues: boolean;
     has_wiki: boolean;
     has_projects: boolean;
+    has_pull_requests: boolean;
     permissions: { admin: boolean; push: boolean; pull: boolean };
+    allow_merge_commits: boolean;
+    allow_rebase: boolean;
+    allow_squash_merge: boolean;
+    clone_url: string;
+    ssh_url: string;
 };
 
 export const getRepo = cache(
@@ -598,9 +622,14 @@ export interface CodebergRepoHeaderInfo {
     isPrivate: boolean;
     permissions: { admin: boolean };
     ownerAvatarUrl: string | null;
-    allowSquashMerge?: boolean;
-    allowRebaseMerge?: boolean;
-    allowMergeCommit?: boolean;
+    allowSquashMerge: boolean;
+    allowRebaseMerge: boolean;
+    allowMergeCommit: boolean;
+    defaultBranch: string | null;
+    description: string;
+    stars: number;
+    forks: number;
+    language: string | null;
 }
 
 export async function getCachedRepoHeaderData(
@@ -618,6 +647,14 @@ export async function getCachedRepoHeaderData(
         isPrivate: repoInfo.private,
         permissions: { admin: repoInfo.permissions.admin },
         ownerAvatarUrl: repoInfo.owner.avatar_url,
+        allowSquashMerge: repoInfo.allow_squash_merge,
+        allowRebaseMerge: repoInfo.allow_rebase,
+        allowMergeCommit: repoInfo.allow_merge_commits,
+        defaultBranch: repoInfo.default_branch,
+        description: repoInfo.description ?? "",
+        stars: repoInfo.stars_count,
+        forks: repoInfo.forks_count,
+        language: repoInfo.language ?? null,
     };
 }
 
