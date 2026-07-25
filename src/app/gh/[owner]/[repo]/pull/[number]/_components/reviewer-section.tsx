@@ -108,6 +108,7 @@ export function ReviewerSection({
             state: string;
             submitted_at?: string | null;
         }>,
+        requestedLogins: Set<string>,
     ): Map<string, string> {
         const map = new Map<string, string>();
         for (const review of reviews) {
@@ -120,6 +121,11 @@ export function ReviewerSection({
                 map.delete(login);
             } else if (state === "COMMENTED" && !map.has(login)) {
                 map.set(login, "COMMENTED");
+            }
+        }
+        for (const login of requestedLogins) {
+            if (map.get(login) === "COMMENTED") {
+                map.set(login, "PENDING");
             }
         }
         return map;
@@ -181,6 +187,11 @@ export function ReviewerSection({
                     }
                     const reviewStateMap = buildReviewStateMap(
                         reviewsQuery.data ?? [],
+                        new Set(
+                            pullRequest.requested_reviewers?.map(
+                                (r) => r.login,
+                            ) ?? [],
+                        ),
                     );
                     const reviewSortMap = buildReviewSortMap(
                         reviewsQuery.data ?? [],
