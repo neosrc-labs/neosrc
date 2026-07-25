@@ -163,6 +163,29 @@ export const auth = betterAuth({
                         },
                     };
                 },
+                after: async (account) => {
+                    if (
+                        account.providerId === "codeberg" &&
+                        account.accessToken
+                    ) {
+                        try {
+                            const accessToken = decrypt(account.accessToken);
+                            const profile = await getCodebergUser(accessToken);
+                            if (profile) {
+                                await db
+                                    .update(betterAuthUser)
+                                    .set({
+                                        codebergUsername: profile.username,
+                                    })
+                                    .where(
+                                        eq(betterAuthUser.id, account.userId),
+                                    );
+                            }
+                        } catch {
+                            // silently fail; username will be fetched on demand
+                        }
+                    }
+                },
             },
             update: {
                 before: async (data) => {
