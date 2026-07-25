@@ -2,6 +2,8 @@ import { cache } from "react";
 import {
     repoDataCacheKey,
     repoIssuePullCountsCacheKey,
+    repoStarredCacheKey,
+    repoSubscriptionCacheKey,
     withStaleWhileRevalidate,
 } from "~/server/cache";
 
@@ -1060,4 +1062,166 @@ export async function getUserRepos(
     }
 
     return results;
+}
+
+export interface RepoSubscription {
+    subscribed: boolean;
+    ignored: boolean;
+}
+
+export async function checkRepoStarred(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<boolean> {
+    const res = await fetch(
+        `${CODEBERG_API}/api/v1/user/starred/${owner}/${repo}`,
+        {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        },
+    );
+    return res.status === 204;
+}
+
+export async function starRepo(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<void> {
+    const res = await fetch(
+        `${CODEBERG_API}/api/v1/user/starred/${owner}/${repo}`,
+        {
+            method: "PUT",
+            headers: {
+                Authorization: `token ${accessToken}`,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+        },
+    );
+    if (!res.ok) {
+        throw new Error(`Failed to star repo: ${res.status} ${res.statusText}`);
+    }
+}
+
+export async function unstarRepo(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<void> {
+    const res = await fetch(
+        `${CODEBERG_API}/api/v1/user/starred/${owner}/${repo}`,
+        {
+            method: "DELETE",
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        },
+    );
+    if (!res.ok) {
+        console.error("failed to star repo", await res.text());
+        throw new Error(
+            `Failed to unstar repo: ${res.status} ${res.statusText}`,
+        );
+    }
+}
+
+export async function getRepoSubscription(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<RepoSubscription | null> {
+    const res = await fetch(
+        `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/subscription`,
+        {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+        subscribed: boolean;
+        ignored: boolean;
+    };
+    return { subscribed: data.subscribed, ignored: data.ignored };
+}
+
+export async function setRepoSubscription(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    subscribed: boolean,
+    ignored: boolean,
+): Promise<void> {
+    const res = await fetch(
+        `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/subscription`,
+        {
+            method: "PUT",
+            headers: {
+                Authorization: `token ${accessToken}`,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            body: JSON.stringify({ subscribed, ignored }),
+        },
+    );
+    if (!res.ok) {
+        throw new Error(
+            `Failed to set subscription: ${res.status} ${res.statusText}`,
+        );
+    }
+}
+
+export async function deleteRepoSubscription(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<void> {
+    const res = await fetch(
+        `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/subscription`,
+        {
+            method: "DELETE",
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        },
+    );
+    if (!res.ok) {
+        throw new Error(
+            `Failed to delete subscription: ${res.status} ${res.statusText}`,
+        );
+    }
+}
+
+export async function getCachedRepoStarred(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    userId: string,
+): Promise<boolean> {
+    return withStaleWhileRevalidate(
+        repoStarredCacheKey("cb", userId, owner, repo),
+        () => checkRepoStarred(accessToken, owner, repo),
+        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    );
+}
+
+export async function getCachedRepoSubscription(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    userId: string,
+): Promise<RepoSubscription | null> {
+    return withStaleWhileRevalidate(
+        repoSubscriptionCacheKey("cb", userId, owner, repo),
+        () => getRepoSubscription(accessToken, owner, repo),
+        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    );
 }

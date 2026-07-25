@@ -9,7 +9,10 @@ import {
     repoSubscriptionCacheKey,
 } from "~/server/cache";
 import {
+    deleteRepoSubscription as deleteCodebergRepoSubscription,
     getCachedRepo as getCachedCodebergRepo,
+    getCachedRepoStarred as getCachedCodebergRepoStarred,
+    getCachedRepoSubscription as getCachedCodebergRepoSubscription,
     getCachedRepoCounts,
     getBranches as getCodebergBranches,
     getFileContent as getCodebergFileContent,
@@ -22,6 +25,9 @@ import {
     getRepoLanguages as getCodebergRepoLanguages,
     getTags as getCodebergTags,
     getUserRepos as getCodebergUserRepos,
+    setRepoSubscription as setCodebergRepoSubscription,
+    starRepo as starCodebergRepo,
+    unstarRepo as unstarCodebergRepo,
 } from "~/server/codeberg";
 import {
     DOC_FILE_PATTERNS,
@@ -674,7 +680,18 @@ export const reposRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") return false;
+            if (input.provider === "cb") {
+                const accessToken = await getCodebergToken(
+                    ctx.db,
+                    ctx.session.user.id,
+                );
+                return getCachedCodebergRepoStarred(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    ctx.session.user.id,
+                );
+            }
             const accessToken = await getGitHubToken(
                 ctx.db,
                 ctx.session.user.id,
@@ -696,10 +713,20 @@ export const reposRouter = createTRPCRouter({
         )
         .mutation(async ({ ctx, input }) => {
             if (input.provider === "cb") {
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Starring is not supported on Codeberg",
-                });
+                const accessToken = await getCodebergToken(
+                    ctx.db,
+                    ctx.session.user.id,
+                );
+                await starCodebergRepo(accessToken, input.owner, input.repo);
+                await deleteCache(
+                    repoStarredCacheKey(
+                        "cb",
+                        ctx.session.user.id,
+                        input.owner,
+                        input.repo,
+                    ),
+                );
+                return;
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
@@ -708,6 +735,7 @@ export const reposRouter = createTRPCRouter({
             await starRepo(accessToken, input.owner, input.repo);
             await deleteCache(
                 repoStarredCacheKey(
+                    "gh",
                     ctx.session.user.id,
                     input.owner,
                     input.repo,
@@ -724,10 +752,20 @@ export const reposRouter = createTRPCRouter({
         )
         .mutation(async ({ ctx, input }) => {
             if (input.provider === "cb") {
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Unstarring is not supported on Codeberg",
-                });
+                const accessToken = await getCodebergToken(
+                    ctx.db,
+                    ctx.session.user.id,
+                );
+                await unstarCodebergRepo(accessToken, input.owner, input.repo);
+                await deleteCache(
+                    repoStarredCacheKey(
+                        "cb",
+                        ctx.session.user.id,
+                        input.owner,
+                        input.repo,
+                    ),
+                );
+                return;
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
@@ -736,6 +774,7 @@ export const reposRouter = createTRPCRouter({
             await unstarRepo(accessToken, input.owner, input.repo);
             await deleteCache(
                 repoStarredCacheKey(
+                    "gh",
                     ctx.session.user.id,
                     input.owner,
                     input.repo,
@@ -751,7 +790,18 @@ export const reposRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") return null;
+            if (input.provider === "cb") {
+                const accessToken = await getCodebergToken(
+                    ctx.db,
+                    ctx.session.user.id,
+                );
+                return getCachedCodebergRepoSubscription(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    ctx.session.user.id,
+                );
+            }
             const accessToken = await getGitHubToken(
                 ctx.db,
                 ctx.session.user.id,
@@ -775,10 +825,26 @@ export const reposRouter = createTRPCRouter({
         )
         .mutation(async ({ ctx, input }) => {
             if (input.provider === "cb") {
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Watching is not supported on Codeberg",
-                });
+                const accessToken = await getCodebergToken(
+                    ctx.db,
+                    ctx.session.user.id,
+                );
+                await setCodebergRepoSubscription(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.subscribed,
+                    input.ignored,
+                );
+                await deleteCache(
+                    repoSubscriptionCacheKey(
+                        "cb",
+                        ctx.session.user.id,
+                        input.owner,
+                        input.repo,
+                    ),
+                );
+                return;
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
@@ -793,6 +859,7 @@ export const reposRouter = createTRPCRouter({
             );
             await deleteCache(
                 repoSubscriptionCacheKey(
+                    "gh",
                     ctx.session.user.id,
                     input.owner,
                     input.repo,
@@ -809,10 +876,24 @@ export const reposRouter = createTRPCRouter({
         )
         .mutation(async ({ ctx, input }) => {
             if (input.provider === "cb") {
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Unwatching is not supported on Codeberg",
-                });
+                const accessToken = await getCodebergToken(
+                    ctx.db,
+                    ctx.session.user.id,
+                );
+                await deleteCodebergRepoSubscription(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                );
+                await deleteCache(
+                    repoSubscriptionCacheKey(
+                        "cb",
+                        ctx.session.user.id,
+                        input.owner,
+                        input.repo,
+                    ),
+                );
+                return;
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
@@ -821,6 +902,7 @@ export const reposRouter = createTRPCRouter({
             await deleteRepoSubscription(accessToken, input.owner, input.repo);
             await deleteCache(
                 repoSubscriptionCacheKey(
+                    "gh",
                     ctx.session.user.id,
                     input.owner,
                     input.repo,

@@ -1264,7 +1264,7 @@ export async function getCachedRepoStarred(
     userId: string,
 ): Promise<boolean> {
     return withStaleWhileRevalidate(
-        repoStarredCacheKey(userId, owner, repo),
+        repoStarredCacheKey("gh", userId, owner, repo),
         () => checkRepoStarred(accessToken, owner, repo),
         { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
     );
@@ -1277,7 +1277,7 @@ export async function getCachedRepoSubscription(
     userId: string,
 ): Promise<RepoSubscription | null> {
     return withStaleWhileRevalidate(
-        repoSubscriptionCacheKey(userId, owner, repo),
+        repoSubscriptionCacheKey("gh", userId, owner, repo),
         () => getRepoSubscription(accessToken, owner, repo),
         { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
     );

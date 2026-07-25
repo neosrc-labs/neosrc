@@ -74,27 +74,26 @@ export function RepoHeader({
                                 {repoData.isPrivate ? "Private" : "Public"}
                             </span>
                             <div className="ml-auto flex items-center gap-2">
-                                {provider !== "cb" && (
-                                    <>
-                                        <WatchDropdown
-                                            owner={owner}
-                                            repo={repo}
-                                            watchers={repoData.watchers}
-                                            initialSubscription={subscription}
-                                        />
-                                        <ForkButton
-                                            owner={owner}
-                                            repo={repo}
-                                            forks={repoData.forks}
-                                        />
-                                        <StarButton
-                                            owner={owner}
-                                            repo={repo}
-                                            stars={repoData.stars}
-                                            initialStarred={starred}
-                                        />
-                                    </>
-                                )}
+                                <WatchDropdown
+                                    owner={owner}
+                                    repo={repo}
+                                    provider={provider}
+                                    watchers={repoData.watchers}
+                                    initialSubscription={subscription}
+                                />
+                                <ForkButton
+                                    owner={owner}
+                                    repo={repo}
+                                    provider={provider}
+                                    forks={repoData.forks}
+                                />
+                                <StarButton
+                                    owner={owner}
+                                    repo={repo}
+                                    provider={provider}
+                                    stars={repoData.stars}
+                                    initialStarred={starred}
+                                />
                             </div>
                         </div>
                         {repoData.isFork && repoData.parentFullName && (
@@ -140,25 +139,31 @@ function RepoHeaderLoading({
                 {repo}
             </h1>
             <div className="h-[22px] w-14 animate-pulse rounded-full bg-surface-secondary" />
-            {provider !== "cb" && (
-                <div className="ml-auto flex items-center gap-2">
-                    <WatchDropdown
-                        owner={owner}
-                        repo={repo}
-                        watchers={0}
-                        initialSubscription={null}
-                        disabled
-                    />
-                    <ForkButton owner={owner} repo={repo} forks={0} disabled />
-                    <StarButton
-                        owner={owner}
-                        repo={repo}
-                        stars={0}
-                        initialStarred={false}
-                        disabled
-                    />
-                </div>
-            )}
+            <div className="ml-auto flex items-center gap-2">
+                <WatchDropdown
+                    owner={owner}
+                    repo={repo}
+                    provider={provider}
+                    watchers={0}
+                    initialSubscription={null}
+                    disabled
+                />
+                <ForkButton
+                    owner={owner}
+                    repo={repo}
+                    provider={provider}
+                    forks={0}
+                    disabled
+                />
+                <StarButton
+                    owner={owner}
+                    repo={repo}
+                    provider={provider}
+                    stars={0}
+                    initialStarred={false}
+                    disabled
+                />
+            </div>
         </div>
     );
 }
@@ -171,12 +176,14 @@ interface SubscriptionState {
 function WatchDropdown({
     owner,
     repo,
+    provider,
     watchers,
     initialSubscription,
     disabled = false,
 }: {
     owner: string;
     repo: string;
+    provider: Provider;
     watchers: number;
     initialSubscription: SubscriptionState | null;
     disabled?: boolean;
@@ -277,6 +284,7 @@ function WatchDropdown({
                         selected={subscription === null}
                         onClick={() => {
                             deleteSub.mutate({
+                                provider,
                                 owner,
                                 repo,
                             });
@@ -289,6 +297,7 @@ function WatchDropdown({
                         selected={isWatching}
                         onClick={() => {
                             setSub.mutate({
+                                provider,
                                 owner,
                                 repo,
                                 subscribed: true,
@@ -303,6 +312,7 @@ function WatchDropdown({
                         selected={isIgnoring}
                         onClick={() => {
                             setSub.mutate({
+                                provider,
                                 owner,
                                 repo,
                                 subscribed: false,
@@ -368,12 +378,14 @@ function WatchOption({
 function StarButton({
     owner,
     repo,
+    provider,
     stars,
     initialStarred,
     disabled = false,
 }: {
     owner: string;
     repo: string;
+    provider: Provider;
     stars: number;
     initialStarred: boolean;
     disabled?: boolean;
@@ -423,9 +435,9 @@ function StarButton({
     const handleClick = () => {
         if (pending) return;
         if (starred) {
-            unstarMutation.mutate({ owner, repo });
+            unstarMutation.mutate({ provider, owner, repo });
         } else {
-            starMutation.mutate({ owner, repo });
+            starMutation.mutate({ provider, owner, repo });
         }
     };
 
@@ -461,17 +473,19 @@ function StarButton({
 function ForkButton({
     owner,
     repo,
+    provider,
     forks,
     disabled = false,
 }: {
     owner: string;
     repo: string;
+    provider: Provider;
     forks: number;
     disabled?: boolean;
 }) {
     return (
         <a
-            href={`https://github.com/${owner}/${repo}/fork`}
+            href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/fork`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-text-secondary text-xs transition hover:bg-surface-secondary"
         >
             <GitForkIcon className="h-3.5 w-3.5" />

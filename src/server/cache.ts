@@ -141,19 +141,21 @@ export function repoDocFilesCacheKey(
 }
 
 export function repoStarredCacheKey(
+    provider: "gh" | "cb",
     userId: string,
     owner: string,
     repo: string,
 ): string {
-    return `gh:starred:${userId}:${owner}:${repo}`;
+    return `${provider}:starred:${userId}:${owner}:${repo}`;
 }
 
 export function repoSubscriptionCacheKey(
+    provider: "gh" | "cb",
     userId: string,
     owner: string,
     repo: string,
 ): string {
-    return `gh:subscription:${userId}:${owner}:${repo}`;
+    return `${provider}:subscription:${userId}:${owner}:${repo}`;
 }
 
 export async function deleteCache(key: string): Promise<void> {

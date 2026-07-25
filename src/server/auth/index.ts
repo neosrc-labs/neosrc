@@ -118,6 +118,7 @@ export const auth = betterAuth({
                         "https://codeberg.org/.well-known/openid-configuration",
                     scopes: [
                         "read:user",
+                        "write:user",
                         "read:repository",
                         "write:repository",
                         "read:issue",
