@@ -228,6 +228,22 @@ export const auth = betterAuth({
                     return { data: { ...data, ...encrypted } };
                 },
             },
+            delete: {
+                after: async (account) => {
+                    if (account.providerId === "codeberg") {
+                        await db
+                            .update(betterAuthUser)
+                            .set({ codebergUsername: null })
+                            .where(eq(betterAuthUser.id, account.userId));
+                    }
+                    if (account.providerId === "github") {
+                        await db
+                            .update(betterAuthUser)
+                            .set({ githubUsername: null })
+                            .where(eq(betterAuthUser.id, account.userId));
+                    }
+                },
+            },
         },
     },
 });
