@@ -40,6 +40,6 @@ export default async function CodeRedirectPage({
     ]);
 
     if (githubExists) redirect(`/gh/${owner}/${repo}`);
-    if (codebergExists) redirect(`https://codeberg.org/${owner}/${repo}`);
+    if (codebergExists) redirect(`/cb/${owner}/${repo}`);
     notFound();
 }
