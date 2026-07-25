@@ -246,6 +246,7 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
         RemovedFromMergeQueueEvent: (
             <X className="text-red-400" size={ICON_SIZE} />
         ),
+        ReviewDismissedEvent: <X className="text-red-400" size={ICON_SIZE} />,
     };
 
     const typename = event.__typename;
