@@ -2015,7 +2015,7 @@ export interface RepoDocFileName {
     displayName: string;
 }
 
-const DOC_FILE_PATTERNS = [
+export const DOC_FILE_PATTERNS = [
     /^readme/i,
     /^contributing\.md$/i,
     /^code_of_conduct\.md$/i,
@@ -2028,7 +2028,7 @@ const PRIORITY_ORDER: Record<string, number> = {
     code_of_conduct: 2,
 };
 
-function getDocFileSortKey(name: string): string {
+export function getDocFileSortKey(name: string): string {
     const base = name.replace(/\.[^.]+$/, "").toLowerCase();
     const priority = PRIORITY_ORDER[base];
     if (priority !== undefined) {
@@ -2037,7 +2037,7 @@ function getDocFileSortKey(name: string): string {
     return `zzz${name.toLowerCase()}`;
 }
 
-function getDocFileDisplayName(name: string): string {
+export function getDocFileDisplayName(name: string): string {
     const base = name.replace(/\.[^.]+$/, "");
     const lowerBase = base.toLowerCase();
 
