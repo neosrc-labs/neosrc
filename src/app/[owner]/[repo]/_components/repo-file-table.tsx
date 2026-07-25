@@ -522,6 +522,7 @@ function CommitRow({
         <div className="flex min-h-12 items-center gap-3 border-border border-b px-4 py-3">
             <div className="[&_img]:h-5 [&_img]:w-5 [&_span]:text-sm">
                 <UserLink
+                    provider={provider}
                     actor={
                         latestCommit.author
                             ? {

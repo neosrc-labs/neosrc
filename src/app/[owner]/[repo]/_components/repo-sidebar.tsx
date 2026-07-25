@@ -277,6 +277,7 @@ export function RepoSidebar({
                             <UserHoverCard
                                 key={contributor.login}
                                 login={contributor.login}
+                                provider={provider}
                             >
                                 <a href={`${host}/${contributor.login}`}>
                                     <img

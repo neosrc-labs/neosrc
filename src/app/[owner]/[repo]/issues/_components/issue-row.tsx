@@ -65,6 +65,7 @@ export function IssueRow({
                         <span className="flex items-center gap-1">
                             by{" "}
                             <UserLink
+                                provider={provider}
                                 actor={{
                                     login: issue.user.login,
                                     avatarUrl: issue.user.avatar_url,
@@ -99,7 +100,10 @@ export function IssueRow({
             </div>
             <div className="flex w-20 shrink-0 items-center justify-center">
                 {issue.assignee ? (
-                    <UserHoverCard login={issue.assignee.login}>
+                    <UserHoverCard
+                        login={issue.assignee.login}
+                        provider={provider}
+                    >
                         <button
                             type="button"
                             onClick={() => {
