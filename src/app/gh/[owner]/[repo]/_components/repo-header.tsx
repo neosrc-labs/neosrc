@@ -216,7 +216,7 @@ function WatchDropdown({
                 <button
                     type="button"
                     className={cn(
-                        "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition",
+                        "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition cursor-pointer",
                         isWatching
                             ? "border-border bg-surface-secondary text-text-primary"
                             : "border-border bg-surface text-text-secondary hover:bg-surface-secondary",
