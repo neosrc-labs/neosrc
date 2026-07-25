@@ -350,8 +350,8 @@ function ReviewerSectionContent({
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Circle
-                                        className="ml-auto fill-yellow-500 text-yellow-500"
-                                        size={16}
+                                        className="mr-1 ml-auto fill-yellow-500 text-yellow-500"
+                                        size={8}
                                     />
                                 </TooltipTrigger>
                                 <TooltipContent side="left">
