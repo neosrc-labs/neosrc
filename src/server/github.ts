@@ -7,8 +7,8 @@ import {
     prCacheKey,
     readCache,
     repoContributorsCacheKey,
+    repoDataCacheKey,
     repoDocFilesCacheKey,
-    repoHeaderDataCacheKey,
     repoIssuePullCountsCacheKey,
     repoLanguagesCacheKey,
     repoStarredCacheKey,
@@ -1143,6 +1143,19 @@ export const getRepo = cache(
     },
 );
 
+export async function getCachedRepo(
+    accessToken: string,
+    userId: string,
+    owner: string,
+    repo: string,
+) {
+    return withStaleWhileRevalidate(
+        repoDataCacheKey("gh", userId, owner, repo),
+        () => getRepo(accessToken, owner, repo),
+        { staleAfter: 5 * 60 * 1000, deleteAfter: 24 * 60 * 60 * 1000 },
+    );
+}
+
 const getRepoIssuePullCounts = cache(
     async (
         accessToken: string,
@@ -1191,25 +1204,20 @@ export interface RepoHeaderInfo {
 
 export async function getCachedRepoHeaderData(
     accessToken: string,
+    userId: string,
     owner: string,
     repo: string,
 ): Promise<RepoHeaderInfo> {
-    return withStaleWhileRevalidate(
-        repoHeaderDataCacheKey("gh", owner, repo),
-        async () => {
-            const repoInfo = await getRepo(accessToken, owner, repo);
-            return {
-                hasIssues: repoInfo.has_issues,
-                hasWiki: repoInfo.has_wiki,
-                hasProjects: repoInfo.has_projects,
-                hasDiscussions: repoInfo.has_discussions,
-                isPrivate: repoInfo.private,
-                permissions: { admin: repoInfo.permissions?.admin ?? false },
-                ownerAvatarUrl: repoInfo.owner.avatar_url,
-            };
-        },
-        { staleAfter: 5 * 60 * 1000, deleteAfter: 24 * 60 * 60 * 1000 },
-    );
+    const repoInfo = await getCachedRepo(accessToken, userId, owner, repo);
+    return {
+        hasIssues: repoInfo.has_issues,
+        hasWiki: repoInfo.has_wiki,
+        hasProjects: repoInfo.has_projects,
+        hasDiscussions: repoInfo.has_discussions,
+        isPrivate: repoInfo.private,
+        permissions: { admin: repoInfo.permissions?.admin ?? false },
+        ownerAvatarUrl: repoInfo.owner.avatar_url,
+    };
 }
 
 export async function getCachedRepoLanguages(

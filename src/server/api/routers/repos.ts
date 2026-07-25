@@ -8,13 +8,14 @@ import {
     repoSubscriptionCacheKey,
 } from "~/server/cache";
 import {
-    getCachedRepoHeaderData as getCachedCodebergRepoHeaderData,
+    getCachedRepo as getCachedCodebergRepo,
     getCachedRepoCounts,
     getUserRepos as getCodebergUserRepos,
 } from "~/server/codeberg";
 import {
     deleteRepoSubscription,
     getCachedDocFileContent,
+    getCachedRepo,
     getCachedRepoContributors,
     getCachedRepoDocFileNames,
     getCachedRepoIssuePullCounts,
@@ -25,7 +26,6 @@ import {
     getForkComparison,
     getUserRepos as getGitHubUserRepos,
     getLatestRelease,
-    getRepo,
     getRepoBranches,
     getRepoContents,
     getRepoDeployments,
@@ -56,11 +56,39 @@ export const reposRouter = createTRPCRouter({
                     ctx.db,
                     ctx.session.user.id,
                 );
-                return getCachedCodebergRepoHeaderData(
+                const data = await getCachedCodebergRepo(
                     accessToken,
+                    ctx.session.user.id,
                     input.owner,
                     input.repo,
                 );
+                return {
+                    hasIssues: data.has_issues,
+                    hasWiki: data.has_wiki,
+                    hasProjects: data.has_projects,
+                    hasDiscussions: false,
+                    isPrivate: data.private,
+                    permissions: {
+                        admin: data.permissions.admin,
+                    },
+                    ownerAvatarUrl: data.owner.avatar_url,
+                    allowSquashMerge: null,
+                    allowRebaseMerge: null,
+                    allowMergeCommit: null,
+                    description: "",
+                    defaultBranch: null,
+                    homepage: null,
+                    stars: 0,
+                    forks: 0,
+                    watchers: 0,
+                    language: null,
+                    topics: [],
+                    license: null,
+                    createdAt: null,
+                    isFork: false,
+                    parentFullName: null,
+                    parentDefaultBranch: null,
+                };
             }
 
             const accessToken = await getGitHubToken(
@@ -68,7 +96,12 @@ export const reposRouter = createTRPCRouter({
                 ctx.session.user.id,
             );
 
-            const data = await getRepo(accessToken, input.owner, input.repo);
+            const data = await getCachedRepo(
+                accessToken,
+                ctx.session.user.id,
+                input.owner,
+                input.repo,
+            );
 
             return {
                 hasIssues: data.has_issues,

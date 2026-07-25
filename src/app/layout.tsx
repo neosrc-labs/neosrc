@@ -29,7 +29,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
     return (
         <html className={`${font.variable}`} lang="en" suppressHydrationWarning>
-            <body className="bg-surface">
+            <body className="flex min-h-svh flex-col bg-surface">
                 <TooltipProvider>
                     <ThemeProvider
                         attribute="class"
@@ -40,7 +40,9 @@ export default function RootLayout({
                             <ThemeStylesheets />
                             <TRPCReactProvider>
                                 <Header />
-                                {children}
+                                <div className="flex min-w-0 flex-1 flex-col">
+                                    {children}
+                                </div>
                                 <Footer />
                             </TRPCReactProvider>
                         </SidebarProvider>

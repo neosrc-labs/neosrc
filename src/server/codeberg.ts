@@ -1,6 +1,6 @@
 import { cache } from "react";
 import {
-    repoHeaderDataCacheKey,
+    repoDataCacheKey,
     repoIssuePullCountsCacheKey,
     withStaleWhileRevalidate,
 } from "~/server/cache";
@@ -325,6 +325,23 @@ export const getRepo = cache(
     },
 );
 
+export async function getCachedRepo(
+    accessToken: string,
+    userId: string,
+    owner: string,
+    repo: string,
+): Promise<CodebergRepo> {
+    return withStaleWhileRevalidate(
+        repoDataCacheKey("cb", userId, owner, repo),
+        async () => {
+            const repoInfo = await getRepo(accessToken, owner, repo);
+            if (!repoInfo) throw new Error("Repo not found");
+            return repoInfo;
+        },
+        { staleAfter: 5 * 60 * 1000, deleteAfter: 24 * 60 * 60 * 1000 },
+    );
+}
+
 const getRepoCounts = cache(
     async (
         accessToken: string,
@@ -588,26 +605,20 @@ export interface CodebergRepoHeaderInfo {
 
 export async function getCachedRepoHeaderData(
     accessToken: string,
+    userId: string,
     owner: string,
     repo: string,
 ): Promise<CodebergRepoHeaderInfo> {
-    return withStaleWhileRevalidate(
-        repoHeaderDataCacheKey("cb", owner, repo),
-        async () => {
-            const repoInfo = await getRepo(accessToken, owner, repo);
-            if (!repoInfo) throw new Error("Repo not found");
-            return {
-                hasIssues: repoInfo.has_issues,
-                hasWiki: repoInfo.has_wiki,
-                hasProjects: repoInfo.has_projects,
-                hasDiscussions: false,
-                isPrivate: repoInfo.private,
-                permissions: { admin: repoInfo.permissions.admin },
-                ownerAvatarUrl: repoInfo.owner.avatar_url,
-            };
-        },
-        { staleAfter: 5 * 60 * 1000, deleteAfter: 24 * 60 * 60 * 1000 },
-    );
+    const repoInfo = await getCachedRepo(accessToken, userId, owner, repo);
+    return {
+        hasIssues: repoInfo.has_issues,
+        hasWiki: repoInfo.has_wiki,
+        hasProjects: repoInfo.has_projects,
+        hasDiscussions: false,
+        isPrivate: repoInfo.private,
+        permissions: { admin: repoInfo.permissions.admin },
+        ownerAvatarUrl: repoInfo.owner.avatar_url,
+    };
 }
 
 export async function getCachedRepoCounts(

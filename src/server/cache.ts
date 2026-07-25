@@ -99,20 +99,21 @@ async function revalidate<T>(
     }
 }
 
+export function repoDataCacheKey(
+    provider: "gh" | "cb",
+    userId: string,
+    owner: string,
+    repo: string,
+): string {
+    return `${provider}:repo:${userId}:${owner}:${repo}`;
+}
+
 export function prCacheKey(
     owner: string,
     repo: string,
     number: number,
 ): string {
     return `pr:${owner}:${repo}:${number}`;
-}
-
-export function repoHeaderDataCacheKey(
-    provider: "gh" | "cb",
-    owner: string,
-    repo: string,
-): string {
-    return `${provider}:repo-header:${owner}:${repo}`;
 }
 
 export function repoIssuePullCountsCacheKey(
