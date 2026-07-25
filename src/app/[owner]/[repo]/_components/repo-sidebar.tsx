@@ -46,7 +46,7 @@ interface RepoSidebarProps {
     owner: string;
     repo: string;
     provider: Provider;
-    description: string;
+    description: string | null;
     homepage: string | null;
     topics: string[];
     createdAt: string;

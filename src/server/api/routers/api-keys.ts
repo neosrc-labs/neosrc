@@ -125,8 +125,10 @@ export const apiKeysRouter = createTRPCRouter({
                     }
                     const rtProvider = rt.target.slice(0, colonIndex);
                     const rtName = rt.target.slice(colonIndex + 1);
-                    const owner = rtName.split("/")[0];
-                    if (!owner) {
+                    const parts = rtName.split("/");
+                    const owner = parts[0];
+                    const repo = parts[1];
+                    if (!owner || !repo) {
                         throw new Error(
                             `Invalid repository "${rtName}" - must be in "owner/repo" format`,
                         );
@@ -143,7 +145,7 @@ export const apiKeysRouter = createTRPCRouter({
                         const ghRepo = await getGitHubRepo(
                             ghToken,
                             owner,
-                            rtName.split("/")[1] ?? "",
+                            repo,
                         );
                         if (
                             !ghRepo ||
@@ -164,7 +166,7 @@ export const apiKeysRouter = createTRPCRouter({
                         const cbRepo = await getCodebergRepo(
                             cbToken,
                             owner,
-                            rtName.split("/")[1] ?? "",
+                            repo,
                         );
                         if (
                             !cbRepo ||

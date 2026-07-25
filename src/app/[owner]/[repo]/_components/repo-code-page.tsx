@@ -12,7 +12,7 @@ export interface RepoData {
     stars: number;
     forks: number;
     watchers: number;
-    description: string;
+    description: string | null;
     defaultBranch: string;
     homepage: string | null;
     language: string | null;
