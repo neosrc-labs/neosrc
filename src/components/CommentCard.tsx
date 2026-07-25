@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import { RoleBadge } from "~/components/RoleBadge";
-import { formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils";
 
 interface CommentCardProps {
     user: { login: string; avatar_url: string } | null;
@@ -51,6 +51,7 @@ export function CommentCard({
     tailDirection,
     id,
 }: CommentCardProps) {
+    const fullDate = formatDateTime(createdAt);
     const userElement = user && (
         <>
             {!hideAvatar && (
@@ -137,7 +138,10 @@ export function CommentCard({
                     ) : (
                         userElement
                     )}
-                    <span className="whitespace-nowrap text-text-tertiary text-xs">
+                    <span
+                        className="whitespace-nowrap text-text-tertiary text-xs"
+                        title={fullDate}
+                    >
                         {formatRelativeTime(createdAt)}
                     </span>
                     {isPending && (
