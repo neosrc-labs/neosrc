@@ -178,6 +178,10 @@ export function ResizableLayout({
                                 bottom: 0,
                             }}
                             onMouseDown={handleMouseDown("left")}
+                            onDoubleClick={() => {
+                                toggleLeft();
+                                setLeftWidth(DEFAULT_LEFT_WIDTH);
+                            }}
                         />
                     </>
                 )}
@@ -212,6 +216,10 @@ export function ResizableLayout({
                                 bottom: 0,
                             }}
                             onMouseDown={handleMouseDown("right")}
+                            onDoubleClick={() => {
+                                toggleRight();
+                                setRightWidth(DEFAULT_RIGHT_WIDTH);
+                            }}
                         />
                     </>
                 )}
