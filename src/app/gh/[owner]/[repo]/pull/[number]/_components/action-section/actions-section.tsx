@@ -354,18 +354,12 @@ export function ActionSection({
                 )}
                 {conflictedFilesSection}
                 {reviewInProgress}
-                {!isMergeBlocked && (
+                {!isMergeBlocked && pullRequest.state === "open" && (
                     <ReviewStatusBadges
                         approvalCount={approvalCount}
                         changesRequestedCount={changesRequestedCount}
                         pendingReviewerCount={pendingCount}
                         requiredApprovalCount={requiredApprovalCount}
-                    />
-                )}
-                {!isMergeBlocked && checkRuns && requiredChecks.length > 0 && (
-                    <RequiredChecksList
-                        checks={checkRuns}
-                        requiredChecks={requiredChecks}
                     />
                 )}
                 {canInteract &&
