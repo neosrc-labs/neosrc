@@ -393,12 +393,11 @@ export function PullRequestDescriptionSection({
                                     </span>
                                 )}
                             </div>
+                            {actionSection}
                         </div>
                     )}
                 </Async>
             </div>
-
-            {actionSection}
 
             <Async
                 fallback={

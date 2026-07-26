@@ -13,11 +13,23 @@ export function StickyActionBar({ children }: StickyActionBarProps) {
     const [isStuck, setIsStuck] = useState(false);
     const [barHeight, setBarHeight] = useState(0);
     const [barStyle, setBarStyle] = useState<React.CSSProperties>({});
-    const offsetRef = useRef(0);
 
     useEffect(() => {
         const sentinel = sentinelRef.current;
         if (!sentinel) return;
+
+        const updatePosition = () => {
+            const main = document.querySelector("main");
+            if (!main) return;
+            const mainRect = main.getBoundingClientRect();
+            setBarStyle({
+                position: "fixed",
+                top: 0,
+                left: mainRect.left,
+                width: mainRect.width,
+                zIndex: 20,
+            });
+        };
 
         const observer = new IntersectionObserver(
             (entries) => {
@@ -25,19 +37,7 @@ export function StickyActionBar({ children }: StickyActionBarProps) {
                 if (!entry) return;
                 const stuck = !entry.isIntersecting;
                 if (stuck && barRef.current) {
-                    const barRect = barRef.current.getBoundingClientRect();
-                    const main = document.querySelector("main");
-                    const mainRect = main?.getBoundingClientRect();
-                    if (mainRect) {
-                        offsetRef.current = barRect.left - mainRect.left;
-                    }
-                    setBarStyle({
-                        position: "fixed",
-                        top: 0,
-                        left: barRect.left,
-                        width: barRect.width,
-                        zIndex: 20,
-                    });
+                    updatePosition();
                 }
                 setIsStuck(stuck);
             },
@@ -45,23 +45,15 @@ export function StickyActionBar({ children }: StickyActionBarProps) {
         );
 
         observer.observe(sentinel);
-        return () => observer.disconnect();
-    }, []);
 
-    useEffect(() => {
-        if (!isStuck) return;
+        if (isStuck) {
+            window.addEventListener("resize", updatePosition);
+        }
 
-        const updatePosition = () => {
-            const main = document.querySelector("main");
-            if (!main) return;
-            setBarStyle((prev) => ({
-                ...prev,
-                left: main.getBoundingClientRect().left + offsetRef.current,
-            }));
+        return () => {
+            observer.disconnect();
+            window.removeEventListener("resize", updatePosition);
         };
-
-        window.addEventListener("resize", updatePosition);
-        return () => window.removeEventListener("resize", updatePosition);
     }, [isStuck]);
 
     useEffect(() => {
@@ -89,7 +81,13 @@ export function StickyActionBar({ children }: StickyActionBarProps) {
                 className="bg-surface"
                 style={isStuck ? barStyle : {}}
             >
-                {children}
+                {isStuck ? (
+                    <div className="mx-auto w-full max-w-7xl px-6">
+                        {children}
+                    </div>
+                ) : (
+                    children
+                )}
             </div>
         </>
     );
