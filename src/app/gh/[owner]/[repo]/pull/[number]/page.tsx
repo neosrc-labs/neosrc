@@ -4,10 +4,17 @@ import { Suspense, use } from "react";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
     getCachedPullRequest,
+    getCheckRuns,
+    getCommitStatuses,
     getConflictedFiles,
     getUserRepoPermission,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
+import {
+    deduplicateCommitStatuses,
+    mapGitHubCheckRunToCheckRun,
+    mapStatusToCheckRun,
+} from "~/utils/status-checks";
 import { PullRequestDescriptionSection } from "./_components/description";
 import { InlineActionBar } from "./_components/inline-action-bar";
 import { PullRequestContent } from "./_components/pull-request-content";
@@ -84,6 +91,20 @@ export default async function PullRequestPage({ params }: PageProps) {
         return [];
     });
 
+    const checksPromise = pullRequestPromise.then(async (pr) => {
+        const [checksResult, statuses] = await Promise.all([
+            getCheckRuns(accessToken, owner, repo, pr.head.sha),
+            getCommitStatuses(accessToken, owner, repo, pr.head.sha),
+        ]);
+        const checkRunItems = (checksResult.check_runs ?? []).map(
+            mapGitHubCheckRunToCheckRun,
+        );
+        const statusItems = deduplicateCommitStatuses(statuses ?? []).map(
+            mapStatusToCheckRun,
+        );
+        return [...checkRunItems, ...statusItems];
+    });
+
     const canInteractPromise = computeCanInteract(
         accessToken,
         owner,
@@ -118,6 +139,7 @@ export default async function PullRequestPage({ params }: PageProps) {
                         conflictedFilesPromise={conflictedFilesPromise}
                         userPermissionPromise={userPermissionPromise}
                         currentUserLogin={currentUserLogin}
+                        checkRunsPromise={checksPromise}
                     />
                 }
             />

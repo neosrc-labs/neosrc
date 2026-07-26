@@ -499,7 +499,7 @@ export function ActionSection({
             >
                 {conflictedFilesSection}
                 {reviewInProgress}
-                {isInline && (
+                {isInline && !isMergeBlocked && (
                     <ReviewStatusBadges
                         approvalCount={approvalCount}
                         changesRequestedCount={changesRequestedCount}
@@ -540,6 +540,10 @@ export function ActionSection({
                             isMergeStateUnknown={isMergeStateUnknown}
                             noMergeMethodsAvailable={noMergeMethodsAvailable}
                             mergeError={mergeMutation.isError}
+                            approvalCount={approvalCount}
+                            changesRequestedCount={changesRequestedCount}
+                            pendingReviewerCount={pendingCount}
+                            requiredApprovalCount={requiredApprovalCount}
                         />
                     )}
                 {!isInline && (
@@ -915,6 +919,14 @@ export function ActionSection({
                                         noMergeMethodsAvailable
                                     }
                                     mergeError={mergeMutation.isError}
+                                    approvalCount={approvalCount}
+                                    changesRequestedCount={
+                                        changesRequestedCount
+                                    }
+                                    pendingReviewerCount={pendingCount}
+                                    requiredApprovalCount={
+                                        requiredApprovalCount
+                                    }
                                 />
                             )}
                         </div>
