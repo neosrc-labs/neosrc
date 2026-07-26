@@ -368,6 +368,19 @@ export function ActionSection({
                         requiredChecks={requiredChecks}
                     />
                 )}
+                {canInteract &&
+                    !isAuthor &&
+                    !dismissReviewMutation.isPending && (
+                        <div>
+                            <SubmitReviewButton
+                                owner={owner}
+                                repo={repo}
+                                number={number}
+                                pendingReview={pendingReview}
+                                navigateAndScroll={navigateAndScroll}
+                            />
+                        </div>
+                    )}
                 {!effectiveMerged &&
                     pullRequest.state === "open" &&
                     !isDraft && (
@@ -450,19 +463,6 @@ export function ActionSection({
                         Failed to reopen. Please try again.
                     </p>
                 )}
-                {canInteract &&
-                    !isAuthor &&
-                    !dismissReviewMutation.isPending && (
-                        <div>
-                            <SubmitReviewButton
-                                owner={owner}
-                                repo={repo}
-                                number={number}
-                                pendingReview={pendingReview}
-                                navigateAndScroll={navigateAndScroll}
-                            />
-                        </div>
-                    )}
                 {!effectiveMerged &&
                     pullRequest.state === "open" &&
                     (isDraft && canManagePR ? (
