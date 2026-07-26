@@ -539,12 +539,12 @@ export function ActionSection({
                 {effectiveMerged && (
                     <div className="flex items-center gap-2">
                         {!isHeader && (
-                            <div className="flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-2 py-1.5 dark:border-violet-900/50 dark:bg-violet-950/30">
+                            <div className="flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-3 py-2 dark:border-violet-900/50 dark:bg-violet-950/30">
                                 <GitMerge
-                                    size={12}
+                                    size={14}
                                     className="text-violet-600 dark:text-violet-400"
                                 />
-                                <span className="font-medium text-violet-700 text-xs dark:text-violet-300">
+                                <span className="font-medium text-sm text-violet-700 dark:text-violet-300">
                                     Merged
                                 </span>
                             </div>

@@ -67,12 +67,10 @@ export function RequiredChecksList({
                         href={check?.html_url ?? check?.details_url ?? "#"}
                         target="_blank"
                         rel="noreferrer"
-                        className={`flex items-center gap-1 rounded-md border px-2 py-1.5 text-xs ${bg} transition-opacity hover:opacity-80`}
+                        className={`flex items-center gap-1.5 rounded-md border px-3 py-2 font-medium text-sm ${bg} transition-opacity hover:opacity-80`}
                     >
-                        <Icon size={12} />
-                        <span className="max-w-[160px] truncate font-medium">
-                            {name}
-                        </span>
+                        <Icon size={14} />
+                        <span className="max-w-[160px] truncate">{name}</span>
                         <span className="tabular-nums opacity-70">{label}</span>
                     </a>
                 );
