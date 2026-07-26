@@ -9,7 +9,11 @@ import {
     SCROLL_TARGET_EVENT,
 } from "~/components/LazyRenderItem";
 import { useFiles } from "~/hooks/files";
-import type { PullsGetResponseData, ReviewComment } from "~/server/github";
+import type {
+    CheckRun,
+    PullsGetResponseData,
+    ReviewComment,
+} from "~/server/github";
 import { api } from "~/trpc/react";
 import { filenameHash } from "~/utils/filename-hash";
 import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
@@ -47,6 +51,7 @@ interface FilesSectionProps {
     currentUserLogin?: string;
     userPermissionPromise?: Promise<string | null> | null;
     conflictedFilesPromise?: Promise<string[]> | null;
+    checkRunsPromise?: Promise<CheckRun[]> | null;
 }
 
 export function FilesSection({
@@ -58,6 +63,7 @@ export function FilesSection({
     currentUserLogin,
     userPermissionPromise,
     conflictedFilesPromise,
+    checkRunsPromise,
 }: FilesSectionProps) {
     const [showComments, setShowComments] = useState(true);
     const [expandedGeneratedFiles, setExpandedGeneratedFiles] = useState(
@@ -260,16 +266,26 @@ export function FilesSection({
                             {allCommentsAll.length}
                         </span>
                     </button>
-                    <ActionSection
-                        variant="inline"
-                        owner={owner}
-                        repo={repo}
-                        number={number}
-                        pullRequestPromise={pullRequestPromise}
-                        conflictedFilesPromise={conflictedFilesPromise}
-                        userPermissionPromise={userPermissionPromise}
-                        currentUserLogin={currentUserLogin}
-                    />
+                    <Async
+                        fallback={null}
+                        promise={
+                            checkRunsPromise ?? Promise.resolve<CheckRun[]>([])
+                        }
+                    >
+                        {(checkRuns) => (
+                            <ActionSection
+                                variant="inline"
+                                owner={owner}
+                                repo={repo}
+                                number={number}
+                                pullRequestPromise={pullRequestPromise}
+                                conflictedFilesPromise={conflictedFilesPromise}
+                                userPermissionPromise={userPermissionPromise}
+                                currentUserLogin={currentUserLogin}
+                                checkRuns={checkRuns}
+                            />
+                        )}
+                    </Async>
                 </div>
             </div>
             {isLoading && allFiles.length === 0 && (
@@ -296,7 +312,7 @@ export function FilesSection({
 
                             return (
                                 <LazyRenderItem
-                                    className="scroll-mt-[8px]"
+                                    className="scroll-mt-[96px]"
                                     heightMap={heightMapRef.current}
                                     id={fileId}
                                     itemKey={file.filename}

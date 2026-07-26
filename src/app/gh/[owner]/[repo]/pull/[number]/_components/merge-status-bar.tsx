@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, GitMerge } from "lucide-react";
+import { Check, ChevronDown, CircleX, Clock, GitMerge } from "lucide-react";
 import { useState } from "react";
 import {
     Popover,
@@ -32,6 +32,10 @@ interface MergeStatusBarProps {
     isMergeStateUnknown: boolean;
     noMergeMethodsAvailable: boolean;
     mergeError: boolean;
+    approvalCount?: number;
+    changesRequestedCount?: number;
+    pendingReviewerCount?: number;
+    requiredApprovalCount?: number;
 }
 
 export function MergeStatusBar({
@@ -50,6 +54,10 @@ export function MergeStatusBar({
     isMergeStateUnknown,
     noMergeMethodsAvailable,
     mergeError,
+    approvalCount = 0,
+    changesRequestedCount = 0,
+    pendingReviewerCount = 0,
+    requiredApprovalCount = 0,
 }: MergeStatusBarProps) {
     const [isMergeOptionsOpen, setIsMergeOptionsOpen] = useState(false);
     const effectiveMergeMode = availableMergeOptions.some(
@@ -84,11 +92,34 @@ export function MergeStatusBar({
 
     if (isMergeBlocked) {
         return (
-            <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
-                <GitMerge size={14} className="text-text-muted" />
-                <span className="font-medium text-sm text-text-muted">
-                    Merging is blocked
-                </span>
+            <div className="flex flex-col rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
+                <div className="flex items-center gap-1.5">
+                    <GitMerge size={14} className="text-text-muted" />
+                    <span className="font-medium text-sm text-text-muted">
+                        Merging is blocked
+                    </span>
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    {requiredApprovalCount > 0 && (
+                        <span className="flex items-center gap-1 text-amber-600 text-xs dark:text-amber-400">
+                            <Check size={11} />
+                            {approvalCount} of {requiredApprovalCount} approvals
+                        </span>
+                    )}
+                    {changesRequestedCount > 0 && (
+                        <span className="flex items-center gap-1 text-red-600 text-xs dark:text-red-400">
+                            <CircleX size={11} />
+                            {changesRequestedCount} change
+                            {changesRequestedCount !== 1 ? "s" : ""} requested
+                        </span>
+                    )}
+                    {pendingReviewerCount > 0 && (
+                        <span className="flex items-center gap-1 text-text-muted text-xs">
+                            <Clock size={11} />
+                            {pendingReviewerCount} pending
+                        </span>
+                    )}
+                </div>
             </div>
         );
     }

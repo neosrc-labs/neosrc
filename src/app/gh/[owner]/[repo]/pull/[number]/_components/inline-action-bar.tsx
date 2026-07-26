@@ -1,5 +1,6 @@
 "use client";
 
+import { Async } from "~/components/async";
 import { useMainContentRef } from "~/components/main-content-ref";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { ActionSection } from "./actions-section";
@@ -13,7 +14,7 @@ interface InlineActionBarProps {
     conflictedFilesPromise?: Promise<string[]> | null;
     userPermissionPromise?: Promise<string | null> | null;
     currentUserLogin?: string;
-    checkRuns?: CheckRun[];
+    checkRunsPromise?: Promise<CheckRun[]> | null;
 }
 
 export function InlineActionBar({
@@ -24,23 +25,30 @@ export function InlineActionBar({
     conflictedFilesPromise,
     userPermissionPromise,
     currentUserLogin,
-    checkRuns,
+    checkRunsPromise,
 }: InlineActionBarProps) {
     const mainRef = useMainContentRef();
 
     return (
         <StickyActionBar measureRef={mainRef ?? undefined}>
-            <ActionSection
-                variant="inline"
-                owner={owner}
-                repo={repo}
-                number={number}
-                pullRequestPromise={pullRequestPromise}
-                conflictedFilesPromise={conflictedFilesPromise}
-                userPermissionPromise={userPermissionPromise}
-                currentUserLogin={currentUserLogin}
-                checkRuns={checkRuns}
-            />
+            <Async
+                fallback={null}
+                promise={checkRunsPromise ?? Promise.resolve<CheckRun[]>([])}
+            >
+                {(checkRuns) => (
+                    <ActionSection
+                        variant="inline"
+                        owner={owner}
+                        repo={repo}
+                        number={number}
+                        pullRequestPromise={pullRequestPromise}
+                        conflictedFilesPromise={conflictedFilesPromise}
+                        userPermissionPromise={userPermissionPromise}
+                        currentUserLogin={currentUserLogin}
+                        checkRuns={checkRuns}
+                    />
+                )}
+            </Async>
         </StickyActionBar>
     );
 }
