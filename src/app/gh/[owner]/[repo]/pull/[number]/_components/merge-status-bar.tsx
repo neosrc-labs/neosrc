@@ -88,7 +88,7 @@ export function MergeStatusBar({
     if (isDraft && canWrite) {
         return (
             <button
-                className="cursor-pointer rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex cursor-pointer items-center gap-1.5 rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isMarkingReady}
                 onClick={onMarkReady}
                 type="button"
@@ -189,7 +189,7 @@ export function MergeStatusBar({
     }
 
     return (
-        <div className="flex items-center">
+        <div className="flex items-stretch">
             {mergeError && (
                 <span className="mr-2 text-red-600 text-xs">
                     Failed to merge. Please try again.
@@ -217,7 +217,7 @@ export function MergeStatusBar({
                 <PopoverTrigger asChild>
                     <button
                         suppressHydrationWarning
-                        className="cursor-pointer rounded-r-md border-[#1a7f37] border-l bg-[#2da44e] px-2 py-2 text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex cursor-pointer items-center rounded-r-md border-[#1a7f37] border-l bg-[#2da44e] px-2.5 text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={isMerging}
                         type="button"
                         title="Merge options"
