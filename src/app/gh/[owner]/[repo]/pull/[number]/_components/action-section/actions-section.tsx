@@ -60,10 +60,6 @@ export function ActionSection({
     const [body, setBody] = useState("");
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [isCancelPopoverOpen, setIsCancelPopoverOpen] = useState(false);
-    const [isRevertPopoverOpen, setIsRevertPopoverOpen] = useState(false);
-    const [revertTitle, setRevertTitle] = useState("");
-    const [revertBody, setRevertBody] = useState("");
-    const [revertDraft, setRevertDraft] = useState(false);
     const [mergeMode, setMergeMode] = useLocalStorage<MergeMethod>(
         "neosrc-merge-mode",
         "merge",
@@ -161,17 +157,6 @@ export function ActionSection({
         },
     });
 
-    const revertMutation = api.pulls.revert.useMutation({
-        onSuccess: (data) => {
-            setIsRevertPopoverOpen(false);
-            utils.timeline.list.invalidate();
-            utils.reviews.getPending.invalidate();
-            router.push(
-                `/gh/${owner}/${repo}/pull/${data.revertPullRequest.number}`,
-            );
-        },
-    });
-
     const handleSubmitAction = useCallback(
         (event: "APPROVE" | "COMMENT" | "REQUEST_CHANGES") => {
             const cleanup = () => {
@@ -225,35 +210,6 @@ export function ActionSection({
     const handleMarkReady = useCallback(() => {
         markReadyMutation.mutate({ owner, repo, number });
     }, [owner, repo, number, markReadyMutation]);
-
-    const openRevertDialog = useCallback(
-        (pullRequest: PullsGetResponseData) => {
-            setRevertTitle(`Revert "${pullRequest.title}"`);
-            setRevertBody(`Reverts ${owner}/${repo}#${number}`);
-            setRevertDraft(false);
-            setIsRevertPopoverOpen(true);
-        },
-        [owner, repo, number],
-    );
-
-    const handleRevert = useCallback(() => {
-        revertMutation.mutate({
-            owner,
-            repo,
-            number,
-            title: revertTitle || undefined,
-            body: revertBody || undefined,
-            draft: revertDraft || undefined,
-        });
-    }, [
-        owner,
-        repo,
-        number,
-        revertTitle,
-        revertBody,
-        revertDraft,
-        revertMutation,
-    ]);
 
     const skeleton = (
         <>
@@ -550,109 +506,12 @@ export function ActionSection({
                             </div>
                         )}
                         {canWrite && canInteract ? (
-                            <Popover
-                                open={isRevertPopoverOpen}
-                                onOpenChange={setIsRevertPopoverOpen}
-                            >
-                                <PopoverTrigger asChild>
-                                    <button
-                                        suppressHydrationWarning
-                                        className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-surface-tertiary dark:border-zinc-600"
-                                        disabled={revertMutation.isPending}
-                                        onClick={() =>
-                                            openRevertDialog(pullRequest)
-                                        }
-                                        type="button"
-                                    >
-                                        <Undo2 size={14} />
-                                        {revertMutation.isPending
-                                            ? "Reverting..."
-                                            : "Revert"}
-                                    </button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                    align="end"
-                                    className="w-[42rem] bg-surface p-4"
-                                    side="top"
-                                    sideOffset={8}
-                                >
-                                    <div className="mb-3 flex items-center gap-1.5">
-                                        <Undo2
-                                            size={14}
-                                            className="text-text-label"
-                                        />
-                                        <span className="font-medium text-sm text-text-primary">
-                                            Revert this pull request
-                                        </span>
-                                    </div>
-                                    <p className="mb-3 text-text-secondary text-xs">
-                                        A new pull request will be created that
-                                        reverts the changes from{" "}
-                                        <span className="font-mono">
-                                            #{number}
-                                        </span>
-                                        .
-                                    </p>
-                                    <label
-                                        className="mb-1 block font-medium text-text-label text-xs"
-                                        htmlFor="revert-title-input"
-                                    >
-                                        Title
-                                    </label>
-                                    <input
-                                        className="mb-3 w-full rounded-md border border-gray-300 bg-surface-elevated px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-zinc-600"
-                                        disabled={revertMutation.isPending}
-                                        id="revert-title-input"
-                                        onChange={(e) =>
-                                            setRevertTitle(e.target.value)
-                                        }
-                                        type="text"
-                                        value={revertTitle}
-                                    />
-                                    <label
-                                        className="mb-1 block font-medium text-text-label text-xs"
-                                        htmlFor="revert-body-input"
-                                    >
-                                        Body
-                                    </label>
-                                    <MarkdownEditor
-                                        autoFocus
-                                        disabled={revertMutation.isPending}
-                                        minHeight="120px"
-                                        onChange={setRevertBody}
-                                        onCancel={() =>
-                                            setIsRevertPopoverOpen(false)
-                                        }
-                                        owner={owner}
-                                        placeholder="Describe the revert"
-                                        repo={repo}
-                                        cancelLabel="Cancel"
-                                        value={revertBody}
-                                        footerActions={[
-                                            {
-                                                label: revertMutation.isPending
-                                                    ? "Reverting..."
-                                                    : "Revert",
-                                                onClick: () => handleRevert(),
-                                                variant: "neutral",
-                                                disabled:
-                                                    revertMutation.isPending,
-                                            },
-                                        ]}
-                                    />
-                                    <label className="mt-2 flex items-center gap-2 text-text-secondary text-xs">
-                                        <input
-                                            checked={revertDraft}
-                                            disabled={revertMutation.isPending}
-                                            onChange={(e) =>
-                                                setRevertDraft(e.target.checked)
-                                            }
-                                            type="checkbox"
-                                        />
-                                        Create as draft
-                                    </label>
-                                </PopoverContent>
-                            </Popover>
+                            <RevertButton
+                                owner={owner}
+                                repo={repo}
+                                number={number}
+                                pullRequest={pullRequest}
+                            />
                         ) : null}
                     </div>
                 )}
@@ -756,21 +615,6 @@ export function ActionSection({
                                 : "Mark as ready for review"}
                         </button>
                     ) : null)}
-                {revertMutation.isError && (
-                    <p className="text-red-600 text-xs">
-                        Failed to revert. Please try again.
-                    </p>
-                )}
-                {approveMutation.isError && (
-                    <p className="text-red-600 text-xs">
-                        Failed to approve. Please try again.
-                    </p>
-                )}
-                {markReadyMutation.isError && (
-                    <p className="text-red-600 text-xs">
-                        Failed to mark as ready. Please try again.
-                    </p>
-                )}
             </div>
         );
     };
@@ -810,5 +654,151 @@ export function ActionSection({
                 skeleton
             )}
         </div>
+    );
+}
+
+function RevertButton({
+    owner,
+    repo,
+    number,
+    pullRequest,
+}: {
+    owner: string;
+    repo: string;
+    number: number;
+    pullRequest: PullsGetResponseData;
+}) {
+    const utils = api.useUtils();
+    const router = useRouter();
+    const [isRevertPopoverOpen, setIsRevertPopoverOpen] = useState(false);
+    const [revertTitle, setRevertTitle] = useState("");
+    const [revertBody, setRevertBody] = useState("");
+    const [revertDraft, setRevertDraft] = useState(false);
+
+    const revertMutation = api.pulls.revert.useMutation({
+        onSuccess: (data) => {
+            setIsRevertPopoverOpen(false);
+            utils.timeline.list.invalidate();
+            utils.reviews.getPending.invalidate();
+            router.push(
+                `/gh/${owner}/${repo}/pull/${data.revertPullRequest.number}`,
+            );
+        },
+    });
+
+    const openRevertDialog = useCallback(
+        (pullRequest: PullsGetResponseData) => {
+            setRevertTitle(`Revert "${pullRequest.title}"`);
+            setRevertBody(`Reverts ${owner}/${repo}#${number}`);
+            setRevertDraft(false);
+            setIsRevertPopoverOpen(true);
+        },
+        [owner, repo, number],
+    );
+
+    const handleRevert = useCallback(() => {
+        revertMutation.mutate({
+            owner,
+            repo,
+            number,
+            title: revertTitle || undefined,
+            body: revertBody || undefined,
+            draft: revertDraft || undefined,
+        });
+    }, [
+        owner,
+        repo,
+        number,
+        revertTitle,
+        revertBody,
+        revertDraft,
+        revertMutation,
+    ]);
+    return (
+        <Popover
+            open={isRevertPopoverOpen}
+            onOpenChange={setIsRevertPopoverOpen}
+        >
+            <PopoverTrigger asChild>
+                <button
+                    suppressHydrationWarning
+                    className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-surface-tertiary dark:border-zinc-600"
+                    disabled={revertMutation.isPending}
+                    onClick={() => openRevertDialog(pullRequest)}
+                    type="button"
+                >
+                    <Undo2 size={14} />
+                    {revertMutation.isPending ? "Reverting..." : "Revert"}
+                </button>
+            </PopoverTrigger>
+            <PopoverContent
+                align="end"
+                className="w-2xl bg-surface p-4"
+                side="top"
+                sideOffset={8}
+            >
+                <div className="mb-3 flex items-center gap-1.5">
+                    <Undo2 size={14} className="text-text-label" />
+                    <span className="font-medium text-sm text-text-primary">
+                        Revert this pull request
+                    </span>
+                </div>
+                <p className="mb-3 text-text-secondary text-xs">
+                    A new pull request will be created that reverts the changes
+                    from <span className="font-mono">#{number}</span>.
+                </p>
+                <label
+                    className="mb-1 block font-medium text-text-label text-xs"
+                    htmlFor="revert-title-input"
+                >
+                    Title
+                </label>
+                <input
+                    className="mb-3 w-full rounded-md border border-gray-300 bg-surface-elevated px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-zinc-600"
+                    disabled={revertMutation.isPending}
+                    id="revert-title-input"
+                    onChange={(e) => setRevertTitle(e.target.value)}
+                    type="text"
+                    value={revertTitle}
+                />
+                <label
+                    className="mb-1 block font-medium text-text-label text-xs"
+                    htmlFor="revert-body-input"
+                >
+                    Body
+                </label>
+                <MarkdownEditor
+                    autoFocus
+                    disabled={revertMutation.isPending}
+                    minHeight="120px"
+                    onChange={setRevertBody}
+                    onCancel={() => setIsRevertPopoverOpen(false)}
+                    owner={owner}
+                    placeholder="Describe the revert"
+                    repo={repo}
+                    cancelLabel="Cancel"
+                    value={revertBody}
+                    footerActions={[
+                        {
+                            label: revertMutation.isPending
+                                ? "Reverting..."
+                                : "Revert",
+                            onClick: () => handleRevert(),
+                            variant: "neutral",
+                            disabled: revertMutation.isPending,
+                        },
+                    ]}
+                />
+                <label className="mt-2 flex items-center gap-2 text-text-secondary text-xs">
+                    <input
+                        checked={revertDraft}
+                        disabled={revertMutation.isPending}
+                        onChange={(e) => setRevertDraft(e.target.checked)}
+                        type="checkbox"
+                    />
+                    Create as draft
+                </label>
+            </PopoverContent>
+        </Popover>
     );
 }
