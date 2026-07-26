@@ -4,12 +4,17 @@ import { File, FilePen, GitMerge, Undo2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
+import { CodeTitle } from "~/components/markdown/code-title";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
+import {
+    extractPullRequestState,
+    StatusPill,
+} from "~/components/ui/status-pill";
 import { useLocalStorage } from "~/hooks/use-local-storage";
 import type { MergeMethod, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -26,6 +31,7 @@ interface ActionSectionProps {
     userPermissionPromise?: Promise<string | null> | null;
     currentUserLogin?: string;
     variant?: "header" | "inline";
+    isSticky?: boolean;
     checkRuns?: Array<{
         name: string;
         conclusion: string | null;
@@ -44,6 +50,7 @@ export function ActionSection({
     userPermissionPromise,
     currentUserLogin,
     variant,
+    isSticky,
     checkRuns,
 }: ActionSectionProps) {
     const router = useRouter();
@@ -465,9 +472,20 @@ export function ActionSection({
         const requiredChecks = mergeReqs?.requiredChecks ?? [];
 
         const isHeader = variant === "header";
+        const showTitle = isHeader && isSticky;
+        const state = extractPullRequestState(pullRequest);
 
         return (
             <div className="flex flex-wrap items-center justify-end gap-2">
+                {showTitle && (
+                    <div className="mr-auto flex min-w-0 flex-1 items-center gap-2">
+                        <StatusPill state={state} />
+                        <span className="min-w-0 truncate font-medium text-sm text-text-primary">
+                            <CodeTitle>{pullRequest.title}</CodeTitle>{" "}
+                            <span className="text-text-muted">#{number}</span>
+                        </span>
+                    </div>
+                )}
                 {conflictedFilesSection}
                 {reviewInProgress}
                 {!isMergeBlocked && (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Async } from "~/components/async";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { ActionSection } from "./actions-section";
@@ -26,8 +27,10 @@ export function HeaderActionBar({
     currentUserLogin,
     checkRunsPromise,
 }: HeaderActionBarProps) {
+    const [isSticky, setIsSticky] = useState(false);
+
     return (
-        <StickyActionBar>
+        <StickyActionBar onStickyChange={setIsSticky}>
             <Async
                 fallback={null}
                 promise={checkRunsPromise ?? Promise.resolve<CheckRun[]>([])}
@@ -35,6 +38,7 @@ export function HeaderActionBar({
                 {(checkRuns) => (
                     <ActionSection
                         variant="header"
+                        isSticky={isSticky}
                         owner={owner}
                         repo={repo}
                         number={number}

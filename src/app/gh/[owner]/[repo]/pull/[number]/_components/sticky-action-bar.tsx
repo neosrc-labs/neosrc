@@ -11,9 +11,14 @@ import {
 interface StickyActionBarProps {
     children: ReactNode;
     className?: string;
+    onStickyChange?: (isFixed: boolean) => void;
 }
 
-export function StickyActionBar({ children, className }: StickyActionBarProps) {
+export function StickyActionBar({
+    children,
+    className,
+    onStickyChange,
+}: StickyActionBarProps) {
     const sentinelRef = useRef<HTMLDivElement>(null);
     const barRef = useRef<HTMLDivElement>(null);
     const [isFixed, setIsFixed] = useState(false);
@@ -58,6 +63,10 @@ export function StickyActionBar({ children, className }: StickyActionBarProps) {
 
         return () => observer.disconnect();
     }, [captureDimensions]);
+
+    useEffect(() => {
+        onStickyChange?.(isFixed);
+    }, [isFixed, onStickyChange]);
 
     useEffect(() => {
         if (!isFixed) return;
