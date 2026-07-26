@@ -1,12 +1,15 @@
 "use client";
 
 import {
+    Check,
     ChevronDown,
     CircleX,
+    Clock,
     File,
     FilePen,
     GitMerge,
     GitPullRequest,
+    MessageSquare,
     Undo2,
     X,
 } from "lucide-react";
@@ -71,6 +74,17 @@ export function ActionSection({
         owner,
         repo,
     });
+
+    const { data: reviews } = api.pulls.listReviews.useQuery(
+        { owner, repo, number },
+        { staleTime: 30_000 },
+    );
+
+    const { data: mergeReqs } = api.pulls.getMergeRequirements.useQuery(
+        { owner, repo, number },
+        { staleTime: 30_000 },
+    );
+    console.log(mergeReqs);
 
     const navigateAndScroll = useCallback(() => {
         router.push(`/gh/${owner}/${repo}/pull/${number}?scrollTo=bottom`);
@@ -358,6 +372,49 @@ export function ActionSection({
         const isMergeBlocked = pullRequest.mergeable_state === "blocked";
         const isMergeStateUnknown = pullRequest.mergeable_state === "unknown";
 
+        const authorLogin = pullRequest.user?.login;
+        const reviewStateMap = new Map<string, string>();
+        if (reviews) {
+            for (const review of reviews) {
+                if (!review.user) continue;
+                if (review.user.login === authorLogin) continue;
+                const state = review.state;
+                if (state === "APPROVED" || state === "CHANGES_REQUESTED") {
+                    reviewStateMap.set(review.user.login, state);
+                } else if (state === "DISMISSED") {
+                    reviewStateMap.delete(review.user.login);
+                } else if (
+                    state === "COMMENTED" &&
+                    !reviewStateMap.has(review.user.login)
+                ) {
+                    reviewStateMap.set(review.user.login, "COMMENTED");
+                }
+            }
+        }
+
+        const requestedReviewerLogins = new Set(
+            (pullRequest.requested_reviewers ?? []).map((r) => r.login),
+        );
+
+        for (const login of requestedReviewerLogins) {
+            if (reviewStateMap.get(login) === "COMMENTED") {
+                reviewStateMap.set(login, "PENDING");
+            }
+        }
+
+        const reviewStates = [...reviewStateMap.values()];
+        const approvalCount = reviewStates.filter(
+            (s) => s === "APPROVED",
+        ).length;
+        const changesRequestedCount = reviewStates.filter(
+            (s) => s === "CHANGES_REQUESTED",
+        ).length;
+        const pendingCount = [...requestedReviewerLogins].filter(
+            (login) => !reviewStateMap.has(login),
+        ).length;
+        const requiredApprovingReviewCount =
+            mergeReqs?.requiredApprovingReviewCount ?? 0;
+
         const mergeOptionDefs = [
             {
                 value: "merge" as const,
@@ -525,12 +582,12 @@ export function ActionSection({
                     ) : null}
                     {effectiveMerged && (
                         <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-3 py-2.5 dark:border-violet-900/50 dark:bg-violet-950/30">
-                                <GitMerge
-                                    size={16}
+                            <div className="flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-2 py-1.5 dark:border-violet-900/50 dark:bg-violet-950/30">
+                                <Check
+                                    size={12}
                                     className="text-violet-600 dark:text-violet-400"
                                 />
-                                <span className="font-medium text-sm text-violet-700 dark:text-violet-300">
+                                <span className="font-medium text-violet-700 text-xs dark:text-violet-300">
                                     Merged
                                 </span>
                             </div>
@@ -731,178 +788,259 @@ export function ActionSection({
                             </Popover>
                         )}
                     {!effectiveMerged && pullRequest.state === "open" && (
-                        <div className="flex gap-2">
-                            {isDraft && canManagePR ? (
-                                <button
-                                    className="cursor-pointer rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
-                                    disabled={markReadyMutation.isPending}
-                                    onClick={handleMarkReady}
-                                    type="button"
-                                >
-                                    {markReadyMutation.isPending
-                                        ? "Marking..."
-                                        : "Mark as ready for review"}
-                                </button>
-                            ) : pullRequest.mergeable_state === "dirty" ? (
-                                <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
-                                    <GitMerge
-                                        size={14}
-                                        className="text-red-500"
-                                    />
-                                    <span className="font-medium text-sm text-text-secondary">
-                                        Conflicts
-                                    </span>
-                                </div>
-                            ) : isMergeBlocked ? (
-                                <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
-                                    <GitMerge
-                                        size={14}
-                                        className="text-text-muted"
-                                    />
-                                    <span className="font-medium text-sm text-text-muted">
-                                        Merging is blocked
-                                    </span>
-                                </div>
-                            ) : isMergeStateUnknown ? (
-                                <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
-                                    <GitMerge
-                                        size={14}
-                                        className="text-text-muted"
-                                    />
-                                    <span className="font-medium text-sm text-text-muted">
-                                        Checking mergeability...
-                                    </span>
-                                </div>
-                            ) : noMergeMethodsAvailable ? (
-                                <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
-                                    <GitMerge
-                                        size={14}
-                                        className="text-text-muted"
-                                    />
-                                    <span className="font-medium text-sm text-text-muted">
-                                        Merging is not allowed for this
-                                        repository
-                                    </span>
-                                </div>
-                            ) : !canMerge ? (
-                                <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
-                                    <GitMerge
-                                        size={14}
-                                        className="text-text-muted"
-                                    />
-                                    <span className="font-medium text-sm text-text-muted">
-                                        You don&apos;t have permission to merge
-                                    </span>
-                                </div>
-                            ) : (
-                                <div className="flex">
-                                    <button
-                                        className="flex cursor-pointer items-center gap-1.5 rounded-l-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
-                                        disabled={mergeMutation.isPending}
-                                        onClick={() => {
-                                            mergeMutation.mutate({
-                                                owner,
-                                                repo,
-                                                number,
-                                                mergeMethod: effectiveMergeMode,
-                                            });
-                                        }}
-                                        type="button"
-                                    >
-                                        <GitMerge size={14} />
-                                        {mergeMutation.isPending
-                                            ? "Merging..."
-                                            : effectiveMergeMode === "squash"
-                                              ? "Squash and merge"
-                                              : effectiveMergeMode === "rebase"
-                                                ? "Rebase and merge"
-                                                : "Merge pull request"}
-                                    </button>
-                                    <Popover
-                                        open={isMergeOptionsOpen}
-                                        onOpenChange={setIsMergeOptionsOpen}
-                                    >
-                                        <PopoverTrigger asChild>
-                                            <button
-                                                suppressHydrationWarning
-                                                className="cursor-pointer rounded-r-md border-[#1a7f37] border-l bg-[#2da44e] px-2 py-2 text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
-                                                disabled={
-                                                    mergeMutation.isPending
-                                                }
-                                                type="button"
-                                                title="Merge options"
-                                            >
-                                                <ChevronDown className="h-4 w-4" />
-                                            </button>
-                                        </PopoverTrigger>
-                                        <PopoverContent
-                                            align="end"
-                                            className="w-72 bg-surface p-2"
-                                            side="left"
-                                            sideOffset={8}
+                        <>
+                            {!isDraft && (
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {changesRequestedCount > 0 && (
+                                        <div className="flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1.5 dark:border-red-900/50 dark:bg-red-950/20">
+                                            <CircleX
+                                                size={12}
+                                                className="text-red-500"
+                                            />
+                                            <span className="font-medium text-red-600 text-xs dark:text-red-400">
+                                                Changes requested
+                                            </span>
+                                        </div>
+                                    )}
+                                    {(approvalCount > 0 ||
+                                        requiredApprovingReviewCount > 0) && (
+                                        <div
+                                            className={`flex items-center gap-1 rounded-md border px-2 py-1.5 ${
+                                                requiredApprovingReviewCount >
+                                                    0 &&
+                                                approvalCount <
+                                                    requiredApprovingReviewCount
+                                                    ? "border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/20"
+                                                    : "border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-950/20"
+                                            }`}
                                         >
-                                            <div className="space-y-1">
-                                                {availableMergeOptions.map(
-                                                    (option) => (
-                                                        <button
-                                                            key={option.value}
-                                                            className={`flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                                                                effectiveMergeMode ===
-                                                                option.value
-                                                                    ? "bg-surface-tertiary"
-                                                                    : "hover:bg-surface-secondary"
-                                                            }`}
-                                                            onClick={() => {
-                                                                setMergeMode(
-                                                                    option.value,
-                                                                );
-                                                                setIsMergeOptionsOpen(
-                                                                    false,
-                                                                );
-                                                            }}
-                                                            type="button"
-                                                        >
-                                                            <span
-                                                                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
-                                                                    effectiveMergeMode ===
-                                                                    option.value
-                                                                        ? "border-[#2da44e]"
-                                                                        : "border-gray-300 dark:border-zinc-600"
-                                                                }`}
-                                                            >
-                                                                {effectiveMergeMode ===
-                                                                    option.value && (
-                                                                    <span className="flex h-2 w-2 rounded-full bg-[#2da44e]" />
-                                                                )}
-                                                            </span>
-                                                            <div>
-                                                                <div
-                                                                    className={
-                                                                        effectiveMergeMode ===
-                                                                        option.value
-                                                                            ? "font-medium text-text-primary"
-                                                                            : "text-text-label"
-                                                                    }
-                                                                >
-                                                                    {
-                                                                        option.label
-                                                                    }
-                                                                </div>
-                                                                <div className="text-text-tertiary text-xs">
-                                                                    {
-                                                                        option.description
-                                                                    }
-                                                                </div>
-                                                            </div>
-                                                        </button>
-                                                    ),
-                                                )}
+                                            <Check
+                                                size={12}
+                                                className={
+                                                    requiredApprovingReviewCount >
+                                                        0 &&
+                                                    approvalCount <
+                                                        requiredApprovingReviewCount
+                                                        ? "text-amber-600"
+                                                        : "text-green-600"
+                                                }
+                                            />
+                                            <span
+                                                className={`font-medium text-xs ${
+                                                    requiredApprovingReviewCount >
+                                                        0 &&
+                                                    approvalCount <
+                                                        requiredApprovingReviewCount
+                                                        ? "text-amber-700 dark:text-amber-400"
+                                                        : "text-green-700 dark:text-green-400"
+                                                }`}
+                                            >
+                                                {requiredApprovingReviewCount >
+                                                0
+                                                    ? `${approvalCount} of ${requiredApprovingReviewCount} approval${requiredApprovingReviewCount !== 1 ? "s" : ""}`
+                                                    : `${approvalCount} ${approvalCount === 1 ? "approval" : "approvals"}`}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {pendingCount > 0 && (
+                                        <div className="flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 dark:border-amber-900/50 dark:bg-amber-950/20">
+                                            <Clock
+                                                size={12}
+                                                className="text-amber-600"
+                                            />
+                                            <span className="font-medium text-amber-700 text-xs dark:text-amber-400">
+                                                {pendingCount}{" "}
+                                                {pendingCount === 1
+                                                    ? "pending"
+                                                    : "pending"}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {changesRequestedCount === 0 &&
+                                        approvalCount === 0 &&
+                                        pendingCount === 0 &&
+                                        requiredApprovingReviewCount === 0 && (
+                                            <div className="flex items-center gap-1 rounded-md border border-gray-200 bg-surface-secondary px-2 py-1.5">
+                                                <MessageSquare
+                                                    size={12}
+                                                    className="text-text-muted"
+                                                />
+                                                <span className="font-medium text-text-muted text-xs">
+                                                    Awaiting review
+                                                </span>
                                             </div>
-                                        </PopoverContent>
-                                    </Popover>
+                                        )}
                                 </div>
                             )}
-                        </div>
+                            <div className="flex gap-2">
+                                {isDraft && canManagePR ? (
+                                    <button
+                                        className="cursor-pointer rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                        disabled={markReadyMutation.isPending}
+                                        onClick={handleMarkReady}
+                                        type="button"
+                                    >
+                                        {markReadyMutation.isPending
+                                            ? "Marking..."
+                                            : "Mark as ready for review"}
+                                    </button>
+                                ) : pullRequest.mergeable_state === "dirty" ? (
+                                    <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
+                                        <GitMerge
+                                            size={14}
+                                            className="text-red-500"
+                                        />
+                                        <span className="font-medium text-sm text-text-secondary">
+                                            Conflicts
+                                        </span>
+                                    </div>
+                                ) : isMergeBlocked ? null : isMergeStateUnknown ? (
+                                    <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
+                                        <GitMerge
+                                            size={14}
+                                            className="text-text-muted"
+                                        />
+                                        <span className="font-medium text-sm text-text-muted">
+                                            Checking mergeability...
+                                        </span>
+                                    </div>
+                                ) : noMergeMethodsAvailable ? (
+                                    <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
+                                        <GitMerge
+                                            size={14}
+                                            className="text-text-muted"
+                                        />
+                                        <span className="font-medium text-sm text-text-muted">
+                                            Merging is not allowed for this
+                                            repository
+                                        </span>
+                                    </div>
+                                ) : !canMerge ? (
+                                    <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
+                                        <GitMerge
+                                            size={14}
+                                            className="text-text-muted"
+                                        />
+                                        <span className="font-medium text-sm text-text-muted">
+                                            You don&apos;t have permission to
+                                            merge
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="flex">
+                                        <button
+                                            className="flex cursor-pointer items-center gap-1.5 rounded-l-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
+                                            disabled={mergeMutation.isPending}
+                                            onClick={() => {
+                                                mergeMutation.mutate({
+                                                    owner,
+                                                    repo,
+                                                    number,
+                                                    mergeMethod:
+                                                        effectiveMergeMode,
+                                                });
+                                            }}
+                                            type="button"
+                                        >
+                                            <GitMerge size={14} />
+                                            {mergeMutation.isPending
+                                                ? "Merging..."
+                                                : effectiveMergeMode ===
+                                                    "squash"
+                                                  ? "Squash and merge"
+                                                  : effectiveMergeMode ===
+                                                      "rebase"
+                                                    ? "Rebase and merge"
+                                                    : "Merge pull request"}
+                                        </button>
+                                        <Popover
+                                            open={isMergeOptionsOpen}
+                                            onOpenChange={setIsMergeOptionsOpen}
+                                        >
+                                            <PopoverTrigger asChild>
+                                                <button
+                                                    suppressHydrationWarning
+                                                    className="cursor-pointer rounded-r-md border-[#1a7f37] border-l bg-[#2da44e] px-2 py-2 text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
+                                                    disabled={
+                                                        mergeMutation.isPending
+                                                    }
+                                                    type="button"
+                                                    title="Merge options"
+                                                >
+                                                    <ChevronDown className="h-4 w-4" />
+                                                </button>
+                                            </PopoverTrigger>
+                                            <PopoverContent
+                                                align="end"
+                                                className="w-72 bg-surface p-2"
+                                                side="left"
+                                                sideOffset={8}
+                                            >
+                                                <div className="space-y-1">
+                                                    {availableMergeOptions.map(
+                                                        (option) => (
+                                                            <button
+                                                                key={
+                                                                    option.value
+                                                                }
+                                                                className={`flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                                                                    effectiveMergeMode ===
+                                                                    option.value
+                                                                        ? "bg-surface-tertiary"
+                                                                        : "hover:bg-surface-secondary"
+                                                                }`}
+                                                                onClick={() => {
+                                                                    setMergeMode(
+                                                                        option.value,
+                                                                    );
+                                                                    setIsMergeOptionsOpen(
+                                                                        false,
+                                                                    );
+                                                                }}
+                                                                type="button"
+                                                            >
+                                                                <span
+                                                                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                                                                        effectiveMergeMode ===
+                                                                        option.value
+                                                                            ? "border-[#2da44e]"
+                                                                            : "border-gray-300 dark:border-zinc-600"
+                                                                    }`}
+                                                                >
+                                                                    {effectiveMergeMode ===
+                                                                        option.value && (
+                                                                        <span className="flex h-2 w-2 rounded-full bg-[#2da44e]" />
+                                                                    )}
+                                                                </span>
+                                                                <div>
+                                                                    <div
+                                                                        className={
+                                                                            effectiveMergeMode ===
+                                                                            option.value
+                                                                                ? "font-medium text-text-primary"
+                                                                                : "text-text-label"
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            option.label
+                                                                        }
+                                                                    </div>
+                                                                    <div className="text-text-tertiary text-xs">
+                                                                        {
+                                                                            option.description
+                                                                        }
+                                                                    </div>
+                                                                </div>
+                                                            </button>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                )}
+                            </div>
+                        </>
                     )}
                     {mergeMutation.isError && (
                         <p className="text-red-600 text-xs">

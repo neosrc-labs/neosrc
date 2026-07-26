@@ -561,6 +561,54 @@ export const getConflictedFiles = cache(
     },
 );
 
+export type MergeRequirements = {
+    requiredApprovingReviewCount: number;
+};
+
+export const getMergeRequirements = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        branch: string,
+    ): Promise<MergeRequirements> => {
+        const octokit = createOctokit(accessToken);
+        let requiredApprovingReviewCount = 0;
+
+        try {
+            const { data: rules } = await octokit.rest.repos.getBranchRules({
+                owner,
+                repo,
+                branch,
+            });
+            for (const rule of rules) {
+                if (rule.type === "pull_request" && rule.parameters) {
+                    requiredApprovingReviewCount = Math.max(
+                        requiredApprovingReviewCount,
+                        rule.parameters.required_approving_review_count,
+                    );
+                }
+            }
+        } catch {
+            try {
+                const { data: protection } =
+                    await octokit.rest.repos.getBranchProtection({
+                        owner,
+                        repo,
+                        branch,
+                    });
+                requiredApprovingReviewCount =
+                    protection.required_pull_request_reviews
+                        ?.required_approving_review_count ?? 0;
+            } catch {
+                /* no branch protection configured */
+            }
+        }
+
+        return { requiredApprovingReviewCount };
+    },
+);
+
 export const getCheckRuns = cache(
     async (
         accessToken: string,
