@@ -5,7 +5,8 @@ export type PullRequestState =
     | "merged"
     | "queued";
 
-export function StatusPill({ state }: { state: PullRequestState }) {
+// FIXME: Refactor these types to play nice with both issues and pull requests
+export function StatusPill({ state }: { state: PullRequestState | string }) {
     let statusText = "";
     let statusColor = "";
 
@@ -30,6 +31,11 @@ export function StatusPill({ state }: { state: PullRequestState }) {
             statusText = "Queued";
             statusColor = "bg-yellow-700 text-white";
             break;
+        default:
+            console.warn("unsupported state: ", state);
+            statusText = "Unknown";
+            statusColor = "bg-gray-700 text-white";
+            break;
     }
     return (
         <span
@@ -42,6 +48,7 @@ export function StatusPill({ state }: { state: PullRequestState }) {
 
 export type PullRequestLike = {
     merged?: boolean;
+    merged_at?: string | null;
     state?: string;
     draft?: boolean;
 };
@@ -49,7 +56,7 @@ export type PullRequestLike = {
 export function extractPullRequestState(
     pullRequest: PullRequestLike,
 ): PullRequestState {
-    if (pullRequest.merged) {
+    if (pullRequest.merged || pullRequest.merged_at) {
         return "merged";
     }
     if (pullRequest.state === "closed") {

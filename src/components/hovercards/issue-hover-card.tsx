@@ -9,6 +9,10 @@ import {
     HoverCardContent,
     HoverCardTrigger,
 } from "~/components/ui/hover-card";
+import {
+    extractPullRequestState,
+    StatusPill,
+} from "~/components/ui/status-pill";
 import type { IssueGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
@@ -30,26 +34,22 @@ function IssueHoverCardContent({
             ? `${body.slice(0, 200).replace(/\s+\S*$/, "")}\u2026`
             : body;
 
-    const isPR = !!issue.pull_request;
-
     return (
         <div>
             <div className="flex items-start gap-3 border-border-subtle border-b p-3">
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                        <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium text-xs ${
-                                issue.state === "open"
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                                    : issue.state === "closed"
-                                      ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
-                                      : "bg-surface-tertiary text-gray-800 dark:text-zinc-300"
-                            }`}
-                        >
-                            {issue.state === "open" ? "Open" : "Closed"}
-                        </span>
+                        {issue.pull_request ? (
+                            <StatusPill
+                                state={extractPullRequestState(
+                                    issue.pull_request,
+                                )}
+                            />
+                        ) : (
+                            <StatusPill state={issue.state} />
+                        )}
                         <span className="text-text-tertiary text-xs">
-                            {isPR ? "Pull Request" : "Issue"}
+                            {issue.pull_request ? "Pull Request" : "Issue"}
                         </span>
                     </div>
                     <p className="mt-1 font-semibold text-sm text-text-primary leading-snug">
@@ -120,7 +120,7 @@ function IssueHoverCardContent({
                 </div>
                 <Link
                     className="text-blue-600 text-xs hover:text-blue-800 hover:underline dark:text-blue-400"
-                    href={`/${owner}/${repo}/${isPR ? "pull" : "issues"}/${issueNumber}`}
+                    href={`/${owner}/${repo}/${issue.pull_request ? "pull" : "issues"}/${issueNumber}`}
                 >
                     View &rarr;
                 </Link>
