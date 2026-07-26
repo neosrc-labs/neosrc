@@ -17,7 +17,7 @@ import type {
 import { api } from "~/trpc/react";
 import { filenameHash } from "~/utils/filename-hash";
 import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
-import { ActionSection } from "./actions-section";
+import { ActionSection } from "./action-section/actions-section";
 
 function FileDiffSkeleton() {
     return (

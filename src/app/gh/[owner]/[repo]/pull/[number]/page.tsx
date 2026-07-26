@@ -16,7 +16,7 @@ import {
     mapStatusToCheckRun,
 } from "~/utils/status-checks";
 import { PullRequestDescriptionSection } from "./_components/description";
-import { HeaderActionBar } from "./_components/header-action-bar";
+import { HeaderActionBar } from "./_components/action-section/header-action-bar";
 import { PullRequestContent } from "./_components/pull-request-content";
 import {
     TimelineSection,
