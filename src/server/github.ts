@@ -457,6 +457,92 @@ export const createPullRequestReview = async (
     return response.data;
 };
 
+export type MergeRequirements = {
+    requiredApprovingReviewCount: number;
+    requiredChecks: string[];
+};
+
+export const getMergeRequirements = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        branch: string,
+    ): Promise<MergeRequirements> => {
+        const octokit = createOctokit(accessToken);
+
+        let requiredApprovingReviewCount = 0;
+        const requiredChecks: string[] = [];
+
+        try {
+            const { data: rulesData } = await octokit.rest.repos.getBranchRules(
+                {
+                    owner,
+                    repo,
+                    branch,
+                },
+            );
+
+            if (rulesData.length > 0) {
+                for (const rule of rulesData) {
+                    if (
+                        rule.type === "pull_request" &&
+                        rule.parameters &&
+                        "required_approving_review_count" in rule.parameters
+                    ) {
+                        const count =
+                            rule.parameters.required_approving_review_count;
+                        if (count > requiredApprovingReviewCount) {
+                            requiredApprovingReviewCount = count;
+                        }
+                    }
+                    if (
+                        rule.type === "required_status_checks" &&
+                        rule.parameters &&
+                        "required_status_checks" in rule.parameters
+                    ) {
+                        for (const checkConfig of rule.parameters
+                            .required_status_checks) {
+                            if (checkConfig.context) {
+                                requiredChecks.push(checkConfig.context);
+                            }
+                        }
+                    }
+                }
+                return { requiredApprovingReviewCount, requiredChecks };
+            }
+        } catch {
+            // Rulesets API may not be available (404) or lack permissions
+        }
+
+        try {
+            const { data: protection } =
+                await octokit.rest.repos.getBranchProtection({
+                    owner,
+                    repo,
+                    branch,
+                });
+
+            if (protection.required_pull_request_reviews) {
+                requiredApprovingReviewCount =
+                    protection.required_pull_request_reviews
+                        .required_approving_review_count ?? 0;
+            }
+
+            if (protection.required_status_checks) {
+                for (const context of protection.required_status_checks
+                    .contexts) {
+                    requiredChecks.push(context);
+                }
+            }
+        } catch {
+            // Branch protection may not be configured
+        }
+
+        return { requiredApprovingReviewCount, requiredChecks };
+    },
+);
+
 export const getPullRequestReviews = cache(
     async (
         accessToken: string,
