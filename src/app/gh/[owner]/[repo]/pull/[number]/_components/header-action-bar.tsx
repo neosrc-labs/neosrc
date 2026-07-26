@@ -6,7 +6,7 @@ import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { ActionSection } from "./actions-section";
 import { StickyActionBar } from "./sticky-action-bar";
 
-interface InlineActionBarProps {
+interface HeaderActionBarProps {
     owner: string;
     repo: string;
     number: number;
@@ -17,7 +17,7 @@ interface InlineActionBarProps {
     checkRunsPromise?: Promise<CheckRun[]> | null;
 }
 
-export function InlineActionBar({
+export function HeaderActionBar({
     owner,
     repo,
     number,
@@ -26,7 +26,7 @@ export function InlineActionBar({
     userPermissionPromise,
     currentUserLogin,
     checkRunsPromise,
-}: InlineActionBarProps) {
+}: HeaderActionBarProps) {
     const mainRef = useMainContentRef();
 
     return (
@@ -37,7 +37,7 @@ export function InlineActionBar({
             >
                 {(checkRuns) => (
                     <ActionSection
-                        variant="inline"
+                        variant="header"
                         owner={owner}
                         repo={repo}
                         number={number}

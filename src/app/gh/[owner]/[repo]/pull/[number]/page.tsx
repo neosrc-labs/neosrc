@@ -16,7 +16,7 @@ import {
     mapStatusToCheckRun,
 } from "~/utils/status-checks";
 import { PullRequestDescriptionSection } from "./_components/description";
-import { InlineActionBar } from "./_components/inline-action-bar";
+import { HeaderActionBar } from "./_components/header-action-bar";
 import { PullRequestContent } from "./_components/pull-request-content";
 import {
     TimelineSection,
@@ -131,7 +131,7 @@ export default async function PullRequestPage({ params }: PageProps) {
                 repo={repo}
                 number={number}
                 actionSection={
-                    <InlineActionBar
+                    <HeaderActionBar
                         owner={owner}
                         repo={repo}
                         number={number}

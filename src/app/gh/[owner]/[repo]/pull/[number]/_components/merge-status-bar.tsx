@@ -1,13 +1,17 @@
 "use client";
 
-import { Check, ChevronDown, CircleX, Clock, GitMerge } from "lucide-react";
+import { ChevronDown, GitMerge } from "lucide-react";
 import { useState } from "react";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
-import type { MergeMethod, PullsGetResponseData } from "~/server/github";
+import type {
+    CheckRun,
+    MergeMethod,
+    PullsGetResponseData,
+} from "~/server/github";
 
 interface MergeOptionDef {
     value: MergeMethod;
@@ -36,6 +40,8 @@ interface MergeStatusBarProps {
     changesRequestedCount?: number;
     pendingReviewerCount?: number;
     requiredApprovalCount?: number;
+    requiredChecks?: string[];
+    checkRuns?: CheckRun[];
 }
 
 export function MergeStatusBar({
@@ -58,6 +64,8 @@ export function MergeStatusBar({
     changesRequestedCount = 0,
     pendingReviewerCount = 0,
     requiredApprovalCount = 0,
+    requiredChecks = [],
+    checkRuns = [],
 }: MergeStatusBarProps) {
     const [isMergeOptionsOpen, setIsMergeOptionsOpen] = useState(false);
     const effectiveMergeMode = availableMergeOptions.some(
@@ -91,35 +99,58 @@ export function MergeStatusBar({
     }
 
     if (isMergeBlocked) {
+        const checkStatuses = requiredChecks.map((name) => {
+            const normalized = name.trim().toLowerCase();
+            const match = checkRuns.find(
+                (c) => c.name.trim().toLowerCase() === normalized,
+            );
+            const failed =
+                match?.conclusion === "failure" ||
+                match?.conclusion === "timed_out" ||
+                match?.conclusion === "cancelled";
+            return { name, failed, pending: !match };
+        });
+
+        const failingChecks = checkStatuses.filter((c) => c.failed);
+        const pendingChecks = checkStatuses.filter((c) => c.pending);
+
+        const reasons: string[] = [];
+        if (requiredApprovalCount > 0) {
+            reasons.push(`${approvalCount}/${requiredApprovalCount} approvals`);
+        }
+        if (changesRequestedCount > 0) {
+            reasons.push(
+                `${changesRequestedCount} change${changesRequestedCount !== 1 ? "s" : ""} requested`,
+            );
+        }
+        if (pendingReviewerCount > 0) {
+            reasons.push(`${pendingReviewerCount} pending`);
+        }
+        if (failingChecks.length > 0) {
+            reasons.push(
+                `${failingChecks.length} check${failingChecks.length !== 1 ? "s" : ""} failing`,
+            );
+        }
+        if (pendingChecks.length > 0) {
+            reasons.push(
+                `${pendingChecks.length} check${pendingChecks.length !== 1 ? "s" : ""} pending`,
+            );
+        }
+
         return (
-            <div className="flex flex-col rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
-                <div className="flex items-center gap-1.5">
-                    <GitMerge size={14} className="text-text-muted" />
-                    <span className="font-medium text-sm text-text-muted">
-                        Merging is blocked
-                    </span>
-                </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    {requiredApprovalCount > 0 && (
-                        <span className="flex items-center gap-1 text-amber-600 text-xs dark:text-amber-400">
-                            <Check size={11} />
-                            {approvalCount} of {requiredApprovalCount} approvals
+            <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
+                <GitMerge size={14} className="text-text-muted" />
+                <span className="font-medium text-sm text-text-muted">
+                    Merging is blocked
+                </span>
+                {reasons.length > 0 && (
+                    <>
+                        <span className="text-text-muted">&mdash;</span>
+                        <span className="text-text-muted text-xs">
+                            {reasons.join(" \u00b7 ")}
                         </span>
-                    )}
-                    {changesRequestedCount > 0 && (
-                        <span className="flex items-center gap-1 text-red-600 text-xs dark:text-red-400">
-                            <CircleX size={11} />
-                            {changesRequestedCount} change
-                            {changesRequestedCount !== 1 ? "s" : ""} requested
-                        </span>
-                    )}
-                    {pendingReviewerCount > 0 && (
-                        <span className="flex items-center gap-1 text-text-muted text-xs">
-                            <Clock size={11} />
-                            {pendingReviewerCount} pending
-                        </span>
-                    )}
-                </div>
+                    </>
+                )}
             </div>
         );
     }
