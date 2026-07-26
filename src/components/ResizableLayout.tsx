@@ -7,6 +7,7 @@ import {
     useRef,
     useState,
 } from "react";
+import { MainContentRefContext } from "./main-content-ref";
 import { useSidebar } from "./sidebar-context";
 
 const LEFT_STORAGE_KEY = "neosrc-sidebar-width";
@@ -65,6 +66,8 @@ export function ResizableLayout({
         sidebarTopPx !== undefined
             ? `${sidebarTopPx}px`
             : "var(--header-height)";
+
+    const mainRef = useRef<HTMLElement>(null);
 
     const isDraggingRef = useRef(false);
     const dragSideRef = useRef<"left" | "right">("left");
@@ -152,78 +155,83 @@ export function ResizableLayout({
     };
 
     return (
-        <div
-            className="grid"
-            style={{ gridTemplateColumns: getGridTemplateColumns() }}
-        >
-            {/* Left sidebar spacer for grid layout */}
-            <div className="relative">
-                {isLeftOpen && (
-                    <>
-                        <div
-                            className="fixed bottom-0 overflow-y-auto border-border-subtle border-r bg-surface"
-                            style={{
-                                left: 0,
-                                width: leftWidth,
-                                top: sidebarTop,
-                            }}
-                        >
-                            {leftSidebar}
-                        </div>
-                        <div
-                            className="fixed z-10 w-1 cursor-col-resize bg-surface-selected transition-colors hover:bg-blue-500 active:bg-blue-600"
-                            style={{
-                                left: leftWidth - 4,
-                                top: sidebarTop,
-                                bottom: 0,
-                            }}
-                            onMouseDown={handleMouseDown("left")}
-                            onDoubleClick={() => {
-                                toggleLeft();
-                                setLeftWidth(DEFAULT_LEFT_WIDTH);
-                            }}
-                        />
-                    </>
-                )}
-            </div>
-
-            {/* Middle Section - PR Content */}
-            <main className="min-w-0 border-border-subtle border-r bg-surface">
-                <div className={boxed ? "mx-auto w-full max-w-7xl" : ""}>
-                    {children}
+        <MainContentRefContext.Provider value={mainRef}>
+            <div
+                className="grid"
+                style={{ gridTemplateColumns: getGridTemplateColumns() }}
+            >
+                {/* Left sidebar spacer for grid layout */}
+                <div className="relative">
+                    {isLeftOpen && (
+                        <>
+                            <div
+                                className="fixed bottom-0 overflow-y-auto border-border-subtle border-r bg-surface"
+                                style={{
+                                    left: 0,
+                                    width: leftWidth,
+                                    top: sidebarTop,
+                                }}
+                            >
+                                {leftSidebar}
+                            </div>
+                            <div
+                                className="fixed z-10 w-1 cursor-col-resize bg-surface-selected transition-colors hover:bg-blue-500 active:bg-blue-600"
+                                style={{
+                                    left: leftWidth - 4,
+                                    top: sidebarTop,
+                                    bottom: 0,
+                                }}
+                                onMouseDown={handleMouseDown("left")}
+                                onDoubleClick={() => {
+                                    toggleLeft();
+                                    setLeftWidth(DEFAULT_LEFT_WIDTH);
+                                }}
+                            />
+                        </>
+                    )}
                 </div>
-            </main>
 
-            {/* Right sidebar spacer for grid layout */}
-            <div className="relative">
-                {isRightOpen && (
-                    <>
-                        <div
-                            className="fixed bottom-0 overflow-y-auto border-border-subtle border-l bg-surface"
-                            style={{
-                                right: 0,
-                                width: rightWidth,
-                                top: sidebarTop,
-                            }}
-                        >
-                            {rightSidebar}
-                        </div>
-                        <div
-                            className="fixed z-10 w-1 cursor-col-resize bg-surface-selected transition-colors hover:bg-blue-500 active:bg-blue-600"
-                            style={{
-                                right: rightWidth - 4,
-                                top: sidebarTop,
-                                bottom: 0,
-                            }}
-                            onMouseDown={handleMouseDown("right")}
-                            onDoubleClick={() => {
-                                toggleRight();
-                                setRightWidth(DEFAULT_RIGHT_WIDTH);
-                            }}
-                        />
-                    </>
-                )}
+                {/* Middle Section - PR Content */}
+                <main
+                    ref={mainRef}
+                    className="min-w-0 border-border-subtle border-r bg-surface"
+                >
+                    <div className={boxed ? "mx-auto w-full max-w-7xl" : ""}>
+                        {children}
+                    </div>
+                </main>
+
+                {/* Right sidebar spacer for grid layout */}
+                <div className="relative">
+                    {isRightOpen && (
+                        <>
+                            <div
+                                className="fixed bottom-0 overflow-y-auto border-border-subtle border-l bg-surface"
+                                style={{
+                                    right: 0,
+                                    width: rightWidth,
+                                    top: sidebarTop,
+                                }}
+                            >
+                                {rightSidebar}
+                            </div>
+                            <div
+                                className="fixed z-10 w-1 cursor-col-resize bg-surface-selected transition-colors hover:bg-blue-500 active:bg-blue-600"
+                                style={{
+                                    right: rightWidth - 4,
+                                    top: sidebarTop,
+                                    bottom: 0,
+                                }}
+                                onMouseDown={handleMouseDown("right")}
+                                onDoubleClick={() => {
+                                    toggleRight();
+                                    setRightWidth(DEFAULT_RIGHT_WIDTH);
+                                }}
+                            />
+                        </>
+                    )}
+                </div>
             </div>
-        </div>
+        </MainContentRefContext.Provider>
     );
 }
