@@ -5,7 +5,6 @@ import {
     getCachedPullRequest,
     getCheckRuns,
     getCommitStatuses,
-    getConflictedFiles,
     getUserRepoPermission,
     type PullsGetResponseData,
 } from "~/server/github";
@@ -37,23 +36,15 @@ export default async function PullRequestLayout({
     let checks: Promise<Array<CheckRun>> | null = Promise.resolve<CheckRun[]>(
         [],
     );
-    let conflictedFiles: Promise<string[]> | null = Promise.resolve<string[]>(
-        [],
-    );
     let userPermission: Promise<string | null> | null = Promise.resolve<
         string | null
     >(null);
-    let currentUserLogin: string | undefined;
 
     const accessToken = await githubAccessToken();
     const session = await getSession();
 
     if (accessToken && session?.user) {
         const userId = session.user.id;
-        currentUserLogin = session.user.githubUsername ?? undefined;
-        if (!currentUserLogin) {
-            throw new Error("github username name not found");
-        }
 
         pullRequest = getCachedPullRequest(
             accessToken,
@@ -67,23 +58,9 @@ export default async function PullRequestLayout({
             accessToken,
             owner,
             repo,
-            currentUserLogin,
+            session.user.githubUsername ?? "",
             userId,
         ).catch(() => null);
-
-        // Fetch conflicted files if there are merge conflicts
-        conflictedFiles = pullRequest.then(async (pr) => {
-            if (pr.mergeable_state === "dirty") {
-                return getConflictedFiles(
-                    accessToken,
-                    owner,
-                    repo,
-                    pr.base.sha,
-                    pr.head.sha,
-                );
-            }
-            return [];
-        });
 
         // Fetch check runs and commit statuses if we have the PR head SHA
         checks = pullRequest.then((pullRequest) =>
@@ -95,10 +72,7 @@ export default async function PullRequestLayout({
         <PullRequestClientLayout
             leftSidebar={
                 <LeftSidebar
-                    currentUserLogin={currentUserLogin}
-                    userPermissionPromise={userPermission}
                     pullRequestPromise={pullRequest}
-                    conflictedFilesPromise={conflictedFiles}
                     number={number}
                     owner={owner}
                     repo={repo}

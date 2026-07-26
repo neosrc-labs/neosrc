@@ -2,10 +2,16 @@ import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-meth
 import type { Metadata } from "next";
 import { Suspense, use } from "react";
 import { getSession, githubAccessToken } from "~/server/auth";
-import { getCachedPullRequest, getUserRepoPermission } from "~/server/github";
+import {
+    getCachedPullRequest,
+    getConflictedFiles,
+    getUserRepoPermission,
+} from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
+import { ActionSection } from "./_components/actions-section";
 import { PullRequestDescriptionSection } from "./_components/description";
 import { PullRequestContent } from "./_components/pull-request-content";
+import { StickyActionBar } from "./_components/sticky-action-bar";
 import {
     TimelineSection,
     TimelineSkeleton,
@@ -69,6 +75,32 @@ export default async function PullRequestPage({ params }: PageProps) {
         userId,
     );
 
+    const currentUserLogin = session?.user?.githubUsername;
+
+    const userPermissionPromise =
+        currentUserLogin && userId
+            ? getUserRepoPermission(
+                  accessToken,
+                  owner,
+                  repo,
+                  currentUserLogin,
+                  userId,
+              ).catch(() => null)
+            : Promise.resolve(null);
+
+    const conflictedFilesPromise = pullRequestPromise.then(async (pr) => {
+        if (pr.mergeable_state === "dirty") {
+            return getConflictedFiles(
+                accessToken,
+                owner,
+                repo,
+                pr.base.sha,
+                pr.head.sha,
+            );
+        }
+        return [];
+    });
+
     return (
         <div className="px-6 py-8">
             <PullRequestTitleSetter pullRequestPromise={pullRequestPromise} />
@@ -79,6 +111,19 @@ export default async function PullRequestPage({ params }: PageProps) {
                 owner={owner}
                 repo={repo}
                 number={number}
+                actionSection={
+                    <StickyActionBar>
+                        <ActionSection
+                            currentUserLogin={currentUserLogin ?? undefined}
+                            userPermissionPromise={userPermissionPromise}
+                            number={number}
+                            owner={owner}
+                            pullRequestPromise={pullRequestPromise}
+                            conflictedFilesPromise={conflictedFilesPromise}
+                            repo={repo}
+                        />
+                    </StickyActionBar>
+                }
             />
 
             <PullRequestContent

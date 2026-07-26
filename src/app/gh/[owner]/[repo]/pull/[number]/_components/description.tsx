@@ -3,6 +3,7 @@
 import type { components } from "@octokit/openapi-types";
 import { Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
 import NextLink from "next/link";
+import type { ReactNode } from "react";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
@@ -38,6 +39,7 @@ interface PullRequestDescriptionSectionProps {
     pullRequestPromise: Promise<PullsGetResponseData>;
     canInteractPromise: Promise<boolean>;
     canEditPromise: Promise<boolean>;
+    actionSection?: ReactNode;
 }
 
 export function PullRequestDescriptionSection({
@@ -47,6 +49,7 @@ export function PullRequestDescriptionSection({
     pullRequestPromise,
     canInteractPromise,
     canEditPromise,
+    actionSection,
 }: PullRequestDescriptionSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editBody, setEditBody] = useState("");
@@ -394,6 +397,8 @@ export function PullRequestDescriptionSection({
                     )}
                 </Async>
             </div>
+
+            {actionSection}
 
             <Async
                 fallback={
