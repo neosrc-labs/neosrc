@@ -513,7 +513,8 @@ export function ActionSection({
                         requiredChecks={requiredChecks}
                     />
                 )}
-                {!effectiveMerged &&
+                {isInline &&
+                    !effectiveMerged &&
                     pullRequest.state === "open" &&
                     !isDraft && (
                         <MergeStatusBar
@@ -918,7 +919,7 @@ export function ActionSection({
                             )}
                         </div>
                     ))}
-                {mergeMutation.isError && (
+                {!isInline && mergeMutation.isError && (
                     <p className="text-red-600 text-xs">
                         Failed to merge. Please try again.
                     </p>
