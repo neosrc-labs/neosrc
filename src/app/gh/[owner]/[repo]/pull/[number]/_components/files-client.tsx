@@ -13,6 +13,7 @@ import type { PullsGetResponseData, ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 import { filenameHash } from "~/utils/filename-hash";
 import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
+import { ActionSection } from "./actions-section";
 
 function FileDiffSkeleton() {
     return (
@@ -43,6 +44,9 @@ interface FilesSectionProps {
     number: number;
     commitSha?: string;
     pullRequestPromise: Promise<PullsGetResponseData>;
+    currentUserLogin?: string;
+    userPermissionPromise?: Promise<string | null> | null;
+    conflictedFilesPromise?: Promise<string[]> | null;
 }
 
 export function FilesSection({
@@ -51,6 +55,9 @@ export function FilesSection({
     number,
     commitSha,
     pullRequestPromise,
+    currentUserLogin,
+    userPermissionPromise,
+    conflictedFilesPromise,
 }: FilesSectionProps) {
     const [showComments, setShowComments] = useState(true);
     const [expandedGeneratedFiles, setExpandedGeneratedFiles] = useState(
@@ -214,6 +221,16 @@ export function FilesSection({
                             </div>
                         )}
                     </Async>
+                    <ActionSection
+                        sticky={false}
+                        currentUserLogin={currentUserLogin}
+                        userPermissionPromise={userPermissionPromise}
+                        number={number}
+                        owner={owner}
+                        pullRequestPromise={pullRequestPromise}
+                        conflictedFilesPromise={conflictedFilesPromise}
+                        repo={repo}
+                    />
                     {allFiles.length > 0 && (
                         <div className="flex flex-col gap-0.5 text-text-secondary text-xs">
                             <div className="flex items-center gap-1.5">

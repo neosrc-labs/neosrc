@@ -5,7 +5,9 @@ import {
     type CommitData,
     getCachedCommit,
     getCachedPullRequest,
+    getConflictedFiles,
     getPullRequestCommits,
+    getUserRepoPermission,
     type PullsListCommitsResponseData,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
@@ -59,6 +61,32 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
         userId,
     );
 
+    const currentUserLogin = session?.user?.githubUsername;
+
+    const userPermissionPromise =
+        currentUserLogin && userId
+            ? getUserRepoPermission(
+                  accessToken,
+                  owner,
+                  repo,
+                  currentUserLogin,
+                  userId,
+              ).catch(() => null)
+            : Promise.resolve(null);
+
+    const conflictedFilesPromise = prPromise.then(async (pr) => {
+        if (pr.mergeable_state === "dirty") {
+            return getConflictedFiles(
+                accessToken,
+                owner,
+                repo,
+                pr.base.sha,
+                pr.head.sha,
+            );
+        }
+        return [];
+    });
+
     let commitPromise: Promise<CommitData> | null = null;
     let commitsPromise: Promise<PullsListCommitsResponseData> | null = null;
     if (commitSha) {
@@ -100,6 +128,9 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
                     repo={repo}
                     commitSha={commitSha ?? undefined}
                     pullRequestPromise={prPromise}
+                    currentUserLogin={currentUserLogin ?? undefined}
+                    userPermissionPromise={userPermissionPromise}
+                    conflictedFilesPromise={conflictedFilesPromise}
                 />
             </Suspense>
         </div>

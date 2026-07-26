@@ -34,6 +34,7 @@ interface ActionSectionProps {
     conflictedFilesPromise?: Promise<string[]> | null;
     userPermissionPromise?: Promise<string | null> | null;
     currentUserLogin?: string;
+    sticky?: boolean;
 }
 
 export function ActionSection({
@@ -44,6 +45,7 @@ export function ActionSection({
     conflictedFilesPromise,
     userPermissionPromise,
     currentUserLogin,
+    sticky = true,
 }: ActionSectionProps) {
     const router = useRouter();
     const utils = api.useUtils();
@@ -1074,42 +1076,41 @@ export function ActionSection({
         );
     };
 
-    return (
-        <div className="sticky top-[var(--header-height)] z-10 bg-surface py-2">
-            {pullRequestPromise ? (
-                <Async fallback={skeleton} promise={pullRequestPromise}>
-                    {(pullRequest) => (
+    const content = pullRequestPromise ? (
+        <Async fallback={skeleton} promise={pullRequestPromise}>
+            {(pullRequest) => (
+                <Async
+                    fallback={null}
+                    promise={conflictedFilesPromise ?? Promise.resolve([])}
+                >
+                    {(files) => (
                         <Async
                             fallback={null}
                             promise={
-                                conflictedFilesPromise ?? Promise.resolve([])
+                                userPermissionPromise ?? Promise.resolve(null)
                             }
                         >
-                            {(files) => (
-                                <Async
-                                    fallback={null}
-                                    promise={
-                                        userPermissionPromise ??
-                                        Promise.resolve(null)
-                                    }
-                                >
-                                    {(userPermission) =>
-                                        buttons(
-                                            pullRequest,
-                                            files,
-                                            userPermission,
-                                        )
-                                    }
-                                </Async>
-                            )}
+                            {(userPermission) =>
+                                buttons(pullRequest, files, userPermission)
+                            }
                         </Async>
                     )}
                 </Async>
-            ) : (
-                skeleton
             )}
-        </div>
+        </Async>
+    ) : (
+        skeleton
     );
+
+    if (sticky) {
+        return (
+            <div className="sticky top-[var(--header-height)] z-10 bg-surface py-2">
+                {content}
+            </div>
+        );
+    }
+
+    return content;
 }
 
 function RequiredChecks({
