@@ -28,8 +28,6 @@ interface MergeStatusBarProps {
     mergeMode: MergeMethod;
     onMergeModeChange: (mode: MergeMethod) => void;
     onMerge: () => void;
-    onMarkReady: () => void;
-    isMarkingReady: boolean;
     isMerging: boolean;
     availableMergeOptions: MergeOptionDef[];
     isMergeBlocked: boolean;
@@ -52,8 +50,6 @@ export function MergeStatusBar({
     mergeMode,
     onMergeModeChange,
     onMerge,
-    onMarkReady,
-    isMarkingReady,
     isMerging,
     availableMergeOptions,
     isMergeBlocked,
@@ -86,16 +82,7 @@ export function MergeStatusBar({
     }
 
     if (isDraft && canWrite) {
-        return (
-            <button
-                className="flex cursor-pointer items-center gap-1.5 rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={isMarkingReady}
-                onClick={onMarkReady}
-                type="button"
-            >
-                {isMarkingReady ? "Marking..." : "Mark as ready for review"}
-            </button>
-        );
+        return null;
     }
 
     if (isMergeBlocked) {

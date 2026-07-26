@@ -120,15 +120,6 @@ export function ActionSection({
         },
     });
 
-    const markReadyMutation = api.pulls.markReadyForReview.useMutation({
-        onSuccess: () => {
-            setMarkedReady(true);
-            utils.timeline.list.invalidate();
-            utils.reviews.getPending.invalidate();
-            router.refresh();
-        },
-    });
-
     const mergeMutation = api.pulls.merge.useMutation({
         onSuccess: () => {
             setIsMerged(true);
@@ -148,10 +139,6 @@ export function ActionSection({
             reviewId: pendingReview.reviewId,
         });
     }, [owner, repo, number, pendingReview, dismissReviewMutation]);
-
-    const handleMarkReady = useCallback(() => {
-        markReadyMutation.mutate({ owner, repo, number });
-    }, [owner, repo, number, markReadyMutation]);
 
     const skeleton = (
         <>
@@ -384,36 +371,46 @@ export function ActionSection({
                 {!effectiveMerged &&
                     pullRequest.state === "open" &&
                     !isDraft && (
-                        <MergeStatusBar
-                            pullRequest={pullRequest}
-                            isDraft={isDraft}
-                            canMerge={canMerge}
-                            canWrite={canWrite}
-                            mergeMode={mergeMode}
-                            onMergeModeChange={setMergeMode}
-                            onMerge={() => {
-                                mergeMutation.mutate({
-                                    owner,
-                                    repo,
-                                    number,
-                                    mergeMethod: effectiveMergeMode,
-                                });
-                            }}
-                            onMarkReady={handleMarkReady}
-                            isMarkingReady={markReadyMutation.isPending}
-                            isMerging={mergeMutation.isPending}
-                            availableMergeOptions={availableMergeOptions}
-                            isMergeBlocked={isMergeBlocked}
-                            isMergeStateUnknown={isMergeStateUnknown}
-                            noMergeMethodsAvailable={noMergeMethodsAvailable}
-                            mergeError={mergeMutation.isError}
-                            approvalCount={approvalCount}
-                            changesRequestedCount={changesRequestedCount}
-                            pendingReviewerCount={pendingCount}
-                            requiredApprovalCount={requiredApprovalCount}
-                            requiredChecks={requiredChecks}
-                            checkRuns={checkRuns}
-                        />
+                        <>
+                            {isDraft && canWrite && (
+                                <ReadyForReviewButton
+                                    owner={owner}
+                                    repo={repo}
+                                    number={number}
+                                    setMarkedReady={setMarkedReady}
+                                />
+                            )}
+                            <MergeStatusBar
+                                pullRequest={pullRequest}
+                                isDraft={isDraft}
+                                canMerge={canMerge}
+                                canWrite={canWrite}
+                                mergeMode={mergeMode}
+                                onMergeModeChange={setMergeMode}
+                                onMerge={() => {
+                                    mergeMutation.mutate({
+                                        owner,
+                                        repo,
+                                        number,
+                                        mergeMethod: effectiveMergeMode,
+                                    });
+                                }}
+                                isMerging={mergeMutation.isPending}
+                                availableMergeOptions={availableMergeOptions}
+                                isMergeBlocked={isMergeBlocked}
+                                isMergeStateUnknown={isMergeStateUnknown}
+                                noMergeMethodsAvailable={
+                                    noMergeMethodsAvailable
+                                }
+                                mergeError={mergeMutation.isError}
+                                approvalCount={approvalCount}
+                                changesRequestedCount={changesRequestedCount}
+                                pendingReviewerCount={pendingCount}
+                                requiredApprovalCount={requiredApprovalCount}
+                                requiredChecks={requiredChecks}
+                                checkRuns={checkRuns}
+                            />
+                        </>
                     )}
                 {effectiveMerged && (
                     <div className="flex items-center gap-2">
@@ -469,16 +466,12 @@ export function ActionSection({
                 {!effectiveMerged &&
                     pullRequest.state === "open" &&
                     (isDraft && canManagePR ? (
-                        <button
-                            className="cursor-pointer rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
-                            disabled={markReadyMutation.isPending}
-                            onClick={handleMarkReady}
-                            type="button"
-                        >
-                            {markReadyMutation.isPending
-                                ? "Marking..."
-                                : "Mark as ready for review"}
-                        </button>
+                        <ReadyForReviewButton
+                            owner={owner}
+                            repo={repo}
+                            number={number}
+                            setMarkedReady={setMarkedReady}
+                        />
                     ) : null)}
             </div>
         );
@@ -519,6 +512,46 @@ export function ActionSection({
                 skeleton
             )}
         </div>
+    );
+}
+
+function ReadyForReviewButton({
+    owner,
+    repo,
+    number,
+    setMarkedReady,
+}: {
+    owner: string;
+    repo: string;
+    number: number;
+    setMarkedReady: (v: boolean) => void;
+}) {
+    const router = useRouter();
+    const utils = api.useUtils();
+    const markReadyMutation = api.pulls.markReadyForReview.useMutation({
+        onSuccess: () => {
+            setMarkedReady(true);
+            utils.timeline.list.invalidate();
+            utils.reviews.getPending.invalidate();
+            router.refresh();
+        },
+    });
+
+    const handleMarkReady = useCallback(() => {
+        markReadyMutation.mutate({ owner, repo, number });
+    }, [owner, repo, number, markReadyMutation]);
+
+    return (
+        <button
+            className="flex cursor-pointer items-center gap-1.5 rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={markReadyMutation.isPending}
+            onClick={handleMarkReady}
+            type="button"
+        >
+            {markReadyMutation.isPending
+                ? "Marking..."
+                : "Mark as ready for review"}
+        </button>
     );
 }
 
@@ -614,7 +647,7 @@ function SubmitReviewButton({
             >
                 <MarkdownEditor
                     autoFocus
-                    disabled={isPending}
+                    disabled={false /* FIXME: do this */}
                     minHeight="150px"
                     onChange={setBody}
                     onCancel={() => {

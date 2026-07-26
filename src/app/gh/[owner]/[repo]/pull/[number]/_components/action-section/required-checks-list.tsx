@@ -8,18 +8,6 @@ interface RequiredChecksListProps {
     checks: CheckRun[];
 }
 
-function normalizeName(name: string): string {
-    return name.trim().toLowerCase();
-}
-
-function getCheckStatus(
-    name: string,
-    checks: CheckRun[],
-): CheckRun | undefined {
-    const normalized = normalizeName(name);
-    return checks.find((c) => normalizeName(c.name) === normalized);
-}
-
 export function RequiredChecksList({
     requiredChecks,
     checks,
@@ -77,4 +65,16 @@ export function RequiredChecksList({
             })}
         </div>
     );
+}
+
+function normalizeName(name: string): string {
+    return name.trim().toLowerCase();
+}
+
+function getCheckStatus(
+    name: string,
+    checks: CheckRun[],
+): CheckRun | undefined {
+    const normalized = normalizeName(name);
+    return checks.find((c) => normalizeName(c.name) === normalized);
 }
