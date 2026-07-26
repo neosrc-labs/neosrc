@@ -1,7 +1,6 @@
 "use client";
 
 import {
-    type CSSProperties,
     type ReactNode,
     useCallback,
     useEffect,
@@ -11,45 +10,25 @@ import {
 
 interface StickyActionBarProps {
     children: ReactNode;
-    measureRef?: React.RefObject<HTMLElement | null>;
     className?: string;
 }
 
-export function StickyActionBar({
-    children,
-    measureRef,
-    className,
-}: StickyActionBarProps) {
+export function StickyActionBar({ children, className }: StickyActionBarProps) {
     const sentinelRef = useRef<HTMLDivElement>(null);
     const barRef = useRef<HTMLDivElement>(null);
     const [isFixed, setIsFixed] = useState(false);
-    const [fixedStyle, setFixedStyle] = useState<CSSProperties>({});
+    const [fixedWidth, setFixedWidth] = useState(0);
+    const [fixedLeft, setFixedLeft] = useState(0);
 
-    const updateDimensions = useCallback(() => {
-        if (!isFixed) return;
-
-        const targetEl = measureRef?.current;
-        if (targetEl) {
-            const rect = targetEl.getBoundingClientRect();
-            setFixedStyle({
-                position: "fixed",
-                top: 0,
-                left: `${rect.left}px`,
-                width: `${rect.width}px`,
-                zIndex: 20,
-            });
-        } else if (barRef.current?.parentElement) {
-            const parentRect =
-                barRef.current.parentElement.getBoundingClientRect();
-            setFixedStyle({
-                position: "fixed",
-                top: 0,
-                left: `${parentRect.left}px`,
-                width: `${parentRect.width}px`,
-                zIndex: 20,
-            });
-        }
-    }, [isFixed, measureRef]);
+    const captureDimensions = useCallback(() => {
+        const bar = barRef.current;
+        if (!bar) return;
+        const row = bar.parentElement?.parentElement;
+        if (!row) return;
+        const rect = row.getBoundingClientRect();
+        setFixedWidth(rect.width);
+        setFixedLeft(rect.left);
+    }, []);
 
     useEffect(() => {
         const sentinel = sentinelRef.current;
@@ -64,6 +43,9 @@ export function StickyActionBar({
         const observer = new IntersectionObserver(
             ([entry]) => {
                 if (!entry) return;
+                if (!entry.isIntersecting) {
+                    captureDimensions();
+                }
                 setIsFixed(!entry.isIntersecting);
             },
             {
@@ -75,32 +57,18 @@ export function StickyActionBar({
         observer.observe(sentinel);
 
         return () => observer.disconnect();
-    }, []);
+    }, [captureDimensions]);
 
     useEffect(() => {
-        if (!isFixed) {
-            setFixedStyle({});
-            return;
-        }
+        if (!isFixed) return;
 
-        updateDimensions();
-
-        const handleResize = () => updateDimensions();
+        const handleResize = () => captureDimensions();
         window.addEventListener("resize", handleResize, { passive: true });
-
-        const observer = new ResizeObserver(() => updateDimensions());
-        const targetEl = measureRef?.current;
-        if (targetEl) {
-            observer.observe(targetEl);
-        } else if (barRef.current?.parentElement) {
-            observer.observe(barRef.current.parentElement);
-        }
 
         return () => {
             window.removeEventListener("resize", handleResize);
-            observer.disconnect();
         };
-    }, [isFixed, measureRef, updateDimensions]);
+    }, [isFixed, captureDimensions]);
 
     return (
         <>
@@ -111,7 +79,11 @@ export function StickyActionBar({
                 style={
                     isFixed
                         ? {
-                              ...fixedStyle,
+                              position: "fixed",
+                              top: 0,
+                              left: `${fixedLeft}px`,
+                              width: `${fixedWidth}px`,
+                              zIndex: 20,
                               backgroundColor: "var(--color-surface, #ffffff)",
                               paddingTop: "8px",
                               paddingBottom: "8px",

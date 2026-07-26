@@ -1,7 +1,6 @@
 "use client";
 
 import { Async } from "~/components/async";
-import { useMainContentRef } from "~/components/main-content-ref";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { ActionSection } from "./actions-section";
 import { StickyActionBar } from "./sticky-action-bar";
@@ -27,10 +26,8 @@ export function HeaderActionBar({
     currentUserLogin,
     checkRunsPromise,
 }: HeaderActionBarProps) {
-    const mainRef = useMainContentRef();
-
     return (
-        <StickyActionBar measureRef={mainRef ?? undefined}>
+        <StickyActionBar>
             <Async
                 fallback={null}
                 promise={checkRunsPromise ?? Promise.resolve<CheckRun[]>([])}
