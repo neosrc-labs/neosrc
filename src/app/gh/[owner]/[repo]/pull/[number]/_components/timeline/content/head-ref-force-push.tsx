@@ -59,6 +59,16 @@ export function HeadRefForcePushContent({
                 )}
             </p>
             <span title={fullDate}>{timestamp}</span>
+            {event.beforeCommit?.oid && event.afterCommit?.oid && (
+                <a
+                    href={`https://github.com/${owner}/${repo}/compare/${event.beforeCommit.oid}...${event.afterCommit.oid}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ml-auto rounded bg-surface-tertiary px-1.5 py-0.5 text-text-secondary text-xs transition-colors hover:bg-surface-selected"
+                >
+                    Compare
+                </a>
+            )}
         </EventRow>
     );
 }
