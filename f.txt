@@ -1,3 +1,0 @@
-- Show "N of M required" counts
-- Show required checks lists
-- Show CODEOWNERS, conversation resolution, or other deeper requirements
