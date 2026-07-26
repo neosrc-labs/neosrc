@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import type { PullsGetResponseData } from "~/server/github";
-import { ActionSection } from "./actions-section";
 import {
     LeftSidebarContentSection,
     SidebarNavMenu,
@@ -11,9 +10,6 @@ interface LeftSidebarProps {
     repo: string;
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData> | null;
-    conflictedFilesPromise?: Promise<string[]> | null;
-    userPermissionPromise?: Promise<string | null> | null;
-    currentUserLogin?: string;
 }
 
 export default function LeftSidebar({
@@ -21,9 +17,6 @@ export default function LeftSidebar({
     repo,
     number,
     pullRequestPromise,
-    conflictedFilesPromise,
-    userPermissionPromise,
-    currentUserLogin,
 }: LeftSidebarProps) {
     return (
         <aside
@@ -52,16 +45,6 @@ export default function LeftSidebar({
                     />
                 </Suspense>
             </div>
-
-            <ActionSection
-                currentUserLogin={currentUserLogin}
-                userPermissionPromise={userPermissionPromise}
-                number={number}
-                owner={owner}
-                pullRequestPromise={pullRequestPromise}
-                conflictedFilesPromise={conflictedFilesPromise}
-                repo={repo}
-            />
         </aside>
     );
 }
