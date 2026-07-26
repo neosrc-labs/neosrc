@@ -563,6 +563,7 @@ export const getConflictedFiles = cache(
 
 export type MergeRequirements = {
     requiredApprovingReviewCount: number;
+    requiredChecks: string[];
 };
 
 export const getMergeRequirements = cache(
@@ -574,7 +575,9 @@ export const getMergeRequirements = cache(
     ): Promise<MergeRequirements> => {
         const octokit = createOctokit(accessToken);
         let requiredApprovingReviewCount = 0;
+        const requiredChecks: string[] = [];
 
+        let foundRules = false;
         try {
             const { data: rules } = await octokit.rest.repos.getBranchRules({
                 owner,
@@ -583,13 +586,25 @@ export const getMergeRequirements = cache(
             });
             for (const rule of rules) {
                 if (rule.type === "pull_request" && rule.parameters) {
+                    foundRules = true;
                     requiredApprovingReviewCount = Math.max(
                         requiredApprovingReviewCount,
                         rule.parameters.required_approving_review_count,
                     );
                 }
+                if (rule.type === "required_status_checks" && rule.parameters) {
+                    foundRules = true;
+                    for (const check of rule.parameters
+                        .required_status_checks) {
+                        requiredChecks.push(check.context);
+                    }
+                }
             }
         } catch {
+            /* rulesets API not available — fall through to protection */
+        }
+
+        if (!foundRules) {
             try {
                 const { data: protection } =
                     await octokit.rest.repos.getBranchProtection({
@@ -600,12 +615,17 @@ export const getMergeRequirements = cache(
                 requiredApprovingReviewCount =
                     protection.required_pull_request_reviews
                         ?.required_approving_review_count ?? 0;
+                if (protection.required_status_checks?.contexts) {
+                    requiredChecks.push(
+                        ...protection.required_status_checks.contexts,
+                    );
+                }
             } catch {
                 /* no branch protection configured */
             }
         }
 
-        return { requiredApprovingReviewCount };
+        return { requiredApprovingReviewCount, requiredChecks };
     },
 );
 

@@ -414,6 +414,7 @@ export function ActionSection({
         ).length;
         const requiredApprovingReviewCount =
             mergeReqs?.requiredApprovingReviewCount ?? 0;
+        const requiredChecks = mergeReqs?.requiredChecks ?? [];
 
         const mergeOptionDefs = [
             {
@@ -870,6 +871,12 @@ export function ActionSection({
                                                 </span>
                                             </div>
                                         )}
+                                    <RequiredChecks
+                                        owner={owner}
+                                        repo={repo}
+                                        sha={pullRequest.head.sha}
+                                        requiredChecks={requiredChecks}
+                                    />
                                 </div>
                             )}
                             <div className="flex gap-2">
@@ -1102,5 +1109,83 @@ export function ActionSection({
                 skeleton
             )}
         </div>
+    );
+}
+
+function RequiredChecks({
+    owner,
+    repo,
+    sha,
+    requiredChecks,
+}: {
+    owner: string;
+    repo: string;
+    sha: string;
+    requiredChecks: string[];
+}) {
+    const { data: checks } = api.checks.list.useQuery(
+        { owner, repo, sha },
+        { staleTime: 15_000, enabled: requiredChecks.length > 0 },
+    );
+
+    if (!requiredChecks.length) return null;
+
+    const checkStatuses = requiredChecks.map((name) => {
+        const match = checks?.find((c) => c.name === name);
+        if (!match) {
+            return { name, conclusion: null, status: "queued" as const };
+        }
+        return {
+            name: match.name,
+            conclusion: match.conclusion,
+            status: match.status,
+        };
+    });
+
+    const failing = checkStatuses.filter(
+        (c) =>
+            c.conclusion === "failure" ||
+            c.conclusion === "cancelled" ||
+            c.conclusion === "timed_out" ||
+            c.conclusion === "action_required",
+    );
+    const pending = checkStatuses.filter(
+        (c) =>
+            !c.conclusion &&
+            (c.status === "queued" ||
+                c.status === "in_progress" ||
+                c.status === "pending"),
+    );
+
+    return (
+        <>
+            {failing.length > 0 && (
+                <div className="flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1.5 dark:border-red-900/50 dark:bg-red-950/20">
+                    <CircleX size={12} className="text-red-500" />
+                    <span
+                        className="font-medium text-red-600 text-xs dark:text-red-400"
+                        title={failing.map((c) => c.name).join("\n")}
+                    >
+                        {failing.length === 1
+                            ? "Required check failing"
+                            : `${failing.length} required checks failing`}
+                    </span>
+                </div>
+            )}
+            {pending.map((check) => (
+                <div
+                    key={check.name}
+                    className="flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 dark:border-amber-900/50 dark:bg-amber-950/20"
+                >
+                    <Clock size={12} className="text-amber-600" />
+                    <span
+                        className="max-w-36 truncate font-medium text-amber-700 text-xs dark:text-amber-400"
+                        title={check.name}
+                    >
+                        {check.name}
+                    </span>
+                </div>
+            ))}
+        </>
     );
 }
