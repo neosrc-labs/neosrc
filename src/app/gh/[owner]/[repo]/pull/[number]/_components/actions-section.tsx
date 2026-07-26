@@ -1,7 +1,6 @@
 "use client";
 
 import {
-    ChevronDown,
     CircleX,
     File,
     FilePen,
@@ -22,6 +21,9 @@ import {
 import { useLocalStorage } from "~/hooks/use-local-storage";
 import type { MergeMethod, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
+import { MergeStatusBar } from "./merge-status-bar";
+import { RequiredChecksList } from "./required-checks-list";
+import { ReviewStatusBadges } from "./review-status-badges";
 
 interface ActionSectionProps {
     owner: string;
@@ -31,6 +33,14 @@ interface ActionSectionProps {
     conflictedFilesPromise?: Promise<string[]> | null;
     userPermissionPromise?: Promise<string | null> | null;
     currentUserLogin?: string;
+    variant?: "sidebar" | "inline";
+    checkRuns?: Array<{
+        name: string;
+        conclusion: string | null;
+        status: string;
+        html_url?: string;
+        details_url?: string | null;
+    }>;
 }
 
 export function ActionSection({
@@ -41,6 +51,8 @@ export function ActionSection({
     conflictedFilesPromise,
     userPermissionPromise,
     currentUserLogin,
+    variant = "sidebar",
+    checkRuns,
 }: ActionSectionProps) {
     const router = useRouter();
     const utils = api.useUtils();
@@ -51,7 +63,6 @@ export function ActionSection({
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [isCancelPopoverOpen, setIsCancelPopoverOpen] = useState(false);
     const [isClosePopoverOpen, setIsClosePopoverOpen] = useState(false);
-    const [isMergeOptionsOpen, setIsMergeOptionsOpen] = useState(false);
     const [isRevertPopoverOpen, setIsRevertPopoverOpen] = useState(false);
     const [revertTitle, setRevertTitle] = useState("");
     const [revertBody, setRevertBody] = useState("");
@@ -71,6 +82,16 @@ export function ActionSection({
         owner,
         repo,
     });
+
+    const { data: reviews } = api.pulls.listReviews.useQuery(
+        { owner, repo, number },
+        { staleTime: 30_000 },
+    );
+
+    const { data: mergeReqs } = api.pulls.getMergeRequirements.useQuery(
+        { owner, repo, number },
+        { staleTime: 60_000 },
+    );
 
     const navigateAndScroll = useCallback(() => {
         router.push(`/gh/${owner}/${repo}/pull/${number}?scrollTo=bottom`);
@@ -423,111 +444,219 @@ export function ActionSection({
                 </div>
             ) : null;
 
+        const reviewStateMap = new Map<string, string>();
+        const authorLogin = pullRequest.user?.login;
+        if (reviews) {
+            for (const review of reviews) {
+                if (!review.user) continue;
+                if (review.user.login === authorLogin) continue;
+                const state = review.state;
+                if (state === "APPROVED" || state === "CHANGES_REQUESTED") {
+                    reviewStateMap.set(review.user.login, state);
+                } else if (state === "DISMISSED") {
+                    reviewStateMap.delete(review.user.login);
+                } else if (
+                    state === "COMMENTED" &&
+                    !reviewStateMap.has(review.user.login)
+                ) {
+                    reviewStateMap.set(review.user.login, "COMMENTED");
+                }
+            }
+        }
+
+        const requestedReviewerLogins = new Set(
+            (pullRequest.requested_reviewers ?? []).map((r) => r.login),
+        );
+        for (const login of requestedReviewerLogins) {
+            if (reviewStateMap.get(login) === "COMMENTED") {
+                reviewStateMap.set(login, "PENDING");
+            }
+        }
+
+        const reviewStates = [...reviewStateMap.values()];
+        const approvalCount = reviewStates.filter(
+            (s) => s === "APPROVED",
+        ).length;
+        const changesRequestedCount = reviewStates.filter(
+            (s) => s === "CHANGES_REQUESTED",
+        ).length;
+        const pendingCount = [...requestedReviewerLogins].filter(
+            (login) => !reviewStateMap.has(login),
+        ).length;
+        const requiredApprovalCount =
+            mergeReqs?.requiredApprovingReviewCount ?? 0;
+        const requiredChecks = mergeReqs?.requiredChecks ?? [];
+
+        const isInline = variant === "inline";
+
         return (
-            <>
+            <div
+                className={
+                    isInline
+                        ? "flex flex-wrap items-center justify-end gap-2"
+                        : "space-y-2 bg-surface"
+                }
+            >
                 {conflictedFilesSection}
                 {reviewInProgress}
-                <div className="flex gap-1">
-                    {!effectiveMerged &&
-                        canManagePR &&
-                        !pullRequest.draft &&
-                        !convertedToDraft &&
-                        pullRequest.state === "open" && (
-                            <button
-                                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-tertiary dark:border-zinc-600"
-                                disabled={markAsDraftMutation.isPending}
-                                onClick={() => handleMarkAsDraft()}
-                                type="button"
-                            >
-                                <FilePen size={14} />
-                                {markAsDraftMutation.isPending
-                                    ? "Converting..."
-                                    : "Mark as draft"}
-                            </button>
-                        )}
-                    {!effectiveMerged &&
+                {isInline && (
+                    <ReviewStatusBadges
+                        approvalCount={approvalCount}
+                        changesRequestedCount={changesRequestedCount}
+                        pendingReviewerCount={pendingCount}
+                        requiredApprovalCount={requiredApprovalCount}
+                    />
+                )}
+                {isInline && checkRuns && requiredChecks.length > 0 && (
+                    <RequiredChecksList
+                        checks={checkRuns}
+                        requiredChecks={requiredChecks}
+                    />
+                )}
+                {!effectiveMerged &&
                     pullRequest.state === "open" &&
-                    canManagePR ? (
-                        <Popover
-                            open={isClosePopoverOpen}
-                            onOpenChange={setIsClosePopoverOpen}
-                        >
-                            <PopoverTrigger asChild>
+                    !isDraft && (
+                        <MergeStatusBar
+                            pullRequest={pullRequest}
+                            isDraft={isDraft}
+                            canMerge={canMerge}
+                            canWrite={canWrite}
+                            mergeMode={mergeMode}
+                            onMergeModeChange={setMergeMode}
+                            onMerge={() => {
+                                mergeMutation.mutate({
+                                    owner,
+                                    repo,
+                                    number,
+                                    mergeMethod: effectiveMergeMode,
+                                });
+                            }}
+                            onMarkReady={handleMarkReady}
+                            isMarkingReady={markReadyMutation.isPending}
+                            isMerging={mergeMutation.isPending}
+                            availableMergeOptions={availableMergeOptions}
+                            isMergeBlocked={isMergeBlocked}
+                            isMergeStateUnknown={isMergeStateUnknown}
+                            noMergeMethodsAvailable={noMergeMethodsAvailable}
+                            mergeError={mergeMutation.isError}
+                        />
+                    )}
+                {!isInline && (
+                    <div className="flex gap-1">
+                        {!effectiveMerged &&
+                            canManagePR &&
+                            !pullRequest.draft &&
+                            !convertedToDraft &&
+                            pullRequest.state === "open" && (
                                 <button
-                                    suppressHydrationWarning
                                     className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-tertiary dark:border-zinc-600"
-                                    disabled={closeMutation.isPending}
+                                    disabled={markAsDraftMutation.isPending}
+                                    onClick={() => handleMarkAsDraft()}
                                     type="button"
                                 >
-                                    <CircleX
-                                        className="text-red-500"
-                                        size={14}
-                                    />
-                                    {closeMutation.isPending
-                                        ? "Closing..."
-                                        : "Close"}
+                                    <FilePen size={14} />
+                                    {markAsDraftMutation.isPending
+                                        ? "Converting..."
+                                        : "Mark as draft"}
                                 </button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                                align="end"
-                                className="w-64 bg-surface p-4"
-                                side="top"
-                                sideOffset={4}
+                            )}
+                        {!effectiveMerged &&
+                        pullRequest.state === "open" &&
+                        canManagePR ? (
+                            <Popover
+                                open={isClosePopoverOpen}
+                                onOpenChange={setIsClosePopoverOpen}
                             >
-                                <p className="mb-3 font-medium text-sm text-text-primary">
-                                    Close this pull request?
-                                </p>
-                                <p className="mb-4 text-text-secondary text-xs">
-                                    This can be undone by reopening it later.
-                                </p>
-                                <div className="flex justify-end gap-2">
+                                <PopoverTrigger asChild>
                                     <button
-                                        className="cursor-pointer rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-text-label text-xs ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
-                                        onClick={() =>
-                                            setIsClosePopoverOpen(false)
-                                        }
+                                        suppressHydrationWarning
+                                        className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-tertiary dark:border-zinc-600"
+                                        disabled={closeMutation.isPending}
                                         type="button"
                                     >
-                                        Cancel
+                                        <CircleX
+                                            className="text-red-500"
+                                            size={14}
+                                        />
+                                        {closeMutation.isPending
+                                            ? "Closing..."
+                                            : "Close"}
                                     </button>
-                                    <button
-                                        className="cursor-pointer rounded-md bg-red-600 px-3 py-1.5 font-medium text-white text-xs transition-colors hover:bg-red-700"
-                                        onClick={() => {
-                                            setIsClosePopoverOpen(false);
-                                            handleClose();
-                                        }}
-                                        type="button"
-                                    >
-                                        Close
-                                    </button>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                    ) : !effectiveMerged &&
-                      pullRequest.state === "closed" &&
-                      !pullRequest.merged &&
-                      canManagePR ? (
-                        <button
-                            className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-green-300 px-3 py-2 text-green-600 text-sm transition-colors hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950"
-                            disabled={reopenMutation.isPending}
-                            onClick={() => handleReopen()}
-                            type="button"
-                        >
-                            <GitPullRequest size={14} />
-                            {reopenMutation.isPending
-                                ? "Reopening..."
-                                : "Reopen"}
-                        </button>
-                    ) : null}
-                </div>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    align="end"
+                                    className="w-64 bg-surface p-4"
+                                    side="top"
+                                    sideOffset={4}
+                                >
+                                    <p className="mb-3 font-medium text-sm text-text-primary">
+                                        Close this pull request?
+                                    </p>
+                                    <p className="mb-4 text-text-secondary text-xs">
+                                        This can be undone by reopening it
+                                        later.
+                                    </p>
+                                    <div className="flex justify-end gap-2">
+                                        <button
+                                            className="cursor-pointer rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-text-label text-xs ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
+                                            onClick={() =>
+                                                setIsClosePopoverOpen(false)
+                                            }
+                                            type="button"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            className="cursor-pointer rounded-md bg-red-600 px-3 py-1.5 font-medium text-white text-xs transition-colors hover:bg-red-700"
+                                            onClick={() => {
+                                                setIsClosePopoverOpen(false);
+                                                handleClose();
+                                            }}
+                                            type="button"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        ) : !effectiveMerged &&
+                          pullRequest.state === "closed" &&
+                          !pullRequest.merged &&
+                          canManagePR ? (
+                            <button
+                                className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-green-300 px-3 py-2 text-green-600 text-sm transition-colors hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950"
+                                disabled={reopenMutation.isPending}
+                                onClick={() => handleReopen()}
+                                type="button"
+                            >
+                                <GitPullRequest size={14} />
+                                {reopenMutation.isPending
+                                    ? "Reopening..."
+                                    : "Reopen"}
+                            </button>
+                        ) : null}
+                    </div>
+                )}
                 {effectiveMerged && (
                     <div className="flex items-center gap-2">
-                        <div className="flex flex-1 items-center justify-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-3 py-2.5 dark:border-violet-900/50 dark:bg-violet-950/30">
+                        <div
+                            className={
+                                isInline
+                                    ? "flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-2 py-1.5 dark:border-violet-900/50 dark:bg-violet-950/30"
+                                    : "flex flex-1 items-center justify-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-3 py-2.5 dark:border-violet-900/50 dark:bg-violet-950/30"
+                            }
+                        >
                             <GitMerge
-                                size={16}
+                                size={isInline ? 12 : 16}
                                 className="text-violet-600 dark:text-violet-400"
                             />
-                            <span className="font-medium text-sm text-violet-700 dark:text-violet-300">
+                            <span
+                                className={
+                                    isInline
+                                        ? "font-medium text-violet-700 text-xs dark:text-violet-300"
+                                        : "font-medium text-sm text-violet-700 dark:text-violet-300"
+                                }
+                            >
                                 Merged
                             </span>
                         </div>
@@ -657,7 +786,7 @@ export function ActionSection({
                     !isAuthor &&
                     !isPending &&
                     !dismissReviewMutation.isPending && (
-                        <div className="flex gap-1">
+                        <div className={isInline ? "" : "flex gap-1"}>
                             <Popover
                                 open={isPopoverOpen}
                                 onOpenChange={setIsPopoverOpen}
@@ -665,7 +794,11 @@ export function ActionSection({
                                 <PopoverTrigger asChild>
                                     <button
                                         suppressHydrationWarning
-                                        className="w-full cursor-pointer rounded-md bg-[#0969da] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#0860ca]"
+                                        className={
+                                            isInline
+                                                ? "cursor-pointer rounded-md bg-[#0969da] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#0860ca]"
+                                                : "w-full cursor-pointer rounded-md bg-[#0969da] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#0860ca]"
+                                        }
                                         type="button"
                                     >
                                         Submit Review
@@ -724,11 +857,12 @@ export function ActionSection({
                             </Popover>
                         </div>
                     )}
-                {!effectiveMerged && pullRequest.state === "open" && (
-                    <div className="flex gap-2">
-                        {isDraft && canManagePR ? (
+                {!effectiveMerged &&
+                    pullRequest.state === "open" &&
+                    (isInline ? (
+                        isDraft && canManagePR ? (
                             <button
-                                className="w-full cursor-pointer rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="cursor-pointer rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
                                 disabled={markReadyMutation.isPending}
                                 onClick={handleMarkReady}
                                 type="button"
@@ -737,59 +871,30 @@ export function ActionSection({
                                     ? "Marking..."
                                     : "Mark as ready for review"}
                             </button>
-                        ) : pullRequest.mergeable_state === "dirty" ? (
-                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
-                                <GitMerge size={14} className="text-red-500" />
-                                <span className="font-medium text-sm text-text-secondary">
-                                    Conflicts
-                                </span>
-                            </div>
-                        ) : isMergeBlocked ? (
-                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
-                                <GitMerge
-                                    size={14}
-                                    className="text-text-muted"
-                                />
-                                <span className="font-medium text-sm text-text-muted">
-                                    Merging is blocked
-                                </span>
-                            </div>
-                        ) : isMergeStateUnknown ? (
-                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
-                                <GitMerge
-                                    size={14}
-                                    className="text-text-muted"
-                                />
-                                <span className="font-medium text-sm text-text-muted">
-                                    Checking mergeability...
-                                </span>
-                            </div>
-                        ) : noMergeMethodsAvailable ? (
-                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
-                                <GitMerge
-                                    size={14}
-                                    className="text-text-muted"
-                                />
-                                <span className="font-medium text-sm text-text-muted">
-                                    Merging is not allowed for this repository
-                                </span>
-                            </div>
-                        ) : !canMerge ? (
-                            <div className="flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
-                                <GitMerge
-                                    size={14}
-                                    className="text-text-muted"
-                                />
-                                <span className="font-medium text-sm text-text-muted">
-                                    You don&apos;t have permission to merge
-                                </span>
-                            </div>
-                        ) : (
-                            <div className="flex flex-1">
+                        ) : null
+                    ) : (
+                        <div className="flex gap-2">
+                            {isDraft && canManagePR ? (
                                 <button
-                                    className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-l-md bg-[#2da44e] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
-                                    disabled={mergeMutation.isPending}
-                                    onClick={() => {
+                                    className="w-full cursor-pointer rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                    disabled={markReadyMutation.isPending}
+                                    onClick={handleMarkReady}
+                                    type="button"
+                                >
+                                    {markReadyMutation.isPending
+                                        ? "Marking..."
+                                        : "Mark as ready for review"}
+                                </button>
+                            ) : null}
+                            {!isDraft && (
+                                <MergeStatusBar
+                                    pullRequest={pullRequest}
+                                    isDraft={false}
+                                    canMerge={canMerge}
+                                    canWrite={canWrite}
+                                    mergeMode={mergeMode}
+                                    onMergeModeChange={setMergeMode}
+                                    onMerge={() => {
                                         mergeMutation.mutate({
                                             owner,
                                             repo,
@@ -797,99 +902,22 @@ export function ActionSection({
                                             mergeMethod: effectiveMergeMode,
                                         });
                                     }}
-                                    type="button"
-                                >
-                                    <GitMerge size={14} />
-                                    {mergeMutation.isPending
-                                        ? "Merging..."
-                                        : effectiveMergeMode === "squash"
-                                          ? "Squash and merge"
-                                          : effectiveMergeMode === "rebase"
-                                            ? "Rebase and merge"
-                                            : "Merge pull request"}
-                                </button>
-                                <Popover
-                                    open={isMergeOptionsOpen}
-                                    onOpenChange={setIsMergeOptionsOpen}
-                                >
-                                    <PopoverTrigger asChild>
-                                        <button
-                                            suppressHydrationWarning
-                                            className="cursor-pointer rounded-r-md border-[#1a7f37] border-l bg-[#2da44e] px-2 py-2 text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
-                                            disabled={mergeMutation.isPending}
-                                            type="button"
-                                            title="Merge options"
-                                        >
-                                            <ChevronDown className="h-4 w-4" />
-                                        </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent
-                                        align="end"
-                                        className="w-72 bg-surface p-2"
-                                        side="left"
-                                        sideOffset={8}
-                                    >
-                                        <div className="space-y-1">
-                                            {availableMergeOptions.map(
-                                                (option) => (
-                                                    <button
-                                                        key={option.value}
-                                                        className={`flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                                                            effectiveMergeMode ===
-                                                            option.value
-                                                                ? "bg-surface-tertiary"
-                                                                : "hover:bg-surface-secondary"
-                                                        }`}
-                                                        onClick={() => {
-                                                            setMergeMode(
-                                                                option.value,
-                                                            );
-                                                            setIsMergeOptionsOpen(
-                                                                false,
-                                                            );
-                                                        }}
-                                                        type="button"
-                                                    >
-                                                        <span
-                                                            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
-                                                                effectiveMergeMode ===
-                                                                option.value
-                                                                    ? "border-[#2da44e]"
-                                                                    : "border-gray-300 dark:border-zinc-600"
-                                                            }`}
-                                                        >
-                                                            {effectiveMergeMode ===
-                                                                option.value && (
-                                                                <span className="flex h-2 w-2 rounded-full bg-[#2da44e]" />
-                                                            )}
-                                                        </span>
-                                                        <div>
-                                                            <div
-                                                                className={
-                                                                    effectiveMergeMode ===
-                                                                    option.value
-                                                                        ? "font-medium text-text-primary"
-                                                                        : "text-text-label"
-                                                                }
-                                                            >
-                                                                {option.label}
-                                                            </div>
-                                                            <div className="text-text-tertiary text-xs">
-                                                                {
-                                                                    option.description
-                                                                }
-                                                            </div>
-                                                        </div>
-                                                    </button>
-                                                ),
-                                            )}
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                        )}
-                    </div>
-                )}
+                                    onMarkReady={handleMarkReady}
+                                    isMarkingReady={markReadyMutation.isPending}
+                                    isMerging={mergeMutation.isPending}
+                                    availableMergeOptions={
+                                        availableMergeOptions
+                                    }
+                                    isMergeBlocked={isMergeBlocked}
+                                    isMergeStateUnknown={isMergeStateUnknown}
+                                    noMergeMethodsAvailable={
+                                        noMergeMethodsAvailable
+                                    }
+                                    mergeError={mergeMutation.isError}
+                                />
+                            )}
+                        </div>
+                    ))}
                 {mergeMutation.isError && (
                     <p className="text-red-600 text-xs">
                         Failed to merge. Please try again.
@@ -910,12 +938,15 @@ export function ActionSection({
                         Failed to mark as ready. Please try again.
                     </p>
                 )}
-            </>
+            </div>
         );
     };
 
+    const sidebarOuterClasses =
+        "sticky bottom-0 z-10 space-y-2 border-border-subtle border-t bg-surface pt-6 pr-4";
+
     return (
-        <div className="sticky bottom-0 z-10 space-y-2 border-border-subtle border-t bg-surface pt-6 pr-4">
+        <div className={variant === "sidebar" ? sidebarOuterClasses : ""}>
             {pullRequestPromise ? (
                 <Async fallback={skeleton} promise={pullRequestPromise}>
                     {(pullRequest) => (
