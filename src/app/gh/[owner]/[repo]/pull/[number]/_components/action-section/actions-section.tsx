@@ -16,6 +16,7 @@ import {
     StatusPill,
 } from "~/components/ui/status-pill";
 import { useLocalStorage } from "~/hooks/use-local-storage";
+import type { PendingReview } from "~/server/api/routers/reviews";
 import type { MergeMethod, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { MergeStatusBar } from "./merge-status-bar";
@@ -57,8 +58,6 @@ export function ActionSection({
     const utils = api.useUtils();
     const [markedReady, setMarkedReady] = useState(false);
     const [isMerged, setIsMerged] = useState(false);
-    const [body, setBody] = useState("");
-    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [isCancelPopoverOpen, setIsCancelPopoverOpen] = useState(false);
     const [mergeMode, setMergeMode] = useLocalStorage<MergeMethod>(
         "neosrc-merge-mode",
@@ -89,23 +88,6 @@ export function ActionSection({
     const navigateAndScroll = useCallback(() => {
         router.push(`/gh/${owner}/${repo}/pull/${number}?scrollTo=bottom`);
     }, [router, owner, repo, number]);
-
-    const approveMutation = api.pulls.approve.useMutation({
-        onSuccess: () => {
-            utils.timeline.list.invalidate();
-            utils.reviews.getPending.invalidate();
-            navigateAndScroll();
-        },
-    });
-
-    const submitReviewMutation = api.reviews.submit.useMutation({
-        onSuccess: () => {
-            utils.reviews.getPending.invalidate();
-            utils.reviewComments.list.invalidate();
-            utils.timeline.list.invalidate();
-            navigateAndScroll();
-        },
-    });
 
     const dismissReviewMutation = api.reviews.dismiss.useMutation({
         onSuccess: () => {
@@ -156,46 +138,6 @@ export function ActionSection({
             navigateAndScroll();
         },
     });
-
-    const handleSubmitAction = useCallback(
-        (event: "APPROVE" | "COMMENT" | "REQUEST_CHANGES") => {
-            const cleanup = () => {
-                setIsPopoverOpen(false);
-                setBody("");
-            };
-
-            if (pendingReview) {
-                submitReviewMutation.mutate(
-                    {
-                        owner,
-                        repo,
-                        number,
-                        reviewId: pendingReview.reviewId,
-                        event,
-                        body: body || undefined,
-                    },
-                    {
-                        onSuccess: cleanup,
-                    },
-                );
-            } else {
-                approveMutation.mutate(
-                    { owner, repo, number, event, body: body || undefined },
-                    { onSuccess: cleanup },
-                );
-            }
-        },
-        [
-            owner,
-            repo,
-            number,
-            pendingReview,
-            body,
-            approveMutation,
-
-            submitReviewMutation,
-        ],
-    );
 
     const handleCancelReview = useCallback(() => {
         if (!pendingReview) return;
@@ -280,21 +222,6 @@ export function ActionSection({
                 {pendingCommentsCount} comment
                 {pendingCommentsCount !== 1 ? "s" : ""} pending
             </p>
-            {dismissReviewMutation.isPending && (
-                <p className="text-xs text-yellow-700 dark:text-yellow-500">
-                    Cancelling review...
-                </p>
-            )}
-            {dismissReviewMutation.isError && (
-                <p className="text-red-600 text-xs">
-                    Failed to cancel review. Please try again.
-                </p>
-            )}
-            {submitReviewMutation.isError && (
-                <p className="text-red-600 text-xs">
-                    Failed to submit review. Please try again.
-                </p>
-            )}
         </div>
     );
 
@@ -306,10 +233,6 @@ export function ActionSection({
         const isDraft = !!pullRequest.draft && !markedReady;
         const effectiveMerged = pullRequest.merged || isMerged;
         const isAuthor = currentUserLogin === pullRequest.user?.login;
-        const isPending =
-            submitReviewMutation.isPending ||
-            approveMutation.isPending ||
-            approveMutation.isPending;
 
         const canWrite =
             userPermission === "admin" || userPermission === "write";
@@ -532,73 +455,15 @@ export function ActionSection({
                 )}
                 {canInteract &&
                     !isAuthor &&
-                    !isPending &&
                     !dismissReviewMutation.isPending && (
                         <div>
-                            <Popover
-                                open={isPopoverOpen}
-                                onOpenChange={setIsPopoverOpen}
-                            >
-                                <PopoverTrigger asChild>
-                                    <button
-                                        suppressHydrationWarning
-                                        className="cursor-pointer rounded-md bg-[#0969da] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#0860ca]"
-                                        type="button"
-                                    >
-                                        Submit Review
-                                    </button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                    align="end"
-                                    className="w-[42rem] bg-surface p-4"
-                                    side="top"
-                                    sideOffset={8}
-                                >
-                                    <MarkdownEditor
-                                        autoFocus
-                                        disabled={isPending}
-                                        minHeight="150px"
-                                        onChange={setBody}
-                                        onCancel={() => {
-                                            setIsPopoverOpen(false);
-                                            setBody("");
-                                        }}
-                                        owner={owner}
-                                        placeholder="Leave a review comment"
-                                        repo={repo}
-                                        cancelLabel="Cancel"
-                                        value={body}
-                                        footerActions={[
-                                            {
-                                                label: "Comment",
-                                                onClick: () =>
-                                                    handleSubmitAction(
-                                                        "COMMENT",
-                                                    ),
-                                                variant: "neutral",
-                                                disabled: (text: string) =>
-                                                    !text.trim(),
-                                            },
-                                            {
-                                                label: "Approve",
-                                                onClick: () =>
-                                                    handleSubmitAction(
-                                                        "APPROVE",
-                                                    ),
-                                                variant: "approve",
-                                            },
-                                            {
-                                                label: "Request Changes",
-                                                onClick: () =>
-                                                    handleSubmitAction(
-                                                        "REQUEST_CHANGES",
-                                                    ),
-                                                variant: "danger",
-                                            },
-                                        ]}
-                                    />
-                                </PopoverContent>
-                            </Popover>
+                            <SubmitReviewButton
+                                owner={owner}
+                                repo={repo}
+                                number={number}
+                                pendingReview={pendingReview}
+                                navigateAndScroll={navigateAndScroll}
+                            />
                         </div>
                     )}
                 {!effectiveMerged &&
@@ -654,6 +519,135 @@ export function ActionSection({
                 skeleton
             )}
         </div>
+    );
+}
+
+function SubmitReviewButton({
+    owner,
+    repo,
+    number,
+    pendingReview,
+    navigateAndScroll,
+}: {
+    owner: string;
+    repo: string;
+    number: number;
+    pendingReview?: PendingReview | null;
+    navigateAndScroll: () => void;
+}) {
+    // TODO: this component needs to handle the pending state internally
+    const utils = api.useUtils();
+    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+    const [body, setBody] = useState("");
+
+    const approveMutation = api.pulls.approve.useMutation({
+        onSuccess: () => {
+            utils.timeline.list.invalidate();
+            utils.reviews.getPending.invalidate();
+            navigateAndScroll();
+        },
+    });
+
+    const submitReviewMutation = api.reviews.submit.useMutation({
+        onSuccess: () => {
+            utils.reviews.getPending.invalidate();
+            utils.reviewComments.list.invalidate();
+            utils.timeline.list.invalidate();
+            navigateAndScroll();
+        },
+    });
+
+    const handleSubmitAction = useCallback(
+        (event: "APPROVE" | "COMMENT" | "REQUEST_CHANGES") => {
+            const cleanup = () => {
+                setIsPopoverOpen(false);
+                setBody("");
+            };
+
+            if (pendingReview) {
+                submitReviewMutation.mutate(
+                    {
+                        owner,
+                        repo,
+                        number,
+                        reviewId: pendingReview.reviewId,
+                        event,
+                        body: body || undefined,
+                    },
+                    {
+                        onSuccess: cleanup,
+                    },
+                );
+            } else {
+                approveMutation.mutate(
+                    { owner, repo, number, event, body: body || undefined },
+                    { onSuccess: cleanup },
+                );
+            }
+        },
+        [
+            owner,
+            repo,
+            number,
+            pendingReview,
+            body,
+            approveMutation,
+            submitReviewMutation,
+        ],
+    );
+    return (
+        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    suppressHydrationWarning
+                    className="cursor-pointer rounded-md bg-[#0969da] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#0860ca]"
+                    type="button"
+                >
+                    Submit Review
+                </button>
+            </PopoverTrigger>
+            <PopoverContent
+                align="end"
+                className="w-[42rem] bg-surface p-4"
+                side="top"
+                sideOffset={8}
+            >
+                <MarkdownEditor
+                    autoFocus
+                    disabled={isPending}
+                    minHeight="150px"
+                    onChange={setBody}
+                    onCancel={() => {
+                        setIsPopoverOpen(false);
+                        setBody("");
+                    }}
+                    owner={owner}
+                    placeholder="Leave a review comment"
+                    repo={repo}
+                    cancelLabel="Cancel"
+                    value={body}
+                    footerActions={[
+                        {
+                            label: "Comment",
+                            onClick: () => handleSubmitAction("COMMENT"),
+                            variant: "neutral",
+                            disabled: (text: string) => !text.trim(),
+                        },
+                        {
+                            label: "Approve",
+                            onClick: () => handleSubmitAction("APPROVE"),
+                            variant: "approve",
+                        },
+                        {
+                            label: "Request Changes",
+                            onClick: () =>
+                                handleSubmitAction("REQUEST_CHANGES"),
+                            variant: "danger",
+                        },
+                    ]}
+                />
+            </PopoverContent>
+        </Popover>
     );
 }
 
