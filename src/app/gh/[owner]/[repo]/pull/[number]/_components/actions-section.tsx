@@ -25,7 +25,7 @@ interface ActionSectionProps {
     conflictedFilesPromise?: Promise<string[]> | null;
     userPermissionPromise?: Promise<string | null> | null;
     currentUserLogin?: string;
-    variant?: "header" | "file-header";
+    variant?: "header" | "inline";
     checkRuns?: Array<{
         name: string;
         conclusion: string | null;
