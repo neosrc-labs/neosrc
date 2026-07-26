@@ -3,7 +3,7 @@
 import type { components } from "@octokit/openapi-types";
 import { Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
 import NextLink from "next/link";
-import { useCallback, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/code-title";
@@ -38,6 +38,7 @@ interface PullRequestDescriptionSectionProps {
     pullRequestPromise: Promise<PullsGetResponseData>;
     canInteractPromise: Promise<boolean>;
     canEditPromise: Promise<boolean>;
+    actionSection?: ReactNode;
 }
 
 export function PullRequestDescriptionSection({
@@ -47,6 +48,7 @@ export function PullRequestDescriptionSection({
     pullRequestPromise,
     canInteractPromise,
     canEditPromise,
+    actionSection,
 }: PullRequestDescriptionSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editBody, setEditBody] = useState("");
@@ -390,6 +392,11 @@ export function PullRequestDescriptionSection({
                                     </span>
                                 )}
                             </div>
+                            {actionSection && (
+                                <div className="ml-2 flex items-center">
+                                    {actionSection}
+                                </div>
+                            )}
                         </div>
                     )}
                 </Async>

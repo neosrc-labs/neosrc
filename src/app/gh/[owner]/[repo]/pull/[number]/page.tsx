@@ -2,9 +2,14 @@ import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-meth
 import type { Metadata } from "next";
 import { Suspense, use } from "react";
 import { getSession, githubAccessToken } from "~/server/auth";
-import { getCachedPullRequest, getUserRepoPermission } from "~/server/github";
+import {
+    getCachedPullRequest,
+    getConflictedFiles,
+    getUserRepoPermission,
+} from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
 import { PullRequestDescriptionSection } from "./_components/description";
+import { InlineActionBar } from "./_components/inline-action-bar";
 import { PullRequestContent } from "./_components/pull-request-content";
 import {
     TimelineSection,
@@ -47,6 +52,7 @@ export default async function PullRequestPage({ params }: PageProps) {
 
     const session = await getSession();
     const userId = session?.user?.id;
+    const currentUserLogin = session?.user?.githubUsername ?? undefined;
     const pullRequestPromise = getCachedPullRequest(
         accessToken,
         owner,
@@ -54,6 +60,30 @@ export default async function PullRequestPage({ params }: PageProps) {
         number,
         userId,
     );
+
+    const userPermissionPromise = currentUserLogin
+        ? getUserRepoPermission(
+              accessToken,
+              owner,
+              repo,
+              currentUserLogin,
+              userId ?? "",
+          ).catch(() => null)
+        : null;
+
+    const conflictedFilesPromise = pullRequestPromise.then(async (pr) => {
+        if (pr.mergeable_state === "dirty") {
+            return getConflictedFiles(
+                accessToken,
+                owner,
+                repo,
+                pr.base.sha,
+                pr.head.sha,
+            );
+        }
+        return [];
+    });
+
     const canInteractPromise = computeCanInteract(
         accessToken,
         owner,
@@ -79,6 +109,17 @@ export default async function PullRequestPage({ params }: PageProps) {
                 owner={owner}
                 repo={repo}
                 number={number}
+                actionSection={
+                    <InlineActionBar
+                        owner={owner}
+                        repo={repo}
+                        number={number}
+                        pullRequestPromise={pullRequestPromise}
+                        conflictedFilesPromise={conflictedFilesPromise}
+                        userPermissionPromise={userPermissionPromise}
+                        currentUserLogin={currentUserLogin}
+                    />
+                }
             />
 
             <PullRequestContent
