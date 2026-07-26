@@ -312,7 +312,7 @@ export function FilesSection({
 
                             return (
                                 <LazyRenderItem
-                                    className="scroll-mt-[96px]"
+                                    className="scroll-mt-24"
                                     heightMap={heightMapRef.current}
                                     id={fileId}
                                     itemKey={file.filename}
