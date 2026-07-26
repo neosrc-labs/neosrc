@@ -4,6 +4,7 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getGitHubToken } from "~/server/auth";
 import { deleteCache, prCacheKey } from "~/server/cache";
 import {
+    type CommentForReview,
     createPullRequestReview,
     deletePendingReview,
     getAuthenticatedUser,
@@ -11,6 +12,11 @@ import {
     getPullRequestReviews,
     submitPullRequestReview,
 } from "~/server/github";
+
+export type PendingReview = {
+    reviewId: number;
+    comments: CommentForReview[];
+};
 
 export const reviewsRouter = createTRPCRouter({
     getPending: protectedProcedure
@@ -21,7 +27,7 @@ export const reviewsRouter = createTRPCRouter({
                 number: z.number(),
             }),
         )
-        .query(async ({ ctx, input }) => {
+        .query(async ({ ctx, input }): Promise<PendingReview | null> => {
             const accessToken = await getGitHubToken(
                 ctx.db,
                 ctx.session.user.id,
