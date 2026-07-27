@@ -20,7 +20,6 @@ import type { PendingReview } from "~/server/api/routers/reviews";
 import type { MergeMethod, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { MergeStatusBar } from "./merge-status-bar";
-import { RequiredChecksList } from "./required-checks-list";
 import { ReviewStatusBadges } from "./review-status-badges";
 
 interface ActionSectionProps {
@@ -339,18 +338,11 @@ export function ActionSection({
 
         const isHeader = variant === "header";
         const showTitle = isHeader && isSticky;
-        const state = extractPullRequestState(pullRequest);
 
         return (
             <div className="flex flex-wrap items-center justify-end gap-2">
                 {showTitle && (
-                    <div className="mr-auto flex min-w-0 flex-1 items-center gap-2">
-                        <StatusPill state={state} />
-                        <span className="min-w-0 truncate font-medium text-sm text-text-primary">
-                            <CodeTitle>{pullRequest.title}</CodeTitle>{" "}
-                            <span className="text-text-muted">#{number}</span>
-                        </span>
-                    </div>
+                    <Title pullRequest={pullRequest} number={number} />
                 )}
                 {conflictedFilesSection}
                 {reviewInProgress}
@@ -421,17 +413,7 @@ export function ActionSection({
                     )}
                 {effectiveMerged && (
                     <div className="flex items-center gap-2">
-                        {!isHeader && (
-                            <div className="flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-3 py-2 dark:border-violet-900/50 dark:bg-violet-950/30">
-                                <GitMerge
-                                    size={14}
-                                    className="text-violet-600 dark:text-violet-400"
-                                />
-                                <span className="font-medium text-sm text-violet-700 dark:text-violet-300">
-                                    Merged
-                                </span>
-                            </div>
-                        )}
+                        {!isHeader && <MergedStatus />}
                         {canWrite && canInteract ? (
                             <RevertButton
                                 owner={owner}
@@ -675,6 +657,39 @@ function SubmitReviewButton({
                 />
             </PopoverContent>
         </Popover>
+    );
+}
+
+function Title({
+    pullRequest,
+    number,
+}: {
+    pullRequest: PullsGetResponseData;
+    number: number;
+}) {
+    const state = extractPullRequestState(pullRequest);
+    return (
+        <div className="mr-auto flex min-w-0 flex-1 items-center gap-2">
+            <StatusPill state={state} />
+            <span className="min-w-0 truncate font-medium text-sm text-text-primary">
+                <CodeTitle>{pullRequest.title}</CodeTitle>{" "}
+                <span className="text-text-muted">#{number}</span>
+            </span>
+        </div>
+    );
+}
+
+function MergedStatus() {
+    return (
+        <div className="flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-3 py-2 dark:border-violet-900/50 dark:bg-violet-950/30">
+            <GitMerge
+                size={14}
+                className="text-violet-600 dark:text-violet-400"
+            />
+            <span className="font-medium text-sm text-violet-700 dark:text-violet-300">
+                Merged
+            </span>
+        </div>
     );
 }
 
