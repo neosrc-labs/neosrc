@@ -339,7 +339,7 @@ export function PullRequestDescriptionSection({
                     promise={pullRequestPromise}
                 >
                     {(pullRequest) => (
-                        <div className="flex items-center gap-2 h-9">
+                        <div className="flex h-9 items-center gap-2">
                             <div className="text-sm text-text-secondary">
                                 <a
                                     href={`https://github.com/${owner}/${repo}/tree/${pullRequest.base.ref}`}
@@ -600,9 +600,7 @@ export function PullRequestDescriptionSection({
 }
 
 function OpenedByLabel() {
-    const [show, setShow] = useState(
-        (document.querySelector("main")?.clientWidth ?? 0) >= 1000,
-    );
+    const [show, setShow] = useState(false);
 
     useEffect(() => {
         const main = document.querySelector("main");
