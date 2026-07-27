@@ -157,7 +157,7 @@ function Buttons({
     repo: string;
     number: number;
     pullRequest: PullsGetResponseData;
-    repoData: RepositoryInfo;
+    repoData?: RepositoryInfo;
     reviews?: ReviewComment2[] | null;
     pendingReview?: PendingReview | null;
     mergeReqs?: MergeRequirements | null;
