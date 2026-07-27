@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildFileTree, compressTree, type FileNode } from "./file-tree";
+import {
+    buildFileTree,
+    compressTree,
+    type FileNode,
+    pruneTree,
+} from "./file-tree";
 
 function file(filename: string, status = "modified") {
     return {
@@ -220,5 +225,71 @@ describe("buildFileTree", () => {
         expect(tree).toHaveLength(1);
         expect(tree[0]!.isFile).toBe(true);
         expect(tree[0]!.name).toBe("index.ts");
+    });
+});
+
+describe("pruneTree", () => {
+    it("keeps nodes matching at the root level", () => {
+        const tree = [leaf("index.ts", "index.ts"), leaf("main.ts", "main.ts")];
+        const result = pruneTree(tree, "index");
+        expect(result).toHaveLength(1);
+        expect(result[0]!.name).toBe("index.ts");
+    });
+
+    it("keeps ancestors of matching files", () => {
+        const tree = [
+            dir({
+                name: "src",
+                path: "src",
+                children: [
+                    dir({
+                        name: "utils",
+                        path: "src/utils",
+                        children: [leaf("format.ts", "src/utils/format.ts")],
+                    }),
+                    leaf("index.ts", "src/index.ts"),
+                ],
+            }),
+        ];
+        const result = pruneTree(tree, "format");
+        expect(result).toHaveLength(1);
+        expect(result[0]!.name).toBe("src");
+        expect(result[0]!.children).toHaveLength(1);
+        expect(result[0]!.children![0]!.name).toBe("utils");
+        expect(result[0]!.children![0]!.children).toHaveLength(1);
+        expect(result[0]!.children![0]!.children![0]!.name).toBe("format.ts");
+    });
+
+    it("returns empty array when nothing matches", () => {
+        const tree = [leaf("a.ts", "a.ts"), leaf("b.ts", "b.ts")];
+        const result = pruneTree(tree, "nonexistent");
+        expect(result).toHaveLength(0);
+    });
+
+    it("is case insensitive", () => {
+        const tree = [leaf("UpperCase.ts", "UpperCase.ts")];
+        const result = pruneTree(tree, "uppercase");
+        expect(result).toHaveLength(1);
+        expect(result[0]!.name).toBe("UpperCase.ts");
+    });
+
+    it("matches on directory names", () => {
+        const tree = [
+            dir({
+                name: "components",
+                path: "components",
+                children: [leaf("Button.tsx", "components/Button.tsx")],
+            }),
+        ];
+        const result = pruneTree(tree, "components");
+        expect(result).toHaveLength(1);
+        expect(result[0]!.name).toBe("components");
+        expect(result[0]!.children).toHaveLength(1);
+    });
+
+    it("returns original tree when search is empty", () => {
+        const tree = [leaf("a.ts", "a.ts"), leaf("b.ts", "b.ts")];
+        const result = pruneTree(tree, "");
+        expect(result).toHaveLength(2);
     });
 });

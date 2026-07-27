@@ -2,7 +2,7 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { SquareDot } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import type { PullRequestFile } from "~/server/github";
 import iconMapData from "~/utils/iconMap.json";
 
@@ -104,12 +104,109 @@ export function compressTree(nodes: FileNode[]): FileNode[] {
     });
 }
 
+export function pruneTree(nodes: FileNode[], search: string): FileNode[] {
+    const lowerSearch = search.toLowerCase();
+
+    function hasMatch(node: FileNode): boolean {
+        if (node.path.toLowerCase().includes(lowerSearch)) return true;
+        return node.children?.some(hasMatch) ?? false;
+    }
+
+    function prune(node: FileNode): FileNode | null {
+        if (!hasMatch(node)) return null;
+        if (!node.children || node.children.length === 0) return node;
+        const children = node.children
+            .map(prune)
+            .filter((c): c is FileNode => c !== null);
+        return { ...node, children };
+    }
+
+    return nodes.map(prune).filter((n): n is FileNode => n !== null);
+}
+
+function highlightMatch(text: string, query: string): ReactNode {
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+
+    const fullIdx = lowerText.indexOf(lowerQuery);
+    if (fullIdx !== -1) {
+        return (
+            <>
+                {text.slice(0, fullIdx)}
+                <mark className="rounded-sm bg-yellow-500/20 text-inherit">
+                    {text.slice(fullIdx, fullIdx + query.length)}
+                </mark>
+                {text.slice(fullIdx + query.length)}
+            </>
+        );
+    }
+
+    if (!query.includes("/")) return text;
+
+    type Match = { start: number; end: number };
+    const matches: Match[] = [];
+
+    for (const segment of query.split("/")) {
+        if (!segment) continue;
+        const lowerSegment = segment.toLowerCase();
+        let searchFrom = 0;
+        while (true) {
+            const idx = lowerText.indexOf(lowerSegment, searchFrom);
+            if (idx === -1) break;
+            matches.push({ start: idx, end: idx + segment.length });
+            searchFrom = idx + segment.length;
+        }
+    }
+
+    if (matches.length === 0) return text;
+
+    matches.sort((a, b) => a.start - b.start);
+
+    const merged: Match[] = [];
+
+    for (const match of matches) {
+        const last = merged.length > 0 ? merged[merged.length - 1] : null;
+        if (last && match.start <= last.end + 1) {
+            last.end = Math.max(last.end, match.end);
+        } else {
+            merged.push(match);
+        }
+    }
+
+    let lastEnd = 0;
+    const parts: ReactNode[] = [];
+
+    for (const match of merged) {
+        if (match.start < lastEnd) continue;
+        if (match.start > lastEnd) {
+            parts.push(text.slice(lastEnd, match.start));
+        }
+        parts.push(
+            <mark
+                key={match.start}
+                className="rounded-sm bg-yellow-500/20 text-inherit"
+            >
+                {text.slice(match.start, match.end)}
+            </mark>,
+        );
+        lastEnd = match.end;
+    }
+
+    if (lastEnd < text.length) {
+        parts.push(text.slice(lastEnd));
+    }
+
+    return parts;
+}
+
 export function FileTree({
     files,
     basePath,
+    filter,
 }: {
     files: FileNode[];
     basePath: string;
+    filter?: string;
 }) {
     const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(
         new Set(),
@@ -117,9 +214,15 @@ export function FileTree({
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
+    const displayFiles = useMemo(
+        () => (filter ? pruneTree(files, filter) : files),
+        [files, filter],
+    );
+
     const flatItems = useMemo(
-        () => flattenFileTree(files, collapsedPaths),
-        [files, collapsedPaths],
+        () =>
+            flattenFileTree(displayFiles, filter ? new Set() : collapsedPaths),
+        [displayFiles, collapsedPaths, filter],
     );
 
     const virtualizer = useVirtualizer({
@@ -167,6 +270,7 @@ export function FileTree({
                             <FileTreeNode
                                 basePath={basePath}
                                 depth={item.depth}
+                                filter={filter}
                                 isCollapsed={collapsedPaths.has(item.node.path)}
                                 node={item.node}
                                 onToggle={toggleFolder}
@@ -183,12 +287,14 @@ function FileTreeNode({
     node,
     depth,
     basePath,
+    filter,
     isCollapsed,
     onToggle,
 }: {
     node: FileNode;
     depth: number;
     basePath: string;
+    filter?: string;
     isCollapsed: boolean;
     onToggle: (path: string) => void;
 }) {
@@ -228,7 +334,9 @@ function FileTreeNode({
                             "/material-icons/file.svg";
                     }}
                 />
-                <span className="flex-1 truncate">{node.name}</span>
+                <span className="flex-1 truncate">
+                    {filter ? highlightMatch(node.name, filter) : node.name}
+                </span>
                 {node.status === "added" ? (
                     <span className="flex-shrink-0" title={diffTooltip}>
                         <SquareDot className="h-3 w-3 text-green-500" />
@@ -273,7 +381,9 @@ function FileTreeNode({
                 loading="lazy"
                 src={`/material-icons/folder${isCollapsed ? "" : "-open"}.svg`}
             />
-            <span className="truncate">{node.name}</span>
+            <span className="truncate">
+                {filter ? highlightMatch(node.name, filter) : node.name}
+            </span>
         </button>
     );
 }

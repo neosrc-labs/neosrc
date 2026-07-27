@@ -1,7 +1,8 @@
 "use client";
 
+import { Search, X } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { use, useEffect, useMemo } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import { Async } from "~/components/async";
 import { useSidebar } from "~/components/sidebar-context";
 import { NavItem, NavMenu } from "~/components/ui/nav-menu";
@@ -76,15 +77,67 @@ function SidebarFileTree({
 
     const filesChanged = commitSha ? files.length : pullRequest?.changed_files;
 
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const inputRef = useRef<HTMLInputElement>(null);
+
     return (
         <div className="flex h-full flex-col">
-            <h3 className="mb-2 text-text-primary">
-                Files Changed{" "}
-                {filesChanged ? <span>({filesChanged})</span> : null}
-            </h3>
+            <div className="mb-2 flex items-center gap-2">
+                <h3 className="text-text-primary">
+                    Files Changed{" "}
+                    {filesChanged ? <span>({filesChanged})</span> : null}
+                </h3>
+                {searchOpen ? (
+                    <div className="flex items-center gap-1">
+                        <input
+                            ref={inputRef}
+                            autoFocus
+                            className="h-6 w-32 rounded border border-border-primary bg-surface-secondary px-1.5 text-text-primary text-xs outline-none placeholder:text-text-tertiary"
+                            placeholder="Filter files..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            onBlur={() => {
+                                if (!search) setSearchOpen(false);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === "Escape") {
+                                    setSearch("");
+                                    setSearchOpen(false);
+                                }
+                            }}
+                        />
+                        <button
+                            className="flex-shrink-0 cursor-pointer rounded p-1 text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label"
+                            onClick={() => {
+                                setSearch("");
+                                setSearchOpen(false);
+                            }}
+                            type="button"
+                        >
+                            <X className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        className="flex-shrink-0 cursor-pointer rounded p-1 text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label"
+                        onClick={() => {
+                            setSearchOpen(true);
+                            setTimeout(() => inputRef.current?.focus(), 0);
+                        }}
+                        type="button"
+                    >
+                        <Search className="h-4 w-4" />
+                    </button>
+                )}
+            </div>
             <div className="min-h-0 flex-1">
                 {files.length > 0 ? (
-                    <FileTree basePath={basePath} files={fileTree} />
+                    <FileTree
+                        basePath={basePath}
+                        files={fileTree}
+                        filter={search || undefined}
+                    />
                 ) : isLoading ? (
                     <FileTreeSkeleton />
                 ) : (
