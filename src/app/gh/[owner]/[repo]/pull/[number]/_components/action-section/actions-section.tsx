@@ -1,9 +1,11 @@
 "use client";
 
 import { File, FilePen, GitMerge, Undo2, X } from "lucide-react";
+import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
+import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/code-title";
 import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
 import {
@@ -738,6 +740,8 @@ function Title({
     number: number;
 }) {
     const state = extractPullRequestState(pullRequest);
+    const user = pullRequest.user;
+
     return (
         <div className="mr-auto flex min-w-0 flex-1 items-center gap-2">
             <StatusPill state={state} />
@@ -745,6 +749,17 @@ function Title({
                 <CodeTitle>{pullRequest.title}</CodeTitle>{" "}
                 <span className="text-text-muted">#{number}</span>
             </span>
+            {user && (
+                <UserHoverCard login={user.login}>
+                    <NextLink href={user.html_url}>
+                        <img
+                            alt={user.login}
+                            className="h-5 w-5 shrink-0 rounded-full"
+                            src={user.avatar_url}
+                        />
+                    </NextLink>
+                </UserHoverCard>
+            )}
         </div>
     );
 }
