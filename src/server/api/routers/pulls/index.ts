@@ -26,6 +26,7 @@ import {
     markPullRequestAsDraft,
     markPullRequestAsReady,
     mergePullRequest,
+    type ReviewComment2,
     removeAssigneesFromIssue,
     removeLabelFromIssue,
     removeReviewersFromPullRequest,
@@ -828,7 +829,7 @@ export const pullsRouter = createTRPCRouter({
                 number: z.number(),
             }),
         )
-        .query(async ({ ctx, input }) => {
+        .query(async ({ ctx, input }): Promise<ReviewComment2[]> => {
             const accessToken = await getGitHubToken(
                 ctx.db,
                 ctx.session.user.id,

@@ -29,6 +29,8 @@ export type Reviewer = NonNullable<
 export type Assignee = NonNullable<PullsGetResponseData["assignees"]>[number];
 export type ReviewComment =
     RestEndpointMethodTypes["pulls"]["listReviewComments"]["response"]["data"][number];
+export type ReviewComment2 =
+    RestEndpointMethodTypes["pulls"]["listReviews"]["response"]["data"][number];
 export type CommentForReview =
     RestEndpointMethodTypes["pulls"]["listCommentsForReview"]["response"]["data"][number];
 export type PullRequestFile =
@@ -552,7 +554,7 @@ export const getPullRequestReviews = cache(
         owner: string,
         repo: string,
         pullNumber: number,
-    ) => {
+    ): Promise<ReviewComment2[]> => {
         const octokit = createOctokit(accessToken);
         const allReviews = await octokit.paginate(
             octokit.rest.pulls.listReviews,

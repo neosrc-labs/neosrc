@@ -16,8 +16,14 @@ import {
     StatusPill,
 } from "~/components/ui/status-pill";
 import { useLocalStorage } from "~/hooks/use-local-storage";
+import type { RepositoryInfo } from "~/server/api/routers/repos";
 import type { PendingReview } from "~/server/api/routers/reviews";
-import type { MergeMethod, PullsGetResponseData } from "~/server/github";
+import type {
+    MergeMethod,
+    MergeRequirements,
+    PullsGetResponseData,
+    ReviewComment2,
+} from "~/server/github";
 import { api } from "~/trpc/react";
 import { MergeStatusBar } from "./merge-status-bar";
 import { ReviewStatusBadges } from "./review-status-badges";
@@ -53,15 +59,6 @@ export function ActionSection({
     isSticky,
     checkRuns,
 }: ActionSectionProps) {
-    const router = useRouter();
-    const utils = api.useUtils();
-    const [markedReady, setMarkedReady] = useState(false);
-    const [isMerged, setIsMerged] = useState(false);
-    const [mergeMode, setMergeMode] = useLocalStorage<MergeMethod>(
-        "neosrc-merge-mode",
-        "merge",
-    );
-
     const { data: pendingReview } = api.reviews.getPending.useQuery(
         { owner, repo, number },
         { staleTime: 30_000 },
@@ -83,6 +80,108 @@ export function ActionSection({
         { staleTime: 60_000 },
     );
 
+    const skeleton = (
+        <>
+            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+        </>
+    );
+
+    return (
+        <div>
+            {pullRequestPromise ? (
+                <Async fallback={skeleton} promise={pullRequestPromise}>
+                    {(pullRequest) => (
+                        <Async
+                            fallback={null}
+                            promise={
+                                conflictedFilesPromise ?? Promise.resolve([])
+                            }
+                        >
+                            {(files) => (
+                                <Async
+                                    fallback={null}
+                                    promise={
+                                        userPermissionPromise ??
+                                        Promise.resolve(null)
+                                    }
+                                >
+                                    {(userPermission) => (
+                                        <Buttons
+                                            owner={owner}
+                                            repo={repo}
+                                            number={number}
+                                            pullRequest={pullRequest}
+                                            conflictedFiles={files}
+                                            userPermission={userPermission}
+                                            repoData={repoData}
+                                            reviews={reviews}
+                                            mergeReqs={mergeReqs}
+                                            pendingReview={pendingReview}
+                                            variant={variant}
+                                            isSticky={isSticky}
+                                            checkRuns={checkRuns}
+                                            currentUserLogin={currentUserLogin}
+                                        />
+                                    )}
+                                </Async>
+                            )}
+                        </Async>
+                    )}
+                </Async>
+            ) : (
+                skeleton
+            )}
+        </div>
+    );
+}
+
+function Buttons({
+    owner,
+    repo,
+    number,
+    pullRequest,
+    conflictedFiles,
+    userPermission,
+    repoData,
+    reviews,
+    pendingReview,
+    mergeReqs,
+    currentUserLogin,
+    variant,
+    isSticky,
+    checkRuns,
+}: {
+    owner: string;
+    repo: string;
+    number: number;
+    pullRequest: PullsGetResponseData;
+    repoData: RepositoryInfo;
+    reviews?: ReviewComment2[] | null;
+    pendingReview?: PendingReview | null;
+    mergeReqs?: MergeRequirements | null;
+    conflictedFiles: string[];
+    currentUserLogin?: string;
+    userPermission: string | null;
+    variant?: "header" | "inline";
+    isSticky?: boolean;
+    checkRuns?: Array<{
+        name: string;
+        conclusion: string | null;
+        status: string;
+        html_url?: string;
+        details_url?: string | null;
+    }>;
+}) {
+    const router = useRouter();
+    const utils = api.useUtils();
+    const [markedReady, setMarkedReady] = useState(false);
+    const [isMerged, setIsMerged] = useState(false);
+    const [mergeMode, setMergeMode] = useLocalStorage<MergeMethod>(
+        "neosrc-merge-mode",
+        "merge",
+    );
     const navigateAndScroll = useCallback(() => {
         router.push(`/gh/${owner}/${repo}/pull/${number}?scrollTo=bottom`);
     }, [router, owner, repo, number]);
@@ -138,272 +237,207 @@ export function ActionSection({
         });
     }, [owner, repo, number, pendingReview, dismissReviewMutation]);
 
-    const skeleton = (
-        <>
-            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
-            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
-            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
-        </>
-    );
-
     const pendingCommentsCount = pendingReview?.comments.length ?? 0;
+    const isDraft = !!pullRequest.draft && !markedReady;
+    const effectiveMerged = pullRequest.merged || isMerged;
+    const isAuthor = currentUserLogin === pullRequest.user?.login;
 
-    const buttons = (
-        pullRequest: PullsGetResponseData,
-        conflictedFiles: string[],
-        userPermission: string | null,
-    ) => {
-        const isDraft = !!pullRequest.draft && !markedReady;
-        const effectiveMerged = pullRequest.merged || isMerged;
-        const isAuthor = currentUserLogin === pullRequest.user?.login;
+    const canWrite = userPermission === "admin" || userPermission === "write";
+    const canManagePR = isAuthor || canWrite;
+    const canMerge = canWrite;
+    const canInteract = !pullRequest.locked || canWrite || isAuthor;
+    const isMergeBlocked = pullRequest.mergeable_state === "blocked";
+    const isMergeStateUnknown = pullRequest.mergeable_state === "unknown";
 
-        const canWrite =
-            userPermission === "admin" || userPermission === "write";
-        const canManagePR = isAuthor || canWrite;
-        const canMerge = canWrite;
-        const canInteract = !pullRequest.locked || canWrite || isAuthor;
-        const isMergeBlocked = pullRequest.mergeable_state === "blocked";
-        const isMergeStateUnknown = pullRequest.mergeable_state === "unknown";
+    const mergeOptionDefs = [
+        {
+            value: "merge" as const,
+            label: "Create a merge commit",
+            description:
+                "All commits will be added to the base branch via a merge commit.",
+            allowed: repoData?.allowMergeCommit !== false,
+        },
+        {
+            value: "squash" as const,
+            label: "Squash and merge",
+            description: "All commits will be squashed into a single commit.",
+            allowed: repoData?.allowSquashMerge !== false,
+        },
+        {
+            value: "rebase" as const,
+            label: "Rebase and merge",
+            description:
+                "All commits will be added to the base branch individually.",
+            allowed: repoData?.allowRebaseMerge !== false,
+        },
+    ];
+    const availableMergeOptions = mergeOptionDefs.filter((o) => o.allowed);
+    const noMergeMethodsAvailable = availableMergeOptions.length === 0;
+    const effectiveMergeMode = availableMergeOptions.some(
+        (o) => o.value === mergeMode,
+    )
+        ? mergeMode
+        : (availableMergeOptions[0]?.value ?? "merge");
 
-        const mergeOptionDefs = [
-            {
-                value: "merge" as const,
-                label: "Create a merge commit",
-                description:
-                    "All commits will be added to the base branch via a merge commit.",
-                allowed: repoData?.allowMergeCommit !== false,
-            },
-            {
-                value: "squash" as const,
-                label: "Squash and merge",
-                description:
-                    "All commits will be squashed into a single commit.",
-                allowed: repoData?.allowSquashMerge !== false,
-            },
-            {
-                value: "rebase" as const,
-                label: "Rebase and merge",
-                description:
-                    "All commits will be added to the base branch individually.",
-                allowed: repoData?.allowRebaseMerge !== false,
-            },
-        ];
-        const availableMergeOptions = mergeOptionDefs.filter((o) => o.allowed);
-        const noMergeMethodsAvailable = availableMergeOptions.length === 0;
-        const effectiveMergeMode = availableMergeOptions.some(
-            (o) => o.value === mergeMode,
-        )
-            ? mergeMode
-            : (availableMergeOptions[0]?.value ?? "merge");
-
-        const reviewStateMap = new Map<string, string>();
-        const authorLogin = pullRequest.user?.login;
-        if (reviews) {
-            for (const review of reviews) {
-                if (!review.user) continue;
-                if (review.user.login === authorLogin) continue;
-                const state = review.state;
-                if (state === "APPROVED" || state === "CHANGES_REQUESTED") {
-                    reviewStateMap.set(review.user.login, state);
-                } else if (state === "DISMISSED") {
-                    reviewStateMap.delete(review.user.login);
-                } else if (
-                    state === "COMMENTED" &&
-                    !reviewStateMap.has(review.user.login)
-                ) {
-                    reviewStateMap.set(review.user.login, "COMMENTED");
-                }
+    const reviewStateMap = new Map<string, string>();
+    const authorLogin = pullRequest.user?.login;
+    if (reviews) {
+        for (const review of reviews) {
+            if (!review.user) continue;
+            if (review.user.login === authorLogin) continue;
+            const state = review.state;
+            if (state === "APPROVED" || state === "CHANGES_REQUESTED") {
+                reviewStateMap.set(review.user.login, state);
+            } else if (state === "DISMISSED") {
+                reviewStateMap.delete(review.user.login);
+            } else if (
+                state === "COMMENTED" &&
+                !reviewStateMap.has(review.user.login)
+            ) {
+                reviewStateMap.set(review.user.login, "COMMENTED");
             }
         }
+    }
 
-        const requestedReviewerLogins = new Set(
-            (pullRequest.requested_reviewers ?? []).map((r) => r.login),
-        );
-        for (const login of requestedReviewerLogins) {
-            if (reviewStateMap.get(login) === "COMMENTED") {
-                reviewStateMap.set(login, "PENDING");
-            }
+    const requestedReviewerLogins = new Set(
+        (pullRequest.requested_reviewers ?? []).map((r) => r.login),
+    );
+    for (const login of requestedReviewerLogins) {
+        if (reviewStateMap.get(login) === "COMMENTED") {
+            reviewStateMap.set(login, "PENDING");
         }
+    }
 
-        const reviewStates = [...reviewStateMap.values()];
-        const approvalCount = reviewStates.filter(
-            (s) => s === "APPROVED",
-        ).length;
-        const changesRequestedCount = reviewStates.filter(
-            (s) => s === "CHANGES_REQUESTED",
-        ).length;
-        const pendingCount = [...requestedReviewerLogins].filter(
-            (login) => !reviewStateMap.has(login),
-        ).length;
-        const requiredApprovalCount =
-            mergeReqs?.requiredApprovingReviewCount ?? 0;
-        const requiredChecks = mergeReqs?.requiredChecks ?? [];
+    const reviewStates = [...reviewStateMap.values()];
+    const approvalCount = reviewStates.filter((s) => s === "APPROVED").length;
+    const changesRequestedCount = reviewStates.filter(
+        (s) => s === "CHANGES_REQUESTED",
+    ).length;
+    const pendingCount = [...requestedReviewerLogins].filter(
+        (login) => !reviewStateMap.has(login),
+    ).length;
+    const requiredApprovalCount = mergeReqs?.requiredApprovingReviewCount ?? 0;
+    const requiredChecks = mergeReqs?.requiredChecks ?? [];
 
-        const isHeader = variant === "header";
-        const showTitle = isHeader && isSticky;
+    const isHeader = variant === "header";
+    const showTitle = isHeader && isSticky;
 
-        return (
-            <div className="flex flex-wrap items-center justify-end gap-2">
-                {showTitle && (
-                    <Title pullRequest={pullRequest} number={number} />
-                )}
-                {conflictedFiles.length > 0 ? (
-                    <ConflictedFiles
+    return (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+            {showTitle && <Title pullRequest={pullRequest} number={number} />}
+            {conflictedFiles.length > 0 ? (
+                <ConflictedFiles
+                    owner={owner}
+                    repo={repo}
+                    number={number}
+                    pullRequest={pullRequest}
+                    conflictedFiles={conflictedFiles}
+                />
+            ) : null}
+            {pendingReview && pendingCommentsCount > 0 && (
+                <ReviewInProgress
+                    disabled={dismissReviewMutation.isPending}
+                    onCancelReview={handleCancelReview}
+                    pendingCommentsCount={pendingCommentsCount}
+                />
+            )}
+            {!isMergeBlocked && pullRequest.state === "open" && (
+                <ReviewStatusBadges
+                    approvalCount={approvalCount}
+                    changesRequestedCount={changesRequestedCount}
+                    pendingReviewerCount={pendingCount}
+                    requiredApprovalCount={requiredApprovalCount}
+                />
+            )}
+            {canInteract && !isAuthor && !dismissReviewMutation.isPending && (
+                <div>
+                    <SubmitReviewButton
                         owner={owner}
                         repo={repo}
                         number={number}
-                        pullRequest={pullRequest}
-                        conflictedFiles={conflictedFiles}
+                        pendingReview={pendingReview}
+                        navigateAndScroll={navigateAndScroll}
                     />
-                ) : null}
-                {pendingReview && pendingCommentsCount > 0 && (
-                    <ReviewInProgress
-                        disabled={dismissReviewMutation.isPending}
-                        onCancelReview={handleCancelReview}
-                        pendingCommentsCount={pendingCommentsCount}
-                    />
-                )}
-                {!isMergeBlocked && pullRequest.state === "open" && (
-                    <ReviewStatusBadges
-                        approvalCount={approvalCount}
-                        changesRequestedCount={changesRequestedCount}
-                        pendingReviewerCount={pendingCount}
-                        requiredApprovalCount={requiredApprovalCount}
-                    />
-                )}
-                {canInteract &&
-                    !isAuthor &&
-                    !dismissReviewMutation.isPending && (
-                        <div>
-                            <SubmitReviewButton
-                                owner={owner}
-                                repo={repo}
-                                number={number}
-                                pendingReview={pendingReview}
-                                navigateAndScroll={navigateAndScroll}
-                            />
-                        </div>
-                    )}
-                {!effectiveMerged &&
-                    pullRequest.state === "open" &&
-                    !isDraft && (
-                        <>
-                            {isDraft && canWrite && (
-                                <ReadyForReviewButton
-                                    owner={owner}
-                                    repo={repo}
-                                    number={number}
-                                    setMarkedReady={setMarkedReady}
-                                />
-                            )}
-                            <MergeStatusBar
-                                pullRequest={pullRequest}
-                                isDraft={isDraft}
-                                canMerge={canMerge}
-                                canWrite={canWrite}
-                                mergeMode={mergeMode}
-                                onMergeModeChange={setMergeMode}
-                                onMerge={() => {
-                                    mergeMutation.mutate({
-                                        owner,
-                                        repo,
-                                        number,
-                                        mergeMethod: effectiveMergeMode,
-                                    });
-                                }}
-                                isMerging={mergeMutation.isPending}
-                                availableMergeOptions={availableMergeOptions}
-                                isMergeBlocked={isMergeBlocked}
-                                isMergeStateUnknown={isMergeStateUnknown}
-                                noMergeMethodsAvailable={
-                                    noMergeMethodsAvailable
-                                }
-                                mergeError={mergeMutation.isError}
-                                approvalCount={approvalCount}
-                                changesRequestedCount={changesRequestedCount}
-                                pendingReviewerCount={pendingCount}
-                                requiredApprovalCount={requiredApprovalCount}
-                                requiredChecks={requiredChecks}
-                                checkRuns={checkRuns}
-                            />
-                        </>
-                    )}
-                {effectiveMerged && (
-                    <div className="flex items-center gap-2">
-                        {!isHeader && <MergedStatus />}
-                        {canWrite && canInteract ? (
-                            <RevertButton
-                                owner={owner}
-                                repo={repo}
-                                number={number}
-                                pullRequest={pullRequest}
-                            />
-                        ) : null}
-                    </div>
-                )}
-                {markAsDraftMutation.isError && (
-                    <p className="text-red-600 text-xs">
-                        Failed to mark as draft. Please try again.
-                    </p>
-                )}
-                {closeMutation.isError && (
-                    <p className="text-red-600 text-xs">
-                        Failed to close. Please try again.
-                    </p>
-                )}
-                {reopenMutation.isError && (
-                    <p className="text-red-600 text-xs">
-                        Failed to reopen. Please try again.
-                    </p>
-                )}
-                {!effectiveMerged &&
-                    pullRequest.state === "open" &&
-                    (isDraft && canManagePR ? (
+                </div>
+            )}
+            {!effectiveMerged && pullRequest.state === "open" && !isDraft && (
+                <>
+                    {isDraft && canWrite && (
                         <ReadyForReviewButton
                             owner={owner}
                             repo={repo}
                             number={number}
                             setMarkedReady={setMarkedReady}
                         />
-                    ) : null)}
-            </div>
-        );
-    };
-
-    return (
-        <div>
-            {pullRequestPromise ? (
-                <Async fallback={skeleton} promise={pullRequestPromise}>
-                    {(pullRequest) => (
-                        <Async
-                            fallback={null}
-                            promise={
-                                conflictedFilesPromise ?? Promise.resolve([])
-                            }
-                        >
-                            {(files) => (
-                                <Async
-                                    fallback={null}
-                                    promise={
-                                        userPermissionPromise ??
-                                        Promise.resolve(null)
-                                    }
-                                >
-                                    {(userPermission) =>
-                                        buttons(
-                                            pullRequest,
-                                            files,
-                                            userPermission,
-                                        )
-                                    }
-                                </Async>
-                            )}
-                        </Async>
                     )}
-                </Async>
-            ) : (
-                skeleton
+                    <MergeStatusBar
+                        pullRequest={pullRequest}
+                        isDraft={isDraft}
+                        canMerge={canMerge}
+                        canWrite={canWrite}
+                        mergeMode={mergeMode}
+                        onMergeModeChange={setMergeMode}
+                        onMerge={() => {
+                            mergeMutation.mutate({
+                                owner,
+                                repo,
+                                number,
+                                mergeMethod: effectiveMergeMode,
+                            });
+                        }}
+                        isMerging={mergeMutation.isPending}
+                        availableMergeOptions={availableMergeOptions}
+                        isMergeBlocked={isMergeBlocked}
+                        isMergeStateUnknown={isMergeStateUnknown}
+                        noMergeMethodsAvailable={noMergeMethodsAvailable}
+                        mergeError={mergeMutation.isError}
+                        approvalCount={approvalCount}
+                        changesRequestedCount={changesRequestedCount}
+                        pendingReviewerCount={pendingCount}
+                        requiredApprovalCount={requiredApprovalCount}
+                        requiredChecks={requiredChecks}
+                        checkRuns={checkRuns}
+                    />
+                </>
             )}
+            {effectiveMerged && (
+                <div className="flex items-center gap-2">
+                    {!isHeader && <MergedStatus />}
+                    {canWrite && canInteract ? (
+                        <RevertButton
+                            owner={owner}
+                            repo={repo}
+                            number={number}
+                            pullRequest={pullRequest}
+                        />
+                    ) : null}
+                </div>
+            )}
+            {markAsDraftMutation.isError && (
+                <p className="text-red-600 text-xs">
+                    Failed to mark as draft. Please try again.
+                </p>
+            )}
+            {closeMutation.isError && (
+                <p className="text-red-600 text-xs">
+                    Failed to close. Please try again.
+                </p>
+            )}
+            {reopenMutation.isError && (
+                <p className="text-red-600 text-xs">
+                    Failed to reopen. Please try again.
+                </p>
+            )}
+            {!effectiveMerged &&
+                pullRequest.state === "open" &&
+                (isDraft && canManagePR ? (
+                    <ReadyForReviewButton
+                        owner={owner}
+                        repo={repo}
+                        number={number}
+                        setMarkedReady={setMarkedReady}
+                    />
+                ) : null)}
         </div>
     );
 }
