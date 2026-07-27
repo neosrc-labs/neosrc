@@ -45,6 +45,7 @@ interface MergeStatusBarProps {
     requiredApprovalCount?: number;
     requiredChecks?: string[];
     checkRuns?: CheckRun[];
+    isMergeStatusLoading: boolean;
 }
 
 export function MergeStatusBar({
@@ -67,6 +68,7 @@ export function MergeStatusBar({
     requiredApprovalCount = 0,
     requiredChecks = [],
     checkRuns = [],
+    isMergeStatusLoading,
 }: MergeStatusBarProps) {
     const [isMergeOptionsOpen, setIsMergeOptionsOpen] = useState(false);
     const effectiveMergeMode = availableMergeOptions.some(
@@ -88,6 +90,15 @@ export function MergeStatusBar({
 
     if (isDraft && canWrite) {
         return null;
+    }
+
+    if (isMergeBlocked && isMergeStatusLoading) {
+        return (
+            <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-1.5 py-2 sm:px-3 dark:border-zinc-600">
+                <GitMerge size={14} className="text-text-muted" />
+                <div className="h-3 w-28 animate-pulse rounded bg-zinc-300 dark:bg-zinc-600" />
+            </div>
+        );
     }
 
     if (isMergeBlocked) {
