@@ -72,15 +72,17 @@ export function ActionSection({
         repo,
     });
 
-    const { data: reviews } = api.pulls.listReviews.useQuery(
-        { owner, repo, number },
-        { staleTime: 30_000 },
-    );
+    const { data: reviews, isLoading: reviewsLoading } =
+        api.pulls.listReviews.useQuery(
+            { owner, repo, number },
+            { staleTime: 30_000 },
+        );
 
-    const { data: mergeReqs } = api.pulls.getMergeRequirements.useQuery(
-        { owner, repo, number },
-        { staleTime: 60_000 },
-    );
+    const { data: mergeReqs, isLoading: mergeReqsLoading } =
+        api.pulls.getMergeRequirements.useQuery(
+            { owner, repo, number },
+            { staleTime: 60_000 },
+        );
 
     const skeleton = (
         <>
@@ -124,6 +126,10 @@ export function ActionSection({
                                             isSticky={isSticky}
                                             checkRuns={checkRuns}
                                             currentUserLogin={currentUserLogin}
+                                            isMergeStatusLoading={
+                                                reviewsLoading ||
+                                                mergeReqsLoading
+                                            }
                                         />
                                     )}
                                 </Async>
@@ -153,6 +159,7 @@ function Buttons({
     variant,
     isSticky,
     checkRuns,
+    isMergeStatusLoading,
 }: {
     owner: string;
     repo: string;
@@ -174,6 +181,7 @@ function Buttons({
         html_url?: string;
         details_url?: string | null;
     }>;
+    isMergeStatusLoading: boolean;
 }) {
     const router = useRouter();
     const utils = api.useUtils();
@@ -398,6 +406,7 @@ function Buttons({
                         requiredApprovalCount={requiredApprovalCount}
                         requiredChecks={requiredChecks}
                         checkRuns={checkRuns}
+                        isMergeStatusLoading={isMergeStatusLoading}
                     />
                 </>
             )}
