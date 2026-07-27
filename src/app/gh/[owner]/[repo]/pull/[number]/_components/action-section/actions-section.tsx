@@ -80,18 +80,19 @@ export function ActionSection({
         { staleTime: 60_000 },
     );
 
-    const skeleton = (
-        <>
-            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
-            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
-            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
-        </>
-    );
-
     return (
         <div>
             {pullRequestPromise ? (
-                <Async fallback={skeleton} promise={pullRequestPromise}>
+                <Async
+                    fallback={
+                        <>
+                            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+                            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+                            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+                        </>
+                    }
+                    promise={pullRequestPromise}
+                >
                     {(pullRequest) => (
                         <Async
                             fallback={null}
