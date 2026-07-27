@@ -124,7 +124,9 @@ export function pruneTree(nodes: FileNode[], search: string): FileNode[] {
     return nodes.map(prune).filter((n): n is FileNode => n !== null);
 }
 
-function highlightMatch(text: string, query: string): ReactNode {
+export function highlightMatch(text: string, query: string): ReactNode {
+    if (!query) return text;
+
     const lowerText = text.toLowerCase();
     const lowerQuery = query.toLowerCase();
 

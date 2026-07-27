@@ -1,8 +1,10 @@
+import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {
     buildFileTree,
     compressTree,
     type FileNode,
+    highlightMatch,
     pruneTree,
 } from "./file-tree";
 
@@ -291,5 +293,67 @@ describe("pruneTree", () => {
         const tree = [leaf("a.ts", "a.ts"), leaf("b.ts", "b.ts")];
         const result = pruneTree(tree, "");
         expect(result).toHaveLength(2);
+    });
+});
+
+describe("highlightMatch", () => {
+    function marks(text: string, query: string) {
+        const { container } = render(
+            <span>{highlightMatch(text, query)}</span>,
+        );
+        return Array.from(container.querySelectorAll("mark")).map(
+            (m) => m.textContent,
+        );
+    }
+
+    function plain(text: string, query: string) {
+        const { container } = render(
+            <span>{highlightMatch(text, query)}</span>,
+        );
+        return container.textContent;
+    }
+
+    it("highlights matching substring with full query", () => {
+        expect(marks("file.txt", "file")).toEqual(["file"]);
+    });
+
+    it("returns plain text unchanged when nothing matches", () => {
+        expect(marks("file.txt", "xyz")).toEqual([]);
+    });
+
+    it("is case insensitive", () => {
+        expect(marks("UpperCase.ts", "uppercase")).toEqual(["UpperCase"]);
+    });
+
+    it("matches full path when query matches the entire name", () => {
+        expect(marks("cargo/core", "cargo/core")).toEqual(["cargo/core"]);
+    });
+
+    it("merges adjacent path segment matches across / separator", () => {
+        const result = marks("cargo/core", "cargo/core/features.rs");
+        expect(result).toEqual(["cargo/core"]);
+    });
+
+    it("highlights last path segment in a filename", () => {
+        const result = marks("feature.rs", "cargo/core/feature.rs");
+        expect(result).toEqual(["feature.rs"]);
+    });
+
+    it("highlights middle path segment in a directory name", () => {
+        const result = marks("core", "cargo/core/feature.rs");
+        expect(result).toEqual(["core"]);
+    });
+
+    it("does not segment-fallback when query has no slash", () => {
+        expect(marks("file.txt", "notfound")).toEqual([]);
+    });
+
+    it("preserves non-matching text around highlights", () => {
+        expect(plain("my-file.txt", "file")).toBe("my-file.txt");
+    });
+
+    it("returns text unchanged for empty query", () => {
+        expect(marks("anything", "")).toEqual([]);
+        expect(plain("anything", "")).toBe("anything");
     });
 });
