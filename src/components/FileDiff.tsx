@@ -331,7 +331,7 @@ export default function FileDiff({
         <div className="rounded border border-border">
             <div
                 ref={headerRef}
-                className="sticky top-[56px] z-[1] flex items-center gap-2 border-border border-b bg-surface-secondary px-4 py-2"
+                className="sticky top-[69px] z-[1] flex items-center gap-2 border-border border-b bg-surface-secondary px-4 py-2"
             >
                 <button
                     className="cursor-pointer text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
