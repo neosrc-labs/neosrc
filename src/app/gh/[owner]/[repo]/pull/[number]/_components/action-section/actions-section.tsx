@@ -57,7 +57,6 @@ export function ActionSection({
     const utils = api.useUtils();
     const [markedReady, setMarkedReady] = useState(false);
     const [isMerged, setIsMerged] = useState(false);
-    const [isCancelPopoverOpen, setIsCancelPopoverOpen] = useState(false);
     const [mergeMode, setMergeMode] = useLocalStorage<MergeMethod>(
         "neosrc-merge-mode",
         "merge",
@@ -148,68 +147,6 @@ export function ActionSection({
     );
 
     const pendingCommentsCount = pendingReview?.comments.length ?? 0;
-
-    const reviewInProgress = pendingReview != null && (
-        <div className="space-y-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-900/50 dark:bg-yellow-900/10">
-            <div className="flex items-center justify-between">
-                <span className="font-medium text-sm text-yellow-800 dark:text-yellow-400">
-                    Review in progress
-                </span>
-                <Popover
-                    open={isCancelPopoverOpen}
-                    onOpenChange={setIsCancelPopoverOpen}
-                >
-                    <PopoverTrigger asChild>
-                        <button
-                            suppressHydrationWarning
-                            className="cursor-pointer text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
-                            disabled={dismissReviewMutation.isPending}
-                            type="button"
-                            title="Cancel review"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                        align="end"
-                        className="w-64 bg-surface p-4"
-                        side="top"
-                        sideOffset={4}
-                    >
-                        <p className="mb-3 font-medium text-sm text-text-primary">
-                            Delete this pending review?
-                        </p>
-                        <p className="mb-4 text-text-secondary text-xs">
-                            Your pending comments will be discarded.
-                        </p>
-                        <div className="flex justify-end gap-2">
-                            <button
-                                className="cursor-pointer rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-text-label text-xs ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
-                                onClick={() => setIsCancelPopoverOpen(false)}
-                                type="button"
-                            >
-                                Keep editing
-                            </button>
-                            <button
-                                className="cursor-pointer rounded-md bg-red-600 px-3 py-1.5 font-medium text-white text-xs transition-colors hover:bg-red-700"
-                                onClick={() => {
-                                    setIsCancelPopoverOpen(false);
-                                    handleCancelReview();
-                                }}
-                                type="button"
-                            >
-                                Delete review
-                            </button>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-            </div>
-            <p className="text-xs text-yellow-700 dark:text-yellow-500">
-                {pendingCommentsCount} comment
-                {pendingCommentsCount !== 1 ? "s" : ""} pending
-            </p>
-        </div>
-    );
 
     const buttons = (
         pullRequest: PullsGetResponseData,
@@ -319,7 +256,13 @@ export function ActionSection({
                         conflictedFiles={conflictedFiles}
                     />
                 ) : null}
-                {reviewInProgress}
+                {pendingReview && pendingCommentsCount > 0 && (
+                    <ReviewInProgress
+                        disabled={dismissReviewMutation.isPending}
+                        onCancelReview={handleCancelReview}
+                        pendingCommentsCount={pendingCommentsCount}
+                    />
+                )}
                 {!isMergeBlocked && pullRequest.state === "open" && (
                     <ReviewStatusBadges
                         approvalCount={approvalCount}
@@ -461,6 +404,79 @@ export function ActionSection({
             ) : (
                 skeleton
             )}
+        </div>
+    );
+}
+
+function ReviewInProgress({
+    pendingCommentsCount,
+    disabled,
+    onCancelReview,
+}: {
+    disabled: boolean;
+    pendingCommentsCount: number;
+    onCancelReview: () => void;
+}) {
+    const [isCancelPopoverOpen, setIsCancelPopoverOpen] = useState(false);
+    return (
+        <div className="space-y-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-900/50 dark:bg-yellow-900/10">
+            <div className="flex items-center justify-between">
+                <span className="font-medium text-sm text-yellow-800 dark:text-yellow-400">
+                    Review in progress
+                </span>
+                <Popover
+                    open={isCancelPopoverOpen}
+                    onOpenChange={setIsCancelPopoverOpen}
+                >
+                    <PopoverTrigger asChild>
+                        <button
+                            suppressHydrationWarning
+                            className="cursor-pointer text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
+                            disabled={disabled}
+                            type="button"
+                            title="Cancel review"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                        align="end"
+                        className="w-64 bg-surface p-4"
+                        side="top"
+                        sideOffset={4}
+                    >
+                        <p className="mb-3 font-medium text-sm text-text-primary">
+                            Delete this pending review?
+                        </p>
+                        <p className="mb-4 text-text-secondary text-xs">
+                            Your pending comments will be discarded.
+                        </p>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                className="cursor-pointer rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-text-label text-xs ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
+                                onClick={() => setIsCancelPopoverOpen(false)}
+                                type="button"
+                            >
+                                Keep editing
+                            </button>
+                            <button
+                                className="cursor-pointer rounded-md bg-red-600 px-3 py-1.5 font-medium text-white text-xs transition-colors hover:bg-red-700"
+                                onClick={() => {
+                                    setIsCancelPopoverOpen(false);
+                                    onCancelReview();
+                                }}
+                                type="button"
+                            >
+                                Delete review
+                            </button>
+                        </div>
+                    </PopoverContent>
+                </Popover>
+            </div>
+            <p className="text-xs text-yellow-700 dark:text-yellow-500">
+                {pendingCommentsCount} comment
+                {pendingCommentsCount !== 1 ? "s" : ""} pending
+            </p>
         </div>
     );
 }
