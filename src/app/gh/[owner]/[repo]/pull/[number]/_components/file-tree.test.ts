@@ -49,11 +49,11 @@ describe("compressTree", () => {
         ];
         const result = compressTree(tree);
         expect(result).toHaveLength(1);
-        expect(result[0].name).toBe("a/b/c");
-        expect(result[0].path).toBe("a/b/c");
-        expect(result[0].children).toHaveLength(1);
-        expect(result[0].children?.[0].name).toBe("file.txt");
-        expect(result[0].children?.[0].isFile).toBe(true);
+        expect(result[0]!.name).toBe("a/b/c");
+        expect(result[0]!.path).toBe("a/b/c");
+        expect(result[0]!.children).toHaveLength(1);
+        expect(result[0]!.children![0]!.name).toBe("file.txt");
+        expect(result[0]!.children![0]!.isFile).toBe(true);
     });
 
     it("does not compress when a directory has multiple children", () => {
@@ -77,8 +77,8 @@ describe("compressTree", () => {
         ];
         const result = compressTree(tree);
         expect(result).toHaveLength(1);
-        expect(result[0].name).toBe("a");
-        expect(result[0].children).toHaveLength(2);
+        expect(result[0]!.name).toBe("a");
+        expect(result[0]!.children).toHaveLength(2);
     });
 
     it("does not compress a single child that is a file", () => {
@@ -91,9 +91,9 @@ describe("compressTree", () => {
         ];
         const result = compressTree(tree);
         expect(result).toHaveLength(1);
-        expect(result[0].name).toBe("a");
-        expect(result[0].children).toHaveLength(1);
-        expect(result[0].children?.[0].isFile).toBe(true);
+        expect(result[0]!.name).toBe("a");
+        expect(result[0]!.children).toHaveLength(1);
+        expect(result[0]!.children![0]!.isFile).toBe(true);
     });
 
     it("compresses mixed: chain + sibling directory at different levels", () => {
@@ -124,25 +124,25 @@ describe("compressTree", () => {
         const result = compressTree(tree);
         expect(result).toHaveLength(1);
         // a has 2 children (b, d) so a is not compressed
-        expect(result[0].name).toBe("a");
-        const aChildren = result[0].children!;
+        expect(result[0]!.name).toBe("a");
+        const aChildren = result[0]!.children!;
         expect(aChildren).toHaveLength(2);
         // b/c chain compresses into one node
-        expect(aChildren[0].name).toBe("b/c");
-        expect(aChildren[0].children).toHaveLength(1);
-        expect(aChildren[0].children?.[0].name).toBe("f.txt");
+        expect(aChildren[0]!.name).toBe("b/c");
+        expect(aChildren[0]!.children).toHaveLength(1);
+        expect(aChildren[0]!.children![0]!.name).toBe("f.txt");
         // d has a single file child, not compressed
-        expect(aChildren[1].name).toBe("d");
-        expect(aChildren[1].children).toHaveLength(1);
-        expect(aChildren[1].children?.[0].name).toBe("g.txt");
+        expect(aChildren[1]!.name).toBe("d");
+        expect(aChildren[1]!.children).toHaveLength(1);
+        expect(aChildren[1]!.children![0]!.name).toBe("g.txt");
     });
 
     it("handles empty children", () => {
         const tree = [dir({ name: "empty", path: "empty", children: [] })];
         const result = compressTree(tree);
         expect(result).toHaveLength(1);
-        expect(result[0].name).toBe("empty");
-        expect(result[0].children).toHaveLength(0);
+        expect(result[0]!.name).toBe("empty");
+        expect(result[0]!.children).toHaveLength(0);
     });
 
     it("is idempotent", () => {
@@ -181,32 +181,26 @@ describe("compressTree", () => {
         }
         const result = compressTree(tree);
         expect(result).toHaveLength(1);
-        const parts = result[0].name.split("/");
+        const parts = result[0]!.name.split("/");
         expect(parts.length).toBe(depth);
     });
 
     it("preserves a flat list of files", () => {
-        const tree = [
-            leaf("a.ts", "a.ts"),
-            leaf("b.ts", "b.ts"),
-        ];
+        const tree = [leaf("a.ts", "a.ts"), leaf("b.ts", "b.ts")];
         const result = compressTree(tree);
         expect(result).toHaveLength(2);
-        expect(result[0].isFile).toBe(true);
-        expect(result[1].isFile).toBe(true);
+        expect(result[0]!.isFile).toBe(true);
+        expect(result[1]!.isFile).toBe(true);
     });
 });
 
 describe("buildFileTree", () => {
     it("builds a compressed tree from flat file list", () => {
-        const files = [
-            file("a/b/c/f1.txt"),
-            file("a/b/c/f2.txt"),
-        ];
+        const files = [file("a/b/c/f1.txt"), file("a/b/c/f2.txt")];
         const tree = buildFileTree(files);
         expect(tree).toHaveLength(1);
-        expect(tree[0].name).toBe("a/b/c");
-        expect(tree[0].children).toHaveLength(2);
+        expect(tree[0]!.name).toBe("a/b/c");
+        expect(tree[0]!.children).toHaveLength(2);
     });
 
     it("does not compress divergent paths", () => {
@@ -216,15 +210,15 @@ describe("buildFileTree", () => {
         ];
         const tree = buildFileTree(files);
         expect(tree).toHaveLength(1);
-        expect(tree[0].name).toBe("src");
-        expect(tree[0].children).toHaveLength(2);
+        expect(tree[0]!.name).toBe("src");
+        expect(tree[0]!.children).toHaveLength(2);
     });
 
     it("handles a single file at root", () => {
         const files = [file("index.ts")];
         const tree = buildFileTree(files);
         expect(tree).toHaveLength(1);
-        expect(tree[0].isFile).toBe(true);
-        expect(tree[0].name).toBe("index.ts");
+        expect(tree[0]!.isFile).toBe(true);
+        expect(tree[0]!.name).toBe("index.ts");
     });
 });
