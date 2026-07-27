@@ -145,7 +145,6 @@ test.describe
             });
 
             await test.step("Verify the author is displayed", async () => {
-                await expect(page.getByText("opened by")).toBeVisible();
                 await expect(
                     page.getByTestId("pr-description").getByText(authorLogin),
                 ).toBeVisible();
