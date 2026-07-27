@@ -128,11 +128,9 @@ export function MergeStatusBar({
             <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
                 <GitMerge size={14} className="text-text-muted" />
                 <span className="font-medium text-sm text-text-muted">
-                    {reasons.length === 0 ? (
-                        "Merging blocked"
-                    ) : (
-                        <>{reasons.join(" \u00b7 ")}</>
-                    )}
+                    {reasons.length === 0
+                        ? "Merging blocked"
+                        : reasons.join(" \u00b7 ")}
                 </span>
             </div>
         );
