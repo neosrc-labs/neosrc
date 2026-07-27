@@ -3,7 +3,7 @@
 import type { components } from "@octokit/openapi-types";
 import { Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
 import NextLink from "next/link";
-import { type ReactNode, useCallback, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/code-title";
@@ -356,7 +356,7 @@ export function PullRequestDescriptionSection({
                                 </a>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-text-secondary">
-                                opened by{" "}
+                                <OpenedByLabel />
                                 <UserHoverCard login={pullRequest.user.login}>
                                     <NextLink
                                         className="flex items-center gap-2"
@@ -393,7 +393,7 @@ export function PullRequestDescriptionSection({
                                 )}
                             </div>
                             {actionSection && (
-                                <div className="ml-2 flex items-center">
+                                <div className="flex items-center">
                                     {actionSection}
                                 </div>
                             )}
@@ -597,4 +597,26 @@ export function PullRequestDescriptionSection({
             </Async>
         </div>
     );
+}
+
+function OpenedByLabel() {
+    const [show, setShow] = useState(true);
+
+    useEffect(() => {
+        const main = document.querySelector("main");
+        if (!main) return;
+
+        const check = () => {
+            setShow(main.clientWidth >= 1000);
+        };
+
+        check();
+        const observer = new ResizeObserver(check);
+        observer.observe(main);
+        return () => observer.disconnect();
+    }, []);
+
+    if (!show) return null;
+
+    return <span>opened by </span>;
 }

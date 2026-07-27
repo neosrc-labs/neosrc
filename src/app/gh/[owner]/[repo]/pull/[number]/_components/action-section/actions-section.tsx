@@ -80,19 +80,17 @@ export function ActionSection({
         { staleTime: 60_000 },
     );
 
+    const skeleton = (
+        <>
+            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+        </>
+    );
     return (
         <div>
             {pullRequestPromise ? (
-                <Async
-                    fallback={
-                        <>
-                            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
-                            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
-                            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
-                        </>
-                    }
-                    promise={pullRequestPromise}
-                >
+                <Async fallback={skeleton} promise={pullRequestPromise}>
                     {(pullRequest) => (
                         <Async
                             fallback={null}
@@ -591,7 +589,7 @@ function ReadyForReviewButton({
 
     return (
         <button
-            className="flex cursor-pointer items-center gap-1.5 rounded-md bg-gray-200 px-3 py-2 font-medium text-gray-800 text-sm transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex cursor-pointer items-center gap-1.5 rounded-md bg-gray-200 px-1.5 py-2 font-medium text-gray-800 text-xs transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
             disabled={markReadyMutation.isPending}
             onClick={handleMarkReady}
             type="button"
@@ -681,7 +679,7 @@ function SubmitReviewButton({
             <PopoverTrigger asChild>
                 <button
                     suppressHydrationWarning
-                    className="cursor-pointer rounded-md bg-[#0969da] px-3 py-2 font-medium text-sm text-white transition-colors hover:bg-[#0860ca]"
+                    className="cursor-pointer rounded-md bg-[#0969da] px-1.5 py-2 font-medium text-white text-xs transition-colors hover:bg-[#0860ca] sm:px-3"
                     type="button"
                 >
                     Submit Review
@@ -753,12 +751,12 @@ function Title({
 
 function MergedStatus() {
     return (
-        <div className="flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-3 py-2 dark:border-violet-900/50 dark:bg-violet-950/30">
+        <div className="flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-1.5 py-2 sm:px-3 dark:border-violet-900/50 dark:bg-violet-950/30">
             <GitMerge
                 size={14}
                 className="text-violet-600 dark:text-violet-400"
             />
-            <span className="font-medium text-sm text-violet-700 dark:text-violet-300">
+            <span className="font-medium text-violet-700 text-xs dark:text-violet-300">
                 Merged
             </span>
         </div>
@@ -830,7 +828,7 @@ function RevertButton({
             <PopoverTrigger asChild>
                 <button
                     suppressHydrationWarning
-                    className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-surface-tertiary dark:border-zinc-600"
+                    className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-1.5 py-2.5 text-text-secondary text-xs transition-colors hover:bg-surface-tertiary sm:px-3 dark:border-zinc-600"
                     disabled={revertMutation.isPending}
                     onClick={() => openRevertDialog(pullRequest)}
                     type="button"
