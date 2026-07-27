@@ -81,7 +81,27 @@ export function buildFileTree(files: PullRequestFile[]): FileNode[] {
         }
     }
 
-    return root;
+    return compressTree(root);
+}
+
+export function compressTree(nodes: FileNode[]): FileNode[] {
+    return nodes.map((node) => {
+        if (node.isFile || !node.children) return node;
+
+        const children = compressTree(node.children);
+
+        const onlyChild = children[0];
+        if (children.length === 1 && onlyChild && !onlyChild.isFile) {
+            return {
+                name: `${node.name}/${onlyChild.name}`,
+                path: onlyChild.path,
+                children: onlyChild.children,
+                isFile: false,
+            };
+        }
+
+        return { ...node, children };
+    });
 }
 
 export function FileTree({
