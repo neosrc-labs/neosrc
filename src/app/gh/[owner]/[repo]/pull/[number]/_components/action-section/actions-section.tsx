@@ -370,45 +370,35 @@ function Buttons({
                 </div>
             )}
             {!effectiveMerged && pullRequest.state === "open" && !isDraft && (
-                <>
-                    {isDraft && canWrite && (
-                        <ReadyForReviewButton
-                            owner={owner}
-                            repo={repo}
-                            number={number}
-                            setMarkedReady={setMarkedReady}
-                        />
-                    )}
-                    <MergeStatusBar
-                        pullRequest={pullRequest}
-                        isDraft={isDraft}
-                        canMerge={canMerge}
-                        canWrite={canWrite}
-                        mergeMode={mergeMode}
-                        onMergeModeChange={setMergeMode}
-                        onMerge={() => {
-                            mergeMutation.mutate({
-                                owner,
-                                repo,
-                                number,
-                                mergeMethod: effectiveMergeMode,
-                            });
-                        }}
-                        isMerging={mergeMutation.isPending}
-                        availableMergeOptions={availableMergeOptions}
-                        isMergeBlocked={isMergeBlocked}
-                        isMergeStateUnknown={isMergeStateUnknown}
-                        noMergeMethodsAvailable={noMergeMethodsAvailable}
-                        mergeError={mergeMutation.isError}
-                        approvalCount={approvalCount}
-                        changesRequestedCount={changesRequestedCount}
-                        pendingReviewerCount={pendingCount}
-                        requiredApprovalCount={requiredApprovalCount}
-                        requiredChecks={requiredChecks}
-                        checkRuns={checkRuns}
-                        isMergeStatusLoading={isMergeStatusLoading}
-                    />
-                </>
+                <MergeStatusBar
+                    pullRequest={pullRequest}
+                    isDraft={isDraft}
+                    canMerge={canMerge}
+                    canWrite={canWrite}
+                    mergeMode={mergeMode}
+                    onMergeModeChange={setMergeMode}
+                    onMerge={() => {
+                        mergeMutation.mutate({
+                            owner,
+                            repo,
+                            number,
+                            mergeMethod: effectiveMergeMode,
+                        });
+                    }}
+                    isMerging={mergeMutation.isPending}
+                    availableMergeOptions={availableMergeOptions}
+                    isMergeBlocked={isMergeBlocked}
+                    isMergeStateUnknown={isMergeStateUnknown}
+                    noMergeMethodsAvailable={noMergeMethodsAvailable}
+                    mergeError={mergeMutation.isError}
+                    approvalCount={approvalCount}
+                    changesRequestedCount={changesRequestedCount}
+                    pendingReviewerCount={pendingCount}
+                    requiredApprovalCount={requiredApprovalCount}
+                    requiredChecks={requiredChecks}
+                    checkRuns={checkRuns}
+                    isMergeStatusLoading={isMergeStatusLoading}
+                />
             )}
             {effectiveMerged && (
                 <div className="flex items-center gap-2">

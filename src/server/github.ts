@@ -486,7 +486,6 @@ export const getMergeRequirements = cache(
                     branch,
                 },
             );
-            console.log({ rulesData });
 
             if (rulesData.length > 0) {
                 for (const rule of rulesData) {
