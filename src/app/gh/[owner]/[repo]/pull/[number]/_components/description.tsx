@@ -601,7 +601,7 @@ export function PullRequestDescriptionSection({
 
 function OpenedByLabel() {
     const [show, setShow] = useState(
-        document.querySelector("main")?.clientWidth ?? 0 >= 1000,
+        (document.querySelector("main")?.clientWidth ?? 0) >= 1000,
     );
 
     useEffect(() => {
