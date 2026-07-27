@@ -1,7 +1,12 @@
 "use client";
 
-import { ChevronDown, GitMerge } from "lucide-react";
+import { Check, ChevronDown, GitMerge, X } from "lucide-react";
 import { useState } from "react";
+import {
+    HoverCard,
+    HoverCardContent,
+    HoverCardTrigger,
+} from "~/components/ui/hover-card";
 import {
     Popover,
     PopoverContent,
@@ -101,25 +106,72 @@ export function MergeStatusBar({
         const failingChecks = checkStatuses.filter((c) => c.failed);
         const pendingChecks = checkStatuses.filter((c) => c.pending);
 
-        const reasons: string[] = [];
+        const parts: React.ReactNode[] = [];
         if (requiredApprovalCount > 0) {
-            reasons.push(`${approvalCount}/${requiredApprovalCount} approvals`);
+            parts.push(`${approvalCount}/${requiredApprovalCount} approvals`);
         }
         if (changesRequestedCount > 0) {
-            reasons.push(
+            parts.push(
                 `${changesRequestedCount} change${changesRequestedCount !== 1 ? "s" : ""} requested`,
             );
         }
         if (pendingReviewerCount > 0) {
-            reasons.push(`${pendingReviewerCount} pending`);
+            parts.push(`${pendingReviewerCount} pending`);
         }
         if (failingChecks.length > 0) {
-            reasons.push(
-                `${failingChecks.length} check${failingChecks.length !== 1 ? "s" : ""} failing`,
+            parts.push(
+                <HoverCard key="failing" openDelay={200}>
+                    <HoverCardTrigger asChild>
+                        <button type="button">
+                            {failingChecks.length} check
+                            {failingChecks.length !== 1 ? "s" : ""} failing
+                        </button>
+                    </HoverCardTrigger>
+                    <HoverCardContent
+                        align="start"
+                        side="bottom"
+                        className="w-72 bg-surface p-0"
+                    >
+                        <div className="border-border-subtle border-b px-3 py-2">
+                            <div className="font-medium text-xs">
+                                Some required checks were not successful
+                            </div>
+                        </div>
+                        <div className="max-h-80 space-y-1.5 overflow-y-auto p-3">
+                            {checkStatuses.map((check) => {
+                                const match = checkRuns.find(
+                                    (c) =>
+                                        c.name.trim().toLowerCase() ===
+                                        check.name.trim().toLowerCase(),
+                                );
+                                return (
+                                    <a
+                                        key={check.name}
+                                        href={match?.html_url ?? "#"}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-surface-tertiary"
+                                    >
+                                        {check.failed ? (
+                                            <X className="size-3.5 shrink-0 text-red-600" />
+                                        ) : check.pending ? (
+                                            <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
+                                        ) : (
+                                            <Check className="size-3.5 shrink-0 text-green-600" />
+                                        )}
+                                        <span className="truncate font-medium text-text-primary">
+                                            {check.name}
+                                        </span>
+                                    </a>
+                                );
+                            })}
+                        </div>
+                    </HoverCardContent>
+                </HoverCard>,
             );
         }
         if (pendingChecks.length > 0) {
-            reasons.push(
+            parts.push(
                 `${pendingChecks.length} check${pendingChecks.length !== 1 ? "s" : ""} pending`,
             );
         }
@@ -128,9 +180,15 @@ export function MergeStatusBar({
             <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-3 py-2 dark:border-zinc-600">
                 <GitMerge size={14} className="text-text-muted" />
                 <span className="font-medium text-sm text-text-muted">
-                    {reasons.length === 0
+                    {parts.length === 0
                         ? "Merging blocked"
-                        : reasons.join(" \u00b7 ")}
+                        : parts.reduce<React.ReactNode[]>((acc, part, i) => {
+                              if (i > 0) {
+                                  acc.push(" \u00b7 ");
+                              }
+                              acc.push(part);
+                              return acc;
+                          }, [])}
                 </span>
             </div>
         );
