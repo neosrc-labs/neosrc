@@ -61,6 +61,38 @@ import {
 } from "~/server/github";
 import { getTopRepositories } from "~/server/github-graphql";
 
+export type RepositoryInfo = {
+    hasIssues: boolean;
+    hasWiki: boolean;
+    hasProjects: boolean;
+    hasDiscussions: boolean;
+    isPrivate: boolean;
+    permissions: {
+        admin: boolean;
+    };
+    ownerAvatarUrl: string;
+    allowSquashMerge: boolean | null;
+    allowRebaseMerge: boolean | null;
+    allowMergeCommit: boolean | null;
+    description: string | null;
+    defaultBranch: string | null;
+    homepage: string | null;
+    stars: number;
+    forks: number;
+    watchers: number;
+    language: string | null;
+    topics: string[];
+    license: {
+        spdxId: string | null;
+        name: string;
+        url: string | null;
+    } | null;
+    createdAt: string | null;
+    isFork: boolean;
+    parentFullName: string | null;
+    parentDefaultBranch: string | null;
+};
+
 export const reposRouter = createTRPCRouter({
     getByOwnerAndRepo: protectedProcedure
         .input(
@@ -70,7 +102,7 @@ export const reposRouter = createTRPCRouter({
                 repo: z.string(),
             }),
         )
-        .query(async ({ ctx, input }) => {
+        .query(async ({ ctx, input }): Promise<RepositoryInfo> => {
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
@@ -114,7 +146,7 @@ export const reposRouter = createTRPCRouter({
                     isFork: data.fork,
                     parentFullName: data.parent?.full_name ?? null,
                     parentDefaultBranch: data.parent?.default_branch ?? null,
-                };
+                } satisfies RepositoryInfo;
             }
 
             const accessToken = await getGitHubToken(
@@ -139,9 +171,9 @@ export const reposRouter = createTRPCRouter({
                     admin: data.permissions?.admin ?? false,
                 },
                 ownerAvatarUrl: data.owner.avatar_url,
-                allowSquashMerge: data.allow_squash_merge,
-                allowRebaseMerge: data.allow_rebase_merge,
-                allowMergeCommit: data.allow_merge_commit,
+                allowSquashMerge: data.allow_squash_merge ?? null,
+                allowRebaseMerge: data.allow_rebase_merge ?? null,
+                allowMergeCommit: data.allow_merge_commit ?? null,
                 description: data.description ?? null,
                 defaultBranch: data.default_branch,
                 homepage: data.homepage ?? null,
@@ -161,7 +193,7 @@ export const reposRouter = createTRPCRouter({
                 isFork: data.fork,
                 parentFullName: data.parent?.full_name ?? null,
                 parentDefaultBranch: data.parent?.default_branch ?? null,
-            };
+            } satisfies RepositoryInfo;
         }),
     getCountsByOwnerAndRepo: protectedProcedure
         .input(
