@@ -226,7 +226,7 @@ export function PullRequestDescriptionSection({
     return (
         <div data-testid="pr-description">
             {/* PR Header */}
-            <div className="mb-6">
+            <div className="mb-4">
                 <div className="mb-2 flex items-center gap-2">
                     <Async
                         fallback={
@@ -334,7 +334,7 @@ export function PullRequestDescriptionSection({
 
                 <Async
                     fallback={
-                        <div className="h-5 w-104 animate-pulse rounded bg-surface-selected" />
+                        <div className="h-8 w-104 animate-pulse rounded bg-surface-selected" />
                     }
                     promise={pullRequestPromise}
                 >
@@ -600,7 +600,9 @@ export function PullRequestDescriptionSection({
 }
 
 function OpenedByLabel() {
-    const [show, setShow] = useState(true);
+    const [show, setShow] = useState(
+        document.querySelector("main")?.clientWidth ?? 0 >= 1000,
+    );
 
     useEffect(() => {
         const main = document.querySelector("main");
