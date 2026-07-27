@@ -226,8 +226,8 @@ export function PullRequestDescriptionSection({
     return (
         <div data-testid="pr-description">
             {/* PR Header */}
-            <div className="mb-4">
-                <div className="mb-2 flex items-center gap-2">
+            <div className="mb-3">
+                <div className="flex items-center gap-2">
                     <Async
                         fallback={
                             <div className="h-5 w-16 animate-pulse rounded-full bg-surface-selected" />
@@ -339,7 +339,7 @@ export function PullRequestDescriptionSection({
                     promise={pullRequestPromise}
                 >
                     {(pullRequest) => (
-                        <div className="mt-2 flex items-center gap-2">
+                        <div className="flex items-center gap-2 h-9">
                             <div className="text-sm text-text-secondary">
                                 <a
                                     href={`https://github.com/${owner}/${repo}/tree/${pullRequest.base.ref}`}
