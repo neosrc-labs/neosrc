@@ -16,6 +16,12 @@ interface HeaderActionBarProps {
     checkRunsPromise?: Promise<CheckRun[]> | null;
 }
 
+const EMPTY_CHECK_RUNS_PROMISE = Promise.resolve<CheckRun[]>([]);
+
+// FIXME: Ideally we have 32 from the screen edge to account for the sidebar open/close icons.
+//        But 32 is too large to look good when the sidebars are opened.
+const MIN_EDGE_PADDING = 8;
+
 export function HeaderActionBar({
     owner,
     repo,
@@ -29,104 +35,162 @@ export function HeaderActionBar({
     const sentinelRef = useRef<HTMLDivElement>(null);
     const barRef = useRef<HTMLDivElement>(null);
     const [isSticky, setIsSticky] = useState(false);
-    const [fixedWidth, setFixedWidth] = useState(0);
     const [fixedLeft, setFixedLeft] = useState(0);
+    const [fixedRight, setFixedRight] = useState(0);
+    const [contentLeft, setContentLeft] = useState(0);
+    const [contentWidth, setContentWidth] = useState(0);
+    const [mainWidth, setMainWidth] = useState(0);
+    const [barHeight, setBarHeight] = useState(0);
 
     const captureDimensions = useCallback(() => {
-        const bar = barRef.current;
-        if (!bar) return;
-        const row = bar.parentElement?.parentElement;
-        if (!row) return;
-        const rect = row.getBoundingClientRect();
-        setFixedWidth(rect.width);
-        setFixedLeft(rect.left);
+        const main = sentinelRef.current?.closest("main");
+        if (!main) return;
+
+        const mainRect = main.getBoundingClientRect();
+        setFixedLeft(mainRect.left);
+        setMainWidth(mainRect.width);
+        setFixedRight(document.documentElement.clientWidth - mainRect.right);
+
+        const contentContainer = main.querySelector(".max-w-7xl") ?? main;
+        const rect = contentContainer.getBoundingClientRect();
+        setContentLeft(rect.left);
+        setContentWidth(rect.width);
     }, []);
 
     useEffect(() => {
         const sentinel = sentinelRef.current;
         if (!sentinel) return;
 
-        const headerEl = document.documentElement;
-        const headerHeight = parseFloat(
-            getComputedStyle(headerEl).getPropertyValue("--header-height") ||
-                "0",
-        );
+        let observer: IntersectionObserver | undefined;
 
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (!entry) return;
-                if (!entry.isIntersecting) {
-                    captureDimensions();
-                }
-                setIsSticky(!entry.isIntersecting);
-            },
-            {
-                rootMargin: `-${headerHeight}px 0px 0px 0px`,
-                threshold: 0,
-            },
-        );
+        const createObserver = () => {
+            observer?.disconnect();
 
-        observer.observe(sentinel);
+            const headerHeight = parseFloat(
+                getComputedStyle(document.documentElement).getPropertyValue(
+                    "--header-height",
+                ) || "0",
+            );
 
-        return () => observer.disconnect();
+            observer = new IntersectionObserver(
+                ([entry]) => {
+                    if (!entry) return;
+                    if (!entry.isIntersecting) {
+                        captureDimensions();
+                    }
+                    setIsSticky(!entry.isIntersecting);
+                },
+                {
+                    rootMargin: `-${headerHeight}px 0px 0px 0px`,
+                    threshold: 0,
+                },
+            );
+            observer.observe(sentinel);
+        };
+
+        createObserver();
+        window.addEventListener("resize", createObserver, { passive: true });
+
+        return () => {
+            observer?.disconnect();
+            window.removeEventListener("resize", createObserver);
+        };
     }, [captureDimensions]);
 
     useEffect(() => {
-        if (!isSticky) return;
+        const main = sentinelRef.current?.closest("main");
+        if (!main) return;
 
-        const handleResize = () => captureDimensions();
-        window.addEventListener("resize", handleResize, { passive: true });
+        const resizeObserver = new ResizeObserver(() => {
+            captureDimensions();
+        });
+        resizeObserver.observe(main);
 
-        return () => {
-            window.removeEventListener("resize", handleResize);
-        };
-    }, [isSticky, captureDimensions]);
+        const contentContainer = main.querySelector(".max-w-7xl");
+        if (contentContainer) {
+            resizeObserver.observe(contentContainer);
+        }
+
+        return () => resizeObserver.disconnect();
+    }, [captureDimensions]);
+
+    useEffect(() => {
+        const bar = barRef.current;
+        if (!bar) return;
+
+        const resizeObserver = new ResizeObserver(([entry]) => {
+            if (!entry) return;
+            const height =
+                entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+            setBarHeight(height);
+        });
+        resizeObserver.observe(bar);
+
+        return () => resizeObserver.disconnect();
+    }, []);
+
+    const naturalMargin = contentLeft - fixedLeft;
+    const hasNaturalGutter = naturalMargin >= MIN_EDGE_PADDING;
+    const barMarginLeft = hasNaturalGutter ? naturalMargin : MIN_EDGE_PADDING;
+    const barWidth = hasNaturalGutter
+        ? contentWidth
+        : mainWidth - MIN_EDGE_PADDING * 2;
 
     return (
         <>
             <div ref={sentinelRef} className="h-px" />
             <div
-                ref={barRef}
                 style={
                     isSticky
                         ? {
                               position: "fixed",
                               top: 0,
                               left: `${fixedLeft}px`,
-                              width: `${fixedWidth}px`,
+                              right: `${fixedRight}px`,
                               zIndex: 20,
                               backgroundColor: "var(--color-surface, #ffffff)",
-                              paddingTop: "8px",
-                              paddingBottom: "8px",
                               borderBottom:
                                   "1px solid var(--color-border-subtle, #e5e7eb)",
                           }
                         : undefined
                 }
             >
-                <Async
-                    fallback={null}
-                    promise={
-                        checkRunsPromise ?? Promise.resolve<CheckRun[]>([])
+                <div
+                    ref={barRef}
+                    style={
+                        isSticky
+                            ? {
+                                  marginLeft: `${barMarginLeft}px`,
+                                  width: `${barWidth}px`,
+                                  padding: "8px",
+                              }
+                            : undefined
                     }
                 >
-                    {(checkRuns) => (
-                        <ActionSection
-                            variant="header"
-                            isSticky={isSticky}
-                            owner={owner}
-                            repo={repo}
-                            number={number}
-                            pullRequestPromise={pullRequestPromise}
-                            conflictedFilesPromise={conflictedFilesPromise}
-                            userPermissionPromise={userPermissionPromise}
-                            currentUserLogin={currentUserLogin}
-                            checkRuns={checkRuns}
-                        />
-                    )}
-                </Async>
+                    <Async
+                        fallback={null}
+                        promise={checkRunsPromise ?? EMPTY_CHECK_RUNS_PROMISE}
+                    >
+                        {(checkRuns) => (
+                            <ActionSection
+                                variant="header"
+                                isSticky={isSticky}
+                                owner={owner}
+                                repo={repo}
+                                number={number}
+                                pullRequestPromise={pullRequestPromise}
+                                conflictedFilesPromise={conflictedFilesPromise}
+                                userPermissionPromise={userPermissionPromise}
+                                currentUserLogin={currentUserLogin}
+                                checkRuns={checkRuns}
+                            />
+                        )}
+                    </Async>
+                </div>
             </div>
-            {isSticky && <div aria-hidden style={{ height: "48px" }} />}
+            {isSticky && (
+                <div aria-hidden style={{ height: `${barHeight}px` }} />
+            )}
         </>
     );
 }
