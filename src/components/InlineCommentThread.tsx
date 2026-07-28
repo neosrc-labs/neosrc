@@ -28,7 +28,10 @@ import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
 import { MarkdownRenderer } from "./markdown/MarkdownRenderer";
-import { createReviewCommentStub } from "./review-comment-utils";
+import {
+    createReviewCommentStub,
+    findAuthorAssociation,
+} from "./review-comment-utils";
 
 interface InlineCommentThreadProps {
     parentComment: ReviewComment;
@@ -91,6 +94,23 @@ export function InlineCommentThread({
 
             const userLogin = currentUserData?.login;
             if (userLogin) {
+                const listData = utils.reviewComments.list.getData({
+                    owner,
+                    repo,
+                    number,
+                });
+                const pendingData = utils.reviews.getPending.getData({
+                    owner,
+                    repo,
+                    number,
+                });
+                const authorAssociation =
+                    findAuthorAssociation(listData ?? [], userLogin) ??
+                    findAuthorAssociation(
+                        pendingData?.comments ?? [],
+                        userLogin,
+                    );
+
                 const stub = createReviewCommentStub({
                     body,
                     filePath: parentComment.path,
@@ -99,6 +119,7 @@ export function InlineCommentThread({
                         avatarUrl: currentUserData.avatarUrl,
                     },
                     inReplyTo,
+                    authorAssociation,
                 });
 
                 utils.reviewComments.list.setData(
@@ -300,6 +321,7 @@ export function InlineCommentThread({
                 reactions={reactionMap[parentComment.id] ?? []}
                 currentUserLogin={currentUserLogin}
                 canInteract={canInteract}
+                isStub={parentComment.id < 0}
                 onStartEdit={() => {
                     setEditBody(parentComment.body);
                     setEditingCommentId(parentComment.id);
@@ -340,6 +362,7 @@ export function InlineCommentThread({
                         reactions={reactionMap[comment.id] ?? []}
                         currentUserLogin={currentUserLogin}
                         canInteract={canInteract}
+                        isStub={comment.id < 0}
                         onStartEdit={() => {
                             setEditBody(comment.body);
                             setEditingCommentId(comment.id);
@@ -424,6 +447,7 @@ function Comment({
     reactions,
     currentUserLogin,
     canInteract,
+    isStub,
     onStartEdit,
     onEditBodyChange,
     onCancelEdit,
@@ -446,6 +470,7 @@ function Comment({
     reactions: Reaction[];
     currentUserLogin: string;
     canInteract: boolean;
+    isStub: boolean;
     onStartEdit: () => void;
     onEditBodyChange: (body: string) => void;
     onCancelEdit: () => void;
@@ -477,7 +502,7 @@ function Comment({
             variant={variant === "parent" ? "default" : "nested"}
             headerActions={
                 <>
-                    {isAuthor && canInteract && (
+                    {isAuthor && canInteract && !isStub && (
                         <button
                             type="button"
                             aria-label="Edit comment"
@@ -487,7 +512,7 @@ function Comment({
                             <SquarePen size={14} />
                         </button>
                     )}
-                    {canInteract && (
+                    {canInteract && !isStub && (
                         <Popover open={menuOpen} onOpenChange={setMenuOpen}>
                             <PopoverTrigger asChild>
                                 <button
@@ -516,18 +541,23 @@ function Comment({
                             </PopoverContent>
                         </Popover>
                     )}
+                    {isStub && (
+                        <span className="inline-flex animate-pulse items-center rounded p-1 font-medium text-text-muted text-xs">
+                            Saving...
+                        </span>
+                    )}
                 </>
             }
             footer={
                 <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
                     <ReactionPicker
-                        disabled={!canInteract}
+                        disabled={!canInteract || isStub}
                         reactions={reactions}
                         currentUserLogin={currentUserLogin}
                         onReact={onReact}
                     />
                     <ReactionBar
-                        disabled={!canInteract}
+                        disabled={!canInteract || isStub}
                         reactions={reactions}
                         currentUserLogin={currentUserLogin}
                         onReact={onReact}

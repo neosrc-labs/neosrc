@@ -10,6 +10,18 @@ interface CreateReviewCommentStubParams {
     startSide?: "LEFT" | "RIGHT" | null;
     inReplyTo?: number;
     pendingReviewId?: number | null;
+    authorAssociation?: string;
+}
+
+export function findAuthorAssociation(
+    comments: { user?: { login?: string } | null }[],
+    login: string,
+): string | undefined {
+    const match = comments.find((c) => c.user?.login === login);
+    if (match && "author_association" in match) {
+        return match.author_association as string;
+    }
+    return undefined;
 }
 
 export function createReviewCommentStub(
@@ -25,6 +37,7 @@ export function createReviewCommentStub(
         startSide,
         inReplyTo,
         pendingReviewId,
+        authorAssociation,
     } = params;
 
     const now = new Date().toISOString();
@@ -66,7 +79,7 @@ export function createReviewCommentStub(
         updated_at: now,
         html_url: "",
         pull_request_url: "",
-        author_association: "NONE",
+        author_association: authorAssociation ?? "NONE",
         _links: {
             self: { href: "" },
             html: { href: "" },

@@ -24,7 +24,10 @@ import { type ActiveComment, DiffView, groupThreads } from "./DiffView";
 import ImageDiff from "./ImageDiff";
 import { InlineCommentThread } from "./InlineCommentThread";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
-import { createReviewCommentStub } from "./review-comment-utils";
+import {
+    createReviewCommentStub,
+    findAuthorAssociation,
+} from "./review-comment-utils";
 import SvgDiff from "./SvgDiff";
 
 interface FileDiffProps {
@@ -270,6 +273,23 @@ export default function FileDiff({
 
             const userLogin = currentUserData?.login;
             if (userLogin) {
+                const listData = utils.reviewComments.list.getData({
+                    owner,
+                    repo,
+                    number: Number(number),
+                });
+                const pendingData = utils.reviews.getPending.getData({
+                    owner,
+                    repo,
+                    number: Number(number),
+                });
+                const authorAssociation =
+                    findAuthorAssociation(listData ?? [], userLogin) ??
+                    findAuthorAssociation(
+                        pendingData?.comments ?? [],
+                        userLogin,
+                    );
+
                 const stub = createReviewCommentStub({
                     body,
                     filePath: file.filename,
@@ -282,6 +302,7 @@ export default function FileDiff({
                     startLineNumber: args.startLineNumber,
                     startSide: args.startSide,
                     pendingReviewId: isReview ? (pendingReviewId ?? 0) : null,
+                    authorAssociation,
                 });
 
                 const stubId = stub.id;
