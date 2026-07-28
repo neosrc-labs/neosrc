@@ -4,7 +4,13 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockTrpc = vi.hoisted(() => ({
+    capturedOnMutate: { current: null as ((data: unknown) => unknown) | null },
     capturedOnSuccess: { current: null as ((data: unknown) => void) | null },
+    capturedOnError: {
+        current: null as
+            | ((_err: unknown, _vars: unknown, _ctx: unknown) => void)
+            | null,
+    },
     createMutate: vi.fn(),
     startMutate: vi.fn(),
 }));
@@ -12,17 +18,47 @@ const mockTrpc = vi.hoisted(() => ({
 vi.mock("~/trpc/react", () => ({
     api: {
         useUtils: vi.fn(() => ({
-            reviewComments: { list: { invalidate: vi.fn() } },
+            reviewComments: {
+                list: {
+                    invalidate: vi.fn(),
+                    cancel: vi.fn(),
+                    getData: vi.fn(() => []),
+                    setData: vi.fn(),
+                },
+            },
             reviews: { getPending: { invalidate: vi.fn() } },
         })),
+        users: {
+            currentUser: {
+                useQuery: vi.fn(() => ({
+                    data: {
+                        login: "testuser",
+                        avatarUrl: "https://example.com/avatar.png",
+                    },
+                })),
+            },
+        },
         reviewComments: {
             create: {
                 useMutation: vi.fn(
-                    (opts: { onSuccess?: (data: unknown) => void }) => {
+                    (opts: {
+                        onMutate?: (data: unknown) => unknown;
+                        onSuccess?: (data: unknown) => void;
+                        onError?: (
+                            _err: unknown,
+                            _vars: unknown,
+                            _ctx: unknown,
+                        ) => void;
+                    }) => {
+                        mockTrpc.capturedOnMutate.current =
+                            opts?.onMutate ?? null;
                         mockTrpc.capturedOnSuccess.current =
                             opts?.onSuccess ?? null;
+                        mockTrpc.capturedOnError.current =
+                            opts?.onError ?? null;
                         mockTrpc.createMutate.mockImplementation(
-                            (_args: unknown) => {
+                            (args: unknown) => {
+                                void mockTrpc.capturedOnMutate.current?.(args);
                                 mockTrpc.capturedOnSuccess.current?.({
                                     id: 99999,
                                 });

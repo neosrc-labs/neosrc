@@ -28,6 +28,7 @@ import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
 import { MarkdownRenderer } from "./markdown/MarkdownRenderer";
+import { createReviewCommentStub } from "./review-comment-utils";
 
 interface InlineCommentThreadProps {
     parentComment: ReviewComment;
@@ -73,10 +74,58 @@ export function InlineCommentThread({
         );
 
     const replyMutation = api.reviewComments.reply.useMutation({
-        onSuccess: () => {
+        onMutate: async ({ body, inReplyTo }) => {
             setReplyBody("");
             setShowReplyForm(false);
-            utils.reviewComments.list.invalidate();
+
+            await utils.reviewComments.list.cancel({
+                owner,
+                repo,
+                number,
+            });
+            const prevData = utils.reviewComments.list.getData({
+                owner,
+                repo,
+                number,
+            });
+
+            const userLogin = currentUserData?.login;
+            if (userLogin) {
+                const stub = createReviewCommentStub({
+                    body,
+                    filePath: parentComment.path,
+                    currentUser: {
+                        login: userLogin,
+                        avatarUrl: currentUserData.avatarUrl,
+                    },
+                    inReplyTo,
+                });
+
+                utils.reviewComments.list.setData(
+                    { owner, repo, number },
+                    (old) => {
+                        if (!old) return old;
+                        return [...old, stub];
+                    },
+                );
+            }
+
+            return { prevData };
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prevData) {
+                utils.reviewComments.list.setData(
+                    { owner, repo, number },
+                    ctx.prevData,
+                );
+            }
+        },
+        onSettled: () => {
+            utils.reviewComments.list.invalidate({
+                owner,
+                repo,
+                number,
+            });
         },
     });
 

@@ -24,6 +24,7 @@ import { type ActiveComment, DiffView, groupThreads } from "./DiffView";
 import ImageDiff from "./ImageDiff";
 import { InlineCommentThread } from "./InlineCommentThread";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
+import { createReviewCommentStub } from "./review-comment-utils";
 import SvgDiff from "./SvgDiff";
 
 interface FileDiffProps {
@@ -165,15 +166,69 @@ export default function FileDiff({
     const effectiveShowComments =
         showComments || recentlyAddedIds.current.size > 0;
 
+    const { data: currentUserData } = api.users.currentUser.useQuery();
+
     const createMutation = api.reviewComments.create.useMutation({
+        onMutate: async (input) => {
+            if (input.asReview) {
+                await utils.reviews.getPending.cancel({
+                    owner,
+                    repo,
+                    number: Number(number),
+                });
+                const prevData = utils.reviews.getPending.getData({
+                    owner,
+                    repo,
+                    number: Number(number),
+                });
+                return { prevData, isReview: true as const };
+            }
+
+            await utils.reviewComments.list.cancel({
+                owner,
+                repo,
+                number: Number(number),
+            });
+            const prevData = utils.reviewComments.list.getData({
+                owner,
+                repo,
+                number: Number(number),
+            });
+            return { prevData, isReview: false as const };
+        },
+        onError: (_err, _vars, ctx) => {
+            if (!ctx?.prevData) return;
+            if (ctx.isReview) {
+                utils.reviews.getPending.setData(
+                    { owner, repo, number: Number(number) },
+                    ctx.prevData,
+                );
+            } else {
+                utils.reviewComments.list.setData(
+                    { owner, repo, number: Number(number) },
+                    ctx.prevData,
+                );
+            }
+        },
         onSuccess: (data) => {
-            setCommentBody("");
-            setActiveComment(null);
             if (!showComments && data?.id) {
                 recentlyAddedIds.current.add(data.id);
             }
-            utils.reviewComments.list.invalidate();
-            utils.reviews.getPending.invalidate();
+        },
+        onSettled: (_data, _err, input) => {
+            if (input.asReview) {
+                utils.reviews.getPending.invalidate({
+                    owner,
+                    repo,
+                    number: Number(number),
+                });
+            } else {
+                utils.reviewComments.list.invalidate({
+                    owner,
+                    repo,
+                    number: Number(number),
+                });
+            }
         },
     });
 
@@ -186,12 +241,15 @@ export default function FileDiff({
     const handleAddComment = useCallback(
         (isReview: boolean) => {
             if (!commentBody.trim() || !activeComment) return;
+            const body = commentBody;
+            const savedActiveComment = activeComment;
+
             const args: Parameters<typeof createMutation.mutate>[0] = {
                 owner,
                 repo,
                 number: Number(number),
                 filePath: file.filename,
-                body: commentBody,
+                body,
                 asReview: isReview,
                 ...(activeComment.type === "line"
                     ? {
@@ -203,14 +261,89 @@ export default function FileDiff({
                     : {}),
             };
 
+            setCommentBody("");
+            setActiveComment(null);
+
+            let prevPending:
+                | Awaited<ReturnType<typeof utils.reviews.getPending.getData>>
+                | undefined;
+
+            const userLogin = currentUserData?.login;
+            if (userLogin) {
+                const stub = createReviewCommentStub({
+                    body,
+                    filePath: file.filename,
+                    currentUser: {
+                        login: userLogin,
+                        avatarUrl: currentUserData.avatarUrl,
+                    },
+                    lineNumber: args.lineNumber,
+                    side: args.side,
+                    startLineNumber: args.startLineNumber,
+                    startSide: args.startSide,
+                    pendingReviewId: isReview ? (pendingReviewId ?? 0) : null,
+                });
+
+                const stubId = stub.id;
+
+                if (isReview) {
+                    prevPending = utils.reviews.getPending.getData({
+                        owner,
+                        repo,
+                        number: Number(number),
+                    });
+                    utils.reviews.getPending.setData(
+                        { owner, repo, number: Number(number) },
+                        (old) => {
+                            const comments = [
+                                ...(old?.comments ?? []),
+                                stub,
+                            ] as typeof old extends { comments: infer C }
+                                ? C
+                                : never;
+                            return {
+                                reviewId: old?.reviewId ?? 0,
+                                comments,
+                            };
+                        },
+                    );
+                } else {
+                    utils.reviewComments.list.setData(
+                        { owner, repo, number: Number(number) },
+                        (old) => {
+                            if (!old) return old;
+                            return [...old, stub];
+                        },
+                    );
+                }
+
+                if (!showComments) {
+                    recentlyAddedIds.current.add(stubId);
+                }
+            }
+
             const doCreateComment = () => {
                 createMutation.mutate(args);
+            };
+
+            const rollbackComment = () => {
+                setCommentBody(body);
+                setActiveComment(savedActiveComment);
+                if (prevPending != null) {
+                    utils.reviews.getPending.setData(
+                        { owner, repo, number: Number(number) },
+                        prevPending,
+                    );
+                }
             };
 
             if (isReview && !pendingReviewId) {
                 startReviewMutation.mutate(
                     { owner, repo, number: Number(number) },
-                    { onSuccess: doCreateComment },
+                    {
+                        onSuccess: doCreateComment,
+                        onError: rollbackComment,
+                    },
                 );
             } else {
                 doCreateComment();
@@ -226,6 +359,9 @@ export default function FileDiff({
             repo,
             number,
             file.filename,
+            currentUserData,
+            showComments,
+            utils,
         ],
     );
 
