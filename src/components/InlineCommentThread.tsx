@@ -126,7 +126,37 @@ export function InlineCommentThread({
     );
 
     const deleteMutation = api.reviewComments.delete.useMutation({
-        onSuccess: () => {
+        onMutate: async ({ commentId }) => {
+            await utils.reviewComments.list.cancel({ owner, repo, number });
+            const prevData = utils.reviewComments.list.getData({
+                owner,
+                repo,
+                number,
+            });
+
+            utils.reviewComments.list.setData(
+                { owner, repo, number },
+                (old) => {
+                    if (!old) return old;
+                    return old.filter(
+                        (c) =>
+                            c.id !== commentId &&
+                            c.in_reply_to_id !== commentId,
+                    );
+                },
+            );
+
+            return { prevData };
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prevData) {
+                utils.reviewComments.list.setData(
+                    { owner, repo, number },
+                    ctx.prevData,
+                );
+            }
+        },
+        onSettled: () => {
             utils.reviewComments.list.invalidate({ owner, repo, number });
         },
     });
