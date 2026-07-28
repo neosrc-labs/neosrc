@@ -118,6 +118,8 @@ export function InlineCommentThread({
                         login: userLogin,
                         avatarUrl: currentUserData.avatarUrl,
                     },
+                    lineNumber: parentComment.line,
+                    side: parentComment.side,
                     inReplyTo,
                     authorAssociation,
                 });

@@ -614,6 +614,8 @@ function CommentBlock({
                         login: userLogin,
                         avatarUrl: currentUserData.avatarUrl,
                     },
+                    lineNumber: comment.line,
+                    side: comment.side,
                     inReplyTo,
                     authorAssociation,
                 });
