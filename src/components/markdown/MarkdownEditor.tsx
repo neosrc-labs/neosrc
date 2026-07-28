@@ -766,7 +766,7 @@ export function MarkdownEditor({
                 {mode === "write" ? (
                     <textarea
                         autoFocus={autoFocus}
-                        className="disabled: w-full resize-y border-0 bg-surface px-3 py-2 text-sm text-text-primary placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:placeholder-zinc-500"
+                        className="w-full resize-y border-0 bg-surface px-3 py-2 text-sm text-text-primary placeholder-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50 dark:placeholder-zinc-500 dark:disabled:bg-zinc-800"
                         disabled={disabled}
                         onBlur={(e) => {
                             savedSelectionRef.current = {
