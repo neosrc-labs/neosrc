@@ -12,6 +12,10 @@ import { ReactionBar } from "~/components/ReactionBar";
 import { ReactionPicker } from "~/components/ReactionPicker";
 import { ResolveButton } from "~/components/ResolvedThreadBanner";
 import {
+    createReviewCommentStub,
+    findAuthorAssociation,
+} from "~/components/review-comment-utils";
+import {
     Popover,
     PopoverContent,
     PopoverTrigger,
@@ -566,12 +570,79 @@ function CommentBlock({
         null,
     );
     const utils = api.useUtils();
+    const { data: currentUserData } = api.users.currentUser.useQuery();
 
     const replyMutation = api.reviewComments.reply.useMutation({
-        onSuccess: () => {
+        onMutate: async ({ body, inReplyTo }) => {
             setReplyBody("");
             setShowReplyForm(false);
-            utils.reviewComments.invalidate();
+
+            await utils.reviewComments.list.cancel({
+                owner,
+                repo,
+                number,
+            });
+            const prevData = utils.reviewComments.list.getData({
+                owner,
+                repo,
+                number,
+            });
+
+            const userLogin = currentUserData?.login;
+            if (userLogin) {
+                const listData = utils.reviewComments.list.getData({
+                    owner,
+                    repo,
+                    number,
+                });
+                const pendingData = utils.reviews.getPending.getData({
+                    owner,
+                    repo,
+                    number,
+                });
+                const authorAssociation =
+                    findAuthorAssociation(listData ?? [], userLogin) ??
+                    findAuthorAssociation(
+                        pendingData?.comments ?? [],
+                        userLogin,
+                    );
+
+                const stub = createReviewCommentStub({
+                    body,
+                    filePath: comment.path,
+                    currentUser: {
+                        login: userLogin,
+                        avatarUrl: currentUserData.avatarUrl,
+                    },
+                    inReplyTo,
+                    authorAssociation,
+                });
+
+                utils.reviewComments.list.setData(
+                    { owner, repo, number },
+                    (old) => {
+                        if (!old) return old;
+                        return [...old, stub];
+                    },
+                );
+            }
+
+            return { prevData };
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prevData) {
+                utils.reviewComments.list.setData(
+                    { owner, repo, number },
+                    ctx.prevData,
+                );
+            }
+        },
+        onSettled: () => {
+            utils.reviewComments.list.invalidate({
+                owner,
+                repo,
+                number,
+            });
         },
     });
 
