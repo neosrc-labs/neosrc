@@ -177,7 +177,14 @@ export function InlineCommentThread({
     const deleteMutation = api.reviewComments.delete.useMutation({
         onMutate: async ({ commentId }) => {
             await utils.reviewComments.list.cancel({ owner, repo, number });
-            const prevData = utils.reviewComments.list.getData({
+            const prevListData = utils.reviewComments.list.getData({
+                owner,
+                repo,
+                number,
+            });
+
+            await utils.reviews.getPending.cancel({ owner, repo, number });
+            const prevPendingData = utils.reviews.getPending.getData({
                 owner,
                 repo,
                 number,
@@ -195,18 +202,37 @@ export function InlineCommentThread({
                 },
             );
 
-            return { prevData };
+            utils.reviews.getPending.setData({ owner, repo, number }, (old) => {
+                if (!old) return old;
+                return {
+                    ...old,
+                    comments: old.comments.filter(
+                        (c) =>
+                            c.id !== commentId &&
+                            c.in_reply_to_id !== commentId,
+                    ),
+                };
+            });
+
+            return { prevListData, prevPendingData };
         },
         onError: (_err, _vars, ctx) => {
-            if (ctx?.prevData) {
+            if (ctx?.prevListData) {
                 utils.reviewComments.list.setData(
                     { owner, repo, number },
-                    ctx.prevData,
+                    ctx.prevListData,
+                );
+            }
+            if (ctx?.prevPendingData) {
+                utils.reviews.getPending.setData(
+                    { owner, repo, number },
+                    ctx.prevPendingData,
                 );
             }
         },
         onSettled: () => {
             utils.reviewComments.list.invalidate({ owner, repo, number });
+            utils.reviews.getPending.invalidate({ owner, repo, number });
         },
     });
 
