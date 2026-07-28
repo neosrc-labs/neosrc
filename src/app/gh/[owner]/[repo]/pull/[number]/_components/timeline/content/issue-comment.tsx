@@ -75,6 +75,7 @@ export function IssueCommentContent({
 
     const isEditing = editingCommentId === event.databaseId;
     const isAuthor = event.author?.login === currentUserLogin;
+    const isPending = event.databaseId < 0;
     const displayBody = savedBodies[event.databaseId] ?? event.body;
     const isMinimized =
         event.isMinimized && !expandedMinimized[event.databaseId];
@@ -151,7 +152,7 @@ export function IssueCommentContent({
                             Hide comment
                         </button>
                     )}
-                    {!isEditing && (
+                    {!isEditing && !isPending && (
                         <Popover open={menuOpen} onOpenChange={setMenuOpen}>
                             <PopoverTrigger asChild>
                                 <button
@@ -213,13 +214,18 @@ export function IssueCommentContent({
                             </PopoverContent>
                         </Popover>
                     )}
+                    {isPending && (
+                        <span className="inline-flex animate-pulse items-center rounded p-1 font-medium text-text-muted text-xs">
+                            Saving...
+                        </span>
+                    )}
                 </>
             }
             footer={
                 !isEditing && (
                     <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
                         <ReactionPicker
-                            disabled={!canInteract}
+                            disabled={!canInteract || isPending}
                             reactions={commentReactionsArr}
                             currentUserLogin={currentUserLogin}
                             onReact={(content) =>
@@ -227,7 +233,7 @@ export function IssueCommentContent({
                             }
                         />
                         <ReactionBar
-                            disabled={!canInteract}
+                            disabled={!canInteract || isPending}
                             reactions={commentReactionsArr}
                             currentUserLogin={currentUserLogin}
                             onReact={(content) =>
