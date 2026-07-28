@@ -343,6 +343,60 @@ function EventContent({
         },
     });
 
+    const deleteCommentMutation = api.pulls.deleteComment.useMutation({
+        onMutate: async ({ commentId }) => {
+            await utils.timeline.list.cancel({
+                owner,
+                repo,
+                number,
+                limit: TIMELINE_PAGE_SIZE,
+            });
+
+            const prevData = utils.timeline.list.getInfiniteData({
+                owner,
+                repo,
+                number,
+                limit: TIMELINE_PAGE_SIZE,
+            });
+
+            utils.timeline.list.setInfiniteData(
+                { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
+                (old) => {
+                    if (!old) return old;
+                    return {
+                        ...old,
+                        pages: old.pages.map((page) => ({
+                            ...page,
+                            events: page.events.filter(
+                                (event) =>
+                                    event.__typename !== "IssueComment" ||
+                                    event.databaseId !== commentId,
+                            ),
+                        })),
+                    };
+                },
+            );
+
+            return { prevData };
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prevData) {
+                utils.timeline.list.setInfiniteData(
+                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
+                    ctx.prevData,
+                );
+            }
+        },
+        onSettled: () => {
+            utils.timeline.list.invalidate({
+                owner,
+                repo,
+                number,
+                limit: TIMELINE_PAGE_SIZE,
+            });
+        },
+    });
+
     const commentReactionMutation =
         api.reactions.toggleIssueComment.useMutation({
             onMutate: async ({ commentId, content }) => {
@@ -474,6 +528,10 @@ function EventContent({
         updateReviewMutation.mutate({ owner, repo, number, reviewId, body });
     };
 
+    const handleDeleteComment = (commentId: number) => {
+        deleteCommentMutation.mutate({ owner, repo, commentId });
+    };
+
     const handleCommentReaction = (
         commentId: number,
         content: ReactionContent,
@@ -516,6 +574,7 @@ function EventContent({
                     }}
                     onCancelEdit={() => setEditingCommentId(null)}
                     onSaveEdit={handleSaveComment}
+                    onDelete={handleDeleteComment}
                     onReactToComment={handleCommentReaction}
                     onToggleMinimized={handleToggleMinimized}
                 />

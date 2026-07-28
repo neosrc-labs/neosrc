@@ -399,6 +399,20 @@ export const updateIssueComment = async (
     return response.data;
 };
 
+export const deleteIssueComment = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    commentId: number,
+) => {
+    const octokit = createOctokit(accessToken);
+    await octokit.issues.deleteComment({
+        owner,
+        repo,
+        comment_id: commentId,
+    });
+};
+
 export const updateReviewComment = async (
     accessToken: string,
     owner: string,

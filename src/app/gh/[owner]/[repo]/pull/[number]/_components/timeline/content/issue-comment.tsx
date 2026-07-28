@@ -6,6 +6,7 @@ import {
     Link,
     MoreVertical,
     SquarePen,
+    Trash2,
 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
@@ -36,6 +37,7 @@ interface IssueCommentContentProps {
     onStartEdit: (commentId: number, body: string) => void;
     onCancelEdit: () => void;
     onSaveEdit: (commentId: number, body: string) => void;
+    onDelete: (commentId: number) => void;
     onReactToComment: (commentId: number, content: ReactionContent) => void;
     onToggleMinimized: (commentId: number, expanded: boolean) => void;
 }
@@ -55,6 +57,7 @@ export function IssueCommentContent({
     onStartEdit,
     onCancelEdit,
     onSaveEdit,
+    onDelete,
     onReactToComment,
     onToggleMinimized,
 }: IssueCommentContentProps) {
@@ -192,6 +195,19 @@ export function IssueCommentContent({
                                     >
                                         <SquarePen size={14} />
                                         Edit
+                                    </button>
+                                )}
+                                {canInteract && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            onDelete(event.databaseId);
+                                            setMenuOpen(false);
+                                        }}
+                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
+                                    >
+                                        <Trash2 size={14} />
+                                        Delete comment
                                     </button>
                                 )}
                             </PopoverContent>

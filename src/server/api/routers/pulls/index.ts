@@ -15,6 +15,7 @@ import {
     addReviewersToPullRequest,
     createIssueComment,
     createPullRequestReview,
+    deleteIssueComment,
     getCachedPullRequest,
     getMergeRequirements,
     getPullRequestReviews,
@@ -156,6 +157,30 @@ export const pullsRouter = createTRPCRouter({
             );
 
             return { success: true as const, body: comment.body };
+        }),
+
+    deleteComment: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                commentId: z.number(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            await deleteIssueComment(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.commentId,
+            );
+
+            return { success: true as const };
         }),
 
     updateReview: protectedProcedure
