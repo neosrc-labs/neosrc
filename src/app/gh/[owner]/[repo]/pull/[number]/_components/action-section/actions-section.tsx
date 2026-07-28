@@ -351,7 +351,7 @@ function Buttons({
                     requiredApprovalCount={requiredApprovalCount}
                 />
             )}
-            {canInteract && !isAuthor && !dismissReviewMutation.isPending && (
+            {canInteract && !dismissReviewMutation.isPending && (
                 <SubmitReviewButton
                     owner={owner}
                     repo={repo}
@@ -361,6 +361,7 @@ function Buttons({
                     isDiscarding={dismissReviewMutation.isPending}
                     navigateAndScroll={navigateAndScroll}
                     onDiscardReview={handleCancelReview}
+                    isAuthor={isAuthor}
                 />
             )}
             {!effectiveMerged && pullRequest.state === "open" && !isDraft && (
@@ -532,6 +533,7 @@ function SubmitReviewButton({
     isDiscarding,
     navigateAndScroll,
     onDiscardReview,
+    isAuthor,
 }: {
     owner: string;
     repo: string;
@@ -541,6 +543,7 @@ function SubmitReviewButton({
     isDiscarding: boolean;
     navigateAndScroll: () => void;
     onDiscardReview: () => void;
+    isAuthor: boolean;
 }) {
     const utils = api.useUtils();
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -651,12 +654,14 @@ function SubmitReviewButton({
                             label: "Approve",
                             onClick: () => handleSubmitAction("APPROVE"),
                             variant: "approve",
+                            disabled: isAuthor,
                         },
                         {
                             label: "Request Changes",
                             onClick: () =>
                                 handleSubmitAction("REQUEST_CHANGES"),
                             variant: "danger",
+                            disabled: isAuthor,
                         },
                     ]}
                 />
