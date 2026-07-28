@@ -1,7 +1,7 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { ChevronDown, MoreVertical, SquarePen } from "lucide-react";
+import { ChevronDown, MoreVertical, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import { DiffView } from "~/components/DiffView";
@@ -22,6 +22,7 @@ import {
     useReviewThreadOperations,
 } from "~/hooks/use-review-thread-operations";
 import type { ReactionContent } from "~/lib/reactions";
+import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 
@@ -32,6 +33,7 @@ interface ReviewCommentsProps {
     repo: string;
     number: number;
     reviewId: number;
+    hasReviewBody: boolean;
     state?: string;
     allComments: ReviewComment[];
     currentUserLogin: string;
@@ -43,6 +45,7 @@ export function ReviewComments({
     repo,
     number,
     reviewId,
+    hasReviewBody,
     state,
     allComments,
     currentUserLogin,
@@ -56,6 +59,7 @@ export function ReviewComments({
     const [expandedResolvedIds, setExpandedResolvedIds] = useState<Set<number>>(
         new Set(),
     );
+    const utils = api.useUtils();
 
     const { data: threads } = api.reviewComments.threads.useQuery(
         { owner, repo, number },
@@ -135,6 +139,123 @@ export function ReviewComments({
         },
     });
 
+    const deleteMutation = api.reviewComments.delete.useMutation({
+        onMutate: async ({ commentId }) => {
+            await utils.reviewComments.list.cancel({ owner, repo, number });
+            const prevListData = utils.reviewComments.list.getData({
+                owner,
+                repo,
+                number,
+            });
+
+            await utils.reviews.getPending.cancel({ owner, repo, number });
+            const prevPendingData = utils.reviews.getPending.getData({
+                owner,
+                repo,
+                number,
+            });
+
+            const removesLastReviewComment =
+                !hasReviewBody &&
+                !allComments.some(
+                    (comment) =>
+                        comment.pull_request_review_id === reviewId &&
+                        comment.id !== commentId &&
+                        comment.in_reply_to_id !== commentId,
+                );
+
+            await utils.timeline.list.cancel({
+                owner,
+                repo,
+                number,
+                limit: TIMELINE_PAGE_SIZE,
+            });
+            const prevTimelineData = utils.timeline.list.getInfiniteData({
+                owner,
+                repo,
+                number,
+                limit: TIMELINE_PAGE_SIZE,
+            });
+
+            utils.reviewComments.list.setData(
+                { owner, repo, number },
+                (old) => {
+                    if (!old) return old;
+                    return old.filter(
+                        (comment) =>
+                            comment.id !== commentId &&
+                            comment.in_reply_to_id !== commentId,
+                    );
+                },
+            );
+
+            utils.reviews.getPending.setData({ owner, repo, number }, (old) => {
+                if (!old) return old;
+                return {
+                    ...old,
+                    comments: old.comments.filter(
+                        (comment) =>
+                            comment.id !== commentId &&
+                            comment.in_reply_to_id !== commentId,
+                    ),
+                };
+            });
+
+            if (removesLastReviewComment) {
+                utils.timeline.list.setInfiniteData(
+                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
+                    (old) => {
+                        if (!old) return old;
+                        return {
+                            ...old,
+                            pages: old.pages.map((page) => ({
+                                ...page,
+                                events: page.events.filter(
+                                    (event) =>
+                                        event.__typename !==
+                                            "PullRequestReview" ||
+                                        event.databaseId !== reviewId,
+                                ),
+                            })),
+                        };
+                    },
+                );
+            }
+
+            return { prevListData, prevPendingData, prevTimelineData };
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prevListData) {
+                utils.reviewComments.list.setData(
+                    { owner, repo, number },
+                    ctx.prevListData,
+                );
+            }
+            if (ctx?.prevPendingData) {
+                utils.reviews.getPending.setData(
+                    { owner, repo, number },
+                    ctx.prevPendingData,
+                );
+            }
+            if (ctx?.prevTimelineData) {
+                utils.timeline.list.setInfiniteData(
+                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
+                    ctx.prevTimelineData,
+                );
+            }
+        },
+        onSettled: () => {
+            utils.reviewComments.list.invalidate({ owner, repo, number });
+            utils.reviews.getPending.invalidate({ owner, repo, number });
+            utils.timeline.list.invalidate({
+                owner,
+                repo,
+                number,
+                limit: TIMELINE_PAGE_SIZE,
+            });
+        },
+    });
+
     const reactMutation = useTogglePullRequestReviewCommentReaction(
         owner,
         repo,
@@ -149,6 +270,10 @@ export function ReviewComments({
     const handleSaveEdit = (commentId: number) => {
         if (!editBody.trim()) return;
         updateMutation.mutate({ owner, repo, commentId, body: editBody });
+    };
+
+    const handleDelete = (commentId: number) => {
+        deleteMutation.mutate({ owner, repo, commentId });
     };
 
     const replyMap = useMemo(() => {
@@ -298,6 +423,7 @@ export function ReviewComments({
                                             setEditBody("");
                                         }}
                                         onSaveEdit={handleSaveEdit}
+                                        onDelete={handleDelete}
                                         onReact={handleReact}
                                         onResolve={handleResolve}
                                     />
@@ -406,6 +532,7 @@ function CommentBlock({
     onEditBodyChange,
     onCancelEdit,
     onSaveEdit,
+    onDelete,
     onReact,
     onResolve,
 }: {
@@ -429,6 +556,7 @@ function CommentBlock({
     onEditBodyChange: (body: string) => void;
     onCancelEdit: () => void;
     onSaveEdit: (commentId: number) => void;
+    onDelete: (commentId: number) => void;
     onReact: (commentId: number, content: ReactionContent) => void;
     onResolve: (commentId: number, threadId: string, resolve: boolean) => void;
 }) {
@@ -490,7 +618,6 @@ function CommentBlock({
                 onCancelEdit={onCancelEdit}
                 onSaveEdit={() => onSaveEdit(comment.id)}
                 headerActions={
-                    comment.user?.login === currentUserLogin &&
                     canInteract && (
                         <Popover
                             open={menuOpenCommentId === comment.id}
@@ -511,20 +638,33 @@ function CommentBlock({
                                 className="w-44 bg-surface p-1"
                                 align="end"
                             >
+                                {comment.user?.login === currentUserLogin && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            onStartEdit(
+                                                comment.id,
+                                                savedBodies[comment.id] ??
+                                                    comment.body,
+                                            );
+                                            setMenuOpenCommentId(null);
+                                        }}
+                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                    >
+                                        <SquarePen size={14} />
+                                        Edit
+                                    </button>
+                                )}
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        onStartEdit(
-                                            comment.id,
-                                            savedBodies[comment.id] ??
-                                                comment.body,
-                                        );
+                                        onDelete(comment.id);
                                         setMenuOpenCommentId(null);
                                     }}
-                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
                                 >
-                                    <SquarePen size={14} />
-                                    Edit
+                                    <Trash2 size={14} />
+                                    Delete comment
                                 </button>
                             </PopoverContent>
                         </Popover>
@@ -578,7 +718,6 @@ function CommentBlock({
                             onCancelEdit={onCancelEdit}
                             onSaveEdit={() => onSaveEdit(reply.id)}
                             headerActions={
-                                reply.user?.login === currentUserLogin &&
                                 canInteract && (
                                     <Popover
                                         open={menuOpenCommentId === reply.id}
@@ -601,20 +740,37 @@ function CommentBlock({
                                             className="w-44 bg-surface p-1"
                                             align="end"
                                         >
+                                            {reply.user?.login ===
+                                                currentUserLogin && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        onStartEdit(
+                                                            reply.id,
+                                                            savedBodies[
+                                                                reply.id
+                                                            ] ?? reply.body,
+                                                        );
+                                                        setMenuOpenCommentId(
+                                                            null,
+                                                        );
+                                                    }}
+                                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                                >
+                                                    <SquarePen size={14} />
+                                                    Edit
+                                                </button>
+                                            )}
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    onStartEdit(
-                                                        reply.id,
-                                                        savedBodies[reply.id] ??
-                                                            reply.body,
-                                                    );
+                                                    onDelete(reply.id);
                                                     setMenuOpenCommentId(null);
                                                 }}
-                                                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
                                             >
-                                                <SquarePen size={14} />
-                                                Edit
+                                                <Trash2 size={14} />
+                                                Delete comment
                                             </button>
                                         </PopoverContent>
                                     </Popover>

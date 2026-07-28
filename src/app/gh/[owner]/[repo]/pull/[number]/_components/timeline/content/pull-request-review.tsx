@@ -223,6 +223,7 @@ export function PullRequestReviewContent({
                 repo={repo}
                 number={number}
                 reviewId={event.databaseId}
+                hasReviewBody={Boolean(event.body)}
                 state={state}
                 allComments={allComments}
                 currentUserLogin={currentUserLogin}
