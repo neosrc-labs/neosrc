@@ -43,6 +43,8 @@
     --color-text-tertiary: #6b7280;
     --color-text-muted: #9ca3af;
     --color-text-label: #374151;
+    --color-destructive: #ef4444;
+    --color-destructive-foreground: #ffffff;
 }
 
 .check-pending-dot {
@@ -68,6 +70,8 @@
     --color-text-tertiary: #a1a1aa;
     --color-text-muted: #71717a;
     --color-text-label: #d4d4d8;
+    --color-destructive: #ef4444;
+    --color-destructive-foreground: #ffffff;
 }
 
 html {
