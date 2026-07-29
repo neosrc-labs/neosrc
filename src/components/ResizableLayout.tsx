@@ -158,7 +158,13 @@ export function ResizableLayout({
         <MainContentRefContext.Provider value={mainRef}>
             <div
                 className="grid"
-                style={{ gridTemplateColumns: getGridTemplateColumns() }}
+                style={{
+                    gridTemplateColumns: getGridTemplateColumns(),
+                    // Extend grid to viewport edge so fixed sidebars at right:0
+                    // stay aligned with grid columns regardless of body padding
+                    // (e.g. Radix dialog scroll-lock) or scrollbar-gutter width.
+                    marginRight: "calc(-1 * (100vw - 100%))",
+                }}
             >
                 {/* Left sidebar spacer for grid layout */}
                 <div className="relative">
