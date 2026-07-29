@@ -15,6 +15,15 @@ import {
     createReviewCommentStub,
     findAuthorAssociation,
 } from "~/components/review-comment-utils";
+import { Button } from "~/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "~/components/ui/dialog";
 import {
     Popover,
     PopoverContent,
@@ -569,6 +578,7 @@ function CommentBlock({
     const [menuOpenCommentId, setMenuOpenCommentId] = useState<number | null>(
         null,
     );
+    const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
     const utils = api.useUtils();
     const { data: currentUserData } = api.users.currentUser.useQuery();
 
@@ -659,287 +669,342 @@ function CommentBlock({
     const parentReactions = reactionMap[comment.id] ?? [];
 
     return (
-        <div
-            id={`review-thread-${comment.id}`}
-            className="bg-surface-secondary dark:bg-zinc-950"
-        >
-            {comment.diff_hunk && (
-                <div>
-                    <DiffView
-                        patch={truncateDiffToRange(
-                            comment.diff_hunk,
-                            comment.start_line ??
-                                (comment.line != null
-                                    ? Math.max(1, comment.line - 5)
-                                    : null),
-                            comment.line,
-                        )}
-                        filename={comment.path}
-                    />
-                </div>
-            )}
-            <CommentCard
-                user={comment.user}
-                createdAt={comment.created_at}
-                authorAssociation={comment.author_association}
-                isPending={state === "pending"}
-                owner={owner}
-                repo={repo}
-                isEditing={editingCommentId === comment.id}
-                editBody={editingCommentId === comment.id ? editBody : ""}
-                onEditBodyChange={onEditBodyChange}
-                onCancelEdit={onCancelEdit}
-                onSaveEdit={() => onSaveEdit(comment.id)}
-                headerActions={
-                    canInteract && (
-                        <Popover
-                            open={menuOpenCommentId === comment.id}
-                            onOpenChange={(open) =>
-                                setMenuOpenCommentId(open ? comment.id : null)
-                            }
-                        >
-                            <PopoverTrigger asChild>
-                                <button
-                                    type="button"
-                                    aria-label="More options"
-                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
-                                >
-                                    <MoreVertical size={14} />
-                                </button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                                className="w-44 bg-surface p-1"
-                                align="end"
+        <>
+            <div
+                id={`review-thread-${comment.id}`}
+                className="bg-surface-secondary dark:bg-zinc-950"
+            >
+                {comment.diff_hunk && (
+                    <div>
+                        <DiffView
+                            patch={truncateDiffToRange(
+                                comment.diff_hunk,
+                                comment.start_line ??
+                                    (comment.line != null
+                                        ? Math.max(1, comment.line - 5)
+                                        : null),
+                                comment.line,
+                            )}
+                            filename={comment.path}
+                        />
+                    </div>
+                )}
+                <CommentCard
+                    user={comment.user}
+                    createdAt={comment.created_at}
+                    authorAssociation={comment.author_association}
+                    isPending={state === "pending"}
+                    owner={owner}
+                    repo={repo}
+                    isEditing={editingCommentId === comment.id}
+                    editBody={editingCommentId === comment.id ? editBody : ""}
+                    onEditBodyChange={onEditBodyChange}
+                    onCancelEdit={onCancelEdit}
+                    onSaveEdit={() => onSaveEdit(comment.id)}
+                    headerActions={
+                        canInteract && (
+                            <Popover
+                                open={menuOpenCommentId === comment.id}
+                                onOpenChange={(open) =>
+                                    setMenuOpenCommentId(
+                                        open ? comment.id : null,
+                                    )
+                                }
                             >
-                                {comment.user?.login === currentUserLogin && (
+                                <PopoverTrigger asChild>
+                                    <button
+                                        type="button"
+                                        aria-label="More options"
+                                        className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                    >
+                                        <MoreVertical size={14} />
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    className="w-44 bg-surface p-1"
+                                    align="end"
+                                >
+                                    {comment.user?.login ===
+                                        currentUserLogin && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                onStartEdit(
+                                                    comment.id,
+                                                    savedBodies[comment.id] ??
+                                                        comment.body,
+                                                );
+                                                setMenuOpenCommentId(null);
+                                            }}
+                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                        >
+                                            <SquarePen size={14} />
+                                            Edit
+                                        </button>
+                                    )}
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            onStartEdit(
-                                                comment.id,
-                                                savedBodies[comment.id] ??
-                                                    comment.body,
-                                            );
                                             setMenuOpenCommentId(null);
+                                            setDeleteConfirmId(comment.id);
                                         }}
-                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
                                     >
-                                        <SquarePen size={14} />
-                                        Edit
+                                        <Trash2 size={14} />
+                                        Delete comment
                                     </button>
-                                )}
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        onDelete(comment.id);
-                                        setMenuOpenCommentId(null);
-                                    }}
-                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
-                                >
-                                    <Trash2 size={14} />
-                                    Delete comment
-                                </button>
-                            </PopoverContent>
-                        </Popover>
-                    )
-                }
-                footer={
-                    <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                        <ReactionPicker
-                            disabled={!canInteract}
-                            reactions={parentReactions}
-                            currentUserLogin={currentUserLogin}
-                            onReact={(content) => onReact(comment.id, content)}
-                        />
-                        <ReactionBar
-                            disabled={!canInteract}
-                            reactions={parentReactions}
-                            currentUserLogin={currentUserLogin}
-                            onReact={(content) => onReact(comment.id, content)}
-                        />
-                    </div>
-                }
-            >
-                <MarkdownRenderer
-                    content={savedBodies[comment.id] ?? comment.body}
-                    owner={owner}
-                    repo={repo}
-                    pullNumber={number}
-                    commentPath={comment.path}
-                    commentLine={comment.line}
-                    commentStartLine={comment.start_line}
-                    commentThreadId={threadId}
-                />
-            </CommentCard>
-            {replies.map((reply) => {
-                if (!reply.user) return null;
-                const replyReactions = reactionMap[reply.id] ?? [];
-                return (
-                    <div key={reply.id} className="mt-2 pl-3">
-                        <CommentCard
-                            user={reply.user}
-                            createdAt={reply.created_at}
-                            authorAssociation={reply.author_association}
-                            owner={owner}
-                            repo={repo}
-                            variant="nested"
-                            isEditing={editingCommentId === reply.id}
-                            editBody={
-                                editingCommentId === reply.id ? editBody : ""
-                            }
-                            onEditBodyChange={onEditBodyChange}
-                            onCancelEdit={onCancelEdit}
-                            onSaveEdit={() => onSaveEdit(reply.id)}
-                            headerActions={
-                                canInteract && (
-                                    <Popover
-                                        open={menuOpenCommentId === reply.id}
-                                        onOpenChange={(open) =>
-                                            setMenuOpenCommentId(
-                                                open ? reply.id : null,
-                                            )
-                                        }
-                                    >
-                                        <PopoverTrigger asChild>
-                                            <button
-                                                type="button"
-                                                aria-label="More options"
-                                                className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
-                                            >
-                                                <MoreVertical size={14} />
-                                            </button>
-                                        </PopoverTrigger>
-                                        <PopoverContent
-                                            className="w-44 bg-surface p-1"
-                                            align="end"
+                                </PopoverContent>
+                            </Popover>
+                        )
+                    }
+                    footer={
+                        <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                            <ReactionPicker
+                                disabled={!canInteract}
+                                reactions={parentReactions}
+                                currentUserLogin={currentUserLogin}
+                                onReact={(content) =>
+                                    onReact(comment.id, content)
+                                }
+                            />
+                            <ReactionBar
+                                disabled={!canInteract}
+                                reactions={parentReactions}
+                                currentUserLogin={currentUserLogin}
+                                onReact={(content) =>
+                                    onReact(comment.id, content)
+                                }
+                            />
+                        </div>
+                    }
+                >
+                    <MarkdownRenderer
+                        content={savedBodies[comment.id] ?? comment.body}
+                        owner={owner}
+                        repo={repo}
+                        pullNumber={number}
+                        commentPath={comment.path}
+                        commentLine={comment.line}
+                        commentStartLine={comment.start_line}
+                        commentThreadId={threadId}
+                    />
+                </CommentCard>
+                {replies.map((reply) => {
+                    if (!reply.user) return null;
+                    const replyReactions = reactionMap[reply.id] ?? [];
+                    return (
+                        <div key={reply.id} className="mt-2 pl-3">
+                            <CommentCard
+                                user={reply.user}
+                                createdAt={reply.created_at}
+                                authorAssociation={reply.author_association}
+                                owner={owner}
+                                repo={repo}
+                                variant="nested"
+                                isEditing={editingCommentId === reply.id}
+                                editBody={
+                                    editingCommentId === reply.id
+                                        ? editBody
+                                        : ""
+                                }
+                                onEditBodyChange={onEditBodyChange}
+                                onCancelEdit={onCancelEdit}
+                                onSaveEdit={() => onSaveEdit(reply.id)}
+                                headerActions={
+                                    canInteract && (
+                                        <Popover
+                                            open={
+                                                menuOpenCommentId === reply.id
+                                            }
+                                            onOpenChange={(open) =>
+                                                setMenuOpenCommentId(
+                                                    open ? reply.id : null,
+                                                )
+                                            }
                                         >
-                                            {reply.user?.login ===
-                                                currentUserLogin && (
+                                            <PopoverTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    aria-label="More options"
+                                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                                >
+                                                    <MoreVertical size={14} />
+                                                </button>
+                                            </PopoverTrigger>
+                                            <PopoverContent
+                                                className="w-44 bg-surface p-1"
+                                                align="end"
+                                            >
+                                                {reply.user?.login ===
+                                                    currentUserLogin && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            onStartEdit(
+                                                                reply.id,
+                                                                savedBodies[
+                                                                    reply.id
+                                                                ] ?? reply.body,
+                                                            );
+                                                            setMenuOpenCommentId(
+                                                                null,
+                                                            );
+                                                        }}
+                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                                    >
+                                                        <SquarePen size={14} />
+                                                        Edit
+                                                    </button>
+                                                )}
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        onStartEdit(
-                                                            reply.id,
-                                                            savedBodies[
-                                                                reply.id
-                                                            ] ?? reply.body,
-                                                        );
                                                         setMenuOpenCommentId(
                                                             null,
                                                         );
+                                                        setDeleteConfirmId(
+                                                            reply.id,
+                                                        );
                                                     }}
-                                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
                                                 >
-                                                    <SquarePen size={14} />
-                                                    Edit
+                                                    <Trash2 size={14} />
+                                                    Delete comment
                                                 </button>
-                                            )}
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    onDelete(reply.id);
-                                                    setMenuOpenCommentId(null);
-                                                }}
-                                                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
-                                            >
-                                                <Trash2 size={14} />
-                                                Delete comment
-                                            </button>
-                                        </PopoverContent>
-                                    </Popover>
-                                )
-                            }
-                            footer={
-                                <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                                    <ReactionPicker
-                                        disabled={!canInteract}
-                                        reactions={replyReactions}
-                                        currentUserLogin={currentUserLogin}
-                                        onReact={(content) =>
-                                            onReact(reply.id, content)
-                                        }
-                                    />
-                                    <ReactionBar
-                                        disabled={!canInteract}
-                                        reactions={replyReactions}
-                                        currentUserLogin={currentUserLogin}
-                                        onReact={(content) =>
-                                            onReact(reply.id, content)
-                                        }
-                                    />
-                                </div>
-                            }
-                        >
-                            <MarkdownRenderer
-                                content={savedBodies[reply.id] ?? reply.body}
+                                            </PopoverContent>
+                                        </Popover>
+                                    )
+                                }
+                                footer={
+                                    <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                                        <ReactionPicker
+                                            disabled={!canInteract}
+                                            reactions={replyReactions}
+                                            currentUserLogin={currentUserLogin}
+                                            onReact={(content) =>
+                                                onReact(reply.id, content)
+                                            }
+                                        />
+                                        <ReactionBar
+                                            disabled={!canInteract}
+                                            reactions={replyReactions}
+                                            currentUserLogin={currentUserLogin}
+                                            onReact={(content) =>
+                                                onReact(reply.id, content)
+                                            }
+                                        />
+                                    </div>
+                                }
+                            >
+                                <MarkdownRenderer
+                                    content={
+                                        savedBodies[reply.id] ?? reply.body
+                                    }
+                                    owner={owner}
+                                    repo={repo}
+                                    pullNumber={number}
+                                    commentPath={comment.path}
+                                    commentLine={comment.line}
+                                    commentStartLine={comment.start_line}
+                                    commentThreadId={threadId}
+                                />
+                            </CommentCard>
+                        </div>
+                    );
+                })}
+                {canInteract ? (
+                    showReplyForm ? (
+                        <div className="p-2">
+                            <MarkdownEditor
+                                autoFocus
+                                disabled={replyMutation.isPending}
+                                onChange={setReplyBody}
+                                onCancel={() => {
+                                    setShowReplyForm(false);
+                                    setReplyBody("");
+                                }}
+                                placeholder="Write a reply..."
+                                value={replyBody}
                                 owner={owner}
                                 repo={repo}
-                                pullNumber={number}
-                                commentPath={comment.path}
-                                commentLine={comment.line}
-                                commentStartLine={comment.start_line}
-                                commentThreadId={threadId}
-                            />
-                        </CommentCard>
-                    </div>
-                );
-            })}
-            {canInteract ? (
-                showReplyForm ? (
-                    <div className="p-2">
-                        <MarkdownEditor
-                            autoFocus
-                            disabled={replyMutation.isPending}
-                            onChange={setReplyBody}
-                            onCancel={() => {
-                                setShowReplyForm(false);
-                                setReplyBody("");
-                            }}
-                            placeholder="Write a reply..."
-                            value={replyBody}
-                            owner={owner}
-                            repo={repo}
-                            footerActions={[
-                                {
-                                    label: "Reply",
-                                    onClick: () => {
-                                        if (!replyBody.trim()) return;
-                                        replyMutation.mutate({
-                                            owner,
-                                            repo,
-                                            number,
-                                            body: replyBody,
-                                            inReplyTo: comment.id,
-                                        });
+                                footerActions={[
+                                    {
+                                        label: "Reply",
+                                        onClick: () => {
+                                            if (!replyBody.trim()) return;
+                                            replyMutation.mutate({
+                                                owner,
+                                                repo,
+                                                number,
+                                                body: replyBody,
+                                                inReplyTo: comment.id,
+                                            });
+                                        },
+                                        variant: "approve",
+                                        disabled: (text: string) =>
+                                            !text.trim(),
                                     },
-                                    variant: "approve",
-                                    disabled: (text: string) => !text.trim(),
-                                },
-                            ]}
-                        />
-                        {replyMutation.isError && (
-                            <p className="mt-1 text-red-600 text-xs">
-                                Failed to post reply. Please try again.
-                            </p>
-                        )}
-                    </div>
-                ) : (
-                    <div className="flex w-full items-center gap-2 px-6 py-2">
-                        <div className="min-w-0 flex-1">
-                            <ReplyTextboxButton
-                                onClick={() => setShowReplyForm(true)}
+                                ]}
+                            />
+                            {replyMutation.isError && (
+                                <p className="mt-1 text-red-600 text-xs">
+                                    Failed to post reply. Please try again.
+                                </p>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex w-full items-center gap-2 px-6 py-2">
+                            <div className="min-w-0 flex-1">
+                                <ReplyTextboxButton
+                                    onClick={() => setShowReplyForm(true)}
+                                />
+                            </div>
+                            <ResolveButton
+                                onClick={() =>
+                                    onResolve(comment.id, threadId, !isResolved)
+                                }
+                                isPending={isResolvePending(threadId)}
+                                isUnresolve={isResolved}
                             />
                         </div>
-                        <ResolveButton
-                            onClick={() =>
-                                onResolve(comment.id, threadId, !isResolved)
-                            }
-                            isPending={isResolvePending(threadId)}
-                            isUnresolve={isResolved}
-                        />
-                    </div>
-                )
-            ) : null}
-        </div>
+                    )
+                ) : null}
+            </div>
+            <Dialog
+                open={deleteConfirmId !== null}
+                onOpenChange={(open) => {
+                    if (!open) setDeleteConfirmId(null);
+                }}
+            >
+                <DialogContent showCloseButton={false}>
+                    <DialogHeader>
+                        <DialogTitle>Delete comment</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete this comment? This
+                            action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteConfirmId(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => {
+                                if (deleteConfirmId !== null) {
+                                    onDelete(deleteConfirmId);
+                                    setDeleteConfirmId(null);
+                                }
+                            }}
+                        >
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }
