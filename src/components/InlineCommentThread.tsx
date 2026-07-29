@@ -13,6 +13,15 @@ type Reaction = components["schemas"]["reaction"];
 
 import { ReactionBar } from "~/components/ReactionBar";
 import { ReactionPicker } from "~/components/ReactionPicker";
+import { Button } from "~/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "~/components/ui/dialog";
 import {
     Popover,
     PopoverContent,
@@ -486,98 +495,132 @@ function Comment({
     variant: "parent" | "reply";
 }) {
     const [menuOpen, setMenuOpen] = useState(false);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
     return (
-        <CommentCard
-            user={comment.user}
-            createdAt={comment.created_at}
-            authorAssociation={comment.author_association}
-            isPending={isPending}
-            isOutdated={isOutdated}
-            isEditing={isEditing}
-            editBody={editBody}
-            onEditBodyChange={onEditBodyChange}
-            onCancelEdit={onCancelEdit}
-            onSaveEdit={onSaveEdit}
-            owner={owner}
-            repo={repo}
-            variant={variant === "parent" ? "default" : "nested"}
-            headerActions={
-                <>
-                    {isAuthor && canInteract && !isStub && (
-                        <button
-                            type="button"
-                            aria-label="Edit comment"
-                            className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
-                            onClick={onStartEdit}
-                        >
-                            <SquarePen size={14} />
-                        </button>
-                    )}
-                    {canInteract && !isStub && (
-                        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-                            <PopoverTrigger asChild>
-                                <button
-                                    type="button"
-                                    aria-label="More options"
-                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
-                                >
-                                    <MoreVertical size={14} />
-                                </button>
-                            </PopoverTrigger>
-                            <PopoverContent
-                                className="w-44 bg-surface p-1"
-                                align="end"
-                            >
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        onDelete();
-                                        setMenuOpen(false);
-                                    }}
-                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
-                                >
-                                    <Trash2 size={14} />
-                                    Delete comment
-                                </button>
-                            </PopoverContent>
-                        </Popover>
-                    )}
-                    {isStub && (
-                        <span className="inline-flex animate-pulse items-center rounded p-1 font-medium text-text-muted text-xs">
-                            Saving...
-                        </span>
-                    )}
-                </>
-            }
-            footer={
-                <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                    <ReactionPicker
-                        disabled={!canInteract || isStub}
-                        reactions={reactions}
-                        currentUserLogin={currentUserLogin}
-                        onReact={onReact}
-                    />
-                    <ReactionBar
-                        disabled={!canInteract || isStub}
-                        reactions={reactions}
-                        currentUserLogin={currentUserLogin}
-                        onReact={onReact}
-                    />
-                </div>
-            }
-        >
-            <MarkdownRenderer
-                content={displayBody}
+        <>
+            <CommentCard
+                user={comment.user}
+                createdAt={comment.created_at}
+                authorAssociation={comment.author_association}
+                isPending={isPending}
+                isOutdated={isOutdated}
+                isEditing={isEditing}
+                editBody={editBody}
+                onEditBodyChange={onEditBodyChange}
+                onCancelEdit={onCancelEdit}
+                onSaveEdit={onSaveEdit}
                 owner={owner}
                 repo={repo}
-                pullNumber={number}
-                commentPath={comment.path}
-                commentLine={comment.line}
-                commentStartLine={comment.start_line}
-                commentThreadId={threadId}
-            />
-        </CommentCard>
+                variant={variant === "parent" ? "default" : "nested"}
+                headerActions={
+                    <>
+                        {isAuthor && canInteract && !isStub && (
+                            <button
+                                type="button"
+                                aria-label="Edit comment"
+                                className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                onClick={onStartEdit}
+                            >
+                                <SquarePen size={14} />
+                            </button>
+                        )}
+                        {canInteract && !isStub && (
+                            <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+                                <PopoverTrigger asChild>
+                                    <button
+                                        type="button"
+                                        aria-label="More options"
+                                        className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                    >
+                                        <MoreVertical size={14} />
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    className="w-44 bg-surface p-1"
+                                    align="end"
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMenuOpen(false);
+                                            setDeleteConfirmOpen(true);
+                                        }}
+                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
+                                    >
+                                        <Trash2 size={14} />
+                                        Delete comment
+                                    </button>
+                                </PopoverContent>
+                            </Popover>
+                        )}
+                        {isStub && (
+                            <span className="inline-flex animate-pulse items-center rounded p-1 font-medium text-text-muted text-xs">
+                                Saving...
+                            </span>
+                        )}
+                    </>
+                }
+                footer={
+                    <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
+                        <ReactionPicker
+                            disabled={!canInteract || isStub}
+                            reactions={reactions}
+                            currentUserLogin={currentUserLogin}
+                            onReact={onReact}
+                        />
+                        <ReactionBar
+                            disabled={!canInteract || isStub}
+                            reactions={reactions}
+                            currentUserLogin={currentUserLogin}
+                            onReact={onReact}
+                        />
+                    </div>
+                }
+            >
+                <MarkdownRenderer
+                    content={displayBody}
+                    owner={owner}
+                    repo={repo}
+                    pullNumber={number}
+                    commentPath={comment.path}
+                    commentLine={comment.line}
+                    commentStartLine={comment.start_line}
+                    commentThreadId={threadId}
+                />
+            </CommentCard>
+            <Dialog
+                open={deleteConfirmOpen}
+                onOpenChange={setDeleteConfirmOpen}
+            >
+                <DialogContent showCloseButton={false}>
+                    <DialogHeader>
+                        <DialogTitle>Delete comment</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete this comment? This
+                            action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteConfirmOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => {
+                                onDelete();
+                                setDeleteConfirmOpen(false);
+                            }}
+                        >
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }
 
