@@ -5,10 +5,15 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const owner = searchParams.get("owner");
     const repo = searchParams.get("repo");
-    const number = searchParams.get("number");
+    const numberParam = searchParams.get("number");
     const commitSha = searchParams.get("commitSha") ?? undefined;
 
-    if (!owner || !repo || !number) {
+    if (!owner || !repo || !numberParam) {
+        return new Response(null, { status: 400 });
+    }
+
+    const number = parseInt(numberParam, 10);
+    if (!Number.isFinite(number) || number < 1) {
         return new Response(null, { status: 400 });
     }
 
@@ -27,7 +32,7 @@ export async function GET(request: Request) {
                 accessToken,
                 owner,
                 repo,
-                parseInt(number, 10),
+                number,
                 commitSha,
                 userId ?? undefined,
             )) {
