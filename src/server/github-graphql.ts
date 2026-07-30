@@ -1162,9 +1162,7 @@ export async function searchPullRequestsWithStatus(
         }),
     ];
 
-    const start = Date.now();
     const [result, countResult] = await Promise.all(promises);
-    console.log(`${Date.now() - start}ms (query)`);
 
     const items = result.search.nodes.filter(
         (n): n is { __typename: "PullRequest" } & GqlPrSearchItem =>
