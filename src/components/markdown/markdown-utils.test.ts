@@ -5,6 +5,11 @@ import {
     applyListFormat,
     findEnclosingCodeBlock,
     findLineStart,
+    generateAlert,
+    generateCodeBlock,
+    generateDetails,
+    generateTable,
+    generateTaskList,
     getLinePrefix,
     getListPrefixLength,
     getNextOrderedNumber,
@@ -441,5 +446,88 @@ describe("applyCodeBlockFormat", () => {
             const result = applyCodeBlockFormat("hello", 3, 3);
             expect(result.newText).toBe("hel```\n\n```lo");
         });
+    });
+});
+
+describe("generateTable", () => {
+    it("generates a 1x1 table", () => {
+        const result = generateTable(1, 1);
+        expect(result.text).toBe("| Column 1 |\n| --- |\n|  |");
+        expect(result.cursorPos).toBeGreaterThan(0);
+    });
+
+    it("generates a 3x4 table", () => {
+        const result = generateTable(3, 4);
+        const lines = result.text.split("\n");
+        expect(lines).toHaveLength(6); // header + separator + 4 rows
+        expect(lines[0]).toBe("| Column 1 | Column 2 | Column 3 |");
+        expect(lines[1]).toBe("| --- | --- | --- |");
+        for (let i = 2; i < lines.length; i++) {
+            expect(lines[i]).toMatch(/^\| {2}\| Cell \| Cell \|$/);
+        }
+    });
+
+    it("generates with column count only", () => {
+        const result = generateTable(2, 0);
+        const lines = result.text.split("\n");
+        expect(lines).toHaveLength(2); // header + separator, no rows
+        expect(lines[0]).toBe("| Column 1 | Column 2 |");
+    });
+});
+
+describe("generateCodeBlock", () => {
+    it("generates with language", () => {
+        const result = generateCodeBlock("typescript");
+        expect(result.text).toBe("```typescript\n\n```");
+        expect(result.cursorPos).toBe(15);
+    });
+
+    it("generates without language", () => {
+        const result = generateCodeBlock();
+        expect(result.text).toBe("```\n\n```");
+        expect(result.cursorPos).toBe(5);
+    });
+});
+
+describe("generateAlert", () => {
+    const types = ["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"];
+    for (const type of types) {
+        it(`generates ${type} alert`, () => {
+            const result = generateAlert(type);
+            expect(result.text).toBe(`> [!${type}]\n> `);
+            expect(result.cursorPos).toBe(result.text.length);
+        });
+    }
+});
+
+describe("generateTaskList", () => {
+    it("generates default 3 items", () => {
+        const result = generateTaskList();
+        expect(result.text).toBe("- [ ] \n- [ ] \n- [ ] ");
+        expect(result.cursorPos).toBe(6);
+    });
+
+    it("generates custom number of items", () => {
+        const result = generateTaskList(5);
+        const items = result.text.split("\n");
+        expect(items).toHaveLength(5);
+        for (const item of items) {
+            expect(item).toBe("- [ ] ");
+        }
+    });
+
+    it("generates 1 item", () => {
+        const result = generateTaskList(1);
+        expect(result.text).toBe("- [ ] ");
+    });
+});
+
+describe("generateDetails", () => {
+    it("generates details block", () => {
+        const result = generateDetails();
+        expect(result.text).toBe(
+            "<details>\n<summary>Click to expand</summary>\n\n\n</details>",
+        );
+        expect(result.cursorPos).toBe(result.text.length - 10);
     });
 });

@@ -17,7 +17,10 @@ export function computeCheckStatusRollup(
     if (!checks.length) return null;
 
     const hasFailure = checks.some(
-        (c) => c.conclusion === "failure" || c.conclusion === "timed_out",
+        (c) =>
+            c.conclusion === "failure" ||
+            c.conclusion === "timed_out" ||
+            c.conclusion === "error",
     );
     if (hasFailure) return "FAILURE";
 

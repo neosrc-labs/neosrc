@@ -94,6 +94,28 @@ describe("computeCheckStatusRollup", () => {
         ];
         expect(computeCheckStatusRollup(checks)).toBe("NEUTRAL");
     });
+
+    it("returns FAILURE when a check has error conclusion", () => {
+        const result = computeCheckStatusRollup([
+            makeCheck("completed", "error"),
+        ]);
+        expect(result).toBe("FAILURE");
+    });
+
+    it("returns FAILURE when error is mixed with success", () => {
+        const result = computeCheckStatusRollup([
+            makeCheck("completed", "success"),
+            makeCheck("completed", "error"),
+        ]);
+        expect(result).toBe("FAILURE");
+    });
+
+    it("returns NEUTRAL for action_required conclusion", () => {
+        const result = computeCheckStatusRollup([
+            makeCheck("completed", "action_required"),
+        ]);
+        expect(result).toBe("NEUTRAL");
+    });
 });
 
 describe("computeChecksPollingInterval", () => {

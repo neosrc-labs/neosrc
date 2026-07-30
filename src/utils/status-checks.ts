@@ -50,7 +50,7 @@ export function mapGitHubCheckRunToCheckRun(check: GhCheckRun): CheckRun {
         name: check.name,
         conclusion: check.conclusion,
         status: check.status,
-        description: check.output.title ?? check.output.summary,
+        description: check.output?.title ?? check.output?.summary ?? null,
         html_url: check.html_url ?? undefined,
         details_url: check.details_url,
         started_at: check.started_at,

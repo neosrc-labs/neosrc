@@ -406,4 +406,52 @@ describe("mapGitHubCheckRunToCheckRun", () => {
         const result: CheckRun = mapGitHubCheckRunToCheckRun(makeGhCheckRun());
         expect("creator" in result).toBe(false);
     });
+
+    it("handles null output gracefully - description becomes null", () => {
+        const check = makeGhCheckRun({
+            output: null,
+        } as unknown as Partial<GhCheckRun>);
+        const result = mapGitHubCheckRunToCheckRun(check);
+        expect(result.description).toBeNull();
+    });
+
+    it("handles undefined output gracefully - description becomes null", () => {
+        const check = makeGhCheckRun({
+            output: undefined,
+        } as unknown as Partial<GhCheckRun>);
+        const result = mapGitHubCheckRunToCheckRun(check);
+        expect(result.description).toBeNull();
+    });
+
+    it("falls back from null title to summary", () => {
+        const check = makeGhCheckRun({
+            output: {
+                title: null,
+                summary: "fallback summary",
+                text: null,
+                annotations_count: 0,
+                annotations_url: "https://github.com/runs/1/annotations",
+            },
+        } as unknown as Partial<GhCheckRun>);
+        const result = mapGitHubCheckRunToCheckRun(check);
+        expect(result.description).toBe("fallback summary");
+    });
+
+    it("deduplicates commit statuses with identical timestamps (last wins)", () => {
+        const statuses = [
+            makeStatus({
+                context: "ci/test",
+                state: "failure",
+                updated_at: "2025-01-15T12:00:00Z",
+            }),
+            makeStatus({
+                context: "ci/test",
+                state: "success",
+                updated_at: "2025-01-15T12:00:00Z",
+            }),
+        ];
+        const result = deduplicateCommitStatuses(statuses);
+        expect(result).toHaveLength(1);
+        expect(result[0]?.state).toBe("success");
+    });
 });
