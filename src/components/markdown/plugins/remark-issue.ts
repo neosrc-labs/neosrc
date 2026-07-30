@@ -50,14 +50,23 @@ export function remarkIssuePlugin(owner?: string, repo?: string) {
                                 url: `https://github.com/${matchedOwner}/${matchedRepo}/issues/${matchedNum}`,
                                 children: [{ type: "text", value: str }],
                             });
-                        } else if (match[2] && owner && repo) {
-                            const hashRef = match[2];
+                        } else if (match[2]) {
+                            if (owner && repo) {
+                                const hashRef = match[2];
 
-                            parts.push({
-                                type: "link",
-                                url: `https://github.com/${owner}/${repo}/issues/${hashRef.slice(1)}`,
-                                children: [{ type: "text", value: hashRef }],
-                            });
+                                parts.push({
+                                    type: "link",
+                                    url: `https://github.com/${owner}/${repo}/issues/${hashRef.slice(1)}`,
+                                    children: [
+                                        { type: "text", value: hashRef },
+                                    ],
+                                });
+                            } else {
+                                parts.push({
+                                    type: "text",
+                                    value: match[2],
+                                });
+                            }
                         }
 
                         cursor = match.index + match[0].length;

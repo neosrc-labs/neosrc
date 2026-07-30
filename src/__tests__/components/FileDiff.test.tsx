@@ -92,12 +92,14 @@ vi.mock("~/components/DiffView", () => ({
         showCommentButton?: boolean;
         activeComment?: unknown;
         comments?: Array<{ id: number; body?: string }>;
+        pendingReviewId?: number | null;
     }) => (
         <div
             data-testid="diff-view"
             data-show-comments={String(props.showComments)}
             data-expand-all={String(props.expandAllContext)}
             data-show-comment-button={String(props.showCommentButton)}
+            data-pending-review-id={String(props.pendingReviewId)}
         >
             {(props.comments ?? []).map((c) => (
                 <div
@@ -387,6 +389,32 @@ describe("FileDiff", () => {
             });
 
             expect(screen.getByTestId("image-diff")).toBeInTheDocument();
+        });
+
+        it("passes pendingReviewId to DiffView", () => {
+            renderFileDiff({
+                pendingReviewId: 42,
+            });
+
+            const diffView = screen.getByTestId("diff-view");
+            expect(diffView.getAttribute("data-pending-review-id")).toBe("42");
+        });
+    });
+
+    describe("viewed toggle", () => {
+        it("clicking viewed checkbox calls setStoredSet", async () => {
+            const user = userEvent.setup();
+            const { setStoredSet } = await import("~/utils/viewed-files");
+
+            renderFileDiff();
+
+            const checkbox = screen.getByLabelText("Viewed");
+            await user.click(checkbox);
+
+            expect(setStoredSet).toHaveBeenCalledWith(
+                "viewed-key",
+                expect.any(Set),
+            );
         });
     });
 });

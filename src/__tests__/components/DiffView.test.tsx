@@ -725,4 +725,80 @@ describe("DiffView rendering", () => {
             expect(unfoldIcons.length).toBe(0);
         });
     });
+
+    describe("gap edge cases", () => {
+        beforeEach(() => {
+            mockUseFileContent.lines = [
+                "line1",
+                "line2",
+                "line3",
+                "line4",
+                "line5",
+            ];
+            mockUseFileContent.isLoading = false;
+            mockUseFileContent.error = null;
+        });
+
+        it("does not render gap row when blocks are adjacent (no missing lines)", () => {
+            // Block 1 ends at line 2, block 2 starts at line 3 — no gap
+            const block1 = mb(1, [mc(" line1", 1, 1), mc(" line2", 2, 2)]);
+            const block2 = mb(3, [mc(" line3", 3, 3)]);
+            mockParse.mockReturnValue([
+                {
+                    addedLines: 0,
+                    deletedLines: 0,
+                    isCombined: false,
+                    isGitDiff: true,
+                    language: "",
+                    oldName: "a/test.ts",
+                    newName: "b/test.ts",
+                    blocks: [block1, block2],
+                },
+            ]);
+
+            const { container } = renderDiffView({
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            // Only trailing gap may render an unfold icon (no between-block gap)
+            const unfoldIcons = container.querySelectorAll(
+                '[data-testid="unfold-icon"]',
+            );
+            // Adjacent blocks = no between-block gap = at most 1 trailing icon
+            expect(unfoldIcons.length).toBeLessThanOrEqual(1);
+        });
+
+        it("renders loading state when gap is expanded and file content is loading", () => {
+            mockUseFileContent.isLoading = true;
+            const lines = [mc(" line1", 1, 1), mc("+line2", 2)];
+            mockParse.mockReturnValue([
+                {
+                    addedLines: 1,
+                    deletedLines: 0,
+                    isCombined: false,
+                    isGitDiff: true,
+                    language: "",
+                    oldName: "a/test.ts",
+                    newName: "b/test.ts",
+                    blocks: [mb(1, lines)],
+                },
+            ]);
+
+            // Trailing gap with expandAllContext to force expand
+            renderDiffView({
+                expandAllContext: true,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            // Should find loading indicators in the table
+            const infoCells = document.querySelectorAll(".d2h-info");
+            expect(infoCells.length).toBeGreaterThan(0);
+        });
+    });
 });

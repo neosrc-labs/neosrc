@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatRelativeTime } from "./index";
+import { formatDateTime, formatRelativeTime } from "./index";
 
 describe("formatRelativeTime", () => {
     describe("now", () => {
@@ -210,5 +210,36 @@ describe("formatRelativeTime", () => {
                 "4 weeks ago",
             );
         });
+    });
+});
+
+describe("formatDateTime", () => {
+    it("formats a valid ISO date", () => {
+        const result = formatDateTime("2025-01-15T12:00:00Z");
+        expect(result).not.toBe("Invalid Date");
+        expect(result).toMatch(/Jan 15, 2025/);
+    });
+
+    it("formats with hour and minute", () => {
+        const result = formatDateTime("2025-06-01T09:30:00Z");
+        expect(result).not.toBe("Invalid Date");
+        expect(result).toMatch(/Jun 1, 2025/);
+    });
+
+    it("returns Invalid Date for invalid input", () => {
+        const result = formatDateTime("not-a-date");
+        expect(result).toBe("Invalid Date");
+    });
+
+    it("handles edge dates like epoch", () => {
+        const result = formatDateTime("1970-01-01T00:00:00Z");
+        expect(result).not.toBe("Invalid Date");
+        expect(result).toMatch(/Jan 1, 1970/);
+    });
+
+    it("handles dates near year 3000", () => {
+        const result = formatDateTime("2999-12-31T12:00:00Z");
+        expect(result).not.toBe("Invalid Date");
+        expect(result).toMatch(/Dec 31, 2999/);
     });
 });
