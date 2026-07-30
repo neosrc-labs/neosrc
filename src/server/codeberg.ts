@@ -1123,7 +1123,7 @@ export async function unstarRepo(
         },
     );
     if (!res.ok) {
-        console.error("failed to star repo", await res.text());
+        console.error("failed to unstar repo", await res.text());
         throw new Error(
             `Failed to unstar repo: ${res.status} ${res.statusText}`,
         );
