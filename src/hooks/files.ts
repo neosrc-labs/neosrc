@@ -73,6 +73,7 @@ function fetchFiles(
         } catch (err) {
             if (err instanceof DOMException && err.name === "AbortError")
                 return;
+            console.error("Failed to parse file chunk:", err);
         } finally {
             if (!controller.signal.aborted) {
                 entry.isLoading = false;
