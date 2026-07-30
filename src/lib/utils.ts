@@ -15,8 +15,9 @@ export function parseTarget(target: string): {
 } {
     const colonIndex = target.indexOf(":");
     if (colonIndex === -1) return { provider: null, name: target };
+    const provider = target.slice(0, colonIndex);
     return {
-        provider: target.slice(0, colonIndex),
+        provider: provider || null,
         name: target.slice(colonIndex + 1),
     };
 }

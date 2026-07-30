@@ -82,20 +82,15 @@ describe("parseTarget", () => {
         expect(result).toEqual({ provider: "a", name: "b:c" });
     });
 
-    // FIXME:
-    //
-    // it("returns null provider when the target starts with a colon (no provider)", () => {
-    //     // BUG: current implementation returns { provider: "", name: "foo" }.
-    //     // Correct behavior per the `string | null` contract: empty provider
-    //     // is semantically the same as no provider, so it should be null.
-    //     const result = parseTarget(":foo");
-    //     expect(result).toEqual({ provider: null, name: "foo" });
-    // });
-    //
-    // it("returns null provider and empty name for a lone colon", () => {
-    //     const result = parseTarget(":");
-    //     expect(result).toEqual({ provider: null, name: "" });
-    // });
+    it("returns null provider when the target starts with a colon (no provider)", () => {
+        const result = parseTarget(":foo");
+        expect(result).toEqual({ provider: null, name: "foo" });
+    });
+
+    it("returns null provider and empty name for a lone colon", () => {
+        const result = parseTarget(":");
+        expect(result).toEqual({ provider: null, name: "" });
+    });
 });
 
 describe("applyArrayOperations", () => {
