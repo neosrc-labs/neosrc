@@ -218,6 +218,11 @@ test.describe
                     await expect(
                         page.getByTestId("timeline").getByText(commentText),
                     ).toBeVisible();
+
+                    // Wait for optimistic insert to settle ("Saving..." disappears)
+                    await expect(
+                        page.getByTestId("timeline").getByText("Saving..."),
+                    ).not.toBeAttached();
                 });
             });
 
