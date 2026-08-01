@@ -332,7 +332,7 @@ function Buttons({
     const showTitle = isHeader && isSticky;
 
     return (
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-nowrap items-center justify-end gap-2">
             {showTitle && <Title pullRequest={pullRequest} number={number} />}
             {conflictedFiles.length > 0 ? (
                 <ConflictedFiles
