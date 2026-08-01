@@ -1,6 +1,8 @@
 "use client";
 
+import { Check, Copy, FolderOpen } from "lucide-react";
 import Link from "next/link";
+import { useCallback, useState } from "react";
 import { StatusChecksHoverCard } from "~/components/ci-status";
 import { CommitSubject } from "~/components/commit-subject";
 import { UserLink } from "~/components/user-link";
@@ -23,21 +25,66 @@ export function CommitRow({
     showStatus,
 }: CommitRowProps) {
     const commitUrl = `/${provider === "gh" ? "gh" : "cb"}/${owner}/${repo}/commit/${commit.sha}`;
+    const treeUrl =
+        provider === "gh"
+            ? `https://github.com/${owner}/${repo}/tree/${commit.sha}`
+            : `https://codeberg.org/${owner}/${repo}/src/commit/${commit.sha}`;
     const relativeTime = formatRelativeTime(commit.committedDate);
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = useCallback(() => {
+        navigator.clipboard.writeText(commit.sha).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    }, [commit.sha]);
+
+    const iconBase =
+        "size-3.5 shrink-0 text-text-muted transition-colors hover:text-text-primary";
 
     return (
         <div className="flex flex-col gap-1 px-4 py-2 transition-colors hover:bg-surface-secondary">
-            {/* Subject */}
-            <div className="min-w-0">
+            {/* Top row: subject + actions */}
+            <div className="flex min-w-0 items-center gap-2">
                 <Link
                     href={commitUrl}
-                    className="font-medium text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+                    className="min-w-0 truncate font-medium text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                 >
                     <CommitSubject message={commit.message} />
                 </Link>
+
+                <span className="ml-auto flex shrink-0 items-center gap-1.5">
+                    <button
+                        type="button"
+                        onClick={handleCopy}
+                        className={iconBase}
+                        aria-label="Copy full SHA"
+                    >
+                        {copied ? (
+                            <Check className="size-3.5 text-green-500" />
+                        ) : (
+                            <Copy className="size-3.5" />
+                        )}
+                    </button>
+                    <a
+                        href={treeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={iconBase}
+                        aria-label="Browse files at this commit"
+                    >
+                        <FolderOpen className="size-3.5" />
+                    </a>
+                    <Link
+                        href={commitUrl}
+                        className="font-mono text-text-muted text-xs transition-colors hover:text-text-primary"
+                    >
+                        {commit.shortSha}
+                    </Link>
+                </span>
             </div>
 
-            {/* Meta row: author, timestamp, CI, SHA */}
+            {/* Meta row: author, timestamp, CI */}
             <div className="flex items-center gap-2 text-text-secondary text-xs">
                 {commit.author ? (
                     <UserLink
@@ -62,12 +109,6 @@ export function CommitRow({
                         className="size-3.5"
                     />
                 )}
-                <Link
-                    href={commitUrl}
-                    className="ml-auto font-mono text-text-muted transition-colors hover:text-text-primary"
-                >
-                    {commit.shortSha}
-                </Link>
             </div>
         </div>
     );
