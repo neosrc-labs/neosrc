@@ -130,6 +130,7 @@ export default async function PullRequestPage({ params }: PageProps) {
                 owner={owner}
                 repo={repo}
                 number={number}
+                conflictedFilesPromise={conflictedFilesPromise}
                 actionSection={
                     <HeaderActionBar
                         owner={owner}
