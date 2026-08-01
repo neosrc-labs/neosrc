@@ -77,14 +77,7 @@ export function MergeStatusBar({
         : (availableMergeOptions[0]?.value ?? "merge");
 
     if (pullRequest.mergeable_state === "dirty") {
-        return (
-            <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-1.5 py-2 sm:px-3 dark:border-zinc-600">
-                <GitMerge size={14} className="text-red-500" />
-                <span className="font-medium text-text-secondary text-xs">
-                    Conflicts
-                </span>
-            </div>
-        );
+        return <CannotMerge variant="danger">Conflicts</CannotMerge>;
     }
 
     if (isDraft && canWrite) {
@@ -94,10 +87,9 @@ export function MergeStatusBar({
     if (isMergeBlocked) {
         if (isMergeStatusLoading) {
             return (
-                <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-1.5 py-2 sm:px-3 dark:border-zinc-600">
-                    <GitMerge size={14} className="text-text-muted" />
-                    <div className="h-3 w-28 animate-pulse rounded bg-zinc-300 dark:bg-zinc-600" />
-                </div>
+                <CannotMerge noWrapper>
+                    <div className="h-3 w-20 animate-pulse rounded bg-zinc-300 dark:bg-zinc-600" />
+                </CannotMerge>
             );
         }
         return (
@@ -113,35 +105,20 @@ export function MergeStatusBar({
     }
 
     if (isMergeStateUnknown) {
-        return (
-            <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-1.5 py-2 sm:px-3 dark:border-zinc-600">
-                <GitMerge size={14} className="text-text-muted" />
-                <span className="font-medium text-text-muted text-xs">
-                    Checking mergeability...
-                </span>
-            </div>
-        );
+        return <CannotMerge>Checking mergeability...</CannotMerge>;
     }
 
     if (noMergeMethodsAvailable) {
         return (
-            <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-1.5 py-2 sm:px-3 dark:border-zinc-600">
-                <GitMerge size={14} className="text-text-muted" />
-                <span className="font-medium text-text-muted text-xs">
-                    Merging is not allowed for this repository
-                </span>
-            </div>
+            <CannotMerge>
+                Merging is not allowed for this repository
+            </CannotMerge>
         );
     }
 
     if (!canMerge) {
         return (
-            <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-1.5 py-2 sm:px-3 dark:border-zinc-600">
-                <GitMerge size={14} className="text-text-muted" />
-                <span className="font-medium text-text-muted text-xs">
-                    You don&apos;t have permission to merge
-                </span>
-            </div>
+            <CannotMerge>You don&apos;t have permission to merge</CannotMerge>
         );
     }
 
@@ -248,20 +225,17 @@ function BlockingReasons({
     }
 
     return (
-        <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-1.5 py-2 sm:px-3 dark:border-zinc-600">
-            <GitMerge size={14} className="text-text-muted" />
-            <span className="font-medium text-text-muted text-xs">
-                {parts.length === 0
-                    ? "Merging blocked"
-                    : parts.reduce<React.ReactNode[]>((acc, part, i) => {
-                          if (i > 0) {
-                              acc.push(" \u00b7 ");
-                          }
-                          acc.push(part);
-                          return acc;
-                      }, [])}
-            </span>
-        </div>
+        <CannotMerge>
+            {parts.length === 0
+                ? "Merging blocked"
+                : parts.reduce<React.ReactNode[]>((acc, part, i) => {
+                      if (i > 0) {
+                          acc.push(" \u00b7 ");
+                      }
+                      acc.push(part);
+                      return acc;
+                  }, [])}
+        </CannotMerge>
     );
 }
 
@@ -393,5 +367,34 @@ function MergeModeDropdown({
                 </div>
             </PopoverContent>
         </Popover>
+    );
+}
+
+function CannotMerge({
+    variant = "normal",
+    noWrapper = false,
+    children,
+}: {
+    variant?: "normal" | "danger";
+    noWrapper?: boolean;
+    children: ReactNode | string;
+}) {
+    return (
+        <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-1.5 py-2 sm:px-3 dark:border-zinc-600">
+            <GitMerge
+                size={14}
+                className={
+                    variant === "normal" ? "text-text-muted" : "text-red-500"
+                }
+            />
+
+            {noWrapper ? (
+                children
+            ) : (
+                <span className="font-medium text-text-secondary text-xs">
+                    {children}
+                </span>
+            )}
+        </div>
     );
 }
