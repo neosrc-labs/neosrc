@@ -209,7 +209,7 @@ async function computeCanInteract(
 /**
  * Strict capability check for edit-class operations on the PR body (e.g.
  * clicking a task-list checkbox). Unlike {@link computeCanInteract}, this is
- * not granted for read-only viewers on unlocked PRs — only repo maintainers
+ * not granted for read-only viewers on unlocked PRs -- only repo maintainers
  * (write/admin) or the PR author may edit. Anonymous users never have edit
  * capability. The locked state is not modeled here because GitHub itself
  * permits body edits on locked PRs by maintainers, and the permission/author

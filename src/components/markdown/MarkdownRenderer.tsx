@@ -317,7 +317,7 @@ export function MarkdownRenderer({
                             // the mdast listItem by remark-rehype). We replace
                             // the gfm-injected <input> child with our own
                             // controlled checkbox whose onChange bakes in this
-                            // line — no global index/ref positional matching, so
+                            // line -- no global index/ref positional matching, so
                             // toggles are robust to any document structure
                             // (blockquotes, ordered lists, nested lists,
                             // preceding headings, etc).
@@ -429,7 +429,7 @@ type HastNode = {
  * `position.start.line` (preserved by remark-rehype from the original mdast
  * listItem position), which react-markdown passes to the `li` component
  * override via the `node` prop. Because each `<li>` directly knows its own
- * source line, no global index/positional-ref matching is needed — every
+ * source line, no global index/positional-ref matching is needed -- every
  * checkbox toggles itself regardless of document structure (blockquotes,
  * ordered lists, nested lists, headings before the list, etc).
  */

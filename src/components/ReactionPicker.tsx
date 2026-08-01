@@ -42,7 +42,7 @@ export function ReactionPicker({
           )
         : [];
 
-    // No reactions left to add — nothing to show
+    // No reactions left to add -- nothing to show
     if (canInteract && availableReactions.length === 0) return null;
 
     return (

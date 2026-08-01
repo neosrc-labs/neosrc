@@ -55,7 +55,7 @@ describe("encrypt()", () => {
     it("handles an empty string", () => {
         const result = encrypt("");
         expect(result).toBeTypeOf("string");
-        // Empty plaintext → payload is exactly IV + tag bytes
+        // Empty plaintext -> payload is exactly IV + tag bytes
         const buf = Buffer.from(result, "base64url");
         expect(buf.length).toBe(IV_LENGTH + TAG_LENGTH);
     });
@@ -178,7 +178,7 @@ describe("decrypt()", () => {
     it("does NOT silently return the ciphertext on failure", () => {
         const encrypted = encrypt("secret");
         const tampered = tamperByte(encrypted, IV_LENGTH);
-        // The old code returned `encrypted` on failure — make sure we throw instead
+        // The old code returned `encrypted` on failure -- make sure we throw instead
         expect(() => decrypt(tampered)).toThrow();
     });
 });
