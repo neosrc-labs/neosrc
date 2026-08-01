@@ -36,6 +36,10 @@ export function CommitRow({
     showStatus,
 }: CommitRowProps) {
     const commitUrl = `/${provider === "gh" ? "gh" : "cb"}/${owner}/${repo}/commit/${commit.sha}`;
+    const externalCommitUrl =
+        provider === "gh"
+            ? `https://github.com/${owner}/${repo}/commit/${commit.sha}`
+            : `https://codeberg.org/${owner}/${repo}/commit/${commit.sha}`;
     const treeUrl =
         provider === "gh"
             ? `https://github.com/${owner}/${repo}/tree/${commit.sha}`
@@ -156,12 +160,14 @@ export function CommitRow({
                         signature={commit.signature as GQLGitSignature}
                     />
                 )}
-                <Link
-                    href={commitUrl}
+                <a
+                    href={externalCommitUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="font-mono text-text-muted text-xs transition-colors hover:text-text-primary"
                 >
                     {commit.shortSha}
-                </Link>
+                </a>
                 <button
                     type="button"
                     onClick={handleCopy}
