@@ -21,18 +21,18 @@ function SkeletonList() {
             {Array.from({ length: 15 }).map(() => (
                 <div
                     key={crypto.randomUUID()}
-                    className="flex animate-pulse items-center gap-2 px-4 py-2"
+                    className="flex animate-pulse items-center gap-2 px-4 py-2.5"
                 >
-                    <div className="flex min-w-0 flex-1 flex-col gap-1">
-                        <div className="h-4 w-3/4 rounded bg-surface-tertiary" />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                        <div className="h-5 w-3/4 rounded bg-surface-tertiary" />
                         <div className="flex items-center gap-2">
-                            <div className="h-3 w-5 rounded-full bg-surface-tertiary" />
-                            <div className="h-3 w-16 rounded bg-surface-tertiary" />
+                            <div className="h-4 w-4 rounded-full bg-surface-tertiary" />
+                            <div className="h-4 w-20 rounded bg-surface-tertiary" />
                         </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
-                        <div className="h-3 w-16 rounded bg-surface-tertiary" />
-                        <div className="h-3 w-5 rounded bg-surface-tertiary" />
+                        <div className="h-4 w-14 rounded bg-surface-tertiary" />
+                        <div className="h-4 w-4 rounded bg-surface-tertiary" />
                     </div>
                 </div>
             ))}
