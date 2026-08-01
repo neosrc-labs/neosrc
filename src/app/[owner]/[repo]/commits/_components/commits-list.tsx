@@ -17,6 +17,29 @@ interface CommitsListProps {
     config: CommitsListConfig;
 }
 
+export function CommitsList(props: CommitsListProps) {
+    return (
+        <Suspense
+            fallback={
+                <div className="space-y-0 divide-y divide-border-subtle rounded-lg border border-border-subtle">
+                    {Array.from({ length: 5 }).map(() => (
+                        <div
+                            key={crypto.randomUUID()}
+                            className="flex animate-pulse items-center gap-3 px-4 py-3"
+                        >
+                            <div className="h-4 w-2/3 rounded bg-surface-tertiary" />
+                            <div className="h-4 w-16 rounded bg-surface-tertiary" />
+                            <div className="h-4 w-14 rounded bg-surface-tertiary" />
+                        </div>
+                    ))}
+                </div>
+            }
+        >
+            <CommitsListInner {...props} />
+        </Suspense>
+    );
+}
+
 function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -274,28 +297,5 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
                 </div>
             )}
         </div>
-    );
-}
-
-export function CommitsList(props: CommitsListProps) {
-    return (
-        <Suspense
-            fallback={
-                <div className="space-y-0 divide-y divide-border-subtle rounded-lg border border-border-subtle">
-                    {Array.from({ length: 5 }).map(() => (
-                        <div
-                            key={crypto.randomUUID()}
-                            className="flex animate-pulse items-center gap-3 px-4 py-3"
-                        >
-                            <div className="h-4 w-2/3 rounded bg-surface-tertiary" />
-                            <div className="h-4 w-16 rounded bg-surface-tertiary" />
-                            <div className="h-4 w-14 rounded bg-surface-tertiary" />
-                        </div>
-                    ))}
-                </div>
-            }
-        >
-            <CommitsListInner {...props} />
-        </Suspense>
     );
 }

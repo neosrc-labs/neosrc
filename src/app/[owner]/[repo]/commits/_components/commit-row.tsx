@@ -6,7 +6,9 @@ import { useCallback, useState } from "react";
 import { StatusChecksHoverCard } from "~/components/ci-status";
 import { CommitSubject } from "~/components/commit-subject";
 import { UserLink } from "~/components/user-link";
+import { VerifiedBadge } from "~/components/verified-badge";
 import type { CommitListItem } from "~/server/api/routers/commits/types";
+import type { GQLGitSignature } from "~/server/github-graphql";
 import { formatRelativeTime } from "~/utils";
 
 interface CommitRowProps {
@@ -54,6 +56,11 @@ export function CommitRow({
                 </Link>
 
                 <span className="ml-auto flex shrink-0 items-center gap-1.5">
+                    {commit.signature?.isValid && (
+                        <VerifiedBadge
+                            signature={commit.signature as GQLGitSignature}
+                        />
+                    )}
                     <Link
                         href={commitUrl}
                         className="font-mono text-text-muted text-xs transition-colors hover:text-text-primary"
