@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, User } from "lucide-react";
+import { ChevronDown, User, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { api } from "~/trpc/react";
@@ -168,6 +168,17 @@ export function AuthorDropdown({
                                 className="size-4 shrink-0 rounded-full"
                             />
                             <span>{selectedUser.login}</span>
+                            <button
+                                type="button"
+                                className="ml-0.5 inline-flex items-center rounded p-0.5 text-text-muted transition-colors hover:text-text-primary"
+                                aria-label="Clear author filter"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onToggle("author", selectedUser.login);
+                                }}
+                            >
+                                <X className="size-3" />
+                            </button>
                         </>
                     ) : (
                         <>
