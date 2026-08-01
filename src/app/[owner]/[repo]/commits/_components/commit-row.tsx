@@ -26,21 +26,19 @@ export function CommitRow({
     const relativeTime = formatRelativeTime(commit.committedDate);
 
     return (
-        <div className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-surface-secondary">
-            {/* Subject + meta */}
-            <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                    <Link
-                        href={commitUrl}
-                        className="truncate font-medium text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
-                    >
-                        <CommitSubject message={commit.message} />
-                    </Link>
-                </div>
+        <div className="flex flex-col gap-1 px-4 py-2 transition-colors hover:bg-surface-secondary">
+            {/* Subject */}
+            <div className="min-w-0">
+                <Link
+                    href={commitUrl}
+                    className="font-medium text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                    <CommitSubject message={commit.message} />
+                </Link>
             </div>
 
-            {/* Author */}
-            <div className="flex shrink-0 items-center gap-3 text-sm text-text-secondary">
+            {/* Meta row: author, timestamp, CI, SHA */}
+            <div className="flex items-center gap-2 text-text-secondary text-xs">
                 {commit.author ? (
                     <UserLink
                         actor={{
@@ -48,7 +46,6 @@ export function CommitRow({
                             avatarUrl: commit.author.avatarUrl,
                         }}
                         provider={provider}
-                        showUsername={false}
                     />
                 ) : (
                     commit.committerName && (
@@ -57,24 +54,21 @@ export function CommitRow({
                         </span>
                     )
                 )}
-                <span className="w-16 whitespace-nowrap text-right tabular-nums">
-                    {relativeTime}
-                </span>
+                <span>committed</span>
+                <span className="whitespace-nowrap">{relativeTime}</span>
+                {showStatus && commit.statusState && (
+                    <StatusChecksHoverCard
+                        contexts={commit.statusContexts}
+                        className="size-3.5"
+                    />
+                )}
+                <Link
+                    href={commitUrl}
+                    className="ml-auto font-mono text-text-muted transition-colors hover:text-text-primary"
+                >
+                    {commit.shortSha}
+                </Link>
             </div>
-            {showStatus && commit.statusState && (
-                <StatusChecksHoverCard
-                    contexts={commit.statusContexts}
-                    className="size-4"
-                />
-            )}
-
-            {/* SHA */}
-            <Link
-                href={commitUrl}
-                className="shrink-0 font-mono text-text-muted text-xs transition-colors hover:text-text-primary"
-            >
-                {commit.shortSha}
-            </Link>
         </div>
     );
 }
