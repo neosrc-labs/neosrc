@@ -29,7 +29,6 @@ import type {
 import { api } from "~/trpc/react";
 import { ConflictedFiles } from "../conflicted-files";
 import { MergeStatusBar } from "./merge-status-bar";
-import { ReviewStatusBadges } from "./review-status-badges";
 
 interface ActionSectionProps {
     owner: string;
@@ -344,14 +343,6 @@ function Buttons({
                     conflictedFiles={conflictedFiles}
                 />
             ) : null}
-            {!isMergeBlocked && pullRequest.state === "open" && (
-                <ReviewStatusBadges
-                    approvalCount={approvalCount}
-                    changesRequestedCount={changesRequestedCount}
-                    pendingReviewerCount={pendingCount}
-                    requiredApprovalCount={requiredApprovalCount}
-                />
-            )}
             {canInteract && !dismissReviewMutation.isPending && (
                 <SubmitReviewButton
                     owner={owner}
