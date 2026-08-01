@@ -45,9 +45,9 @@ export function CommitRow({
         "inline-flex items-center justify-center size-4 shrink-0 text-text-muted transition-colors hover:text-text-primary";
 
     return (
-        <div className="flex flex-col gap-1 px-4 py-2 transition-colors hover:bg-surface-secondary">
-            {/* Top row: subject + actions */}
-            <div className="flex min-w-0 items-center gap-2">
+        <div className="flex items-center gap-2 px-4 py-2 transition-colors hover:bg-surface-secondary">
+            {/* Left: subject + meta */}
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <Link
                     href={commitUrl}
                     className="min-w-0 truncate font-medium text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
@@ -55,68 +55,68 @@ export function CommitRow({
                     <CommitSubject message={commit.message} />
                 </Link>
 
-                <span className="ml-auto flex shrink-0 items-center gap-1.5">
-                    {commit.signature?.isValid && (
-                        <VerifiedBadge
-                            signature={commit.signature as GQLGitSignature}
+                <div className="flex items-center gap-2 text-text-secondary text-xs">
+                    {commit.author ? (
+                        <UserLink
+                            actor={{
+                                login: commit.author.login,
+                                avatarUrl: commit.author.avatarUrl,
+                            }}
+                            provider={provider}
+                        />
+                    ) : (
+                        commit.committerName && (
+                            <span className="max-w-[120px] truncate">
+                                {commit.committerName}
+                            </span>
+                        )
+                    )}
+                    <span>committed</span>
+                    <span className="whitespace-nowrap">{relativeTime}</span>
+                    {showStatus && commit.statusState && (
+                        <StatusChecksHoverCard
+                            contexts={commit.statusContexts}
+                            className="size-3.5"
                         />
                     )}
-                    <Link
-                        href={commitUrl}
-                        className="font-mono text-text-muted text-xs transition-colors hover:text-text-primary"
-                    >
-                        {commit.shortSha}
-                    </Link>
-                    <button
-                        type="button"
-                        onClick={handleCopy}
-                        className={iconBase}
-                        aria-label="Copy full SHA"
-                    >
-                        {copied ? (
-                            <Check className="text-green-500" size={16} />
-                        ) : (
-                            <Copy size={16} />
-                        )}
-                    </button>
-                    <a
-                        href={treeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={iconBase}
-                        aria-label="Browse files at this commit"
-                    >
-                        <FolderOpen size={16} />
-                    </a>
-                </span>
+                </div>
             </div>
 
-            {/* Meta row: author, timestamp, CI */}
-            <div className="flex items-center gap-2 text-text-secondary text-xs">
-                {commit.author ? (
-                    <UserLink
-                        actor={{
-                            login: commit.author.login,
-                            avatarUrl: commit.author.avatarUrl,
-                        }}
-                        provider={provider}
-                    />
-                ) : (
-                    commit.committerName && (
-                        <span className="max-w-[120px] truncate">
-                            {commit.committerName}
-                        </span>
-                    )
-                )}
-                <span>committed</span>
-                <span className="whitespace-nowrap">{relativeTime}</span>
-                {showStatus && commit.statusState && (
-                    <StatusChecksHoverCard
-                        contexts={commit.statusContexts}
-                        className="size-3.5"
+            {/* Right: verified badge, hash, copy, browse */}
+            <span className="flex shrink-0 items-center gap-1.5">
+                {commit.signature?.isValid && (
+                    <VerifiedBadge
+                        signature={commit.signature as GQLGitSignature}
                     />
                 )}
-            </div>
+                <Link
+                    href={commitUrl}
+                    className="font-mono text-text-muted text-xs transition-colors hover:text-text-primary"
+                >
+                    {commit.shortSha}
+                </Link>
+                <button
+                    type="button"
+                    onClick={handleCopy}
+                    className={iconBase}
+                    aria-label="Copy full SHA"
+                >
+                    {copied ? (
+                        <Check className="text-green-500" size={16} />
+                    ) : (
+                        <Copy size={16} />
+                    )}
+                </button>
+                <a
+                    href={treeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={iconBase}
+                    aria-label="Browse files at this commit"
+                >
+                    <FolderOpen size={16} />
+                </a>
+            </span>
         </div>
     );
 }
