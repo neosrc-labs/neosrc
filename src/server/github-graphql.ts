@@ -393,6 +393,41 @@ query CommitByOid($owner: String!, $repo: String!, $oid: GitObjectID!) {
 	}
 }
 `;
+const BRANCH_COMMITS_QUERY = `
+${SIMPLE_USER_FRAGMENT}
+
+query BranchCommits(
+	$owner: String!
+	$repo: String!
+	$branch: String!
+	$first: Int
+	$last: Int
+	$after: String
+	$before: String
+	$authorId: ID
+) {
+	repository(owner: $owner, name: $repo) {
+		ref(qualifiedName: $branch) {
+			target {
+				... on Commit {
+					history(first: $first, last: $last, after: $after, before: $before, author: $authorId ? { id: $authorId } : null) {
+						totalCount
+						pageInfo { hasNextPage, hasPreviousPage, startCursor, endCursor }
+						nodes {
+							oid
+							message
+							committedDate
+							authors(first: 10) { nodes { name, avatarUrl, user { ...SimpleUser } } }
+							statusCheckRollup { state, contexts(first: 50) { nodes { ... on StatusContext { state, targetUrl, description, context, createdAt } ... on CheckRun { name, conclusion, status, detailsUrl, startedAt, completedAt } } } }
+							signature { __typename ... on GpgSignature { isValid, keyId, state } ... on SshSignature { isValid, state } ... on SmimeSignature { isValid, state } }
+						}
+					}
+				}
+			}
+		}
+	}
+}
+`;
 
 export type GQLActor = {
     __typename: string;
@@ -1430,6 +1465,160 @@ export async function getCommitGraphQL(
         authors: toCommitAuthors(commit.authors),
         signature: commit.signature,
     };
+}
+
+export interface BranchCommitsResult {
+	commits: (GQLCommitWithAuthors & {
+		statusCheckRollup: {
+			state: string;
+			contexts: {
+				nodes: Array<{
+					__typename?: string;
+					state?: string;
+					targetUrl?: string | null;
+					description?: string | null;
+					context?: string;
+					name?: string;
+					status?: string;
+					conclusion?: string | null;
+					detailsUrl?: string | null;
+					createdAt?: string;
+					startedAt?: string;
+					completedAt?: string;
+				} | null> | null;
+			};
+		} | null;
+	})[];
+	totalCount: number;
+	pageInfo: {
+		hasNextPage: boolean;
+		hasPreviousPage: boolean;
+		startCursor: string | null;
+		endCursor: string | null;
+	};
+}
+
+export async function getBranchCommitsGraphQL(
+	accessToken: string,
+	owner: string,
+	repo: string,
+	branch: string,
+	opts: {
+		first?: number;
+		last?: number;
+		after?: string;
+		before?: string;
+		authorId?: string;
+	},
+): Promise<BranchCommitsResult> {
+	const graphql = octokitGraphql.defaults({
+		headers: { authorization: `bearer ${accessToken}` },
+	});
+
+	const result = await graphql<{
+		repository: {
+			ref: {
+				target: {
+					history: {
+						totalCount: number;
+						pageInfo: {
+							hasNextPage: boolean;
+							hasPreviousPage: boolean;
+							startCursor: string | null;
+							endCursor: string | null;
+						};
+						nodes: Array<{
+							oid: string;
+							message: string;
+							committedDate: string;
+							authors: {
+								nodes: Array<{
+									name: string;
+									avatarUrl: string;
+									user: {
+										login: string;
+										avatarUrl: string;
+										url: string;
+									} | null;
+								} | null>;
+							};
+							statusCheckRollup: {
+								state: string;
+								contexts: {
+									nodes: Array<{
+										__typename?: string;
+										state?: string;
+										targetUrl?: string | null;
+										description?: string | null;
+										context?: string;
+										name?: string;
+										status?: string;
+										conclusion?: string | null;
+										detailsUrl?: string | null;
+										createdAt?: string;
+										startedAt?: string;
+										completedAt?: string;
+									} | null> | null;
+								};
+							} | null;
+							signature: {
+								__typename: string;
+								isValid: boolean | null;
+							} | null;
+						}>;
+					};
+				} | null;
+			} | null;
+		};
+	}>(BRANCH_COMMITS_QUERY, {
+		owner,
+		repo,
+		branch,
+		first: opts.first,
+		last: opts.last,
+		after: opts.after,
+		before: opts.before,
+		authorId: opts.authorId,
+	});
+
+	const ref = result.repository.ref;
+	if (!ref) {
+		throw new Error(`Branch ${branch} not found in ${owner}/${repo}`);
+	}
+	const target = ref.target;
+	if (!target) {
+		throw new Error(`Branch ${branch} not found in ${owner}/${repo}`);
+	}
+	const history = target.history;
+
+	return {
+		commits: history.nodes.map((node) => ({
+			oid: node.oid,
+			message: node.message,
+			committedDate: node.committedDate,
+			authors: toCommitAuthors(node.authors),
+			signature: node.signature,
+			statusCheckRollup: node.statusCheckRollup,
+		})),
+		totalCount: history.totalCount,
+		pageInfo: history.pageInfo,
+	};
+}
+
+export async function resolveUserNodeId(
+	accessToken: string,
+	login: string,
+): Promise<string | null> {
+	const graphql = octokitGraphql.defaults({
+		headers: { authorization: `bearer ${accessToken}` },
+	});
+	const result = await graphql<{
+		user: { id: string } | null;
+	}>(
+		`query($login: String!) { user(login: $login) { id } }`,
+		{ login },
+	);
+	return result.user?.id ?? null;
 }
 
 const TOP_REPOS_QUERY = `
