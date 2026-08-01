@@ -74,10 +74,21 @@ export function CommitRow({
                     <span>committed</span>
                     <span className="whitespace-nowrap">{relativeTime}</span>
                     {showStatus && commit.statusState && (
-                        <StatusChecksHoverCard
-                            contexts={commit.statusContexts}
-                            className="size-3.5"
-                        />
+                        <span className="inline-flex items-center gap-1">
+                            <StatusChecksHoverCard
+                                contexts={commit.statusContexts}
+                                className="size-3.5"
+                            />
+                            <span className="tabular-nums">
+                                {
+                                    commit.statusContexts.filter(
+                                        (c) => c.state === "SUCCESS",
+                                    ).length
+                                }
+                                {" / "}
+                                {commit.statusContexts.length}
+                            </span>
+                        </span>
                     )}
                 </div>
             </div>
