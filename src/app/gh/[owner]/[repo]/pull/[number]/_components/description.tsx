@@ -78,22 +78,7 @@ export function PullRequestDescriptionSection({
         staticInput: { owner, repo, number },
     });
 
-    const [isEditingTitle, setIsEditingTitle] = useState(false);
-    const [editTitle, setEditTitle] = useState("");
-    const [savedTitle, setSavedTitle] = useState<string | null>(null);
-
     const [menuOpen, setMenuOpen] = useState(false);
-
-    const updateTitleMutation = api.pulls.updateTitle.useMutation({
-        onMutate: () => {
-            setSavedTitle(editTitle);
-            setIsEditingTitle(false);
-        },
-        onError: () => {
-            setSavedTitle(null);
-            setIsEditingTitle(true);
-        },
-    });
 
     const { data: currentUserData } = api.users.currentUser.useQuery();
 
@@ -209,197 +194,23 @@ export function PullRequestDescriptionSection({
         updateMutation.mutate({ owner, repo, number, body: editBody });
     }, [editBody, owner, repo, number, updateMutation]);
 
-    const handleStartEditTitle = useCallback((currentTitle: string) => {
-        setEditTitle(currentTitle);
-        setIsEditingTitle(true);
-    }, []);
-
-    const handleCancelTitle = useCallback(() => {
-        setIsEditingTitle(false);
-        setEditTitle("");
-    }, []);
-
-    const handleSaveTitle = useCallback(() => {
-        updateTitleMutation.mutate({ owner, repo, number, title: editTitle });
-    }, [editTitle, owner, repo, number, updateTitleMutation]);
-
     return (
         <div data-testid="pr-description">
             {/* PR Header */}
             <div className="mb-3">
-                <div className="flex items-center gap-2">
-                    <Async
-                        fallback={
-                            <div className="h-5 w-16 animate-pulse rounded-full bg-surface-selected" />
-                        }
-                        promise={pullRequestPromise}
-                    >
-                        {(pullRequest) => {
-                            const state = extractPullRequestState(pullRequest);
-                            return (
-                                <>
-                                    <StatusPill state={state} />
-                                    {pullRequest.locked && (
-                                        <span className="flex items-center gap-1 rounded-md border border-border bg-surface-secondary px-2 py-0.5 text-text-tertiary text-xs">
-                                            <Lock size={12} />
-                                            Locked
-                                        </span>
-                                    )}
-                                </>
-                            );
-                        }}
-                    </Async>
-                    <Async
-                        fallback={
-                            <div className="h-8 w-96 animate-pulse rounded bg-surface-selected" />
-                        }
-                        promise={pullRequestPromise}
-                    >
-                        {(pullRequest) => {
-                            const displayTitle =
-                                savedTitle ?? pullRequest.title;
-                            return (
-                                <div className="flex w-full items-center gap-2">
-                                    {isEditingTitle ? (
-                                        <>
-                                            <input
-                                                type="text"
-                                                value={editTitle}
-                                                onChange={(e) =>
-                                                    setEditTitle(e.target.value)
-                                                }
-                                                className="flex-1 border-blue-500 border-b-2 bg-transparent font-bold text-2xl text-text-primary outline-none"
-                                                autoFocus
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Enter")
-                                                        handleSaveTitle();
-                                                    if (e.key === "Escape")
-                                                        handleCancelTitle();
-                                                }}
-                                            />
-                                            <button
-                                                className="cursor-pointer rounded bg-green-600 px-2 py-1 text-white text-xs hover:bg-green-700"
-                                                onClick={handleSaveTitle}
-                                                type="button"
-                                            >
-                                                Save
-                                            </button>
-                                            <button
-                                                className="cursor-pointer text-text-muted text-xs hover:text-text-secondary dark:hover:text-zinc-300"
-                                                onClick={handleCancelTitle}
-                                                type="button"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <h1 className="text-text-primary">
-                                                <CodeTitle>
-                                                    {displayTitle}
-                                                </CodeTitle>
-                                            </h1>
-                                            <span className="text-2xl text-text-muted">
-                                                #{number}
-                                            </span>
-                                            <Async
-                                                fallback={null}
-                                                promise={canInteractPromise}
-                                            >
-                                                {(canInteract) =>
-                                                    canInteract ? (
-                                                        <button
-                                                            className="cursor-pointer text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
-                                                            onClick={() =>
-                                                                handleStartEditTitle(
-                                                                    displayTitle,
-                                                                )
-                                                            }
-                                                            type="button"
-                                                        >
-                                                            <SquarePen
-                                                                size={16}
-                                                            />
-                                                        </button>
-                                                    ) : null
-                                                }
-                                            </Async>
-                                        </>
-                                    )}
-                                </div>
-                            );
-                        }}
-                    </Async>
-                </div>
-
-                <Async
-                    fallback={
-                        <div className="h-8 w-104 animate-pulse rounded bg-surface-selected" />
-                    }
-                    promise={pullRequestPromise}
-                >
-                    {(pullRequest) => (
-                        <div className="flex h-9 items-center gap-2">
-                            <div className="text-sm text-text-secondary">
-                                <a
-                                    href={`https://github.com/${owner}/${repo}/tree/${pullRequest.base.ref}`}
-                                    className="rounded bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs hover:bg-surface-selected dark:hover:bg-zinc-600"
-                                >
-                                    {pullRequest.base.ref}
-                                </a>
-                                <span className="mx-2">←</span>
-                                <a
-                                    href={`https://github.com/${pullRequest.head.repo?.full_name ?? `${owner}/${repo}`}/tree/${pullRequest.head.ref}`}
-                                    className="rounded bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs hover:bg-surface-selected dark:hover:bg-zinc-600"
-                                >
-                                    {pullRequest.head.label}
-                                </a>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-text-secondary">
-                                <OpenedByLabel />
-                                <UserHoverCard login={pullRequest.user.login}>
-                                    <NextLink
-                                        className="flex items-center gap-2"
-                                        href={pullRequest.user.html_url}
-                                    >
-                                        <img
-                                            alt={pullRequest.user?.login}
-                                            className="h-5 w-5 rounded-full"
-                                            src={pullRequest.user?.avatar_url}
-                                        />
-                                        {pullRequest.user?.login}{" "}
-                                    </NextLink>
-                                </UserHoverCard>
-                                <span
-                                    title={formatDateTime(
-                                        pullRequest.created_at,
-                                    )}
-                                >
-                                    {formatRelativeTime(pullRequest.created_at)}
-                                </span>
-                            </div>
-                            <div className="ml-auto flex items-center gap-1.5 text-sm">
-                                {pullRequest.additions > 0 && (
-                                    <span className="font-medium text-green-600 dark:text-green-500">
-                                        +
-                                        {pullRequest.additions.toLocaleString()}
-                                    </span>
-                                )}
-                                {pullRequest.deletions > 0 && (
-                                    <span className="font-medium text-red-600 dark:text-red-500">
-                                        -
-                                        {pullRequest.deletions.toLocaleString()}
-                                    </span>
-                                )}
-                            </div>
-                            {actionSection && (
-                                <div className="flex items-center">
-                                    {actionSection}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </Async>
+                <TitleRow
+                    owner={owner}
+                    repo={repo}
+                    number={number}
+                    pullRequestPromise={pullRequestPromise}
+                    canInteractPromise={canInteractPromise}
+                />
+                <SubtitleActionRow
+                    owner={owner}
+                    repo={repo}
+                    pullRequestPromise={pullRequestPromise}
+                    actionSection={actionSection}
+                />
             </div>
 
             <Async
@@ -599,15 +410,279 @@ export function PullRequestDescriptionSection({
     );
 }
 
+function AuthorLabel({
+    username,
+    profileUrl,
+    avatarUrl,
+}: {
+    username: string;
+    profileUrl: string;
+    avatarUrl: string;
+}) {
+    return (
+        <UserHoverCard login={username}>
+            <NextLink className="flex items-center gap-2" href={profileUrl}>
+                <img
+                    alt={username}
+                    className="h-5 w-5 rounded-full"
+                    src={avatarUrl}
+                />
+                {username}{" "}
+            </NextLink>
+        </UserHoverCard>
+    );
+}
+
+function TitleRow({
+    owner,
+    repo,
+    number,
+    pullRequestPromise,
+    canInteractPromise,
+}: {
+    owner: string;
+    repo: string;
+    number: number;
+    pullRequestPromise: Promise<PullsGetResponseData>;
+    canInteractPromise: Promise<boolean>;
+}) {
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [editTitle, setEditTitle] = useState("");
+    const [savedTitle, setSavedTitle] = useState<string | null>(null);
+
+    const updateTitleMutation = api.pulls.updateTitle.useMutation({
+        onMutate: () => {
+            setSavedTitle(editTitle);
+            setIsEditingTitle(false);
+        },
+        onError: () => {
+            setSavedTitle(null);
+            setIsEditingTitle(true);
+        },
+    });
+
+    const handleStartEditTitle = useCallback((currentTitle: string) => {
+        setEditTitle(currentTitle);
+        setIsEditingTitle(true);
+    }, []);
+
+    const handleCancelTitle = useCallback(() => {
+        setIsEditingTitle(false);
+        setEditTitle("");
+    }, []);
+
+    const handleSaveTitle = useCallback(() => {
+        updateTitleMutation.mutate({ owner, repo, number, title: editTitle });
+    }, [editTitle, owner, repo, number, updateTitleMutation]);
+
+    return (
+        <div className="flex items-center gap-2">
+            <Async
+                fallback={
+                    <div className="h-5 w-16 animate-pulse rounded-full bg-surface-selected" />
+                }
+                promise={pullRequestPromise}
+            >
+                {(pullRequest) => {
+                    const state = extractPullRequestState(pullRequest);
+                    return (
+                        <>
+                            <StatusPill state={state} />
+                            {pullRequest.locked && (
+                                <span className="flex items-center gap-1 rounded-md border border-border bg-surface-secondary px-2 py-0.5 text-text-tertiary text-xs">
+                                    <Lock size={12} />
+                                    Locked
+                                </span>
+                            )}
+                        </>
+                    );
+                }}
+            </Async>
+            <Async
+                fallback={
+                    <div className="h-8 w-96 animate-pulse rounded bg-surface-selected" />
+                }
+                promise={pullRequestPromise}
+            >
+                {(pullRequest) => {
+                    const displayTitle = savedTitle ?? pullRequest.title;
+                    return (
+                        <div className="flex w-full items-center gap-2">
+                            {isEditingTitle ? (
+                                <>
+                                    <input
+                                        type="text"
+                                        value={editTitle}
+                                        onChange={(e) =>
+                                            setEditTitle(e.target.value)
+                                        }
+                                        className="flex-1 border-blue-500 border-b-2 bg-transparent font-bold text-2xl text-text-primary outline-none"
+                                        autoFocus
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter")
+                                                handleSaveTitle();
+                                            if (e.key === "Escape")
+                                                handleCancelTitle();
+                                        }}
+                                    />
+                                    <button
+                                        className="cursor-pointer rounded bg-green-600 px-2 py-1 text-white text-xs hover:bg-green-700"
+                                        onClick={handleSaveTitle}
+                                        type="button"
+                                    >
+                                        Save
+                                    </button>
+                                    <button
+                                        className="cursor-pointer text-text-muted text-xs hover:text-text-secondary dark:hover:text-zinc-300"
+                                        onClick={handleCancelTitle}
+                                        type="button"
+                                    >
+                                        Cancel
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <h1 className="text-text-primary">
+                                        <CodeTitle>{displayTitle}</CodeTitle>
+                                    </h1>
+                                    <span className="text-2xl text-text-muted">
+                                        #{number}
+                                    </span>
+                                    <Async
+                                        fallback={null}
+                                        promise={canInteractPromise}
+                                    >
+                                        {(canInteract) =>
+                                            canInteract ? (
+                                                <button
+                                                    className="cursor-pointer text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
+                                                    onClick={() =>
+                                                        handleStartEditTitle(
+                                                            displayTitle,
+                                                        )
+                                                    }
+                                                    type="button"
+                                                >
+                                                    <SquarePen size={16} />
+                                                </button>
+                                            ) : null
+                                        }
+                                    </Async>
+                                </>
+                            )}
+                        </div>
+                    );
+                }}
+            </Async>
+        </div>
+    );
+}
+
+function SubtitleActionRow({
+    owner,
+    repo,
+    pullRequestPromise,
+    actionSection,
+}: {
+    owner: string;
+    repo: string;
+    pullRequestPromise: Promise<PullsGetResponseData>;
+    actionSection?: ReactNode;
+}) {
+    return (
+        <Async
+            fallback={
+                <div className="h-8 w-104 animate-pulse rounded bg-surface-selected" />
+            }
+            promise={pullRequestPromise}
+        >
+            {(pullRequest) => (
+                <div className="flex h-9 items-center gap-2">
+                    <Branches
+                        owner={owner}
+                        repo={repo}
+                        pullRequest={pullRequest}
+                    />
+                    <div className="flex items-center gap-2 text-sm text-text-secondary">
+                        <OpenedByLabel />
+                        <AuthorLabel
+                            username={pullRequest.user.login}
+                            avatarUrl={pullRequest.user.avatar_url}
+                            profileUrl={pullRequest.user.html_url}
+                        />
+                        <span title={formatDateTime(pullRequest.created_at)}>
+                            {formatRelativeTime(pullRequest.created_at)}
+                        </span>
+                    </div>
+                    <div className="ml-auto flex items-center gap-1.5 text-sm">
+                        {pullRequest.additions > 0 && (
+                            <span className="font-medium text-green-600 dark:text-green-500">
+                                +{pullRequest.additions.toLocaleString()}
+                            </span>
+                        )}
+                        {pullRequest.deletions > 0 && (
+                            <span className="font-medium text-red-600 dark:text-red-500">
+                                -{pullRequest.deletions.toLocaleString()}
+                            </span>
+                        )}
+                    </div>
+                    {actionSection && (
+                        <div className="flex items-center">{actionSection}</div>
+                    )}
+                </div>
+            )}
+        </Async>
+    );
+}
+
+function Branches({
+    owner,
+    repo,
+    pullRequest,
+}: {
+    owner: string;
+    repo: string;
+    pullRequest: PullsGetResponseData;
+}) {
+    const width = useMainSectionWidth();
+    return (
+        <div className="text-sm text-text-secondary">
+            <a
+                href={`https://github.com/${owner}/${repo}/tree/${pullRequest.base.ref}`}
+                className="rounded bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs hover:bg-surface-selected dark:hover:bg-zinc-600"
+            >
+                {pullRequest.base.ref}
+            </a>
+            <span className="mx-2">←</span>
+            <a
+                href={`https://github.com/${pullRequest.head.repo?.full_name ?? `${owner}/${repo}`}/tree/${pullRequest.head.ref}`}
+                className="rounded bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs hover:bg-surface-selected dark:hover:bg-zinc-600"
+            >
+                <span title={pullRequest.head.label}>
+                    {!width || width > 1100
+                        ? pullRequest.head.label
+                        : `${pullRequest.head.label.substring(0, 25)}...`}
+                </span>
+            </a>
+        </div>
+    );
+}
+
 function OpenedByLabel() {
-    const [show, setShow] = useState(false);
+    const width = useMainSectionWidth();
+    if (!width || width < 1000) return null;
+    return <span>opened by </span>;
+}
+
+function useMainSectionWidth() {
+    const [width, setWidth] = useState<number | null>(null);
 
     useEffect(() => {
         const main = document.querySelector("main");
         if (!main) return;
 
         const check = () => {
-            setShow(main.clientWidth >= 1000);
+            setWidth(main.clientWidth);
         };
 
         check();
@@ -616,7 +691,5 @@ function OpenedByLabel() {
         return () => observer.disconnect();
     }, []);
 
-    if (!show) return null;
-
-    return <span>opened by </span>;
+    return width;
 }

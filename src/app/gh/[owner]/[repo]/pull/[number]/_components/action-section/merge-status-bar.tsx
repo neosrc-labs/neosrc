@@ -122,6 +122,14 @@ export function MergeStatusBar({
         );
     }
 
+    const buttonText = isMerging
+        ? "Merging..."
+        : effectiveMergeMode === "squash"
+          ? "Squash and merge"
+          : effectiveMergeMode === "rebase"
+            ? "Rebase and merge"
+            : "Merge pull request";
+
     return (
         <div className="flex items-stretch">
             {mergeError && (
@@ -130,19 +138,14 @@ export function MergeStatusBar({
                 </span>
             )}
             <button
-                className="flex cursor-pointer items-center gap-1.5 rounded-l-md bg-[#2da44e] px-1.5 py-2 font-medium text-white text-xs transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
+                className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-l-md bg-[#2da44e] px-1.5 py-2 font-medium text-white text-xs transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
                 disabled={isMerging}
                 onClick={onMerge}
+                title={buttonText}
                 type="button"
             >
                 <GitMerge size={14} />
-                {isMerging
-                    ? "Merging..."
-                    : effectiveMergeMode === "squash"
-                      ? "Squash and merge"
-                      : effectiveMergeMode === "rebase"
-                        ? "Rebase and merge"
-                        : "Merge pull request"}
+                {buttonText}
             </button>
             <MergeModeDropdown
                 effectiveMergeMode={effectiveMergeMode}

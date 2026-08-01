@@ -611,7 +611,7 @@ function SubmitReviewButton({
             <PopoverTrigger asChild>
                 <button
                     suppressHydrationWarning
-                    className="flex cursor-pointer items-center gap-1.5 rounded-md bg-[#0969da] px-1.5 py-2 font-medium text-white text-xs transition-colors hover:bg-[#0860ca] sm:px-3"
+                    className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-md bg-[#0969da] px-1.5 py-2 font-medium text-white text-xs transition-colors hover:bg-[#0860ca] sm:px-3"
                     type="button"
                 >
                     Submit Review
