@@ -2,7 +2,7 @@
 
 import type { components } from "@octokit/openapi-types";
 import { MoreVertical, SquarePen, Trash2 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import {
     ResolveButton,
@@ -43,6 +43,25 @@ import {
     findAuthorAssociation,
 } from "./review-comment-utils";
 
+// Cache for preserving in-progress reply state across stub -> real comment
+// transitions. When a new comment is posted with optimistic update, the stub
+// gets a temporary negative ID. If the user opens the reply textarea and
+// starts typing before the server confirms, the cache refetch replaces the
+// stub with the real comment (different ID), causing React to unmount the
+// old component and mount a new one. This cache bridges that gap by keying
+// on stable properties (path, line, side) instead of the volatile comment ID.
+const replyStateCache = new Map<string, { body: string; visible: boolean }>();
+
+function getThreadIdentity(comment: ReviewComment): string {
+    return [
+        comment.path,
+        comment.line ?? "F",
+        comment.side ?? "N",
+        comment.start_line ?? "0",
+        comment.start_side ?? "N",
+    ].join(":");
+}
+
 interface InlineCommentThreadProps {
     parentComment: ReviewComment;
     replies: ReviewComment[];
@@ -62,14 +81,44 @@ export function InlineCommentThread({
     pendingReviewId,
     canInteract = true,
 }: InlineCommentThreadProps) {
-    const [showReplyForm, setShowReplyForm] = useState(false);
-    const [replyBody, setReplyBody] = useState("");
+    const threadIdentity = useMemo(
+        () => getThreadIdentity(parentComment),
+        [parentComment],
+    );
+
+    const savedState = replyStateCache.get(threadIdentity);
+
+    const [showReplyForm, setShowReplyForm] = useState(
+        () => savedState?.visible ?? false,
+    );
+    const [replyBody, setReplyBody] = useState(() => savedState?.body ?? "");
     const [expandedResolved, setExpandedResolved] = useState(false);
     const [editingCommentId, setEditingCommentId] = useState<number | null>(
         null,
     );
     const [editBody, setEditBody] = useState("");
     const [savedBodies, setSavedBodies] = useState<Record<number, string>>({});
+
+    // Persist reply state so it survives stub -> real remount cycles
+    useEffect(() => {
+        replyStateCache.set(threadIdentity, {
+            body: replyBody,
+            visible: showReplyForm,
+        });
+    }, [threadIdentity, replyBody, showReplyForm]);
+
+    // Track stub status in a ref so the cleanup effect below always
+    // reads the latest value without needing parentComment.id as a dep.
+    const isStubRef = useRef(parentComment.id < 0);
+    isStubRef.current = parentComment.id < 0;
+
+    useEffect(() => {
+        return () => {
+            if (!isStubRef.current) {
+                replyStateCache.delete(threadIdentity);
+            }
+        };
+    }, [threadIdentity]);
     const utils = api.useUtils();
 
     const { data: currentUserData } = api.users.currentUser.useQuery();
