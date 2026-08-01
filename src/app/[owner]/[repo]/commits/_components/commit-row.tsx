@@ -3,8 +3,17 @@
 import { Check, Copy, FolderOpen } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useState } from "react";
-import { StatusChecksHoverCard } from "~/components/ci-status";
+import {
+    computeStatusState,
+    StatusCheckIcon,
+    StatusContextRow,
+} from "~/components/ci-status";
 import { CommitSubject } from "~/components/commit-subject";
+import {
+    HoverCard,
+    HoverCardContent,
+    HoverCardTrigger,
+} from "~/components/ui/hover-card";
 import { UserLink } from "~/components/user-link";
 import { VerifiedBadge } from "~/components/verified-badge";
 import type { CommitListItem } from "~/server/api/routers/commits/types";
@@ -73,23 +82,65 @@ export function CommitRow({
                     )}
                     <span>committed</span>
                     <span className="whitespace-nowrap">{relativeTime}</span>
-                    {showStatus && commit.statusState && (
-                        <span className="inline-flex items-center gap-1">
-                            <StatusChecksHoverCard
-                                contexts={commit.statusContexts}
-                                className="size-3.5"
-                            />
-                            <span className="tabular-nums">
-                                {
-                                    commit.statusContexts.filter(
-                                        (c) => c.state === "SUCCESS",
-                                    ).length
-                                }
-                                {" / "}
-                                {commit.statusContexts.length}
-                            </span>
-                        </span>
-                    )}
+                    {showStatus &&
+                        commit.statusState &&
+                        (() => {
+                            const rollup = computeStatusState(
+                                commit.statusContexts,
+                            );
+                            if (!rollup) return null;
+                            return (
+                                <HoverCard openDelay={200}>
+                                    <HoverCardTrigger asChild>
+                                        <button
+                                            type="button"
+                                            className="inline-flex cursor-pointer items-center gap-1"
+                                            tabIndex={-1}
+                                        >
+                                            <StatusCheckIcon
+                                                state={rollup}
+                                                className="size-3.5"
+                                            />
+                                            <span className="tabular-nums">
+                                                {
+                                                    commit.statusContexts.filter(
+                                                        (c) =>
+                                                            c.state ===
+                                                            "SUCCESS",
+                                                    ).length
+                                                }
+                                                {" / "}
+                                                {commit.statusContexts.length}
+                                            </span>
+                                        </button>
+                                    </HoverCardTrigger>
+                                    <HoverCardContent
+                                        align="start"
+                                        side="bottom"
+                                        className="w-72 bg-surface p-0"
+                                    >
+                                        <div className="border-border-subtle border-b px-3 py-2">
+                                            <div className="font-medium text-xs">
+                                                {commit.statusState ===
+                                                "SUCCESS"
+                                                    ? "All checks have passed"
+                                                    : "Some checks were not successful"}
+                                            </div>
+                                        </div>
+                                        <div className="max-h-80 space-y-1.5 overflow-y-auto p-3">
+                                            {commit.statusContexts.map(
+                                                (ctx) => (
+                                                    <StatusContextRow
+                                                        key={ctx.name}
+                                                        context={ctx}
+                                                    />
+                                                ),
+                                            )}
+                                        </div>
+                                    </HoverCardContent>
+                                </HoverCard>
+                            );
+                        })()}
                 </div>
             </div>
 
