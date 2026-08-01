@@ -139,8 +139,12 @@ test.describe
             });
 
             await test.step("Verify the head branch is visible", async () => {
+                // On small screens we truncate the head branch to save space
+                const headBranchPrefix = headBranch.substring(0, 10);
                 await expect(
-                    page.getByTestId("pr-description").getByText(headBranch),
+                    page
+                        .getByTestId("pr-description")
+                        .getByText(headBranchPrefix),
                 ).toBeVisible();
             });
 
