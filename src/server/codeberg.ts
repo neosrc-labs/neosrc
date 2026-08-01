@@ -793,42 +793,42 @@ export const listRecentIssueAuthors = cache(
 );
 
 export const listBranchCommits = cache(
-	async (
-		accessToken: string,
-		owner: string,
-		repo: string,
-		branch: string,
-		opts: { page?: number; limit?: number; author?: string },
-	): Promise<{
-		commits: CodebergCommitRaw[];
-		totalCount: number;
-	}> => {
-		const params = new URLSearchParams({
-			sha: branch,
-			limit: String(opts.limit ?? 35),
-			page: String(opts.page ?? 1),
-		});
-		const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`;
-		const res = await fetch(url, {
-			headers: {
-				Authorization: `token ${accessToken}`,
-				Accept: "application/json",
-			},
-		});
-		if (!res.ok) {
-			throw new Error(
-				`Failed to list commits for ${owner}/${repo}/${branch}: ${res.status}`,
-			);
-		}
-		const commits = (await res.json()) as CodebergCommitRaw[];
-		const totalCount = parseTotalCountFromLinkHeader(
-			res.headers.get("Link"),
-			opts.limit ?? 35,
-			commits.length,
-			opts.page ?? 1,
-		);
-		return { commits, totalCount };
-	},
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        branch: string,
+        opts: { page?: number; limit?: number; author?: string },
+    ): Promise<{
+        commits: CodebergCommitRaw[];
+        totalCount: number;
+    }> => {
+        const params = new URLSearchParams({
+            sha: branch,
+            limit: String(opts.limit ?? 35),
+            page: String(opts.page ?? 1),
+        });
+        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`;
+        const res = await fetch(url, {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        });
+        if (!res.ok) {
+            throw new Error(
+                `Failed to list commits for ${owner}/${repo}/${branch}: ${res.status}`,
+            );
+        }
+        const commits = (await res.json()) as CodebergCommitRaw[];
+        const totalCount = parseTotalCountFromLinkHeader(
+            res.headers.get("Link"),
+            opts.limit ?? 35,
+            commits.length,
+            opts.page ?? 1,
+        );
+        return { commits, totalCount };
+    },
 );
 
 export type CodebergIssue = {

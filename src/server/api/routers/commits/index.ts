@@ -1,14 +1,14 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getGitHubToken, getCodebergToken } from "~/server/auth";
+import { getCodebergToken, getGitHubToken } from "~/server/auth";
+import { listBranchCommits } from "~/server/codeberg";
 import {
+    getBranchCommitsGraphQL,
     getCommitGraphQL,
     getPullRequestCommitsGraphQL,
-    getBranchCommitsGraphQL,
     resolveUserNodeId,
 } from "~/server/github-graphql";
-import { listBranchCommits } from "~/server/codeberg";
 import { mapCodebergCommit, mapGQLCommit } from "./mappers";
 import type { ListCommitsResult } from "./types";
 
