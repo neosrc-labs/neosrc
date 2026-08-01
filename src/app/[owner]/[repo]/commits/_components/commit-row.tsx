@@ -83,7 +83,7 @@ export function CommitRow({
             </div>
 
             {/* Right: verified badge, hash, copy, browse */}
-            <span className="flex shrink-0 items-center gap-2">
+            <span className="flex shrink-0 items-center gap-3">
                 {commit.signature?.isValid && (
                     <VerifiedBadge
                         signature={commit.signature as GQLGitSignature}
