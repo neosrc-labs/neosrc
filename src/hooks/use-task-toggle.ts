@@ -38,7 +38,7 @@ export interface UseTaskToggleOptions<TInput extends { body: string }> {
 /**
  * Wires a {@link MarkdownRenderer} `onToggleTask` callback to a tRPC mutation
  * that persists a full body containing the toggled checkbox. Guards against
- * concurrent toggles while a previous toggle is still in flight — rapid clicks
+ * concurrent toggles while a previous toggle is still in flight -- rapid clicks
  * are dropped rather than queued, since GitHub rewrites the whole body and
  * interleaving full-body writes would corrupt the markdown.
  */

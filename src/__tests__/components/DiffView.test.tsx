@@ -740,7 +740,7 @@ describe("DiffView rendering", () => {
         });
 
         it("does not render gap row when blocks are adjacent (no missing lines)", () => {
-            // Block 1 ends at line 2, block 2 starts at line 3 — no gap
+            // Block 1 ends at line 2, block 2 starts at line 3 -- no gap
             const block1 = mb(1, [mc(" line1", 1, 1), mc(" line2", 2, 2)]);
             const block2 = mb(3, [mc(" line3", 3, 3)]);
             mockParse.mockReturnValue([

@@ -37,14 +37,14 @@ export async function withStaleWhileRevalidate<T>(
             return cached.value as T;
         }
     } catch {
-        // DB error — fall through to fetcher
+        // DB error -- fall through to fetcher
     }
 
     const fresh = await fetcher();
     try {
         await persistCache(key, fresh, options);
     } catch {
-        // Swallow — cache write failure shouldn't break the response
+        // Swallow -- cache write failure shouldn't break the response
     }
     return fresh;
 }
@@ -81,7 +81,7 @@ export async function readCache<T>(key: string): Promise<T | null> {
             return cached.value as T;
         }
     } catch {
-        // DB error — return null
+        // DB error -- return null
     }
     return null;
 }
@@ -95,7 +95,7 @@ async function revalidate<T>(
         const fresh = await fetcher();
         await persistCache(key, fresh, options);
     } catch {
-        // Background revalidation failed — stale data remains, try again next time
+        // Background revalidation failed -- stale data remains, try again next time
     }
 }
 
@@ -162,6 +162,6 @@ export async function deleteCache(key: string): Promise<void> {
     try {
         await db.delete(cacheTable).where(eq(cacheTable.key, key));
     } catch {
-        // Swallow — cache delete failure shouldn't break the request
+        // Swallow -- cache delete failure shouldn't break the request
     }
 }
