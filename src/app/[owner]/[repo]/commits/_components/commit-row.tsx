@@ -1,7 +1,6 @@
 "use client";
 
 import { Check, Copy, FolderOpen } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useState } from "react";
 import {
     computeStatusState,
@@ -35,7 +34,6 @@ export function CommitRow({
     provider,
     showStatus,
 }: CommitRowProps) {
-    const commitUrl = `/${provider === "gh" ? "gh" : "cb"}/${owner}/${repo}/commit/${commit.sha}`;
     const externalCommitUrl =
         provider === "gh"
             ? `https://github.com/${owner}/${repo}/commit/${commit.sha}`
@@ -61,12 +59,14 @@ export function CommitRow({
         <div className="flex items-center gap-2 px-4 py-2 transition-colors hover:bg-surface-secondary">
             {/* Left: subject + meta */}
             <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <Link
-                    href={commitUrl}
+                <a
+                    href={externalCommitUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="min-w-0 truncate font-medium text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                 >
                     <CommitSubject message={commit.message} />
-                </Link>
+                </a>
 
                 <div className="flex items-center gap-2 text-text-secondary text-xs">
                     {commit.author ? (
