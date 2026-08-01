@@ -12,51 +12,52 @@ export function AuthorDropdown({
     provider = "gh",
     currentQuery,
     onToggle,
+    selectedAuthor,
 }: {
     owner: string;
     repo: string;
     provider?: "gh" | "cb";
     currentQuery: string;
     onToggle: (key: string, value: string) => void;
+    selectedAuthor?: string;
 }) {
     const { data: assignees } = api.pulls.listAssignees.useQuery({
         provider,
         owner,
         repo,
     });
+
     const { data: recentAuthors } = api.pulls.listRecentAuthors.useQuery({
         provider,
         owner,
         repo,
     });
+
     const { data: currentUser } = api.users.currentUser.useQuery();
 
     const allUsers = useMemo(() => {
-        const map = new Map<string, { login: string; avatar_url?: string }>();
-        for (const u of assignees ?? []) {
-            map.set(u.login, u);
-        }
-        for (const u of recentAuthors ?? []) {
-            if (!map.has(u.login)) {
-                map.set(u.login, {
-                    login: u.login,
-                    avatar_url: u.avatar_url ?? undefined,
-                });
-            }
-        }
-        if (currentUser?.login && !map.has(currentUser.login)) {
-            map.set(currentUser.login, {
-                login: currentUser.login,
-                avatar_url: currentUser.avatarUrl,
+        const seen = new Set<string>();
+        const users: { login: string; avatar_url?: string }[] = [];
+        const add = (
+            u: { login: string; avatar_url?: string | null } | null | undefined,
+        ) => {
+            if (!u || seen.has(u.login)) return;
+            seen.add(u.login);
+            users.push({
+                login: u.login,
+                avatar_url: u.avatar_url ?? undefined,
+            });
+        };
+        (assignees ?? []).forEach(add);
+        (recentAuthors ?? []).forEach(add);
+        if (currentUser?.login) {
+            const login = currentUser.login;
+            add({
+                login,
+                avatar_url: currentUser.avatarUrl ?? undefined,
             });
         }
-        const result = Array.from(map.values());
-        result.sort((a, b) => {
-            if (a.login === currentUser?.login) return -1;
-            if (b.login === currentUser?.login) return 1;
-            return a.login.localeCompare(b.login);
-        });
-        return result;
+        return users;
     }, [assignees, recentAuthors, currentUser?.login, currentUser?.avatarUrl]);
 
     const [searchText, setSearchText] = useState("");
@@ -94,7 +95,6 @@ export function AuthorDropdown({
                   {
                       login: debouncedSearch,
                       avatar_url: searchedUser?.avatar_url,
-                      isCustom: true as const,
                   },
               ]
             : [];
@@ -105,6 +105,14 @@ export function AuthorDropdown({
         allUsers
             .filter((u) => currentQuery.includes(`author:${u.login}`))
             .map((u) => u.login),
+    );
+
+    const selectedUser = useMemo(
+        () =>
+            selectedAuthor
+                ? allUsers.find((u) => u.login === selectedAuthor)
+                : undefined,
+        [allUsers, selectedAuthor],
     );
 
     return (
@@ -150,10 +158,23 @@ export function AuthorDropdown({
             trigger={
                 <button
                     type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
                 >
-                    <User className="size-4" />
-                    Author
+                    {selectedUser ? (
+                        <>
+                            <img
+                                src={selectedUser.avatar_url}
+                                alt=""
+                                className="size-4 shrink-0 rounded-full"
+                            />
+                            <span>{selectedUser.login}</span>
+                        </>
+                    ) : (
+                        <>
+                            <User className="size-4" />
+                            Author
+                        </>
+                    )}
                     <ChevronDown className="size-3.5 text-text-muted" />
                 </button>
             }
