@@ -341,6 +341,7 @@ function Buttons({
                     number={number}
                     pullRequest={pullRequest}
                     conflictedFiles={conflictedFiles}
+                    compact
                 />
             ) : null}
             {canInteract && !dismissReviewMutation.isPending && (
