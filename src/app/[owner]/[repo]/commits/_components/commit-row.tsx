@@ -84,12 +84,14 @@ export function CommitRow({
                             </span>
                         )
                     )}
-                    <span>committed</span>
-                    <span
-                        className="whitespace-nowrap"
-                        title={commit.committedDate}
-                    >
-                        {relativeTime}
+                    <span>
+                        committed{" "}
+                        <span
+                            className="whitespace-nowrap"
+                            title={commit.committedDate}
+                        >
+                            {relativeTime}
+                        </span>
                     </span>
                     {showStatus &&
                         commit.statusState &&
