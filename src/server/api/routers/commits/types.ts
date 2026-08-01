@@ -15,6 +15,8 @@ export interface CommitListItem {
     signature: {
         __typename: string;
         isValid: boolean | null;
+        state?: string;
+        keyId?: string;
     } | null;
 }
 

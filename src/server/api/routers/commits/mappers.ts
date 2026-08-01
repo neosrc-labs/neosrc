@@ -74,6 +74,11 @@ export function mapGQLCommit(
             ? {
                   __typename: c.signature.__typename,
                   isValid: c.signature.isValid,
+                  state: c.signature.state,
+                  keyId:
+                      "keyId" in c.signature
+                          ? (c.signature as { keyId: string }).keyId
+                          : undefined,
               }
             : null,
     };
