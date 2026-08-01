@@ -1,14 +1,12 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo, useRef, useState } from "react";
-import { RefSelector } from "~/app/[owner]/[repo]/_components/ref-selector";
-import { AuthorDropdown } from "~/app/[owner]/[repo]/_components/search/author-dropdown";
-import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
-import { CommitRow } from "./commit-row";
+import { CommitsGroupedList } from "./commits-grouped-list";
 import type { CommitsListConfig } from "./commits-list-config";
+import { CommitsPaginationFooter } from "./commits-pagination-footer";
+import { CommitsToolbar } from "./commits-toolbar";
 
 interface CommitsListProps {
     owner: string;
@@ -17,24 +15,26 @@ interface CommitsListProps {
     config: CommitsListConfig;
 }
 
+function SkeletonList() {
+    return (
+        <div className="space-y-0 divide-y divide-border-subtle rounded-lg border border-border-subtle">
+            {Array.from({ length: 5 }).map(() => (
+                <div
+                    key={crypto.randomUUID()}
+                    className="flex animate-pulse items-center gap-3 px-4 py-3"
+                >
+                    <div className="h-4 w-2/3 rounded bg-surface-tertiary" />
+                    <div className="h-4 w-16 rounded bg-surface-tertiary" />
+                    <div className="h-4 w-14 rounded bg-surface-tertiary" />
+                </div>
+            ))}
+        </div>
+    );
+}
+
 export function CommitsList(props: CommitsListProps) {
     return (
-        <Suspense
-            fallback={
-                <div className="space-y-0 divide-y divide-border-subtle rounded-lg border border-border-subtle">
-                    {Array.from({ length: 5 }).map(() => (
-                        <div
-                            key={crypto.randomUUID()}
-                            className="flex animate-pulse items-center gap-3 px-4 py-3"
-                        >
-                            <div className="h-4 w-2/3 rounded bg-surface-tertiary" />
-                            <div className="h-4 w-16 rounded bg-surface-tertiary" />
-                            <div className="h-4 w-14 rounded bg-surface-tertiary" />
-                        </div>
-                    ))}
-                </div>
-            }
-        >
+        <Suspense fallback={<SkeletonList />}>
             <CommitsListInner {...props} />
         </Suspense>
     );
@@ -72,7 +72,6 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
             },
         );
 
-    // Save cursor for backward navigation
     if (data?.cursors?.start) {
         pageStartCursors.current.set(nav.page, data.cursors.start);
     }
@@ -129,7 +128,6 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
         [author, updateParams],
     );
 
-    // Group commits by date
     const groupedCommits = useMemo(() => {
         if (!data?.commits) return [];
         const groups = new Map<string, typeof data.commits>();
@@ -150,74 +148,20 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
 
     const totalPages = data ? Math.max(1, Math.ceil(data.totalCount / 35)) : 1;
 
-    // Pagination button styles (reuse from pagination.tsx)
-    const btnBase =
-        "inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 font-medium text-sm transition-colors";
-    const btnActive =
-        "cursor-pointer text-text-label hover:bg-surface-tertiary hover:text-text-primary dark:hover:text-zinc-100";
-    const btnDisabled = "cursor-not-allowed text-text-muted opacity-50";
-
     return (
         <div>
-            {/* Toolbar */}
-            <div className="mb-6 flex items-center justify-between gap-4">
-                <RefSelector
-                    owner={owner}
-                    repo={repo}
-                    provider={config.provider}
-                    selectedRef={branch}
-                    onSelect={handleBranchChange}
-                />
+            <CommitsToolbar
+                owner={owner}
+                repo={repo}
+                branch={branch}
+                provider={config.provider}
+                author={author}
+                onBranchChange={handleBranchChange}
+                onAuthorToggle={handleAuthorToggle}
+            />
 
-                <div className="flex items-center gap-2">
-                    {author && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-surface-tertiary px-2 py-1 text-sm">
-                            <span className="text-text-secondary">author:</span>
-                            <span className="font-medium text-text-primary">
-                                {author}
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    handleAuthorToggle(
-                                        "author",
-                                        `author:${author}`,
-                                    )
-                                }
-                                className="ml-0.5 rounded p-0.5 text-text-muted transition-colors hover:text-text-primary"
-                                aria-label={`Clear author filter`}
-                            >
-                                <X className="size-3" />
-                            </button>
-                        </span>
-                    )}
-                    <AuthorDropdown
-                        owner={owner}
-                        repo={repo}
-                        provider={config.provider}
-                        currentQuery={author ? `author:${author}` : ""}
-                        onToggle={handleAuthorToggle}
-                    />
-                </div>
-            </div>
+            {isLoading && <SkeletonList />}
 
-            {/* Loading */}
-            {isLoading && (
-                <div className="space-y-0 divide-y divide-border-subtle rounded-lg border border-border-subtle">
-                    {Array.from({ length: 5 }).map(() => (
-                        <div
-                            key={crypto.randomUUID()}
-                            className="flex animate-pulse items-center gap-3 px-4 py-3"
-                        >
-                            <div className="h-4 w-2/3 rounded bg-surface-tertiary" />
-                            <div className="h-4 w-16 rounded bg-surface-tertiary" />
-                            <div className="h-4 w-14 rounded bg-surface-tertiary" />
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Error */}
             {isError && (
                 <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-950">
                     <p className="text-red-600 dark:text-red-400">
@@ -227,7 +171,6 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
                 </div>
             )}
 
-            {/* Empty */}
             {!isLoading && !isError && data && data.commits.length === 0 && (
                 <div className="rounded-lg border border-border-subtle bg-surface p-12 text-center">
                     <p className="text-text-secondary">
@@ -237,64 +180,22 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
                 </div>
             )}
 
-            {/* Commit list */}
             {!isLoading && !isError && groupedCommits.length > 0 && (
-                <div>
-                    <div className="space-y-6">
-                        {groupedCommits.map(([dateLabel, commits]) => (
-                            <div key={dateLabel}>
-                                <h3 className="mb-2 px-2 py-1 font-medium text-sm text-text-secondary">
-                                    {dateLabel}
-                                </h3>
-                                <div className="divide-y divide-border-subtle rounded-lg border border-border-subtle bg-surface">
-                                    {commits.map((commit) => (
-                                        <CommitRow
-                                            key={commit.sha}
-                                            commit={commit}
-                                            owner={owner}
-                                            repo={repo}
-                                            provider={config.provider}
-                                            showStatus={config.showStatusChecks}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Pagination footer */}
-                    <div className="mt-6 flex items-center justify-center gap-4">
-                        <button
-                            type="button"
-                            onClick={handlePrevious}
-                            disabled={nav.page <= 1}
-                            className={cn(
-                                btnBase,
-                                nav.page <= 1 ? btnDisabled : btnActive,
-                            )}
-                        >
-                            <ChevronLeft className="size-4" />
-                            Previous
-                        </button>
-                        <span className="text-sm text-text-secondary">
-                            Page {nav.page} of {totalPages}
-                        </span>
-                        <button
-                            type="button"
-                            onClick={handleNext}
-                            disabled={nav.page >= totalPages}
-                            className={cn(
-                                btnBase,
-                                nav.page >= totalPages
-                                    ? btnDisabled
-                                    : btnActive,
-                            )}
-                        >
-                            Next
-                            <ChevronRight className="size-4" />
-                        </button>
-                    </div>
-                </div>
+                <>
+                    <CommitsGroupedList
+                        groupedCommits={groupedCommits}
+                        owner={owner}
+                        repo={repo}
+                        provider={config.provider}
+                        showStatus={config.showStatusChecks}
+                    />
+                    <CommitsPaginationFooter
+                        page={nav.page}
+                        totalPages={totalPages}
+                        onPrevious={handlePrevious}
+                        onNext={handleNext}
+                    />
+                </>
             )}
         </div>
     );
