@@ -404,13 +404,13 @@ query BranchCommits(
 	$last: Int
 	$after: String
 	$before: String
-	$authorId: ID
+	$author: CommitAuthor
 ) {
 	repository(owner: $owner, name: $repo) {
 		ref(qualifiedName: $branch) {
 			target {
 				... on Commit {
-					history(first: $first, last: $last, after: $after, before: $before, author: $authorId ? { id: $authorId } : null) {
+					history(first: $first, last: $last, after: $after, before: $before, author: $author) {
 						totalCount
 						pageInfo { hasNextPage, hasPreviousPage, startCursor, endCursor }
 						nodes {
@@ -1580,7 +1580,7 @@ export async function getBranchCommitsGraphQL(
         last: opts.last,
         after: opts.after,
         before: opts.before,
-        authorId: opts.authorId,
+        author: opts.authorId ? { id: opts.authorId } : null,
     });
 
     const ref = result.repository.ref;
