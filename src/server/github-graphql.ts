@@ -1468,157 +1468,156 @@ export async function getCommitGraphQL(
 }
 
 export interface BranchCommitsResult {
-	commits: (GQLCommitWithAuthors & {
-		statusCheckRollup: {
-			state: string;
-			contexts: {
-				nodes: Array<{
-					__typename?: string;
-					state?: string;
-					targetUrl?: string | null;
-					description?: string | null;
-					context?: string;
-					name?: string;
-					status?: string;
-					conclusion?: string | null;
-					detailsUrl?: string | null;
-					createdAt?: string;
-					startedAt?: string;
-					completedAt?: string;
-				} | null> | null;
-			};
-		} | null;
-	})[];
-	totalCount: number;
-	pageInfo: {
-		hasNextPage: boolean;
-		hasPreviousPage: boolean;
-		startCursor: string | null;
-		endCursor: string | null;
-	};
+    commits: (GQLCommitWithAuthors & {
+        statusCheckRollup: {
+            state: string;
+            contexts: {
+                nodes: Array<{
+                    __typename?: string;
+                    state?: string;
+                    targetUrl?: string | null;
+                    description?: string | null;
+                    context?: string;
+                    name?: string;
+                    status?: string;
+                    conclusion?: string | null;
+                    detailsUrl?: string | null;
+                    createdAt?: string;
+                    startedAt?: string;
+                    completedAt?: string;
+                } | null> | null;
+            };
+        } | null;
+    })[];
+    totalCount: number;
+    pageInfo: {
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+        startCursor: string | null;
+        endCursor: string | null;
+    };
 }
 
 export async function getBranchCommitsGraphQL(
-	accessToken: string,
-	owner: string,
-	repo: string,
-	branch: string,
-	opts: {
-		first?: number;
-		last?: number;
-		after?: string;
-		before?: string;
-		authorId?: string;
-	},
+    accessToken: string,
+    owner: string,
+    repo: string,
+    branch: string,
+    opts: {
+        first?: number;
+        last?: number;
+        after?: string;
+        before?: string;
+        authorId?: string;
+    },
 ): Promise<BranchCommitsResult> {
-	const graphql = octokitGraphql.defaults({
-		headers: { authorization: `bearer ${accessToken}` },
-	});
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
 
-	const result = await graphql<{
-		repository: {
-			ref: {
-				target: {
-					history: {
-						totalCount: number;
-						pageInfo: {
-							hasNextPage: boolean;
-							hasPreviousPage: boolean;
-							startCursor: string | null;
-							endCursor: string | null;
-						};
-						nodes: Array<{
-							oid: string;
-							message: string;
-							committedDate: string;
-							authors: {
-								nodes: Array<{
-									name: string;
-									avatarUrl: string;
-									user: {
-										login: string;
-										avatarUrl: string;
-										url: string;
-									} | null;
-								} | null>;
-							};
-							statusCheckRollup: {
-								state: string;
-								contexts: {
-									nodes: Array<{
-										__typename?: string;
-										state?: string;
-										targetUrl?: string | null;
-										description?: string | null;
-										context?: string;
-										name?: string;
-										status?: string;
-										conclusion?: string | null;
-										detailsUrl?: string | null;
-										createdAt?: string;
-										startedAt?: string;
-										completedAt?: string;
-									} | null> | null;
-								};
-							} | null;
-							signature: {
-								__typename: string;
-								isValid: boolean | null;
-							} | null;
-						}>;
-					};
-				} | null;
-			} | null;
-		};
-	}>(BRANCH_COMMITS_QUERY, {
-		owner,
-		repo,
-		branch,
-		first: opts.first,
-		last: opts.last,
-		after: opts.after,
-		before: opts.before,
-		authorId: opts.authorId,
-	});
+    const result = await graphql<{
+        repository: {
+            ref: {
+                target: {
+                    history: {
+                        totalCount: number;
+                        pageInfo: {
+                            hasNextPage: boolean;
+                            hasPreviousPage: boolean;
+                            startCursor: string | null;
+                            endCursor: string | null;
+                        };
+                        nodes: Array<{
+                            oid: string;
+                            message: string;
+                            committedDate: string;
+                            authors: {
+                                nodes: Array<{
+                                    name: string;
+                                    avatarUrl: string;
+                                    user: {
+                                        __typename: string;
+                                        login: string;
+                                        avatarUrl: string;
+                                        url: string;
+                                    } | null;
+                                } | null>;
+                            };
+                            statusCheckRollup: {
+                                state: string;
+                                contexts: {
+                                    nodes: Array<{
+                                        __typename?: string;
+                                        state?: string;
+                                        targetUrl?: string | null;
+                                        description?: string | null;
+                                        context?: string;
+                                        name?: string;
+                                        status?: string;
+                                        conclusion?: string | null;
+                                        detailsUrl?: string | null;
+                                        createdAt?: string;
+                                        startedAt?: string;
+                                        completedAt?: string;
+                                    } | null> | null;
+                                };
+                            } | null;
+                            signature: {
+                                __typename: string;
+                                isValid: boolean | null;
+                                state: string;
+                            } | null;
+                        }>;
+                    };
+                } | null;
+            } | null;
+        };
+    }>(BRANCH_COMMITS_QUERY, {
+        owner,
+        repo,
+        branch,
+        first: opts.first,
+        last: opts.last,
+        after: opts.after,
+        before: opts.before,
+        authorId: opts.authorId,
+    });
 
-	const ref = result.repository.ref;
-	if (!ref) {
-		throw new Error(`Branch ${branch} not found in ${owner}/${repo}`);
-	}
-	const target = ref.target;
-	if (!target) {
-		throw new Error(`Branch ${branch} not found in ${owner}/${repo}`);
-	}
-	const history = target.history;
+    const ref = result.repository.ref;
+    if (!ref) {
+        throw new Error(`Branch ${branch} not found in ${owner}/${repo}`);
+    }
+    const target = ref.target;
+    if (!target) {
+        throw new Error(`Branch ${branch} not found in ${owner}/${repo}`);
+    }
+    const history = target.history;
 
-	return {
-		commits: history.nodes.map((node) => ({
-			oid: node.oid,
-			message: node.message,
-			committedDate: node.committedDate,
-			authors: toCommitAuthors(node.authors),
-			signature: node.signature,
-			statusCheckRollup: node.statusCheckRollup,
-		})),
-		totalCount: history.totalCount,
-		pageInfo: history.pageInfo,
-	};
+    return {
+        commits: history.nodes.map((node) => ({
+            oid: node.oid,
+            message: node.message,
+            committedDate: node.committedDate,
+            authors: toCommitAuthors(node.authors),
+            signature: node.signature as unknown as GQLGitSignature | null,
+            statusCheckRollup: node.statusCheckRollup,
+        })),
+        totalCount: history.totalCount,
+        pageInfo: history.pageInfo,
+    };
 }
 
 export async function resolveUserNodeId(
-	accessToken: string,
-	login: string,
+    accessToken: string,
+    login: string,
 ): Promise<string | null> {
-	const graphql = octokitGraphql.defaults({
-		headers: { authorization: `bearer ${accessToken}` },
-	});
-	const result = await graphql<{
-		user: { id: string } | null;
-	}>(
-		`query($login: String!) { user(login: $login) { id } }`,
-		{ login },
-	);
-	return result.user?.id ?? null;
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+    const result = await graphql<{
+        user: { id: string } | null;
+    }>(`query($login: String!) { user(login: $login) { id } }`, { login });
+    return result.user?.id ?? null;
 }
 
 const TOP_REPOS_QUERY = `
