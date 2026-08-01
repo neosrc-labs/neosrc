@@ -35,6 +35,7 @@ import {
     useReviewThreadOperations,
 } from "~/hooks/use-review-thread-operations";
 import type { ReactionContent } from "~/lib/reactions";
+import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -173,8 +174,7 @@ export function ReviewComments({
                 !allComments.some(
                     (comment) =>
                         comment.pull_request_review_id === reviewId &&
-                        comment.id !== commentId &&
-                        comment.in_reply_to_id !== commentId,
+                        comment.id !== commentId,
                 );
 
             await utils.timeline.list.cancel({
@@ -194,11 +194,7 @@ export function ReviewComments({
                 { owner, repo, number },
                 (old) => {
                     if (!old) return old;
-                    return old.filter(
-                        (comment) =>
-                            comment.id !== commentId &&
-                            comment.in_reply_to_id !== commentId,
-                    );
+                    return removeCommentFromFlatList(old, commentId);
                 },
             );
 
@@ -206,10 +202,9 @@ export function ReviewComments({
                 if (!old) return old;
                 return {
                     ...old,
-                    comments: old.comments.filter(
-                        (comment) =>
-                            comment.id !== commentId &&
-                            comment.in_reply_to_id !== commentId,
+                    comments: removeCommentFromFlatList(
+                        old.comments,
+                        commentId,
                     ),
                 };
             });

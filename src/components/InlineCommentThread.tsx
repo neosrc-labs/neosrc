@@ -33,6 +33,7 @@ import {
     useReviewThreadOperations,
 } from "~/hooks/use-review-thread-operations";
 import type { ReactionContent } from "~/lib/reactions";
+import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
@@ -226,11 +227,7 @@ export function InlineCommentThread({
                 { owner, repo, number },
                 (old) => {
                     if (!old) return old;
-                    return old.filter(
-                        (c) =>
-                            c.id !== commentId &&
-                            c.in_reply_to_id !== commentId,
-                    );
+                    return removeCommentFromFlatList(old, commentId);
                 },
             );
 
@@ -238,10 +235,9 @@ export function InlineCommentThread({
                 if (!old) return old;
                 return {
                     ...old,
-                    comments: old.comments.filter(
-                        (c) =>
-                            c.id !== commentId &&
-                            c.in_reply_to_id !== commentId,
+                    comments: removeCommentFromFlatList(
+                        old.comments,
+                        commentId,
                     ),
                 };
             });
