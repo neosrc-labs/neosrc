@@ -170,7 +170,7 @@ export function AuthorDropdown({
                             <span>{selectedUser.login}</span>
                             <button
                                 type="button"
-                                className="ml-0.5 inline-flex items-center rounded p-0.5 text-text-muted transition-colors hover:text-text-primary"
+                                className="ml-0.5 inline-flex cursor-pointer items-center rounded p-0.5 text-text-muted transition-colors hover:text-text-primary"
                                 aria-label="Clear author filter"
                                 onClick={(e) => {
                                     e.stopPropagation();
