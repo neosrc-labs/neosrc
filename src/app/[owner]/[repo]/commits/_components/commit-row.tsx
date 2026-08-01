@@ -42,7 +42,7 @@ export function CommitRow({
     }, [commit.sha]);
 
     const iconBase =
-        "inline-flex items-center justify-center size-4 shrink-0 text-text-muted transition-colors hover:text-text-primary";
+        "inline-flex items-center justify-center size-4 shrink-0 cursor-pointer text-text-muted transition-colors hover:text-text-primary";
 
     return (
         <div className="flex items-center gap-2 px-4 py-2 transition-colors hover:bg-surface-secondary">
