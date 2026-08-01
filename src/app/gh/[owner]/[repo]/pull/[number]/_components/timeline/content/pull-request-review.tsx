@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Link, MoreVertical, SquarePen } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { ReactionBar } from "~/components/ReactionBar";
@@ -18,6 +18,7 @@ import type {
     GQLPullRequestReview,
     GQLReactionNode,
 } from "~/server/github-graphql";
+import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
 import { ReviewComments } from "../../review-comments";
 
@@ -86,6 +87,26 @@ export function PullRequestReviewContent({
         changes_requested: "requested changes",
     };
     const stateLabel = STATE_LABELS[state] ?? "reviewed";
+
+    const isPendingByCurrentUser =
+        state === "pending" && event.author?.login === currentUserLogin;
+
+    const { data: pendingComments = [] } =
+        api.reviewComments.byReviewId.useQuery(
+            { owner, repo, number, reviewId: event.databaseId },
+            { enabled: isPendingByCurrentUser, staleTime: 30_000 },
+        );
+
+    const mergedComments = useMemo(() => {
+        if (!isPendingByCurrentUser || pendingComments.length === 0) {
+            return allComments;
+        }
+        const existingIds = new Set(allComments.map((c) => c.id));
+        const newComments = pendingComments.filter(
+            (c) => !existingIds.has(c.id),
+        );
+        return [...allComments, ...(newComments as unknown as ReviewComment[])];
+    }, [allComments, pendingComments, isPendingByCurrentUser]);
 
     return (
         <>
@@ -225,7 +246,7 @@ export function PullRequestReviewContent({
                 reviewId={event.databaseId}
                 hasReviewBody={Boolean(event.body)}
                 state={state}
-                allComments={allComments}
+                allComments={mergedComments}
                 currentUserLogin={currentUserLogin}
                 canInteract={canInteract}
             />
