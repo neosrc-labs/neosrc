@@ -2,6 +2,7 @@
 
 import { Fzf } from "fzf";
 import { GitBranchIcon, HistoryIcon, Search, TagIcon, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
     mapChecksListToStatusContexts,
@@ -521,6 +522,7 @@ function CommitRow({
         [checks],
     );
     const baseUrl = repoUrl(provider, owner, repo);
+    const commitsHref = `/${provider === "gh" ? "gh" : "cb"}/${owner}/${repo}/commits/${selectedBranch}`;
     return (
         <div className="flex min-h-12 items-center gap-3 border-border border-b px-4 py-3">
             <div className="[&_img]:h-5 [&_img]:w-5 [&_span]:text-sm">
@@ -576,14 +578,14 @@ function CommitRow({
                     {formatRelativeTime(latestCommit.committedDate)}
                 </span>
             )}
-            <a
-                href={`${baseUrl}/commits/${selectedBranch}`}
+            <Link
+                href={commitsHref}
                 className="inline-flex shrink-0 items-center gap-1 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
             >
                 <HistoryIcon className="h-3.5 w-3.5" />
                 {latestCommit.commitCount.toLocaleString()}{" "}
                 {latestCommit.commitCount === 1 ? "commit" : "commits"}
-            </a>
+            </Link>
         </div>
     );
 }
