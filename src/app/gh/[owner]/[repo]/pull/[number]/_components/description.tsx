@@ -22,6 +22,7 @@ import {
 } from "~/components/ui/status-pill";
 import type { ReactionContent } from "~/lib/reactions";
 import type { PullsGetResponseData } from "~/server/github";
+import { ConflictedFiles } from "./conflicted-files";
 
 type SimpleUser = components["schemas"]["nullable-simple-user"];
 
@@ -39,6 +40,7 @@ interface PullRequestDescriptionSectionProps {
     canInteractPromise: Promise<boolean>;
     canEditPromise: Promise<boolean>;
     actionSection?: ReactNode;
+    conflictedFilesPromise?: Promise<string[]> | null;
 }
 
 export function PullRequestDescriptionSection({
@@ -49,6 +51,7 @@ export function PullRequestDescriptionSection({
     canInteractPromise,
     canEditPromise,
     actionSection,
+    conflictedFilesPromise,
 }: PullRequestDescriptionSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editBody, setEditBody] = useState("");
@@ -211,6 +214,30 @@ export function PullRequestDescriptionSection({
                     pullRequestPromise={pullRequestPromise}
                     actionSection={actionSection}
                 />
+                {conflictedFilesPromise && (
+                    <Async fallback={null} promise={pullRequestPromise}>
+                        {(pullRequest) => (
+                            <Async
+                                fallback={null}
+                                promise={conflictedFilesPromise}
+                            >
+                                {(files) =>
+                                    files.length > 0 ? (
+                                        <div className="mt-3">
+                                            <ConflictedFiles
+                                                owner={owner}
+                                                repo={repo}
+                                                number={number}
+                                                pullRequest={pullRequest}
+                                                conflictedFiles={files}
+                                            />
+                                        </div>
+                                    ) : null
+                                }
+                            </Async>
+                        )}
+                    </Async>
+                )}
             </div>
 
             <Async
