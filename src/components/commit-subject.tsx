@@ -1,5 +1,6 @@
 import { TriangleAlert } from "lucide-react";
 import { CommitTypeBadge } from "~/components/commit-type-badge";
+import { CodeTitle } from "~/components/markdown/code-title";
 import { cn } from "~/lib/utils";
 import { parseCommitMessage } from "~/utils/commit-message";
 
@@ -13,7 +14,11 @@ export function CommitSubject({
     const { subject, conventional } = parseCommitMessage(message);
 
     if (!conventional) {
-        return <span className={className}>{subject}</span>;
+        return (
+            <span className={className}>
+                <CodeTitle>{subject}</CodeTitle>
+            </span>
+        );
     }
 
     return (
@@ -37,7 +42,9 @@ export function CommitSubject({
                     ({conventional.scope})
                 </span>
             )}
-            <span className="truncate">{conventional.description}</span>
+            <span className="truncate">
+                <CodeTitle>{conventional.description}</CodeTitle>
+            </span>
         </span>
     );
 }
