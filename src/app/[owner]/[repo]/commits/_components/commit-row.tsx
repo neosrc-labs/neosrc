@@ -40,7 +40,7 @@ export function CommitRow({
     }, [commit.sha]);
 
     const iconBase =
-        "size-3.5 shrink-0 text-text-muted transition-colors hover:text-text-primary";
+        "inline-flex items-center justify-center size-4 shrink-0 text-text-muted transition-colors hover:text-text-primary";
 
     return (
         <div className="flex flex-col gap-1 px-4 py-2 transition-colors hover:bg-surface-secondary">
@@ -54,6 +54,12 @@ export function CommitRow({
                 </Link>
 
                 <span className="ml-auto flex shrink-0 items-center gap-1.5">
+                    <Link
+                        href={commitUrl}
+                        className="font-mono text-text-muted text-xs transition-colors hover:text-text-primary"
+                    >
+                        {commit.shortSha}
+                    </Link>
                     <button
                         type="button"
                         onClick={handleCopy}
@@ -61,9 +67,9 @@ export function CommitRow({
                         aria-label="Copy full SHA"
                     >
                         {copied ? (
-                            <Check className="size-3.5 text-green-500" />
+                            <Check className="text-green-500" size={16} />
                         ) : (
-                            <Copy className="size-3.5" />
+                            <Copy size={16} />
                         )}
                     </button>
                     <a
@@ -73,14 +79,8 @@ export function CommitRow({
                         className={iconBase}
                         aria-label="Browse files at this commit"
                     >
-                        <FolderOpen className="size-3.5" />
+                        <FolderOpen size={16} />
                     </a>
-                    <Link
-                        href={commitUrl}
-                        className="font-mono text-text-muted text-xs transition-colors hover:text-text-primary"
-                    >
-                        {commit.shortSha}
-                    </Link>
                 </span>
             </div>
 
