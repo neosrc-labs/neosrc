@@ -86,7 +86,7 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
         (newBranch: string) => {
             setNav({ page: 1 });
             router.push(
-                `/${config.basePath}/${owner}/${repo}/commits/${newBranch}`,
+                `${config.basePath}/${owner}/${repo}/commits/${newBranch}`,
             );
         },
         [config.basePath, owner, repo, router],
