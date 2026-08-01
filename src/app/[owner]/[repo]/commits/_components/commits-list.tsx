@@ -17,15 +17,23 @@ interface CommitsListProps {
 
 function SkeletonList() {
     return (
-        <div className="space-y-0 divide-y divide-border-subtle rounded-lg border border-border-subtle">
-            {Array.from({ length: 5 }).map(() => (
+        <div className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
+            {Array.from({ length: 15 }).map(() => (
                 <div
                     key={crypto.randomUUID()}
-                    className="flex animate-pulse items-center gap-3 px-4 py-3"
+                    className="flex animate-pulse items-center gap-2 px-4 py-2"
                 >
-                    <div className="h-4 w-2/3 rounded bg-surface-tertiary" />
-                    <div className="h-4 w-16 rounded bg-surface-tertiary" />
-                    <div className="h-4 w-14 rounded bg-surface-tertiary" />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <div className="h-4 w-3/4 rounded bg-surface-tertiary" />
+                        <div className="flex items-center gap-2">
+                            <div className="h-3 w-5 rounded-full bg-surface-tertiary" />
+                            <div className="h-3 w-16 rounded bg-surface-tertiary" />
+                        </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                        <div className="h-3 w-16 rounded bg-surface-tertiary" />
+                        <div className="h-3 w-5 rounded bg-surface-tertiary" />
+                    </div>
                 </div>
             ))}
         </div>
