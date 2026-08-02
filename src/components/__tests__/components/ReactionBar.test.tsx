@@ -10,7 +10,7 @@ vi.mock("~/components/ui/tooltip", () => ({
         <>{children}</>
     ),
     TooltipContent: ({ children }: { children: React.ReactNode }) => (
-        <span>{children}</span>
+        <span data-testid="tooltip-content">{children}</span>
     ),
 }));
 
@@ -244,5 +244,44 @@ describe("ReactionBar", () => {
 
         expect(screen.getByText("alice, bob")).toBeInTheDocument();
         expect(screen.getByText("carol")).toBeInTheDocument();
+    });
+
+    it("does not render a tooltip when counts include a type with no reactors on the page", () => {
+        // counts reports heart reactors, but the first page of reactions has
+        // none of them, so the heart button would otherwise show an empty
+        // tooltip.
+        const reactions = [
+            { content: "+1", id: "1", user: { login: "alice" } },
+        ];
+
+        render(
+            <ReactionBar
+                reactions={reactions}
+                counts={{ "+1": 5, heart: 3 }}
+                onReact={vi.fn()}
+            />,
+        );
+
+        // The heart button is still rendered (count > 0) but has no tooltip.
+        expect(screen.getByLabelText(/❤️/)).toBeInTheDocument();
+        const tooltips = screen.getAllByTestId("tooltip-content");
+        expect(tooltips).toHaveLength(1);
+        expect(tooltips[0]).toHaveTextContent("alice");
+    });
+
+    it("does not render a tooltip for reactions without a named user", () => {
+        render(
+            <ReactionBar
+                reactions={[
+                    { content: "+1", id: "1", user: null },
+                    { content: "+1", id: "2", user: { login: "bob" } },
+                ]}
+                onReact={vi.fn()}
+            />,
+        );
+
+        const tooltips = screen.getAllByTestId("tooltip-content");
+        expect(tooltips).toHaveLength(1);
+        expect(tooltips[0]).toHaveTextContent("bob");
     });
 });

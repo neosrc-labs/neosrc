@@ -57,6 +57,9 @@ export function ReactionBar({
                 const isActive = currentUserLogin
                     ? rs.some((r) => r.user?.login === currentUserLogin)
                     : false;
+                const tooltipUsers = rs
+                    .map((r) => r.user?.login)
+                    .filter(Boolean);
 
                 return (
                     <Tooltip key={content}>
@@ -103,15 +106,14 @@ export function ReactionBar({
                                     ))}
                             </button>
                         </TooltipTrigger>
-                        <TooltipContent
-                            side="top"
-                            className="max-w-64 text-center"
-                        >
-                            {rs
-                                .map((r) => r.user?.login)
-                                .filter(Boolean)
-                                .join(", ")}
-                        </TooltipContent>
+                        {tooltipUsers.length > 0 && (
+                            <TooltipContent
+                                side="top"
+                                className="max-w-64 text-center"
+                            >
+                                {tooltipUsers.join(", ")}
+                            </TooltipContent>
+                        )}
                     </Tooltip>
                 );
             })}
