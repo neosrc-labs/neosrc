@@ -7,7 +7,9 @@ import { InlineCommentThread } from "~/components/InlineCommentThread";
 import type { ReviewComment } from "~/server/github";
 
 const mockThreadsQuery = vi.hoisted(() =>
-    vi.fn<() => { data: unknown }>(() => ({ data: undefined })),
+    vi.fn<() => { data: unknown; isPending?: boolean }>(() => ({
+        data: undefined,
+    })),
 );
 vi.mock("~/trpc/react", () => ({
     api: {
@@ -324,7 +326,28 @@ const defaultProps = {
 describe("InlineCommentThread", () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockThreadsQuery.mockReturnValue({ data: undefined });
+        // Threads query settled: the parent comment belongs to an unresolved
+        // thread, so the full thread renders.
+        mockThreadsQuery.mockReturnValue({
+            data: [
+                {
+                    id: "thread-1",
+                    isResolved: false,
+                    isOutdated: false,
+                    comments: [{ id: 1 }],
+                },
+            ],
+        });
+    });
+
+    it("does not render the comment body while thread resolution is loading", () => {
+        mockThreadsQuery.mockReturnValue({ data: undefined, isPending: true });
+
+        render(<InlineCommentThread {...defaultProps} />);
+
+        expect(screen.queryByTestId("comment-card")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("resolved-banner")).not.toBeInTheDocument();
+        expect(screen.queryByText("Reply...")).not.toBeInTheDocument();
     });
 
     it("renders thread with parent comment", () => {

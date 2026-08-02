@@ -313,10 +313,11 @@ export function InlineCommentThread({
         },
     });
 
-    const { data: threads } = api.reviewComments.threads.useQuery(
-        { owner, repo, number },
-        { staleTime: 30_000 },
-    );
+    const { data: threads, isPending: threadsPending } =
+        api.reviewComments.threads.useQuery(
+            { owner, repo, number },
+            { staleTime: 30_000 },
+        );
 
     const resolveOps = useReviewThreadOperations({ owner, repo, number });
     const displayThreads = applyReviewThreadOperations(
@@ -348,6 +349,12 @@ export function InlineCommentThread({
         },
         [deleteMutation, owner, repo],
     );
+
+    // Never render comment bodies while thread resolution state is unknown:
+    // resolved threads must not flash open while the threads query loads.
+    if (threadsPending) {
+        return <div id={`review-thread-${parentComment.id}`} />;
+    }
 
     if (threadInfo?.isResolved && !expandedResolved) {
         return (
