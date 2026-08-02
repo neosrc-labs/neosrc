@@ -321,8 +321,9 @@ function MergeModeDropdown({
             <PopoverTrigger asChild>{children}</PopoverTrigger>
             <PopoverContent
                 align="end"
+                avoidCollisions={false}
                 className="w-72 bg-surface p-2"
-                side="left"
+                side="bottom"
                 sideOffset={8}
             >
                 <div className="space-y-1">
