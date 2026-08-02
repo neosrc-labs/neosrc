@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -83,73 +84,88 @@ export const commitsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }): Promise<ListCommitsResult> => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
+            try {
+                if (input.provider === "cb") {
+                    const accessToken = await getCodebergToken(
+                        ctx.db,
+                        ctx.session.user.id,
+                    );
+                    const { commits, totalCount } = await listBranchCommits(
+                        accessToken,
+                        input.owner,
+                        input.repo,
+                        input.branch,
+                        {
+                            page: input.page,
+                            limit: input.perPage,
+                            author: input.author ?? undefined,
+                        },
+                    );
+                    const items = commits
+                        .map(mapCodebergCommit)
+                        .filter(
+                            (c) =>
+                                !input.author ||
+                                c.author?.login === input.author,
+                        );
+                    return { commits: items, totalCount, cursors: null };
+                }
+
+                const accessToken = await getGitHubToken(
                     ctx.db,
                     ctx.session.user.id,
                 );
-                const { commits, totalCount } = await listBranchCommits(
+
+                let authorId: string | undefined;
+                if (input.author) {
+                    const resolvedId = await resolveUserNodeId(
+                        accessToken,
+                        input.author,
+                    );
+                    if (!resolvedId) {
+                        return {
+                            commits: [],
+                            totalCount: 0,
+                            cursors: null,
+                        };
+                    }
+                    authorId = resolvedId;
+                }
+
+                const result = await getBranchCommitsGraphQL(
                     accessToken,
                     input.owner,
                     input.repo,
                     input.branch,
                     {
-                        page: input.page,
-                        limit: input.perPage,
-                        author: input.author ?? undefined,
+                        first: input.beforeCursor ? undefined : input.perPage,
+                        last: input.beforeCursor ? input.perPage : undefined,
+                        after: input.afterCursor,
+                        before: input.beforeCursor,
+                        authorId,
                     },
                 );
-                const items = commits
-                    .map(mapCodebergCommit)
-                    .filter(
-                        (c) =>
-                            !input.author || c.author?.login === input.author,
-                    );
-                return { commits: items, totalCount, cursors: null };
-            }
 
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session.user.id,
-            );
-
-            let authorId: string | undefined;
-            if (input.author) {
-                const resolvedId = await resolveUserNodeId(
-                    accessToken,
-                    input.author,
-                );
-                if (!resolvedId) {
-                    return { commits: [], totalCount: 0, cursors: null };
+                const items = result.commits.map(mapGQLCommit);
+                return {
+                    commits: items,
+                    totalCount: result.totalCount,
+                    cursors:
+                        result.pageInfo.startCursor && result.pageInfo.endCursor
+                            ? {
+                                  start: result.pageInfo.startCursor,
+                                  end: result.pageInfo.endCursor,
+                              }
+                            : null,
+                };
+            } catch (e) {
+                if (e instanceof Error && /not found/i.test(e.message)) {
+                    throw new TRPCError({
+                        code: "NOT_FOUND",
+                        message: e.message,
+                    });
                 }
-                authorId = resolvedId;
+                throw e;
             }
-
-            const result = await getBranchCommitsGraphQL(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.branch,
-                {
-                    first: input.beforeCursor ? undefined : input.perPage,
-                    last: input.beforeCursor ? input.perPage : undefined,
-                    after: input.afterCursor,
-                    before: input.beforeCursor,
-                    authorId,
-                },
-            );
-
-            const items = result.commits.map(mapGQLCommit);
-            return {
-                commits: items,
-                totalCount: result.totalCount,
-                cursors:
-                    result.pageInfo.startCursor && result.pageInfo.endCursor
-                        ? {
-                              start: result.pageInfo.startCursor,
-                              end: result.pageInfo.endCursor,
-                          }
-                        : null,
-            };
         }),
 });

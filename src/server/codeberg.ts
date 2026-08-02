@@ -816,6 +816,11 @@ export const listBranchCommits = cache(
             },
         });
         if (!res.ok) {
+            if (res.status === 404) {
+                throw new Error(
+                    `Branch ${branch} not found in ${owner}/${repo}`,
+                );
+            }
             throw new Error(
                 `Failed to list commits for ${owner}/${repo}/${branch}: ${res.status}`,
             );
