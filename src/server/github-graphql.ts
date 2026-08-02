@@ -21,6 +21,7 @@ fragment CommitFields on Commit {
 	authors(first: 10) {
 		nodes {
 			name
+			email
 			avatarUrl
 			user { ...SimpleUser }
 		}
@@ -419,7 +420,7 @@ query BranchCommits(
 							oid
 							message
 							committedDate
-							authors(first: 10) { nodes { name, avatarUrl, user { ...SimpleUser } } }
+							authors(first: 10) { nodes { name, email, avatarUrl, user { ...SimpleUser } } }
 							statusCheckRollup { state, contexts(first: 50) { nodes { ... on StatusContext { state, targetUrl, description, context, createdAt } ... on CheckRun { name, conclusion, status, detailsUrl, startedAt, completedAt } } } }
 							signature { __typename ... on GpgSignature { isValid, keyId, state } ... on SshSignature { isValid, state } ... on SmimeSignature { isValid, state } }
 						}
@@ -736,6 +737,7 @@ export type GQLGitSignature =
 
 export type GQLCommitAuthor = {
     name: string | null;
+    email?: string | null;
     avatarUrl: string | null;
     user: GQLActor | null;
 };
@@ -911,7 +913,23 @@ export async function getPullRequestTimelineGraphQL(
         Boolean,
     ) as GQLTimelineEvent[];
 
-    const events = rawNodes;
+    const events = rawNodes.map((node) => {
+        if (node.__typename === "PullRequestCommit" && node.commit?.authors) {
+            return {
+                ...node,
+                commit: {
+                    ...node.commit,
+                    authors: {
+                        nodes: (node.commit.authors.nodes ?? []).map(
+                            (author) =>
+                                author ? resolveCommitAuthor(author) : author,
+                        ),
+                    },
+                },
+            };
+        }
+        return node;
+    });
     const pageInfo = result.repository.pullRequest.timelineItems.pageInfo;
 
     const commentReactions: Record<
@@ -1370,12 +1388,37 @@ export type GQLCommitWithAuthors = {
     signature?: GQLGitSignature | null;
 };
 
+const NOREPLY_EMAIL_PATTERN = /^(\d+)\+([^@]+)@users\.noreply\.github\.com$/;
+
+// GitHub's GraphQL Commit.authors.user sometimes fails to resolve a commit
+// author whose git email is a noreply address (ID+login@users.noreply.github.com),
+// even though REST resolves it. The email format itself encodes the account,
+// so synthesize the user instead of rendering the author as unknown.
+export function resolveCommitAuthor(author: GQLCommitAuthor): GQLCommitAuthor {
+    if (author.user) return author;
+
+    const match = author.email?.match(NOREPLY_EMAIL_PATTERN);
+    if (!match || match[1] === undefined || match[2] === undefined) {
+        return author;
+    }
+
+    const id = match[1];
+    const login = match[2];
+    const user: GQLActor = {
+        __typename: "User",
+        login,
+        avatarUrl: `https://avatars.githubusercontent.com/u/${id}?v=4`,
+        url: `https://github.com/${login}`,
+    };
+    return { ...author, avatarUrl: user.avatarUrl, user };
+}
+
 function toCommitAuthors(
     authors: GQLCommitFields["authors"],
 ): GQLCommitAuthor[] {
-    return (authors?.nodes ?? []).filter(
-        (a): a is GQLCommitAuthor => a !== null,
-    );
+    return (authors?.nodes ?? [])
+        .filter((a): a is GQLCommitAuthor => a !== null)
+        .map(resolveCommitAuthor);
 }
 
 export async function getPullRequestCommitsGraphQL(
