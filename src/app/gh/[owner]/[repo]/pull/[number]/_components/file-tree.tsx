@@ -323,7 +323,7 @@ function FileTreeNode({
         return (
             <a
                 className="flex items-center gap-1.5 truncate rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                href={`${basePath}/files#${fileId}`}
+                href={`${basePath}/changes#${fileId}`}
                 style={{ paddingLeft: `${paddingLeft}px` }}
             >
                 <img

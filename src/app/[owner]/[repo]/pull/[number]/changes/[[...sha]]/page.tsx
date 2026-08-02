@@ -21,7 +21,7 @@ async function checkCodebergRepo(token: string, owner: string, repo: string) {
     return result !== null;
 }
 
-export default async function FilesRedirectPage({
+export default async function ChangesRedirectPage({
     params,
 }: {
     params: Promise<{
@@ -48,7 +48,7 @@ export default async function FilesRedirectPage({
     const shaPath = sha && sha.length > 0 ? `/${sha.join("/")}` : "";
 
     if (githubExists)
-        redirect(`/gh/${owner}/${repo}/pull/${number}/files${shaPath}`);
+        redirect(`/gh/${owner}/${repo}/pull/${number}/changes${shaPath}`);
     if (codebergExists)
         redirect(
             `https://codeberg.org/${owner}/${repo}/pull/${number}/files${shaPath}`,

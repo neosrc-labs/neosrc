@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { ResizableLayout } from "~/components/ResizableLayout";
-import { isFilesPage } from "~/utils/route";
+import { isChangesPage } from "~/utils/route";
 
 export type PullRequestClientLayoutProps = {
     leftSidebar: ReactNode;
@@ -20,7 +20,7 @@ export function PullRequestClientLayout({
     const pathname = usePathname();
     return (
         <ResizableLayout
-            boxed={!isFilesPage(pathname)}
+            boxed={!isChangesPage(pathname)}
             leftSidebar={leftSidebar}
             rightSidebar={rightSidebar}
         >

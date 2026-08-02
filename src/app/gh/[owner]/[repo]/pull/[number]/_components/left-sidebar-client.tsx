@@ -27,8 +27,8 @@ export function LeftSidebarContentSection({
     const pathname = usePathname();
     const basePath = `/gh/${owner}/${repo}/pull/${number}`;
     const isFilesActive =
-        pathname === `${basePath}/files` ||
-        pathname.startsWith(`${basePath}/files/`);
+        pathname === `${basePath}/changes` ||
+        pathname.startsWith(`${basePath}/changes/`);
 
     const { setRightOpen } = useSidebar();
 
@@ -66,7 +66,7 @@ function SidebarFileTree({
     const pathname = usePathname();
     const basePath = `/gh/${owner}/${repo}/pull/${number}`;
     const commitSha = useMemo(() => {
-        const match = pathname?.match(/\/files\/([a-f0-9]{7,40})/);
+        const match = pathname?.match(/\/changes\/([a-f0-9]{7,40})/);
         return match ? match[1] : undefined;
     }, [pathname]);
 
@@ -168,8 +168,8 @@ export function SidebarNavMenu({
     const pathname = usePathname();
     const basePath = `/gh/${owner}/${repo}/pull/${number}`;
     const isFilesActive =
-        pathname === `${basePath}/files` ||
-        pathname.startsWith(`${basePath}/files/`);
+        pathname === `${basePath}/changes` ||
+        pathname.startsWith(`${basePath}/changes/`);
     return (
         <NavMenu>
             <NavItem
@@ -185,7 +185,7 @@ export function SidebarNavMenu({
                 }
             />
             <NavItem
-                href={`${basePath}/files`}
+                href={`${basePath}/changes`}
                 isActive={isFilesActive}
                 label="Files Changed"
                 count={

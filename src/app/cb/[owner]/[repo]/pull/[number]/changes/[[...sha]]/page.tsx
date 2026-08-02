@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default async function CbFilesPage({
+export default async function CbChangesPage({
     params,
 }: {
     params: Promise<{

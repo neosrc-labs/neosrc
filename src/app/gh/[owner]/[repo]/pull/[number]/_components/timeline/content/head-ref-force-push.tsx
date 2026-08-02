@@ -22,10 +22,10 @@ export function HeadRefForcePushContent({
     const beforeShort = event.beforeCommit?.oid.slice(0, 7) ?? "unknown";
     const afterShort = event.afterCommit?.oid.slice(0, 7) ?? "unknown";
     const beforeHref = event.beforeCommit?.oid
-        ? `/gh/${owner}/${repo}/pull/${number}/files/${event.beforeCommit.oid}`
+        ? `/gh/${owner}/${repo}/pull/${number}/changes/${event.beforeCommit.oid}`
         : null;
     const afterHref = event.afterCommit?.oid
-        ? `/gh/${owner}/${repo}/pull/${number}/files/${event.afterCommit.oid}`
+        ? `/gh/${owner}/${repo}/pull/${number}/changes/${event.afterCommit.oid}`
         : null;
     return (
         <EventRow>

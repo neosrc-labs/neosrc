@@ -28,7 +28,7 @@ export function PullRequestCommitContent({
                     />
                 )}
                 <NextLink
-                    href={`/gh/${owner}/${repo}/pull/${number}/files/${commit?.oid}`}
+                    href={`/gh/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
                     className="truncate hover:text-blue-600 hover:underline dark:hover:text-blue-400"
                 >
                     <CommitSubject
@@ -45,7 +45,7 @@ export function PullRequestCommitContent({
                     <VerifiedBadge signature={commit.signature} />
                 )}
                 <NextLink
-                    href={`/gh/${owner}/${repo}/pull/${number}/files/${commit?.oid}`}
+                    href={`/gh/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
                     className="font-mono text-text-secondary text-xs hover:text-blue-600 hover:underline dark:hover:text-blue-400"
                 >
                     {commit?.oid.slice(0, 7)}
