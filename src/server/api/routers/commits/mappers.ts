@@ -29,7 +29,11 @@ export function mapGQLCommit(
 ): CommitListItem {
     const authorNode = c.authors[0];
     const author = authorNode?.user
-        ? { login: authorNode.user.login, avatarUrl: authorNode.user.avatarUrl }
+        ? {
+              login: authorNode.user.login,
+              avatarUrl: authorNode.user.avatarUrl,
+              url: authorNode.user.url,
+          }
         : null;
 
     const statusContexts: StatusContext[] = (
@@ -91,7 +95,11 @@ export function mapCodebergCommit(c: CodebergCommitRaw): CommitListItem {
         message: c.commit.message,
         committedDate: c.commit.author.date,
         author: c.author
-            ? { login: c.author.login, avatarUrl: c.author.avatar_url }
+            ? {
+                  login: c.author.login,
+                  avatarUrl: c.author.avatar_url,
+                  url: `https://codeberg.org/${c.author.login}`,
+              }
             : null,
         committerName: c.author?.login ?? c.commit.author.name,
         statusState: null,

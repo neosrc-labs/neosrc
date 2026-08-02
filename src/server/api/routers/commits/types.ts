@@ -8,6 +8,7 @@ export interface CommitListItem {
     author: {
         login: string;
         avatarUrl: string;
+        url: string;
     } | null;
     committerName: string | null; // fallback display name when author is null
     statusState: string | null; // "SUCCESS" | "FAILURE" | "PENDING" | "ERROR" | null
