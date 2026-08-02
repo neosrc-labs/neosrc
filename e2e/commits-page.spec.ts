@@ -41,12 +41,15 @@ test.describe
             );
 
             expectedCommits = commits
-                .map((c) => ({
-                    sha: c.sha,
-                    shortSha: c.sha.slice(0, 7),
-                    subject: c.commit.message.split("\n")[0],
-                    authorLogin: c.author?.login ?? null,
-                }))
+                .map((c) => {
+                    const [subject = ""] = c.commit.message.split("\n");
+                    return {
+                        sha: c.sha,
+                        shortSha: c.sha.slice(0, 7),
+                        subject,
+                        authorLogin: c.author?.login ?? null,
+                    };
+                })
                 .filter((c) => c.subject.length > 0);
         });
 
@@ -76,10 +79,8 @@ test.describe
             });
 
             await test.step("Verify the commit author is displayed", async () => {
-                const withAuthor =
-                    expectedCommits.find((c) => c.authorLogin) ??
-                    expectedCommits[0];
-                if (withAuthor.authorLogin) {
+                const withAuthor = expectedCommits.find((c) => c.authorLogin);
+                if (withAuthor?.authorLogin) {
                     await expect(
                         page.getByText(withAuthor.authorLogin).first(),
                     ).toBeVisible();
