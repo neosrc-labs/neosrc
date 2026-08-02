@@ -97,7 +97,13 @@ export function TimelineEvent({
             <TimelineIcon event={wrapper.event} />
 
             <div
-                className="pt-1"
+                // content-visibility: auto implies paint containment, which clips
+                // anything drawn outside this box. The CommentCard speech-bubble
+                // tail (issue comments) hangs 8px left of the card, so extend the
+                // box leftward (negative margin plus padding) without moving the
+                // card itself. The review-card up-tail stays inside because a
+                // header row sits above it.
+                className="-ml-2 pl-2 pt-1"
                 style={{
                     contentVisibility: "auto",
                     containIntrinsicSize: "200px",
