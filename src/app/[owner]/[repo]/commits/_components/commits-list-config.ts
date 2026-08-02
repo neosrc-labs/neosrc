@@ -13,5 +13,5 @@ export const ghConfig: CommitsListConfig = {
 export const cbConfig: CommitsListConfig = {
     provider: "cb",
     basePath: "/cb",
-    showStatusChecks: false,
+    showStatusChecks: true,
 };

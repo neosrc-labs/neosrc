@@ -792,6 +792,46 @@ export const listRecentIssueAuthors = cache(
     },
 );
 
+type GiteaCommitStatus = {
+    context: string;
+    status: string;
+    description: string | null;
+    target_url: string | null;
+    created_at: string;
+    updated_at: string;
+};
+
+type GiteaCombinedStatus = {
+    state: string;
+    sha: string;
+    total_count: number;
+    statuses: GiteaCommitStatus[];
+};
+export async function getCommitCombinedStatus(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    sha: string,
+): Promise<GiteaCombinedStatus | null> {
+    const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits/${sha}/status`;
+    const res = await fetch(url, {
+        headers: {
+            Authorization: `token ${accessToken}`,
+            Accept: "application/json",
+        },
+    });
+    if (!res.ok) {
+        if (res.status === 404) return null;
+        throw new Error(
+            `Failed to fetch commit status for ${owner}/${repo}/${sha}: ${res.status}`,
+        );
+    }
+    const data = (await res.json()) as GiteaCombinedStatus;
+    return {
+        ...data,
+        statuses: data.statuses ?? [],
+    };
+}
 export const listBranchCommits = cache(
     async (
         accessToken: string,
