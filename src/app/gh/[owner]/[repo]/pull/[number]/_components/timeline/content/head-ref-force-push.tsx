@@ -35,12 +35,12 @@ export function HeadRefForcePushContent({
                 {beforeHref ? (
                     <NextLink
                         href={beforeHref}
-                        className="rounded bg-surface-tertiary px-1 text-xs hover:bg-surface-selected"
+                        className="font-medium text-text-primary hover:underline"
                     >
                         {beforeShort}
                     </NextLink>
                 ) : (
-                    <code className="rounded bg-surface-tertiary px-1 text-xs">
+                    <code className="font-medium text-text-primary">
                         {beforeShort}
                     </code>
                 )}
@@ -48,12 +48,12 @@ export function HeadRefForcePushContent({
                 {afterHref ? (
                     <NextLink
                         href={afterHref}
-                        className="rounded bg-surface-tertiary px-1 text-xs hover:bg-surface-selected"
+                        className="font-medium text-text-primary hover:underline"
                     >
                         {afterShort}
                     </NextLink>
                 ) : (
-                    <code className="rounded bg-surface-tertiary px-1 text-xs">
+                    <code className="font-medium text-text-primary">
                         {afterShort}
                     </code>
                 )}
