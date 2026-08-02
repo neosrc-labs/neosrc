@@ -70,6 +70,8 @@ function mapGqlItem(item: {
     comments: { totalCount: number };
     reviewDecision: string | null;
     mergeStateStatus: string;
+    stack: { size: number } | null;
+    stackEntry: { position: number } | null;
 }): PrSearchItem {
     return {
         id: item.databaseId,
@@ -85,5 +87,12 @@ function mapGqlItem(item: {
         comments: item.comments.totalCount,
         reviewDecision: item.reviewDecision,
         mergeable: item.mergeStateStatus,
+        stack:
+            item.stack && item.stackEntry
+                ? {
+                      size: item.stack.size,
+                      position: item.stackEntry.position,
+                  }
+                : null,
     };
 }

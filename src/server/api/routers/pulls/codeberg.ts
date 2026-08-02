@@ -123,5 +123,6 @@ function mapCodebergPr(pr: CodebergPullRequest): PrSearchItem {
         assignees: nullSafe(pr.assignees).map(mapCbAssignee),
         comments: pr.comments ?? 0,
         reviewDecision: null,
+        stack: null,
     };
 }

@@ -4,6 +4,7 @@ import {
     GitPullRequest,
     GitPullRequestClosed,
     GitPullRequestDraft,
+    Layers,
     MessageSquare,
     TriangleAlert,
     XCircle,
@@ -44,6 +45,7 @@ export interface PrRowData {
     status_contexts: StatusContext[];
     review_decision: string | null;
     mergeable?: string | null;
+    stack: { size: number; position: number } | null;
 }
 
 type PrStatus = "draft" | "open" | "closed" | "merged";
@@ -161,6 +163,19 @@ export function PullRequestRow({
                         </span>
                     ) : (
                         <span>by unknown</span>
+                    )}
+                    {pr.stack && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span className="flex items-center gap-0.5 text-text-secondary text-xs">
+                                    <Layers className="size-3.5" />
+                                    {pr.stack.position} / {pr.stack.size}
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                                Part of a PR stack
+                            </TooltipContent>
+                        </Tooltip>
                     )}
                     {pr.review_decision === "APPROVED" && (
                         <span className="flex items-center gap-0.5 text-green-600 text-xs dark:text-green-500">

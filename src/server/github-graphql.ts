@@ -1100,36 +1100,8 @@ export interface GqlPrSearchItem {
     comments: { totalCount: number };
     reviewDecision: string | null;
     mergeStateStatus: string;
-    // commits: {
-    // 	nodes: Array<{
-    // 		commit: {
-    // 			oid: string;
-    // 			statusCheckRollup: {
-    // 				state: string;
-    // 				contexts: {
-    // 					nodes: Array<
-    // 						| {
-    // 							__typename: "CheckRun";
-    // 							name: string;
-    // 							status: string;
-    // 							conclusion: string | null;
-    // 							detailsUrl: string;
-    // 							startedAt: string | null;
-    // 							completedAt: string | null;
-    // 						}
-    // 						| {
-    // 							__typename: "StatusContext";
-    // 							context: string;
-    // 							description: string | null;
-    // 							state: string;
-    // 							targetUrl: string | null;
-    // 						}
-    // 					>;
-    // 				};
-    // 			} | null;
-    // 		};
-    // 	}>;
-    // };
+    stack: { size: number } | null;
+    stackEntry: { position: number } | null;
 }
 
 export interface GqlPrSearchResult {
@@ -1172,6 +1144,12 @@ query SearchPRs($searchQuery: String!, $first: Int!, $after: String) {
         comments { totalCount }
         reviewDecision
         mergeStateStatus
+        stack {
+          size
+        }
+        stackEntry {
+          position
+        }
       }
     }
   }
