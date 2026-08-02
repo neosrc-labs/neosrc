@@ -110,6 +110,8 @@ query PullRequestTimeline(
 						state
 						submittedAt
 						createdAt
+						isMinimized
+						minimizedReason
 						reactions(first: 10) {
 							nodes {
 								databaseId
@@ -472,6 +474,8 @@ export type GQLPullRequestReview = {
     authorAssociation: string;
     submittedAt: string | null;
     createdAt: string;
+    isMinimized: boolean;
+    minimizedReason: string | null;
     reactions: { nodes: (GQLReactionNode | null)[] };
 };
 

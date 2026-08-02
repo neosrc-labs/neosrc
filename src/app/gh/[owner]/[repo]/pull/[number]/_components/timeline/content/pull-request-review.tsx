@@ -1,6 +1,12 @@
 "use client";
 
-import { Check, Link, MoreVertical, SquarePen } from "lucide-react";
+import {
+    Check,
+    ChevronDown,
+    Link,
+    MoreVertical,
+    SquarePen,
+} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { CommentCard } from "~/components/CommentCard";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
@@ -21,6 +27,7 @@ import type {
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
 import { ReviewComments } from "../../review-comments";
+import { formatReason } from "../event";
 
 interface PullRequestReviewContentProps {
     event: GQLPullRequestReview;
@@ -43,6 +50,8 @@ interface PullRequestReviewContentProps {
         databaseId: number,
         content: ReactionContent,
     ) => void;
+    expandedMinimized: Record<number, boolean>;
+    onToggleMinimized: (reviewId: number, expanded: boolean) => void;
 }
 
 export function PullRequestReviewContent({
@@ -62,6 +71,8 @@ export function PullRequestReviewContent({
     onCancelEdit,
     onSaveEdit,
     onReactToReview,
+    expandedMinimized,
+    onToggleMinimized,
 }: PullRequestReviewContentProps) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [copied, setCopied] = useState(false);
@@ -91,6 +102,9 @@ export function PullRequestReviewContent({
     const isPendingByCurrentUser =
         state === "pending" && event.author?.login === currentUserLogin;
 
+    const isMinimized =
+        event.isMinimized && !expandedMinimized[event.databaseId];
+
     const { data: pendingComments = [] } =
         api.reviewComments.byReviewId.useQuery(
             { owner, repo, number, reviewId: event.databaseId },
@@ -107,6 +121,37 @@ export function PullRequestReviewContent({
         );
         return [...allComments, ...(newComments as unknown as ReviewComment[])];
     }, [allComments, pendingComments, isPendingByCurrentUser]);
+
+    if (isMinimized) {
+        return (
+            <div className="/50 rounded-lg border border-border bg-surface-secondary p-3">
+                <div className="flex items-center justify-between">
+                    <p className="text-sm text-text-tertiary">
+                        A review by{" "}
+                        <span className="font-medium text-text-label">
+                            {event.author?.login ?? "unknown"}
+                        </span>{" "}
+                        was minimized as{" "}
+                        <span className="font-medium text-text-label">
+                            {event.minimizedReason
+                                ? formatReason(event.minimizedReason)
+                                : "outdated"}
+                        </span>
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() =>
+                            onToggleMinimized(event.databaseId, true)
+                        }
+                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label dark:hover:text-zinc-300"
+                    >
+                        <ChevronDown size={14} />
+                        Show review
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>
@@ -144,6 +189,20 @@ export function PullRequestReviewContent({
                         repo={repo}
                         headerActions={
                             <div className="flex items-center gap-1">
+                                {event.isMinimized && (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            onToggleMinimized(
+                                                event.databaseId,
+                                                false,
+                                            )
+                                        }
+                                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                    >
+                                        Hide review
+                                    </button>
+                                )}
                                 {event.body && !isEditing && (
                                     <Popover
                                         open={menuOpen}

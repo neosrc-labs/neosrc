@@ -599,6 +599,8 @@ function EventContent({
                     onCancelEdit={() => setEditingCommentId(null)}
                     onSaveEdit={handleSaveReview}
                     onReactToReview={handleReviewReaction}
+                    expandedMinimized={expandedMinimized}
+                    onToggleMinimized={handleToggleMinimized}
                 />
             );
 
