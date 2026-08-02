@@ -1195,6 +1195,86 @@ export const deleteReviewComment = async (
     });
 };
 
+export type ReviewMinimizeClassifier =
+    | "OUTDATED"
+    | "OFF_TOPIC"
+    | "DUPLICATE"
+    | "SPAM"
+    | "ABUSE";
+
+export const minimizePullRequestReview = async (
+    accessToken: string,
+    subjectId: string,
+    classifier: ReviewMinimizeClassifier,
+) => {
+    const response = await fetch("https://api.github.com/graphql", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            query: `
+				mutation($subjectId: ID!, $classifier: ReportedContentClassifiers!) {
+					minimizeComment(input: { subjectId: $subjectId, classifier: $classifier }) {
+						minimizedComment {
+							... on PullRequestReview {
+								databaseId
+								isMinimized
+								minimizedReason
+							}
+						}
+					}
+				}
+			`,
+            variables: { subjectId, classifier },
+        }),
+    });
+
+    const result = await response.json();
+    if (result.errors) {
+        throw new Error(
+            `Failed to minimize review: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
+        );
+    }
+};
+
+export const unminimizePullRequestReview = async (
+    accessToken: string,
+    subjectId: string,
+) => {
+    const response = await fetch("https://api.github.com/graphql", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            query: `
+				mutation($subjectId: ID!) {
+					unminimizeComment(input: { subjectId: $subjectId }) {
+						unminimizedComment {
+							... on PullRequestReview {
+								databaseId
+								isMinimized
+								minimizedReason
+							}
+						}
+					}
+				}
+			`,
+            variables: { subjectId },
+        }),
+    });
+
+    const result = await response.json();
+    if (result.errors) {
+        throw new Error(
+            `Failed to unminimize review: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
+        );
+    }
+};
+
 // TODO: Check if generators support cache() or maybe internally we can cache?
 export async function* getPullRequestFilesStream(
     accessToken: string,

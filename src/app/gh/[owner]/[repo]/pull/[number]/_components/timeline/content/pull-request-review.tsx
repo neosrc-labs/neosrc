@@ -3,6 +3,8 @@
 import {
     Check,
     ChevronDown,
+    Eye,
+    EyeOff,
     Link,
     MoreVertical,
     SquarePen,
@@ -12,6 +14,15 @@ import { CommentCard } from "~/components/CommentCard";
 import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
 import { ReactionBar } from "~/components/ReactionBar";
 import { ReactionPicker } from "~/components/ReactionPicker";
+import { Button } from "~/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "~/components/ui/dialog";
 import {
     Popover,
     PopoverContent,
@@ -19,7 +30,8 @@ import {
 } from "~/components/ui/popover";
 import { UserLink } from "~/components/user-link";
 import type { ReactionContent } from "~/lib/reactions";
-import type { ReviewComment } from "~/server/github";
+import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
+import type { ReviewComment, ReviewMinimizeClassifier } from "~/server/github";
 import type {
     GQLPullRequestReview,
     GQLReactionNode,
@@ -28,6 +40,17 @@ import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
 import { ReviewComments } from "../../review-comments";
 import { formatReason } from "../event";
+
+const REVIEW_MINIMIZE_REASONS: {
+    value: ReviewMinimizeClassifier;
+    label: string;
+}[] = [
+    { value: "OUTDATED", label: "Outdated" },
+    { value: "OFF_TOPIC", label: "Off-topic" },
+    { value: "DUPLICATE", label: "Duplicate" },
+    { value: "SPAM", label: "Spam" },
+    { value: "ABUSE", label: "Abuse" },
+];
 
 interface PullRequestReviewContentProps {
     event: GQLPullRequestReview;
@@ -76,6 +99,7 @@ export function PullRequestReviewContent({
 }: PullRequestReviewContentProps) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [hideDialogOpen, setHideDialogOpen] = useState(false);
 
     const handleCopyLink = useCallback(async () => {
         const url = `${window.location.origin}${window.location.pathname}#pullrequestreview-${event.databaseId}`;
@@ -121,6 +145,101 @@ export function PullRequestReviewContent({
         );
         return [...allComments, ...(newComments as unknown as ReviewComment[])];
     }, [allComments, pendingComments, isPendingByCurrentUser]);
+
+    const utils = api.useUtils();
+    const timelineCacheKey = {
+        owner,
+        repo,
+        number,
+        limit: TIMELINE_PAGE_SIZE,
+    } as const;
+
+    const minimizeMutation = api.reviews.minimize.useMutation({
+        onMutate: async ({ subjectId, classifier }) => {
+            await utils.timeline.list.cancel(timelineCacheKey);
+
+            const prevData =
+                utils.timeline.list.getInfiniteData(timelineCacheKey);
+
+            utils.timeline.list.setInfiniteData(timelineCacheKey, (old) => {
+                if (!old) return old;
+                return {
+                    ...old,
+                    pages: old.pages.map((page) => ({
+                        ...page,
+                        events: page.events.map((ev) =>
+                            ev.__typename === "PullRequestReview" &&
+                            ev.id === subjectId
+                                ? {
+                                      ...ev,
+                                      isMinimized: true,
+                                      minimizedReason: classifier.toLowerCase(),
+                                  }
+                                : ev,
+                        ),
+                    })),
+                };
+            });
+
+            return { prevData };
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prevData) {
+                utils.timeline.list.setInfiniteData(
+                    timelineCacheKey,
+                    ctx.prevData,
+                );
+            }
+        },
+        onSuccess: () => {
+            onToggleMinimized(event.databaseId, false);
+        },
+        onSettled: () => {
+            utils.timeline.list.invalidate(timelineCacheKey);
+        },
+    });
+
+    const unminimizeMutation = api.reviews.unminimize.useMutation({
+        onMutate: async ({ subjectId }) => {
+            await utils.timeline.list.cancel(timelineCacheKey);
+
+            const prevData =
+                utils.timeline.list.getInfiniteData(timelineCacheKey);
+
+            utils.timeline.list.setInfiniteData(timelineCacheKey, (old) => {
+                if (!old) return old;
+                return {
+                    ...old,
+                    pages: old.pages.map((page) => ({
+                        ...page,
+                        events: page.events.map((ev) =>
+                            ev.__typename === "PullRequestReview" &&
+                            ev.id === subjectId
+                                ? {
+                                      ...ev,
+                                      isMinimized: false,
+                                      minimizedReason: null,
+                                  }
+                                : ev,
+                        ),
+                    })),
+                };
+            });
+
+            return { prevData };
+        },
+        onError: (_err, _vars, ctx) => {
+            if (ctx?.prevData) {
+                utils.timeline.list.setInfiniteData(
+                    timelineCacheKey,
+                    ctx.prevData,
+                );
+            }
+        },
+        onSettled: () => {
+            utils.timeline.list.invalidate(timelineCacheKey);
+        },
+    });
 
     if (isMinimized) {
         return (
@@ -189,20 +308,6 @@ export function PullRequestReviewContent({
                         repo={repo}
                         headerActions={
                             <div className="flex items-center gap-1">
-                                {event.isMinimized && (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            onToggleMinimized(
-                                                event.databaseId,
-                                                false,
-                                            )
-                                        }
-                                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
-                                    >
-                                        Hide review
-                                    </button>
-                                )}
                                 {event.body && !isEditing && (
                                     <Popover
                                         open={menuOpen}
@@ -254,6 +359,43 @@ export function PullRequestReviewContent({
                                                     Edit
                                                 </button>
                                             )}
+                                            {canInteract &&
+                                                !isPendingByCurrentUser &&
+                                                (event.isMinimized ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setMenuOpen(false);
+                                                            unminimizeMutation.mutate(
+                                                                {
+                                                                    owner,
+                                                                    repo,
+                                                                    number,
+                                                                    subjectId:
+                                                                        event.id,
+                                                                },
+                                                            );
+                                                        }}
+                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                                    >
+                                                        <Eye size={14} />
+                                                        Unhide
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setMenuOpen(false);
+                                                            setHideDialogOpen(
+                                                                true,
+                                                            );
+                                                        }}
+                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                                    >
+                                                        <EyeOff size={14} />
+                                                        Hide
+                                                    </button>
+                                                ))}
                                         </PopoverContent>
                                     </Popover>
                                 )}
@@ -309,6 +451,46 @@ export function PullRequestReviewContent({
                 currentUserLogin={currentUserLogin}
                 canInteract={canInteract}
             />
+            <Dialog open={hideDialogOpen} onOpenChange={setHideDialogOpen}>
+                <DialogContent showCloseButton={false}>
+                    <DialogHeader>
+                        <DialogTitle>Hide review</DialogTitle>
+                        <DialogDescription>
+                            Select a reason for hiding this review by{" "}
+                            {event.author?.login ?? "unknown"}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col gap-1">
+                        {REVIEW_MINIMIZE_REASONS.map((reason) => (
+                            <button
+                                key={reason.value}
+                                type="button"
+                                onClick={() => {
+                                    setHideDialogOpen(false);
+                                    minimizeMutation.mutate({
+                                        owner,
+                                        repo,
+                                        number,
+                                        subjectId: event.id,
+                                        classifier: reason.value,
+                                    });
+                                }}
+                                className="flex w-full cursor-pointer items-center rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                            >
+                                {reason.label}
+                            </button>
+                        ))}
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setHideDialogOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

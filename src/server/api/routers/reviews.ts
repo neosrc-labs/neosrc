@@ -10,7 +10,10 @@ import {
     getAuthenticatedUser,
     getPullRequestReviewCommentsForReview,
     getPullRequestReviews,
+    minimizePullRequestReview,
+    type ReviewMinimizeClassifier,
     submitPullRequestReview,
+    unminimizePullRequestReview,
 } from "~/server/github";
 
 export type PendingReview = {
@@ -163,6 +166,65 @@ export const reviewsRouter = createTRPCRouter({
                 input.number,
                 input.reviewId,
             );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
+            return { success: true as const };
+        }),
+
+    minimize: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+                subjectId: z.string(),
+                classifier: z.enum([
+                    "OUTDATED",
+                    "OFF_TOPIC",
+                    "DUPLICATE",
+                    "SPAM",
+                    "ABUSE",
+                ]),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            await minimizePullRequestReview(
+                accessToken,
+                input.subjectId,
+                input.classifier satisfies ReviewMinimizeClassifier,
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
+            return { success: true as const };
+        }),
+
+    unminimize: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+                subjectId: z.string(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            await unminimizePullRequestReview(accessToken, input.subjectId);
 
             await deleteCache(
                 prCacheKey(input.owner, input.repo, input.number),

@@ -17,10 +17,37 @@ const mockMutation = vi.hoisted(() =>
         isError: false,
     })),
 );
+const { minimizeMutate, unminimizeMutate } = vi.hoisted(() => ({
+    minimizeMutate: vi.fn(),
+    unminimizeMutate: vi.fn(),
+}));
+const mockMinimize = vi.hoisted(() =>
+    vi.fn(() => ({
+        mutate: minimizeMutate,
+        isPending: false,
+        isError: false,
+    })),
+);
+const mockUnminimize = vi.hoisted(() =>
+    vi.fn(() => ({
+        mutate: unminimizeMutate,
+        isPending: false,
+        isError: false,
+    })),
+);
 
 vi.mock("~/trpc/react", () => ({
     api: {
-        useUtils: vi.fn(() => ({})),
+        useUtils: vi.fn(() => ({
+            timeline: {
+                list: {
+                    cancel: vi.fn(),
+                    getInfiniteData: vi.fn(() => undefined),
+                    setInfiniteData: vi.fn(),
+                    invalidate: vi.fn(),
+                },
+            },
+        })),
         pulls: {
             updateComment: { useMutation: mockMutation },
             updateReview: { useMutation: mockMutation },
@@ -32,6 +59,10 @@ vi.mock("~/trpc/react", () => ({
         },
         reviewComments: {
             byReviewId: { useQuery: mockByReviewIdQuery },
+        },
+        reviews: {
+            minimize: { useMutation: mockMinimize },
+            unminimize: { useMutation: mockUnminimize },
         },
     },
 }));
@@ -86,6 +117,27 @@ vi.mock("~/components/ui/popover", () => ({
     ),
     PopoverTrigger: ({ children }: { children?: React.ReactNode }) => (
         <>{children}</>
+    ),
+}));
+
+vi.mock("~/components/ui/dialog", () => ({
+    Dialog: ({ children }: { children?: React.ReactNode }) => (
+        <div data-testid="dialog">{children}</div>
+    ),
+    DialogContent: ({ children }: { children?: React.ReactNode }) => (
+        <div>{children}</div>
+    ),
+    DialogDescription: ({ children }: { children?: React.ReactNode }) => (
+        <div>{children}</div>
+    ),
+    DialogFooter: ({ children }: { children?: React.ReactNode }) => (
+        <div>{children}</div>
+    ),
+    DialogHeader: ({ children }: { children?: React.ReactNode }) => (
+        <div>{children}</div>
+    ),
+    DialogTitle: ({ children }: { children?: React.ReactNode }) => (
+        <div>{children}</div>
     ),
 }));
 
@@ -196,7 +248,7 @@ describe("PullRequestReviewContent minimized reviews", () => {
         expect(screen.getByText("outdated")).toBeInTheDocument();
     });
 
-    it("expands and re-collapses a minimized review", async () => {
+    it("expands a minimized review via Show review", async () => {
         const user = userEvent.setup();
         render(<ToggleHarness event={makeReview()} />);
 
@@ -205,19 +257,12 @@ describe("PullRequestReviewContent minimized reviews", () => {
         expect(screen.getByTestId("comment-card")).toBeInTheDocument();
         expect(screen.getByText("foo bar")).toBeInTheDocument();
         expect(
-            screen.getByRole("button", { name: "Hide review" }),
+            screen.getByRole("button", { name: "Unhide" }),
         ).toBeInTheDocument();
         expect(screen.getByTestId("review-comments")).toBeInTheDocument();
-
-        await user.click(screen.getByRole("button", { name: "Hide review" }));
-
-        expect(screen.queryByTestId("comment-card")).not.toBeInTheDocument();
-        expect(
-            screen.getByRole("button", { name: "Show review" }),
-        ).toBeInTheDocument();
     });
 
-    it("renders a non-minimized review in full without hide controls", () => {
+    it("renders a non-minimized review in full with a Hide review menu option", () => {
         render(
             <PullRequestReviewContent
                 {...baseProps}
@@ -233,7 +278,70 @@ describe("PullRequestReviewContent minimized reviews", () => {
             screen.queryByRole("button", { name: "Show review" }),
         ).not.toBeInTheDocument();
         expect(
-            screen.queryByRole("button", { name: "Hide review" }),
+            screen.queryByRole("button", { name: "Unhide" }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.getByRole("button", { name: "Hide" }),
+        ).toBeInTheDocument();
+    });
+
+    it("hides a review via the menu with the selected reason", async () => {
+        const user = userEvent.setup();
+        render(
+            <PullRequestReviewContent
+                {...baseProps}
+                event={makeReview({ isMinimized: false })}
+            />,
+        );
+
+        await user.click(screen.getByRole("button", { name: "Hide" }));
+
+        expect(
+            screen.getByText(
+                /Select a reason for hiding this review by ranger-ross/,
+            ),
+        ).toBeInTheDocument();
+
+        await user.click(screen.getByRole("button", { name: "Outdated" }));
+
+        expect(minimizeMutate).toHaveBeenCalledWith({
+            owner: "ranger-ross",
+            repo: "jj-fun-times",
+            number: 29,
+            subjectId: "PRR_kwDOQMFd_c8AAAABIFkLNg",
+            classifier: "OUTDATED",
+        });
+    });
+
+    it("unhides a minimized review from the menu", async () => {
+        const user = userEvent.setup();
+        render(<ToggleHarness event={makeReview()} />);
+
+        await user.click(screen.getByRole("button", { name: "Show review" }));
+        await user.click(screen.getByRole("button", { name: "Unhide" }));
+
+        expect(unminimizeMutate).toHaveBeenCalledWith({
+            owner: "ranger-ross",
+            repo: "jj-fun-times",
+            number: 29,
+            subjectId: "PRR_kwDOQMFd_c8AAAABIFkLNg",
+        });
+    });
+
+    it("does not offer hide or unhide options without interaction permission", () => {
+        render(
+            <PullRequestReviewContent
+                {...baseProps}
+                canInteract={false}
+                event={makeReview({ isMinimized: false })}
+            />,
+        );
+
+        expect(
+            screen.queryByRole("button", { name: "Hide" }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole("button", { name: "Unhide" }),
         ).not.toBeInTheDocument();
     });
 });
