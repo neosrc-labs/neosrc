@@ -115,6 +115,9 @@ export function PullRequestContent({
                                                                 ""
                                                             }
                                                             className="truncate"
+                                                            provider="gh"
+                                                            owner={owner}
+                                                            repo={repo}
                                                         />
                                                     </div>
                                                     {reportCommit?.commit

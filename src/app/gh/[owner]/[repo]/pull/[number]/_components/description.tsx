@@ -570,7 +570,13 @@ function TitleRow({
                             ) : (
                                 <>
                                     <h1 className="text-text-primary">
-                                        <CodeTitle>{displayTitle}</CodeTitle>
+                                        <CodeTitle
+                                            provider="gh"
+                                            owner={owner}
+                                            repo={repo}
+                                        >
+                                            {displayTitle}
+                                        </CodeTitle>
                                     </h1>
                                     <span className="text-2xl text-text-muted">
                                         #{number}

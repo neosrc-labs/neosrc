@@ -333,7 +333,14 @@ function Buttons({
 
     return (
         <div className="flex flex-nowrap items-center justify-end gap-2">
-            {showTitle && <Title pullRequest={pullRequest} number={number} />}
+            {showTitle && (
+                <Title
+                    pullRequest={pullRequest}
+                    number={number}
+                    owner={owner}
+                    repo={repo}
+                />
+            )}
             {conflictedFiles.length > 0 && variant !== "header" ? (
                 <ConflictedFiles
                     owner={owner}
@@ -665,9 +672,13 @@ function SubmitReviewButton({
 function Title({
     pullRequest,
     number,
+    owner,
+    repo,
 }: {
     pullRequest: PullsGetResponseData;
     number: number;
+    owner: string;
+    repo: string;
 }) {
     const state = extractPullRequestState(pullRequest);
     const user = pullRequest.user;
@@ -676,7 +687,9 @@ function Title({
         <div className="mr-auto flex min-w-0 flex-1 items-center gap-2">
             <StatusPill state={state} />
             <span className="min-w-0 truncate font-medium text-sm text-text-primary">
-                <CodeTitle>{pullRequest.title}</CodeTitle>{" "}
+                <CodeTitle provider="gh" owner={owner} repo={repo}>
+                    {pullRequest.title}
+                </CodeTitle>{" "}
                 <span className="text-text-muted">#{number}</span>
             </span>
             {user && (

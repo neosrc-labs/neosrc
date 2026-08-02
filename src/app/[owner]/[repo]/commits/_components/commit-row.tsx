@@ -65,7 +65,12 @@ export function CommitRow({
                     rel="noopener noreferrer"
                     className="min-w-0 truncate font-medium text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                 >
-                    <CommitSubject message={commit.message} />
+                    <CommitSubject
+                        message={commit.message}
+                        provider={provider}
+                        owner={owner}
+                        repo={repo}
+                    />
                 </a>
 
                 <div className="flex items-center gap-2 text-text-secondary text-xs">

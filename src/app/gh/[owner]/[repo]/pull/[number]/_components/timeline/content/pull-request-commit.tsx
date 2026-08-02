@@ -34,6 +34,9 @@ export function PullRequestCommitContent({
                     <CommitSubject
                         message={commit?.message ?? ""}
                         className="truncate"
+                        provider="gh"
+                        owner={owner}
+                        repo={repo}
                     />
                 </NextLink>
             </div>
