@@ -69,7 +69,7 @@ export function CrossReferencedEventContent({
                 (appHref ? (
                     <NextLink
                         href={appHref}
-                        className="mt-1 ml-7 flex w-full items-center justify-between gap-1.5 pr-4"
+                        className="mt-1 ml-7 flex items-center justify-between gap-1.5"
                     >
                         {inner}
                     </NextLink>
@@ -78,7 +78,7 @@ export function CrossReferencedEventContent({
                         href={sourceUrl ?? undefined}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-1 ml-7 flex w-full items-center justify-between gap-1.5 pr-4"
+                        className="mt-1 ml-7 flex items-center justify-between gap-1.5"
                     >
                         {inner}
                     </a>

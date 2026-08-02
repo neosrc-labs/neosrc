@@ -103,7 +103,7 @@ export function TimelineEvent({
                 // box leftward (negative margin plus padding) without moving the
                 // card itself. The review-card up-tail stays inside because a
                 // header row sits above it.
-                className="-ml-2 pl-2 pt-1"
+                className="-ml-2 pt-1 pl-2"
                 style={{
                     contentVisibility: "auto",
                     containIntrinsicSize: "200px",
