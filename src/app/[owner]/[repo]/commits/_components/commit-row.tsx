@@ -56,7 +56,7 @@ export function CommitRow({
         "inline-flex items-center justify-center size-4 shrink-0 cursor-pointer text-text-secondary transition-colors hover:text-text-primary";
 
     return (
-        <div className="flex items-center gap-2 px-4 py-2 transition-colors hover:bg-surface-secondary">
+        <div className="flex items-center gap-2 px-4 py-3 transition-colors hover:bg-surface-secondary">
             {/* Left: subject + meta */}
             <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <a

@@ -79,25 +79,32 @@ function BranchNotFoundError({
 
 function SkeletonList() {
     return (
-        <div className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
-            {Array.from({ length: 15 }).map(() => (
-                <div
-                    key={crypto.randomUUID()}
-                    className="flex animate-pulse items-center gap-2 px-4 py-2.5"
-                >
-                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                        <div className="h-5 w-3/4 rounded bg-surface-tertiary" />
-                        <div className="flex items-center gap-2">
-                            <div className="h-4 w-4 rounded-full bg-surface-tertiary" />
-                            <div className="h-4 w-20 rounded bg-surface-tertiary" />
-                        </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
-                        <div className="h-4 w-14 rounded bg-surface-tertiary" />
-                        <div className="h-4 w-4 rounded bg-surface-tertiary" />
-                    </div>
+        <div className="space-y-6">
+            <div>
+                <div className="mb-2 px-2 py-1">
+                    <div className="h-5 w-28 animate-pulse rounded bg-surface-tertiary" />
                 </div>
-            ))}
+                <div className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
+                    {Array.from({ length: 15 }).map(() => (
+                        <div
+                            key={crypto.randomUUID()}
+                            className="flex animate-pulse items-center gap-2 px-4 py-3"
+                        >
+                            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                                <div className="h-5 w-3/4 rounded bg-surface-tertiary" />
+                                <div className="flex items-center gap-2">
+                                    <div className="h-4 w-4 rounded-full bg-surface-tertiary" />
+                                    <div className="h-4 w-20 rounded bg-surface-tertiary" />
+                                </div>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-3">
+                                <div className="h-4 w-14 rounded bg-surface-tertiary" />
+                                <div className="h-4 w-4 rounded bg-surface-tertiary" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 }
