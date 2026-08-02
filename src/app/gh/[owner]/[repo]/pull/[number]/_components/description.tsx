@@ -678,23 +678,33 @@ function Branches({
     pullRequest: PullsGetResponseData;
 }) {
     const width = useMainSectionWidth();
+    const baseRepo = pullRequest.base.repo?.full_name ?? `${owner}/${repo}`;
+    const headRepo = pullRequest.head.repo?.full_name ?? `${owner}/${repo}`;
+    const headLabel =
+        headRepo === baseRepo ? pullRequest.head.ref : pullRequest.head.label;
+
+    const branchLinkClassName =
+        "rounded bg-blue-100 px-1.5 py-0.5 font-mono text-xs text-blue-800 hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30";
+
     return (
         <div className="text-sm text-text-secondary">
             <a
-                href={`https://github.com/${owner}/${repo}/tree/${pullRequest.base.ref}`}
-                className="rounded bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs hover:bg-surface-selected dark:hover:bg-zinc-600"
+                href={`https://github.com/${baseRepo}/tree/${pullRequest.base.ref}`}
+                className={branchLinkClassName}
             >
-                {pullRequest.base.ref}
+                <span className="select-all">{pullRequest.base.ref}</span>
             </a>
-            <span className="mx-2">←</span>
+            <span className="mx-2 text-text-tertiary" aria-hidden="true">
+                ←
+            </span>
             <a
-                href={`https://github.com/${pullRequest.head.repo?.full_name ?? `${owner}/${repo}`}/tree/${pullRequest.head.ref}`}
-                className="rounded bg-surface-tertiary px-1.5 py-0.5 font-mono text-xs hover:bg-surface-selected dark:hover:bg-zinc-600"
+                href={`https://github.com/${headRepo}/tree/${pullRequest.head.ref}`}
+                className={branchLinkClassName}
             >
-                <span title={pullRequest.head.label}>
+                <span className="select-all" title={pullRequest.head.label}>
                     {!width || width > 1100
-                        ? pullRequest.head.label
-                        : `${pullRequest.head.label.substring(0, 25)}...`}
+                        ? headLabel
+                        : `${headLabel.substring(0, 25)}...`}
                 </span>
             </a>
         </div>
