@@ -2,12 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
-import {
-    LazyRenderItem,
-    SCROLL_TARGET_EVENT,
-} from "~/components/LazyRenderItem";
 import { UserLink } from "~/components/user-link";
-import type { ReviewComment } from "~/server/github";
 import type {
     GQLMergeQueueEntry,
     GQLMergeQueueEntryState,
@@ -105,7 +100,6 @@ export function TimelineSection({
         [data],
     );
 
-    const heightMapRef = useRef(new Map<string, number>());
     const searchParams = useSearchParams();
     const timelineRouter = useRouter();
     const timelineEndRef = useRef<HTMLDivElement>(null);
@@ -154,10 +148,6 @@ export function TimelineSection({
                 clearInterval(adjustIntervalRef.current);
                 adjustIntervalRef.current = null;
             }
-
-            window.dispatchEvent(
-                new CustomEvent(SCROLL_TARGET_EVENT, { detail: targetId }),
-            );
 
             if (scrollIntervalRef.current) {
                 clearInterval(scrollIntervalRef.current);
@@ -221,18 +211,6 @@ export function TimelineSection({
             }
         };
     }, [data]);
-
-    const reviewThreadIds = useMemo(() => {
-        const map = new Map<number, string[]>();
-        for (const c of allComments as ReviewComment[]) {
-            const reviewId = c.pull_request_review_id;
-            if (!reviewId) continue;
-            const list = map.get(reviewId) ?? [];
-            list.push(`review-thread-${c.id}`);
-            map.set(reviewId, list);
-        }
-        return map;
-    }, [allComments]);
 
     const STATE_LABELS: Record<GQLMergeQueueEntryState, string> = {
         QUEUED: "In queue",
@@ -369,49 +347,23 @@ export function TimelineSection({
             <div className="relative">
                 <div className="absolute top-0 bottom-0 left-6 w-px bg-surface-selected" />
 
-                {wrappers.map((wrapper) => {
-                    const key =
-                        wrapper.type === "raw"
-                            ? `raw-${wrapper.event.id}`
-                            : `label-${wrapper.createdAt}`;
-
-                    let renderOnIds: string[] | undefined;
-                    if (wrapper.type === "raw") {
-                        const ids: string[] = [];
-                        const event = wrapper.event;
-                        if (event.__typename === "PullRequestReview") {
-                            const threadIds = reviewThreadIds.get(
-                                event.databaseId,
-                            );
-                            if (threadIds) ids.push(...threadIds);
-                            ids.push(`pullrequestreview-${event.databaseId}`);
-                        } else if (event.__typename === "IssueComment") {
-                            ids.push(`issuecomment-${event.databaseId}`);
+                {wrappers.map((wrapper) => (
+                    <TimelineEvent
+                        key={
+                            wrapper.type === "raw"
+                                ? `raw-${wrapper.event.id}`
+                                : `label-${wrapper.createdAt}`
                         }
-                        if (ids.length > 0) renderOnIds = ids;
-                    }
-
-                    return (
-                        <LazyRenderItem
-                            itemKey={key}
-                            heightMap={heightMapRef.current}
-                            key={key}
-                            extraHeight={32}
-                            renderOnIds={renderOnIds}
-                        >
-                            <TimelineEvent
-                                wrapper={wrapper}
-                                number={number}
-                                owner={owner}
-                                repo={repo}
-                                commentReactions={allCommentReactions}
-                                currentUserLogin={currentUserLogin}
-                                allComments={allComments}
-                                canInteract={canInteract}
-                            />
-                        </LazyRenderItem>
-                    );
-                })}
+                        wrapper={wrapper}
+                        number={number}
+                        owner={owner}
+                        repo={repo}
+                        commentReactions={allCommentReactions}
+                        currentUserLogin={currentUserLogin}
+                        allComments={allComments}
+                        canInteract={canInteract}
+                    />
+                ))}
             </div>
 
             {isFetchingNextPage && (
