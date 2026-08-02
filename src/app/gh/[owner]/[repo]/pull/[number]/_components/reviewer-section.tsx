@@ -1,6 +1,12 @@
 "use client";
 
-import { Check, Circle, MessageSquare, XCircle } from "lucide-react";
+import {
+    Check,
+    ChevronDown,
+    Circle,
+    MessageSquare,
+    XCircle,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
@@ -14,6 +20,8 @@ import { applyArrayOperations, opId } from "~/lib/utils";
 import type { Assignee, PullsGetResponseData, Reviewer } from "~/server/github";
 import { api } from "~/trpc/react";
 import { FieldSkeleton } from "./metadata-section";
+
+const MAX_VISIBLE_REVIEWERS = 10;
 
 type ReviewerOperation = {
     id: number;
@@ -35,10 +43,12 @@ export function ReviewerSection({
     number: number;
 }) {
     const [operations, setOperations] = useState<ReviewerOperation[]>([]);
+    const [showAll, setShowAll] = useState(false);
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the operations
+    // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the state
     useEffect(() => {
         setOperations([]);
+        setShowAll(false);
     }, [pullRequestPromise]);
 
     const { data: repoUsers } = api.pulls.listAssignees.useQuery({
@@ -206,6 +216,8 @@ export function ReviewerSection({
                             reviewStateMap={reviewStateMap}
                             reviewSortMap={reviewSortMap}
                             operations={operations}
+                            showAll={showAll}
+                            onToggleShowAll={() => setShowAll((prev) => !prev)}
                         />
                     );
                 }}
@@ -273,11 +285,15 @@ function ReviewerSectionContent({
     reviewStateMap,
     reviewSortMap,
     operations,
+    showAll,
+    onToggleShowAll,
 }: {
     reviewers: Reviewer[];
     reviewStateMap: Map<string, string>;
     reviewSortMap: Map<string, number>;
     operations: ReviewerOperation[];
+    showAll: boolean;
+    onToggleShowAll: () => void;
 }) {
     const displayReviewers = applyOperations(reviewers, operations);
 
@@ -294,87 +310,115 @@ function ReviewerSectionContent({
         return <p className="text-sm text-text-tertiary">No reviewers</p>;
     }
 
+    const visibleReviewers = showAll
+        ? sortedReviewers
+        : sortedReviewers.slice(0, MAX_VISIBLE_REVIEWERS);
+    const hiddenCount = sortedReviewers.length - visibleReviewers.length;
+
     return (
-        <ul className="space-y-2">
-            {sortedReviewers.map((reviewer) => {
-                const state = reviewStateMap.get(reviewer.login) ?? "PENDING";
-                return (
-                    <li
-                        className="group flex items-center gap-2 text-sm"
-                        key={reviewer.login}
-                    >
-                        <UserHoverCard login={reviewer.login}>
-                            <a
-                                className="flex items-center gap-2"
-                                href={reviewer.html_url}
-                            >
-                                <img
-                                    alt={reviewer.login}
-                                    className="h-5 w-5 rounded-full"
-                                    src={reviewer.avatar_url}
-                                />
-                                <span className="text-text-secondary">
-                                    {reviewer.login}
-                                </span>
-                            </a>
-                        </UserHoverCard>
-                        {state === "APPROVED" && (
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Check
-                                        className="ml-auto text-green-600"
-                                        size={16}
+        <>
+            <ul
+                className={`space-y-2 ${
+                    showAll ? "max-h-80 overflow-y-auto" : ""
+                }`}
+            >
+                {visibleReviewers.map((reviewer) => {
+                    const state =
+                        reviewStateMap.get(reviewer.login) ?? "PENDING";
+                    return (
+                        <li
+                            className="group flex items-center gap-2 text-sm"
+                            key={reviewer.login}
+                        >
+                            <UserHoverCard login={reviewer.login}>
+                                <a
+                                    className="flex items-center gap-2"
+                                    href={reviewer.html_url}
+                                >
+                                    <img
+                                        alt={reviewer.login}
+                                        className="h-5 w-5 rounded-full"
+                                        src={reviewer.avatar_url}
                                     />
-                                </TooltipTrigger>
-                                <TooltipContent side="left">
-                                    {reviewer.login} approved these changes
-                                </TooltipContent>
-                            </Tooltip>
-                        )}
-                        {state === "CHANGES_REQUESTED" && (
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <XCircle
-                                        className="ml-auto text-red-600"
-                                        size={16}
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent side="left">
-                                    {reviewer.login} requested changes
-                                </TooltipContent>
-                            </Tooltip>
-                        )}
-                        {state === "COMMENTED" && (
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <MessageSquare
-                                        className="mr-0.5 ml-auto text-text-muted"
-                                        size={13}
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent side="left">
-                                    {reviewer.login} left review comments
-                                </TooltipContent>
-                            </Tooltip>
-                        )}
-                        {state === "PENDING" && (
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Circle
-                                        className="mr-1 ml-auto fill-yellow-500 text-yellow-500"
-                                        size={8}
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent side="left">
-                                    Awaiting requested review from{" "}
-                                    {reviewer.login}
-                                </TooltipContent>
-                            </Tooltip>
-                        )}
-                    </li>
-                );
-            })}
-        </ul>
+                                    <span className="text-text-secondary">
+                                        {reviewer.login}
+                                    </span>
+                                </a>
+                            </UserHoverCard>
+                            {state === "APPROVED" && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Check
+                                            className="ml-auto text-green-600"
+                                            size={16}
+                                        />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">
+                                        {reviewer.login} approved these changes
+                                    </TooltipContent>
+                                </Tooltip>
+                            )}
+                            {state === "CHANGES_REQUESTED" && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <XCircle
+                                            className="ml-auto text-red-600"
+                                            size={16}
+                                        />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">
+                                        {reviewer.login} requested changes
+                                    </TooltipContent>
+                                </Tooltip>
+                            )}
+                            {state === "COMMENTED" && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <MessageSquare
+                                            className="mr-0.5 ml-auto text-text-muted"
+                                            size={13}
+                                        />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">
+                                        {reviewer.login} left review comments
+                                    </TooltipContent>
+                                </Tooltip>
+                            )}
+                            {state === "PENDING" && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Circle
+                                            className="mr-1 ml-auto fill-yellow-500 text-yellow-500"
+                                            size={8}
+                                        />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">
+                                        Awaiting requested review from{" "}
+                                        {reviewer.login}
+                                    </TooltipContent>
+                                </Tooltip>
+                            )}
+                        </li>
+                    );
+                })}
+            </ul>
+            {sortedReviewers.length > MAX_VISIBLE_REVIEWERS && (
+                <button
+                    type="button"
+                    aria-expanded={showAll}
+                    onClick={onToggleShowAll}
+                    className="mt-1 flex cursor-pointer items-center gap-1 rounded px-1 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label dark:hover:text-zinc-300"
+                >
+                    <ChevronDown
+                        size={14}
+                        className={showAll ? "rotate-180" : ""}
+                    />
+                    {showAll
+                        ? "Show less"
+                        : `Show ${hiddenCount} more reviewer${hiddenCount === 1 ? "" : "s"}`}
+                </button>
+            )}
+        </>
     );
 }
 
