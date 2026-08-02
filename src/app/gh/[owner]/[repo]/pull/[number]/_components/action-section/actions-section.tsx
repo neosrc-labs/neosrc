@@ -232,7 +232,6 @@ function Buttons({
             utils.timeline.list.invalidate();
             utils.reviews.getPending.invalidate();
             router.refresh();
-            navigateAndScroll();
         },
     });
 
