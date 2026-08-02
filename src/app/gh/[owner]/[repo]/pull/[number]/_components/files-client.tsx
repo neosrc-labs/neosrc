@@ -4,10 +4,6 @@ import { MessageSquare, MessageSquareOff } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Async } from "~/components/async";
 import FileDiff from "~/components/FileDiff";
-import {
-    LazyRenderItem,
-    SCROLL_TARGET_EVENT,
-} from "~/components/LazyRenderItem";
 import { useFiles } from "~/hooks/files";
 import type {
     CheckRun,
@@ -15,7 +11,6 @@ import type {
     ReviewComment,
 } from "~/server/github";
 import { api } from "~/trpc/react";
-import { filenameHash } from "~/utils/filename-hash";
 import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
 import { ActionSection } from "./action-section/actions-section";
 
@@ -160,47 +155,17 @@ export function FilesSection({
         }
     }, [allFiles]);
 
-    const fileHashToId = useMemo(() => {
-        const map = new Map<string, string>();
-        for (const file of allFiles) {
-            const hash = filenameHash(file.filename);
-            const id = file.filename.replace(/\//g, "-");
-            map.set(hash, id);
-        }
-        return map;
-    }, [allFiles]);
-
     useEffect(() => {
         if (allCommentsAll.length === 0) return;
         const hash = window.location.hash;
         if (hash.startsWith("#review-thread-")) {
             const id = hash.slice(1);
-            window.dispatchEvent(
-                new CustomEvent(SCROLL_TARGET_EVENT, { detail: id }),
-            );
             const el = document.getElementById(id);
             if (el) {
                 el.scrollIntoView({ behavior: "smooth", block: "center" });
             }
         }
     }, [allCommentsAll]);
-
-    // Force LazyRenderItem to render the file when navigating via hash
-    useEffect(() => {
-        const hash = window.location.hash;
-        if (!hash?.startsWith("#diff-")) return;
-        const rawHash = hash.match(/^#diff-([0-9a-f]+)/)?.[1];
-        if (!rawHash) return;
-        const resolvedFileId = fileHashToId.get(rawHash);
-        if (!resolvedFileId) return;
-        queueMicrotask(() => {
-            window.dispatchEvent(
-                new CustomEvent(SCROLL_TARGET_EVENT, {
-                    detail: resolvedFileId,
-                }),
-            );
-        });
-    }, [fileHashToId]);
 
     return (
         <div>
@@ -302,7 +267,6 @@ export function FilesSection({
                             const fileComments = allCommentsAll.filter(
                                 (c) => c.path === file.filename,
                             );
-                            const fileId = file.filename.replace(/\//g, "-");
                             const totalChanged =
                                 file.additions + file.deletions;
                             const isOverflow =
@@ -311,18 +275,9 @@ export function FilesSection({
                                 totalChanged > 1000;
 
                             return (
-                                <LazyRenderItem
-                                    className="scroll-mt-24"
-                                    heightMap={heightMapRef.current}
-                                    id={fileId}
-                                    itemKey={file.filename}
+                                <div
                                     key={file.filename}
-                                    renderOnIds={[
-                                        ...fileComments.map(
-                                            (c) => `review-thread-${c.id}`,
-                                        ),
-                                        fileId,
-                                    ]}
+                                    style={{ contentVisibility: "auto" }}
                                 >
                                     <FileDiff
                                         baseSha={pullRequest.base.sha}
@@ -356,7 +311,7 @@ export function FilesSection({
                                             file.filename,
                                         )}
                                     />
-                                </LazyRenderItem>
+                                </div>
                             );
                         })}
                     </div>

@@ -3,7 +3,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CheckCircle, Circle, Code2, MessageSquare } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { SCROLL_TARGET_EVENT } from "~/components/LazyRenderItem";
 import { cn } from "~/lib/utils";
 import type { ReviewThreadData } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -28,7 +27,6 @@ function isSuggestionBody(body: string): boolean {
 
 function scrollToComment(commentId: number) {
     const id = `review-thread-${commentId}`;
-    window.dispatchEvent(new CustomEvent(SCROLL_TARGET_EVENT, { detail: id }));
 
     const el = document.getElementById(id);
     if (el) {

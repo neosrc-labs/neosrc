@@ -96,7 +96,13 @@ export function TimelineEvent({
         <div className="relative mb-8 ml-14">
             <TimelineIcon event={wrapper.event} />
 
-            <div className="pt-1">
+            <div
+                className="pt-1"
+                style={{
+                    contentVisibility: "auto",
+                    containIntrinsicSize: "200px",
+                }}
+            >
                 <EventContent
                     event={wrapper.event}
                     owner={owner}
