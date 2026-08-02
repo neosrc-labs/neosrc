@@ -79,6 +79,7 @@ export function CommitRow({
                             actor={{
                                 login: commit.author.login,
                                 avatarUrl: commit.author.avatarUrl,
+                                url: commit.author.url,
                             }}
                             provider={provider}
                         />
