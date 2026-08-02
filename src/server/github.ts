@@ -1022,13 +1022,16 @@ export const getPullRequestReviewComments = cache(
         pullNumber: number,
     ): Promise<ReviewComment[]> => {
         const octokit = createOctokit(accessToken);
-        const response = await octokit.pulls.listReviewComments({
-            owner,
-            repo,
-            pull_number: pullNumber,
-            per_page: 100,
-        });
-        return response.data;
+        const comments = await octokit.paginate(
+            octokit.rest.pulls.listReviewComments,
+            {
+                owner,
+                repo,
+                pull_number: pullNumber,
+                per_page: 100,
+            },
+        );
+        return comments;
     },
 );
 
@@ -1040,14 +1043,17 @@ export const getPullRequestReviewCommentsForReview = async (
     reviewId: number,
 ): Promise<CommentForReview[]> => {
     const octokit = createOctokit(accessToken);
-    const response = await octokit.pulls.listCommentsForReview({
-        owner,
-        repo,
-        pull_number: pullNumber,
-        review_id: reviewId,
-        per_page: 100,
-    });
-    return response.data;
+    const comments = await octokit.paginate(
+        octokit.rest.pulls.listCommentsForReview,
+        {
+            owner,
+            repo,
+            pull_number: pullNumber,
+            review_id: reviewId,
+            per_page: 100,
+        },
+    );
+    return comments;
 };
 
 export const createPullRequestReviewComment = async (
