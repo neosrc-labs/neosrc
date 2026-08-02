@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+
 import { Suspense, useCallback, useMemo, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { CommitsGroupedList } from "./commits-grouped-list";
@@ -13,6 +15,66 @@ interface CommitsListProps {
     repo: string;
     branch: string;
     config: CommitsListConfig;
+}
+
+function BranchNotFoundError({
+    error,
+    owner,
+    repo,
+    branch,
+    config,
+}: {
+    error: unknown;
+    owner: string;
+    repo: string;
+    branch: string;
+    config: CommitsListConfig;
+}) {
+    const isBranchNotFound =
+        (error as { data?: { code?: string } })?.data?.code === "NOT_FOUND" ||
+        (error instanceof Error && /not found/i.test(error.message));
+
+    if (!isBranchNotFound) {
+        return (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-950">
+                <p className="text-red-600 dark:text-red-400">
+                    {(error as Error)?.message ?? "Failed to load commits"}
+                </p>
+            </div>
+        );
+    }
+
+    const repoUrl = `${config.basePath}/${owner}/${repo}`;
+
+    return (
+        <div className="rounded-lg border border-border-subtle bg-surface p-12 text-center">
+            <p className="font-semibold text-lg text-text-primary">
+                Branch not found
+            </p>
+            <p className="mt-2 text-text-secondary">
+                The branch{" "}
+                <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-sm dark:bg-zinc-700">
+                    {branch}
+                </code>{" "}
+                does not exist in{" "}
+                <Link
+                    href={repoUrl}
+                    className="text-blue-600 hover:underline dark:text-blue-400"
+                >
+                    {owner}/{repo}
+                </Link>
+                .
+            </p>
+            <div className="mt-4 flex justify-center gap-3">
+                <Link
+                    href={repoUrl}
+                    className="rounded-md bg-surface-secondary px-4 py-2 text-sm text-text-primary transition-colors hover:bg-surface-selected"
+                >
+                    View repository
+                </Link>
+            </div>
+        </div>
+    );
 }
 
 function SkeletonList() {
@@ -77,6 +139,7 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
             },
             {
                 placeholderData: (prev) => prev,
+                retry: false,
             },
         );
 
@@ -171,12 +234,13 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
             {isLoading && <SkeletonList />}
 
             {isError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-950">
-                    <p className="text-red-600 dark:text-red-400">
-                        {(error as unknown as Error)?.message ??
-                            "Failed to load commits"}
-                    </p>
-                </div>
+                <BranchNotFoundError
+                    error={error}
+                    owner={owner}
+                    repo={repo}
+                    branch={branch}
+                    config={config}
+                />
             )}
 
             {!isLoading && !isError && data && data.commits.length === 0 && (
