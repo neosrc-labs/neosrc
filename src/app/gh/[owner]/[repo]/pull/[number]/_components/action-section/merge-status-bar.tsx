@@ -330,7 +330,7 @@ function MergeModeDropdown({
                     {availableMergeOptions.map((option) => (
                         <button
                             key={option.value}
-                            className={`flex w-full items-start gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                            className={`flex w-full cursor-pointer items-start gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
                                 effectiveMergeMode === option.value
                                     ? "bg-surface-tertiary"
                                     : "hover:bg-surface-secondary"
