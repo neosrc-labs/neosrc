@@ -1,35 +1,99 @@
+"use client";
+
 import type { ReactNode } from "react";
 
-const backtickRegex = /(`+)/g;
+const tokenRegex = /(`+)(.+?)\1|#(\d+)/g;
 
-export function CodeTitle({ children }: { children: string }) {
-    const parts = children.split(backtickRegex);
+interface CodeTitleProps {
+    children: string;
+    provider?: string;
+    owner?: string;
+    repo?: string;
+}
+
+function suppressParentHover(el: HTMLElement) {
+    const parent = el.closest("a");
+    if (parent) {
+        parent.style.color = "var(--color-text-primary)";
+    }
+}
+
+function restoreParentHover(el: HTMLElement) {
+    const parent = el.closest("a");
+    if (parent) {
+        parent.style.removeProperty("color");
+    }
+}
+
+export function CodeTitle({ children, provider, owner, repo }: CodeTitleProps) {
+    const showIssueLinks =
+        provider !== undefined && owner !== undefined && repo !== undefined;
+
     const elements: ReactNode[] = [];
-    let i = 0;
-    while (i < parts.length) {
-        const part = parts[i];
-        if (!part) {
-            i++;
-            continue;
+    let lastIndex = 0;
+
+    for (const match of children.matchAll(tokenRegex)) {
+        if (match.index > lastIndex) {
+            elements.push(children.slice(lastIndex, match.index));
         }
-        if (part.startsWith("`")) {
-            const content = parts[i + 1];
-            const closing = parts[i + 2];
-            if (closing === part) {
+
+        if (match[1] !== undefined) {
+            elements.push(
+                <code
+                    key={elements.length}
+                    className="rounded bg-gray-100 px-1.25 py-0.5 font-mono before:content-none after:content-none dark:bg-zinc-700"
+                >
+                    {match[2]}
+                </code>,
+            );
+        } else if (match[3] !== undefined) {
+            if (showIssueLinks) {
+                const host = provider === "cb" ? "codeberg.org" : "github.com";
                 elements.push(
-                    <code
+                    <span
                         key={elements.length}
-                        className="rounded bg-gray-100 px-1.25 py-0.5 font-mono before:content-none after:content-none dark:bg-zinc-700"
+                        className="cursor-pointer text-blue-600 hover:underline dark:text-blue-400"
+                        onClick={() =>
+                            window.open(
+                                `https://${host}/${owner}/${repo}/issues/${match[3]}`,
+                                "_blank",
+                                "noopener,noreferrer",
+                            )
+                        }
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                window.open(
+                                    `https://${host}/${owner}/${repo}/issues/${match[3]}`,
+                                    "_blank",
+                                    "noopener,noreferrer",
+                                );
+                            }
+                        }}
+                        onMouseEnter={(e) =>
+                            suppressParentHover(e.currentTarget)
+                        }
+                        onMouseLeave={(e) =>
+                            restoreParentHover(e.currentTarget)
+                        }
                     >
-                        {content}
-                    </code>,
+                        #{match[3]}
+                    </span>,
                 );
-                i += 3;
-                continue;
+            } else {
+                elements.push(match[0]);
             }
         }
-        elements.push(part);
-        i++;
+
+        lastIndex = match.index + match[0].length;
     }
+
+    if (lastIndex < children.length) {
+        elements.push(children.slice(lastIndex));
+    }
+
+    if (elements.length === 0) {
+        return <>{children}</>;
+    }
+
     return <>{elements}</>;
 }

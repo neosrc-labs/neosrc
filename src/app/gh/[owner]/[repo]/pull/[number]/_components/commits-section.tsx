@@ -67,6 +67,8 @@ export function CommitsSection({
                             hasNextPage={hasNextPage ?? false}
                             fetchNextPage={fetchNextPage}
                             isFetchingNextPage={isFetchingNextPage}
+                            owner={owner}
+                            repo={repo}
                         />
                     )}
                 </Async>
@@ -83,6 +85,8 @@ interface CommitsListProps {
     hasNextPage: boolean;
     fetchNextPage: () => Promise<unknown>;
     isFetchingNextPage: boolean;
+    owner: string;
+    repo: string;
 }
 
 function CommitsList({
@@ -93,6 +97,8 @@ function CommitsList({
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
+    owner,
+    repo,
 }: CommitsListProps) {
     const virtualizer = useVirtualizer({
         count: commits.length,
@@ -172,6 +178,9 @@ function CommitsList({
                                         <CommitSubject
                                             message={commit.message}
                                             className="truncate"
+                                            provider="gh"
+                                            owner={owner}
+                                            repo={repo}
                                         />
                                     </p>
                                     {commit.authors[0] && (

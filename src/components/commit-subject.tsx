@@ -5,9 +5,15 @@ import { cn } from "~/lib/utils";
 import { parseCommitMessage } from "~/utils/commit-message";
 
 export function CommitSubject({
+    provider,
+    owner,
+    repo,
     message,
     className,
 }: {
+    provider?: string;
+    owner?: string;
+    repo?: string;
     message: string;
     className?: string;
 }) {
@@ -16,7 +22,9 @@ export function CommitSubject({
     if (!conventional) {
         return (
             <span className={className}>
-                <CodeTitle>{subject}</CodeTitle>
+                <CodeTitle provider={provider} owner={owner} repo={repo}>
+                    {subject}
+                </CodeTitle>
             </span>
         );
     }
@@ -43,7 +51,9 @@ export function CommitSubject({
                 </span>
             )}
             <span className="truncate">
-                <CodeTitle>{conventional.description}</CodeTitle>
+                <CodeTitle provider={provider} owner={owner} repo={repo}>
+                    {conventional.description}
+                </CodeTitle>
             </span>
         </span>
     );

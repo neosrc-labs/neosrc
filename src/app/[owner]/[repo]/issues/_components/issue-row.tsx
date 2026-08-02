@@ -53,7 +53,13 @@ export function IssueRow({
                         href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues/${issue.number}`}
                         className="font-medium text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                     >
-                        <CodeTitle>{issue.title}</CodeTitle>
+                        <CodeTitle
+                            provider={provider}
+                            owner={owner}
+                            repo={repo}
+                        >
+                            {issue.title}
+                        </CodeTitle>
                     </a>
                 </div>
                 <div className="mt-1 flex items-center gap-1 text-sm text-text-secondary">

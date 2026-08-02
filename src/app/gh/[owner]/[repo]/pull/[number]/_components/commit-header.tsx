@@ -35,7 +35,12 @@ export async function CommitHeader({
         <div className="mb-6 rounded-lg border border-border bg-surface-secondary p-4">
             <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-text-primary">
-                    <CommitSubject message={commit.commit.message} />
+                    <CommitSubject
+                        message={commit.commit.message}
+                        provider="gh"
+                        owner={owner}
+                        repo={repo}
+                    />
                 </h2>
                 <div className="flex gap-2">
                     {prevCommit ? (

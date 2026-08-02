@@ -109,7 +109,13 @@ export function PullRequestRow({
                         href={prHref}
                         className="font-medium text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                     >
-                        <CodeTitle>{pr.title}</CodeTitle>
+                        <CodeTitle
+                            provider={provider}
+                            owner={owner}
+                            repo={repo}
+                        >
+                            {pr.title}
+                        </CodeTitle>
                     </Link>
                     {pr.mergeable === "DIRTY" && (
                         <Tooltip>
