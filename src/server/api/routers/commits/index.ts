@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
-import { listBranchCommits } from "~/server/codeberg";
+import { getCommitCombinedStatus, listBranchCommits } from "~/server/codeberg";
 import {
     getBranchCommitsGraphQL,
     getCommitGraphQL,
@@ -101,8 +101,20 @@ export const commitsRouter = createTRPCRouter({
                             author: input.author ?? undefined,
                         },
                     );
+
+                    const statuses = await Promise.all(
+                        commits.map((c) =>
+                            getCommitCombinedStatus(
+                                accessToken,
+                                input.owner,
+                                input.repo,
+                                c.sha,
+                            ),
+                        ),
+                    );
+
                     const items = commits
-                        .map(mapCodebergCommit)
+                        .map((c, i) => mapCodebergCommit(c, statuses[i]))
                         .filter(
                             (c) =>
                                 !input.author ||
@@ -110,7 +122,6 @@ export const commitsRouter = createTRPCRouter({
                         );
                     return { commits: items, totalCount, cursors: null };
                 }
-
                 const accessToken = await getGitHubToken(
                     ctx.db,
                     ctx.session.user.id,

@@ -88,7 +88,20 @@ export function mapGQLCommit(
     };
 }
 
-export function mapCodebergCommit(c: CodebergCommitRaw): CommitListItem {
+export function mapCodebergCommit(
+    c: CodebergCommitRaw,
+    combinedStatus?: {
+        state: string;
+        statuses: Array<{
+            context: string;
+            status: string;
+            description: string | null;
+            target_url: string | null;
+            created_at: string;
+            updated_at: string;
+        }>;
+    } | null,
+): CommitListItem {
     return {
         sha: c.sha,
         shortSha: c.sha.slice(0, 7),
@@ -102,8 +115,26 @@ export function mapCodebergCommit(c: CodebergCommitRaw): CommitListItem {
               }
             : null,
         committerName: c.author?.login ?? c.commit.author.name,
-        statusState: null,
-        statusContexts: [],
+        statusState:
+            combinedStatus?.state != null &&
+            (combinedStatus.statuses?.length ?? 0) > 0
+                ? combinedStatus.state.toUpperCase()
+                : null,
+        statusContexts: combinedStatus?.statuses
+            ? combinedStatus.statuses.map(
+                  (s): StatusContext => ({
+                      name: s.context,
+                      state:
+                          s.status != null ? s.status.toUpperCase() : "PENDING",
+                      description: s.description,
+                      url: s.target_url?.startsWith("/")
+                          ? `https://codeberg.org${s.target_url}`
+                          : s.target_url,
+                      startedAt: s.created_at,
+                      completedAt: s.updated_at,
+                  }),
+              )
+            : [],
         signature: null,
     };
 }
