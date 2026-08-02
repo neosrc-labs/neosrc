@@ -315,135 +315,94 @@ export function ReviewComments({
         return null;
     }
 
-    const byPath: Record<string, ReviewComment[]> = {};
-    for (const comment of topLevel) {
-        const path = comment.path;
-        if (!byPath[path]) byPath[path] = [];
-        byPath[path].push(comment);
-    }
-
     return (
         <div className="pt-1">
-            {Object.entries(byPath).map(([path, fileComments]) => {
-                const resolvedInFile = fileComments.filter(
-                    (c) => threadByCommentId.get(c.id)?.isResolved,
-                );
-                const outdatedInFile = fileComments.some((c) => {
-                    const t = threadByCommentId.get(c.id);
-                    return t?.isOutdated && !t.isResolved;
-                });
+            {topLevel.map((comment) => {
+                const thread = threadByCommentId.get(comment.id);
+                const isResolved = thread?.isResolved ?? false;
+                const isExpanded = expandedResolvedIds.has(comment.id);
+                const toggleExpanded = () =>
+                    setExpandedResolvedIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(comment.id)) {
+                            next.delete(comment.id);
+                        } else {
+                            next.add(comment.id);
+                        }
+                        return next;
+                    });
 
                 return (
                     <div
-                        key={path}
+                        key={comment.id}
+                        data-testid="review-thread-block"
                         className="mt-3 rounded border border-border"
                     >
                         <div className="flex items-center gap-2 border-border border-b bg-surface-secondary px-4 py-2">
                             <span className="flex-1 truncate font-mono text-text-label text-xs">
-                                {path}
+                                {comment.path}
                             </span>
-                            {resolvedInFile.length > 0 && (
+                            {isResolved && (
                                 <span className="font-sans text-text-tertiary text-xs">
                                     Resolved
                                 </span>
                             )}
                             <div className="flex items-center gap-2">
-                                {outdatedInFile && (
+                                {thread?.isOutdated && (
                                     <span className="whitespace-nowrap rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-[10px] text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
                                         Outdated
                                     </span>
                                 )}
-                                {resolvedInFile.length > 0 && (
-                                    <div className="flex gap-1">
-                                        {resolvedInFile.map((c) => (
-                                            <button
-                                                key={c.id}
-                                                type="button"
-                                                aria-expanded={expandedResolvedIds.has(
-                                                    c.id,
-                                                )}
-                                                onClick={() =>
-                                                    setExpandedResolvedIds(
-                                                        (prev) => {
-                                                            const next =
-                                                                new Set(prev);
-                                                            if (
-                                                                next.has(c.id)
-                                                            ) {
-                                                                next.delete(
-                                                                    c.id,
-                                                                );
-                                                            } else {
-                                                                next.add(c.id);
-                                                            }
-                                                            return next;
-                                                        },
-                                                    )
-                                                }
-                                                className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label dark:hover:text-zinc-300"
-                                            >
-                                                <ChevronDown
-                                                    size={14}
-                                                    className={
-                                                        expandedResolvedIds.has(
-                                                            c.id,
-                                                        )
-                                                            ? "rotate-180"
-                                                            : ""
-                                                    }
-                                                />
-                                                Show thread
-                                            </button>
-                                        ))}
-                                    </div>
+                                {isResolved && (
+                                    <button
+                                        type="button"
+                                        aria-expanded={isExpanded}
+                                        onClick={toggleExpanded}
+                                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label dark:hover:text-zinc-300"
+                                    >
+                                        <ChevronDown
+                                            size={14}
+                                            className={
+                                                isExpanded ? "rotate-180" : ""
+                                            }
+                                        />
+                                        Show thread
+                                    </button>
                                 )}
                             </div>
                         </div>
                         <div className="divide-y divide-gray-200 overflow-hidden rounded-b dark:divide-zinc-700">
-                            {fileComments.map((comment) => {
-                                const thread = threadByCommentId.get(
-                                    comment.id,
-                                );
-                                const isResolved = thread?.isResolved ?? false;
-                                const isExpanded = expandedResolvedIds.has(
-                                    comment.id,
-                                );
-
-                                return (
-                                    <CommentBlock
-                                        key={comment.id}
-                                        comment={comment}
-                                        replies={replyMap.get(comment.id) ?? []}
-                                        owner={owner}
-                                        repo={repo}
-                                        number={number}
-                                        state={state}
-                                        canInteract={canInteract}
-                                        currentUserLogin={currentUserLogin}
-                                        reactionMap={reactionMap}
-                                        editingCommentId={editingCommentId}
-                                        editBody={editBody}
-                                        savedBodies={savedBodies}
-                                        isResolved={isResolved}
-                                        isExpanded={isExpanded}
-                                        threadId={thread?.id ?? ""}
-                                        isResolvePending={resolveOps.isPending}
-                                        onStartEdit={(id, body) => {
-                                            setEditBody(body);
-                                            setEditingCommentId(id);
-                                        }}
-                                        onEditBodyChange={setEditBody}
-                                        onCancelEdit={() => {
-                                            setEditingCommentId(null);
-                                            setEditBody("");
-                                        }}
-                                        onSaveEdit={handleSaveEdit}
-                                        onDelete={handleDelete}
-                                        onReact={handleReact}
-                                        onResolve={handleResolve}
-                                    />
-                                );
-                            })}
+                            <CommentBlock
+                                comment={comment}
+                                replies={replyMap.get(comment.id) ?? []}
+                                owner={owner}
+                                repo={repo}
+                                number={number}
+                                state={state}
+                                canInteract={canInteract}
+                                currentUserLogin={currentUserLogin}
+                                reactionMap={reactionMap}
+                                editingCommentId={editingCommentId}
+                                editBody={editBody}
+                                savedBodies={savedBodies}
+                                isResolved={isResolved}
+                                isExpanded={isExpanded}
+                                threadId={thread?.id ?? ""}
+                                isResolvePending={resolveOps.isPending}
+                                onStartEdit={(id, body) => {
+                                    setEditBody(body);
+                                    setEditingCommentId(id);
+                                }}
+                                onEditBodyChange={setEditBody}
+                                onCancelEdit={() => {
+                                    setEditingCommentId(null);
+                                    setEditBody("");
+                                }}
+                                onSaveEdit={handleSaveEdit}
+                                onDelete={handleDelete}
+                                onReact={handleReact}
+                                onResolve={handleResolve}
+                            />
                         </div>
                     </div>
                 );
