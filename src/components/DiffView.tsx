@@ -22,6 +22,31 @@ import { InlineCommentThread } from "./InlineCommentThread";
 import type { FooterAction } from "./markdown/MarkdownEditor";
 import { MarkdownEditor } from "./markdown/MarkdownEditor";
 
+// Breathing room between the sticky bars and the line a permalink scrolls to.
+const SCROLL_TARGET_PADDING = 12;
+
+// Total height of the sticky elements pinned to the top of the viewport that
+// horizontally overlap the target line. On the files changed page that is the
+// "Files Changed" bar (sticky top-0) plus the file's own sticky header
+// (sticky top-[64px]); elements in other columns (e.g. the left sidebar) never
+// overlap the diff lines and are excluded.
+function getStickyTopHeight(target: HTMLElement): number {
+    const targetRect = target.getBoundingClientRect();
+    const targetCenterX = targetRect.left + targetRect.width / 2;
+    let offset = 0;
+    for (const el of document.querySelectorAll<HTMLElement>("*")) {
+        const style = getComputedStyle(el);
+        if (style.position !== "sticky") continue;
+        const stickyTop = parseFloat(style.top);
+        if (!Number.isFinite(stickyTop) || stickyTop < 0) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.height <= 0 || rect.bottom <= 0) continue;
+        if (rect.left > targetCenterX || rect.right < targetCenterX) continue;
+        offset = Math.max(offset, stickyTop + rect.height);
+    }
+    return offset;
+}
+
 export type ActiveComment =
     | {
           type: "line";
@@ -397,90 +422,176 @@ export function DiffView({
     const renderItemsRef = useRef(renderItems);
     renderItemsRef.current = renderItems;
 
-    // Scroll to line targeted by URL hash; expand only the gap containing the target
+    // Expose the sticky-header offset so native fragment scrolls (initial load,
+    // pressing Enter in the URL bar) also land the line below the sticky bars.
+    // The offset is the same for every diff on the page, so setting the CSS
+    // variable from any rendered diff is enough.
     useEffect(() => {
-        if (!diffRef.current) return;
-        const hash = window.location.hash;
-        if (!hash?.startsWith(`#diff-${fileHash}`)) return;
-        const targetMatch = hash.match(/^#(diff-[0-9a-f]+[RL]\d+)/);
-        const targetId = targetMatch?.[1];
-        if (!targetId) return;
+        const el = diffRef.current;
+        if (!parsed || !el) return;
+        const offset = getStickyTopHeight(el) + SCROLL_TARGET_PADDING;
+        document.documentElement.style.setProperty(
+            "--diff-scroll-offset",
+            `${offset}px`,
+        );
+    }, [parsed]);
 
-        const lineMatch = hash.match(/[RL](\d+)/g);
-        const startLine = lineMatch
-            ? parseInt(lineMatch[0]?.slice(1) ?? "0", 10)
-            : 0;
-        const endLine = lineMatch?.[1]
-            ? parseInt(lineMatch[1].slice(1), 10)
-            : startLine;
-        const side = hash.includes("R") ? "RIGHT" : "LEFT";
+    // Scroll to line targeted by URL hash; expand only the gap containing the
+    // target. Files stream in and content-visibility defers rendering, so wait
+    // until the target's document position stops moving before scrolling, then
+    // re-check after the scroll settles in case the layout was refined. Also
+    // respond to hash changes (e.g. pressing Enter in the URL bar) while the
+    // page is already loaded.
+    useEffect(() => {
+        let rafId = 0;
+        let verifyTimeout: ReturnType<typeof setTimeout> | undefined;
+        let settleTimeout: ReturnType<typeof setTimeout> | undefined;
 
-        // Expand only the gap containing the target line, not all gaps
-        const targetLine = startLine;
-        const items = renderItemsRef.current;
-        if (items) {
-            for (const item of items) {
-                if (item.type === "gap") {
+        const stopPolling = () => {
+            cancelAnimationFrame(rafId);
+            clearTimeout(verifyTimeout);
+            clearTimeout(settleTimeout);
+        };
+
+        const scrollToHashTarget = () => {
+            stopPolling();
+
+            const hash = window.location.hash;
+            if (!hash?.startsWith(`#diff-${fileHash}`)) return;
+            const targetMatch = hash.match(/^#(diff-[0-9a-f]+[RL]\d+)/);
+            const targetId = targetMatch?.[1];
+            if (!targetId) return;
+
+            const lineMatch = hash.match(/[RL](\d+)/g);
+            const startLine = lineMatch
+                ? parseInt(lineMatch[0]?.slice(1) ?? "0", 10)
+                : 0;
+            const endLine = lineMatch?.[1]
+                ? parseInt(lineMatch[1].slice(1), 10)
+                : startLine;
+            const side = hash.includes("R") ? "RIGHT" : "LEFT";
+
+            // Expand only the gap containing the target line, not all gaps.
+            // Re-run on every poll attempt: the diff may still be parsing when
+            // the effect first fires, so the gap list can be empty initially.
+            const expandTargetGap = () => {
+                const items = renderItemsRef.current;
+                if (!items) return;
+                for (const item of items) {
+                    if (item.type !== "gap") continue;
                     const gapStart = item.startLine;
                     const gapEnd =
                         item.endLine === -1 ? Infinity : item.endLine;
-                    if (targetLine >= gapStart && targetLine <= gapEnd) {
-                        const gapKey = `gap-${gapStart}`;
-                        setExpandedGapKeys((prev) => {
-                            if (prev.has(gapKey)) return prev;
-                            const next = new Set(prev);
-                            next.add(gapKey);
-                            return next;
-                        });
-                        break;
-                    }
+                    if (startLine < gapStart || startLine > gapEnd) continue;
+                    const gapKey = `gap-${gapStart}`;
+                    setExpandedGapKeys((prev) => {
+                        if (prev.has(gapKey)) return prev;
+                        const next = new Set(prev);
+                        next.add(gapKey);
+                        return next;
+                    });
+                    break;
                 }
-            }
-        }
+            };
 
-        const scrollToLine = () => {
-            const el = document.getElementById(targetId);
-            if (el) {
-                const rect = el.getBoundingClientRect();
-                window.scrollTo({
-                    top: rect.top + window.scrollY - window.innerHeight / 2,
-                    behavior: "smooth",
-                });
+            // The sticky stack is stable while the routine runs, so measure it
+            // once instead of scanning the whole document on every verify.
+            let cachedOffset = 0;
+            const getTargetOffset = (el: HTMLElement): number => {
+                if (cachedOffset === 0) {
+                    cachedOffset =
+                        getStickyTopHeight(el) + SCROLL_TARGET_PADDING;
+                }
+                return cachedOffset;
+            };
+
+            // Position the line just below the sticky bars instead of the
+            // viewport center, so it is never covered by them.
+            const scrollToLine = (behavior: ScrollBehavior): boolean => {
+                const el = document.getElementById(targetId);
+                if (!el) return false;
+                const offset = getTargetOffset(el);
+                const targetY =
+                    el.getBoundingClientRect().top + window.scrollY - offset;
+                window.scrollTo({ top: Math.max(0, targetY), behavior });
                 setSelectedRange({ startLine, endLine, side });
                 return true;
-            }
-            return false;
-        };
+            };
 
-        if (scrollToLine()) return;
+            // The target may not be in the DOM yet: the diff can still be
+            // loading, the containing gap may be expanding, or
+            // content-visibility defers its rendering. Wait until its document
+            // position stops changing (files above keep arriving), then scroll.
+            let lastAbsTop = -1;
+            let stableFrames = 0;
+            let scrolled = false;
+            let scrollStart = 0;
 
-        let rafId: number;
-        const poll = () => {
-            if (scrollToLine()) return;
+            // Re-check after the scroll settles: content-visibility sizes are
+            // estimates until the region is rendered and files above can keep
+            // arriving, so the line can end up off-target. Keep re-scrolling
+            // (instantly) until the line is just below the sticky bars, or the
+            // page is scrolled as far as it can go (the target is near the
+            // bottom of the document). Keep watching for a short window even
+            // when the position looks right to catch late refinements.
+            const verify = () => {
+                const el = document.getElementById(targetId);
+                if (!el) return;
+                const offset = getTargetOffset(el);
+                const rect = el.getBoundingClientRect();
+                const diff = rect.top - offset;
+                const atMaxScroll =
+                    window.innerHeight + window.scrollY >=
+                    document.body.scrollHeight - 2;
+                if (diff < -4 || (diff > 24 && !atMaxScroll)) {
+                    window.scrollTo({
+                        top: rect.top + window.scrollY - offset,
+                        behavior: "auto",
+                    });
+                    verifyTimeout = setTimeout(verify, 350);
+                } else if (Date.now() - scrollStart < 3000) {
+                    verifyTimeout = setTimeout(verify, 350);
+                }
+            };
+
+            const poll = () => {
+                const el = document.getElementById(targetId);
+                if (el) {
+                    const absTop =
+                        el.getBoundingClientRect().top + window.scrollY;
+                    if (absTop === lastAbsTop) {
+                        stableFrames++;
+                    } else {
+                        lastAbsTop = absTop;
+                        stableFrames = 0;
+                    }
+                    if (stableFrames >= 3 && !scrolled) {
+                        scrolled = true;
+                        scrollStart = Date.now();
+                        scrollToLine("smooth");
+                        verifyTimeout = setTimeout(verify, 600);
+                        return;
+                    }
+                } else {
+                    expandTargetGap();
+                }
+                rafId = requestAnimationFrame(poll);
+            };
+
+            settleTimeout = setTimeout(() => {
+                cancelAnimationFrame(rafId);
+                clearTimeout(verifyTimeout);
+            }, 15000);
+
             rafId = requestAnimationFrame(poll);
         };
-        rafId = requestAnimationFrame(poll);
 
-        const observer = new MutationObserver(() => {
-            if (scrollToLine()) {
-                observer.disconnect();
-                cancelAnimationFrame(rafId);
-            }
-        });
-        observer.observe(diffRef.current, {
-            childList: true,
-            subtree: true,
-        });
-
-        const timeout = setTimeout(() => {
-            observer.disconnect();
-            cancelAnimationFrame(rafId);
-        }, 15000);
+        scrollToHashTarget();
+        window.addEventListener("hashchange", scrollToHashTarget);
 
         return () => {
-            observer.disconnect();
-            cancelAnimationFrame(rafId);
-            clearTimeout(timeout);
+            window.removeEventListener("hashchange", scrollToHashTarget);
+            stopPolling();
         };
     }, [fileHash]);
 
@@ -493,6 +604,9 @@ export function DiffView({
             <style>{`
                 tr.line-highlighted td {
                     background-color: rgba(251, 146, 60, 0.2) !important;
+                }
+                tr[id^="diff-"] {
+                    scroll-margin-top: var(--diff-scroll-offset, 0px);
                 }
                 .d2h-code-line {
                     white-space: pre-wrap;
@@ -769,7 +883,14 @@ function BlockRows({
                     .map((lineContent, idx) => {
                         const lineNum = gap.startLine + idx;
                         return (
-                            <tr key={`gap-${lineNum}`}>
+                            <tr
+                                key={`gap-${lineNum}`}
+                                id={
+                                    fileHash
+                                        ? `diff-${fileHash}R${lineNum}`
+                                        : undefined
+                                }
+                            >
                                 <td className="d2h-code-linenumber d2h-cntx">
                                     <div className="absolute">
                                         <div className="line-num1">
