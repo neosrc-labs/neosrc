@@ -17,5 +17,3 @@ The URL scheme mirrors GitHub's: `/{owner}/{repo}/pull/{number}`.
 
 PRs and issues welcome.
 
-
-# test-repo
