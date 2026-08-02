@@ -80,9 +80,14 @@ function ThreadCard({ thread }: ThreadCardProps) {
 
             <div className="min-w-0 flex-1">
                 {isSuggestionBody(root.body) ? (
-                    <span className="flex items-center gap-1.5 text-sm text-text-secondary">
+                    <span className="flex items-center gap-1.5 text-sm text-text-label">
                         <Code2 className="size-3.5 shrink-0" />
-                        <span className="truncate">
+                        <span
+                            className={cn(
+                                "truncate",
+                                thread.isResolved && "line-through",
+                            )}
+                        >
                             Suggestion{thread.path ? ` in ${thread.path}` : ""}
                         </span>
                     </span>
