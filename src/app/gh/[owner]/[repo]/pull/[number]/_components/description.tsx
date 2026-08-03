@@ -1,7 +1,7 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
+import { Layers, Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
 import NextLink from "next/link";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Async } from "~/components/async";
@@ -20,6 +20,11 @@ import {
     extractPullRequestState,
     StatusPill,
 } from "~/components/ui/status-pill";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "~/components/ui/tooltip";
 import type { ReactionContent } from "~/lib/reactions";
 import type { PullsGetResponseData } from "~/server/github";
 import { ConflictedFiles } from "./conflicted-files";
@@ -647,6 +652,20 @@ function SubtitleActionRow({
                             {formatRelativeTime(pullRequest.created_at)}
                         </span>
                     </div>
+                    {pullRequest.stack ? (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span className="flex items-center gap-0.5 text-text-secondary text-xs">
+                                    <Layers className="size-3.5" />
+                                    {pullRequest.stack.position} /{" "}
+                                    {pullRequest.stack.size}
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                                Part of a PR stack
+                            </TooltipContent>
+                        </Tooltip>
+                    ) : null}
                     <div className="ml-auto flex items-center gap-1.5 text-sm">
                         {pullRequest.additions > 0 && (
                             <span className="font-medium text-green-600 dark:text-green-500">
