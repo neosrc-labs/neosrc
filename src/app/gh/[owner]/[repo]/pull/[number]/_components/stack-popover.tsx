@@ -1,6 +1,7 @@
 "use client";
 
 import {
+    GitMerge,
     GitPullRequest,
     GitPullRequestClosed,
     GitPullRequestDraft,
@@ -14,7 +15,7 @@ import {
     PopoverTrigger,
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
-import type { StackEntry } from "~/server/github";
+import type { StackEntry } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 
 interface StackPopoverProps {
@@ -23,19 +24,6 @@ interface StackPopoverProps {
     prNumber: number;
 }
 
-function prStateIcon(pr: StackEntry) {
-    if (pr.draft) {
-        return <GitPullRequestDraft className="size-3.5 text-text-secondary" />;
-    }
-    if (pr.state === "closed") {
-        return (
-            <GitPullRequestClosed className="size-3.5 text-text-secondary" />
-        );
-    }
-    // TODO: merged state is not directly available from the stacks API;
-    // we infer from closed state. For now, treat all open PRs as open.
-    return <GitPullRequest className="size-3.5 text-green-600" />;
-}
 function StackPopoverContent({ owner, repo, prNumber }: StackPopoverProps) {
     const { data, isLoading } = api.pulls.getStack.useQuery(
         { owner, repo, prNumber },
@@ -79,7 +67,7 @@ function StackPopoverContent({ owner, repo, prNumber }: StackPopoverProps) {
                             prNumber === pr.number && "bg-surface-selected",
                         )}
                     >
-                        {prStateIcon(pr)}
+                        <PrStateIcon pr={pr} />
                         <span className="shrink-0 font-mono text-text-secondary text-xs">
                             #{pr.number}
                         </span>
@@ -137,4 +125,19 @@ export function StackBadge({
             </PopoverContent>
         </Popover>
     );
+}
+
+function PrStateIcon({ pr }: { pr: StackEntry }) {
+    if (pr.draft) {
+        return <GitPullRequestDraft className="size-3.5 text-text-secondary" />;
+    }
+    if (pr.state === "merged") {
+        return <GitMerge className="size-3.5 text-purple-600" />;
+    }
+    if (pr.state === "closed") {
+        return (
+            <GitPullRequestClosed className="size-3.5 text-text-secondary" />
+        );
+    }
+    return <GitPullRequest className="size-3.5 text-green-600" />;
 }
