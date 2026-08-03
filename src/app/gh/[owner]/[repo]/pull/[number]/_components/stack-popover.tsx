@@ -32,15 +32,15 @@ function StackPopoverContent({ owner, repo, prNumber }: StackPopoverProps) {
     );
     if (isLoading) {
         return (
-            <div className="flex flex-col gap-2 p-1">
-                <div className="h-4 w-24 animate-pulse rounded bg-surface-selected" />
+            <div className="flex min-w-[360px] flex-col gap-3 px-4 py-3">
+                <div className="h-7 w-24 animate-pulse rounded bg-surface-selected" />
                 {["skel-1", "skel-2", "skel-3"].map((key) => (
                     <div
                         key={key}
-                        className="h-5 w-48 animate-pulse rounded bg-surface-selected"
+                        className="h-5 w-3/4 animate-pulse rounded bg-surface-selected"
                     />
                 ))}
-                <div className="h-4 w-32 animate-pulse rounded bg-surface-selected" />
+                <div className="h-5 w-16 animate-pulse rounded bg-surface-selected" />
             </div>
         );
     }
