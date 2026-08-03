@@ -1,6 +1,7 @@
 "use client";
 
 import {
+    Circle,
     GitMerge,
     GitPullRequest,
     GitPullRequestClosed,
@@ -51,37 +52,54 @@ function StackPopoverContent({ owner, repo, prNumber }: StackPopoverProps) {
             </div>
         );
     }
-
     return (
         <div className="flex min-w-[360px] flex-col">
             <div className="border-border border-b px-4 py-2.5 font-semibold text-sm">
                 Stack #{data.number}
             </div>
-            <div className="flex flex-col py-1">
+            <div className="flex flex-col">
                 {data.pullRequests.map((pr) => (
                     <Link
                         key={pr.number}
                         href={`/gh/${owner}/${repo}/pull/${pr.number}`}
                         className={cn(
-                            "flex items-center gap-2.5 px-4 py-2 text-sm transition-colors hover:bg-surface-selected",
+                            "flex items-stretch gap-3 px-4 transition-colors hover:bg-surface-selected",
                             prNumber === pr.number && "bg-surface-selected",
                         )}
                     >
-                        <PrStateIcon pr={pr} />
-                        <span className="shrink-0 font-mono text-text-secondary text-xs">
-                            #{pr.number}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate">
-                            {pr.title}
-                        </span>
-                        <span className="shrink-0 font-mono text-text-secondary text-xs">
-                            {pr.headRef}
-                        </span>
+                        <div className="flex shrink-0 flex-col items-center self-stretch">
+                            <div className="w-0.5 flex-1 rounded-full bg-text-secondary/25" />
+                            <span
+                                className={cn(
+                                    "flex size-5 items-center justify-center rounded-full ring-1 ring-border",
+                                    prCircleFill(pr),
+                                )}
+                            >
+                                <PrStateIcon pr={pr} />
+                            </span>
+                            <div className="w-0.5 flex-1 rounded-full bg-text-secondary/25" />
+                        </div>
+                        <div className="flex min-w-0 flex-1 flex-col py-2">
+                            <span className="truncate text-sm leading-snug">
+                                {pr.title}
+                            </span>
+                            <span className="font-mono text-text-secondary text-xs">
+                                #{pr.number} · {pr.headRef}
+                            </span>
+                        </div>
                     </Link>
                 ))}
-            </div>
-            <div className="border-border border-t px-4 py-2 font-mono text-text-secondary text-xs">
-                Base: {data.baseRef}
+                <div className="flex items-stretch gap-3 px-4 pb-2.5">
+                    <div className="flex shrink-0 flex-col items-center self-stretch">
+                        <div className="w-0.5 flex-1 rounded-full bg-text-secondary/25" />
+                        <span className="flex size-5 items-center justify-center rounded-full bg-surface ring-1 ring-border">
+                            <Circle className="size-2.5 fill-text-secondary/25 text-text-secondary" />
+                        </span>
+                    </div>
+                    <span className="font-mono text-text-secondary text-xs leading-snug">
+                        {data.baseRef}
+                    </span>
+                </div>
             </div>
         </div>
     );
@@ -127,17 +145,19 @@ export function StackBadge({
     );
 }
 
+function prCircleFill(pr: StackEntry) {
+    if (pr.draft) return "bg-text-secondary";
+    if (pr.state === "merged") return "bg-purple-600";
+    if (pr.state === "closed") return "bg-red-600";
+    return "bg-green-600";
+}
+
 function PrStateIcon({ pr }: { pr: StackEntry }) {
-    if (pr.draft) {
-        return <GitPullRequestDraft className="size-3.5 text-text-secondary" />;
-    }
-    if (pr.state === "merged") {
-        return <GitMerge className="size-3.5 text-purple-600" />;
-    }
-    if (pr.state === "closed") {
-        return (
-            <GitPullRequestClosed className="size-3.5 text-text-secondary" />
-        );
-    }
-    return <GitPullRequest className="size-3.5 text-green-600" />;
+    if (pr.draft)
+        return <GitPullRequestDraft className="size-3.5 text-text-inverse" />;
+    if (pr.state === "merged")
+        return <GitMerge className="size-3.5 text-text-inverse" />;
+    if (pr.state === "closed")
+        return <GitPullRequestClosed className="size-3.5 text-text-inverse" />;
+    return <GitPullRequest className="size-3.5 text-text-inverse" />;
 }
