@@ -127,7 +127,10 @@ export function StackBadge({
             <PopoverTrigger asChild>
                 <button
                     type="button"
-                    className="flex cursor-pointer items-center gap-0.5 rounded px-1 py-0.5 text-text-secondary text-xs transition-colors hover:bg-surface-selected hover:text-text"
+                    className={cn(
+                        "flex cursor-pointer items-center gap-0.5 rounded px-1 py-0.5 text-text-secondary text-xs transition-colors hover:bg-surface-selected hover:text-text",
+                        open && "bg-surface-selected text-text",
+                    )}
                 >
                     <Layers className="size-3.5" />
                     {stack.position} / {stack.size}
