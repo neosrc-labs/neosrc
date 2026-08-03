@@ -7,6 +7,7 @@ import {
     getCheckRuns,
     getCommitStatuses,
     getConflictedFiles,
+    getStackSuggestion,
     getUserRepoPermission,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
@@ -119,6 +120,12 @@ export default async function PullRequestPage({ params }: PageProps) {
         pullRequestPromise,
         userId,
     );
+    const stackSuggestionPromise = getStackSuggestion(
+        accessToken,
+        owner,
+        repo,
+        number,
+    );
 
     return (
         <div className="px-6 py-8">
@@ -131,6 +138,7 @@ export default async function PullRequestPage({ params }: PageProps) {
                 repo={repo}
                 number={number}
                 conflictedFilesPromise={conflictedFilesPromise}
+                stackSuggestionPromise={stackSuggestionPromise}
                 actionSection={
                     <HeaderActionBar
                         owner={owner}

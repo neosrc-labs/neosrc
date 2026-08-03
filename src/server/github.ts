@@ -20,6 +20,17 @@ import {
     getPullRequestStackGraphQL,
     type StackData,
 } from "~/server/github-graphql";
+import {
+    buildStackSuggestion,
+    MAX_STACK_SIZE,
+    type StackCandidate,
+    type StackSuggestion,
+} from "~/server/stack-suggestion";
+
+export type {
+    StackCandidate,
+    StackSuggestion,
+} from "~/server/stack-suggestion";
 export type PullsGetResponseData =
     RestEndpointMethodTypes["pulls"]["get"]["response"]["data"] & {
         // TODO: This has not yet been added to the RestEndpointMethodTypes upstream yet. Should remove when we update
@@ -88,7 +99,7 @@ export const getPullRequest = cache(
         owner: string,
         repo: string,
         pullNumber: number,
-    ) => {
+    ): Promise<PullsGetResponseData> => {
         const octokit = createOctokit(accessToken);
         const response = await octokit.pulls.get({
             owner,
@@ -148,6 +159,62 @@ export const getPullRequestStack = cache(
         prNumber: number,
     ): Promise<StackData | null> => {
         return getPullRequestStackGraphQL(accessToken, owner, repo, prNumber);
+    },
+);
+
+async function findOpenPullRequestByHead(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    headRef: string,
+): Promise<StackCandidate | null> {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.pulls.list({
+        owner,
+        repo,
+        state: "open",
+        head: `${owner}:${headRef}`,
+        per_page: 100,
+    });
+
+    for (const pr of response.data) {
+        const stack = (pr as { stack?: unknown }).stack;
+        if (stack || pr.base.ref === pr.head.ref) {
+            continue;
+        }
+        return {
+            number: pr.number,
+            title: pr.title,
+            baseRef: pr.base.ref,
+        };
+    }
+    return null;
+}
+
+/**
+ * When the current PR is not yet stacked and its base branch is the head of
+ * an open PR (or a chain of them), returns the chain that could be turned
+ * into a stack. Mirrors GitHub's recommendation banner: each PR's base
+ * branch is the head branch of the PR below it. Capped at
+ * {@link MAX_STACK_SIZE} PRs.
+ */
+export const getStackSuggestion = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        pullNumber: number,
+    ): Promise<StackSuggestion | null> => {
+        const pr = await getPullRequest(accessToken, owner, repo, pullNumber);
+        if (pr.state !== "open" || pr.stack) {
+            return null;
+        }
+
+        return buildStackSuggestion(
+            { number: pr.number, title: pr.title, baseRef: pr.base.ref },
+            (headRef) =>
+                findOpenPullRequestByHead(accessToken, owner, repo, headRef),
+        );
     },
 );
 
@@ -407,6 +474,23 @@ export const unstackPullRequests = async (
             },
         },
     );
+};
+
+export const createPullRequestStack = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullRequests: number[],
+): Promise<void> => {
+    const octokit = createOctokit(accessToken);
+    await octokit.request("POST /repos/{owner}/{repo}/stacks", {
+        owner,
+        repo,
+        pull_requests: pullRequests,
+        headers: {
+            "X-GitHub-Api-Version": "2026-03-10",
+        },
+    });
 };
 
 export const createIssueComment = async (
