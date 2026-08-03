@@ -4,7 +4,6 @@ import {
     GitPullRequest,
     GitPullRequestClosed,
     GitPullRequestDraft,
-    Layers,
     MessageSquare,
     TriangleAlert,
     XCircle,
@@ -23,6 +22,7 @@ import {
 import { UserLink } from "~/components/user-link";
 import { cn } from "~/lib/utils";
 import { formatRelativeTime } from "~/utils";
+import { StackBadge } from "../../pull/[number]/_components/stack-popover";
 
 export interface PrRowData {
     id: number;
@@ -45,7 +45,7 @@ export interface PrRowData {
     status_contexts: StatusContext[];
     review_decision: string | null;
     mergeable?: string | null;
-    stack: { size: number; position: number } | null;
+    stack: { size: number; position: number; number: number } | null;
 }
 
 type PrStatus = "draft" | "open" | "closed" | "merged";
@@ -182,17 +182,16 @@ export function PullRequestRow({
                         </span>
                     )}
                     {pr.stack && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <span className="ml-2 flex items-center gap-0.5 text-text-secondary text-xs">
-                                    <Layers className="size-3.5" />
-                                    {pr.stack.position} / {pr.stack.size}
-                                </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top">
-                                Part of a PR stack
-                            </TooltipContent>
-                        </Tooltip>
+                        <StackBadge
+                            owner={owner}
+                            repo={repo}
+                            stack={{
+                                size: pr.stack.size,
+                                position: pr.stack.position,
+                                number: pr.stack.number,
+                            }}
+                            prNumber={pr.number}
+                        />
                     )}
                 </div>
                 {pr.labels && pr.labels.length > 0 && (

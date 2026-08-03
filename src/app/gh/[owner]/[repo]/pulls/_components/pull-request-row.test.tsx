@@ -34,7 +34,7 @@ describe("PullRequestRow", () => {
     it("shows the stack icon and position when the PR is part of a stack", () => {
         const { container } = renderRow({
             ...basePr,
-            stack: { size: 4, position: 2 },
+            stack: { size: 4, position: 2, number: 1 },
         });
         expect(container.querySelector(".lucide-layers")).not.toBeNull();
         expect(screen.getByText("2 / 4")).toBeInTheDocument();

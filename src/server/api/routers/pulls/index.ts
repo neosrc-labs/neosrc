@@ -19,6 +19,7 @@ import {
     getCachedPullRequest,
     getMergeRequirements,
     getPullRequestReviews,
+    getPullRequestStack,
     listLabelsForRepo,
     listMilestonesForRepo,
     listPullRequests,
@@ -859,12 +860,33 @@ export const pullsRouter = createTRPCRouter({
                 ctx.db,
                 ctx.session.user.id,
             );
-
             return getPullRequestReviews(
                 accessToken,
                 input.owner,
                 input.repo,
                 input.number,
+            );
+        }),
+
+    getStack: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                prNumber: z.number(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+
+            return getPullRequestStack(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.prNumber,
             );
         }),
 });

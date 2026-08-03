@@ -1100,7 +1100,7 @@ export interface GqlPrSearchItem {
     comments: { totalCount: number };
     reviewDecision: string | null;
     mergeStateStatus: string;
-    stack: { size: number } | null;
+    stack: { size: number; number: number } | null;
     stackEntry: { position: number } | null;
 }
 
@@ -1146,6 +1146,7 @@ query SearchPRs($searchQuery: String!, $first: Int!, $after: String) {
         mergeStateStatus
         stack {
           size
+          number
         }
         stackEntry {
           position
@@ -1696,4 +1697,109 @@ export async function getTopRepositories(
 
     const nodes = result.viewer.topRepositories?.nodes ?? [];
     return nodes.filter((n): n is GqlTopRepo => n !== null);
+}
+
+const STACK_QUERY = `
+query($owner: String!, $repo: String!, $prNumber: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $prNumber) {
+      stack {
+        id
+        number
+        baseRefName
+        entries(first: 100) {
+          nodes {
+            position
+            pullRequest {
+              number
+              title
+              state
+              isDraft
+              headRefName
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`;
+
+export interface StackData {
+    id: number;
+    number: number;
+    baseRef: string;
+    open: boolean;
+    createdAt: string;
+    pullRequests: StackEntry[];
+}
+
+export interface StackEntry {
+    number: number;
+    state: "open" | "closed";
+    draft: boolean;
+    title: string;
+    headRef: string;
+}
+
+export async function getPullRequestStackGraphQL(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    prNumber: number,
+): Promise<StackData | null> {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const result = await graphql<{
+        repository: {
+            pullRequest: {
+                stack: {
+                    id: string;
+                    number: number;
+                    baseRefName: string;
+                    entries: {
+                        nodes: {
+                            position: number;
+                            pullRequest: {
+                                number: number;
+                                title: string;
+                                state: "OPEN" | "CLOSED" | "MERGED";
+                                isDraft: boolean;
+                                headRefName: string;
+                            };
+                        }[];
+                    };
+                } | null;
+            };
+        };
+    }>(STACK_QUERY, { owner, repo, prNumber });
+
+    const stack = result.repository.pullRequest.stack;
+    if (!stack) return null;
+
+    // entries are ordered bottom-to-top; reverse for descending position (top first)
+    const pullRequests = stack.entries.nodes
+        .map((e) => ({
+            number: e.pullRequest.number,
+            state:
+                e.pullRequest.state === "OPEN"
+                    ? ("open" as const)
+                    : ("closed" as const),
+            draft: e.pullRequest.isDraft,
+            title: e.pullRequest.title,
+            headRef: e.pullRequest.headRefName,
+        }))
+        .reverse();
+
+    return {
+        id: parseInt(stack.id, 10),
+        number: stack.number,
+        baseRef: stack.baseRefName,
+        // not exposed via PullRequest.stack; unused by the UI
+        open: true as const,
+        createdAt: "",
+        pullRequests,
+    };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { Layers, Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
+import { Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
 import NextLink from "next/link";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Async } from "~/components/async";
@@ -20,11 +20,6 @@ import {
     extractPullRequestState,
     StatusPill,
 } from "~/components/ui/status-pill";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from "~/components/ui/tooltip";
 import type { ReactionContent } from "~/lib/reactions";
 import type { PullsGetResponseData } from "~/server/github";
 import { ConflictedFiles } from "./conflicted-files";
@@ -32,10 +27,10 @@ import { ConflictedFiles } from "./conflicted-files";
 type SimpleUser = components["schemas"]["nullable-simple-user"];
 
 import { RoleBadge } from "~/components/RoleBadge";
-
 import { useTaskToggle } from "~/hooks/use-task-toggle";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import { StackBadge } from "./stack-popover";
 
 interface PullRequestDescriptionSectionProps {
     owner: string;
@@ -653,18 +648,16 @@ function SubtitleActionRow({
                         </span>
                     </div>
                     {pullRequest.stack ? (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <span className="flex items-center gap-0.5 text-text-secondary text-xs">
-                                    <Layers className="size-3.5" />
-                                    {pullRequest.stack.position} /{" "}
-                                    {pullRequest.stack.size}
-                                </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top">
-                                Part of a PR stack
-                            </TooltipContent>
-                        </Tooltip>
+                        <StackBadge
+                            owner={owner}
+                            repo={repo}
+                            stack={{
+                                size: pullRequest.stack.size,
+                                position: pullRequest.stack.position,
+                                number: pullRequest.stack.number,
+                            }}
+                            prNumber={pullRequest.number}
+                        />
                     ) : null}
                     <div className="ml-auto flex items-center gap-1.5 text-sm">
                         {pullRequest.additions > 0 && (

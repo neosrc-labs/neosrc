@@ -70,7 +70,7 @@ function mapGqlItem(item: {
     comments: { totalCount: number };
     reviewDecision: string | null;
     mergeStateStatus: string;
-    stack: { size: number } | null;
+    stack: { size: number; number: number } | null;
     stackEntry: { position: number } | null;
 }): PrSearchItem {
     return {
@@ -92,6 +92,7 @@ function mapGqlItem(item: {
                 ? {
                       size: item.stack.size,
                       position: item.stackEntry.position,
+                      number: item.stack.number,
                   }
                 : null,
     };

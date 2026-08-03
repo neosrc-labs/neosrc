@@ -17,7 +17,7 @@ export interface PrSearchItem {
     comments: number;
     reviewDecision: string | null;
     mergeable?: string;
-    stack: { size: number; position: number } | null;
+    stack: { size: number; position: number; number: number } | null;
 }
 
 export interface PrSearchResult {
