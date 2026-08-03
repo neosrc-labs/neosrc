@@ -15,7 +15,11 @@ import {
     repoSubscriptionCacheKey,
     withStaleWhileRevalidate,
 } from "~/server/cache";
-import type { GQLActor } from "~/server/github-graphql";
+import {
+    type GQLActor,
+    type StackData,
+    getPullRequestStackGraphQL,
+} from "~/server/github-graphql";
 export type PullsGetResponseData =
     RestEndpointMethodTypes["pulls"]["get"]["response"]["data"] & {
         // TODO: This has not yet been added to the RestEndpointMethodTypes upstream yet. Should remove when we update
@@ -135,6 +139,17 @@ export async function getCachedPullRequest(
         },
     );
 }
+
+export const getPullRequestStack = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        prNumber: number,
+    ): Promise<StackData | null> => {
+        return getPullRequestStackGraphQL(accessToken, owner, repo, prNumber);
+    },
+);
 
 export const listPullRequests = cache(
     async (
