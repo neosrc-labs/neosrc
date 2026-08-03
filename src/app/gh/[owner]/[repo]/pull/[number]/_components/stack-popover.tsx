@@ -54,7 +54,7 @@ function StackPopoverContent({ owner, repo, prNumber }: StackPopoverProps) {
     }
     return (
         <div className="flex min-w-[360px] flex-col">
-            <div className="border-border border-b px-4 py-2.5 font-semibold text-sm">
+            <div className="border-border border-b px-4 py-3 font-bold font-semibold text-lg">
                 Stack #{data.number}
             </div>
             <div className="flex flex-col">
@@ -80,10 +80,10 @@ function StackPopoverContent({ owner, repo, prNumber }: StackPopoverProps) {
                             <div className="w-0.5 flex-1 rounded-full bg-text-secondary/25" />
                         </div>
                         <div className="flex min-w-0 flex-1 flex-col py-2">
-                            <span className="truncate text-sm leading-snug">
+                            <span className="truncate font-bold text-sm leading-snug">
                                 {pr.title}
                             </span>
-                            <span className="font-mono text-text-secondary text-xs">
+                            <span className="pt-1 font-mono text-text-secondary text-xs">
                                 #{pr.number} · {pr.headRef}
                             </span>
                         </div>
