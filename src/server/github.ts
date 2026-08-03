@@ -389,6 +389,26 @@ export const mergePullRequest = async (
     return response.data;
 };
 
+export const unstackPullRequests = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    stackNumber: number,
+): Promise<void> => {
+    const octokit = createOctokit(accessToken);
+    await octokit.request(
+        "POST /repos/{owner}/{repo}/stacks/{stack_number}/unstack",
+        {
+            owner,
+            repo,
+            stack_number: stackNumber,
+            headers: {
+                "X-GitHub-Api-Version": "2026-03-10",
+            },
+        },
+    );
+};
+
 export const createIssueComment = async (
     accessToken: string,
     owner: string,
