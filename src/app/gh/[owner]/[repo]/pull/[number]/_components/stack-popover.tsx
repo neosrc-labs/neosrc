@@ -89,17 +89,20 @@ function StackPopoverContent({ owner, repo, prNumber }: StackPopoverProps) {
                         </div>
                     </Link>
                 ))}
-                <div className="flex items-center gap-3 px-4">
+                <div className="flex items-center gap-3 px-4 pb-1">
                     <div className="flex shrink-0 flex-col items-center">
                         <div className="h-4 w-0.5 rounded-full bg-text-secondary/25" />
                         <span className="flex size-5 items-center justify-center rounded-full bg-surface ring-1 ring-border">
                             <Circle className="size-2.5 fill-text-secondary/25 text-text-secondary" />
                         </span>
-                        <div className="h-4 w-0.5" />
+                        <div className="h-3 w-0.5" />
                     </div>
-                    <span className="py-2 font-mono text-text-secondary text-xs leading-snug">
+                    <a
+                        href={`https://github.com/${owner}/${repo}/tree/${data.baseRef}`}
+                        className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-blue-800 text-xs hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30"
+                    >
                         {data.baseRef}
-                    </span>
+                    </a>
                 </div>
             </div>
         </div>
