@@ -89,14 +89,15 @@ function StackPopoverContent({ owner, repo, prNumber }: StackPopoverProps) {
                         </div>
                     </Link>
                 ))}
-                <div className="flex items-stretch gap-3 px-4 pb-2.5">
-                    <div className="flex shrink-0 flex-col items-center self-stretch">
-                        <div className="w-0.5 flex-1 rounded-full bg-text-secondary/25" />
+                <div className="flex items-center gap-3 px-4">
+                    <div className="flex shrink-0 flex-col items-center">
+                        <div className="h-4 w-0.5 rounded-full bg-text-secondary/25" />
                         <span className="flex size-5 items-center justify-center rounded-full bg-surface ring-1 ring-border">
                             <Circle className="size-2.5 fill-text-secondary/25 text-text-secondary" />
                         </span>
+                        <div className="h-4 w-0.5" />
                     </div>
-                    <span className="font-mono text-text-secondary text-xs leading-snug">
+                    <span className="py-2 font-mono text-text-secondary text-xs leading-snug">
                         {data.baseRef}
                     </span>
                 </div>
