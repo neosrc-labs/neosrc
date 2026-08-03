@@ -167,7 +167,7 @@ export function PullRequestRow({
                     {pr.stack && (
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <span className="flex items-center gap-0.5 text-text-secondary text-xs">
+                                <span className="ml-2 flex items-center gap-0.5 text-text-secondary text-xs">
                                     <Layers className="size-3.5" />
                                     {pr.stack.position} / {pr.stack.size}
                                 </span>
