@@ -7,14 +7,30 @@ import {
     GitPullRequestClosed,
     GitPullRequestDraft,
     Layers,
+    LayersMinus,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "~/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "~/components/ui/dialog";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 import type { StackEntry } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
@@ -23,13 +39,30 @@ interface StackPopoverProps {
     owner: string;
     repo: string;
     prNumber: number;
+    onClose: () => void;
 }
 
-function StackPopoverContent({ owner, repo, prNumber }: StackPopoverProps) {
+function StackPopoverContent({
+    owner,
+    repo,
+    prNumber,
+    onClose,
+}: StackPopoverProps) {
+    const utils = api.useUtils();
+    const router = useRouter();
     const { data, isLoading } = api.pulls.getStack.useQuery(
         { owner, repo, prNumber },
         { enabled: true },
     );
+    const unstackMutation = api.pulls.unstack.useMutation({
+        onSuccess: () => {
+            utils.pulls.getStack.invalidate({ owner, repo, prNumber });
+            utils.pulls.list.invalidate();
+            router.refresh();
+            onClose();
+        },
+    });
+    const [confirmUnstack, setConfirmUnstack] = useState(false);
     if (isLoading) {
         return (
             <div className="flex min-w-[360px] flex-col gap-3 px-4 py-3">
@@ -54,8 +87,26 @@ function StackPopoverContent({ owner, repo, prNumber }: StackPopoverProps) {
     }
     return (
         <div className="flex min-w-[360px] flex-col">
-            <div className="border-border border-b px-4 py-3 font-bold font-semibold text-lg">
-                Stack #{data.number}
+            <div className="flex items-center justify-between border-border border-b px-4 py-3">
+                <span className="font-bold font-semibold text-lg">
+                    Stack #{data.number}
+                </span>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <button
+                            type="button"
+                            aria-label="Unstack pull requests"
+                            className="flex size-6 cursor-pointer items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-selected hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={unstackMutation.isPending}
+                            onClick={() => setConfirmUnstack(true)}
+                        >
+                            <LayersMinus className="size-4" />
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                        Unstack pull requests
+                    </TooltipContent>
+                </Tooltip>
             </div>
             <div className="flex flex-col">
                 {data.pullRequests.map((pr) => (
@@ -105,6 +156,41 @@ function StackPopoverContent({ owner, repo, prNumber }: StackPopoverProps) {
                     </a>
                 </div>
             </div>
+            <Dialog open={confirmUnstack} onOpenChange={setConfirmUnstack}>
+                <DialogContent showCloseButton={false}>
+                    <DialogHeader>
+                        <DialogTitle>Unstack pull requests</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to unstack these pull
+                            requests?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setConfirmUnstack(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            disabled={unstackMutation.isPending}
+                            onClick={() =>
+                                unstackMutation.mutate({
+                                    owner,
+                                    repo,
+                                    stackNumber: data.number,
+                                    prNumbers: data.pullRequests.map(
+                                        (pr) => pr.number,
+                                    ),
+                                })
+                            }
+                        >
+                            Unstack
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
@@ -146,6 +232,7 @@ export function StackBadge({
                     owner={owner}
                     repo={repo}
                     prNumber={prNumber}
+                    onClose={() => setOpen(false)}
                 />
             </PopoverContent>
         </Popover>

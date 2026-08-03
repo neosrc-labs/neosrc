@@ -33,6 +33,7 @@ import {
     removeLabelFromIssue,
     removeReviewersFromPullRequest,
     revertPullRequest,
+    unstackPullRequests,
     updateIssueComment,
     updateIssueMilestone,
     updatePullRequest,
@@ -887,6 +888,33 @@ export const pullsRouter = createTRPCRouter({
                 input.owner,
                 input.repo,
                 input.prNumber,
+            );
+        }),
+
+    unstack: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                stackNumber: z.number(),
+                prNumbers: z.array(z.number()),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            await unstackPullRequests(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.stackNumber,
+            );
+            await Promise.all(
+                input.prNumbers.map((number) =>
+                    deleteCache(prCacheKey(input.owner, input.repo, number)),
+                ),
             );
         }),
 });
