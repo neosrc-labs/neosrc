@@ -1736,7 +1736,7 @@ export interface StackData {
 
 export interface StackEntry {
     number: number;
-    state: "open" | "closed";
+    state: "open" | "closed" | "merged";
     draft: boolean;
     title: string;
     headRef: string;
@@ -1786,7 +1786,9 @@ export async function getPullRequestStackGraphQL(
             state:
                 e.pullRequest.state === "OPEN"
                     ? ("open" as const)
-                    : ("closed" as const),
+                    : e.pullRequest.state === "MERGED"
+                      ? ("merged" as const)
+                      : ("closed" as const),
             draft: e.pullRequest.isDraft,
             title: e.pullRequest.title,
             headRef: e.pullRequest.headRefName,

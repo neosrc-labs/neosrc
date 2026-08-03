@@ -17,8 +17,8 @@ import {
 } from "~/server/cache";
 import {
     type GQLActor,
-    type StackData,
     getPullRequestStackGraphQL,
+    type StackData,
 } from "~/server/github-graphql";
 export type PullsGetResponseData =
     RestEndpointMethodTypes["pulls"]["get"]["response"]["data"] & {
