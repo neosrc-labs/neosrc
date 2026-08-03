@@ -17,7 +17,16 @@ import {
 } from "~/server/cache";
 import type { GQLActor } from "~/server/github-graphql";
 export type PullsGetResponseData =
-    RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
+    RestEndpointMethodTypes["pulls"]["get"]["response"]["data"] & {
+        // TODO: This has not yet been added to the RestEndpointMethodTypes upstream yet. Should remove when we update
+        stack?: {
+            id: number;
+            base: { ref: string; sha: string };
+            size: number;
+            number: number;
+            position: number;
+        };
+    };
 export type PullsListCommitsResponseData =
     RestEndpointMethodTypes["pulls"]["listCommits"]["response"]["data"];
 export type CommitData =
