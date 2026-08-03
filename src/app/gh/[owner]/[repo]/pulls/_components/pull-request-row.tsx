@@ -164,19 +164,6 @@ export function PullRequestRow({
                     ) : (
                         <span>by unknown</span>
                     )}
-                    {pr.stack && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <span className="ml-2 flex items-center gap-0.5 text-text-secondary text-xs">
-                                    <Layers className="size-3.5" />
-                                    {pr.stack.position} / {pr.stack.size}
-                                </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top">
-                                Part of a PR stack
-                            </TooltipContent>
-                        </Tooltip>
-                    )}
                     {pr.review_decision === "APPROVED" && (
                         <span className="flex items-center gap-0.5 text-green-600 text-xs dark:text-green-500">
                             <Check className="size-3.5" />
@@ -193,6 +180,19 @@ export function PullRequestRow({
                         <span className="text-amber-600 text-xs dark:text-amber-500">
                             Review required
                         </span>
+                    )}
+                    {pr.stack && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span className="ml-2 flex items-center gap-0.5 text-text-secondary text-xs">
+                                    <Layers className="size-3.5" />
+                                    {pr.stack.position} / {pr.stack.size}
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                                Part of a PR stack
+                            </TooltipContent>
+                        </Tooltip>
                     )}
                 </div>
                 {pr.labels && pr.labels.length > 0 && (
