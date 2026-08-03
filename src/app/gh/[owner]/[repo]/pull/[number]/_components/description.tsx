@@ -21,8 +21,9 @@ import {
     StatusPill,
 } from "~/components/ui/status-pill";
 import type { ReactionContent } from "~/lib/reactions";
-import type { PullsGetResponseData } from "~/server/github";
+import type { PullsGetResponseData, StackSuggestion } from "~/server/github";
 import { ConflictedFiles } from "./conflicted-files";
+import { StackBanner } from "./stack-banner";
 
 type SimpleUser = components["schemas"]["nullable-simple-user"];
 
@@ -41,6 +42,7 @@ interface PullRequestDescriptionSectionProps {
     canEditPromise: Promise<boolean>;
     actionSection?: ReactNode;
     conflictedFilesPromise?: Promise<string[]> | null;
+    stackSuggestionPromise: Promise<StackSuggestion | null>;
 }
 
 export function PullRequestDescriptionSection({
@@ -52,6 +54,7 @@ export function PullRequestDescriptionSection({
     canEditPromise,
     actionSection,
     conflictedFilesPromise,
+    stackSuggestionPromise,
 }: PullRequestDescriptionSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editBody, setEditBody] = useState("");
@@ -239,6 +242,20 @@ export function PullRequestDescriptionSection({
                     </Async>
                 )}
             </div>
+
+            <Async fallback={null} promise={stackSuggestionPromise}>
+                {(suggestion) =>
+                    suggestion ? (
+                        <div className="mb-3">
+                            <StackBanner
+                                owner={owner}
+                                repo={repo}
+                                suggestion={suggestion}
+                            />
+                        </div>
+                    ) : null
+                }
+            </Async>
 
             <Async
                 fallback={

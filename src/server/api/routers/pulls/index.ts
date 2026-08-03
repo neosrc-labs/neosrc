@@ -15,6 +15,7 @@ import {
     addReviewersToPullRequest,
     createIssueComment,
     createPullRequestReview,
+    createPullRequestStack,
     deleteIssueComment,
     getCachedPullRequest,
     getMergeRequirements,
@@ -888,6 +889,32 @@ export const pullsRouter = createTRPCRouter({
                 input.owner,
                 input.repo,
                 input.prNumber,
+            );
+        }),
+
+    createStack: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                pullRequests: z.array(z.number()),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session.user.id,
+            );
+            await createPullRequestStack(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.pullRequests,
+            );
+            await Promise.all(
+                input.pullRequests.map((number) =>
+                    deleteCache(prCacheKey(input.owner, input.repo, number)),
+                ),
             );
         }),
 
