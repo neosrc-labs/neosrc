@@ -259,7 +259,11 @@ const getUserId = async (userId?: string) => {
 };
 
 export const getGitHubToken = cache(
-    async (database: typeof db, userId: string) => {
+    async (database: typeof db, userId: string | null | undefined) => {
+        if (!userId) {
+            if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
+            throw new Error("GitHub account not connected");
+        }
         const [account] = await database
             .select({
                 id: betterAuthAccount.id,
@@ -277,6 +281,7 @@ export const getGitHubToken = cache(
             .limit(1);
 
         if (!account?.accessToken) {
+            if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
             throw new Error("GitHub account not connected");
         }
 
@@ -343,37 +348,40 @@ export const getAccountByProvider = cache(async (providerId: string) => {
 export const githubAccessToken = cache(async () => {
     const account = await getAccountByProvider("github");
 
-    if (!account) return null;
+    if (account) {
+        const now = Date.now();
+        const expiresAt = account.accessTokenExpiresAt?.getTime() ?? Infinity;
 
-    const now = Date.now();
-    const expiresAt = account.accessTokenExpiresAt?.getTime() ?? Infinity;
+        if (expiresAt < now && account.refreshToken) {
+            const refreshed = await refreshGitHubToken(account.refreshToken);
+            await db
+                .update(betterAuthAccount)
+                .set({
+                    accessToken: encrypt(refreshed.access_token),
+                    refreshToken: encrypt(refreshed.refresh_token),
+                    accessTokenExpiresAt: new Date(
+                        Date.now() + refreshed.expires_in * 1000,
+                    ),
+                    refreshTokenExpiresAt: refreshed.refresh_token_expires_in
+                        ? new Date(
+                              Date.now() +
+                                  refreshed.refresh_token_expires_in * 1000,
+                          )
+                        : undefined,
+                })
+                .where(eq(betterAuthAccount.id, account.id));
+            return refreshed.access_token;
+        }
 
-    if (expiresAt < now && account.refreshToken) {
-        const refreshed = await refreshGitHubToken(account.refreshToken);
-        await db
-            .update(betterAuthAccount)
-            .set({
-                accessToken: encrypt(refreshed.access_token),
-                refreshToken: encrypt(refreshed.refresh_token),
-                accessTokenExpiresAt: new Date(
-                    Date.now() + refreshed.expires_in * 1000,
-                ),
-                refreshTokenExpiresAt: refreshed.refresh_token_expires_in
-                    ? new Date(
-                          Date.now() +
-                              refreshed.refresh_token_expires_in * 1000,
-                      )
-                    : undefined,
-            })
-            .where(eq(betterAuthAccount.id, account.id));
-        return refreshed.access_token;
+        return account.accessToken;
     }
-
-    return account.accessToken;
+    if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
+    return null;
 });
 
 export const getCodebergToken = cache(
-    async (database: typeof db, userId: string) => {
+    async (database: typeof db, userId: string | null | undefined) => {
+        if (!userId) throw new Error("Codeberg account not connected");
         const [account] = await database
             .select({
                 id: betterAuthAccount.id,
@@ -498,6 +506,7 @@ export async function getGithubUsername(
     userId: string | null,
     accessToken: string,
 ): Promise<string | undefined> {
+    if (accessToken === env.GITHUB_ANONYMOUS_TOKEN) return undefined;
     // Try to get the username from the database since it's probably
     // faster, but fallback to github if its missing.
     return (
@@ -505,4 +514,8 @@ export async function getGithubUsername(
             ? (await getUser(userId))?.githubUsername
             : (await getAuthenticatedUser(accessToken)).login) ?? undefined
     );
+}
+
+export function isAnonymousToken(token: string): boolean {
+    return !!env.GITHUB_ANONYMOUS_TOKEN && token === env.GITHUB_ANONYMOUS_TOKEN;
 }
