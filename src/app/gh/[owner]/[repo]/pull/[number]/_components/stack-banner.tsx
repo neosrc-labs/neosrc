@@ -1,7 +1,6 @@
 "use client";
 
 import { Layers } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
@@ -15,6 +14,7 @@ import {
 } from "~/components/ui/dialog";
 import type { StackSuggestion } from "~/server/github";
 import { api } from "~/trpc/react";
+import { StackList } from "./stack-list";
 
 interface StackBannerProps {
     owner: string;
@@ -69,27 +69,16 @@ export function StackBanner({ owner, repo, suggestion }: StackBannerProps) {
                             branch of the pull request below it.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex flex-col gap-1">
-                        {suggestion.pullRequests
-                            .slice()
-                            .reverse()
-                            .map((pr, index) => (
-                                <Link
-                                    key={pr.number}
-                                    href={`/gh/${owner}/${repo}/pull/${pr.number}`}
-                                    className="flex items-center gap-2.5 rounded px-2 py-1.5 text-sm transition-colors hover:bg-surface-selected"
-                                >
-                                    <span className="w-4 shrink-0 text-right font-mono text-text-tertiary text-xs">
-                                        {index + 1}
-                                    </span>
-                                    <span className="truncate font-medium text-text-primary">
-                                        {pr.title}
-                                    </span>
-                                    <span className="ml-auto shrink-0 font-mono text-text-secondary text-xs">
-                                        #{pr.number}
-                                    </span>
-                                </Link>
-                            ))}
+                    <div className="flex flex-col">
+                        <StackList
+                            owner={owner}
+                            repo={repo}
+                            items={suggestion.pullRequests}
+                            baseRef={suggestion.baseRef}
+                            currentNumber={
+                                suggestion.pullRequests.at(-1)?.number
+                            }
+                        />
                     </div>
                     <DialogFooter>
                         <Button

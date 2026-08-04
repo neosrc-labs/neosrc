@@ -1,14 +1,19 @@
-export interface StackSuggestion {
-    /** Chain of pull requests, bottom to top, including the current PR. */
-    pullRequests: Array<{
-        number: number;
-        title: string;
-    }>;
-}
-
-export interface StackCandidate {
+export interface StackSuggestionPullRequest {
     number: number;
     title: string;
+    state: "open" | "closed" | "merged";
+    draft: boolean;
+    headRef: string;
+}
+
+export interface StackSuggestion {
+    /** Chain of pull requests, bottom to top, including the current PR. */
+    pullRequests: StackSuggestionPullRequest[];
+    /** Trunk branch the bottom pull request targets. */
+    baseRef: string;
+}
+
+export interface StackCandidate extends StackSuggestionPullRequest {
     baseRef: string;
 }
 
@@ -30,8 +35,14 @@ export async function buildStackSuggestion(
     findBelow: (headRef: string) => Promise<StackCandidate | null>,
     maxSize: number = MAX_STACK_SIZE,
 ): Promise<StackSuggestion | null> {
-    const chain: StackSuggestion["pullRequests"] = [
-        { number: top.number, title: top.title },
+    const chain: StackSuggestionPullRequest[] = [
+        {
+            number: top.number,
+            title: top.title,
+            state: top.state,
+            draft: top.draft,
+            headRef: top.headRef,
+        },
     ];
     let headRef = top.baseRef;
 
@@ -40,9 +51,15 @@ export async function buildStackSuggestion(
         if (!candidate) {
             break;
         }
-        chain.unshift({ number: candidate.number, title: candidate.title });
+        chain.unshift({
+            number: candidate.number,
+            title: candidate.title,
+            state: candidate.state,
+            draft: candidate.draft,
+            headRef: candidate.headRef,
+        });
         headRef = candidate.baseRef;
     }
 
-    return chain.length > 1 ? { pullRequests: chain } : null;
+    return chain.length > 1 ? { pullRequests: chain, baseRef: headRef } : null;
 }
