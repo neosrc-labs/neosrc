@@ -1,4 +1,5 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -20,11 +21,12 @@ const permissionSchema = z.discriminatedUnion("kind", [
 
 export const apiKeysRouter = createTRPCRouter({
     getAll: protectedProcedure.query(async ({ ctx }) => {
+        if (!ctx.session?.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+        const userId = ctx.session.user.id;
         const keys = await ctx.db
             .select()
             .from(apiKey)
-            .where(eq(apiKey.owner, ctx.session.user.id))
-            .orderBy(desc(apiKey.createdAt));
+            .where(eq(apiKey.owner, userId));
 
         const keyIds = keys.map((k) => k.id);
 
@@ -77,13 +79,16 @@ export const apiKeysRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
+            if (!ctx.session?.user)
+                throw new TRPCError({ code: "UNAUTHORIZED" });
+            const userId = ctx.session.user.id;
             const [user] = await ctx.db
                 .select({
                     githubUsername: betterAuthUser.githubUsername,
                     codebergUsername: betterAuthUser.codebergUsername,
                 })
                 .from(betterAuthUser)
-                .where(eq(betterAuthUser.id, ctx.session.user.id))
+                .where(eq(betterAuthUser.id, userId))
                 .limit(1);
 
             if (!user) {
@@ -138,10 +143,7 @@ export const apiKeysRouter = createTRPCRouter({
                         if (!user.githubUsername) {
                             throw new Error("GitHub account not linked");
                         }
-                        const ghToken = await getGitHubToken(
-                            ctx.db,
-                            ctx.session.user.id,
-                        );
+                        const ghToken = await getGitHubToken(ctx.db, userId);
                         const ghRepo = await getGitHubRepo(
                             ghToken,
                             owner,
@@ -159,10 +161,7 @@ export const apiKeysRouter = createTRPCRouter({
                         if (!user.codebergUsername) {
                             throw new Error("Codeberg account not linked");
                         }
-                        const cbToken = await getCodebergToken(
-                            ctx.db,
-                            ctx.session.user.id,
-                        );
+                        const cbToken = await getCodebergToken(ctx.db, userId);
                         const cbRepo = await getCodebergRepo(
                             cbToken,
                             owner,
@@ -187,7 +186,7 @@ export const apiKeysRouter = createTRPCRouter({
                 .values({
                     name: input.name,
                     hash,
-                    owner: ctx.session.user.id,
+                    owner: userId,
                     expirationTimestamp: input.expirationTimestamp
                         ? new Date(input.expirationTimestamp)
                         : null,
@@ -228,15 +227,13 @@ export const apiKeysRouter = createTRPCRouter({
     revoke: protectedProcedure
         .input(z.object({ id: z.number() }))
         .mutation(async ({ ctx, input }) => {
+            if (!ctx.session?.user)
+                throw new TRPCError({ code: "UNAUTHORIZED" });
+            const userId = ctx.session.user.id;
             const [key] = await ctx.db
                 .select()
                 .from(apiKey)
-                .where(
-                    and(
-                        eq(apiKey.id, input.id),
-                        eq(apiKey.owner, ctx.session.user.id),
-                    ),
-                )
+                .where(and(eq(apiKey.id, input.id), eq(apiKey.owner, userId)))
                 .limit(1);
 
             if (!key) {

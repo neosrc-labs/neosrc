@@ -20,7 +20,7 @@ export class CodebergIssueProvider implements IssueProvider {
     ): Promise<IssueSearchResult> {
         const accessToken = await getCodebergToken(
             params.ctx.db,
-            params.ctx.session.user.id,
+            params.ctx.session?.user?.id,
         );
 
         const stateMatch = params.query.match(/^(is:open|is:closed)\s*/);

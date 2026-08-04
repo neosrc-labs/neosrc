@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getGitHubToken } from "~/server/auth";
+import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import {
     createIssueCommentReaction,
     createIssueReaction,
@@ -34,11 +34,14 @@ export const reactionsRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
-            const [currentUser, reactions, reactionCounts] = await Promise.all([
-                getAuthenticatedUser(accessToken),
+            const currentUser = isAnonymousToken(accessToken)
+                ? null
+                : await getAuthenticatedUser(accessToken);
+
+            const [reactions, reactionCounts] = await Promise.all([
                 getPullRequestReactionsPage(
                     accessToken,
                     input.owner,
@@ -55,7 +58,7 @@ export const reactionsRouter = createTRPCRouter({
 
             return {
                 reactions,
-                currentUserLogin: currentUser.login,
+                currentUserLogin: currentUser?.login,
                 counts: reactionCounts,
             };
         }),
@@ -81,11 +84,13 @@ export const reactionsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const [currentUser, existingReactions] = await Promise.all([
-                getAuthenticatedUser(accessToken),
+                isAnonymousToken(accessToken)
+                    ? null
+                    : getAuthenticatedUser(accessToken),
                 getIssueCommentReactions(
                     accessToken,
                     input.owner,
@@ -96,7 +101,7 @@ export const reactionsRouter = createTRPCRouter({
 
             const existing = existingReactions.find(
                 (r) =>
-                    r.user?.login === currentUser.login &&
+                    r.user?.login === currentUser?.login &&
                     r.content === input.content,
             );
 
@@ -142,11 +147,13 @@ export const reactionsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const [currentUser, existingReactions] = await Promise.all([
-                getAuthenticatedUser(accessToken),
+                isAnonymousToken(accessToken)
+                    ? null
+                    : getAuthenticatedUser(accessToken),
                 getPullRequestReviewCommentReactions(
                     accessToken,
                     input.owner,
@@ -157,7 +164,7 @@ export const reactionsRouter = createTRPCRouter({
 
             const existing = existingReactions.find(
                 (r) =>
-                    r.user?.login === currentUser.login &&
+                    r.user?.login === currentUser?.login &&
                     r.content === input.content,
             );
 
@@ -202,17 +209,19 @@ export const reactionsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const [currentUser, existingReactions] = await Promise.all([
-                getAuthenticatedUser(accessToken),
+                isAnonymousToken(accessToken)
+                    ? null
+                    : getAuthenticatedUser(accessToken),
                 getSubjectReactions(accessToken, input.subjectId),
             ]);
 
             const existing = existingReactions.find(
                 (r) =>
-                    r.user?.login === currentUser.login &&
+                    r.user?.login === currentUser?.login &&
                     r.content === input.content,
             );
 
@@ -240,7 +249,7 @@ export const reactionsRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const token = accessToken;
@@ -290,11 +299,13 @@ export const reactionsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const [currentUser, existingReactions] = await Promise.all([
-                getAuthenticatedUser(accessToken),
+                isAnonymousToken(accessToken)
+                    ? null
+                    : getAuthenticatedUser(accessToken),
                 getPullRequestReactions(
                     accessToken,
                     input.owner,
@@ -305,7 +316,7 @@ export const reactionsRouter = createTRPCRouter({
 
             const existing = existingReactions.find(
                 (r) =>
-                    r.user?.login === currentUser.login &&
+                    r.user?.login === currentUser?.login &&
                     r.content === input.content,
             );
 

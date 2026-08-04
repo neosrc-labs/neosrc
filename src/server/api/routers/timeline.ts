@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getGitHubToken } from "~/server/auth";
+import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import {
     type GQLMergeQueueEntry,
     type GQLTimelineEvent,
@@ -20,7 +20,7 @@ export type TimelineResult = {
             user: { login: string } | null;
         }[]
     >;
-    currentUserLogin: string;
+    currentUserLogin: string | undefined;
     mergeQueueEntry: GQLMergeQueueEntry;
 };
 
@@ -38,7 +38,7 @@ export const timelineRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const result = await getPullRequestTimelineGraphQL(
@@ -49,6 +49,10 @@ export const timelineRouter = createTRPCRouter({
                 input.limit,
                 input.cursor,
             );
+
+            if (isAnonymousToken(accessToken)) {
+                result.currentUserLogin = undefined;
+            }
 
             return {
                 events: result.events,
