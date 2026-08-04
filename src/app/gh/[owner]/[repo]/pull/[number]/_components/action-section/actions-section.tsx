@@ -84,13 +84,7 @@ export function ActionSection({
             { staleTime: 60_000 },
         );
 
-    const skeleton = (
-        <>
-            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
-            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
-            <div className="h-9 w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
-        </>
-    );
+    const skeleton = <div className="h-9 w-full" />;
     return (
         <div>
             {pullRequestPromise ? (
@@ -253,7 +247,8 @@ function Buttons({
     const canWrite = userPermission === "admin" || userPermission === "write";
     const canManagePR = isAuthor || canWrite;
     const canMerge = canWrite;
-    const canInteract = !pullRequest.locked || canWrite || isAuthor;
+    const canInteract =
+        !!currentUserLogin && (!pullRequest.locked || canWrite || isAuthor);
     const isMergeBlocked = pullRequest.mergeable_state === "blocked";
     const isMergeStateUnknown = pullRequest.mergeable_state === "unknown";
 

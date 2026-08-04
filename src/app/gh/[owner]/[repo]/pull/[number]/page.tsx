@@ -192,8 +192,7 @@ async function computeCanInteract(
     const session = await getSession();
     const currentUser = session?.user.githubUsername;
     if (!currentUser || !userId) {
-        const pr = await pullRequestPromise;
-        return !pr.locked;
+        return false;
     }
     const [pr, userPermission] = await Promise.all([
         pullRequestPromise,
