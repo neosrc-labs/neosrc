@@ -53,7 +53,7 @@ export function StackBanner({ owner, repo, suggestion }: StackBannerProps) {
                 </div>
                 <Button
                     size="sm"
-                    variant="outline"
+                    className="bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                     onClick={() => setDialogOpen(true)}
                 >
                     Create stack
@@ -88,6 +88,7 @@ export function StackBanner({ owner, repo, suggestion }: StackBannerProps) {
                             Cancel
                         </Button>
                         <Button
+                            className="bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                             disabled={createStackMutation.isPending}
                             onClick={() =>
                                 createStackMutation.mutate({
