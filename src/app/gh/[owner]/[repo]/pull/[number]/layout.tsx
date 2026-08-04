@@ -44,12 +44,9 @@ export default async function PullRequestLayout({
     const accessToken = await githubAccessToken();
     const session = await getSession();
 
-    if (accessToken && session?.user) {
-        const userId = session.user.id;
-        currentUserLogin = session.user.githubUsername ?? undefined;
-        if (!currentUserLogin) {
-            throw new Error("github username name not found");
-        }
+    if (accessToken) {
+        const userId = session?.user?.id ?? null;
+        currentUserLogin = session?.user?.githubUsername ?? undefined;
 
         pullRequest = getCachedPullRequest(
             accessToken,
@@ -59,13 +56,15 @@ export default async function PullRequestLayout({
             userId,
         );
 
-        userPermission = getUserRepoPermission(
-            accessToken,
-            owner,
-            repo,
-            currentUserLogin,
-            userId,
-        ).catch(() => null);
+        if (currentUserLogin) {
+            userPermission = getUserRepoPermission(
+                accessToken,
+                owner,
+                repo,
+                currentUserLogin,
+                userId ?? "",
+            ).catch(() => null);
+        }
 
         // Fetch check runs and commit statuses if we have the PR head SHA
         checks = pullRequest.then((pullRequest) =>
