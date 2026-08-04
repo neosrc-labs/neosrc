@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { env } from "~/env";
 import {
     codebergAccessToken,
     getSession,
@@ -33,7 +34,7 @@ export default async function ChangesRedirectPage({
 }) {
     const { owner, repo, number, sha } = await params;
     const session = await getSession();
-    if (!session) notFound();
+    if (!session && !env.GITHUB_ANONYMOUS_TOKEN) notFound();
 
     const [githubToken, codebergToken] = await Promise.all([
         githubAccessToken(),
