@@ -1,8 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildStackSuggestion, MAX_STACK_SIZE } from "./stack-suggestion";
+import {
+    buildStackSuggestion,
+    MAX_STACK_SIZE,
+    type StackCandidate,
+} from "./stack-suggestion";
 
 function pr(number: number, baseRef: string, title = `PR ${number}`) {
-    return { number, title, baseRef };
+    return {
+        number,
+        title,
+        state: "open" as const,
+        draft: false,
+        headRef: `head-${number}`,
+        baseRef,
+    };
 }
 
 describe("buildStackSuggestion", () => {
@@ -30,9 +41,22 @@ describe("buildStackSuggestion", () => {
 
         expect(suggestion).toEqual({
             pullRequests: [
-                { number: 5, title: "PR 5" },
-                { number: 10, title: "PR 10" },
+                {
+                    number: 5,
+                    title: "PR 5",
+                    state: "open",
+                    draft: false,
+                    headRef: "head-5",
+                },
+                {
+                    number: 10,
+                    title: "PR 10",
+                    state: "open",
+                    draft: false,
+                    headRef: "head-10",
+                },
             ],
+            baseRef: "main",
         });
         expect(findBelow).toHaveBeenCalledTimes(2);
     });
@@ -40,10 +64,7 @@ describe("buildStackSuggestion", () => {
     it("walks a deep chain, ordering bottom to top", async () => {
         // PR 3's head is the branch PR 4 bases on; PR 2's head is what PR 3
         // bases on; and so on down to PR 1 which targets main.
-        const below = new Map<
-            string,
-            { number: number; title: string; baseRef: string }
-        >([
+        const below = new Map<string, StackCandidate>([
             ["branch-3", pr(3, "branch-2")],
             ["branch-2", pr(2, "branch-1")],
             ["branch-1", pr(1, "main")],
@@ -60,6 +81,7 @@ describe("buildStackSuggestion", () => {
         expect(suggestion?.pullRequests.map((p) => p.number)).toEqual([
             1, 2, 3, 4,
         ]);
+        expect(suggestion?.baseRef).toBe("main");
     });
 
     it("stops at the first missing link in the chain", async () => {
@@ -77,6 +99,7 @@ describe("buildStackSuggestion", () => {
         expect(suggestion?.pullRequests.map((p) => p.number)).toEqual([
             2, 5, 10,
         ]);
+        expect(suggestion?.baseRef).toBe("branch-y");
         expect(findBelow).toHaveBeenCalledTimes(3);
     });
 
@@ -92,6 +115,7 @@ describe("buildStackSuggestion", () => {
         expect(suggestion?.pullRequests).toHaveLength(MAX_STACK_SIZE);
         expect(suggestion?.pullRequests[0]?.number).toBe(999);
         expect(suggestion?.pullRequests.at(-1)?.number).toBe(1000);
+        expect(suggestion?.baseRef).toBe("branch-999");
         expect(findBelow).toHaveBeenCalledTimes(MAX_STACK_SIZE - 1);
     });
 });

@@ -185,6 +185,9 @@ async function findOpenPullRequestByHead(
         return {
             number: pr.number,
             title: pr.title,
+            state: "open",
+            draft: pr.draft ?? false,
+            headRef: pr.head.ref,
             baseRef: pr.base.ref,
         };
     }
@@ -211,7 +214,14 @@ export const getStackSuggestion = cache(
         }
 
         return buildStackSuggestion(
-            { number: pr.number, title: pr.title, baseRef: pr.base.ref },
+            {
+                number: pr.number,
+                title: pr.title,
+                state: pr.state,
+                draft: pr.draft ?? false,
+                headRef: pr.head.ref,
+                baseRef: pr.base.ref,
+            },
             (headRef) =>
                 findOpenPullRequestByHead(accessToken, owner, repo, headRef),
         );
