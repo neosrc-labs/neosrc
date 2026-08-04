@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getGitHubToken } from "~/server/auth";
+import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import { deleteCache, prCacheKey } from "~/server/cache";
 import {
     type CommentForReview,
@@ -33,11 +33,10 @@ export const reviewsRouter = createTRPCRouter({
         .query(async ({ ctx, input }): Promise<PendingReview | null> => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
-
+            if (isAnonymousToken(accessToken)) return null;
             const currentUser = await getAuthenticatedUser(accessToken);
-            const githubLogin = currentUser.login;
 
             const reviews = await getPullRequestReviews(
                 accessToken,
@@ -47,7 +46,9 @@ export const reviewsRouter = createTRPCRouter({
             );
 
             const pendingReview = reviews.find(
-                (r) => r.state === "PENDING" && r.user?.login === githubLogin,
+                (r) =>
+                    r.state === "PENDING" &&
+                    r.user?.login === currentUser.login,
             );
 
             if (!pendingReview) {
@@ -79,11 +80,10 @@ export const reviewsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
-
+            if (isAnonymousToken(accessToken)) return null;
             const currentUser = await getAuthenticatedUser(accessToken);
-            const githubLogin = currentUser.login;
 
             const existing = await getPullRequestReviews(
                 accessToken,
@@ -93,7 +93,9 @@ export const reviewsRouter = createTRPCRouter({
             );
 
             const existingPending = existing.find(
-                (r) => r.state === "PENDING" && r.user?.login === githubLogin,
+                (r) =>
+                    r.state === "PENDING" &&
+                    r.user?.login === currentUser.login,
             );
 
             if (existingPending) {
@@ -124,7 +126,7 @@ export const reviewsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await submitPullRequestReview(
@@ -156,7 +158,7 @@ export const reviewsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await deletePendingReview(
@@ -193,7 +195,7 @@ export const reviewsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await minimizePullRequestReview(
@@ -221,7 +223,7 @@ export const reviewsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await unminimizePullRequestReview(accessToken, input.subjectId);

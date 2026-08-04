@@ -58,7 +58,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const result = await updatePullRequest(
@@ -88,7 +88,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const result = await updatePullRequest(
@@ -118,7 +118,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const comment = await createIssueComment(
@@ -148,7 +148,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const comment = await updateIssueComment(
@@ -173,7 +173,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await deleteIssueComment(
@@ -199,7 +199,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const review = await updatePullRequestReview(
@@ -230,14 +230,14 @@ export const pullsRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return listCodebergLabels(accessToken, input.owner, input.repo);
             }
 
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             return listLabelsForRepo(accessToken, input.owner, input.repo);
@@ -255,7 +255,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await addLabelsToIssue(
@@ -285,7 +285,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await removeLabelFromIssue(
@@ -315,7 +315,7 @@ export const pullsRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return listCodebergAssignees(
                     accessToken,
@@ -326,7 +326,7 @@ export const pullsRouter = createTRPCRouter({
 
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             return listRepoAssignees(accessToken, input.owner, input.repo);
@@ -344,7 +344,7 @@ export const pullsRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return listCodebergRecentAuthors(
                     accessToken,
@@ -355,7 +355,7 @@ export const pullsRouter = createTRPCRouter({
 
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             return listRecentIssueAuthors(accessToken, input.owner, input.repo);
@@ -373,7 +373,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await addAssigneesToIssue(
@@ -403,7 +403,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await removeAssigneesFromIssue(
@@ -433,7 +433,7 @@ export const pullsRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return listCodebergMilestones(
                     accessToken,
@@ -444,7 +444,7 @@ export const pullsRouter = createTRPCRouter({
 
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             return listMilestonesForRepo(accessToken, input.owner, input.repo);
@@ -462,7 +462,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await updateIssueMilestone(
@@ -492,7 +492,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await addReviewersToPullRequest(
@@ -522,7 +522,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await removeReviewersFromPullRequest(
@@ -553,7 +553,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const review = await createPullRequestReview(
@@ -583,7 +583,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await markPullRequestAsDraft(
@@ -611,7 +611,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await markPullRequestAsReady(
@@ -642,7 +642,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const result = await mergePullRequest(
@@ -680,7 +680,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const result = await revertPullRequest(
@@ -717,7 +717,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await updatePullRequest(
@@ -746,7 +746,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await updatePullRequest(
@@ -776,7 +776,7 @@ export const pullsRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             return listPullRequests(
@@ -830,7 +830,7 @@ export const pullsRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const pr = await getCachedPullRequest(
@@ -838,7 +838,7 @@ export const pullsRouter = createTRPCRouter({
                 input.owner,
                 input.repo,
                 input.number,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             return getMergeRequirements(
@@ -860,7 +860,7 @@ export const pullsRouter = createTRPCRouter({
         .query(async ({ ctx, input }): Promise<ReviewComment2[]> => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getPullRequestReviews(
                 accessToken,

@@ -25,7 +25,7 @@ export const commitsRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const commit = await getCommitGraphQL(
@@ -51,7 +51,7 @@ export const commitsRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const result = await getPullRequestCommitsGraphQL(
@@ -88,7 +88,7 @@ export const commitsRouter = createTRPCRouter({
                 if (input.provider === "cb") {
                     const accessToken = await getCodebergToken(
                         ctx.db,
-                        ctx.session.user.id,
+                        ctx.session?.user?.id,
                     );
                     const { commits, totalCount } = await listBranchCommits(
                         accessToken,
@@ -124,7 +124,7 @@ export const commitsRouter = createTRPCRouter({
                 }
                 const accessToken = await getGitHubToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
 
                 let authorId: string | undefined;

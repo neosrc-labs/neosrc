@@ -5,6 +5,7 @@ import {
     getCodebergToken,
     getGitHubToken,
     getGithubUsername,
+    isAnonymousToken,
 } from "~/server/auth";
 import { getUserByUsername as getCodebergUserByUsername } from "~/server/codeberg";
 import {
@@ -29,19 +30,24 @@ export type UserProfile = {
 
 export const usersRouter = createTRPCRouter({
     currentUser: protectedProcedure.query(async ({ ctx }) => {
-        const { githubUsername, image: avatarUrl } = ctx.session.user;
+        const githubUsername = ctx.session?.user?.githubUsername;
+        const avatarUrl = ctx.session?.user?.image;
 
         if (githubUsername && avatarUrl) {
             return { login: githubUsername, avatarUrl };
         }
 
-        const accessToken = await getGitHubToken(ctx.db, ctx.session.user.id);
+        const accessToken = await getGitHubToken(ctx.db, ctx.session?.user?.id);
+        if (isAnonymousToken(accessToken)) return null;
         const user = await getAuthenticatedUser(accessToken);
 
         return {
             login:
                 githubUsername ??
-                (await getGithubUsername(ctx.session.user.id, accessToken)),
+                (await getGithubUsername(
+                    ctx.session?.user?.id ?? null,
+                    accessToken,
+                )),
             avatarUrl: avatarUrl ?? user.avatar_url,
         };
     }),
@@ -57,7 +63,7 @@ export const usersRouter = createTRPCRouter({
                 if (input.provider === "cb") {
                     const accessToken = await getCodebergToken(
                         ctx.db,
-                        ctx.session.user.id,
+                        ctx.session?.user?.id,
                     );
                     const raw = await getCodebergUserByUsername(
                         accessToken,
@@ -83,7 +89,7 @@ export const usersRouter = createTRPCRouter({
 
                 const accessToken = await getGitHubToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
 
                 const user = await getGitHubUser(accessToken, input.username);
@@ -101,7 +107,7 @@ export const usersRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const team = await getGitHubTeam(

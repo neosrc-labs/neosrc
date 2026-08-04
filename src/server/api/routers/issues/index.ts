@@ -25,8 +25,8 @@ export const issuesRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken =
                 input.provider === "cb"
-                    ? await getCodebergToken(ctx.db, ctx.session.user.id)
-                    : await getGitHubToken(ctx.db, ctx.session.user.id);
+                    ? await getCodebergToken(ctx.db, ctx.session?.user?.id)
+                    : await getGitHubToken(ctx.db, ctx.session?.user?.id);
 
             if (input.provider === "cb") {
                 return getCodebergIssue(
@@ -82,8 +82,8 @@ export const issuesRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken =
                 input.provider === "cb"
-                    ? await getCodebergToken(ctx.db, ctx.session.user.id)
-                    : await getGitHubToken(ctx.db, ctx.session.user.id);
+                    ? await getCodebergToken(ctx.db, ctx.session?.user?.id)
+                    : await getGitHubToken(ctx.db, ctx.session?.user?.id);
 
             if (input.provider === "cb") {
                 return searchCodebergIssues(

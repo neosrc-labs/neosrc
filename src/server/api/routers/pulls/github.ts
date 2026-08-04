@@ -12,7 +12,7 @@ export class GitHubPullRequestProvider implements PullRequestProvider {
     async search(params: SearchParams & { ctx: Ctx }): Promise<PrSearchResult> {
         const accessToken = await getGitHubToken(
             params.ctx.db,
-            params.ctx.session.user.id,
+            params.ctx.session?.user?.id,
         );
 
         const sortOrder =

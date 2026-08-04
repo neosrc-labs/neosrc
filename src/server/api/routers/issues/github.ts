@@ -14,7 +14,7 @@ export class GitHubIssueProvider implements IssueProvider {
     ): Promise<IssueSearchResult> {
         const accessToken = await getGitHubToken(
             params.ctx.db,
-            params.ctx.session.user.id,
+            params.ctx.session?.user?.id,
         );
 
         const sortOrder =

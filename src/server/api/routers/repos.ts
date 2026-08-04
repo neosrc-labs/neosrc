@@ -103,14 +103,12 @@ export const reposRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }): Promise<RepositoryInfo> => {
+            const userId = ctx.session?.user?.id ?? "anonymous";
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session.user.id,
-                );
+                const accessToken = await getCodebergToken(ctx.db, userId);
                 const data = await getCachedCodebergRepo(
                     accessToken,
-                    ctx.session.user.id,
+                    userId,
                     input.owner,
                     input.repo,
                 );
@@ -149,14 +147,11 @@ export const reposRouter = createTRPCRouter({
                 } satisfies RepositoryInfo;
             }
 
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session.user.id,
-            );
+            const accessToken = await getGitHubToken(ctx.db, userId);
 
             const data = await getCachedRepo(
                 accessToken,
-                ctx.session.user.id,
+                userId,
                 input.owner,
                 input.repo,
             );
@@ -207,7 +202,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return getCachedRepoCounts(
                     accessToken,
@@ -218,7 +213,7 @@ export const reposRouter = createTRPCRouter({
 
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getCachedRepoIssuePullCounts(
                 accessToken,
@@ -227,7 +222,8 @@ export const reposRouter = createTRPCRouter({
             );
         }),
     getTopRepos: protectedProcedure.query(async ({ ctx }) => {
-        const accessToken = await getGitHubToken(ctx.db, ctx.session.user.id);
+        if (ctx.isAnonymous) return [];
+        const accessToken = await getGitHubToken(ctx.db, ctx.session?.user?.id);
         return getTopRepositories(accessToken);
     }),
     getBranches: protectedProcedure
@@ -242,7 +238,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return getCodebergBranches(
                     accessToken,
@@ -252,7 +248,7 @@ export const reposRouter = createTRPCRouter({
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getRepoBranches(accessToken, input.owner, input.repo);
         }),
@@ -268,13 +264,13 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return getCodebergTags(accessToken, input.owner, input.repo);
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getRepoTags(accessToken, input.owner, input.repo);
         }),
@@ -290,7 +286,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return getCodebergRefCounts(
                     accessToken,
@@ -300,7 +296,7 @@ export const reposRouter = createTRPCRouter({
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getRepoRefCounts(accessToken, input.owner, input.repo);
         }),
@@ -317,7 +313,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return getCodebergLatestCommit(
                     accessToken,
@@ -328,7 +324,7 @@ export const reposRouter = createTRPCRouter({
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getRepoLatestCommit(
                 accessToken,
@@ -352,7 +348,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") return null;
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getForkComparison(
                 accessToken,
@@ -381,7 +377,7 @@ export const reposRouter = createTRPCRouter({
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return mergeForkUpstream(
                 accessToken,
@@ -404,7 +400,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 const result: Record<
                     string,
@@ -428,7 +424,7 @@ export const reposRouter = createTRPCRouter({
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getFileLatestCommits(
                 accessToken,
@@ -452,7 +448,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return getCodebergRepoContents(
                     accessToken,
@@ -464,7 +460,7 @@ export const reposRouter = createTRPCRouter({
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getRepoContents(
                 accessToken,
@@ -487,7 +483,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return getCodebergFileTree(
                     accessToken,
@@ -498,7 +494,7 @@ export const reposRouter = createTRPCRouter({
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getRepoFileTree(
                 accessToken,
@@ -520,7 +516,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 const items = await getCodebergRepoContents(
                     accessToken,
@@ -548,7 +544,7 @@ export const reposRouter = createTRPCRouter({
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getCachedRepoDocFileNames(
                 accessToken,
@@ -569,7 +565,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return getCodebergRepoLanguages(
                     accessToken,
@@ -579,7 +575,7 @@ export const reposRouter = createTRPCRouter({
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getCachedRepoLanguages(accessToken, input.owner, input.repo);
         }),
@@ -596,7 +592,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") return [];
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getRepoDocFiles(
                 accessToken,
@@ -619,7 +615,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return getCodebergFileContent(
                     accessToken,
@@ -631,7 +627,7 @@ export const reposRouter = createTRPCRouter({
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getCachedDocFileContent(
                 accessToken,
@@ -653,7 +649,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") return [];
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getCachedRepoContributors(
                 accessToken,
@@ -673,7 +669,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") return [];
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getRepoDeployments(accessToken, input.owner, input.repo);
         }),
@@ -689,7 +685,7 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(
                     ctx.db,
-                    ctx.session.user.id,
+                    ctx.session?.user?.id,
                 );
                 return getCodebergLatestRelease(
                     accessToken,
@@ -699,7 +695,7 @@ export const reposRouter = createTRPCRouter({
             }
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             return getLatestRelease(accessToken, input.owner, input.repo);
         }),
@@ -712,27 +708,23 @@ export const reposRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
+            if (!ctx.session?.user) return false;
+            const userId = ctx.session.user.id;
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session.user.id,
-                );
+                const accessToken = await getCodebergToken(ctx.db, userId);
                 return getCachedCodebergRepoStarred(
                     accessToken,
                     input.owner,
                     input.repo,
-                    ctx.session.user.id,
+                    userId,
                 );
             }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session.user.id,
-            );
+            const accessToken = await getGitHubToken(ctx.db, userId);
             return getCachedRepoStarred(
                 accessToken,
                 input.owner,
                 input.repo,
-                ctx.session.user.id,
+                userId,
             );
         }),
     star: protectedProcedure
@@ -744,34 +736,21 @@ export const reposRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
+            if (!ctx.session?.user)
+                throw new TRPCError({ code: "UNAUTHORIZED" });
+            const userId = ctx.session.user.id;
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session.user.id,
-                );
+                const accessToken = await getCodebergToken(ctx.db, userId);
                 await starCodebergRepo(accessToken, input.owner, input.repo);
                 await deleteCache(
-                    repoStarredCacheKey(
-                        "cb",
-                        ctx.session.user.id,
-                        input.owner,
-                        input.repo,
-                    ),
+                    repoStarredCacheKey("cb", userId, input.owner, input.repo),
                 );
                 return;
             }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session.user.id,
-            );
+            const accessToken = await getGitHubToken(ctx.db, userId);
             await starRepo(accessToken, input.owner, input.repo);
             await deleteCache(
-                repoStarredCacheKey(
-                    "gh",
-                    ctx.session.user.id,
-                    input.owner,
-                    input.repo,
-                ),
+                repoStarredCacheKey("gh", userId, input.owner, input.repo),
             );
         }),
     unstar: protectedProcedure
@@ -783,34 +762,21 @@ export const reposRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
+            if (!ctx.session?.user)
+                throw new TRPCError({ code: "UNAUTHORIZED" });
+            const userId = ctx.session.user.id;
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session.user.id,
-                );
+                const accessToken = await getCodebergToken(ctx.db, userId);
                 await unstarCodebergRepo(accessToken, input.owner, input.repo);
                 await deleteCache(
-                    repoStarredCacheKey(
-                        "cb",
-                        ctx.session.user.id,
-                        input.owner,
-                        input.repo,
-                    ),
+                    repoStarredCacheKey("cb", userId, input.owner, input.repo),
                 );
                 return;
             }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session.user.id,
-            );
+            const accessToken = await getGitHubToken(ctx.db, userId);
             await unstarRepo(accessToken, input.owner, input.repo);
             await deleteCache(
-                repoStarredCacheKey(
-                    "gh",
-                    ctx.session.user.id,
-                    input.owner,
-                    input.repo,
-                ),
+                repoStarredCacheKey("gh", userId, input.owner, input.repo),
             );
         }),
     getSubscription: protectedProcedure
@@ -822,27 +788,22 @@ export const reposRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
+            const userId = ctx.session?.user?.id ?? "anonymous";
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session.user.id,
-                );
+                const accessToken = await getCodebergToken(ctx.db, userId);
                 return getCachedCodebergRepoSubscription(
                     accessToken,
                     input.owner,
                     input.repo,
-                    ctx.session.user.id,
+                    userId,
                 );
             }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session.user.id,
-            );
+            const accessToken = await getGitHubToken(ctx.db, userId);
             return getCachedRepoSubscription(
                 accessToken,
                 input.owner,
                 input.repo,
-                ctx.session.user.id,
+                userId,
             );
         }),
     setSubscription: protectedProcedure
@@ -856,11 +817,11 @@ export const reposRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
+            if (!ctx.session?.user)
+                throw new TRPCError({ code: "UNAUTHORIZED" });
+            const userId = ctx.session.user.id;
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session.user.id,
-                );
+                const accessToken = await getCodebergToken(ctx.db, userId);
                 await setCodebergRepoSubscription(
                     accessToken,
                     input.owner,
@@ -871,17 +832,14 @@ export const reposRouter = createTRPCRouter({
                 await deleteCache(
                     repoSubscriptionCacheKey(
                         "cb",
-                        ctx.session.user.id,
+                        userId,
                         input.owner,
                         input.repo,
                     ),
                 );
                 return;
             }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session.user.id,
-            );
+            const accessToken = await getGitHubToken(ctx.db, userId);
             await setRepoSubscription(
                 accessToken,
                 input.owner,
@@ -890,12 +848,7 @@ export const reposRouter = createTRPCRouter({
                 input.ignored,
             );
             await deleteCache(
-                repoSubscriptionCacheKey(
-                    "gh",
-                    ctx.session.user.id,
-                    input.owner,
-                    input.repo,
-                ),
+                repoSubscriptionCacheKey("gh", userId, input.owner, input.repo),
             );
         }),
     deleteSubscription: protectedProcedure
@@ -907,11 +860,11 @@ export const reposRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
+            if (!ctx.session?.user)
+                throw new TRPCError({ code: "UNAUTHORIZED" });
+            const userId = ctx.session.user.id;
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session.user.id,
-                );
+                const accessToken = await getCodebergToken(ctx.db, userId);
                 await deleteCodebergRepoSubscription(
                     accessToken,
                     input.owner,
@@ -920,28 +873,22 @@ export const reposRouter = createTRPCRouter({
                 await deleteCache(
                     repoSubscriptionCacheKey(
                         "cb",
-                        ctx.session.user.id,
+                        userId,
                         input.owner,
                         input.repo,
                     ),
                 );
                 return;
             }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session.user.id,
-            );
+            const accessToken = await getGitHubToken(ctx.db, userId);
             await deleteRepoSubscription(accessToken, input.owner, input.repo);
             await deleteCache(
-                repoSubscriptionCacheKey(
-                    "gh",
-                    ctx.session.user.id,
-                    input.owner,
-                    input.repo,
-                ),
+                repoSubscriptionCacheKey("gh", userId, input.owner, input.repo),
             );
         }),
     getAllMyRepos: protectedProcedure.query(async ({ ctx }) => {
+        if (!ctx.session?.user) return [];
+        const userId = ctx.session.user.id;
         const results: {
             provider: "github" | "codeberg";
             owner: string;
@@ -950,10 +897,10 @@ export const reposRouter = createTRPCRouter({
         }[] = [];
 
         const settled = await Promise.allSettled([
-            getGitHubToken(ctx.db, ctx.session.user.id).then((token) =>
+            getGitHubToken(ctx.db, userId).then((token) =>
                 getGitHubUserRepos(token),
             ),
-            getCodebergToken(ctx.db, ctx.session.user.id).then((token) =>
+            getCodebergToken(ctx.db, userId).then((token) =>
                 getCodebergUserRepos(token),
             ),
         ]);

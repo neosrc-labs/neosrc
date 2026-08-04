@@ -7,5 +7,5 @@ export interface PullRequestProvider {
 
 export type Ctx = {
     db: typeof db;
-    session: { user: { id: string } };
+    session: { user: { id: string } } | null;
 };

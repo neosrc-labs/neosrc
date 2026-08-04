@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getGitHubToken } from "~/server/auth";
+import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import { deleteCache, prCacheKey } from "~/server/cache";
 import {
     applySuggestion,
@@ -35,7 +35,7 @@ export const reviewCommentsRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const comments = await getPullRequestReviewComments(
@@ -60,7 +60,7 @@ export const reviewCommentsRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             return getPullRequestReviewCommentsForReview(
@@ -90,7 +90,7 @@ export const reviewCommentsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const pr = await getPullRequest(
@@ -102,6 +102,11 @@ export const reviewCommentsRouter = createTRPCRouter({
 
             if (input.lineNumber && input.side) {
                 if (input.asReview) {
+                    if (isAnonymousToken(accessToken)) {
+                        throw new Error(
+                            "Cannot create review comments without authentication",
+                        );
+                    }
                     const currentUser = await getAuthenticatedUser(accessToken);
                     const reviews = await getPullRequestReviews(
                         accessToken,
@@ -186,7 +191,7 @@ export const reviewCommentsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await updateReviewComment(
@@ -211,7 +216,7 @@ export const reviewCommentsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await deleteReviewComment(
@@ -237,7 +242,7 @@ export const reviewCommentsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const comment = await replyToPullRequestReviewComment(
@@ -267,7 +272,7 @@ export const reviewCommentsRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             return getReviewThreads(
@@ -291,7 +296,7 @@ export const reviewCommentsRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const result = await getReviewThreadsPage(
@@ -321,7 +326,7 @@ export const reviewCommentsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             if (input.resolve) {
@@ -348,7 +353,7 @@ export const reviewCommentsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             await applySuggestion(
@@ -384,7 +389,7 @@ export const reviewCommentsRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             const patch = await getSuggestionPatch(

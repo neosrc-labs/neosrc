@@ -18,7 +18,7 @@ export class CodebergPullRequestProvider implements PullRequestProvider {
     async search(params: SearchParams & { ctx: Ctx }): Promise<PrSearchResult> {
         const accessToken = await getCodebergToken(
             params.ctx.db,
-            params.ctx.session.user.id,
+            params.ctx.session?.user?.id,
         );
 
         const stateMatch = params.query.match(
