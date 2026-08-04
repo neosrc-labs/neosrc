@@ -882,7 +882,22 @@ export async function getPullRequestTimelineGraphQL(
     pullNumber: number,
     limit: number,
     after?: string,
-) {
+): Promise<{
+    events: GQLTimelineEvent[];
+    hasMore: boolean;
+    endCursor: string | undefined;
+    commentReactions: Record<
+        number,
+        {
+            databaseId: number;
+            content: string;
+            createdAt: string;
+            user: { login: string; avatarUrl?: string } | null;
+        }[]
+    >;
+    currentUserLogin: string | undefined;
+    mergeQueueEntry: GQLMergeQueueEntry;
+}> {
     const graphql = octokitGraphql.defaults({
         headers: { authorization: `bearer ${accessToken}` },
     });
