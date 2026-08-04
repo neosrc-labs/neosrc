@@ -881,7 +881,7 @@ export const pullsRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
 
             return getPullRequestStack(
@@ -903,7 +903,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             await createPullRequestStack(
                 accessToken,
@@ -930,7 +930,7 @@ export const pullsRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const accessToken = await getGitHubToken(
                 ctx.db,
-                ctx.session.user.id,
+                ctx.session?.user?.id,
             );
             await unstackPullRequests(
                 accessToken,
