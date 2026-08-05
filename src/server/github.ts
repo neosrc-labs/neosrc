@@ -1498,7 +1498,7 @@ const getRepoIssuePullCounts = cache(
         });
 
         const query = `
-query GetPRCrossReferences {
+query GetRepoIssuePullCounts($owner: String!, $repo: String!) {
   repository(owner: $owner, name: $repo) {
     issues {
       totalCount
