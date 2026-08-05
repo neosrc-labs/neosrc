@@ -1489,21 +1489,46 @@ const getRepoIssuePullCounts = cache(
         accessToken: string,
         owner: string,
         repo: string,
-    ): Promise<{ openIssuesCount: number; openPullRequestsCount: number }> => {
-        const octokit = createOctokit(accessToken);
-        const [issuesRes, prsRes] = await Promise.all([
-            octokit.search.issuesAndPullRequests({
-                q: `repo:${owner}/${repo} type:issue state:open`,
-                per_page: 1,
-            }),
-            octokit.search.issuesAndPullRequests({
-                q: `repo:${owner}/${repo} type:pr state:open`,
-                per_page: 1,
-            }),
-        ]);
+    ): Promise<{
+        openIssuesCount: number;
+        openPullRequestsCount: number;
+    } | null> => {
+        const graphql = octokitGraphql.defaults({
+            headers: { authorization: `bearer ${accessToken}` },
+        });
+
+        const query = `
+query GetPRCrossReferences {
+  repository(owner: $owner, name: $repo) {
+    issues {
+      totalCount
+    }
+    pullRequests {
+      totalCount
+    }
+  }
+}`;
+        const result = await graphql<{
+            repository?: {
+                issues: {
+                    totalCount: number;
+                };
+                pullRequests: {
+                    totalCount: number;
+                };
+            };
+        }>(query, {
+            owner,
+            repo,
+        });
+
+        if (!result?.repository) {
+            return null;
+        }
+
         return {
-            openIssuesCount: issuesRes.data.total_count,
-            openPullRequestsCount: prsRes.data.total_count,
+            openIssuesCount: result.repository.issues.totalCount,
+            openPullRequestsCount: result.repository.pullRequests.totalCount,
         };
     },
 );
@@ -1512,7 +1537,7 @@ export async function getCachedRepoIssuePullCounts(
     accessToken: string,
     owner: string,
     repo: string,
-): Promise<{ openIssuesCount: number; openPullRequestsCount: number }> {
+): Promise<{ openIssuesCount: number; openPullRequestsCount: number } | null> {
     return withStaleWhileRevalidate(
         repoIssuePullCountsCacheKey("gh", owner, repo),
         () => getRepoIssuePullCounts(accessToken, owner, repo),

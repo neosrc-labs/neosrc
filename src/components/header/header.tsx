@@ -97,7 +97,7 @@ async function getRepoData(
     ]);
     return {
         ...headerData,
-        openIssuesCount: counts.openIssuesCount,
-        openPullRequestsCount: counts.openPullRequestsCount,
+        openIssuesCount: counts?.openIssuesCount ?? 0,
+        openPullRequestsCount: counts?.openPullRequestsCount ?? 0,
     };
 }
