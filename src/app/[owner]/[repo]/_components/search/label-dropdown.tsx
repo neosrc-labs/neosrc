@@ -3,6 +3,7 @@
 import { ChevronDown, Tag } from "lucide-react";
 import { Label as LabelComponent } from "~/components/ui/label";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
+import { useState } from "react";
 import { api } from "~/trpc/react";
 
 export function LabelDropdown({
@@ -18,11 +19,12 @@ export function LabelDropdown({
     currentQuery: string;
     onToggle: (labelName: string) => void;
 }) {
-    const { data: labels } = api.pulls.listLabels.useQuery({
-        provider,
-        owner,
-        repo,
-    });
+    const [enabled, setEnabled] = useState(false);
+
+    const { data: labels, isLoading } = api.pulls.listLabels.useQuery(
+        { provider, owner, repo },
+        { enabled },
+    );
 
     const items = labels ?? [];
     const currentNames = new Set(
@@ -35,7 +37,9 @@ export function LabelDropdown({
 
     return (
         <SearchableDropdown
+            onOpenChange={(open) => { if (open) setEnabled(true); }}
             items={items}
+            isLoading={isLoading}
             isSelected={(l: { name: string }) => currentNames.has(l.name)}
             onSelect={(l: { name: string }) => onToggle(l.name)}
             keyFn={(l: { name: string }) => l.name}

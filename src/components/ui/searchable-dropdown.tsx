@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings } from "lucide-react";
+import { Loader2, Settings } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "~/lib/utils";
 
@@ -19,6 +19,8 @@ interface SearchableDropdownProps<T> {
     trigger?: React.ReactNode;
     onSearchChange?: (query: string) => void;
     closeOnSelect?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    isLoading?: boolean;
 }
 
 export function SearchableDropdown<T>({
@@ -35,17 +37,23 @@ export function SearchableDropdown<T>({
     disabled,
     trigger,
     onSearchChange,
+    onOpenChange,
     closeOnSelect,
+    isLoading,
 }: SearchableDropdownProps<T>) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [selectedIndex, setSelectedIndex] = useState(0);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const listRef = useRef<HTMLUListElement>(null);
+    const onOpenChangeRef = useRef(onOpenChange);
+    onOpenChangeRef.current = onOpenChange;
     const onSearchChangeRef = useRef(onSearchChange);
+
     onSearchChangeRef.current = onSearchChange;
 
     useEffect(() => {
+        onOpenChangeRef.current?.(open);
         if (!open) {
             setSearch("");
             onSearchChangeRef.current?.("");
@@ -62,6 +70,7 @@ export function SearchableDropdown<T>({
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, [open]);
+
 
     useEffect(() => {
         const el = listRef.current?.children[selectedIndex] as
@@ -119,7 +128,7 @@ export function SearchableDropdown<T>({
                             onSearchChangeRef.current?.(e.target.value);
                         }}
                         onKeyDown={(e) => {
-                            if (filteredItems.length === 0) return;
+                            if (isLoading || filteredItems.length === 0) return;
                             if (e.key === "ArrowDown") {
                                 e.preventDefault();
                                 setSelectedIndex(
@@ -147,42 +156,49 @@ export function SearchableDropdown<T>({
                         placeholder={placeholder}
                         value={search}
                     />
-                    <ul className="max-h-60 overflow-y-auto py-1" ref={listRef}>
-                        {beforeItems}
-                        {filteredItems.length === 0 ? (
-                            <li className="px-3 py-2 text-text-muted text-xs">
-                                {emptyText}
-                            </li>
-                        ) : (
-                            filteredItems.map((item, idx) => {
-                                const selected = isSelected(item);
-                                return (
-                                    <li
-                                        className={cn(
-                                            "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-surface-tertiary",
-                                            selected &&
-                                                "bg-blue-50 dark:bg-blue-950/30",
-                                            idx === selectedIndex &&
-                                                !selected &&
-                                                "bg-surface-tertiary",
-                                        )}
-                                        key={keyFn(item)}
-                                        onClick={() => {
-                                            onSelect(item);
-                                            if (closeOnSelect) setOpen(false);
-                                        }}
-                                        onMouseEnter={() =>
-                                            setSelectedIndex(idx)
-                                        }
-                                        role="option"
-                                        aria-selected={selected}
-                                    >
-                                        {renderItem(item, selected)}
-                                    </li>
-                                );
-                            })
-                        )}
-                    </ul>
+                    {isLoading ? (
+                        <div className="flex items-center justify-center gap-2 px-3 py-4 text-text-muted text-sm">
+                            <Loader2 className="size-4 animate-spin" />
+                            Loading...
+                        </div>
+                    ) : (
+                        <ul className="max-h-60 overflow-y-auto py-1" ref={listRef}>
+                            {beforeItems}
+                            {filteredItems.length === 0 ? (
+                                <li className="px-3 py-2 text-text-muted text-xs">
+                                    {emptyText}
+                                </li>
+                            ) : (
+                                filteredItems.map((item, idx) => {
+                                    const selected = isSelected(item);
+                                    return (
+                                        <li
+                                            className={cn(
+                                                "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-surface-tertiary",
+                                                selected &&
+                                                    "bg-blue-50 dark:bg-blue-950/30",
+                                                idx === selectedIndex &&
+                                                    !selected &&
+                                                    "bg-surface-tertiary",
+                                            )}
+                                            key={keyFn(item)}
+                                            onClick={() => {
+                                                onSelect(item);
+                                                if (closeOnSelect) setOpen(false);
+                                            }}
+                                            onMouseEnter={() =>
+                                                setSelectedIndex(idx)
+                                            }
+                                            role="option"
+                                            aria-selected={selected}
+                                        >
+                                            {renderItem(item, selected)}
+                                        </li>
+                                    );
+                                })
+                            )}
+                        </ul>
+                    )}
                 </div>
             )}
         </div>

@@ -3,6 +3,7 @@
 import { ChevronDown, Flag } from "lucide-react";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { api } from "~/trpc/react";
+import { useState } from "react";
 
 export function MilestoneDropdown({
     owner,
@@ -17,11 +18,12 @@ export function MilestoneDropdown({
     currentQuery: string;
     onToggle: (milestone: string) => void;
 }) {
-    const { data: milestones } = api.pulls.listMilestones.useQuery({
-        provider,
-        owner,
-        repo,
-    });
+    const [enabled, setEnabled] = useState(false);
+
+    const { data: milestones, isLoading } = api.pulls.listMilestones.useQuery(
+        { provider, owner, repo },
+        { enabled },
+    );
 
     const items = milestones ?? [];
     const currentNames = new Set(
@@ -34,7 +36,9 @@ export function MilestoneDropdown({
 
     return (
         <SearchableDropdown
+            onOpenChange={(open) => { if (open) setEnabled(true); }}
             items={items}
+            isLoading={isLoading}
             isSelected={(m: { title: string }) => currentNames.has(m.title)}
             onSelect={(m: { title: string }) => onToggle(m.title)}
             keyFn={(m: { title: string }) => m.title}

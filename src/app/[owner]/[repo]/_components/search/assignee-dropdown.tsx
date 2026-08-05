@@ -1,9 +1,9 @@
 "use client";
 
 import { ChevronDown, User } from "lucide-react";
-import { useMemo } from "react";
-import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
+import { useMemo, useState } from "react";
 import { api } from "~/trpc/react";
+import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 
 export function AssigneeDropdown({
     owner,
@@ -18,12 +18,16 @@ export function AssigneeDropdown({
     currentQuery: string;
     onToggle: (key: string, value: string) => void;
 }) {
-    const { data: assignees } = api.pulls.listAssignees.useQuery({
-        provider,
-        owner,
-        repo,
+    const [enabled, setEnabled] = useState(false);
+
+    const { data: assignees, isLoading: assigneesLoading } = api.pulls.listAssignees.useQuery(
+        { provider, owner, repo },
+        { enabled },
+    );
+    const { data: currentUser, isLoading: currentUserLoading } = api.users.currentUser.useQuery(undefined, {
+        enabled,
     });
-    const { data: currentUser } = api.users.currentUser.useQuery();
+    const isLoading = assigneesLoading || currentUserLoading;
 
     const allUsers = useMemo(() => {
         const map = new Map<string, { login: string; avatar_url?: string }>();
@@ -54,6 +58,7 @@ export function AssigneeDropdown({
     return (
         <SearchableDropdown
             items={allUsers}
+            isLoading={isLoading}
             isSelected={(u: { login: string }) => selectedNames.has(u.login)}
             onSelect={(u: { login: string }) => onToggle("assignee", u.login)}
             keyFn={(u: { login: string }) => u.login}
@@ -85,6 +90,7 @@ export function AssigneeDropdown({
             placeholder="Filter users..."
             emptyText="No users found"
             ariaLabel="Filter by assignee"
+            onOpenChange={(open) => { if (open) setEnabled(true); }}
             closeOnSelect
             trigger={
                 <button
