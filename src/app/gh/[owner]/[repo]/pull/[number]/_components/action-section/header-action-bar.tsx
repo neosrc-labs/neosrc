@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Async } from "~/components/async";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { ActionSection } from "./actions-section";
+import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 
 interface HeaderActionBarProps {
     owner: string;
@@ -15,8 +16,6 @@ interface HeaderActionBarProps {
     currentUserLogin?: string;
     checkRunsPromise?: Promise<CheckRun[]> | null;
 }
-
-const EMPTY_CHECK_RUNS_PROMISE = Promise.resolve<CheckRun[]>([]);
 
 // FIXME: Ideally we have 32 from the screen edge to account for the sidebar open/close icons.
 //        But 32 is too large to look good when the sidebars are opened.
@@ -169,7 +168,7 @@ export function HeaderActionBar({
                 >
                     <Async
                         fallback={null}
-                        promise={checkRunsPromise ?? EMPTY_CHECK_RUNS_PROMISE}
+                        promise={checkRunsPromise ?? EMPTY_ARRAY_PROMISE}
                     >
                         {(checkRuns) => (
                             <ActionSection
