@@ -16,6 +16,7 @@ import {
 import LeftSidebar from "./_components/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
 import { PullRequestClientLayout } from "./layout-client";
+import { EMPTY_ARRAY_PROMISE, NULL_PROMISE } from "~/utils/promise";
 
 interface LayoutProps {
     children: ReactNode;
@@ -33,12 +34,8 @@ export default async function PullRequestLayout({
     const { owner, repo, number: numberStr } = await params;
     const number = parseInt(numberStr, 10);
     let pullRequest: Promise<PullsGetResponseData> | null = null;
-    let checks: Promise<Array<CheckRun>> | null = Promise.resolve<CheckRun[]>(
-        [],
-    );
-    let userPermission: Promise<string | null> | null = Promise.resolve<
-        string | null
-    >(null);
+    let checks: Promise<Array<CheckRun>> | null = EMPTY_ARRAY_PROMISE;
+    let userPermission: Promise<string | null> | null = NULL_PROMISE;
     let currentUserLogin: string | undefined;
 
     const accessToken = await githubAccessToken();

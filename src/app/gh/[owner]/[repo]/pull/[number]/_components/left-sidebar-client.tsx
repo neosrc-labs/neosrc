@@ -10,6 +10,7 @@ import { useFiles } from "~/hooks/files";
 import type { PullsGetResponseData } from "~/server/github";
 import { buildFileTree, FileTree, FileTreeSkeleton } from "./file-tree";
 import { ReviewThreadsSection } from "./review-threads-section";
+import { NULL_PROMISE } from "~/utils/promise";
 
 interface LeftSidebarContentSectionProps {
     owner: string;
@@ -70,7 +71,7 @@ function SidebarFileTree({
         return match ? match[1] : undefined;
     }, [pathname]);
 
-    const pullRequest = use(pullRequestPromise ?? Promise.resolve(null));
+    const pullRequest = use(pullRequestPromise ?? NULL_PROMISE);
     const { files, isLoading } = useFiles({ owner, repo, number, commitSha });
 
     const fileTree = useMemo(() => buildFileTree(files), [files]);

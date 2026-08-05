@@ -29,6 +29,7 @@ import type {
 import { api } from "~/trpc/react";
 import { ConflictedFiles } from "../conflicted-files";
 import { MergeStatusBar } from "./merge-status-bar";
+import { EMPTY_ARRAY_PROMISE, NULL_PROMISE } from "~/utils/promise";
 
 interface ActionSectionProps {
     owner: string;
@@ -93,15 +94,14 @@ export function ActionSection({
                         <Async
                             fallback={null}
                             promise={
-                                conflictedFilesPromise ?? Promise.resolve([])
+                                conflictedFilesPromise ?? EMPTY_ARRAY_PROMISE
                             }
                         >
                             {(files) => (
                                 <Async
                                     fallback={null}
                                     promise={
-                                        userPermissionPromise ??
-                                        Promise.resolve(null)
+                                        userPermissionPromise ?? NULL_PROMISE
                                     }
                                 >
                                     {(userPermission) => (

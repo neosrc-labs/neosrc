@@ -13,6 +13,7 @@ import type {
 import { api } from "~/trpc/react";
 import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
 import { ActionSection } from "./action-section/actions-section";
+import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 
 function FileDiffSkeleton() {
     return (
@@ -233,9 +234,7 @@ export function FilesSection({
                     </button>
                     <Async
                         fallback={null}
-                        promise={
-                            checkRunsPromise ?? Promise.resolve<CheckRun[]>([])
-                        }
+                        promise={checkRunsPromise ?? EMPTY_ARRAY_PROMISE}
                     >
                         {(checkRuns) => (
                             <ActionSection
