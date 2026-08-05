@@ -11,9 +11,9 @@ import type {
     ReviewComment,
 } from "~/server/github";
 import { api } from "~/trpc/react";
+import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
 import { ActionSection } from "./action-section/actions-section";
-import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 
 function FileDiffSkeleton() {
     return (

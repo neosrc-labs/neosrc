@@ -27,9 +27,9 @@ import type {
     ReviewComment2,
 } from "~/server/github";
 import { api } from "~/trpc/react";
+import { EMPTY_ARRAY_PROMISE, NULL_PROMISE } from "~/utils/promise";
 import { ConflictedFiles } from "../conflicted-files";
 import { MergeStatusBar } from "./merge-status-bar";
-import { EMPTY_ARRAY_PROMISE, NULL_PROMISE } from "~/utils/promise";
 
 interface ActionSectionProps {
     owner: string;

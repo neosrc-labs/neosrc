@@ -8,6 +8,7 @@ import {
     getUserRepoPermission,
     type PullsGetResponseData,
 } from "~/server/github";
+import { EMPTY_ARRAY_PROMISE, NULL_PROMISE } from "~/utils/promise";
 import {
     deduplicateCommitStatuses,
     mapGitHubCheckRunToCheckRun,
@@ -16,7 +17,6 @@ import {
 import LeftSidebar from "./_components/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
 import { PullRequestClientLayout } from "./layout-client";
-import { EMPTY_ARRAY_PROMISE, NULL_PROMISE } from "~/utils/promise";
 
 interface LayoutProps {
     children: ReactNode;
