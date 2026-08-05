@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Async } from "~/components/async";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
-import { ActionSection } from "./actions-section";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
+import { ActionSection } from "./actions-section";
 
 interface HeaderActionBarProps {
     owner: string;

@@ -8,9 +8,9 @@ import { useSidebar } from "~/components/sidebar-context";
 import { NavItem, NavMenu } from "~/components/ui/nav-menu";
 import { useFiles } from "~/hooks/files";
 import type { PullsGetResponseData } from "~/server/github";
+import { NULL_PROMISE } from "~/utils/promise";
 import { buildFileTree, FileTree, FileTreeSkeleton } from "./file-tree";
 import { ReviewThreadsSection } from "./review-threads-section";
-import { NULL_PROMISE } from "~/utils/promise";
 
 interface LeftSidebarContentSectionProps {
     owner: string;
