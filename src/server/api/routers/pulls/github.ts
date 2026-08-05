@@ -69,7 +69,6 @@ function mapGqlItem(item: {
     };
     comments: { totalCount: number };
     reviewDecision: string | null;
-    mergeStateStatus: string;
     stack: { size: number; number: number } | null;
     stackEntry: { position: number } | null;
 }): PrSearchItem {
@@ -86,7 +85,6 @@ function mapGqlItem(item: {
         assignees: item.assignees.nodes.map(mapGqlAssignee),
         comments: item.comments.totalCount,
         reviewDecision: item.reviewDecision,
-        mergeable: item.mergeStateStatus,
         stack:
             item.stack && item.stackEntry
                 ? {

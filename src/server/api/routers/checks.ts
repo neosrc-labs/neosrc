@@ -1,4 +1,3 @@
-import { graphql as octokitGraphql } from "@octokit/graphql";
 import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -9,7 +8,7 @@ import {
     mapStatusToCheckRun,
 } from "~/utils/status-checks";
 
-interface StatusContext {
+export interface StatusContext {
     name: string;
     state: string;
     description: string | null;
@@ -43,17 +42,19 @@ interface GqlPrStatusRollup {
     };
 }
 
-interface GqlPrData {
+export interface GqlPrData {
+    mergeStateStatus?: string;
     commits?: {
         nodes?: GqlPrStatusRollup[];
     };
 }
 
-function buildPrStatusBatchQuery(numbers: number[]): string {
+export function buildPrStatusBatchQuery(numbers: number[]): string {
     const aliases = numbers.map(
         (num, i) => `
   pr${i}: repository(owner: $owner, name: $repo) {
     pullRequest(number: ${num}) {
+      mergeStateStatus
       commits(last: 1) {
         nodes {
           commit {
@@ -91,7 +92,7 @@ function buildPrStatusBatchQuery(numbers: number[]): string {
 }`;
 }
 
-function extractStatusContexts(
+export function extractStatusContexts(
     prData: GqlPrData | null | undefined,
 ): StatusContext[] {
     const rollup = prData?.commits?.nodes?.[0]?.commit?.statusCheckRollup;
@@ -119,6 +120,17 @@ function extractStatusContexts(
                 completedAt: null,
             };
         });
+}
+
+export function extractMergeStateStatus(
+    prData: GqlPrData | null | undefined,
+): string | null {
+    return prData?.mergeStateStatus ?? null;
+}
+
+export interface PrDetailsEntry {
+    mergeStateStatus: string | null;
+    statusContexts: StatusContext[];
 }
 
 export const checksRouter = createTRPCRouter({
@@ -169,41 +181,5 @@ export const checksRouter = createTRPCRouter({
             );
 
             return [...checkRunItems, ...statusItems];
-        }),
-
-    listByPrNumbers: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                prNumbers: z.array(z.number()),
-            }),
-        )
-        .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            const graphql = octokitGraphql.defaults({
-                headers: { authorization: `bearer ${accessToken}` },
-            });
-
-            const query = buildPrStatusBatchQuery(input.prNumbers);
-            const raw = await graphql<Record<string, unknown>>(query, {
-                owner: input.owner,
-                repo: input.repo,
-            });
-
-            return input.prNumbers.reduce<Record<number, StatusContext[]>>(
-                (acc, num, i) => {
-                    const entry = raw[`pr${i}`] as
-                        | { pullRequest?: GqlPrData }
-                        | undefined;
-                    acc[num] = extractStatusContexts(entry?.pullRequest);
-                    return acc;
-                },
-                {},
-            );
         }),
 });

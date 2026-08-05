@@ -2,8 +2,8 @@
 
 import { ChevronDown, User } from "lucide-react";
 import { useMemo, useState } from "react";
-import { api } from "~/trpc/react";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
+import { api } from "~/trpc/react";
 
 export function AssigneeDropdown({
     owner,
@@ -20,13 +20,15 @@ export function AssigneeDropdown({
 }) {
     const [enabled, setEnabled] = useState(false);
 
-    const { data: assignees, isLoading: assigneesLoading } = api.pulls.listAssignees.useQuery(
-        { provider, owner, repo },
-        { enabled },
-    );
-    const { data: currentUser, isLoading: currentUserLoading } = api.users.currentUser.useQuery(undefined, {
-        enabled,
-    });
+    const { data: assignees, isLoading: assigneesLoading } =
+        api.pulls.listAssignees.useQuery(
+            { provider, owner, repo },
+            { enabled },
+        );
+    const { data: currentUser, isLoading: currentUserLoading } =
+        api.users.currentUser.useQuery(undefined, {
+            enabled,
+        });
     const isLoading = assigneesLoading || currentUserLoading;
 
     const allUsers = useMemo(() => {
@@ -90,7 +92,9 @@ export function AssigneeDropdown({
             placeholder="Filter users..."
             emptyText="No users found"
             ariaLabel="Filter by assignee"
-            onOpenChange={(open) => { if (open) setEnabled(true); }}
+            onOpenChange={(open) => {
+                if (open) setEnabled(true);
+            }}
             closeOnSelect
             trigger={
                 <button

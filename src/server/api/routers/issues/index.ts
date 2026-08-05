@@ -64,7 +64,7 @@ export const issuesRouter = createTRPCRouter({
                     ? new CodebergIssueProvider()
                     : new GitHubIssueProvider();
 
-            return provider.search({
+            return await provider.search({
                 ...input,
                 ctx: { db: ctx.db, session: ctx.session },
             });

@@ -1,9 +1,9 @@
 "use client";
 
 import { ChevronDown, Tag } from "lucide-react";
+import { useState } from "react";
 import { Label as LabelComponent } from "~/components/ui/label";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
-import { useState } from "react";
 import { api } from "~/trpc/react";
 
 export function LabelDropdown({
@@ -37,7 +37,9 @@ export function LabelDropdown({
 
     return (
         <SearchableDropdown
-            onOpenChange={(open) => { if (open) setEnabled(true); }}
+            onOpenChange={(open) => {
+                if (open) setEnabled(true);
+            }}
             items={items}
             isLoading={isLoading}
             isSelected={(l: { name: string }) => currentNames.has(l.name)}

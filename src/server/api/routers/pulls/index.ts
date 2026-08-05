@@ -1,5 +1,12 @@
+import { graphql as octokitGraphql } from "@octokit/graphql";
 import { z } from "zod";
-
+import {
+    buildPrStatusBatchQuery,
+    extractMergeStateStatus,
+    extractStatusContexts,
+    type GqlPrData,
+    type PrDetailsEntry,
+} from "~/server/api/routers/checks";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
 import { deleteCache, prCacheKey } from "~/server/cache";
@@ -817,6 +824,45 @@ export const pullsRouter = createTRPCRouter({
                 ...input,
                 ctx: providerCtx,
             });
+        }),
+
+    listDetailsByPrNumbers: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                prNumbers: z.array(z.number()),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session?.user?.id,
+            );
+
+            const graphql = octokitGraphql.defaults({
+                headers: { authorization: `bearer ${accessToken}` },
+            });
+            const query = buildPrStatusBatchQuery(input.prNumbers);
+            const raw = await graphql<Record<string, unknown>>(query, {
+                owner: input.owner,
+                repo: input.repo,
+            });
+
+            return input.prNumbers.reduce<Record<number, PrDetailsEntry>>(
+                (acc, num, i) => {
+                    const entry = raw[`pr${i}`] as
+                        | { pullRequest?: GqlPrData }
+                        | undefined;
+                    const pr = entry?.pullRequest;
+                    acc[num] = {
+                        mergeStateStatus: extractMergeStateStatus(pr),
+                        statusContexts: extractStatusContexts(pr),
+                    };
+                    return acc;
+                },
+                {},
+            );
         }),
 
     getMergeRequirements: protectedProcedure

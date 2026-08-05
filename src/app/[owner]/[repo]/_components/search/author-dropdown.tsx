@@ -23,21 +23,22 @@ export function AuthorDropdown({
 }) {
     const [enabled, setEnabled] = useState(false);
 
-    const { data: assignees, isLoading: assigneesLoading } = api.pulls.listAssignees.useQuery(
-        { provider, owner, repo },
-        { enabled },
-    );
+    const { data: assignees, isLoading: assigneesLoading } =
+        api.pulls.listAssignees.useQuery(
+            { provider, owner, repo },
+            { enabled },
+        );
 
-    const { data: recentAuthors, isLoading: recentAuthorsLoading } = api.pulls.listRecentAuthors.useQuery(
-        { provider, owner, repo },
-        { enabled },
-    );
+    const { data: recentAuthors, isLoading: recentAuthorsLoading } =
+        api.pulls.listRecentAuthors.useQuery(
+            { provider, owner, repo },
+            { enabled },
+        );
 
-    const { data: currentUser, isLoading: currentUserLoading } = api.users.currentUser.useQuery(
-        undefined,
-        { enabled },
-    );
-    const isLoading = assigneesLoading || recentAuthorsLoading || currentUserLoading;
+    const { data: currentUser, isLoading: currentUserLoading } =
+        api.users.currentUser.useQuery(undefined, { enabled });
+    const isLoading =
+        assigneesLoading || recentAuthorsLoading || currentUserLoading;
 
     const allUsers = useMemo(() => {
         const seen = new Set<string>();
@@ -158,7 +159,9 @@ export function AuthorDropdown({
                     : "No users found"
             }
             ariaLabel="Filter by author"
-            onOpenChange={(open) => { if (open) setEnabled(true); }}
+            onOpenChange={(open) => {
+                if (open) setEnabled(true);
+            }}
             closeOnSelect
             onSearchChange={setSearchText}
             trigger={

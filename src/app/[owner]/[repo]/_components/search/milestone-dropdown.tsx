@@ -1,9 +1,9 @@
 "use client";
 
 import { ChevronDown, Flag } from "lucide-react";
+import { useState } from "react";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { api } from "~/trpc/react";
-import { useState } from "react";
 
 export function MilestoneDropdown({
     owner,
@@ -36,7 +36,9 @@ export function MilestoneDropdown({
 
     return (
         <SearchableDropdown
-            onOpenChange={(open) => { if (open) setEnabled(true); }}
+            onOpenChange={(open) => {
+                if (open) setEnabled(true);
+            }}
             items={items}
             isLoading={isLoading}
             isSelected={(m: { title: string }) => currentNames.has(m.title)}

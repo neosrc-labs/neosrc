@@ -1114,7 +1114,6 @@ export interface GqlPrSearchItem {
     assignees: { nodes: Array<{ login: string; avatarUrl: string }> };
     comments: { totalCount: number };
     reviewDecision: string | null;
-    mergeStateStatus: string;
     stack: { size: number; number: number } | null;
     stackEntry: { position: number } | null;
 }
@@ -1158,7 +1157,6 @@ query SearchPRs($searchQuery: String!, $first: Int!, $after: String) {
         }
         comments { totalCount }
         reviewDecision
-        mergeStateStatus
         stack {
           size
           number
@@ -1307,21 +1305,23 @@ export async function searchIssuesWithMetadata(
         headers: { authorization: `bearer ${accessToken}` },
     });
 
+    type IssueSearchResult = {
+        search: {
+            issueCount: number;
+            pageInfo: { endCursor: string | null; hasNextPage: boolean };
+            nodes: Array<
+                | ({ __typename: "Issue" } & GqlIssueSearchItem)
+                | { __typename: string }
+                | null
+            >;
+        };
+    };
+
     const promises: [
-        Promise<{
-            search: {
-                issueCount: number;
-                pageInfo: { endCursor: string | null; hasNextPage: boolean };
-                nodes: Array<
-                    | ({ __typename: "Issue" } & GqlIssueSearchItem)
-                    | { __typename: string }
-                    | null
-                >;
-            };
-        }>,
+        Promise<IssueSearchResult>,
         ...Promise<CountIssueQueryResult>[],
     ] = [
-        graphql(ISSUE_SEARCH_QUERY, {
+        graphql<IssueSearchResult>(ISSUE_SEARCH_QUERY, {
             searchQuery: query,
             first,
             after,

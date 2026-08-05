@@ -94,7 +94,7 @@ export function PullRequestListShared({
         [list.data],
     );
 
-    const { data: statusByPr } = api.checks.listByPrNumbers.useQuery(
+    const { data: detailsByPr } = api.pulls.listDetailsByPrNumbers.useQuery(
         { owner, repo, prNumbers },
         { enabled: config.fetchStatusChecks && prNumbers.length > 0 },
     );
@@ -104,15 +104,18 @@ export function PullRequestListShared({
         return rawItems.map((item) => {
             const normalized = normalizeSearchItem(item);
             if (config.fetchStatusChecks) {
-                const checks = statusByPr?.[item.number];
-                if (checks) {
-                    normalized.status_contexts = checks;
-                    normalized.status_state = computeStatusState(checks);
+                const details = detailsByPr?.[item.number];
+                if (details) {
+                    normalized.status_contexts = details.statusContexts;
+                    normalized.status_state = computeStatusState(
+                        details.statusContexts,
+                    );
+                    normalized.mergeable = details.mergeStateStatus;
                 }
             }
             return normalized;
         });
-    }, [list.data, statusByPr, config.fetchStatusChecks]);
+    }, [list.data, detailsByPr, config.fetchStatusChecks]);
 
     return (
         <div>

@@ -71,7 +71,6 @@ export function SearchableDropdown<T>({
         return () => document.removeEventListener("mousedown", handler);
     }, [open]);
 
-
     useEffect(() => {
         const el = listRef.current?.children[selectedIndex] as
             | HTMLElement
@@ -157,12 +156,15 @@ export function SearchableDropdown<T>({
                         value={search}
                     />
                     {isLoading ? (
-                        <div className="flex items-center justify-center gap-2 px-3 py-4 text-text-muted text-sm">
+                        <div className="flex items-center justify-center gap-2 px-3 py-4 text-sm text-text-muted">
                             <Loader2 className="size-4 animate-spin" />
                             Loading...
                         </div>
                     ) : (
-                        <ul className="max-h-60 overflow-y-auto py-1" ref={listRef}>
+                        <ul
+                            className="max-h-60 overflow-y-auto py-1"
+                            ref={listRef}
+                        >
                             {beforeItems}
                             {filteredItems.length === 0 ? (
                                 <li className="px-3 py-2 text-text-muted text-xs">
@@ -184,7 +186,8 @@ export function SearchableDropdown<T>({
                                             key={keyFn(item)}
                                             onClick={() => {
                                                 onSelect(item);
-                                                if (closeOnSelect) setOpen(false);
+                                                if (closeOnSelect)
+                                                    setOpen(false);
                                             }}
                                             onMouseEnter={() =>
                                                 setSelectedIndex(idx)

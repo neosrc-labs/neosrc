@@ -72,12 +72,11 @@ vi.mock("~/trpc/react", () => ({
             listMilestones: {
                 useQuery: vi.fn(() => ({ data: [], isLoading: false })),
             },
-        },
-        checks: {
-            listByPrNumbers: {
+            listDetailsByPrNumbers: {
                 useQuery: vi.fn(() => ({ data: {}, isLoading: false })),
             },
         },
+        checks: {},
         users: {
             currentUser: {
                 useQuery: vi.fn(() => ({ data: null, isLoading: false })),
