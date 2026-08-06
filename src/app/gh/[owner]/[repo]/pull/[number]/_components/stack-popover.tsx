@@ -1,6 +1,6 @@
 "use client";
 
-import { Layers, LayersMinus } from "lucide-react";
+import { Layers, LayersMinus, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
@@ -136,6 +136,9 @@ function StackPopoverContent({
                                 })
                             }
                         >
+                            {unstackMutation.isPending && (
+                                <Loader2 className="animate-spin" />
+                            )}
                             Unstack
                         </Button>
                     </DialogFooter>

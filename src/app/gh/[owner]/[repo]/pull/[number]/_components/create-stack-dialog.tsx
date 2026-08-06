@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import {
@@ -80,6 +81,9 @@ export function CreateStackDialog({
                             })
                         }
                     >
+                        {createStackMutation.isPending && (
+                            <Loader2 className="animate-spin" />
+                        )}
                         Create stack
                     </Button>
                 </DialogFooter>
