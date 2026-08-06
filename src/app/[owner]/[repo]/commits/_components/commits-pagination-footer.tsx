@@ -6,8 +6,11 @@ import { cn } from "~/lib/utils";
 interface CommitsPaginationFooterProps {
     page: number;
     totalPages: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
     onPrevious: () => void;
     onNext: () => void;
+    showPageNumbers: boolean;
 }
 
 const btnBase =
@@ -19,8 +22,11 @@ const btnDisabled = "cursor-not-allowed text-text-muted opacity-50";
 export function CommitsPaginationFooter({
     page,
     totalPages,
+    hasPrevious,
+    hasNext,
     onPrevious,
     onNext,
+    showPageNumbers,
 }: CommitsPaginationFooterProps) {
     if (totalPages <= 1) return null;
 
@@ -29,23 +35,22 @@ export function CommitsPaginationFooter({
             <button
                 type="button"
                 onClick={onPrevious}
-                disabled={page <= 1}
-                className={cn(btnBase, page <= 1 ? btnDisabled : btnActive)}
+                disabled={!hasPrevious}
+                className={cn(btnBase, !hasPrevious ? btnDisabled : btnActive)}
             >
                 <ChevronLeft className="size-4" />
                 Previous
             </button>
-            <span className="text-sm text-text-secondary">
-                Page {page} of {totalPages}
-            </span>
+            {showPageNumbers && (
+                <span className="text-sm text-text-secondary">
+                    Page {page} of {totalPages}
+                </span>
+            )}
             <button
                 type="button"
                 onClick={onNext}
-                disabled={page >= totalPages}
-                className={cn(
-                    btnBase,
-                    page >= totalPages ? btnDisabled : btnActive,
-                )}
+                disabled={!hasNext}
+                className={cn(btnBase, !hasNext ? btnDisabled : btnActive)}
             >
                 Next
                 <ChevronRight className="size-4" />

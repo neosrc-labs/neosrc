@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { Suspense, useCallback, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import { api } from "~/trpc/react";
 import { CommitsGroupedList } from "./commits-grouped-list";
 import type { CommitsListConfig } from "./commits-list-config";
@@ -121,15 +121,27 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    const page = Number.parseInt(searchParams.get("page") ?? "1", 10);
     const author = searchParams.get("author") ?? undefined;
+    const page =
+        config.provider === "gh"
+            ? 1
+            : Number.parseInt(searchParams.get("page") ?? "1", 10);
 
-    const pageStartCursors = useRef<Map<number, string>>(new Map());
     const [nav, setNav] = useState<{
         page: number;
         afterCursor?: string;
         beforeCursor?: string;
-    }>({ page });
+    }>({
+        page,
+        afterCursor:
+            config.provider === "gh"
+                ? (searchParams.get("after") ?? undefined)
+                : undefined,
+        beforeCursor:
+            config.provider === "gh"
+                ? (searchParams.get("before") ?? undefined)
+                : undefined,
+    });
 
     const { data, isLoading, isError, error } =
         api.commits.listCommits.useQuery(
@@ -138,21 +150,22 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
                 owner,
                 repo,
                 branch,
-                page: nav.page,
                 perPage: 35,
                 author: author ?? undefined,
-                afterCursor: nav.afterCursor,
-                beforeCursor: nav.beforeCursor,
+                pagination:
+                    config.provider === "gh"
+                        ? {
+                              provider: "gh",
+                              afterCursor: nav.afterCursor,
+                              beforeCursor: nav.beforeCursor,
+                          }
+                        : { provider: "cb", page: nav.page },
             },
             {
                 placeholderData: (prev) => prev,
                 retry: false,
             },
         );
-
-    if (data?.cursors?.start) {
-        pageStartCursors.current.set(nav.page, data.cursors.start);
-    }
 
     const updateParams = useCallback(
         (updates: Record<string, string | undefined>) => {
@@ -170,17 +183,47 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
     );
 
     const handleNext = useCallback(() => {
-        if (!data?.cursors?.end) return;
-        setNav({ page: nav.page + 1, afterCursor: data.cursors.end });
-        updateParams({ page: String(nav.page + 1) });
-    }, [data?.cursors?.end, nav.page, updateParams]);
+        if (config.provider === "gh") {
+            if (!data?.cursors?.end) return;
+            setNav({
+                page: nav.page + 1,
+                afterCursor: data.cursors.end,
+                beforeCursor: undefined,
+            });
+            updateParams({ after: data.cursors.end, before: undefined });
+        } else {
+            // Codeberg returns cursors: null; paginate by page number only.
+            setNav({ page: nav.page + 1 });
+            updateParams({ page: String(nav.page + 1) });
+        }
+    }, [config.provider, data?.cursors?.end, nav.page, updateParams]);
 
     const handlePrevious = useCallback(() => {
-        if (nav.page <= 1) return;
-        const startCursor = pageStartCursors.current.get(nav.page);
-        setNav({ page: nav.page - 1, beforeCursor: startCursor });
-        updateParams({ page: String(nav.page - 1) });
-    }, [nav.page, updateParams]);
+        if (config.provider === "cb") {
+            if (nav.page <= 1) return;
+            setNav({ page: nav.page - 1 });
+            updateParams({ page: String(nav.page - 1) });
+            return;
+        }
+        // gh: page 1 has no cursor (deep links can carry one with an unknown
+        // page number). Going back fetches the page before the current one
+        // via the current page's start cursor.
+        if (!nav.afterCursor && !nav.beforeCursor) return;
+        if (!data?.cursors?.start) return;
+        setNav({
+            page: Math.max(1, nav.page - 1),
+            beforeCursor: data.cursors.start,
+            afterCursor: undefined,
+        });
+        updateParams({ before: data.cursors.start, after: undefined });
+    }, [
+        config.provider,
+        nav.afterCursor,
+        nav.beforeCursor,
+        nav.page,
+        data?.cursors?.start,
+        updateParams,
+    ]);
 
     const handleBranchChange = useCallback(
         (newBranch: string) => {
@@ -195,15 +238,19 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
     const handleAuthorToggle = useCallback(
         (_key: string, value: string) => {
             const login = value.replace(/^author:/, "");
-            if (author === login) {
-                updateParams({ author: undefined, page: "1" });
-                setNav({ page: 1 });
+            const authorValue = author === login ? undefined : login;
+            if (config.provider === "gh") {
+                updateParams({
+                    author: authorValue,
+                    after: undefined,
+                    before: undefined,
+                });
             } else {
-                updateParams({ author: login, page: "1" });
-                setNav({ page: 1 });
+                updateParams({ author: authorValue, page: "1" });
             }
+            setNav({ page: 1 });
         },
-        [author, updateParams],
+        [author, config.provider, updateParams],
     );
 
     const groupedCommits = useMemo(() => {
@@ -271,8 +318,19 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
                     <CommitsPaginationFooter
                         page={nav.page}
                         totalPages={totalPages}
+                        hasPrevious={
+                            config.provider === "cb"
+                                ? nav.page > 1
+                                : (data?.hasPreviousPage ?? false)
+                        }
+                        hasNext={
+                            config.provider === "cb"
+                                ? nav.page < totalPages
+                                : (data?.hasNextPage ?? false)
+                        }
                         onPrevious={handlePrevious}
                         onNext={handleNext}
+                        showPageNumbers={config.provider === "cb"}
                     />
                 </>
             )}

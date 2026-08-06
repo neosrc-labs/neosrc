@@ -76,11 +76,19 @@ export const commitsRouter = createTRPCRouter({
                 owner: z.string(),
                 repo: z.string(),
                 branch: z.string(),
-                page: z.number().min(1).default(1),
                 perPage: z.number().min(1).max(35).default(35),
                 author: z.string().optional(),
-                afterCursor: z.string().optional(),
-                beforeCursor: z.string().optional(),
+                pagination: z.discriminatedUnion("provider", [
+                    z.object({
+                        provider: z.literal("gh"),
+                        afterCursor: z.string().optional(),
+                        beforeCursor: z.string().optional(),
+                    }),
+                    z.object({
+                        provider: z.literal("cb"),
+                        page: z.number().optional().default(1),
+                    }),
+                ]),
             }),
         )
         .query(async ({ ctx, input }): Promise<ListCommitsResult> => {
@@ -90,13 +98,19 @@ export const commitsRouter = createTRPCRouter({
                         ctx.db,
                         ctx.session?.user?.id,
                     );
+
+                    const page =
+                        input.pagination.provider === "cb"
+                            ? input.pagination.page
+                            : 1;
+
                     const { commits, totalCount } = await listBranchCommits(
                         accessToken,
                         input.owner,
                         input.repo,
                         input.branch,
                         {
-                            page: input.page,
+                            page,
                             limit: input.perPage,
                             author: input.author ?? undefined,
                         },
@@ -120,7 +134,13 @@ export const commitsRouter = createTRPCRouter({
                                 !input.author ||
                                 c.author?.login === input.author,
                         );
-                    return { commits: items, totalCount, cursors: null };
+                    return {
+                        commits: items,
+                        totalCount,
+                        cursors: null,
+                        hasPreviousPage: page > 1,
+                        hasNextPage: page * input.perPage < totalCount,
+                    };
                 }
                 const accessToken = await getGitHubToken(
                     ctx.db,
@@ -138,10 +158,22 @@ export const commitsRouter = createTRPCRouter({
                             commits: [],
                             totalCount: 0,
                             cursors: null,
+                            hasPreviousPage: false,
+                            hasNextPage: false,
                         };
                     }
                     authorId = resolvedId;
                 }
+
+                const after =
+                    input.pagination.provider === "gh" &&
+                    !input.pagination.beforeCursor
+                        ? input.pagination.afterCursor
+                        : undefined;
+                const before =
+                    input.pagination.provider === "gh"
+                        ? input.pagination.beforeCursor
+                        : undefined;
 
                 const result = await getBranchCommitsGraphQL(
                     accessToken,
@@ -149,11 +181,11 @@ export const commitsRouter = createTRPCRouter({
                     input.repo,
                     input.branch,
                     {
-                        first: input.beforeCursor ? undefined : input.perPage,
-                        last: input.beforeCursor ? input.perPage : undefined,
-                        after: input.afterCursor,
-                        before: input.beforeCursor,
+                        after: after,
+                        before: before,
                         authorId,
+                        first: before ? undefined : input.perPage,
+                        last: before ? input.perPage : undefined,
                     },
                 );
 
@@ -168,6 +200,8 @@ export const commitsRouter = createTRPCRouter({
                                   end: result.pageInfo.endCursor,
                               }
                             : null,
+                    hasPreviousPage: result.pageInfo.hasPreviousPage,
+                    hasNextPage: result.pageInfo.hasNextPage,
                 };
             } catch (e) {
                 if (e instanceof Error && /not found/i.test(e.message)) {

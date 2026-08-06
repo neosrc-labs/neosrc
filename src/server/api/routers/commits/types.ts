@@ -21,18 +21,10 @@ export interface CommitListItem {
     } | null;
 }
 
-export interface ListCommitsParams {
-    provider: "gh" | "cb";
-    owner: string;
-    repo: string;
-    branch: string;
-    page: number;
-    perPage: number;
-    author?: string;
-}
-
 export interface ListCommitsResult {
     commits: CommitListItem[];
     totalCount: number;
     cursors: { start: string; end: string } | null;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
 }
