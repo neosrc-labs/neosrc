@@ -8,3 +8,15 @@ if (typeof Element !== "undefined") {
 if (typeof window !== "undefined") {
     window.scrollTo = () => {};
 }
+
+// jsdom doesn't implement ResizeObserver, which Radix popper content
+// (tooltips, popovers) relies on to measure its trigger when it opens
+class ResizeObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+}
+
+if (typeof globalThis.ResizeObserver === "undefined") {
+    globalThis.ResizeObserver = ResizeObserverStub;
+}

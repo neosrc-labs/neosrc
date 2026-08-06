@@ -23,14 +23,17 @@ import {
 import type { ReactionContent } from "~/lib/reactions";
 import type { PullsGetResponseData, StackSuggestion } from "~/server/github";
 import { ConflictedFiles } from "./conflicted-files";
+import { CreateStackDialog } from "./create-stack-dialog";
 import { StackBanner } from "./stack-banner";
 
 type SimpleUser = components["schemas"]["nullable-simple-user"];
 
 import { RoleBadge } from "~/components/RoleBadge";
+import { useLocalStorage } from "~/hooks/use-local-storage";
 import { useTaskToggle } from "~/hooks/use-task-toggle";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import { StackCreateBadge } from "./stack-create-badge";
 import { StackBadge } from "./stack-popover";
 
 interface PullRequestDescriptionSectionProps {
@@ -59,6 +62,11 @@ export function PullRequestDescriptionSection({
     const [isEditing, setIsEditing] = useState(false);
     const [editBody, setEditBody] = useState("");
     const [savedBody, setSavedBody] = useState<string | null>(null);
+    const [stackDialogOpen, setStackDialogOpen] = useState(false);
+    const [stackBannerDismissed, setStackBannerDismissed] = useLocalStorage(
+        `stack-banner-dismissed:${owner}:${repo}:${number}`,
+        false,
+    );
     const updateMutation = api.pulls.updateBody.useMutation({
         onMutate: () => {
             setSavedBody(editBody);
@@ -216,6 +224,9 @@ export function PullRequestDescriptionSection({
                     repo={repo}
                     pullRequestPromise={pullRequestPromise}
                     actionSection={actionSection}
+                    stackSuggestionPromise={stackSuggestionPromise}
+                    stackBannerDismissed={stackBannerDismissed}
+                    onCreateStack={() => setStackDialogOpen(true)}
                 />
                 {conflictedFilesPromise && (
                     <Async fallback={null} promise={pullRequestPromise}>
@@ -246,13 +257,28 @@ export function PullRequestDescriptionSection({
             <Async fallback={null} promise={stackSuggestionPromise}>
                 {(suggestion) =>
                     suggestion ? (
-                        <div className="mb-3">
-                            <StackBanner
+                        <>
+                            {!stackBannerDismissed && (
+                                <div className="mb-3">
+                                    <StackBanner
+                                        suggestion={suggestion}
+                                        onDismiss={() =>
+                                            setStackBannerDismissed(true)
+                                        }
+                                        onCreateStack={() =>
+                                            setStackDialogOpen(true)
+                                        }
+                                    />
+                                </div>
+                            )}
+                            <CreateStackDialog
+                                open={stackDialogOpen}
+                                onOpenChange={setStackDialogOpen}
                                 owner={owner}
                                 repo={repo}
                                 suggestion={suggestion}
                             />
-                        </div>
+                        </>
                     ) : null
                 }
             </Async>
@@ -633,11 +659,17 @@ function SubtitleActionRow({
     repo,
     pullRequestPromise,
     actionSection,
+    stackSuggestionPromise,
+    stackBannerDismissed,
+    onCreateStack,
 }: {
     owner: string;
     repo: string;
     pullRequestPromise: Promise<PullsGetResponseData>;
     actionSection?: ReactNode;
+    stackSuggestionPromise: Promise<StackSuggestion | null>;
+    stackBannerDismissed: boolean;
+    onCreateStack: () => void;
 }) {
     return (
         <Async
@@ -675,6 +707,14 @@ function SubtitleActionRow({
                             }}
                             prNumber={pullRequest.number}
                         />
+                    ) : stackBannerDismissed ? (
+                        <Async fallback={null} promise={stackSuggestionPromise}>
+                            {(suggestion) =>
+                                suggestion ? (
+                                    <StackCreateBadge onClick={onCreateStack} />
+                                ) : null
+                            }
+                        </Async>
                     ) : null}
                     <div className="ml-auto flex items-center gap-1.5 text-sm">
                         {pullRequest.additions > 0 && (
