@@ -71,21 +71,23 @@ export default function FileDiff({
     showPerformanceDiff = true,
     onTogglePerformanceDiff,
 }: FileDiffProps) {
-    const [isViewed, setIsViewed] = useState(() => {
-        if (typeof window === "undefined") return false;
-        return getStoredSet(getViewedKey(owner, repo, number)).has(
-            file.filename,
-        );
-    });
-    const [isCollapsed, setIsCollapsed] = useState(isViewed);
-    const [activeComment, setActiveComment] = useState<ActiveComment | null>(
-        null,
-    );
-    const [commentBody, setCommentBody] = useState("");
-    const [expandedAll, setExpandedAll] = useState(false);
+    const {
+        isViewed,
+        isCollapsed,
+        activeComment,
+        commentBody,
+        expandedAll,
+        headerRef,
+        setActiveComment,
+        setCommentBody,
+        toggleCollapsed,
+        toggleExpandAll,
+        toggleViewed,
+        onToggleFileComment,
+        isFileCommentOpen,
+    } = useFileDiffState({ owner, repo, number, filename: file.filename });
+
     const recentlyAddedIds = useRef(new Set<number>());
-    const utils = api.useUtils();
-    const headerRef = useRef<HTMLDivElement>(null);
 
     const generated = isGeneratedFile(file.filename);
 
@@ -167,9 +169,251 @@ export default function FileDiff({
         );
     }, [showComments, allLineComments]);
 
-    const effectiveShowComments =
-        showComments || recentlyAddedIds.current.size > 0;
+    const {
+        createMutation,
+        startReviewMutation,
+        footerActions,
+        effectiveShowComments,
+    } = useFileCommentActions({
+        owner,
+        repo,
+        number,
+        filename: file.filename,
+        pendingReviewId,
+        showComments,
+        commentBody,
+        activeComment,
+        recentlyAddedIds,
+        setActiveComment,
+        setCommentBody,
+    });
 
+    return (
+        <div className="rounded border border-border">
+            <FileDiffHeader
+                file={file}
+                isCollapsed={isCollapsed}
+                isViewed={isViewed}
+                expandedAll={expandedAll}
+                headerRef={headerRef}
+                onToggleCollapsed={toggleCollapsed}
+                onToggleExpandAll={toggleExpandAll}
+                onToggleViewed={toggleViewed}
+                onToggleFileComment={onToggleFileComment}
+                isFileCommentOpen={isFileCommentOpen}
+            />
+
+            <FileCommentEditor
+                open={activeComment?.type === "file"}
+                value={commentBody}
+                onChange={setCommentBody}
+                onCancel={() => {
+                    setActiveComment(null);
+                    setCommentBody("");
+                }}
+                footerActions={footerActions}
+                disabled={
+                    createMutation.isPending || startReviewMutation.isPending
+                }
+                error={createMutation.isError || startReviewMutation.isError}
+                owner={owner}
+                repo={repo}
+            />
+
+            <FileCommentThreads
+                comments={fileLevelComments}
+                owner={owner}
+                repo={repo}
+                pullNumber={number}
+                pendingReviewId={pendingReviewId}
+            />
+
+            <div className="overflow-hidden rounded-b">
+                {!isCollapsed && (
+                    <DiffContent
+                        file={file}
+                        performanceHidden={performanceHidden}
+                        showPerformanceDiff={showPerformanceDiff}
+                        onTogglePerformanceDiff={onTogglePerformanceDiff}
+                        generated={generated}
+                        showGeneratedDiff={showGeneratedDiff}
+                        onToggleGeneratedDiff={onToggleGeneratedDiff}
+                        isSvg={isSvg}
+                        svgContentUrls={svgContentUrls}
+                        isImage={!!isImage}
+                        imageUrls={imageUrls}
+                        lineComments={lineComments}
+                        showComments={effectiveShowComments}
+                        activeComment={activeComment}
+                        onStartComment={setActiveComment}
+                        commentBody={commentBody}
+                        onCommentBodyChange={setCommentBody}
+                        commentPending={
+                            createMutation.isPending ||
+                            startReviewMutation.isPending
+                        }
+                        commentError={
+                            createMutation.isError ||
+                            startReviewMutation.isError
+                        }
+                        onCancelComment={() => {
+                            setActiveComment(null);
+                            setCommentBody("");
+                        }}
+                        footerActions={footerActions}
+                        pendingReviewId={pendingReviewId}
+                        owner={owner}
+                        repo={repo}
+                        pullNumber={number}
+                        headSha={headSha}
+                        expandAllContext={expandedAll}
+                    />
+                )}
+            </div>
+        </div>
+    );
+}
+
+interface UseFileDiffStateParams {
+    owner: string;
+    repo: string;
+    number: string;
+    filename: string;
+}
+
+function useFileDiffState({
+    owner,
+    repo,
+    number,
+    filename,
+}: UseFileDiffStateParams) {
+    const [isViewed, setIsViewed] = useState(() => {
+        if (typeof window === "undefined") return false;
+        return getStoredSet(getViewedKey(owner, repo, number)).has(filename);
+    });
+    const [isCollapsed, setIsCollapsed] = useState(isViewed);
+    const [activeComment, setActiveComment] = useState<ActiveComment | null>(
+        null,
+    );
+    const [commentBody, setCommentBody] = useState("");
+    const [expandedAll, setExpandedAll] = useState(false);
+    const headerRef = useRef<HTMLDivElement>(null);
+
+    const toggleCollapsed = () => {
+        const willCollapse = !isCollapsed;
+        const stickyOffset = 56;
+
+        if (willCollapse && headerRef.current) {
+            const headerTop = headerRef.current.getBoundingClientRect().top;
+            if (Math.abs(headerTop - stickyOffset) < 20) {
+                setIsCollapsed(true);
+                setTimeout(() => {
+                    if (headerRef.current) {
+                        const newTop =
+                            headerRef.current.getBoundingClientRect().top;
+                        const delta = newTop - stickyOffset;
+                        if (Math.abs(delta) > 1) {
+                            window.scrollBy(0, delta);
+                        }
+                    }
+                }, 0);
+                return;
+            }
+        }
+        setIsCollapsed(!isCollapsed);
+    };
+
+    const toggleExpandAll = () => {
+        const willCollapse = expandedAll;
+        if (willCollapse && headerRef.current) {
+            const stickyOffset = 56;
+            const headerTop = headerRef.current.getBoundingClientRect().top;
+            if (Math.abs(headerTop - stickyOffset) < 20) {
+                setExpandedAll(false);
+                setTimeout(() => {
+                    if (headerRef.current) {
+                        const newTop =
+                            headerRef.current.getBoundingClientRect().top;
+                        const delta = newTop - stickyOffset;
+                        if (Math.abs(delta) > 1) {
+                            window.scrollBy(0, delta);
+                        }
+                    }
+                }, 0);
+                return;
+            }
+        }
+        setExpandedAll(!expandedAll);
+    };
+
+    const toggleViewed = () => {
+        const key = getViewedKey(owner, repo, number);
+        const viewed = getStoredSet(key);
+        if (isViewed) {
+            viewed.delete(filename);
+        } else {
+            viewed.add(filename);
+        }
+        setStoredSet(key, viewed);
+        setIsViewed(!isViewed);
+        if (!isViewed && !isCollapsed) {
+            toggleCollapsed();
+        } else if (isViewed && isCollapsed) {
+            toggleCollapsed();
+        }
+        window.dispatchEvent(new Event("file-viewed-changed"));
+    };
+
+    const onToggleFileComment = () =>
+        setActiveComment(
+            activeComment?.type === "file" ? null : { type: "file" },
+        );
+
+    return {
+        isViewed,
+        isCollapsed,
+        activeComment,
+        commentBody,
+        expandedAll,
+        headerRef,
+        setActiveComment,
+        setCommentBody,
+        toggleCollapsed,
+        toggleExpandAll,
+        toggleViewed,
+        onToggleFileComment,
+        isFileCommentOpen: activeComment?.type === "file",
+    };
+}
+
+interface UseFileCommentActionsParams {
+    owner: string;
+    repo: string;
+    number: string;
+    filename: string;
+    pendingReviewId?: number | null;
+    showComments: boolean;
+    commentBody: string;
+    activeComment: ActiveComment | null;
+    recentlyAddedIds: React.RefObject<Set<number>>;
+    setActiveComment: (comment: ActiveComment | null) => void;
+    setCommentBody: (body: string) => void;
+}
+
+function useFileCommentActions({
+    owner,
+    repo,
+    number,
+    filename,
+    pendingReviewId,
+    showComments,
+    commentBody,
+    activeComment,
+    recentlyAddedIds,
+    setActiveComment,
+    setCommentBody,
+}: UseFileCommentActionsParams) {
+    const utils = api.useUtils();
     const { data: currentUserData } = api.users.currentUser.useQuery();
 
     const createMutation = api.reviewComments.create.useMutation({
@@ -252,7 +496,7 @@ export default function FileDiff({
                 owner,
                 repo,
                 number: Number(number),
-                filePath: file.filename,
+                filePath: filename,
                 body,
                 asReview: isReview,
                 ...(activeComment.type === "line"
@@ -293,7 +537,7 @@ export default function FileDiff({
 
                 const stub = createReviewCommentStub({
                     body,
-                    filePath: file.filename,
+                    filePath: filename,
                     currentUser: {
                         login: userLogin,
                         avatarUrl: currentUserData.avatarUrl,
@@ -380,10 +624,13 @@ export default function FileDiff({
             owner,
             repo,
             number,
-            file.filename,
+            filename,
             currentUserData,
             showComments,
             utils,
+            recentlyAddedIds,
+            setActiveComment,
+            setCommentBody,
         ],
     );
 
@@ -411,161 +658,15 @@ export default function FileDiff({
               },
           ];
 
-    const toggleCollapsed = () => {
-        const willCollapse = !isCollapsed;
-        const stickyOffset = 56;
+    const effectiveShowComments =
+        showComments || recentlyAddedIds.current.size > 0;
 
-        if (willCollapse && headerRef.current) {
-            const headerTop = headerRef.current.getBoundingClientRect().top;
-            if (Math.abs(headerTop - stickyOffset) < 20) {
-                setIsCollapsed(true);
-                setTimeout(() => {
-                    if (headerRef.current) {
-                        const newTop =
-                            headerRef.current.getBoundingClientRect().top;
-                        const delta = newTop - stickyOffset;
-                        if (Math.abs(delta) > 1) {
-                            window.scrollBy(0, delta);
-                        }
-                    }
-                }, 0);
-                return;
-            }
-        }
-        setIsCollapsed(!isCollapsed);
+    return {
+        createMutation,
+        startReviewMutation,
+        footerActions,
+        effectiveShowComments,
     };
-
-    const toggleExpandAll = () => {
-        const willCollapse = expandedAll;
-        if (willCollapse && headerRef.current) {
-            const stickyOffset = 56;
-            const headerTop = headerRef.current.getBoundingClientRect().top;
-            if (Math.abs(headerTop - stickyOffset) < 20) {
-                setExpandedAll(false);
-                setTimeout(() => {
-                    if (headerRef.current) {
-                        const newTop =
-                            headerRef.current.getBoundingClientRect().top;
-                        const delta = newTop - stickyOffset;
-                        if (Math.abs(delta) > 1) {
-                            window.scrollBy(0, delta);
-                        }
-                    }
-                }, 0);
-                return;
-            }
-        }
-        setExpandedAll(!expandedAll);
-    };
-
-    const toggleViewed = () => {
-        const key = getViewedKey(owner, repo, number);
-        const viewed = getStoredSet(key);
-        if (isViewed) {
-            viewed.delete(file.filename);
-        } else {
-            viewed.add(file.filename);
-        }
-        setStoredSet(key, viewed);
-        setIsViewed(!isViewed);
-        if (!isViewed && !isCollapsed) {
-            toggleCollapsed();
-        } else if (isViewed && isCollapsed) {
-            toggleCollapsed();
-        }
-        window.dispatchEvent(new Event("file-viewed-changed"));
-    };
-
-    return (
-        <div className="rounded border border-border">
-            <FileDiffHeader
-                file={file}
-                isCollapsed={isCollapsed}
-                isViewed={isViewed}
-                expandedAll={expandedAll}
-                headerRef={headerRef}
-                onToggleCollapsed={toggleCollapsed}
-                onToggleExpandAll={toggleExpandAll}
-                onToggleViewed={toggleViewed}
-                onToggleFileComment={() =>
-                    setActiveComment(
-                        activeComment?.type === "file"
-                            ? null
-                            : { type: "file" },
-                    )
-                }
-                isFileCommentOpen={activeComment?.type === "file"}
-            />
-
-            <FileCommentEditor
-                open={activeComment?.type === "file"}
-                value={commentBody}
-                onChange={setCommentBody}
-                onCancel={() => {
-                    setActiveComment(null);
-                    setCommentBody("");
-                }}
-                footerActions={footerActions}
-                disabled={
-                    createMutation.isPending || startReviewMutation.isPending
-                }
-                error={createMutation.isError || startReviewMutation.isError}
-                owner={owner}
-                repo={repo}
-            />
-
-            <FileCommentThreads
-                comments={fileLevelComments}
-                owner={owner}
-                repo={repo}
-                pullNumber={number}
-                pendingReviewId={pendingReviewId}
-            />
-
-            <div className="overflow-hidden rounded-b">
-                {!isCollapsed && (
-                    <DiffContent
-                        file={file}
-                        performanceHidden={performanceHidden}
-                        showPerformanceDiff={showPerformanceDiff}
-                        onTogglePerformanceDiff={onTogglePerformanceDiff}
-                        generated={generated}
-                        showGeneratedDiff={showGeneratedDiff}
-                        onToggleGeneratedDiff={onToggleGeneratedDiff}
-                        isSvg={isSvg}
-                        svgContentUrls={svgContentUrls}
-                        isImage={!!isImage}
-                        imageUrls={imageUrls}
-                        lineComments={lineComments}
-                        showComments={effectiveShowComments}
-                        activeComment={activeComment}
-                        onStartComment={setActiveComment}
-                        commentBody={commentBody}
-                        onCommentBodyChange={setCommentBody}
-                        commentPending={
-                            createMutation.isPending ||
-                            startReviewMutation.isPending
-                        }
-                        commentError={
-                            createMutation.isError ||
-                            startReviewMutation.isError
-                        }
-                        onCancelComment={() => {
-                            setActiveComment(null);
-                            setCommentBody("");
-                        }}
-                        footerActions={footerActions}
-                        pendingReviewId={pendingReviewId}
-                        owner={owner}
-                        repo={repo}
-                        pullNumber={number}
-                        headSha={headSha}
-                        expandAllContext={expandedAll}
-                    />
-                )}
-            </div>
-        </div>
-    );
 }
 
 interface FileDiffHeaderProps {
