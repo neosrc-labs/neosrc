@@ -53,15 +53,24 @@ export function CodeTitle({ children, provider, owner, repo }: CodeTitleProps) {
                     <span
                         key={elements.length}
                         className="cursor-pointer text-blue-600 hover:underline dark:text-blue-400"
-                        onClick={() =>
+                        onClick={(e) => {
+                            // Keep the click from bubbling to a wrapping
+                            // commit/pr link: only the issue should open.
+                            // preventDefault stops the anchor's native
+                            // navigation; stopPropagation keeps the Link's
+                            // onClick (router push) from running.
+                            e.preventDefault();
+                            e.stopPropagation();
                             window.open(
                                 `https://${host}/${owner}/${repo}/issues/${match[3]}`,
                                 "_blank",
                                 "noopener,noreferrer",
-                            )
-                        }
+                            );
+                        }}
                         onKeyDown={(e) => {
                             if (e.key === "Enter") {
+                                e.preventDefault();
+                                e.stopPropagation();
                                 window.open(
                                     `https://${host}/${owner}/${repo}/issues/${match[3]}`,
                                     "_blank",
