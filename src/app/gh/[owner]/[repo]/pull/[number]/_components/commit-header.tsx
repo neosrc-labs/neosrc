@@ -34,15 +34,20 @@ export async function CommitHeader({
     return (
         <div className="mb-6 rounded-lg border border-border bg-surface-secondary p-4">
             <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-text-primary">
+                <h2 className="flex items-center gap-2 text-text-primary">
                     <CommitSubject
                         message={commit.commit.message}
                         provider="gh"
                         owner={owner}
                         repo={repo}
                     />
+                    {currentIndex >= 0 && (
+                        <span className="whitespace-nowrap font-medium text-sm text-text-secondary tabular-nums">
+                            {currentIndex + 1} / {commits.length}
+                        </span>
+                    )}
                 </h2>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
                     {prevCommit ? (
                         <a
                             className="whitespace-nowrap rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
