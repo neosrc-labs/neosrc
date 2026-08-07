@@ -305,7 +305,7 @@ export function TimelineSection({
         for (const ev of filteredEvents) {
             if (ev.__typename !== "CrossReferencedEvent") continue;
             const source = ev.source;
-            if (!source || source.__typename !== "PullRequest") continue;
+            if (source?.__typename !== "PullRequest") continue;
             const match = source.body?.match(revertRe);
             if (!match) continue;
             const refRepo = match[1];

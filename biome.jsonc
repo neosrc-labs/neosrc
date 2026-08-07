@@ -2,7 +2,7 @@
     "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
     "root": true,
     "files": {
-        "includes": ["**", "!drizzle", "!api-specs"]
+        "includes": ["**", "!drizzle", "!api-specs", "!public"]
     },
     "vcs": {
         "enabled": true,
@@ -12,9 +12,9 @@
     "assist": {
         "enabled": true,
         "actions": {
-            "recommended": true,
+            "preset": "recommended",
             "source": {
-                "recommended": true,
+                "preset": "recommended",
                 "organizeImports": "on"
             }
         }
@@ -27,7 +27,7 @@
     "linter": {
         "enabled": true,
         "rules": {
-            "recommended": true,
+            "preset": "recommended",
             "style": {
                 "useFilenamingConvention": {
                     "level": "error",

@@ -6,7 +6,7 @@ import { CodeTitle } from "~/components/markdown/code-title";
 
 function renderInLink(message: string, onParentClick: () => void) {
     render(
-        <a href="#commit" onClick={onParentClick}>
+        <a href="/commit" onClick={onParentClick}>
             <CodeTitle provider="gh" owner="acme" repo="widgets">
                 {message}
             </CodeTitle>
@@ -16,9 +16,7 @@ function renderInLink(message: string, onParentClick: () => void) {
 
 describe("CodeTitle", () => {
     it("opens the issue in a new tab and does not follow the wrapping link", async () => {
-        const openSpy = vi
-            .spyOn(window, "open")
-            .mockImplementation(() => null);
+        const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
         const parentClick = vi.fn();
         const user = userEvent.setup();
 
@@ -37,12 +35,10 @@ describe("CodeTitle", () => {
     });
 
     it("cancels the wrapping link's default navigation when clicking the issue", () => {
-        const openSpy = vi
-            .spyOn(window, "open")
-            .mockImplementation(() => null);
+        const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
         const parentClick = vi.fn();
 
-        const { container } = render(
+        render(
             <a href="/commit" onClick={parentClick}>
                 <CodeTitle provider="gh" owner="acme" repo="widgets">
                     fix #123 crash
@@ -69,9 +65,7 @@ describe("CodeTitle", () => {
     });
 
     it("still lets the wrapping link navigate when clicking the rest of the text", async () => {
-        const openSpy = vi
-            .spyOn(window, "open")
-            .mockImplementation(() => null);
+        const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
         const parentClick = vi.fn();
         const user = userEvent.setup();
 
@@ -89,10 +83,7 @@ describe("CodeTitle", () => {
         const user = userEvent.setup();
 
         render(
-            <a
-                href="/commit"
-                className="hover:text-blue-600 hover:underline"
-            >
+            <a href="/commit" className="hover:text-blue-600 hover:underline">
                 <CodeTitle provider="gh" owner="acme" repo="widgets">
                     fix #123 crash
                 </CodeTitle>
