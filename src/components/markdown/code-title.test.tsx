@@ -84,4 +84,30 @@ describe("CodeTitle", () => {
 
         openSpy.mockRestore();
     });
+
+    it("does not apply the wrapping link's hover styles while hovering the issue", async () => {
+        const user = userEvent.setup();
+
+        render(
+            <a
+                href="/commit"
+                className="hover:text-blue-600 hover:underline"
+            >
+                <CodeTitle provider="gh" owner="acme" repo="widgets">
+                    fix #123 crash
+                </CodeTitle>
+            </a>,
+        );
+
+        const link = screen.getByRole("link");
+        const span = screen.getByText("#123");
+
+        await user.hover(span);
+        expect(link.style.color).toBe("var(--color-text-primary)");
+        expect(link.style.textDecorationLine).toBe("none");
+
+        await user.unhover(span);
+        expect(link.style.color).toBe("");
+        expect(link.style.textDecorationLine).toBe("");
+    });
 });

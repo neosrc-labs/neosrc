@@ -14,7 +14,10 @@ interface CodeTitleProps {
 function suppressParentHover(el: HTMLElement) {
     const parent = el.closest("a");
     if (parent) {
+        // Neutralize the wrapping link's :hover styles (color and
+        // underline) while the pointer is on the issue link.
         parent.style.color = "var(--color-text-primary)";
+        parent.style.textDecorationLine = "none";
     }
 }
 
@@ -22,6 +25,7 @@ function restoreParentHover(el: HTMLElement) {
     const parent = el.closest("a");
     if (parent) {
         parent.style.removeProperty("color");
+        parent.style.removeProperty("text-decoration-line");
     }
 }
 
