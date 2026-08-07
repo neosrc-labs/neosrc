@@ -39,9 +39,7 @@ const COMMITS = [
 async function renderCommitHeader(commitSha: string, commit?: CommitData) {
     const element = await CommitHeader({
         commitPromise: Promise.resolve(
-            commit ??
-                COMMITS.find((c) => c.sha === commitSha) ??
-                COMMITS[0]!,
+            commit ?? COMMITS.find((c) => c.sha === commitSha) ?? COMMITS[0]!,
         ),
         commitsPromise: Promise.resolve(COMMITS),
         owner: "acme",
@@ -65,9 +63,7 @@ describe("CommitHeader", () => {
         expect(
             screen.getByRole("button", { name: "← Previous" }),
         ).toBeDisabled();
-        expect(
-            screen.getByRole("link", { name: "Next →" }),
-        ).toHaveAttribute(
+        expect(screen.getByRole("link", { name: "Next →" })).toHaveAttribute(
             "href",
             "/gh/acme/widget/pull/42/changes/2222222bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         );
@@ -88,9 +84,7 @@ describe("CommitHeader", () => {
     it("omits the count when the sha is not in the PR's commit list", async () => {
         const staleSha = "9999999dddddddddddddddddddddddddddddddddddddd";
         await renderCommitHeader(staleSha, makeCommit(staleSha, "old commit"));
-        expect(
-            screen.queryByText(/\d+ \/ \d+/),
-        ).not.toBeInTheDocument();
+        expect(screen.queryByText(/\d+ \/ \d+/)).not.toBeInTheDocument();
         expect(
             screen.queryByRole("link", { name: "← Previous" }),
         ).not.toBeInTheDocument();

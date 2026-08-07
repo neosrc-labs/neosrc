@@ -23,6 +23,7 @@ import { getStoredSet, getViewedKey, setStoredSet } from "~/utils/viewed-files";
 import { type ActiveComment, DiffView, groupThreads } from "./diff-view";
 import ImageDiff from "./image-diff";
 import { InlineCommentThread } from "./inline-comment-thread";
+import type { FooterAction } from "./markdown/markdown-editor";
 import { MarkdownEditor } from "./markdown/markdown-editor";
 import {
     createReviewCommentStub,
@@ -475,6 +476,123 @@ export default function FileDiff({
         window.dispatchEvent(new Event("file-viewed-changed"));
     };
 
+    return (
+        <div className="rounded border border-border">
+            <FileDiffHeader
+                file={file}
+                isCollapsed={isCollapsed}
+                isViewed={isViewed}
+                expandedAll={expandedAll}
+                headerRef={headerRef}
+                onToggleCollapsed={toggleCollapsed}
+                onToggleExpandAll={toggleExpandAll}
+                onToggleViewed={toggleViewed}
+                onToggleFileComment={() =>
+                    setActiveComment(
+                        activeComment?.type === "file"
+                            ? null
+                            : { type: "file" },
+                    )
+                }
+                isFileCommentOpen={activeComment?.type === "file"}
+            />
+
+            <FileCommentEditor
+                open={activeComment?.type === "file"}
+                value={commentBody}
+                onChange={setCommentBody}
+                onCancel={() => {
+                    setActiveComment(null);
+                    setCommentBody("");
+                }}
+                footerActions={footerActions}
+                disabled={
+                    createMutation.isPending || startReviewMutation.isPending
+                }
+                error={createMutation.isError || startReviewMutation.isError}
+                owner={owner}
+                repo={repo}
+            />
+
+            <FileCommentThreads
+                comments={fileLevelComments}
+                owner={owner}
+                repo={repo}
+                pullNumber={number}
+                pendingReviewId={pendingReviewId}
+            />
+
+            <div className="overflow-hidden rounded-b">
+                {!isCollapsed && (
+                    <DiffContent
+                        file={file}
+                        performanceHidden={performanceHidden}
+                        showPerformanceDiff={showPerformanceDiff}
+                        onTogglePerformanceDiff={onTogglePerformanceDiff}
+                        generated={generated}
+                        showGeneratedDiff={showGeneratedDiff}
+                        onToggleGeneratedDiff={onToggleGeneratedDiff}
+                        isSvg={isSvg}
+                        svgContentUrls={svgContentUrls}
+                        isImage={!!isImage}
+                        imageUrls={imageUrls}
+                        lineComments={lineComments}
+                        showComments={effectiveShowComments}
+                        activeComment={activeComment}
+                        onStartComment={setActiveComment}
+                        commentBody={commentBody}
+                        onCommentBodyChange={setCommentBody}
+                        commentPending={
+                            createMutation.isPending ||
+                            startReviewMutation.isPending
+                        }
+                        commentError={
+                            createMutation.isError ||
+                            startReviewMutation.isError
+                        }
+                        onCancelComment={() => {
+                            setActiveComment(null);
+                            setCommentBody("");
+                        }}
+                        footerActions={footerActions}
+                        pendingReviewId={pendingReviewId}
+                        owner={owner}
+                        repo={repo}
+                        pullNumber={number}
+                        headSha={headSha}
+                        expandAllContext={expandedAll}
+                    />
+                )}
+            </div>
+        </div>
+    );
+}
+
+interface FileDiffHeaderProps {
+    file: FileDiffProps["file"];
+    isCollapsed: boolean;
+    isViewed: boolean;
+    expandedAll: boolean;
+    headerRef: React.RefObject<HTMLDivElement | null>;
+    onToggleCollapsed: () => void;
+    onToggleExpandAll: () => void;
+    onToggleViewed: () => void;
+    onToggleFileComment: () => void;
+    isFileCommentOpen: boolean;
+}
+
+function FileDiffHeader({
+    file,
+    isCollapsed,
+    isViewed,
+    expandedAll,
+    headerRef,
+    onToggleCollapsed,
+    onToggleExpandAll,
+    onToggleViewed,
+    onToggleFileComment,
+    isFileCommentOpen,
+}: FileDiffHeaderProps) {
     const statusColor =
         file.status === "added"
             ? "text-green-600"
@@ -485,268 +603,336 @@ export default function FileDiff({
                 : "text-yellow-600";
 
     return (
-        <div className="rounded border border-border">
-            <div
-                ref={headerRef}
-                className="sticky top-[64px] z-[1] flex items-center gap-2 border-border border-b bg-surface-secondary px-4 py-2"
+        <div
+            ref={headerRef}
+            className="sticky top-[64px] z-[1] flex items-center gap-2 border-border border-b bg-surface-secondary px-4 py-2"
+        >
+            <button
+                className="cursor-pointer text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                onClick={onToggleCollapsed}
+                type="button"
             >
+                <svg
+                    className={`h-4 w-4 transition-transform ${isCollapsed ? "-rotate-90" : "rotate-0"}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <title>Toggle collapse</title>
+                    <path
+                        d="M19 9l-7 7-7-7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                    />
+                </svg>
+            </button>
+
+            <button
+                className="h-4 w-4 cursor-pointer text-text-tertiary"
+                onClick={onToggleCollapsed}
+                type="button"
+            >
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <title>File</title>
+                    <path
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                    />
+                </svg>
+            </button>
+
+            <span className="flex min-w-0 flex-1 items-center gap-1">
                 <button
-                    className="cursor-pointer text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
-                    onClick={toggleCollapsed}
+                    className="cursor-pointer truncate text-left font-mono text-sm text-text-label"
+                    onClick={onToggleCollapsed}
                     type="button"
                 >
-                    <svg
-                        className={`h-4 w-4 transition-transform ${isCollapsed ? "-rotate-90" : "rotate-0"}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <title>Toggle collapse</title>
-                        <path
-                            d="M19 9l-7 7-7-7"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                        />
-                    </svg>
+                    {file.filename}
                 </button>
-
-                <button
-                    className="h-4 w-4 cursor-pointer text-text-tertiary"
-                    onClick={toggleCollapsed}
-                    type="button"
-                >
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <title>File</title>
-                        <path
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                        />
-                    </svg>
-                </button>
-
-                <span className="flex min-w-0 flex-1 items-center gap-1">
+                {file.status === "modified" && (
                     <button
-                        className="cursor-pointer truncate text-left font-mono text-sm text-text-label"
-                        onClick={toggleCollapsed}
+                        className="ml-1 flex shrink-0 cursor-pointer items-center text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                        onClick={onToggleExpandAll}
                         type="button"
+                        title={expandedAll ? "Collapse all" : "Expand all"}
                     >
-                        {file.filename}
+                        {expandedAll ? (
+                            <FoldVertical size={14} />
+                        ) : (
+                            <UnfoldVertical size={14} />
+                        )}
                     </button>
-                    {file.status === "modified" && (
-                        <button
-                            className="ml-1 flex shrink-0 cursor-pointer items-center text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
-                            onClick={toggleExpandAll}
-                            type="button"
-                            title={expandedAll ? "Collapse all" : "Expand all"}
-                        >
-                            {expandedAll ? (
-                                <FoldVertical size={14} />
-                            ) : (
-                                <UnfoldVertical size={14} />
-                            )}
-                        </button>
-                    )}
-                </span>
-
-                <span className={`font-medium text-xs ${statusColor}`}>
-                    {file.status}
-                </span>
-
-                {file.additions > 0 && (
-                    <span className="font-medium text-green-600 text-xs">
-                        +{file.additions}
-                    </span>
                 )}
-                {file.deletions > 0 && (
-                    <span className="font-medium text-red-600 text-xs">
-                        -{file.deletions}
-                    </span>
-                )}
+            </span>
 
-                <label className="flex cursor-pointer items-center gap-1 text-text-secondary text-xs hover:text-gray-800 dark:hover:text-zinc-200">
-                    <input
-                        checked={isViewed}
-                        className="cursor-pointer rounded border-gray-300 dark:border-zinc-600"
-                        onChange={toggleViewed}
-                        type="checkbox"
-                    />
-                    Viewed
-                </label>
+            <span className={`font-medium text-xs ${statusColor}`}>
+                {file.status}
+            </span>
 
-                <button
-                    className="flex shrink-0 cursor-pointer items-center text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
-                    onClick={() =>
-                        setActiveComment(
-                            activeComment?.type === "file"
-                                ? null
-                                : { type: "file" },
-                        )
-                    }
-                    type="button"
-                    title={
-                        activeComment?.type === "file"
-                            ? "Cancel"
-                            : "Comment on file"
-                    }
-                >
-                    <MessageSquare size={14} />
-                </button>
-            </div>
-
-            {activeComment?.type === "file" && (
-                <div className="border-border border-b p-2">
-                    <MarkdownEditor
-                        autoFocus
-                        disabled={
-                            createMutation.isPending ||
-                            startReviewMutation.isPending
-                        }
-                        onChange={setCommentBody}
-                        onCancel={() => {
-                            setActiveComment(null);
-                            setCommentBody("");
-                        }}
-                        placeholder="Leave a comment on this file..."
-                        value={commentBody}
-                        owner={owner}
-                        repo={repo}
-                        footerActions={footerActions}
-                    />
-                    {(createMutation.isError ||
-                        startReviewMutation.isError) && (
-                        <p className="mt-1 text-red-600 text-xs">
-                            Failed to post comment. Please try again.
-                        </p>
-                    )}
-                </div>
+            {file.additions > 0 && (
+                <span className="font-medium text-green-600 text-xs">
+                    +{file.additions}
+                </span>
+            )}
+            {file.deletions > 0 && (
+                <span className="font-medium text-red-600 text-xs">
+                    -{file.deletions}
+                </span>
             )}
 
-            {fileLevelComments.length > 0 &&
-                groupThreads(fileLevelComments).map((thread) => (
+            <label className="flex cursor-pointer items-center gap-1 text-text-secondary text-xs hover:text-gray-800 dark:hover:text-zinc-200">
+                <input
+                    checked={isViewed}
+                    className="cursor-pointer rounded border-gray-300 dark:border-zinc-600"
+                    onChange={onToggleViewed}
+                    type="checkbox"
+                />
+                Viewed
+            </label>
+
+            <button
+                className="flex shrink-0 cursor-pointer items-center text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                onClick={onToggleFileComment}
+                type="button"
+                title={isFileCommentOpen ? "Cancel" : "Comment on file"}
+            >
+                <MessageSquare size={14} />
+            </button>
+        </div>
+    );
+}
+
+interface FileCommentEditorProps {
+    open: boolean;
+    value: string;
+    onChange: (value: string) => void;
+    onCancel: () => void;
+    footerActions: FooterAction[];
+    disabled: boolean;
+    error: boolean;
+    owner: string;
+    repo: string;
+}
+
+function FileCommentEditor({
+    open,
+    value,
+    onChange,
+    onCancel,
+    footerActions,
+    disabled,
+    error,
+    owner,
+    repo,
+}: FileCommentEditorProps) {
+    if (!open) return null;
+    return (
+        <div className="border-border border-b p-2">
+            <MarkdownEditor
+                autoFocus
+                disabled={disabled}
+                onChange={onChange}
+                onCancel={onCancel}
+                placeholder="Leave a comment on this file..."
+                value={value}
+                owner={owner}
+                repo={repo}
+                footerActions={footerActions}
+            />
+            {error && (
+                <p className="mt-1 text-red-600 text-xs">
+                    Failed to post comment. Please try again.
+                </p>
+            )}
+        </div>
+    );
+}
+
+interface HiddenDiffNoticeProps {
+    message: string;
+    onShow: () => void;
+}
+
+function HiddenDiffNotice({ message, onShow }: HiddenDiffNoticeProps) {
+    return (
+        <div className="flex flex-col items-center gap-2 border-border border-t px-4 py-6 text-sm text-text-tertiary">
+            <span>{message}</span>
+            <button
+                className="cursor-pointer font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                onClick={onShow}
+                type="button"
+            >
+                Show changes
+            </button>
+        </div>
+    );
+}
+
+interface FileCommentThreadsProps {
+    comments: ReviewComment[];
+    owner: string;
+    repo: string;
+    pullNumber: string;
+    pendingReviewId?: number | null;
+}
+
+function FileCommentThreads({
+    comments,
+    owner,
+    repo,
+    pullNumber,
+    pendingReviewId,
+}: FileCommentThreadsProps) {
+    return (
+        <>
+            {comments.length > 0 &&
+                groupThreads(comments).map((thread) => (
                     <Fragment key={`file-thread-${thread.parent.id}`}>
                         <InlineCommentThread
                             parentComment={thread.parent}
                             replies={thread.replies}
                             owner={owner}
                             repo={repo}
-                            number={Number(number)}
+                            number={Number(pullNumber)}
                             pendingReviewId={pendingReviewId}
                         />
                     </Fragment>
                 ))}
+        </>
+    );
+}
 
-            <div className="overflow-hidden rounded-b">
-                {!isCollapsed &&
-                    (performanceHidden && !showPerformanceDiff ? (
-                        <div className="flex flex-col items-center gap-2 border-border border-t px-4 py-6 text-sm text-text-tertiary">
-                            <span>
-                                {file.status === "removed"
-                                    ? "This file was deleted."
-                                    : file.additions + file.deletions > 1000
-                                      ? `This diff is large (${(file.additions + file.deletions).toLocaleString()} lines changed) and is hidden by default.`
-                                      : "This diff is hidden to improve performance."}
-                            </span>
-                            <button
-                                className="cursor-pointer font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                onClick={() => onTogglePerformanceDiff?.()}
-                                type="button"
-                            >
-                                Show changes
-                            </button>
-                        </div>
-                    ) : generated && !showGeneratedDiff ? (
-                        <div className="flex flex-col items-center gap-2 border-border border-t px-4 py-6 text-sm text-text-tertiary">
-                            <span>
-                                This file is generated and hidden by default.
-                            </span>
-                            <button
-                                className="cursor-pointer font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                onClick={() => onToggleGeneratedDiff?.()}
-                                type="button"
-                            >
-                                Show changes
-                            </button>
-                        </div>
-                    ) : isSvg && svgContentUrls ? (
-                        <SvgDiff
-                            patch={file.patch as string}
-                            filename={file.filename}
-                            oldContentUrl={svgContentUrls.oldUrl}
-                            newContentUrl={svgContentUrls.newUrl}
-                            comments={lineComments}
-                            showComments={effectiveShowComments}
-                            showCommentButton={true}
-                            activeComment={activeComment}
-                            onStartComment={setActiveComment}
-                            commentBody={commentBody}
-                            onCommentBodyChange={setCommentBody}
-                            commentPending={
-                                createMutation.isPending ||
-                                startReviewMutation.isPending
-                            }
-                            commentError={
-                                createMutation.isError ||
-                                startReviewMutation.isError
-                            }
-                            onCancelComment={() => {
-                                setActiveComment(null);
-                                setCommentBody("");
-                            }}
-                            footerActions={footerActions}
-                            pendingReviewId={pendingReviewId}
-                            owner={owner}
-                            repo={repo}
-                            pullNumber={number}
-                        />
-                    ) : file.patch ? (
-                        <DiffView
-                            patch={file.patch}
-                            filename={file.filename}
-                            comments={lineComments}
-                            showComments={effectiveShowComments}
-                            showCommentButton={true}
-                            activeComment={activeComment}
-                            onStartComment={setActiveComment}
-                            commentBody={commentBody}
-                            onCommentBodyChange={setCommentBody}
-                            commentPending={
-                                createMutation.isPending ||
-                                startReviewMutation.isPending
-                            }
-                            commentError={
-                                createMutation.isError ||
-                                startReviewMutation.isError
-                            }
-                            onCancelComment={() => {
-                                setActiveComment(null);
-                                setCommentBody("");
-                            }}
-                            footerActions={footerActions}
-                            pendingReviewId={pendingReviewId}
-                            owner={owner}
-                            repo={repo}
-                            pullNumber={number}
-                            headSha={headSha}
-                            expandAllContext={expandedAll}
-                        />
-                    ) : isImage && imageUrls ? (
-                        <ImageDiff
-                            newUrl={imageUrls.newUrl}
-                            oldUrl={imageUrls.oldUrl}
-                        />
-                    ) : (
-                        <div className="px-4 py-3 text-sm text-text-tertiary italic">
-                            {file.status === "renamed"
-                                ? `File renamed from ${file.previous_filename} without changes`
-                                : file.additions === 0 && file.deletions === 0
-                                  ? "Whitespace-only changes."
-                                  : "Binary file not shown"}
-                        </div>
-                    ))}
-            </div>
+interface DiffContentProps {
+    file: FileDiffProps["file"];
+    performanceHidden: boolean;
+    showPerformanceDiff: boolean;
+    onTogglePerformanceDiff?: () => void;
+    generated: boolean;
+    showGeneratedDiff: boolean;
+    onToggleGeneratedDiff?: () => void;
+    isSvg: boolean;
+    svgContentUrls: { oldUrl: string | null; newUrl: string | null } | null;
+    isImage: boolean;
+    imageUrls: { oldUrl: string | null; newUrl: string | null } | null;
+    lineComments: ReviewComment[];
+    showComments: boolean;
+    activeComment: ActiveComment | null;
+    onStartComment: (ac: ActiveComment | null) => void;
+    commentBody: string;
+    onCommentBodyChange: (body: string) => void;
+    commentPending: boolean;
+    commentError: boolean;
+    onCancelComment: () => void;
+    footerActions: FooterAction[];
+    pendingReviewId?: number | null;
+    owner: string;
+    repo: string;
+    pullNumber: string;
+    headSha?: string;
+    expandAllContext: boolean;
+}
+
+function DiffContent({
+    file,
+    performanceHidden,
+    showPerformanceDiff,
+    onTogglePerformanceDiff,
+    generated,
+    showGeneratedDiff,
+    onToggleGeneratedDiff,
+    isSvg,
+    svgContentUrls,
+    isImage,
+    imageUrls,
+    lineComments,
+    showComments,
+    activeComment,
+    onStartComment,
+    commentBody,
+    onCommentBodyChange,
+    commentPending,
+    commentError,
+    onCancelComment,
+    footerActions,
+    pendingReviewId,
+    owner,
+    repo,
+    pullNumber,
+    headSha,
+    expandAllContext,
+}: DiffContentProps) {
+    return performanceHidden && !showPerformanceDiff ? (
+        <HiddenDiffNotice
+            message={
+                file.status === "removed"
+                    ? "This file was deleted."
+                    : file.additions + file.deletions > 1000
+                      ? `This diff is large (${(file.additions + file.deletions).toLocaleString()} lines changed) and is hidden by default.`
+                      : "This diff is hidden to improve performance."
+            }
+            onShow={() => onTogglePerformanceDiff?.()}
+        />
+    ) : generated && !showGeneratedDiff ? (
+        <HiddenDiffNotice
+            message="This file is generated and hidden by default."
+            onShow={() => onToggleGeneratedDiff?.()}
+        />
+    ) : isSvg && svgContentUrls ? (
+        <SvgDiff
+            patch={file.patch as string}
+            filename={file.filename}
+            oldContentUrl={svgContentUrls.oldUrl}
+            newContentUrl={svgContentUrls.newUrl}
+            comments={lineComments}
+            showComments={showComments}
+            showCommentButton={true}
+            activeComment={activeComment}
+            onStartComment={onStartComment}
+            commentBody={commentBody}
+            onCommentBodyChange={onCommentBodyChange}
+            commentPending={commentPending}
+            commentError={commentError}
+            onCancelComment={onCancelComment}
+            footerActions={footerActions}
+            pendingReviewId={pendingReviewId}
+            owner={owner}
+            repo={repo}
+            pullNumber={pullNumber}
+        />
+    ) : file.patch ? (
+        <DiffView
+            patch={file.patch}
+            filename={file.filename}
+            comments={lineComments}
+            showComments={showComments}
+            showCommentButton={true}
+            activeComment={activeComment}
+            onStartComment={onStartComment}
+            commentBody={commentBody}
+            onCommentBodyChange={onCommentBodyChange}
+            commentPending={commentPending}
+            commentError={commentError}
+            onCancelComment={onCancelComment}
+            footerActions={footerActions}
+            pendingReviewId={pendingReviewId}
+            owner={owner}
+            repo={repo}
+            pullNumber={pullNumber}
+            headSha={headSha}
+            expandAllContext={expandAllContext}
+        />
+    ) : isImage && imageUrls ? (
+        <ImageDiff newUrl={imageUrls.newUrl} oldUrl={imageUrls.oldUrl} />
+    ) : (
+        <div className="px-4 py-3 text-sm text-text-tertiary italic">
+            {file.status === "renamed"
+                ? `File renamed from ${file.previous_filename} without changes`
+                : file.additions === 0 && file.deletions === 0
+                  ? "Whitespace-only changes."
+                  : "Binary file not shown"}
         </div>
     );
 }

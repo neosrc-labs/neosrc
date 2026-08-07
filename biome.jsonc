@@ -36,6 +36,15 @@
                     }
                 }
             },
+            "complexity": {
+                "noExcessiveLinesPerFunction": {
+                    "level": "error",
+                    "options": {
+                        "maxLines": 400,
+                        "skipBlankLines": true
+                    }
+                }
+            },
             "performance": {
                 "noImgElement": "off"
             },
@@ -65,6 +74,9 @@
                 "rules": {
                     "style": {
                         "noNonNullAssertion": "off"
+                    },
+                    "complexity": {
+                        "noExcessiveLinesPerFunction": "off"
                     }
                 }
             }

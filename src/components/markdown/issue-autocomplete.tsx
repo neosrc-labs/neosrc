@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { CodeTitle } from "~/components/markdown/code-title";
 
-interface IssueItem {
+export interface IssueItem {
     number: number;
     title: string;
     type: "issue" | "pull_request";

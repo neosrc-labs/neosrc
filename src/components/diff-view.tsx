@@ -379,9 +379,7 @@ export function DiffView({
 
     const renderItems = useMemo(() => {
         if (!parsed?.blocks) return [];
-        const items: Array<
-            { type: "block"; block: DiffBlock } | ({ type: "gap" } & Gap)
-        > = [];
+        const items: RenderItem[] = [];
 
         for (let i = 0; i < parsed.blocks.length; i++) {
             const block = parsed.blocks[i];
@@ -436,164 +434,12 @@ export function DiffView({
         );
     }, [parsed]);
 
-    // Scroll to line targeted by URL hash; expand only the gap containing the
-    // target. Files stream in and content-visibility defers rendering, so wait
-    // until the target's document position stops moving before scrolling, then
-    // re-check after the scroll settles in case the layout was refined. Also
-    // respond to hash changes (e.g. pressing Enter in the URL bar) while the
-    // page is already loaded.
-    useEffect(() => {
-        let rafId = 0;
-        let verifyTimeout: ReturnType<typeof setTimeout> | undefined;
-        let settleTimeout: ReturnType<typeof setTimeout> | undefined;
-
-        const stopPolling = () => {
-            cancelAnimationFrame(rafId);
-            clearTimeout(verifyTimeout);
-            clearTimeout(settleTimeout);
-        };
-
-        const scrollToHashTarget = () => {
-            stopPolling();
-
-            const hash = window.location.hash;
-            if (!hash?.startsWith(`#diff-${fileHash}`)) return;
-            const targetMatch = hash.match(/^#(diff-[0-9a-f]+[RL]\d+)/);
-            const targetId = targetMatch?.[1];
-            if (!targetId) return;
-
-            const lineMatch = hash.match(/[RL](\d+)/g);
-            const startLine = lineMatch
-                ? parseInt(lineMatch[0]?.slice(1) ?? "0", 10)
-                : 0;
-            const endLine = lineMatch?.[1]
-                ? parseInt(lineMatch[1].slice(1), 10)
-                : startLine;
-            const side = hash.includes("R") ? "RIGHT" : "LEFT";
-
-            // Expand only the gap containing the target line, not all gaps.
-            // Re-run on every poll attempt: the diff may still be parsing when
-            // the effect first fires, so the gap list can be empty initially.
-            const expandTargetGap = () => {
-                const items = renderItemsRef.current;
-                if (!items) return;
-                for (const item of items) {
-                    if (item.type !== "gap") continue;
-                    const gapStart = item.startLine;
-                    const gapEnd =
-                        item.endLine === -1 ? Infinity : item.endLine;
-                    if (startLine < gapStart || startLine > gapEnd) continue;
-                    const gapKey = `gap-${gapStart}`;
-                    setExpandedGapKeys((prev) => {
-                        if (prev.has(gapKey)) return prev;
-                        const next = new Set(prev);
-                        next.add(gapKey);
-                        return next;
-                    });
-                    break;
-                }
-            };
-
-            // The sticky stack is stable while the routine runs, so measure it
-            // once instead of scanning the whole document on every verify.
-            let cachedOffset = 0;
-            const getTargetOffset = (el: HTMLElement): number => {
-                if (cachedOffset === 0) {
-                    cachedOffset =
-                        getStickyTopHeight(el) + SCROLL_TARGET_PADDING;
-                }
-                return cachedOffset;
-            };
-
-            // Position the line just below the sticky bars instead of the
-            // viewport center, so it is never covered by them.
-            const scrollToLine = (behavior: ScrollBehavior): boolean => {
-                const el = document.getElementById(targetId);
-                if (!el) return false;
-                const offset = getTargetOffset(el);
-                const targetY =
-                    el.getBoundingClientRect().top + window.scrollY - offset;
-                window.scrollTo({ top: Math.max(0, targetY), behavior });
-                setSelectedRange({ startLine, endLine, side });
-                return true;
-            };
-
-            // The target may not be in the DOM yet: the diff can still be
-            // loading, the containing gap may be expanding, or
-            // content-visibility defers its rendering. Wait until its document
-            // position stops changing (files above keep arriving), then scroll.
-            let lastAbsTop = -1;
-            let stableFrames = 0;
-            let scrolled = false;
-            let scrollStart = 0;
-
-            // Re-check after the scroll settles: content-visibility sizes are
-            // estimates until the region is rendered and files above can keep
-            // arriving, so the line can end up off-target. Keep re-scrolling
-            // (instantly) until the line is just below the sticky bars, or the
-            // page is scrolled as far as it can go (the target is near the
-            // bottom of the document). Keep watching for a short window even
-            // when the position looks right to catch late refinements.
-            const verify = () => {
-                const el = document.getElementById(targetId);
-                if (!el) return;
-                const offset = getTargetOffset(el);
-                const rect = el.getBoundingClientRect();
-                const diff = rect.top - offset;
-                const atMaxScroll =
-                    window.innerHeight + window.scrollY >=
-                    document.body.scrollHeight - 2;
-                if (diff < -4 || (diff > 24 && !atMaxScroll)) {
-                    window.scrollTo({
-                        top: rect.top + window.scrollY - offset,
-                        behavior: "auto",
-                    });
-                    verifyTimeout = setTimeout(verify, 350);
-                } else if (Date.now() - scrollStart < 3000) {
-                    verifyTimeout = setTimeout(verify, 350);
-                }
-            };
-
-            const poll = () => {
-                const el = document.getElementById(targetId);
-                if (el) {
-                    const absTop =
-                        el.getBoundingClientRect().top + window.scrollY;
-                    if (absTop === lastAbsTop) {
-                        stableFrames++;
-                    } else {
-                        lastAbsTop = absTop;
-                        stableFrames = 0;
-                    }
-                    if (stableFrames >= 3 && !scrolled) {
-                        scrolled = true;
-                        scrollStart = Date.now();
-                        scrollToLine("smooth");
-                        verifyTimeout = setTimeout(verify, 600);
-                        return;
-                    }
-                } else {
-                    expandTargetGap();
-                }
-                rafId = requestAnimationFrame(poll);
-            };
-
-            settleTimeout = setTimeout(() => {
-                cancelAnimationFrame(rafId);
-                clearTimeout(verifyTimeout);
-            }, 15000);
-
-            rafId = requestAnimationFrame(poll);
-        };
-
-        scrollToHashTarget();
-        window.addEventListener("hashchange", scrollToHashTarget);
-
-        return () => {
-            window.removeEventListener("hashchange", scrollToHashTarget);
-            stopPolling();
-        };
-    }, [fileHash]);
+    useHashScrollToLine(
+        fileHash,
+        renderItemsRef,
+        setExpandedGapKeys,
+        setSelectedRange,
+    );
 
     if (!parsed) {
         return null;
@@ -630,93 +476,36 @@ export function DiffView({
                         onMouseOver={handleTableMouseOver}
                         onFocus={() => {}}
                     >
-                        {renderItems.map((item, idx) => {
-                            if (item.type === "gap") {
-                                if (item.endLine !== -1) {
-                                    // Leading/between gaps handled via next block
-                                    return null;
-                                }
-                                // Trailing gap: render standalone expandable row
-                                const gapKey = `gap-${item.startLine}`;
-                                const isExpanded =
-                                    expandAllContext ||
-                                    expandedGapKeys.has(gapKey);
-                                return (
-                                    <GapRow
-                                        key={gapKey}
-                                        startLine={item.startLine}
-                                        isExpanded={isExpanded}
-                                        onExpand={handleGapExpand}
-                                        gapKey={gapKey}
-                                        owner={owner}
-                                        repo={repo}
-                                        headSha={headSha}
-                                        filename={filename}
-                                        fileHash={fileHash}
-                                        selectedRange={selectedRange}
-                                        onLineSelect={handleLineSelect}
-                                        onLineMouseDown={handleLineMouseDown}
-                                    />
-                                );
-                            }
-
-                            const prevItem =
-                                idx > 0 ? renderItems[idx - 1] : null;
-                            const prevGap =
-                                prevItem?.type === "gap" ? prevItem : null;
-                            // Only pass gap info if it's not a trailing gap (handled separately)
-                            const prevGapForBlock: Gap | undefined =
-                                prevGap && prevGap.endLine !== -1
-                                    ? {
-                                          startLine: prevGap.startLine,
-                                          endLine: prevGap.endLine,
-                                      }
-                                    : undefined;
-                            const prevGapKey = prevGapForBlock
-                                ? `gap-${prevGapForBlock.startLine}`
-                                : undefined;
-                            const isGapExpanded =
-                                prevGapForBlock !== null &&
-                                prevGapKey !== undefined &&
-                                (expandAllContext ||
-                                    expandedGapKeys.has(prevGapKey));
-
-                            return (
-                                <BlockRows
-                                    key={`block-${item.block.newStartLine}`}
-                                    block={item.block}
-                                    hideHeader={isGapExpanded}
-                                    gap={prevGapForBlock}
-                                    gapKey={prevGapKey}
-                                    isGapExpanded={isGapExpanded}
-                                    onGapExpand={handleGapExpand}
-                                    headSha={headSha}
-                                    filename={filename}
-                                    fileHash={fileHash}
-                                    selectedRange={selectedRange}
-                                    onLineSelect={handleLineSelect}
-                                    onLineMouseDown={handleLineMouseDown}
-                                    commentsByLine={commentsByLine}
-                                    multiLineRanges={multiLineRanges}
-                                    activeComment={activeComment}
-                                    onStartComment={onStartComment}
-                                    owner={owner}
-                                    repo={repo}
-                                    pullNumber={pullNumber}
-                                    commentBody={commentBody}
-                                    onCommentBodyChange={onCommentBodyChange}
-                                    footerActions={footerActions}
-                                    commentPending={commentPending}
-                                    commentError={commentError}
-                                    onCancelComment={onCancelComment}
-                                    showComments={showComments}
-                                    showCommentButton={showCommentButton}
-                                    commentDragRange={commentDragRange}
-                                    onCommentDragStart={handleCommentDragStart}
-                                    pendingReviewId={pendingReviewId}
-                                />
-                            );
-                        })}
+                        <DiffTableBody
+                            items={renderItems}
+                            expandAllContext={expandAllContext}
+                            expandedGapKeys={expandedGapKeys}
+                            onGapExpand={handleGapExpand}
+                            owner={owner}
+                            repo={repo}
+                            headSha={headSha}
+                            filename={filename}
+                            fileHash={fileHash}
+                            selectedRange={selectedRange}
+                            onLineSelect={handleLineSelect}
+                            onLineMouseDown={handleLineMouseDown}
+                            commentsByLine={commentsByLine}
+                            multiLineRanges={multiLineRanges}
+                            activeComment={activeComment}
+                            onStartComment={onStartComment}
+                            pullNumber={pullNumber}
+                            commentBody={commentBody}
+                            onCommentBodyChange={onCommentBodyChange}
+                            footerActions={footerActions}
+                            commentPending={commentPending}
+                            commentError={commentError}
+                            onCancelComment={onCancelComment}
+                            showComments={showComments}
+                            showCommentButton={showCommentButton}
+                            commentDragRange={commentDragRange}
+                            onCommentDragStart={handleCommentDragStart}
+                            pendingReviewId={pendingReviewId}
+                        />
                     </tbody>
                 </table>
             </div>
@@ -725,6 +514,8 @@ export function DiffView({
 }
 
 type Gap = { startLine: number; endLine: number };
+
+type RenderItem = { type: "block"; block: DiffBlock } | ({ type: "gap" } & Gap);
 
 function getLastNewLine(block: DiffBlock): number {
     let last = block.newStartLine;
@@ -1286,6 +1077,333 @@ function GapRow({
                             </div>
                         </td>
                     </tr>
+                );
+            })}
+        </>
+    );
+}
+
+function useHashScrollToLine(
+    fileHash: string,
+    renderItemsRef: React.RefObject<RenderItem[]>,
+    setExpandedGapKeys: React.Dispatch<React.SetStateAction<Set<string>>>,
+    setSelectedRange: React.Dispatch<
+        React.SetStateAction<{
+            startLine: number;
+            endLine: number;
+            side: string;
+        } | null>
+    >,
+) {
+    // Scroll to line targeted by URL hash; expand only the gap containing the
+    // target. Files stream in and content-visibility defers rendering, so wait
+    // until the target's document position stops moving before scrolling, then
+    // re-check after the scroll settles in case the layout was refined. Also
+    // respond to hash changes (e.g. pressing Enter in the URL bar) while the
+    // page is already loaded.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: ref and setters are stable; only re-run on hash change
+    useEffect(() => {
+        let rafId = 0;
+        let verifyTimeout: ReturnType<typeof setTimeout> | undefined;
+        let settleTimeout: ReturnType<typeof setTimeout> | undefined;
+
+        const stopPolling = () => {
+            cancelAnimationFrame(rafId);
+            clearTimeout(verifyTimeout);
+            clearTimeout(settleTimeout);
+        };
+
+        const scrollToHashTarget = () => {
+            stopPolling();
+
+            const hash = window.location.hash;
+            if (!hash?.startsWith(`#diff-${fileHash}`)) return;
+            const targetMatch = hash.match(/^#(diff-[0-9a-f]+[RL]\d+)/);
+            const targetId = targetMatch?.[1];
+            if (!targetId) return;
+
+            const lineMatch = hash.match(/[RL](\d+)/g);
+            const startLine = lineMatch
+                ? parseInt(lineMatch[0]?.slice(1) ?? "0", 10)
+                : 0;
+            const endLine = lineMatch?.[1]
+                ? parseInt(lineMatch[1].slice(1), 10)
+                : startLine;
+            const side = hash.includes("R") ? "RIGHT" : "LEFT";
+
+            // Expand only the gap containing the target line, not all gaps.
+            // Re-run on every poll attempt: the diff may still be parsing when
+            // the effect first fires, so the gap list can be empty initially.
+            const expandTargetGap = () => {
+                const items = renderItemsRef.current;
+                if (!items) return;
+                for (const item of items) {
+                    if (item.type !== "gap") continue;
+                    const gapStart = item.startLine;
+                    const gapEnd =
+                        item.endLine === -1 ? Infinity : item.endLine;
+                    if (startLine < gapStart || startLine > gapEnd) continue;
+                    const gapKey = `gap-${gapStart}`;
+                    setExpandedGapKeys((prev) => {
+                        if (prev.has(gapKey)) return prev;
+                        const next = new Set(prev);
+                        next.add(gapKey);
+                        return next;
+                    });
+                    break;
+                }
+            };
+
+            // The sticky stack is stable while the routine runs, so measure it
+            // once instead of scanning the whole document on every verify.
+            let cachedOffset = 0;
+            const getTargetOffset = (el: HTMLElement): number => {
+                if (cachedOffset === 0) {
+                    cachedOffset =
+                        getStickyTopHeight(el) + SCROLL_TARGET_PADDING;
+                }
+                return cachedOffset;
+            };
+
+            // Position the line just below the sticky bars instead of the
+            // viewport center, so it is never covered by them.
+            const scrollToLine = (behavior: ScrollBehavior): boolean => {
+                const el = document.getElementById(targetId);
+                if (!el) return false;
+                const offset = getTargetOffset(el);
+                const targetY =
+                    el.getBoundingClientRect().top + window.scrollY - offset;
+                window.scrollTo({ top: Math.max(0, targetY), behavior });
+                setSelectedRange({ startLine, endLine, side });
+                return true;
+            };
+
+            // The target may not be in the DOM yet: the diff can still be
+            // loading, the containing gap may be expanding, or
+            // content-visibility defers its rendering. Wait until its document
+            // position stops changing (files above keep arriving), then scroll.
+            let lastAbsTop = -1;
+            let stableFrames = 0;
+            let scrolled = false;
+            let scrollStart = 0;
+
+            // Re-check after the scroll settles: content-visibility sizes are
+            // estimates until the region is rendered and files above can keep
+            // arriving, so the line can end up off-target. Keep re-scrolling
+            // (instantly) until the line is just below the sticky bars, or the
+            // page is scrolled as far as it can go (the target is near the
+            // bottom of the document). Keep watching for a short window even
+            // when the position looks right to catch late refinements.
+            const verify = () => {
+                const el = document.getElementById(targetId);
+                if (!el) return;
+                const offset = getTargetOffset(el);
+                const rect = el.getBoundingClientRect();
+                const diff = rect.top - offset;
+                const atMaxScroll =
+                    window.innerHeight + window.scrollY >=
+                    document.body.scrollHeight - 2;
+                if (diff < -4 || (diff > 24 && !atMaxScroll)) {
+                    window.scrollTo({
+                        top: rect.top + window.scrollY - offset,
+                        behavior: "auto",
+                    });
+                    verifyTimeout = setTimeout(verify, 350);
+                } else if (Date.now() - scrollStart < 3000) {
+                    verifyTimeout = setTimeout(verify, 350);
+                }
+            };
+
+            const poll = () => {
+                const el = document.getElementById(targetId);
+                if (el) {
+                    const absTop =
+                        el.getBoundingClientRect().top + window.scrollY;
+                    if (absTop === lastAbsTop) {
+                        stableFrames++;
+                    } else {
+                        lastAbsTop = absTop;
+                        stableFrames = 0;
+                    }
+                    if (stableFrames >= 3 && !scrolled) {
+                        scrolled = true;
+                        scrollStart = Date.now();
+                        scrollToLine("smooth");
+                        verifyTimeout = setTimeout(verify, 600);
+                        return;
+                    }
+                } else {
+                    expandTargetGap();
+                }
+                rafId = requestAnimationFrame(poll);
+            };
+
+            settleTimeout = setTimeout(() => {
+                cancelAnimationFrame(rafId);
+                clearTimeout(verifyTimeout);
+            }, 15000);
+
+            rafId = requestAnimationFrame(poll);
+        };
+
+        scrollToHashTarget();
+        window.addEventListener("hashchange", scrollToHashTarget);
+
+        return () => {
+            window.removeEventListener("hashchange", scrollToHashTarget);
+            stopPolling();
+        };
+    }, [fileHash]);
+}
+
+interface DiffTableBodyProps {
+    items: RenderItem[];
+    expandAllContext: boolean;
+    expandedGapKeys: Set<string>;
+    onGapExpand: (key: string) => void;
+    owner: string | undefined;
+    repo: string | undefined;
+    headSha: string | undefined;
+    filename: string;
+    fileHash: string | undefined;
+    selectedRange: { startLine: number; endLine: number; side: string } | null;
+    onLineSelect: (lineNum: number, side: string, shiftKey: boolean) => void;
+    onLineMouseDown: (lineNum: number, side: string) => void;
+    commentsByLine: Map<string, ReviewComment[]>;
+    multiLineRanges: Map<string, string[]>;
+    activeComment: ActiveComment | null;
+    onStartComment: ((ac: ActiveComment | null) => void) | undefined;
+    pullNumber: number | string | undefined;
+    commentBody: string;
+    onCommentBodyChange: ((body: string) => void) | undefined;
+    footerActions: FooterAction[] | undefined;
+    commentPending: boolean;
+    commentError: boolean;
+    onCancelComment: (() => void) | undefined;
+    showComments: boolean;
+    showCommentButton: boolean;
+    commentDragRange: {
+        startLine: number;
+        endLine: number;
+        side: "LEFT" | "RIGHT";
+    } | null;
+    onCommentDragStart: (line: number, side: "LEFT" | "RIGHT") => void;
+    pendingReviewId: number | null | undefined;
+}
+
+function DiffTableBody({
+    items,
+    expandAllContext,
+    expandedGapKeys,
+    onGapExpand,
+    owner,
+    repo,
+    headSha,
+    filename,
+    fileHash,
+    selectedRange,
+    onLineSelect,
+    onLineMouseDown,
+    commentsByLine,
+    multiLineRanges,
+    activeComment,
+    onStartComment,
+    pullNumber,
+    commentBody,
+    onCommentBodyChange,
+    footerActions,
+    commentPending,
+    commentError,
+    onCancelComment,
+    showComments,
+    showCommentButton,
+    commentDragRange,
+    onCommentDragStart,
+    pendingReviewId,
+}: DiffTableBodyProps) {
+    return (
+        <>
+            {items.map((item, idx) => {
+                if (item.type === "gap") {
+                    if (item.endLine !== -1) {
+                        // Leading/between gaps handled via next block
+                        return null;
+                    }
+                    // Trailing gap: render standalone expandable row
+                    const gapKey = `gap-${item.startLine}`;
+                    const isExpanded =
+                        expandAllContext || expandedGapKeys.has(gapKey);
+                    return (
+                        <GapRow
+                            key={gapKey}
+                            startLine={item.startLine}
+                            isExpanded={isExpanded}
+                            onExpand={onGapExpand}
+                            gapKey={gapKey}
+                            owner={owner}
+                            repo={repo}
+                            headSha={headSha}
+                            filename={filename}
+                            fileHash={fileHash}
+                            selectedRange={selectedRange}
+                            onLineSelect={onLineSelect}
+                            onLineMouseDown={onLineMouseDown}
+                        />
+                    );
+                }
+
+                const prevItem = idx > 0 ? items[idx - 1] : null;
+                const prevGap = prevItem?.type === "gap" ? prevItem : null;
+                // Only pass gap info if it's not a trailing gap (handled separately)
+                const prevGapForBlock: Gap | undefined =
+                    prevGap && prevGap.endLine !== -1
+                        ? {
+                              startLine: prevGap.startLine,
+                              endLine: prevGap.endLine,
+                          }
+                        : undefined;
+                const prevGapKey = prevGapForBlock
+                    ? `gap-${prevGapForBlock.startLine}`
+                    : undefined;
+                const isGapExpanded =
+                    prevGapForBlock !== null &&
+                    prevGapKey !== undefined &&
+                    (expandAllContext || expandedGapKeys.has(prevGapKey));
+
+                return (
+                    <BlockRows
+                        key={`block-${item.block.newStartLine}`}
+                        block={item.block}
+                        hideHeader={isGapExpanded}
+                        gap={prevGapForBlock}
+                        gapKey={prevGapKey}
+                        isGapExpanded={isGapExpanded}
+                        onGapExpand={onGapExpand}
+                        headSha={headSha}
+                        filename={filename}
+                        fileHash={fileHash}
+                        selectedRange={selectedRange}
+                        onLineSelect={onLineSelect}
+                        onLineMouseDown={onLineMouseDown}
+                        commentsByLine={commentsByLine}
+                        multiLineRanges={multiLineRanges}
+                        activeComment={activeComment}
+                        onStartComment={onStartComment}
+                        owner={owner}
+                        repo={repo}
+                        pullNumber={pullNumber}
+                        commentBody={commentBody}
+                        onCommentBodyChange={onCommentBodyChange}
+                        footerActions={footerActions}
+                        commentPending={commentPending}
+                        commentError={commentError}
+                        onCancelComment={onCancelComment}
+                        showComments={showComments}
+                        showCommentButton={showCommentButton}
+                        commentDragRange={commentDragRange}
+                        onCommentDragStart={onCommentDragStart}
+                        pendingReviewId={pendingReviewId}
+                    />
                 );
             })}
         </>
