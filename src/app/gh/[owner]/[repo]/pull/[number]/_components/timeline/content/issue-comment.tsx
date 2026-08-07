@@ -9,10 +9,10 @@ import {
     Trash2,
 } from "lucide-react";
 import { useCallback, useState } from "react";
-import { CommentCard } from "~/components/CommentCard";
-import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
-import { ReactionBar } from "~/components/ReactionBar";
-import { ReactionPicker } from "~/components/ReactionPicker";
+import { CommentCard } from "~/components/comment-card";
+import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
+import { ReactionBar } from "~/components/reaction-bar";
+import { ReactionPicker } from "~/components/reaction-picker";
 import { Button } from "~/components/ui/button";
 import {
     Dialog,

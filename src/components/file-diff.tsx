@@ -20,15 +20,15 @@ import { isGeneratedFile } from "~/utils/generated-files";
 import { isImageFile } from "~/utils/image-file";
 import { isSvgFile } from "~/utils/svg-file";
 import { getStoredSet, getViewedKey, setStoredSet } from "~/utils/viewed-files";
-import { type ActiveComment, DiffView, groupThreads } from "./DiffView";
-import ImageDiff from "./ImageDiff";
-import { InlineCommentThread } from "./InlineCommentThread";
-import { MarkdownEditor } from "./markdown/MarkdownEditor";
+import { type ActiveComment, DiffView, groupThreads } from "./diff-view";
+import ImageDiff from "./image-diff";
+import { InlineCommentThread } from "./inline-comment-thread";
+import { MarkdownEditor } from "./markdown/markdown-editor";
 import {
     createReviewCommentStub,
     findAuthorAssociation,
 } from "./review-comment-utils";
-import SvgDiff from "./SvgDiff";
+import SvgDiff from "./svg-diff";
 
 interface FileDiffProps {
     file: {

@@ -2,7 +2,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ReactionBar } from "~/components/ReactionBar";
+import { ReactionBar } from "~/components/reaction-bar";
 
 vi.mock("~/components/ui/tooltip", () => ({
     Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,

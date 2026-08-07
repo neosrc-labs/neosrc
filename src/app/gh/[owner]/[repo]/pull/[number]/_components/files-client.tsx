@@ -3,7 +3,7 @@
 import { MessageSquare, MessageSquareOff } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Async } from "~/components/async";
-import FileDiff from "~/components/FileDiff";
+import FileDiff from "~/components/file-diff";
 import { useFiles } from "~/hooks/files";
 import type {
     CheckRun,

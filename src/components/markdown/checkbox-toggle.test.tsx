@@ -1,7 +1,7 @@
 import { fireEvent, render } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
-import { MarkdownRenderer } from "./MarkdownRenderer";
+import { MarkdownRenderer } from "./markdown-renderer";
 
 describe("checkbox index mapping", () => {
     it("maps the first clicked checkbox to the first task item", () => {

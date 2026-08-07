@@ -3,7 +3,7 @@
 import { Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
-import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
+import { MarkdownEditor } from "~/components/markdown/markdown-editor";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { GQLIssueComment } from "~/server/github-graphql";
 import { api } from "~/trpc/react";

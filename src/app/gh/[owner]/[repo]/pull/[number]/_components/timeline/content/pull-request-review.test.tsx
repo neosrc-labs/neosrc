@@ -76,7 +76,7 @@ vi.mock("next/link", () => ({
     ),
 }));
 
-vi.mock("~/components/CommentCard", () => ({
+vi.mock("~/components/comment-card", () => ({
     CommentCard: ({
         children,
         headerActions,
@@ -94,17 +94,17 @@ vi.mock("~/components/CommentCard", () => ({
     ),
 }));
 
-vi.mock("~/components/markdown/MarkdownRenderer", () => ({
+vi.mock("~/components/markdown/markdown-renderer", () => ({
     MarkdownRenderer: ({ content }: { content: string }) => (
         <div data-testid="markdown">{content}</div>
     ),
 }));
 
-vi.mock("~/components/ReactionBar", () => ({
+vi.mock("~/components/reaction-bar", () => ({
     ReactionBar: () => <div data-testid="reaction-bar" />,
 }));
 
-vi.mock("~/components/ReactionPicker", () => ({
+vi.mock("~/components/reaction-picker", () => ({
     ReactionPicker: () => <div data-testid="reaction-picker" />,
 }));
 

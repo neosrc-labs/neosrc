@@ -7,10 +7,10 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/code-title";
-import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
-import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
-import { ReactionBar } from "~/components/ReactionBar";
-import { ReactionPicker } from "~/components/ReactionPicker";
+import { MarkdownEditor } from "~/components/markdown/markdown-editor";
+import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
+import { ReactionBar } from "~/components/reaction-bar";
+import { ReactionPicker } from "~/components/reaction-picker";
 import {
     Popover,
     PopoverContent,
@@ -28,7 +28,7 @@ import { StackBanner } from "./stack-banner";
 
 type SimpleUser = components["schemas"]["nullable-simple-user"];
 
-import { RoleBadge } from "~/components/RoleBadge";
+import { RoleBadge } from "~/components/role-badge";
 import { useLocalStorage } from "~/hooks/use-local-storage";
 import { useTaskToggle } from "~/hooks/use-task-toggle";
 import { api } from "~/trpc/react";

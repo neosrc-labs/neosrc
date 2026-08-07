@@ -103,7 +103,7 @@ vi.mock("~/hooks/use-review-thread-operations", () => ({
     applyReviewThreadOperations: vi.fn((threads: unknown) => threads),
 }));
 
-vi.mock("~/components/CommentCard", () => ({
+vi.mock("~/components/comment-card", () => ({
     CommentCard: ({
         children,
         headerActions,
@@ -121,29 +121,29 @@ vi.mock("~/components/CommentCard", () => ({
     ),
 }));
 
-vi.mock("~/components/markdown/MarkdownRenderer", () => ({
+vi.mock("~/components/markdown/markdown-renderer", () => ({
     MarkdownRenderer: ({ content }: { content: string }) => (
         <div data-testid="markdown-renderer">{content}</div>
     ),
 }));
 
-vi.mock("~/components/ReactionBar", () => ({
+vi.mock("~/components/reaction-bar", () => ({
     ReactionBar: () => <div data-testid="reaction-bar" />,
 }));
 
-vi.mock("~/components/ReactionPicker", () => ({
+vi.mock("~/components/reaction-picker", () => ({
     ReactionPicker: () => <div data-testid="reaction-picker" />,
 }));
 
-vi.mock("~/components/DiffView", () => ({
+vi.mock("~/components/diff-view", () => ({
     DiffView: () => <div data-testid="diff-view" />,
 }));
 
-vi.mock("~/components/InlineCommentThread", () => ({
+vi.mock("~/components/inline-comment-thread", () => ({
     ReplyTextboxButton: () => <button type="button">Reply...</button>,
 }));
 
-vi.mock("~/components/ResolvedThreadBanner", () => ({
+vi.mock("~/components/resolved-thread-banner", () => ({
     ResolveButton: () => <button type="button">Resolve</button>,
 }));
 

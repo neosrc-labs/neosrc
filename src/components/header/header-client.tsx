@@ -21,7 +21,7 @@ import { GitHubIcon } from "~/components/github-icon";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { useSidebar } from "../sidebar-context";
-import { ThemeToggle } from "../ThemeToggle";
+import { ThemeToggle } from "../theme-toggle";
 
 interface Tab {
     label: string;

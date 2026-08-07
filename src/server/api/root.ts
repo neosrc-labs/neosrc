@@ -6,7 +6,7 @@ import { pullsRouter } from "~/server/api/routers/pulls";
 import { reactionsRouter } from "~/server/api/routers/reactions";
 import { reportsRouter } from "~/server/api/routers/reports";
 import { reposRouter } from "~/server/api/routers/repos";
-import { reviewCommentsRouter } from "~/server/api/routers/reviewComments";
+import { reviewCommentsRouter } from "~/server/api/routers/review-comments";
 import { reviewsRouter } from "~/server/api/routers/reviews";
 import { timelineRouter } from "~/server/api/routers/timeline";
 import { usersRouter } from "~/server/api/routers/users";

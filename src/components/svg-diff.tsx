@@ -3,9 +3,9 @@
 import { Code, Eye } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ReviewComment } from "~/server/github";
-import type { ActiveComment } from "./DiffView";
-import { DiffView } from "./DiffView";
-import type { FooterAction } from "./markdown/MarkdownEditor";
+import type { ActiveComment } from "./diff-view";
+import { DiffView } from "./diff-view";
+import type { FooterAction } from "./markdown/markdown-editor";
 
 type ViewMode = "rendered" | "code";
 

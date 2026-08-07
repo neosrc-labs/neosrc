@@ -30,7 +30,7 @@ vi.mock("next-themes", () => ({
     useTheme: () => ({ resolvedTheme: "light" }),
 }));
 
-vi.mock("~/hooks/useFileContent", () => ({
+vi.mock("~/hooks/use-file-content", () => ({
     useFileContent: vi.fn(() => ({
         lines: mockUseFileContent.lines,
         isLoading: mockUseFileContent.isLoading,
@@ -38,7 +38,7 @@ vi.mock("~/hooks/useFileContent", () => ({
     })),
 }));
 
-vi.mock("~/components/InlineCommentThread", () => ({
+vi.mock("~/components/inline-comment-thread", () => ({
     InlineCommentThread: (props: { parentComment: { id: number } }) => (
         <div
             data-testid="inline-comment-thread"
@@ -49,7 +49,7 @@ vi.mock("~/components/InlineCommentThread", () => ({
     ),
 }));
 
-vi.mock("~/components/markdown/MarkdownEditor", () => ({
+vi.mock("~/components/markdown/markdown-editor", () => ({
     MarkdownEditor: (props: {
         value?: string;
         onChange?: (v: string) => void;
@@ -98,7 +98,7 @@ vi.mock("lucide-react", () => ({
     MessageSquareOff: () => <div data-testid="message-square-off" />,
 }));
 
-import { type ActiveComment, DiffView } from "~/components/DiffView";
+import { type ActiveComment, DiffView } from "~/components/diff-view";
 import type { ReviewComment } from "~/server/github";
 
 // --- Helpers ---

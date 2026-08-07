@@ -3,16 +3,16 @@
 import type { components } from "@octokit/openapi-types";
 import { MoreVertical, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CommentCard } from "~/components/CommentCard";
+import { CommentCard } from "~/components/comment-card";
 import {
     ResolveButton,
     ResolvedThreadBanner,
-} from "~/components/ResolvedThreadBanner";
+} from "~/components/resolved-thread-banner";
 
 type Reaction = components["schemas"]["reaction"];
 
-import { ReactionBar } from "~/components/ReactionBar";
-import { ReactionPicker } from "~/components/ReactionPicker";
+import { ReactionBar } from "~/components/reaction-bar";
+import { ReactionPicker } from "~/components/reaction-picker";
 import { Button } from "~/components/ui/button";
 import {
     Dialog,
@@ -36,8 +36,8 @@ import type { ReactionContent } from "~/lib/reactions";
 import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
-import { MarkdownEditor } from "./markdown/MarkdownEditor";
-import { MarkdownRenderer } from "./markdown/MarkdownRenderer";
+import { MarkdownEditor } from "./markdown/markdown-editor";
+import { MarkdownRenderer } from "./markdown/markdown-renderer";
 import {
     createReviewCommentStub,
     findAuthorAssociation,

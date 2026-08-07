@@ -3,7 +3,7 @@
 import { BookOpen } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
+import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import { api } from "~/trpc/react";
 
 interface RepoDocFilesProps {

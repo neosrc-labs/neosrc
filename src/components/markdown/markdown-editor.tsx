@@ -20,7 +20,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { IssueAutocomplete } from "./issue-autocomplete";
-import { MarkdownRenderer } from "./MarkdownRenderer";
+import { MarkdownRenderer } from "./markdown-renderer";
 import {
     applyCodeBlockFormat,
     applyInlineFormat,

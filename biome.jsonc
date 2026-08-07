@@ -28,6 +28,14 @@
         "enabled": true,
         "rules": {
             "recommended": true,
+            "style": {
+                "useFilenamingConvention": {
+                    "level": "error",
+                    "options": {
+                        "filenameCases": ["kebab-case"]
+                    }
+                }
+            },
             "performance": {
                 "noImgElement": "off"
             },

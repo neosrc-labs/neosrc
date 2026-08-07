@@ -34,7 +34,7 @@ describe("filenameHash", () => {
     });
 
     it("is consistent across repeated calls", () => {
-        const f = "src/components/DiffView.tsx";
+        const f = "src/components/diff-view.tsx";
         const results = Array.from({ length: 100 }, () => filenameHash(f));
         expect(new Set(results).size).toBe(1);
     });

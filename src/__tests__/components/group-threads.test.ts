@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { groupThreads } from "~/components/DiffView";
+import { groupThreads } from "~/components/diff-view";
 import type { ReviewComment } from "~/server/github";
 
 type MockComment = {

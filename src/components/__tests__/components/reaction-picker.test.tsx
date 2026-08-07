@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { ReactionPicker } from "~/components/ReactionPicker";
+import { ReactionPicker } from "~/components/reaction-picker";
 import { ALL_REACTIONS } from "~/lib/reactions";
 
 vi.mock("~/components/ui/popover", () => ({

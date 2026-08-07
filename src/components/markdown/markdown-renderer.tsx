@@ -32,7 +32,7 @@ import { remarkCommitPlugin } from "./plugins/remark-commit";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
-import { SuggestionBlock } from "./SuggestionBlock";
+import { SuggestionBlock } from "./suggestion-block";
 
 interface MarkdownRendererProps {
     content: string;

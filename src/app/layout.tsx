@@ -8,8 +8,8 @@ import { Inter } from "next/font/google";
 import { Footer } from "~/components/footer";
 import { Header } from "~/components/header/header";
 import { SidebarProvider } from "~/components/sidebar-context";
-import { ThemeProvider } from "~/components/ThemeProvider";
-import { ThemeStylesheets } from "~/components/ThemeStylesheets";
+import { ThemeProvider } from "~/components/theme-provider";
+import { ThemeStylesheets } from "~/components/theme-stylesheets";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { TRPCReactProvider } from "~/trpc/react";
 

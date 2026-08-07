@@ -85,7 +85,7 @@ vi.mock("~/trpc/react", () => ({
     },
 }));
 
-vi.mock("~/components/DiffView", () => ({
+vi.mock("~/components/diff-view", () => ({
     DiffView: (props: {
         showComments?: boolean;
         expandAllContext?: boolean;
@@ -117,15 +117,15 @@ vi.mock("~/components/DiffView", () => ({
     ),
 }));
 
-vi.mock("~/components/ImageDiff", () => ({
+vi.mock("~/components/image-diff", () => ({
     default: () => <div data-testid="image-diff" />,
 }));
 
-vi.mock("~/components/SvgDiff", () => ({
+vi.mock("~/components/svg-diff", () => ({
     default: () => <div data-testid="svg-diff" />,
 }));
 
-vi.mock("~/components/InlineCommentThread", () => ({
+vi.mock("~/components/inline-comment-thread", () => ({
     InlineCommentThread: (props: {
         parentComment: { id: number; body?: string };
     }) => (
@@ -138,7 +138,7 @@ vi.mock("~/components/InlineCommentThread", () => ({
     ),
 }));
 
-vi.mock("~/components/markdown/MarkdownEditor", () => ({
+vi.mock("~/components/markdown/markdown-editor", () => ({
     MarkdownEditor: (props: {
         value?: string;
         onChange?: (v: string) => void;
@@ -188,7 +188,7 @@ vi.mock("~/utils/viewed-files", () => ({
     getViewedKey: vi.fn(() => "viewed-key"),
 }));
 
-import FileDiff from "~/components/FileDiff";
+import FileDiff from "~/components/file-diff";
 
 const BASE_FILE = {
     filename: "test.ts",

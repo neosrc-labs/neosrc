@@ -3,14 +3,14 @@
 import type { components } from "@octokit/openapi-types";
 import { ChevronDown, MoreVertical, SquarePen, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { CommentCard } from "~/components/CommentCard";
-import { DiffView } from "~/components/DiffView";
-import { ReplyTextboxButton } from "~/components/InlineCommentThread";
-import { MarkdownEditor } from "~/components/markdown/MarkdownEditor";
-import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
-import { ReactionBar } from "~/components/ReactionBar";
-import { ReactionPicker } from "~/components/ReactionPicker";
-import { ResolveButton } from "~/components/ResolvedThreadBanner";
+import { CommentCard } from "~/components/comment-card";
+import { DiffView } from "~/components/diff-view";
+import { ReplyTextboxButton } from "~/components/inline-comment-thread";
+import { MarkdownEditor } from "~/components/markdown/markdown-editor";
+import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
+import { ReactionBar } from "~/components/reaction-bar";
+import { ReactionPicker } from "~/components/reaction-picker";
+import { ResolveButton } from "~/components/resolved-thread-banner";
 import {
     createReviewCommentStub,
     findAuthorAssociation,

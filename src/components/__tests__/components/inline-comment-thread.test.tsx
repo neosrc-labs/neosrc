@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { InlineCommentThread } from "~/components/InlineCommentThread";
+import { InlineCommentThread } from "~/components/inline-comment-thread";
 import type { ReviewComment } from "~/server/github";
 
 const mockThreadsQuery = vi.hoisted(() =>
@@ -97,7 +97,7 @@ vi.mock("~/hooks/use-review-thread-operations", () => ({
     applyReviewThreadOperations: vi.fn((threads: unknown) => threads),
 }));
 
-vi.mock("~/components/CommentCard", () => ({
+vi.mock("~/components/comment-card", () => ({
     CommentCard: ({
         children,
         headerActions,
@@ -115,7 +115,7 @@ vi.mock("~/components/CommentCard", () => ({
     ),
 }));
 
-vi.mock("~/components/ResolvedThreadBanner", () => ({
+vi.mock("~/components/resolved-thread-banner", () => ({
     ResolvedThreadBanner: ({ onShow }: { onShow: () => void }) => (
         <div data-testid="resolved-banner">
             <button
@@ -148,21 +148,21 @@ vi.mock("~/components/ResolvedThreadBanner", () => ({
     ),
 }));
 
-vi.mock("~/components/ReactionBar", () => ({
+vi.mock("~/components/reaction-bar", () => ({
     ReactionBar: () => <div data-testid="reaction-bar" />,
 }));
 
-vi.mock("~/components/ReactionPicker", () => ({
+vi.mock("~/components/reaction-picker", () => ({
     ReactionPicker: () => <div data-testid="reaction-picker" />,
 }));
 
-vi.mock("~/components/markdown/MarkdownRenderer", () => ({
+vi.mock("~/components/markdown/markdown-renderer", () => ({
     MarkdownRenderer: ({ content }: { content: string }) => (
         <div data-testid="markdown-renderer">{content}</div>
     ),
 }));
 
-vi.mock("~/components/markdown/MarkdownEditor", () => ({
+vi.mock("~/components/markdown/markdown-editor", () => ({
     MarkdownEditor: (props: {
         value?: string;
         onChange?: (v: string) => void;

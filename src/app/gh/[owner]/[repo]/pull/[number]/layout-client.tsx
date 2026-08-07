@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { ResizableLayout } from "~/components/ResizableLayout";
+import { ResizableLayout } from "~/components/resizable-layout";
 import { isChangesPage } from "~/utils/route";
 
 export type PullRequestClientLayoutProps = {

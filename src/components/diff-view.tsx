@@ -15,12 +15,12 @@ import {
     useRef,
     useState,
 } from "react";
-import { useFileContent } from "~/hooks/useFileContent";
+import { useFileContent } from "~/hooks/use-file-content";
 import type { ReviewComment } from "~/server/github";
 import { filenameHash } from "~/utils/filename-hash";
-import { InlineCommentThread } from "./InlineCommentThread";
-import type { FooterAction } from "./markdown/MarkdownEditor";
-import { MarkdownEditor } from "./markdown/MarkdownEditor";
+import { InlineCommentThread } from "./inline-comment-thread";
+import type { FooterAction } from "./markdown/markdown-editor";
+import { MarkdownEditor } from "./markdown/markdown-editor";
 
 // Breathing room between the sticky bars and the line a permalink scrolls to.
 const SCROLL_TARGET_PADDING = 12;

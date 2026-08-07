@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { Async } from "~/components/async";
 import { CommitSubject } from "~/components/commit-subject";
-import { MarkdownRenderer } from "~/components/markdown/MarkdownRenderer";
+import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import {
     HoverCard,
     HoverCardContent,
