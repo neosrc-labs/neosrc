@@ -13,6 +13,12 @@ setDefaultResultOrder("ipv4first");
 
 /** @type {import("next").NextConfig} */
 const config = {
+    logging: {
+        incomingRequests: {
+            ignore: [/^\/api\/trpc/],
+        },
+    },
+    serverExternalPackages: ["pino", "pino-pretty"],
     async headers() {
         return [
             {

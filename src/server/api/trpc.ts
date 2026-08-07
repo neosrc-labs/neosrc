@@ -14,6 +14,7 @@ import { env } from "~/env";
 
 import { getSession } from "~/server/auth";
 import { db } from "~/server/db";
+import { log } from "~/logging";
 
 /**
  * 1. CONTEXT
@@ -68,6 +69,34 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
  */
 export const createCallerFactory = t.createCallerFactory;
 
+const loggingMiddleware = t.middleware(async ({ path, type, ctx, next }) => {
+    const start = performance.now();
+    const result = await next();
+    const durationMs = Number((performance.now() - start).toFixed(2));
+
+    const metadata = {
+        type,
+        path,
+        durationMs,
+        userId: ctx.session?.user?.id ?? "anonymous",
+    };
+
+    if (result.ok) {
+        log.info(metadata, `[tRPC] ${type} ${path} completed`);
+    } else {
+        log.error(
+            {
+                ...metadata,
+                errorCode: result.error.code,
+                cause: result.error.cause,
+            },
+            `[tRPC] ${type} ${path} failed`,
+        );
+    }
+
+    return result;
+});
+
 /**
  * 3. ROUTER & PROCEDURE (THE IMPORTANT BIT)
  *
@@ -89,7 +118,7 @@ export const createTRPCRouter = t.router;
  * guarantee that a user querying is authorized, but you can still access user session data if they
  * are logged in.
  */
-export const publicProcedure = t.procedure;
+export const publicProcedure = t.procedure.use(loggingMiddleware);
 
 /**
  * Protected (authenticated) procedure
@@ -99,15 +128,17 @@ export const publicProcedure = t.procedure;
  *
  * @see https://trpc.io/docs/procedures
  */
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
-    if (!ctx.session?.user && !env.GITHUB_ANONYMOUS_TOKEN) {
-        throw new TRPCError({ code: "UNAUTHORIZED" });
-    }
-    return next({
-        ctx: {
-            session: ctx.session
-                ? { ...ctx.session, user: ctx.session.user }
-                : null,
-        },
+export const protectedProcedure = t.procedure
+    .use(loggingMiddleware)
+    .use(({ ctx, next }) => {
+        if (!ctx.session?.user && !env.GITHUB_ANONYMOUS_TOKEN) {
+            throw new TRPCError({ code: "UNAUTHORIZED" });
+        }
+        return next({
+            ctx: {
+                session: ctx.session
+                    ? { ...ctx.session, user: ctx.session.user }
+                    : null,
+            },
+        });
     });
-});
