@@ -553,6 +553,7 @@ function Comment({
         <>
             <CommentCard
                 user={comment.user}
+                userHref={comment.user?.html_url}
                 createdAt={comment.created_at}
                 authorAssociation={comment.author_association}
                 isPending={isPending}

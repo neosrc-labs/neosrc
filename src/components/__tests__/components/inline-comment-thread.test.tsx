@@ -102,12 +102,14 @@ vi.mock("~/components/comment-card", () => ({
         children,
         headerActions,
         footer,
+        userHref,
     }: {
         children?: React.ReactNode;
         headerActions?: React.ReactNode;
         footer?: React.ReactNode;
+        userHref?: string;
     }) => (
-        <div data-testid="comment-card">
+        <div data-testid="comment-card" data-user-href={userHref}>
             {headerActions}
             <div data-testid="comment-body">{children}</div>
             {footer}
@@ -354,6 +356,10 @@ describe("InlineCommentThread", () => {
         render(<InlineCommentThread {...defaultProps} />);
 
         expect(screen.getByTestId("comment-card")).toBeInTheDocument();
+        expect(screen.getByTestId("comment-card")).toHaveAttribute(
+            "data-user-href",
+            "https://github.com/author",
+        );
         expect(screen.getByTestId("comment-body")).toHaveTextContent(
             "Test comment body",
         );
@@ -440,6 +446,12 @@ describe("InlineCommentThread", () => {
 
         const commentCards = screen.getAllByTestId("comment-card");
         expect(commentCards).toHaveLength(2);
+        for (const card of commentCards) {
+            expect(card).toHaveAttribute(
+                "data-user-href",
+                "https://github.com/author",
+            );
+        }
         const bodies = screen.getAllByTestId("comment-body");
         expect(bodies[0]).toHaveTextContent("Test comment body");
         expect(bodies[1]).toHaveTextContent("A reply to the parent comment");

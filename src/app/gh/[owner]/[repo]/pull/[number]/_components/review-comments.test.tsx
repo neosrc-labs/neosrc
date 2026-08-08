@@ -108,12 +108,14 @@ vi.mock("~/components/comment-card", () => ({
         children,
         headerActions,
         footer,
+        userHref,
     }: {
         children?: React.ReactNode;
         headerActions?: React.ReactNode;
         footer?: React.ReactNode;
+        userHref?: string;
     }) => (
-        <div data-testid="comment-card">
+        <div data-testid="comment-card" data-user-href={userHref}>
             {headerActions}
             <div data-testid="comment-body">{children}</div>
             {footer}
@@ -312,6 +314,9 @@ describe("ReviewComments", () => {
 
         // Unresolved thread: full body, no Resolved label, no Show thread.
         const unresolvedBlock = blocks[0]!;
+        expect(
+            within(unresolvedBlock).getByTestId("comment-card"),
+        ).toHaveAttribute("data-user-href", "https://github.com/author");
         expect(
             within(unresolvedBlock).getByTestId("markdown-renderer"),
         ).toHaveTextContent("So I understand that my voice does not have");

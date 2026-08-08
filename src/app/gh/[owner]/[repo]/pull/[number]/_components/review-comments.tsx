@@ -652,6 +652,7 @@ function CommentBlock({
                 )}
                 <CommentCard
                     user={comment.user}
+                    userHref={comment.user?.html_url}
                     createdAt={comment.created_at}
                     authorAssociation={comment.author_association}
                     isPending={state === "pending"}
@@ -757,6 +758,7 @@ function CommentBlock({
                         <div key={reply.id} className="mt-2 pl-3">
                             <CommentCard
                                 user={reply.user}
+                                userHref={reply.user?.html_url}
                                 createdAt={reply.created_at}
                                 authorAssociation={reply.author_association}
                                 owner={owner}
