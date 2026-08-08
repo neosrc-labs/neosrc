@@ -1103,17 +1103,88 @@ export const getUserRepoPermission = cache(
             `permission:${owner}:${repo}:${userId}`,
             async () => {
                 const octokit = createOctokit(accessToken);
-                const response =
-                    await octokit.rest.repos.getCollaboratorPermissionLevel({
-                        owner,
-                        repo,
-                        username,
-                    });
-                return response.data.permission as
-                    | "admin"
-                    | "write"
-                    | "read"
-                    | "none";
+                try {
+                    const response =
+                        await octokit.rest.repos.getCollaboratorPermissionLevel(
+                            {
+                                owner,
+                                repo,
+                                username,
+                            },
+                        );
+                    return response.data.permission as
+                        | "admin"
+                        | "write"
+                        | "read"
+                        | "none";
+                } catch (error) {
+                    const status = (error as { status?: number } | null)
+                        ?.status;
+                    // 404: the user is not a collaborator, so they have no
+                    // access. Return "none" so it is cached instead of
+                    // re-fetching on every page view.
+                    if (status === 404) {
+                        return "none" as const;
+                    }
+                    throw error;
+                }
+            },
+            { staleAfter: 5 * 60 * 1000, deleteAfter: 6 * 60 * 60 * 1000 },
+        );
+    },
+);
+
+/**
+ * Resolves every collaborator's effective base permission for the repo in one
+ * (paginated) call, keyed by login. The endpoint requires write/maintain/admin
+ * access, so this returns null when the caller cannot list collaborators;
+ * callers should fall back to per-user lookups via getUserRepoPermission.
+ * Absent users have no access.
+ */
+export const getRepoCollaboratorPermissions = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+    ): Promise<Record<string, "admin" | "write" | "read" | "none"> | null> => {
+        return withStaleWhileRevalidate(
+            `gh:collaborators:${owner}:${repo}`,
+            async () => {
+                const octokit = createOctokit(accessToken);
+                const permissions: Record<
+                    string,
+                    "admin" | "write" | "read" | "none"
+                > = {};
+                try {
+                    let page = 1;
+                    for (;;) {
+                        const response =
+                            await octokit.rest.repos.listCollaborators({
+                                owner,
+                                repo,
+                                per_page: 100,
+                                page,
+                            });
+                        for (const collaborator of response.data) {
+                            const p = collaborator.permissions;
+                            // The permissions hash uses the legacy base roles:
+                            // maintain implies push (write) and triage implies
+                            // pull (read), matching getCollaboratorPermissionLevel.
+                            permissions[collaborator.login] = p?.admin
+                                ? "admin"
+                                : p?.push
+                                  ? "write"
+                                  : p?.pull
+                                    ? "read"
+                                    : "none";
+                        }
+                        if (response.data.length < 100) break;
+                        page += 1;
+                    }
+                    return permissions;
+                } catch {
+                    return null;
+                }
             },
             { staleAfter: 5 * 60 * 1000, deleteAfter: 6 * 60 * 60 * 1000 },
         );

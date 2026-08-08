@@ -478,6 +478,10 @@ export type GQLPullRequestReview = {
     isMinimized: boolean;
     minimizedReason: string | null;
     reactions: { nodes: (GQLReactionNode | null)[] };
+    /** Repo permission of the review author. Set server-side for approved
+     *  reviews to decide the green/gray approval check; undefined when
+     *  unknown (e.g. anonymous viewer or a failed lookup). */
+    authorPermission?: "admin" | "write" | "read" | "none";
 };
 
 export type GQLHeadRefForcePushedEvent = {

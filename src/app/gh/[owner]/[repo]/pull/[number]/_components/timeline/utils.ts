@@ -1,4 +1,7 @@
-import type { GQLTimelineEvent } from "~/server/github-graphql";
+import type {
+    GQLPullRequestReview,
+    GQLTimelineEvent,
+} from "~/server/github-graphql";
 import type { LabelChange, TimelineWrapper } from "./types";
 
 const MAX_LABEL_GAP_MS = 3 * 60 * 60 * 1000;
@@ -112,6 +115,17 @@ function filterTimelineEvents(events: GQLTimelineEvent[]): GQLTimelineEvent[] {
         }
         return true;
     });
+}
+
+/**
+ * GitHub shows a green approval check when the reviewer has write access to
+ * the repository and a gray check otherwise. An undefined permission (e.g.
+ * anonymous viewer, unresolved lookup) keeps the green check.
+ */
+export function approvalHasWriteAccess(
+    permission: GQLPullRequestReview["authorPermission"],
+): boolean {
+    return permission !== "read" && permission !== "none";
 }
 
 export { aggregateEvents, filterTimelineEvents };

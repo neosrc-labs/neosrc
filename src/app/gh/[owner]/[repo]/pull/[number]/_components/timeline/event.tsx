@@ -61,6 +61,7 @@ import { ReviewDismissedContent } from "./content/review-dismissed";
 import { ReviewRequestEventContent } from "./content/review-request-event";
 import { StateEventContent } from "./content/state-event";
 import type { TimelineWrapper } from "./types";
+import { approvalHasWriteAccess } from "./utils";
 
 export const formatReason = (reason: string) =>
     reason
@@ -275,7 +276,9 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
     const isMerged = typename === "MergedEvent";
 
     const circleClass = isApproved
-        ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-green-500"
+        ? approvalHasWriteAccess(event.authorPermission)
+            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-green-500"
+            : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-surface ring-1 ring-border"
         : isChangesRequested
           ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-red-500"
           : isMerged
@@ -285,8 +288,13 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
     let icon = iconMap[typename] ?? <Circle size={ICON_SIZE} />;
 
     if (typename === "PullRequestReview") {
-        if (event.state === "APPROVED")
-            icon = <Check className="text-white" size={ICON_SIZE} />;
+        if (event.state === "APPROVED") {
+            icon = approvalHasWriteAccess(event.authorPermission) ? (
+                <Check className="text-white" size={ICON_SIZE} />
+            ) : (
+                <Check className="text-text-muted" size={ICON_SIZE} />
+            );
+        }
         if (event.state === "CHANGES_REQUESTED")
             icon = <FileText className="text-white" size={ICON_SIZE} />;
     }
