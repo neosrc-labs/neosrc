@@ -644,6 +644,20 @@ function TitleRow({
                                             ) : null
                                         }
                                     </Async>
+                                    <div className="ml-auto flex items-center gap-1.5 text-sm">
+                                        {pullRequest.additions > 0 && (
+                                            <span className="font-medium text-green-600 dark:text-green-500">
+                                                +
+                                                {pullRequest.additions.toLocaleString()}
+                                            </span>
+                                        )}
+                                        {pullRequest.deletions > 0 && (
+                                            <span className="font-medium text-red-600 dark:text-red-500">
+                                                -
+                                                {pullRequest.deletions.toLocaleString()}
+                                            </span>
+                                        )}
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -716,20 +730,10 @@ function SubtitleActionRow({
                             }
                         </Async>
                     ) : null}
-                    <div className="ml-auto flex items-center gap-1.5 text-sm">
-                        {pullRequest.additions > 0 && (
-                            <span className="font-medium text-green-600 dark:text-green-500">
-                                +{pullRequest.additions.toLocaleString()}
-                            </span>
-                        )}
-                        {pullRequest.deletions > 0 && (
-                            <span className="font-medium text-red-600 dark:text-red-500">
-                                -{pullRequest.deletions.toLocaleString()}
-                            </span>
-                        )}
-                    </div>
                     {actionSection && (
-                        <div className="flex items-center">{actionSection}</div>
+                        <div className="ml-auto flex items-center">
+                            {actionSection}
+                        </div>
                     )}
                 </div>
             )}
@@ -746,7 +750,6 @@ function Branches({
     repo: string;
     pullRequest: PullsGetResponseData;
 }) {
-    const width = useMainSectionWidth();
     const baseRepo = pullRequest.base.repo?.full_name ?? `${owner}/${repo}`;
     const headRepo = pullRequest.head.repo?.full_name ?? `${owner}/${repo}`;
     const headLabel =
@@ -771,9 +774,7 @@ function Branches({
                 className={branchLinkClassName}
             >
                 <span className="select-all" title={pullRequest.head.label}>
-                    {!width || width > 1100
-                        ? headLabel
-                        : `${headLabel.substring(0, 25)}...`}
+                    {headLabel}
                 </span>
             </a>
         </div>
