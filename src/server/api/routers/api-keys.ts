@@ -71,11 +71,7 @@ export const apiKeysRouter = createTRPCRouter({
             z.object({
                 name: z.string().min(1).max(255),
                 permissions: z.array(permissionSchema).min(1),
-                expirationTimestamp: z
-                    .string()
-                    .datetime()
-                    .nullable()
-                    .optional(),
+                expirationTimestamp: z.iso.datetime().nullable().optional(),
             }),
         )
         .mutation(async ({ ctx, input }) => {
