@@ -9,7 +9,7 @@ import {
 } from "~/server/api/routers/checks";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
-import { deleteCache, prCacheKey } from "~/server/cache";
+import { deleteCache, prCacheKey, readCache } from "~/server/cache";
 import {
     listAssignees as listCodebergAssignees,
     listLabels as listCodebergLabels,
@@ -36,6 +36,7 @@ import {
     markPullRequestAsDraft,
     markPullRequestAsReady,
     mergePullRequest,
+    type PullsGetResponseData,
     type ReviewComment2,
     removeAssigneesFromIssue,
     removeLabelFromIssue,
@@ -886,6 +887,14 @@ export const pullsRouter = createTRPCRouter({
                 input.repo,
                 input.number,
             );
+
+            // When the live head is ahead of the cached PR, drop the cache
+            // entry so the next page load fetches fresh PR data.
+            const cacheKey = prCacheKey(input.owner, input.repo, input.number);
+            const cachedPr = await readCache<PullsGetResponseData>(cacheKey);
+            if (headSha && cachedPr && cachedPr.head?.sha !== headSha) {
+                await deleteCache(cacheKey);
+            }
 
             return { headSha };
         }),
