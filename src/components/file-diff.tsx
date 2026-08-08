@@ -48,8 +48,6 @@ interface FileDiffProps {
     comments?: ReviewComment[];
     showComments?: boolean;
     pendingReviewId?: number | null;
-    showGeneratedDiff?: boolean;
-    onToggleGeneratedDiff?: () => void;
     performanceHidden?: boolean;
     showPerformanceDiff?: boolean;
     onTogglePerformanceDiff?: () => void;
@@ -65,8 +63,6 @@ export default function FileDiff({
     comments = [],
     showComments = true,
     pendingReviewId,
-    showGeneratedDiff = false,
-    onToggleGeneratedDiff,
     performanceHidden = false,
     showPerformanceDiff = true,
     onTogglePerformanceDiff,
@@ -88,8 +84,6 @@ export default function FileDiff({
     } = useFileDiffState({ owner, repo, number, filename: file.filename });
 
     const recentlyAddedIds = useRef(new Set<number>());
-
-    const generated = isGeneratedFile(file.filename);
 
     const isImage = isImageFile(file.filename) && !file.patch && baseSha;
 
@@ -235,9 +229,6 @@ export default function FileDiff({
                         performanceHidden={performanceHidden}
                         showPerformanceDiff={showPerformanceDiff}
                         onTogglePerformanceDiff={onTogglePerformanceDiff}
-                        generated={generated}
-                        showGeneratedDiff={showGeneratedDiff}
-                        onToggleGeneratedDiff={onToggleGeneratedDiff}
                         isSvg={isSvg}
                         svgContentUrls={svgContentUrls}
                         isImage={!!isImage}
@@ -291,7 +282,9 @@ function useFileDiffState({
         if (typeof window === "undefined") return false;
         return getStoredSet(getViewedKey(owner, repo, number)).has(filename);
     });
-    const [isCollapsed, setIsCollapsed] = useState(isViewed);
+    const [isCollapsed, setIsCollapsed] = useState(
+        () => isViewed || isGeneratedFile(filename),
+    );
     const [activeComment, setActiveComment] = useState<ActiveComment | null>(
         null,
     );
@@ -909,9 +902,6 @@ interface DiffContentProps {
     performanceHidden: boolean;
     showPerformanceDiff: boolean;
     onTogglePerformanceDiff?: () => void;
-    generated: boolean;
-    showGeneratedDiff: boolean;
-    onToggleGeneratedDiff?: () => void;
     isSvg: boolean;
     svgContentUrls: { oldUrl: string | null; newUrl: string | null } | null;
     isImage: boolean;
@@ -939,9 +929,6 @@ function DiffContent({
     performanceHidden,
     showPerformanceDiff,
     onTogglePerformanceDiff,
-    generated,
-    showGeneratedDiff,
-    onToggleGeneratedDiff,
     isSvg,
     svgContentUrls,
     isImage,
@@ -973,11 +960,6 @@ function DiffContent({
                       : "This diff is hidden to improve performance."
             }
             onShow={() => onTogglePerformanceDiff?.()}
-        />
-    ) : generated && !showGeneratedDiff ? (
-        <HiddenDiffNotice
-            message="This file is generated and hidden by default."
-            onShow={() => onToggleGeneratedDiff?.()}
         />
     ) : isSvg && svgContentUrls ? (
         <SvgDiff

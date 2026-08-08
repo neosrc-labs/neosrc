@@ -62,9 +62,6 @@ export function FilesSection({
     checkRunsPromise,
 }: FilesSectionProps) {
     const [showComments, setShowComments] = useState(true);
-    const [expandedGeneratedFiles, setExpandedGeneratedFiles] = useState(
-        () => new Set<string>(),
-    );
     const [expandedOverflowFiles, setExpandedOverflowFiles] = useState(
         () => new Set<string>(),
     );
@@ -115,18 +112,6 @@ export function FilesSection({
     }, [allComments, pendingReview]);
 
     const pendingReviewId = pendingReview?.reviewId ?? null;
-
-    const toggleGeneratedFile = useCallback((filename: string) => {
-        setExpandedGeneratedFiles((prev) => {
-            const next = new Set(prev);
-            if (next.has(filename)) {
-                next.delete(filename);
-            } else {
-                next.add(filename);
-            }
-            return next;
-        });
-    }, []);
 
     const toggleOverflowFile = useCallback((filename: string) => {
         setExpandedOverflowFiles((prev) => {
@@ -286,9 +271,6 @@ export function FilesSection({
                                         comments={fileComments}
                                         file={file}
                                         number={number.toString()}
-                                        onToggleGeneratedDiff={() =>
-                                            toggleGeneratedFile(file.filename)
-                                        }
                                         onTogglePerformanceDiff={() =>
                                             toggleOverflowFile(file.filename)
                                         }
@@ -297,15 +279,6 @@ export function FilesSection({
                                         performanceHidden={isOverflow}
                                         repo={repo}
                                         showComments={showComments}
-                                        showGeneratedDiff={
-                                            expandedGeneratedFiles.has(
-                                                file.filename,
-                                            ) ||
-                                            (isOverflow &&
-                                                expandedOverflowFiles.has(
-                                                    file.filename,
-                                                ))
-                                        }
                                         showPerformanceDiff={expandedOverflowFiles.has(
                                             file.filename,
                                         )}
