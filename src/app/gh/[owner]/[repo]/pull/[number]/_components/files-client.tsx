@@ -1,9 +1,15 @@
 "use client";
 
 import { MessageSquare, MessageSquareOff, RefreshCw } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Async } from "~/components/async";
 import FileDiff from "~/components/file-diff";
+import { CodeTitle } from "~/components/markdown/code-title";
+import {
+    extractPullRequestState,
+    StatusPill,
+} from "~/components/ui/status-pill";
 import { useFiles } from "~/hooks/files";
 import type {
     CheckRun,
@@ -14,6 +20,7 @@ import { api } from "~/trpc/react";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
 import { ActionSection } from "./action-section/actions-section";
+import { Branches } from "./description";
 
 function FileDiffSkeleton() {
     return (
@@ -165,37 +172,91 @@ export function FilesSection({
 
     return (
         <div>
-            <div className="sticky top-0 z-10 flex items-center justify-between bg-surface py-4 pr-2">
-                <div className="flex items-center gap-3">
-                    <h2 className="text-text-primary">
-                        Files Changed{!isLoading && ` (${allFiles.length})`}
-                    </h2>
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-surface py-2 pr-2">
+                <div className="min-w-0">
                     <Async promise={pullRequestPromise} fallback={null}>
                         {(pullRequest) => {
+                            if (!pullRequest.title) return null;
+
                             const displayedSha =
                                 commitSha ?? pullRequest.head?.sha;
-                            if (
-                                !displayedSha ||
-                                !currentHeadSha?.headSha ||
-                                displayedSha === currentHeadSha.headSha
-                            ) {
-                                return null;
-                            }
+                            const polledHeadSha = currentHeadSha?.headSha;
+                            const isOutdated =
+                                displayedSha !== undefined &&
+                                polledHeadSha !== undefined &&
+                                displayedSha !== polledHeadSha;
+
                             return (
-                                <button
-                                    type="button"
-                                    className="flex cursor-pointer items-center gap-2 rounded-md bg-orange-600 px-3 py-1.5 font-medium text-sm text-white ring-1 ring-orange-700 transition-colors hover:bg-orange-700"
-                                    onClick={handleRefresh}
-                                    title="Refresh to view the latest changes"
-                                >
-                                    <RefreshCw size={14} />
-                                    Refresh
-                                </button>
+                                <div className="flex min-w-0 items-center gap-3">
+                                    <div className="flex min-w-0 items-center gap-2">
+                                        <StatusPill
+                                            size="xs"
+                                            state={extractPullRequestState(
+                                                pullRequest,
+                                            )}
+                                        />
+                                        <h2 className="truncate font-semibold text-base text-text-primary">
+                                            <CodeTitle
+                                                provider="gh"
+                                                owner={owner}
+                                                repo={repo}
+                                            >
+                                                {pullRequest.title}
+                                            </CodeTitle>
+                                        </h2>
+                                    </div>
+                                    {isOutdated && (
+                                        <button
+                                            type="button"
+                                            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-md bg-orange-600 px-3 py-1.5 font-medium text-sm text-white ring-1 ring-orange-700 transition-colors hover:bg-orange-700"
+                                            onClick={handleRefresh}
+                                            title="Refresh to view the latest changes"
+                                        >
+                                            <RefreshCw size={14} />
+                                            Refresh
+                                        </button>
+                                    )}
+                                </div>
                             );
                         }}
                     </Async>
+                    <div className="mt-1 flex items-center gap-3 text-text-secondary text-xs">
+                        <Async promise={pullRequestPromise} fallback={null}>
+                            {(pullRequest) => {
+                                const user = pullRequest.user;
+                                const baseRef = pullRequest.base?.ref;
+                                const headRef = pullRequest.head?.ref;
+                                return (
+                                    <>
+                                        {user?.login ? (
+                                            <a
+                                                className="flex items-center gap-2"
+                                                href={user.html_url}
+                                            >
+                                                <Image
+                                                    alt={user.login}
+                                                    className="h-4 w-4 rounded-full"
+                                                    src={user.avatar_url}
+                                                    width={16}
+                                                    height={16}
+                                                />
+                                                {user.login}
+                                            </a>
+                                        ) : null}
+                                        {baseRef && headRef ? (
+                                            <Branches
+                                                owner={owner}
+                                                repo={repo}
+                                                pullRequest={pullRequest}
+                                            />
+                                        ) : null}
+                                    </>
+                                );
+                            }}
+                        </Async>
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex shrink-0 items-center gap-3">
                     <Async promise={pullRequestPromise}>
                         {(pullRequest) => (
                             <div className="flex items-center gap-1.5 text-sm">

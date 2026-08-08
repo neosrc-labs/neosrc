@@ -6,7 +6,13 @@ export type PullRequestState =
     | "queued";
 
 // FIXME: Refactor these types to play nice with both issues and pull requests
-export function StatusPill({ state }: { state: PullRequestState | string }) {
+export function StatusPill({
+    state,
+    size = "sm",
+}: {
+    state: PullRequestState | string;
+    size?: "sm" | "xs";
+}) {
     let statusText = "";
     let statusColor = "";
 
@@ -39,7 +45,9 @@ export function StatusPill({ state }: { state: PullRequestState | string }) {
     }
     return (
         <span
-            className={`inline-flex items-center rounded-full px-3 py-1 font-medium text-sm ${statusColor}`}
+            className={`inline-flex items-center rounded-full font-medium ${
+                size === "xs" ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm"
+            } ${statusColor}`}
         >
             {statusText}
         </span>

@@ -744,7 +744,7 @@ function SubtitleActionRow({
     );
 }
 
-function Branches({
+export function Branches({
     owner,
     repo,
     pullRequest,
