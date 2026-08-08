@@ -153,11 +153,7 @@ export function AuthorDropdown({
                 </div>
             )}
             placeholder="Filter users..."
-            emptyText={
-                isCustomAuthor && userNotFound
-                    ? "No users found"
-                    : "No users found"
-            }
+            emptyText="No users found"
             ariaLabel="Filter by author"
             onOpenChange={(open) => {
                 if (open) setEnabled(true);
