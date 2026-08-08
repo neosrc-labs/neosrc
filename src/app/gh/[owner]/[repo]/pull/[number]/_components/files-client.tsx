@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Async } from "~/components/async";
 import FileDiff from "~/components/file-diff";
+import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/code-title";
 import {
     extractPullRequestState,
@@ -229,19 +230,21 @@ export function FilesSection({
                                 return (
                                     <>
                                         {user?.login ? (
-                                            <a
-                                                className="flex items-center gap-2"
-                                                href={user.html_url}
-                                            >
-                                                <Image
-                                                    alt={user.login}
-                                                    className="h-4 w-4 rounded-full"
-                                                    src={user.avatar_url}
-                                                    width={16}
-                                                    height={16}
-                                                />
-                                                {user.login}
-                                            </a>
+                                            <UserHoverCard login={user.login}>
+                                                <a
+                                                    className="flex items-center gap-2"
+                                                    href={user.html_url}
+                                                >
+                                                    <Image
+                                                        alt={user.login}
+                                                        className="h-4 w-4 rounded-full"
+                                                        src={user.avatar_url}
+                                                        width={16}
+                                                        height={16}
+                                                    />
+                                                    {user.login}
+                                                </a>
+                                            </UserHoverCard>
                                         ) : null}
                                         {baseRef && headRef ? (
                                             <Branches
