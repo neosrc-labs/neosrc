@@ -14,6 +14,7 @@ import {
     User,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ElementType } from "react";
 import { useEffect, useMemo, useRef } from "react";
@@ -54,6 +55,11 @@ interface HeaderClientProps {
 
 const SKELETON_WIDTHS = [48, 56, 72, 52, 60, 44, 64];
 
+// Header repo data cache keyed by "provider/owner/repo". The header stays
+// mounted across client-side navigations, so this lets revisiting a repo
+// render its nav instantly instead of blanking it or showing a skeleton.
+const repoDataCache = new Map<string, HeaderRepoData>();
+
 export function HeaderClient({
     currentUserPromise,
     repoDataPromise,
@@ -77,15 +83,32 @@ export function HeaderClient({
         { provider, owner, repo },
         { enabled: !!owner && !!repo },
     );
-    const { data: clientCounts } = api.repos.getCountsByOwnerAndRepo.useQuery(
-        { provider, owner, repo },
-        { enabled: !!owner && !!repo },
-    );
+    const { data: clientCounts, refetch: refetchCounts } =
+        api.repos.getCountsByOwnerAndRepo.useQuery(
+            { provider, owner, repo },
+            { enabled: !!owner && !!repo },
+        );
 
     const clientFetchedData =
         clientRepoData && clientCounts
             ? { ...clientRepoData, ...clientCounts }
             : null;
+
+    // Refresh the open issues/PR counts on same-repo page transitions so the
+    // header counts always reflect the latest state. Cross-repo transitions
+    // already fetch fresh counts through the new query key.
+    const lastCountsNav = useRef({ pathname, owner, repo, provider });
+    useEffect(() => {
+        const prev = lastCountsNav.current;
+        lastCountsNav.current = { pathname, owner, repo, provider };
+        const repoChanged =
+            prev.owner !== owner ||
+            prev.repo !== repo ||
+            prev.provider !== provider;
+        if (prev.pathname !== pathname && !repoChanged) {
+            void refetchCounts();
+        }
+    }, [pathname, owner, repo, provider, refetchCounts]);
 
     const cachedDataRef = useRef<{
         currentUser: { login: string; avatarUrl: string } | null;
@@ -101,6 +124,7 @@ export function HeaderClient({
                     currentUser={cachedDataRef.current?.currentUser ?? null}
                     repoData={cachedDataRef.current?.repoData ?? null}
                     clientFetchedData={clientFetchedData}
+                    clientCounts={clientCounts}
                     initialOwner={initialOwner}
                     initialRepo={initialRepo}
                 />
@@ -114,6 +138,7 @@ export function HeaderClient({
                         currentUser={currentUser}
                         repoData={repoData}
                         clientFetchedData={clientFetchedData}
+                        clientCounts={clientCounts}
                         initialOwner={initialOwner}
                         initialRepo={initialRepo}
                     />
@@ -128,6 +153,7 @@ function HeaderContent({
     currentUser,
     repoData: serverRepoData,
     clientFetchedData,
+    clientCounts,
     initialOwner,
     initialRepo,
 }: {
@@ -135,6 +161,10 @@ function HeaderContent({
     currentUser: { login: string; avatarUrl: string } | null;
     repoData: HeaderRepoData | null;
     clientFetchedData?: HeaderRepoData | null;
+    clientCounts?: {
+        openIssuesCount: number;
+        openPullRequestsCount: number;
+    } | null;
     initialOwner: string | null;
     initialRepo: string | null;
 }) {
@@ -150,10 +180,37 @@ function HeaderContent({
     const provider = pathname.startsWith("/cb/") ? "cb" : "gh";
     const { isLeftOpen, isRightOpen, toggleLeft, toggleRight } = useSidebar();
 
-    const resolvedRepoData =
+    const cacheKey = owner && repo ? `${provider}/${owner}/${repo}` : null;
+
+    // Repo metadata: the server render covers the repo it was rendered for;
+    // client-side navigations fall back to the client fetch, then the cache.
+    const baseRepoData =
         owner === initialOwner && repo === initialRepo
             ? serverRepoData
-            : clientFetchedData;
+            : cacheKey
+              ? (clientFetchedData ?? repoDataCache.get(cacheKey) ?? null)
+              : (clientFetchedData ?? null);
+
+    // Counts always come from the freshest client fetch when available, so
+    // open issues/PR counts update on every page transition.
+    const resolvedRepoData = useMemo(() => {
+        if (!baseRepoData) return null;
+        return {
+            ...baseRepoData,
+            openIssuesCount:
+                clientCounts?.openIssuesCount ??
+                baseRepoData.openIssuesCount ??
+                null,
+            openPullRequestsCount:
+                clientCounts?.openPullRequestsCount ??
+                baseRepoData.openPullRequestsCount ??
+                null,
+        };
+    }, [baseRepoData, clientCounts]);
+
+    if (resolvedRepoData && cacheKey) {
+        repoDataCache.set(cacheKey, resolvedRepoData);
+    }
 
     const headerRef = useRef<HTMLDivElement>(null);
     const leftToggleRef = useRef<HTMLButtonElement>(null);
@@ -301,7 +358,7 @@ function HeaderContent({
                 <div className="px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <a href="/">
+                            <Link href="/">
                                 <Image
                                     src="/logo.svg"
                                     alt="Neosrc"
@@ -309,7 +366,7 @@ function HeaderContent({
                                     height={32}
                                     className="size-8 shrink-0"
                                 />
-                            </a>
+                            </Link>
                             {showRepoNav && (
                                 <div className="flex items-center gap-1.5">
                                     <a
@@ -390,7 +447,7 @@ function HeaderContent({
                                 </a>
                             )}
                             <ThemeToggle />
-                            <a
+                            <Link
                                 className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
                                 href="/profile"
                             >
@@ -408,7 +465,7 @@ function HeaderContent({
                                 <span className="sr-only">
                                     {currentUser?.login ?? "Profile"}
                                 </span>
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -417,26 +474,42 @@ function HeaderContent({
                     <nav aria-label="Repository navigation">
                         <div className="flex gap-0 overflow-x-auto px-4 sm:px-6 lg:px-8">
                             {tabs.length > 0
-                                ? tabs.map((tab) => (
-                                      <a
-                                          key={tab.path}
-                                          href={tab.path}
-                                          className={cn(
-                                              "flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 font-medium text-sm transition-colors",
-                                              tab.isActive
-                                                  ? "border-blue-500 text-text-primary"
-                                                  : "border-transparent text-text-secondary hover:border-gray-300 hover:text-text-primary dark:hover:border-zinc-600 dark:hover:text-zinc-100",
-                                          )}
-                                      >
-                                          <tab.icon className="size-4" />
-                                          {tab.label}
-                                          {tab.count != null && (
-                                              <span className="text-text-muted">
-                                                  {tab.count.toLocaleString()}
-                                              </span>
-                                          )}
-                                      </a>
-                                  ))
+                                ? tabs.map((tab) => {
+                                      const className = cn(
+                                          "flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 font-medium text-sm transition-colors",
+                                          tab.isActive
+                                              ? "border-blue-500 text-text-primary"
+                                              : "border-transparent text-text-secondary hover:border-gray-300 hover:text-text-primary dark:hover:border-zinc-600 dark:hover:text-zinc-100",
+                                      );
+                                      const children = (
+                                          <>
+                                              <tab.icon className="size-4" />
+                                              {tab.label}
+                                              {tab.count != null && (
+                                                  <span className="text-text-muted">
+                                                      {tab.count.toLocaleString()}
+                                                  </span>
+                                              )}
+                                          </>
+                                      );
+                                      return tab.path.startsWith("/") ? (
+                                          <Link
+                                              key={tab.path}
+                                              href={tab.path}
+                                              className={className}
+                                          >
+                                              {children}
+                                          </Link>
+                                      ) : (
+                                          <a
+                                              key={tab.path}
+                                              href={tab.path}
+                                              className={className}
+                                          >
+                                              {children}
+                                          </a>
+                                      );
+                                  })
                                 : SKELETON_WIDTHS.map((w) => (
                                       <div
                                           key={`skeleton-${w}`}
