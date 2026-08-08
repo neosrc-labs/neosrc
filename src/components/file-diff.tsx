@@ -356,9 +356,7 @@ function useFileDiffState({
         }
         setStoredSet(key, viewed);
         setIsViewed(!isViewed);
-        if (!isViewed && !isCollapsed) {
-            toggleCollapsed();
-        } else if (isViewed && isCollapsed) {
+        if (isViewed === isCollapsed) {
             toggleCollapsed();
         }
         window.dispatchEvent(new Event("file-viewed-changed"));
