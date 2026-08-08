@@ -57,14 +57,14 @@ const STATUS_CONFIG: Record<
 > = {
     draft: {
         icon: GitPullRequestDraft,
-        color: "text-text-tertiary",
+        color: "text-state-draft",
     },
-    open: { icon: GitPullRequest, color: "text-green-600 dark:text-green-500" },
+    open: { icon: GitPullRequest, color: "text-state-open" },
     closed: {
         icon: GitPullRequestClosed,
-        color: "text-red-600 dark:text-red-500",
+        color: "text-state-closed",
     },
-    merged: { icon: GitMerge, color: "text-purple-600 dark:text-purple-500" },
+    merged: { icon: GitMerge, color: "text-state-merged" },
 } as const;
 
 export function PullRequestRow({
@@ -104,7 +104,7 @@ export function PullRequestRow({
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                     {pr.draft && (
-                        <span className="inline-flex items-center rounded-full border border-gray-300 px-2 py-0.5 font-medium text-[10px] text-text-secondary uppercase tracking-wide dark:border-zinc-600">
+                        <span className="inline-flex items-center rounded-full border border-gray-300 px-2 py-0.5 font-medium text-[10px] text-state-draft uppercase tracking-wide dark:border-zinc-600">
                             Draft
                         </span>
                     )}

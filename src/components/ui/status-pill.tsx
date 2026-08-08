@@ -13,28 +13,28 @@ export function StatusPill({ state }: { state: PullRequestState | string }) {
     switch (state) {
         case "merged":
             statusText = "Merged";
-            statusColor = "bg-violet-600 text-white";
+            statusColor = "bg-state-merged text-white";
             break;
         case "open":
             statusText = "Open";
-            statusColor = "bg-green-600 text-white";
+            statusColor = "bg-state-open text-white";
             break;
         case "draft":
             statusText = "Draft";
-            statusColor = "bg-zinc-500 text-white";
+            statusColor = "bg-state-draft text-white";
             break;
         case "closed":
             statusText = "Closed";
-            statusColor = "bg-red-600 text-white";
+            statusColor = "bg-state-closed text-white";
             break;
         case "queued":
             statusText = "Queued";
-            statusColor = "bg-yellow-700 text-white";
+            statusColor = "bg-state-queued text-white";
             break;
         default:
             console.warn("unsupported state: ", state);
             statusText = "Unknown";
-            statusColor = "bg-gray-700 text-white";
+            statusColor = "bg-state-unknown text-white";
             break;
     }
     return (

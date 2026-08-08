@@ -388,7 +388,9 @@ function CannotMerge({
             <GitMerge
                 size={14}
                 className={
-                    variant === "normal" ? "text-text-muted" : "text-red-500"
+                    variant === "normal"
+                        ? "text-text-muted"
+                        : "text-state-closed"
                 }
             />
 

@@ -43,9 +43,9 @@ export function IssueRow({
         <div className="flex items-start gap-3 border-border-subtle border-b px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-zinc-900/50">
             <div className="mt-0.5 shrink-0">
                 {issue.state === "open" ? (
-                    <CircleCheck className="size-4 text-green-600 dark:text-green-500" />
+                    <CircleCheck className="size-4 text-state-open" />
                 ) : (
-                    <Circle className="size-4 text-red-600 dark:text-red-500" />
+                    <Circle className="size-4 text-state-closed" />
                 )}
             </div>
             <div className="min-w-0 flex-1">

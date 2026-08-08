@@ -225,24 +225,24 @@ export function TimelineSection({
         { bg: string; text: string; dot: string }
     > = {
         QUEUED: {
-            bg: "bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800",
-            text: "text-blue-700 dark:text-blue-300",
-            dot: "bg-blue-500",
+            bg: "bg-state-queued/10 border-state-queued/25 dark:bg-state-queued/20 dark:border-state-queued/40",
+            text: "text-state-queued",
+            dot: "bg-state-queued",
         },
         AWAITING_CHECKS: {
-            bg: "bg-yellow-50 border-yellow-200 dark:bg-yellow-950/30 dark:border-yellow-800",
-            text: "text-yellow-700 dark:text-yellow-300",
-            dot: "bg-yellow-500",
+            bg: "bg-state-queued/10 border-state-queued/25 dark:bg-state-queued/20 dark:border-state-queued/40",
+            text: "text-state-queued",
+            dot: "bg-state-queued",
         },
         MERGEABLE: {
-            bg: "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800",
-            text: "text-green-700 dark:text-green-300",
-            dot: "bg-green-500",
+            bg: "bg-state-open/10 border-state-open/25 dark:bg-state-open/20 dark:border-state-open/40",
+            text: "text-state-open",
+            dot: "bg-state-open",
         },
         UNMERGEABLE: {
-            bg: "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800",
-            text: "text-red-700 dark:text-red-300",
-            dot: "bg-red-500",
+            bg: "bg-state-closed/10 border-state-closed/25 dark:bg-state-closed/20 dark:border-state-closed/40",
+            text: "text-state-closed",
+            dot: "bg-state-closed",
         },
         LOCKED: {
             bg: "bg-surface-secondary border-border /30",

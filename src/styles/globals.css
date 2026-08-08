@@ -45,6 +45,14 @@
     --color-text-label: #374151;
     --color-destructive: #ef4444;
     --color-destructive-foreground: #ffffff;
+
+    /* Merge/issue state colors */
+    --color-state-merged: #7c3aed; /* violet-600 */
+    --color-state-open: #16a34a; /* green-600 */
+    --color-state-closed: #dc2626; /* red-600 */
+    --color-state-draft: #71717a; /* zinc-500 */
+    --color-state-queued: #a16207; /* yellow-700 */
+    --color-state-unknown: #374151; /* gray-700 */
 }
 
 .check-pending-dot {

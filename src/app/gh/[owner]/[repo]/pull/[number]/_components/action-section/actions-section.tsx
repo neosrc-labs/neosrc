@@ -706,12 +706,9 @@ function Title({
 
 function MergedStatus() {
     return (
-        <div className="flex items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-1.5 py-2 sm:px-3 dark:border-violet-900/50 dark:bg-violet-950/30">
-            <GitMerge
-                size={14}
-                className="text-violet-600 dark:text-violet-400"
-            />
-            <span className="font-medium text-violet-700 text-xs dark:text-violet-300">
+        <div className="flex items-center gap-1.5 rounded-md border border-state-merged/25 bg-state-merged/10 px-1.5 py-2 sm:px-3 dark:border-state-merged/50 dark:bg-state-merged/20">
+            <GitMerge size={14} className="text-state-merged" />
+            <span className="font-medium text-state-merged text-xs">
                 Merged
             </span>
         </div>

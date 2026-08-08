@@ -225,11 +225,14 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
     const iconMap: Record<string, React.ReactNode> = {
         PullRequestReview: <Eye size={ICON_SIZE} />,
         ClosedEvent: (
-            <Circle className="fill-red-500/20 text-red-500" size={ICON_SIZE} />
+            <Circle
+                className="fill-state-closed/20 text-state-closed"
+                size={ICON_SIZE}
+            />
         ),
         ReopenedEvent: (
             <Circle
-                className="fill-green-500/20 text-green-500"
+                className="fill-state-open/20 text-state-open"
                 size={ICON_SIZE}
             />
         ),
@@ -260,12 +263,18 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
         AutoMergeEnabledEvent: (
             <ListOrdered className="text-blue-500" size={ICON_SIZE} />
         ),
-        AutoMergeDisabledEvent: <X className="text-red-400" size={ICON_SIZE} />,
-        AddedToMergeQueueEvent: <Clock size={ICON_SIZE} />,
-        RemovedFromMergeQueueEvent: (
-            <X className="text-red-400" size={ICON_SIZE} />
+        AutoMergeDisabledEvent: (
+            <X className="text-state-closed" size={ICON_SIZE} />
         ),
-        ReviewDismissedEvent: <X className="text-red-400" size={ICON_SIZE} />,
+        AddedToMergeQueueEvent: (
+            <Clock className="text-state-queued" size={ICON_SIZE} />
+        ),
+        RemovedFromMergeQueueEvent: (
+            <X className="text-state-closed" size={ICON_SIZE} />
+        ),
+        ReviewDismissedEvent: (
+            <X className="text-state-closed" size={ICON_SIZE} />
+        ),
     };
 
     const typename = event.__typename;
@@ -277,12 +286,12 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
 
     const circleClass = isApproved
         ? approvalHasWriteAccess(event.authorPermission)
-            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-green-500"
+            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-open"
             : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-surface ring-1 ring-border"
         : isChangesRequested
-          ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-red-500"
+          ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-closed"
           : isMerged
-            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-purple-500"
+            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-merged"
             : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-surface ring-1 ring-border";
 
     let icon = iconMap[typename] ?? <Circle size={ICON_SIZE} />;

@@ -79,10 +79,10 @@ export function StackList({
 }
 
 function prCircleFill(pr: StackEntry) {
-    if (pr.draft) return "bg-text-secondary";
-    if (pr.state === "merged") return "bg-purple-600";
-    if (pr.state === "closed") return "bg-red-600";
-    return "bg-green-600";
+    if (pr.draft) return "bg-state-draft";
+    if (pr.state === "merged") return "bg-state-merged";
+    if (pr.state === "closed") return "bg-state-closed";
+    return "bg-state-open";
 }
 
 function PrStateIcon({ pr }: { pr: StackEntry }) {
