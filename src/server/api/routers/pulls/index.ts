@@ -47,6 +47,7 @@ import {
     updatePullRequest,
     updatePullRequestReview,
 } from "~/server/github";
+import { getPullRequestHeadShaGraphQL } from "~/server/github-graphql";
 import { CodebergPullRequestProvider } from "./codeberg";
 import { GitHubPullRequestProvider } from "./github";
 import type { Ctx } from "./provider";
@@ -863,6 +864,30 @@ export const pullsRouter = createTRPCRouter({
                 },
                 {},
             );
+        }),
+
+    headSha: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session?.user?.id,
+            );
+
+            const headSha = await getPullRequestHeadShaGraphQL(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+            );
+
+            return { headSha };
         }),
 
     getMergeRequirements: protectedProcedure

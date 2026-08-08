@@ -384,6 +384,16 @@ query PullRequestCommits(
 }
 `;
 
+const PULL_REQUEST_HEAD_SHA_QUERY = `
+query PullRequestHeadSha($owner: String!, $repo: String!, $number: Int!) {
+	repository(owner: $owner, name: $repo) {
+		pullRequest(number: $number) {
+			headRefOid
+		}
+	}
+}
+`;
+
 const COMMIT_BY_OID_QUERY = `
 ${SIMPLE_USER_FRAGMENT}
 ${COMMIT_FIELDS_FRAGMENT}
@@ -1476,6 +1486,29 @@ export async function getPullRequestCommitsGraphQL(
             result.repository.pullRequest.commits.pageInfo.endCursor ??
             undefined,
     };
+}
+
+export async function getPullRequestHeadShaGraphQL(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+): Promise<string | null> {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const result = await graphql<{
+        repository: {
+            pullRequest: { headRefOid: string | null } | null;
+        };
+    }>(PULL_REQUEST_HEAD_SHA_QUERY, {
+        owner,
+        repo,
+        number: pullNumber,
+    });
+
+    return result.repository.pullRequest?.headRefOid ?? null;
 }
 
 export async function getCommitGraphQL(

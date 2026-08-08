@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageSquare, MessageSquareOff } from "lucide-react";
+import { MessageSquare, MessageSquareOff, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Async } from "~/components/async";
 import FileDiff from "~/components/file-diff";
@@ -72,6 +72,16 @@ export function FilesSection({
         number,
         commitSha,
     });
+
+    // Poll the PR head so we can detect pushes made after the page rendered.
+    const { data: currentHeadSha } = api.pulls.headSha.useQuery(
+        { owner, repo, number },
+        { refetchInterval: 15_000 },
+    );
+
+    const handleRefresh = useCallback(() => {
+        window.location.href = `/gh/${owner}/${repo}/pull/${number}/changes`;
+    }, [owner, repo, number]);
 
     const [viewedCount, setViewedCount] = useState(0);
 
@@ -156,9 +166,35 @@ export function FilesSection({
     return (
         <div>
             <div className="sticky top-0 z-10 flex items-center justify-between bg-surface py-4 pr-2">
-                <h2 className="text-text-primary">
-                    Files Changed{!isLoading && ` (${allFiles.length})`}
-                </h2>
+                <div className="flex items-center gap-3">
+                    <h2 className="text-text-primary">
+                        Files Changed{!isLoading && ` (${allFiles.length})`}
+                    </h2>
+                    <Async promise={pullRequestPromise} fallback={null}>
+                        {(pullRequest) => {
+                            const displayedSha =
+                                commitSha ?? pullRequest.head?.sha;
+                            if (
+                                !displayedSha ||
+                                !currentHeadSha?.headSha ||
+                                displayedSha === currentHeadSha.headSha
+                            ) {
+                                return null;
+                            }
+                            return (
+                                <button
+                                    type="button"
+                                    className="flex cursor-pointer items-center gap-2 rounded-md bg-orange-600 px-3 py-1.5 font-medium text-sm text-white ring-1 ring-orange-700 transition-colors hover:bg-orange-700"
+                                    onClick={handleRefresh}
+                                    title="Refresh to view the latest changes"
+                                >
+                                    <RefreshCw size={14} />
+                                    Refresh
+                                </button>
+                            );
+                        }}
+                    </Async>
+                </div>
                 <div className="flex items-center gap-3">
                     <Async promise={pullRequestPromise}>
                         {(pullRequest) => (
