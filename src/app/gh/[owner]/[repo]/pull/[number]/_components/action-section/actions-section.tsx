@@ -1,6 +1,6 @@
 "use client";
 
-import { GitMerge, Undo2 } from "lucide-react";
+import { Undo2 } from "lucide-react";
 import Image from "next/image";
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
@@ -392,7 +392,6 @@ function Buttons({
             )}
             {effectiveMerged && (
                 <div className="flex items-center gap-2">
-                    {!isHeader && <MergedStatus />}
                     {canWrite && canInteract ? (
                         <RevertButton
                             owner={owner}
@@ -700,17 +699,6 @@ function Title({
                     </NextLink>
                 </UserHoverCard>
             )}
-        </div>
-    );
-}
-
-function MergedStatus() {
-    return (
-        <div className="flex items-center gap-1.5 rounded-md border border-state-merged/25 bg-state-merged/10 px-1.5 py-2 sm:px-3 dark:border-state-merged/50 dark:bg-state-merged/20">
-            <GitMerge size={14} className="text-state-merged" />
-            <span className="font-medium text-state-merged text-xs">
-                Merged
-            </span>
         </div>
     );
 }
