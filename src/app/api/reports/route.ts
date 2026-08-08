@@ -1,5 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
-import { z } from "zod";
+import { flattenError, z } from "zod";
 import {
     checkReportPermission,
     KEY_PREFIX,
@@ -132,7 +132,7 @@ export async function PUT(request: Request) {
         return Response.json(
             {
                 error: "Validation failed",
-                issues: result.error.flatten().fieldErrors,
+                issues: flattenError(result.error).fieldErrors,
             },
             { status: 400 },
         );
@@ -187,7 +187,7 @@ export async function POST(request: Request) {
         return Response.json(
             {
                 error: "Validation failed",
-                issues: result.error.flatten().fieldErrors,
+                issues: flattenError(result.error).fieldErrors,
             },
             { status: 400 },
         );
@@ -243,7 +243,7 @@ export async function DELETE(request: Request) {
         return Response.json(
             {
                 error: "Validation failed",
-                issues: result.error.flatten().fieldErrors,
+                issues: flattenError(result.error).fieldErrors,
             },
             { status: 400 },
         );

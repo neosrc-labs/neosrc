@@ -8,15 +8,15 @@ export const env = createEnv({
      */
     server: {
         BETTER_AUTH_SECRET: z.string(),
-        BETTER_AUTH_URL: z.string().url(),
+        BETTER_AUTH_URL: z.url(),
         GITHUB_CLIENT_ID: z.string(),
         GITHUB_CLIENT_SECRET: z.string(),
         CODEBERG_CLIENT_ID: z.string(),
         CODEBERG_CLIENT_SECRET: z.string(),
-        DATABASE_URL: z.string().url(),
+        DATABASE_URL: z.url(),
         DATA_ENCRYPTION_KEY: z.string().length(64).optional(),
         GITHUB_ANONYMOUS_TOKEN: z.string().optional(),
-        REPORTS_OIDC_AUDIENCE: z.string().url().default("https://neosrc.dev"),
+        REPORTS_OIDC_AUDIENCE: z.url().default("https://neosrc.dev"),
         NODE_ENV: z
             .enum(["development", "test", "production"])
             .default("development"),
