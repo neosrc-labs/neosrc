@@ -1881,6 +1881,39 @@ export type ReviewThreadData = {
     }>;
 };
 
+type RawReviewThreadSummaryComment = {
+    databaseId: number;
+    body: string;
+    author: GQLActor | null;
+};
+
+type RawReviewThreadSummaryNode = {
+    id: string;
+    isResolved: boolean;
+    isOutdated: boolean;
+    path: string | null;
+    comments: {
+        totalCount: number;
+        nodes: (RawReviewThreadSummaryComment | null)[];
+    };
+};
+
+export type ReviewThreadSummary = {
+    id: string;
+    isResolved: boolean;
+    isOutdated: boolean;
+    path: string | null;
+    commentCount: number;
+    root: {
+        id: number;
+        body: string;
+        author: {
+            login: string;
+            avatarUrl: string;
+        } | null;
+    } | null;
+};
+
 export const getReviewThreads = async (
     accessToken: string,
     owner: string,
@@ -1978,7 +2011,7 @@ export async function getReviewThreadsPage(
     perPage = 50,
     after?: string,
 ): Promise<{
-    threads: ReviewThreadData[];
+    threads: ReviewThreadSummary[];
     hasNextPage: boolean;
     endCursor: string | null;
 }> {
@@ -1995,7 +2028,6 @@ export async function getReviewThreadsPage(
                 query($owner: String!, $repo: String!, $number: Int!, $first: Int!${afterVar}) {
                     repository(owner: $owner, name: $repo) {
                         pullRequest(number: $number) {
-                            id
                             reviewThreads(first: $first${afterArg}) {
                                 pageInfo {
                                     hasNextPage
@@ -2006,18 +2038,14 @@ export async function getReviewThreadsPage(
                                     isResolved
                                     isOutdated
                                     path
-                                    comments(first: 100) {
+                                    comments(first: 1) {
+                                        totalCount
                                         nodes {
                                             databaseId
                                             body
                                             author {
                                                 login
                                                 avatarUrl
-                                                url
-                                            }
-                                            createdAt
-                                            replyTo {
-                                                databaseId
                                             }
                                         }
                                     }
@@ -2050,28 +2078,33 @@ export async function getReviewThreadsPage(
         endCursor: null,
     };
     const threadNodes = reviewThreads?.nodes ?? [];
-    const pullRequestId = result.data?.repository?.pullRequest?.id ?? "";
 
     const threads = threadNodes
         .filter((thread: unknown) => thread != null)
-        .map((thread: RawReviewThreadNode) => {
-            const comments = (thread.comments?.nodes ?? [])
-                .filter((c): c is RawReviewThreadComment => c != null)
-                .map((c) => ({
-                    id: c.databaseId,
-                    body: c.body,
-                    author: c.author,
-                    createdAt: c.createdAt,
-                    replyToId: c.replyTo?.databaseId ?? null,
-                }));
+        .map((thread: RawReviewThreadSummaryNode) => {
+            const rootNode =
+                thread.comments?.nodes.find(
+                    (c): c is RawReviewThreadSummaryComment => c != null,
+                ) ?? null;
 
             return {
                 id: thread.id,
                 isResolved: thread.isResolved,
                 isOutdated: thread.isOutdated,
                 path: thread.path,
-                pullRequestId,
-                comments,
+                commentCount: thread.comments?.totalCount ?? 0,
+                root: rootNode
+                    ? {
+                          id: rootNode.databaseId,
+                          body: rootNode.body,
+                          author: rootNode.author
+                              ? {
+                                    login: rootNode.author.login,
+                                    avatarUrl: rootNode.author.avatarUrl,
+                                }
+                              : null,
+                      }
+                    : null,
             };
         });
 

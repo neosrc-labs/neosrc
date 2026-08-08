@@ -3,18 +3,12 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CheckCircle, Circle, Code2, MessageSquare } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { cn } from "~/lib/utils";
-import type { ReviewThreadData } from "~/server/github";
+import type { ReviewThreadSummary } from "~/server/github";
 import { api } from "~/trpc/react";
 
 const THREAD_ITEM_HEIGHT = 50;
-
-function groupThread(thread: ReviewThreadData) {
-    const root =
-        thread.comments.find((c) => c.replyToId === null) ?? thread.comments[0];
-    return { root };
-}
 
 function truncateBody(body: string, maxLen = 80): string {
     const firstLine = body.split("\n")[0] ?? "";
@@ -49,18 +43,17 @@ function scrollToComment(commentId: number) {
 }
 
 interface ThreadCardProps {
-    thread: ReviewThreadData;
+    thread: ReviewThreadSummary;
 }
 
 function ThreadCard({ thread }: ThreadCardProps) {
-    const { root } = useMemo(() => groupThread(thread), [thread]);
-
-    const handleClick = useCallback(() => {
-        if (!root) return;
-        scrollToComment(root.id);
-    }, [root]);
+    const root = thread.root;
 
     if (!root) return null;
+
+    const handleClick = () => {
+        scrollToComment(root.id);
+    };
 
     return (
         <button
@@ -114,7 +107,7 @@ function ThreadCard({ thread }: ThreadCardProps) {
                     )}
                     <span className="flex items-center gap-1 text-text-muted text-xs no-underline">
                         <MessageSquare className="size-3" />
-                        {thread.comments.length}
+                        {thread.commentCount}
                     </span>
                     {thread.isOutdated && (
                         <span className="whitespace-nowrap rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-[10px] text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">

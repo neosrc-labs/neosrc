@@ -39,20 +39,15 @@ function makeThread(
         isResolved,
         isOutdated,
         path: "text/3959-llm-policy.md",
-        pullRequestId: "PR_kwDOAQt0tc5",
-        comments: [
-            {
-                id: id === "t-suggestion" ? 1 : 2,
-                body,
-                author: {
-                    login: id === "t-suggestion" ? "ArhanChaudhary" : "someone",
-                    avatarUrl: "https://example.com/avatar.png",
-                    url: "https://github.com/author",
-                },
-                createdAt: "2026-05-04T00:00:00Z",
-                replyToId: null,
+        commentCount: 1,
+        root: {
+            id: id === "t-suggestion" ? 1 : 2,
+            body,
+            author: {
+                login: id === "t-suggestion" ? "ArhanChaudhary" : "someone",
+                avatarUrl: "https://example.com/avatar.png",
             },
-        ],
+        },
     };
 }
 
