@@ -4,18 +4,7 @@ import { AlertTriangle, Check, ChevronDown, Copy, FilePen } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PullsGetResponseData } from "~/server/github";
-import iconMapData from "~/utils/iconMap.json";
-
-const iconMap: Record<string, string> = iconMapData as Record<string, string>;
-
-function getFileIcon(filename: string) {
-    const parts = filename.split(".");
-    if (parts.length > 1) {
-        const ext = parts.pop()?.toLowerCase();
-        return ext ? (iconMap[ext] ?? "file") : "file";
-    }
-    return "file";
-}
+import { getFileIconName } from "~/utils/icons";
 
 interface ConflictedFilesProps {
     owner: string;
@@ -89,7 +78,7 @@ function CompactConflictedFiles({
                                     <Image
                                         alt=""
                                         className="h-3.5 w-3.5 shrink-0"
-                                        src={`/material-icons/${getFileIcon(file)}.svg`}
+                                        src={`/material-icons/${getFileIconName(file)}.svg`}
                                         width={14}
                                         height={14}
                                         onError={(e) => {
@@ -185,7 +174,7 @@ export function ConflictedFiles({
                         <Image
                             alt=""
                             className="h-3.5 w-3.5 shrink-0"
-                            src={`/material-icons/${getFileIcon(file)}.svg`}
+                            src={`/material-icons/${getFileIconName(file)}.svg`}
                             width={14}
                             height={14}
                             onError={(e) => {

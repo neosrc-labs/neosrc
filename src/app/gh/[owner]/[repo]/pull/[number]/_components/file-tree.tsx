@@ -5,9 +5,7 @@ import { SquareDot } from "lucide-react";
 import Image from "next/image";
 import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import type { PullRequestFile } from "~/server/github";
-import iconMapData from "~/utils/iconMap.json";
-
-const iconMap: Record<string, string> = iconMapData as Record<string, string>;
+import { getFileIconName, getFolderIconName } from "~/utils/icons";
 
 const ITEM_HEIGHT = 30;
 
@@ -304,17 +302,8 @@ function FileTreeNode({
     const paddingLeft = depth * 12 + 8 + (node.isFile ? 8 : 0);
     const fileId = node.path.replace(/\//g, "-");
 
-    const getFileIcon = (filename: string) => {
-        const parts = filename.split(".");
-        if (parts.length > 1) {
-            const ext = parts.pop()?.toLowerCase();
-            return ext ? (iconMap[ext] ?? "file") : "file";
-        }
-        return "file";
-    };
-
     if (node.isFile) {
-        const iconName = getFileIcon(node.name);
+        const iconName = getFileIconName(node.name);
         const diffTooltip = [
             node.additions ? `+${node.additions}` : "",
             node.deletions ? `-${node.deletions}` : "",
@@ -384,9 +373,13 @@ function FileTreeNode({
                 alt=""
                 className="h-4 w-4 flex-shrink-0"
                 loading="lazy"
-                src={`/material-icons/folder${isCollapsed ? "" : "-open"}.svg`}
+                src={`/material-icons/${getFolderIconName(node.name, !isCollapsed)}.svg`}
                 width={16}
                 height={16}
+                onError={(e) => {
+                    (e.target as HTMLImageElement).src =
+                        `/material-icons/folder${isCollapsed ? "" : "-open"}.svg`;
+                }}
             />
             <span className="truncate">
                 {filter ? highlightMatch(node.name, filter) : node.name}

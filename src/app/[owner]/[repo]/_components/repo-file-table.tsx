@@ -18,12 +18,10 @@ import type {
 } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
-import iconMapData from "~/utils/iconMap.json";
+import { getFileIconName, getFolderIconName } from "~/utils/icons";
 import { ClonePopover } from "./clone-popover";
 import { ForkSyncRow } from "./fork-sync-row";
 import { RefSelector } from "./ref-selector";
-
-const iconMap: Record<string, string> = iconMapData as Record<string, string>;
 
 type Provider = "gh" | "cb";
 
@@ -228,7 +226,7 @@ function FileTable({
                               ? `${repoUrl(provider, owner, repo)}/tree/${selectedBranch}/${encodedPath}`
                               : `${repoUrl(provider, owner, repo)}/blob/${selectedBranch}/${encodedPath}`;
                     const iconName = isDir
-                        ? "folder"
+                        ? getFolderIconName(item.name)
                         : getFileIconName(item.name);
 
                     const commit = fileCommits?.[item.path] ?? null;
@@ -302,7 +300,7 @@ function SearchResultsTable({
                 {searchResults.map((item) => {
                     const isDir = item.type === "tree";
                     const iconName = isDir
-                        ? "folder"
+                        ? getFolderIconName(item.name)
                         : getFileIconName(item.name);
                     return (
                         <tr
@@ -341,15 +339,6 @@ function SearchResultsTable({
             </tbody>
         </table>
     );
-}
-
-function getFileIconName(filename: string): string {
-    const parts = filename.split(".");
-    if (parts.length > 1) {
-        const ext = parts.pop()?.toLowerCase();
-        return ext ? (iconMap[ext] ?? "file") : "file";
-    }
-    return "file";
 }
 
 interface RepoFileTableSkeletonProps {
