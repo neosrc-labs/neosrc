@@ -8,6 +8,7 @@ import {
     GitForkIcon,
     StarIcon,
 } from "lucide-react";
+import Image from "next/image";
 import { useRef, useState } from "react";
 import { Async } from "~/components/async";
 import {
@@ -61,10 +62,12 @@ export function RepoHeader({
                     <>
                         <div className="flex flex-wrap items-center gap-3">
                             {repoData.ownerAvatarUrl && (
-                                <img
+                                <Image
                                     src={repoData.ownerAvatarUrl}
                                     alt=""
                                     className="size-6 rounded-full"
+                                    width={24}
+                                    height={24}
                                 />
                             )}
                             <h1 className="whitespace-nowrap font-semibold text-text-primary text-xl">

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Copy, Eye, EyeOff, Trash2 } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useState } from "react";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { parseTarget } from "~/lib/utils";
@@ -36,10 +37,12 @@ export function PermissionBadge({
 function ProviderIcon({ provider }: { provider: string }) {
     if (provider === "codeberg") {
         return (
-            <img
+            <Image
                 src="/logo-codeberg.svg"
                 alt=""
                 className="size-4 invert-[.5] dark:invert-[.6]"
+                width={16}
+                height={16}
                 aria-hidden="true"
             />
         );

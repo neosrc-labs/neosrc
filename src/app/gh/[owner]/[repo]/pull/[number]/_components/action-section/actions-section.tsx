@@ -1,6 +1,7 @@
 "use client";
 
 import { GitMerge, Undo2 } from "lucide-react";
+import Image from "next/image";
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -689,10 +690,12 @@ function Title({
             {user && (
                 <UserHoverCard login={user.login}>
                     <NextLink href={user.html_url}>
-                        <img
+                        <Image
                             alt={user.login}
                             className="h-5 w-5 shrink-0 rounded-full"
                             src={user.avatar_url}
+                            width={20}
+                            height={20}
                         />
                     </NextLink>
                 </UserHoverCard>

@@ -1,6 +1,7 @@
 "use client";
 
 import { LockIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { api } from "~/trpc/react";
@@ -31,10 +32,12 @@ export function HomePage() {
                                     href={`/${repo.nameWithOwner}`}
                                     className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text-primary transition hover:bg-surface-secondary"
                                 >
-                                    <img
+                                    <Image
                                         src={repo.owner.avatarUrl}
                                         alt=""
                                         className="h-5 w-5 shrink-0 rounded-full"
+                                        width={20}
+                                        height={20}
                                     />
                                     <span className="truncate">
                                         {repo.nameWithOwner}

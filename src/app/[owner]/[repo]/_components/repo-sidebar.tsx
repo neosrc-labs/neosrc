@@ -14,6 +14,7 @@ import {
     UsersIcon,
     X,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
@@ -282,14 +283,17 @@ export function RepoSidebar({
                                     provider={provider}
                                 >
                                     <a href={`${host}/${login}`}>
-                                        <img
-                                            src={
-                                                contributor.avatarUrl ??
-                                                undefined
-                                            }
-                                            alt={login}
-                                            className="h-8 w-8 rounded-full"
-                                        />
+                                        {contributor.avatarUrl ? (
+                                            <Image
+                                                src={contributor.avatarUrl}
+                                                alt={login}
+                                                className="h-8 w-8 rounded-full"
+                                                width={32}
+                                                height={32}
+                                            />
+                                        ) : (
+                                            <span className="h-8 w-8 rounded-full bg-surface-selected" />
+                                        )}
                                     </a>
                                 </UserHoverCard>
                             );

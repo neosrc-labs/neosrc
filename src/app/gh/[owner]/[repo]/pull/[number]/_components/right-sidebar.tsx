@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Circle, CircleX, X, XCircle } from "lucide-react";
+import Image from "next/image";
 import { use, useRef, useState } from "react";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
@@ -202,16 +203,20 @@ function ChecksSection({ checks }: ChecksSectionProps) {
                                 <Circle className="h-3.5 w-3.5 text-text-muted" />
                             )}
                             {check.creator?.avatar_url ? (
-                                <img
+                                <Image
                                     src={check.creator.avatar_url}
                                     alt=""
                                     className="h-5 w-5 rounded-full"
+                                    width={20}
+                                    height={20}
                                 />
                             ) : check.app?.owner?.avatar_url ? (
-                                <img
+                                <Image
                                     src={check.app.owner.avatar_url}
                                     alt=""
                                     className="h-5 w-5 rounded-full"
+                                    width={20}
+                                    height={20}
                                 />
                             ) : null}
                         </span>

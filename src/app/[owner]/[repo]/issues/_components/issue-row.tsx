@@ -1,4 +1,5 @@
 import { Circle, CircleCheck, MessageSquare } from "lucide-react";
+import Image from "next/image";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/code-title";
 import { Label } from "~/components/ui/label";
@@ -119,10 +120,12 @@ export function IssueRow({
                             }}
                             className="cursor-pointer rounded-full"
                         >
-                            <img
+                            <Image
                                 src={issue.assignee.avatar_url}
                                 alt={issue.assignee.login}
                                 className="size-5 rounded-full"
+                                width={20}
+                                height={20}
                             />
                         </button>
                     </UserHoverCard>

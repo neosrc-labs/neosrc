@@ -2,6 +2,7 @@
 
 import type { components } from "@octokit/openapi-types";
 import { Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
+import Image from "next/image";
 import NextLink from "next/link";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Async } from "~/components/async";
@@ -492,10 +493,12 @@ function AuthorLabel({
     return (
         <UserHoverCard login={username}>
             <NextLink className="flex items-center gap-2" href={profileUrl}>
-                <img
+                <Image
                     alt={username}
                     className="h-5 w-5 rounded-full"
                     src={avatarUrl}
+                    width={20}
+                    height={20}
                 />
                 {username}{" "}
             </NextLink>

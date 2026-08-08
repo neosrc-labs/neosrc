@@ -13,6 +13,7 @@ import {
     Table2,
     User,
 } from "lucide-react";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import type { ElementType } from "react";
 import { useEffect, useMemo, useRef } from "react";
@@ -301,7 +302,7 @@ function HeaderContent({
                     <div className="flex h-16 items-center justify-between">
                         <div className="flex items-center gap-3">
                             <a href="/">
-                                <img
+                                <Image
                                     src="/logo.svg"
                                     alt="Neosrc"
                                     width={32}
@@ -318,12 +319,14 @@ function HeaderContent({
                                         rel="noopener noreferrer"
                                     >
                                         {resolvedRepoData?.ownerAvatarUrl ? (
-                                            <img
+                                            <Image
                                                 src={
                                                     resolvedRepoData.ownerAvatarUrl
                                                 }
                                                 alt={owner}
                                                 className="size-5 rounded-full"
+                                                width={20}
+                                                height={20}
                                             />
                                         ) : (
                                             <div className="size-5 rounded-full bg-surface-selected" />
@@ -370,10 +373,12 @@ function HeaderContent({
                                     title={`Back to ${provider === "cb" ? "Codeberg" : "GitHub"}`}
                                 >
                                     {provider === "cb" ? (
-                                        <img
+                                        <Image
                                             src="/logo-codeberg.svg"
                                             alt=""
                                             className="size-[18px] invert dark:invert-0"
+                                            width={18}
+                                            height={18}
                                             aria-hidden="true"
                                         />
                                     ) : (
@@ -390,10 +395,12 @@ function HeaderContent({
                                 href="/profile"
                             >
                                 {currentUser?.avatarUrl ? (
-                                    <img
+                                    <Image
                                         src={currentUser.avatarUrl}
                                         alt={currentUser.login}
                                         className="size-6 rounded-full"
+                                        width={24}
+                                        height={24}
                                     />
                                 ) : (
                                     <User size={18} />

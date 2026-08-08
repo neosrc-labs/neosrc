@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
     forwardRef,
     useCallback,
@@ -298,10 +299,12 @@ export const SearchAutocomplete = forwardRef<
                                 )}
                             </span>
                         ) : suggestion.avatarUrl ? (
-                            <img
+                            <Image
                                 src={suggestion.avatarUrl}
                                 alt=""
                                 className="size-5 shrink-0 rounded-full"
+                                width={20}
+                                height={20}
                             />
                         ) : null}
                         {!suggestion.color && (

@@ -1,28 +1,28 @@
 "use client";
 
 import { User } from "lucide-react";
+import Image from "next/image";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import type { GQLCommitAuthor } from "~/server/github-graphql";
 
 const AVATAR_OVERLAP = 8;
 
 function Avatar({
-    author,
+    name,
+    avatarUrl,
     size,
 }: {
-    author: {
-        name: string | null;
-        avatarUrl: string | null;
-        login?: string | null;
-    };
+    name: string | null;
+    avatarUrl: string;
     size: number;
 }) {
     return (
-        <img
-            alt={author.login ?? author.name ?? "Author"}
+        <Image
+            alt={name ?? "Author"}
             className="shrink-0 rounded-full ring-2 ring-white dark:ring-zinc-950"
-            src={author.avatarUrl ?? undefined}
-            style={{ width: size, height: size }}
+            src={avatarUrl}
+            width={size}
+            height={size}
         />
     );
 }
@@ -70,7 +70,11 @@ export function CommitAuthors({ authors, size = 20 }: CommitAuthorsProps) {
                 const avatar = (
                     <span className="flex">
                         {author.avatarUrl ? (
-                            <Avatar author={author} size={size} />
+                            <Avatar
+                                avatarUrl={author.avatarUrl}
+                                name={author.name}
+                                size={size}
+                            />
                         ) : (
                             <PlaceholderAvatar name={author.name} size={size} />
                         )}

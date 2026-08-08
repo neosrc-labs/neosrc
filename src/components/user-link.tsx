@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 
 export function UserLink({
@@ -33,10 +34,12 @@ export function UserLink({
                     }
                 }}
             >
-                <img
+                <Image
                     src={actor.avatarUrl}
                     alt={actor.login}
                     className="h-5 w-5 shrink-0 rounded-full object-cover"
+                    width={20}
+                    height={20}
                 />
                 {showUsername && (
                     <span className="font-medium text-gray-800 dark:text-zinc-200">

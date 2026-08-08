@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { UserLink } from "~/components/user-link";
 import type {
@@ -45,10 +46,12 @@ export function ReviewRequestEventContent({
                                 className="inline-flex items-center gap-1 font-medium text-gray-800 dark:text-zinc-200"
                                 href={reviewer.url}
                             >
-                                <img
+                                <Image
                                     src={reviewer.avatarUrl}
                                     alt={reviewer.login}
                                     className="h-4 w-4 rounded-full"
+                                    width={16}
+                                    height={16}
                                 />
                                 {reviewer.login}
                             </a>

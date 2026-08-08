@@ -6,6 +6,7 @@ import {
     Link as LinkIcon,
     MapPin,
 } from "lucide-react";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import {
     HoverCard,
@@ -47,10 +48,12 @@ function UserHoverCardContent({
     return (
         <div>
             <div className="flex items-start gap-4 border-border-subtle border-b p-4">
-                <img
+                <Image
                     alt={user.login}
                     className="h-16 w-16 rounded-full"
                     src={user.avatar_url}
+                    width={64}
+                    height={64}
                 />
                 <div className="min-w-0">
                     <div className="flex flex-wrap items-baseline gap-x-2">

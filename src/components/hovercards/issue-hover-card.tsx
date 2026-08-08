@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageSquare } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { type ReactNode, useState } from "react";
 import { CodeTitle } from "~/components/markdown/code-title";
@@ -57,10 +58,12 @@ function IssueHoverCardContent({
                     </p>
                     {issue.user && (
                         <div className="mt-1 flex items-center gap-1.5">
-                            <img
+                            <Image
                                 alt={issue.user.login}
                                 className="h-4 w-4 rounded-full"
                                 src={issue.user.avatar_url}
+                                width={16}
+                                height={16}
                             />
                             <span className="text-text-tertiary text-xs">
                                 {issue.user.login}

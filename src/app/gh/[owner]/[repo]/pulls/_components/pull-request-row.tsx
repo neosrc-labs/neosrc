@@ -8,6 +8,7 @@ import {
     TriangleAlert,
     XCircle,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import type { StatusContext } from "~/components/ci-status";
 import { StatusChecksHoverCard } from "~/components/ci-status";
@@ -227,10 +228,12 @@ export function PullRequestRow({
                             }}
                             className="cursor-pointer rounded-full"
                         >
-                            <img
+                            <Image
                                 src={pr.assignee.avatar_url}
                                 alt={pr.assignee.login}
                                 className="size-5 rounded-full"
+                                width={20}
+                                height={20}
                             />
                         </button>
                     </UserHoverCard>

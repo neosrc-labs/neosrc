@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { CommitSubject } from "~/components/commit-subject";
 import type { CommitData, PullsListCommitsResponseData } from "~/server/github";
 
@@ -100,10 +101,12 @@ export async function CommitHeader({
                             rel="noopener noreferrer"
                             target="_blank"
                         >
-                            <img
+                            <Image
                                 alt={commit.author.login}
                                 className="h-5 w-5 rounded-full"
                                 src={commit.author.avatar_url}
+                                width={20}
+                                height={20}
                             />
                         </a>
 

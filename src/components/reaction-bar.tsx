@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo } from "react";
 import {
     Tooltip,
@@ -88,22 +89,29 @@ export function ReactionBar({
                                                 r.user?.avatarUrl),
                                     )
                                     .slice(0, 4)
-                                    .map((r, i, arr) => (
-                                        <img
-                                            key={r.id ?? r.databaseId}
-                                            src={
-                                                r.user?.avatar_url ??
-                                                r.user?.avatarUrl
-                                            }
-                                            alt={r.user?.login ?? undefined}
-                                            className={`h-4 w-4 rounded-full ring-1 ring-white dark:ring-zinc-800 ${
-                                                i === 0 ? "ml-0.5" : "-ml-1.5"
-                                            }`}
-                                            style={{
-                                                zIndex: arr.length - i,
-                                            }}
-                                        />
-                                    ))}
+                                    .map((r, i, arr) => {
+                                        const avatarUrl =
+                                            r.user?.avatar_url ??
+                                            r.user?.avatarUrl;
+                                        if (!avatarUrl) return null;
+                                        return (
+                                            <Image
+                                                key={r.id ?? r.databaseId}
+                                                src={avatarUrl}
+                                                alt={r.user?.login ?? ""}
+                                                className={`h-4 w-4 rounded-full ring-1 ring-white dark:ring-zinc-800 ${
+                                                    i === 0
+                                                        ? "ml-0.5"
+                                                        : "-ml-1.5"
+                                                }`}
+                                                width={16}
+                                                height={16}
+                                                style={{
+                                                    zIndex: arr.length - i,
+                                                }}
+                                            />
+                                        );
+                                    })}
                             </button>
                         </TooltipTrigger>
                         {tooltipUsers.length > 0 && (

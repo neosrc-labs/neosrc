@@ -190,7 +190,10 @@ describe("ReactionBar", () => {
 
         const imgs = screen.getAllByRole("img");
         expect(imgs).toHaveLength(1);
-        expect(imgs[0]).toHaveAttribute("src", "/bob.png");
+        expect(imgs[0]).toHaveAttribute(
+            "src",
+            expect.stringContaining("bob.png"),
+        );
     });
 
     it("renders nothing for empty reactions", () => {

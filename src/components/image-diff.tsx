@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeftRight, Columns2, Layers } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "~/lib/utils";
 
@@ -36,12 +37,16 @@ function ImageWithFallback({
     }
 
     return (
-        <img
+        <Image
             alt={alt}
             className={className}
             draggable={false}
             onError={() => setError(true)}
             src={src}
+            width={0}
+            height={0}
+            sizes="100vw"
+            style={{ width: "auto", height: "auto" }}
         />
     );
 }
@@ -192,14 +197,18 @@ function SwipeView({
                     className="absolute top-0 left-0 h-full overflow-hidden"
                     style={{ width: `${position}%` }}
                 >
-                    <img
+                    <Image
                         alt="New version"
                         className="block max-h-[600px] w-full object-contain"
                         draggable={false}
                         src={newUrl}
+                        width={0}
+                        height={0}
+                        sizes="100vw"
                         style={{
                             width: `${(1 / (position / 100)) * 100}%`,
                             maxWidth: "none",
+                            height: "auto",
                         }}
                     />
                 </div>
@@ -262,12 +271,19 @@ function OnionSkinView({
                     className="max-h-[600px] max-w-full object-contain"
                     src={newUrl}
                 />
-                <img
+                <Image
                     alt="Old version"
                     className="absolute top-1/2 left-1/2 max-h-[600px] max-w-full -translate-x-1/2 -translate-y-1/2 object-contain"
                     draggable={false}
                     src={oldUrl}
-                    style={{ opacity: opacity / 100 }}
+                    width={0}
+                    height={0}
+                    sizes="100vw"
+                    style={{
+                        opacity: opacity / 100,
+                        width: "auto",
+                        height: "auto",
+                    }}
                 />
             </div>
             <div className="flex items-center gap-3 border-border border-t bg-surface-secondary px-4 py-2">

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
@@ -158,10 +159,12 @@ function AssigneeSectionSettings({
             searchFn={(a, q) => a.login.toLowerCase().includes(q)}
             renderItem={(a, selected) => (
                 <>
-                    <img
+                    <Image
                         src={a.avatar_url}
                         alt=""
                         className="h-5 w-5 shrink-0 rounded-full"
+                        width={20}
+                        height={20}
                     />
                     <span className="flex-1 truncate text-text-label">
                         {a.login}
@@ -210,10 +213,12 @@ function AssigneeSectionContent({
                             className="flex items-center gap-2"
                             href={assignee.html_url}
                         >
-                            <img
+                            <Image
                                 alt={assignee.login}
                                 className="h-5 w-5 rounded-full"
                                 src={assignee.avatar_url}
+                                width={20}
+                                height={20}
                             />
                             <span className="text-text-secondary">
                                 {assignee.login}

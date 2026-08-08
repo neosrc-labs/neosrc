@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, Check, ChevronDown, Copy, FilePen } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PullsGetResponseData } from "~/server/github";
 import iconMapData from "~/utils/iconMap.json";
@@ -85,10 +86,12 @@ function CompactConflictedFiles({
                                     key={file}
                                     className="group flex min-w-0 items-center gap-1.5 rounded px-1.5 py-0.5 font-mono text-text-secondary text-xs"
                                 >
-                                    <img
+                                    <Image
                                         alt=""
                                         className="h-3.5 w-3.5 shrink-0"
                                         src={`/material-icons/${getFileIcon(file)}.svg`}
+                                        width={14}
+                                        height={14}
                                         onError={(e) => {
                                             (e.target as HTMLImageElement).src =
                                                 "/material-icons/file.svg";
@@ -179,10 +182,12 @@ export function ConflictedFiles({
                         key={file}
                         className="flex min-w-0 items-center gap-1.5 font-mono text-text-secondary text-xs"
                     >
-                        <img
+                        <Image
                             alt=""
                             className="h-3.5 w-3.5 shrink-0"
                             src={`/material-icons/${getFileIcon(file)}.svg`}
+                            width={14}
+                            height={14}
                             onError={(e) => {
                                 (e.target as HTMLImageElement).src =
                                     "/material-icons/file.svg";

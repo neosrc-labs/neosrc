@@ -268,6 +268,7 @@ export function MarkdownRenderer({
                     },
                     img({ ...props }) {
                         return (
+                            // biome-ignore lint/performance/noImgElement: markdown images are user content with arbitrary hosts/dimensions that next/image cannot optimize
                             <img
                                 className="m-0 inline-block max-h-10 align-middle"
                                 {...props}

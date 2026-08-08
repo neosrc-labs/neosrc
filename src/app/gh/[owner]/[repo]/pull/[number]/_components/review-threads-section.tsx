@@ -2,6 +2,7 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CheckCircle, Circle, Code2, MessageSquare } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { cn } from "~/lib/utils";
 import type { ReviewThreadData } from "~/server/github";
@@ -72,11 +73,15 @@ function ThreadCard({ thread }: ThreadCardProps) {
                 .filter(Boolean)
                 .join(" ")}
         >
-            <img
-                alt={`${root.author?.login ?? "unknown"}'s avatar`}
-                className="mt-0.5 size-5 shrink-0 rounded-full"
-                src={root.author?.avatarUrl ?? undefined}
-            />
+            {root.author?.avatarUrl ? (
+                <Image
+                    alt={`${root.author?.login ?? "unknown"}'s avatar`}
+                    className="mt-0.5 size-5 shrink-0 rounded-full"
+                    src={root.author?.avatarUrl}
+                    width={20}
+                    height={20}
+                />
+            ) : null}
 
             <div className="min-w-0 flex-1">
                 {isSuggestionBody(root.body) ? (

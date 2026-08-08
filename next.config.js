@@ -13,6 +13,17 @@ setDefaultResultOrder("ipv4first");
 
 /** @type {import("next").NextConfig} */
 const config = {
+    images: {
+        remotePatterns: [
+            { protocol: "https", hostname: "avatars.githubusercontent.com" },
+            { protocol: "https", hostname: "camo.githubusercontent.com" },
+            {
+                protocol: "https",
+                hostname: "codeberg.org",
+                pathname: "/avatars/**",
+            },
+        ],
+    },
     logging: {
         incomingRequests: {
             ignore: [/^\/api\/trpc/],

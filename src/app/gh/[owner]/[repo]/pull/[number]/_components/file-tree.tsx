@@ -2,6 +2,7 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { SquareDot } from "lucide-react";
+import Image from "next/image";
 import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import type { PullRequestFile } from "~/server/github";
 import iconMapData from "~/utils/iconMap.json";
@@ -326,11 +327,13 @@ function FileTreeNode({
                 href={`${basePath}/changes#${fileId}`}
                 style={{ paddingLeft: `${paddingLeft}px` }}
             >
-                <img
+                <Image
                     alt=""
                     className="h-4 w-4 flex-shrink-0"
                     loading="lazy"
                     src={`/material-icons/${iconName}.svg`}
+                    width={16}
+                    height={16}
                     onError={(e) => {
                         (e.target as HTMLImageElement).src =
                             "/material-icons/file.svg";
@@ -377,11 +380,13 @@ function FileTreeNode({
                     strokeWidth={2}
                 />
             </svg>
-            <img
+            <Image
                 alt=""
                 className="h-4 w-4 flex-shrink-0"
                 loading="lazy"
                 src={`/material-icons/folder${isCollapsed ? "" : "-open"}.svg`}
+                width={16}
+                height={16}
             />
             <span className="truncate">
                 {filter ? highlightMatch(node.name, filter) : node.name}

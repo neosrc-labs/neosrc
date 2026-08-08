@@ -7,6 +7,7 @@ import {
     MessageSquare,
     XCircle,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
@@ -257,10 +258,12 @@ function ReviewerSectionSettings({
             searchFn={(r, q) => r.login.toLowerCase().includes(q)}
             renderItem={(r, selected) => (
                 <>
-                    <img
+                    <Image
                         src={r.avatar_url}
                         alt=""
                         className="h-5 w-5 shrink-0 rounded-full"
+                        width={20}
+                        height={20}
                     />
                     <span className="flex-1 truncate text-text-label">
                         {r.login}
@@ -335,10 +338,12 @@ function ReviewerSectionContent({
                                     className="flex items-center gap-2"
                                     href={reviewer.html_url}
                                 >
-                                    <img
+                                    <Image
                                         alt={reviewer.login}
                                         className="h-5 w-5 rounded-full"
                                         src={reviewer.avatar_url}
+                                        width={20}
+                                        height={20}
                                     />
                                     <span className="text-text-secondary">
                                         {reviewer.login}

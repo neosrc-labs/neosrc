@@ -25,6 +25,7 @@ import {
     User,
     X,
 } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { Label } from "~/components/ui/label";
@@ -208,10 +209,12 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
                     className="absolute -left-[52px] h-10 w-10 overflow-hidden rounded-full ring-1 ring-border"
                     href={event.author.url}
                 >
-                    <img
+                    <Image
                         alt={event.author.login}
                         className="h-10 w-10 rounded-full"
                         src={event.author.avatarUrl}
+                        width={40}
+                        height={40}
                     />
                 </a>
             </UserHoverCard>

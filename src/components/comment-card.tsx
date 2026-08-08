@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { MarkdownEditor } from "~/components/markdown/markdown-editor";
@@ -55,10 +56,12 @@ export function CommentCard({
     const userElement = user && (
         <>
             {!hideAvatar && (
-                <img
+                <Image
                     alt={user.login ?? "user"}
                     className="h-5 w-5 flex-shrink-0 self-center rounded-full"
                     src={user.avatar_url ?? undefined}
+                    width={20}
+                    height={20}
                 />
             )}
             <span className="truncate font-medium text-sm text-text-primary">

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, User, X } from "lucide-react";
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { api } from "~/trpc/react";
@@ -136,10 +137,12 @@ export function AuthorDropdown({
             ) => (
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                     {u.avatar_url ? (
-                        <img
+                        <Image
                             src={u.avatar_url}
                             alt=""
                             className="size-5 shrink-0 rounded-full"
+                            width={20}
+                            height={20}
                         />
                     ) : (
                         <div className="size-5 shrink-0 rounded-full bg-surface-selected" />
@@ -167,11 +170,15 @@ export function AuthorDropdown({
                 >
                     {selectedUser ? (
                         <>
-                            <img
-                                src={selectedUser.avatar_url}
-                                alt=""
-                                className="size-4 shrink-0 rounded-full"
-                            />
+                            {selectedUser.avatar_url ? (
+                                <Image
+                                    src={selectedUser.avatar_url}
+                                    alt=""
+                                    className="size-4 shrink-0 rounded-full"
+                                    width={16}
+                                    height={16}
+                                />
+                            ) : null}
                             <span>{selectedUser.login}</span>
                             <button
                                 type="button"

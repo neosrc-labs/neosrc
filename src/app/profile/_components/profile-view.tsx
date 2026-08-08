@@ -7,6 +7,7 @@ import {
     LogOut,
     MapPin,
 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
@@ -65,10 +66,12 @@ function ProviderProfileCard({
             <SectionHeading provider={provider} />
             <div className="flex flex-col gap-4">
                 <div className="flex items-start gap-4">
-                    <img
+                    <Image
                         alt={user.login}
                         className="h-16 w-16 shrink-0 rounded-full object-cover"
                         src={user.avatar_url}
+                        width={64}
+                        height={64}
                     />
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-baseline gap-x-2">
@@ -182,10 +185,12 @@ export function ProfileView({
         <div className="flex flex-col gap-8">
             <div className="flex items-center gap-5">
                 {image ? (
-                    <img
+                    <Image
                         alt={name}
                         className="h-16 w-16 shrink-0 rounded-full object-cover"
                         src={image}
+                        width={64}
+                        height={64}
                     />
                 ) : (
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-selected text-text-tertiary text-xl">

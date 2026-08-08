@@ -1,6 +1,7 @@
 "use client";
 
 import { Building2, Globe, Lock, Users } from "lucide-react";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import {
     HoverCard,
@@ -32,10 +33,12 @@ export function TeamHoverCard({ org, teamSlug, children }: TeamHoverCardProps) {
             <HoverCardContent className="w-80 bg-surface p-0">
                 <div>
                     <div className="flex items-start gap-4 border-border-subtle border-b p-4">
-                        <img
+                        <Image
                             alt={team.organization.login}
                             className="h-16 w-16 rounded-full"
                             src={team.organization.avatar_url}
+                            width={64}
+                            height={64}
                         />
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-baseline gap-x-2">
