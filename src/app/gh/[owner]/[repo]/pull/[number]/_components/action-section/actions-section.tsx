@@ -254,6 +254,18 @@ function Buttons({
     const isMergeStateUnknown = pullRequest.mergeable_state === "unknown";
     const isStackMerge = (pullRequest.stack?.position ?? 0) > 1;
 
+    const { data: stackData } = api.pulls.getStack.useQuery(
+        { owner, repo, prNumber: number },
+        { enabled: !!pullRequest.stack },
+    );
+
+    const earlierOpenInStack = stackData
+        ? stackData.pullRequests.some(
+              (entry) =>
+                  (entry.position ?? 0) < (pullRequest.stack?.position ?? 0) &&
+                  entry.state === "open",
+          )
+        : false;
     const mergeOptionDefs = [
         {
             value: "merge" as const,
@@ -390,6 +402,7 @@ function Buttons({
                     checkRuns={checkRuns}
                     isMergeStatusLoading={isMergeStatusLoading}
                     isStackMerge={isStackMerge}
+                    isBlockedByStack={earlierOpenInStack}
                 />
             )}
             {effectiveMerged && (

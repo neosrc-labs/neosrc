@@ -1788,6 +1788,7 @@ export interface StackData {
 
 export interface StackEntry {
     number: number;
+    position?: number;
     state: "open" | "closed" | "merged";
     draft: boolean;
     title: string;
@@ -1835,6 +1836,7 @@ export async function getPullRequestStackGraphQL(
     const pullRequests = stack.entries.nodes
         .map((e) => ({
             number: e.pullRequest.number,
+            position: e.position,
             state:
                 e.pullRequest.state === "OPEN"
                     ? ("open" as const)
