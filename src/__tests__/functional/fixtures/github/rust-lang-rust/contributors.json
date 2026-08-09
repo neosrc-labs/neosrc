@@ -1,0 +1,37 @@
+[
+    {
+        "login": "bors",
+        "id": 3370662,
+        "avatar_url": "https://avatars.githubusercontent.com/u/3370662?v=4",
+        "type": "Bot",
+        "contributions": 35000
+    },
+    {
+        "login": "alexcrichton",
+        "id": 64996,
+        "avatar_url": "https://avatars.githubusercontent.com/u/64996?v=4",
+        "type": "User",
+        "contributions": 7500
+    },
+    {
+        "login": "nikomatsakis",
+        "id": 348729,
+        "avatar_url": "https://avatars.githubusercontent.com/u/348729?v=4",
+        "type": "User",
+        "contributions": 5500
+    },
+    {
+        "login": "nrc",
+        "id": 381114,
+        "avatar_url": "https://avatars.githubusercontent.com/u/381114?v=4",
+        "type": "User",
+        "contributions": 4800
+    },
+    {
+        "login": "Mark-Simulacrum",
+        "id": 5285592,
+        "avatar_url": "https://avatars.githubusercontent.com/u/5285592?v=4",
+        "type": "User",
+        "contributions": 4500
+    }
+]

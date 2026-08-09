@@ -24,6 +24,10 @@ const config = {
             },
         ],
     },
+    experimental: {
+        // FIXME: Re-enable after https://github.com/vercel/next.js/issues/96768
+        // testProxy: process.env.NEXT_TEST_PROXY === "true",
+    },
     logging: {
         incomingRequests: {
             ignore: [/^\/api\/trpc/],
