@@ -27,6 +27,7 @@ import {
     deleteIssueComment,
     getCachedPullRequest,
     getMergeRequirements,
+    getMergeAsyncResult,
     getPullRequestReviews,
     getPullRequestStack,
     listLabelsForRepo,
@@ -663,56 +664,82 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 ctx.session?.user?.id,
             );
-
-            let result: {
-                merged: boolean;
-                message: string;
-                sha?: string | null;
-            };
             if (pr.stack) {
-                const position = pr.stack.position ?? 0;
-                if (position > 1) {
-                    const stack = await getPullRequestStack(
-                        accessToken,
-                        input.owner,
-                        input.repo,
-                        input.number,
-                    );
-                    if (stack) {
-                        const toMerge = stack.pullRequests
-                            .filter(
-                                (e) =>
-                                    (e.position ?? 0) < position &&
-                                    e.state === "open",
-                            )
-                            .sort(
-                                (a, b) => (a.position ?? 0) - (b.position ?? 0),
-                            );
-                        for (const entry of toMerge) {
-                            result = await mergePullRequestAsync(
-                                accessToken,
-                                input.owner,
-                                input.repo,
-                                entry.number,
-                                input.mergeMethod,
-                            );
-                            if (!result.merged) {
-                                throw new TRPCError({
-                                    code: "INTERNAL_SERVER_ERROR",
-                                    message: `Failed to merge #${entry.number}: ${result.message}`,
-                                });
-                            }
-                            await deleteCache(
+                const asyncResult = await mergePullRequestAsync(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                    input.mergeMethod,
+                    input.commitTitle,
+                    input.commitMessage,
+                );
+                if (asyncResult.status === "failed") {
+                    throw new TRPCError({
+                        code: "INTERNAL_SERVER_ERROR",
+                        message: asyncResult.details.message,
+                    });
+                }
+
+                if (
+                    (asyncResult.status === "pending" ||
+                        asyncResult.status === "enqueued") &&
+                    asyncResult.details.uuid
+                ) {
+                    let pollResult = asyncResult;
+                    const startedAt = Date.now();
+                    while (
+                        pollResult.status === "pending" ||
+                        pollResult.status === "enqueued"
+                    ) {
+                        if (Date.now() - startedAt > 120_000) {
+                            throw new TRPCError({
+                                code: "INTERNAL_SERVER_ERROR",
+                                message:
+                                    "Merge is taking too long. The pull request may still merge in the background.",
+                            });
+                        }
+                        await new Promise<void>((resolve) =>
+                            setTimeout(resolve, 1500),
+                        );
+                        pollResult = await getMergeAsyncResult(
+                            accessToken,
+                            input.owner,
+                            input.repo,
+                            input.number,
+                            asyncResult.details.uuid,
+                        );
+                    }
+                    if (pollResult.status === "failed") {
+                        throw new TRPCError({
+                            code: "INTERNAL_SERVER_ERROR",
+                            message: pollResult.details.message,
+                        });
+                    }
+                }
+
+                // Evict caches for all PRs in the stack
+                const stack = await getPullRequestStack(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                );
+                if (stack) {
+                    await Promise.all(
+                        stack.pullRequests.map((entry) =>
+                            deleteCache(
                                 prCacheKey(
                                     input.owner,
                                     input.repo,
                                     entry.number,
                                 ),
-                            );
-                        }
-                    }
+                            ),
+                        ),
+                    );
                 }
-                result = await mergePullRequestAsync(
+            } else {
+                await mergePullRequest(
                     accessToken,
                     input.owner,
                     input.repo,
@@ -721,27 +748,13 @@ export const pullsRouter = createTRPCRouter({
                     input.commitTitle,
                     input.commitMessage,
                 );
-            } else {
-                result = await mergePullRequest(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.number,
-                    input.mergeMethod,
-                    input.commitTitle,
-                    input.commitMessage,
+
+                await deleteCache(
+                    prCacheKey(input.owner, input.repo, input.number),
                 );
             }
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
-            return {
-                success: true as const,
-                sha: result.sha ?? undefined,
-                merged: result.merged,
-            };
+            return { success: true as const };
         }),
     revert: protectedProcedure
         .input(

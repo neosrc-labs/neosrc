@@ -476,23 +476,42 @@ export const mergePullRequestAsync = async (
     commitMessage?: string,
 ) => {
     const octokit = createOctokit(accessToken);
+    const body: Record<string, unknown> = {
+        owner,
+        repo,
+        pull_number: pullNumber,
+        merge_method: mergeMethod,
+    };
+    if (commitTitle !== undefined) body.commit_title = commitTitle;
+    if (commitMessage !== undefined) body.commit_message = commitMessage;
     const response = await octokit.request(
-        "PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge",
-        {
-            owner,
-            repo,
-            pull_number: pullNumber,
-            merge_method: mergeMethod,
-            commit_title: commitTitle,
-            commit_message: commitMessage,
-            headers: { "X-GitHub-Api-Version": "2026-03-10" },
-        },
+        "PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge-async",
+        body,
     );
     return response.data as {
-        merged: boolean;
-        message: string;
-        sha?: string | null;
+        status: "pending" | "merged" | "enqueued" | "failed";
+        details: { message: string; uuid?: string; sha?: string };
     };
+};
+
+export type MergeAsyncResult = {
+    status: "pending" | "merged" | "enqueued" | "failed";
+    details: { message: string; uuid?: string; sha?: string };
+};
+
+export const getMergeAsyncResult = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    uuid: string,
+): Promise<MergeAsyncResult> => {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.request(
+        "GET /repos/{owner}/{repo}/pulls/{pull_number}/merge-async/{uuid}",
+        { owner, repo, pull_number: pullNumber, uuid },
+    );
+    return response.data as MergeAsyncResult;
 };
 
 export const unstackPullRequests = async (
