@@ -1,38 +1,23 @@
 "use client";
 
 import {
-    BookOpen,
-    CircleDot,
-    CirclePlay,
-    Code2,
-    GitPullRequest,
     PanelLeftOpen,
     PanelRightClose,
     PanelRightOpen,
-    Settings,
-    Table2,
     User,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ElementType, RefObject } from "react";
+import type { RefObject } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { Async } from "~/components/async";
 import { CodebergIcon, GitHubIcon } from "~/components/icons";
-import { cn, formatCount } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { useSidebar } from "../sidebar-context";
 import { ThemeToggle } from "../theme-toggle";
-
-interface Tab {
-    label: string;
-    path: string;
-    show: boolean;
-    isActive: boolean;
-    icon: ElementType;
-    count?: number | null;
-}
+import { domain, type Provider, RepoNavbar, useTabs } from "./navbar";
+import type { PathType } from "./types";
 
 export interface HeaderRepoData {
     hasIssues: boolean;
@@ -52,8 +37,6 @@ interface HeaderClientProps {
     initialOwner: string | null;
     initialRepo: string | null;
 }
-
-const SKELETON_WIDTHS = [48, 56, 72, 52, 60, 44, 64];
 
 // Header repo data cache keyed by "provider/owner/repo". The header stays
 // mounted across client-side navigations, so this lets revisiting a repo
@@ -224,66 +207,13 @@ function HeaderContent({
     // We optimize for the happy path. 404 pages may have a bit of layout shift but oh well.
     const showRepoNav = !!owner && !!repo && (isLoading || resolvedRepoData);
 
-    const tabs = useMemo((): Tab[] => {
-        if (!resolvedRepoData || !owner || !repo) return [];
-
-        const allTabs: Tab[] = [
-            {
-                label: "Code",
-                path: `/${provider}/${owner}/${repo}`,
-                show: true,
-                isActive: pathType === "REPO",
-                icon: Code2,
-            },
-            {
-                label: "Issues",
-                path: `/${provider}/${owner}/${repo}/issues`,
-                show: resolvedRepoData.hasIssues ?? true,
-                isActive: pathType === "ISSUES_LIST",
-                icon: CircleDot,
-                count: resolvedRepoData.openIssuesCount,
-            },
-            {
-                label: "Pull Requests",
-                path: `/${provider}/${owner}/${repo}/pulls`,
-                show: true,
-                isActive:
-                    pathType === "PULLS_LIST" || pathType === "PULL_REQUEST",
-                icon: GitPullRequest,
-                count: resolvedRepoData.openPullRequestsCount,
-            },
-            {
-                label: "Actions",
-                path: `https://${domain(provider)}/${owner}/${repo}/actions`,
-                show: true,
-                isActive: false,
-                icon: CirclePlay,
-            },
-            {
-                label: "Projects",
-                path: `https://${domain(provider)}/${owner}/${repo}/projects`,
-                show: resolvedRepoData.hasProjects ?? false,
-                isActive: false,
-                icon: Table2,
-            },
-            {
-                label: "Wiki",
-                path: `https://${domain(provider)}/${owner}/${repo}/wiki`,
-                show: resolvedRepoData.hasWiki ?? false,
-                isActive: false,
-                icon: BookOpen,
-            },
-            {
-                label: "Settings",
-                path: `https://${domain(provider)}/${owner}/${repo}/settings`,
-                show: resolvedRepoData.permissions.admin ?? false,
-                isActive: false,
-                icon: Settings,
-            },
-        ];
-
-        return allTabs.filter((t) => t.show);
-    }, [resolvedRepoData, provider, owner, repo, pathType]);
+    const tabs = useTabs({
+        repoData: resolvedRepoData,
+        provider,
+        owner: owner ?? null,
+        repo: repo ?? null,
+        pathType,
+    });
 
     return (
         <>
@@ -433,67 +363,6 @@ function ProviderIcon({
     );
 }
 
-function RepoNavbar({ tabs }: { tabs: Tab[] }) {
-    return (
-        <nav aria-label="Repository navigation">
-            <div className="flex gap-0 overflow-x-auto px-4 sm:px-6 lg:px-8">
-                {tabs.length > 0
-                    ? tabs.map((tab) => {
-                          const className = cn(
-                              "flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 font-medium text-sm transition-colors",
-                              tab.isActive
-                                  ? "border-blue-500 text-text-primary"
-                                  : "border-transparent text-text-secondary hover:border-gray-300 hover:text-text-primary dark:hover:border-zinc-600 dark:hover:text-zinc-100",
-                          );
-                          const children = (
-                              <>
-                                  <tab.icon className="size-4" />
-                                  {tab.label}
-                                  {tab.count != null && (
-                                      <span className="text-text-muted">
-                                          {formatCount(tab.count)}
-                                      </span>
-                                  )}
-                              </>
-                          );
-                          return tab.path.startsWith("/") ? (
-                              <Link
-                                  key={tab.path}
-                                  href={tab.path}
-                                  className={className}
-                              >
-                                  {children}
-                              </Link>
-                          ) : (
-                              <a
-                                  key={tab.path}
-                                  href={tab.path}
-                                  className={className}
-                              >
-                                  {children}
-                              </a>
-                          );
-                      })
-                    : SKELETON_WIDTHS.map((w) => (
-                          <div
-                              key={`skeleton-${w}`}
-                              className="flex items-center border-transparent border-b-2 px-3 py-2"
-                              aria-hidden
-                          >
-                              <div
-                                  className="h-5 animate-pulse rounded bg-surface-selected"
-                                  style={{ width: `${w}px` }}
-                              />
-                          </div>
-                      ))}
-            </div>
-        </nav>
-    );
-}
-
-type PathType = "REPO" | "PULL_REQUEST" | "ISSUES_LIST" | "PULLS_LIST";
-type Provider = "gh" | "cb";
-
 function usePathParams() {
     const pathname = usePathname();
     const provider: Provider = pathname.startsWith("/cb/") ? "cb" : "gh";
@@ -532,10 +401,6 @@ function usePathParams() {
         pullRequestNumber,
         pathType,
     };
-}
-
-function domain(provider: Provider) {
-    return provider === "cb" ? "codeberg.org" : "github.com";
 }
 
 function UserIcon({
