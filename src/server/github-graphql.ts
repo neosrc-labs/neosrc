@@ -1822,7 +1822,10 @@ export async function getPullRequestStackGraphQL(
                                 title: string;
                                 state: "OPEN" | "CLOSED" | "MERGED";
                                 isDraft: boolean;
-                                mergeable: "MERGEABLE" | "CONFLICTING" | "UNKNOWN";
+                                mergeable:
+                                    | "MERGEABLE"
+                                    | "CONFLICTING"
+                                    | "UNKNOWN";
                                 headRefName: string;
                             };
                         }[];

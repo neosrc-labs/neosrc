@@ -262,9 +262,7 @@ function Buttons({
     const stackMergeBlocked = stackData
         ? stackData.pullRequests
               .filter(
-                  (e) =>
-                      (e.position ?? 0) <
-                      (pullRequest.stack?.position ?? 0),
+                  (e) => (e.position ?? 0) < (pullRequest.stack?.position ?? 0),
               )
               .reduce<string | null>((reason, e) => {
                   if (reason) return reason;
