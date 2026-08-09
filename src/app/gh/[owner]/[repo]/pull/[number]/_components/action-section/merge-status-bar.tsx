@@ -47,7 +47,7 @@ interface MergeStatusBarProps {
     checkRuns?: CheckRun[];
     isMergeStatusLoading: boolean;
     isStackMerge?: boolean;
-    isBlockedByStack?: boolean;
+    isBlockedByStack?: string | null;
 }
 
 export function MergeStatusBar({
@@ -72,7 +72,7 @@ export function MergeStatusBar({
     checkRuns = [],
     isMergeStatusLoading,
     isStackMerge = false,
-    isBlockedByStack = false,
+    isBlockedByStack = null,
 }: MergeStatusBarProps) {
     const effectiveMergeMode = availableMergeOptions.some(
         (o) => o.value === mergeMode,
@@ -89,9 +89,12 @@ export function MergeStatusBar({
     }
 
     if (isBlockedByStack) {
+        const isConflict = isBlockedByStack === "conflicts";
         return (
-            <CannotMerge>
-                Earlier pull requests in the stack must be merged first
+            <CannotMerge variant={isConflict ? "danger" : "normal"}>
+                {isConflict
+                    ? "Stack conflicts"
+                    : "Earlier pull requests in the stack must be merged first"}
             </CannotMerge>
         );
     }

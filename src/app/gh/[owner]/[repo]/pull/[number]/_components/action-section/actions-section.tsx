@@ -259,14 +259,20 @@ function Buttons({
         { owner, repo, prNumber: number },
         { enabled: !!pullRequest.stack },
     );
-
     const stackMergeBlocked = stackData
-        ? stackData.pullRequests.some(
-              (entry: { position?: number; state: string; draft: boolean }) =>
-                  (entry.position ?? 0) < (pullRequest.stack?.position ?? 0) &&
-                  (entry.state === "closed" || entry.draft),
-          )
-        : false;
+        ? stackData.pullRequests
+              .filter(
+                  (e) =>
+                      (e.position ?? 0) <
+                      (pullRequest.stack?.position ?? 0),
+              )
+              .reduce<string | null>((reason, e) => {
+                  if (reason) return reason;
+                  if (e.mergeable === "CONFLICTING") return "conflicts";
+                  if (e.state === "closed" || e.draft) return "closed";
+                  return null;
+              }, null)
+        : null;
     const mergeOptionDefs = [
         {
             value: "merge" as const,

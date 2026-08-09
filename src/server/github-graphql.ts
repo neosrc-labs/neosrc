@@ -1767,6 +1767,7 @@ query($owner: String!, $repo: String!, $prNumber: Int!) {
               title
               state
               isDraft
+              mergeable
               headRefName
             }
           }
@@ -1792,6 +1793,7 @@ export interface StackEntry {
     state: "open" | "closed" | "merged";
     draft: boolean;
     title: string;
+    mergeable?: "MERGEABLE" | "CONFLICTING" | "UNKNOWN";
     headRef: string;
 }
 
@@ -1820,6 +1822,7 @@ export async function getPullRequestStackGraphQL(
                                 title: string;
                                 state: "OPEN" | "CLOSED" | "MERGED";
                                 isDraft: boolean;
+                                mergeable: "MERGEABLE" | "CONFLICTING" | "UNKNOWN";
                                 headRefName: string;
                             };
                         }[];
@@ -1843,6 +1846,7 @@ export async function getPullRequestStackGraphQL(
                     : e.pullRequest.state === "MERGED"
                       ? ("merged" as const)
                       : ("closed" as const),
+            mergeable: e.pullRequest.mergeable,
             draft: e.pullRequest.isDraft,
             title: e.pullRequest.title,
             headRef: e.pullRequest.headRefName,
