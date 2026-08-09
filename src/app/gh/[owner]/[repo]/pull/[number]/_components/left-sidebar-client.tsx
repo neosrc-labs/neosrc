@@ -11,6 +11,7 @@ import type { PullsGetResponseData } from "~/server/github";
 import { NULL_PROMISE } from "~/utils/promise";
 import { buildFileTree, FileTree, FileTreeSkeleton } from "./file-tree";
 import { ReviewThreadsSection } from "./review-threads-section";
+import { StackSection } from "./stack-section";
 
 interface LeftSidebarContentSectionProps {
     owner: string;
@@ -48,7 +49,12 @@ export function LeftSidebarContentSection({
         );
     }
 
-    return <ReviewThreadsSection number={number} owner={owner} repo={repo} />;
+    return (
+        <>
+            <ReviewThreadsSection owner={owner} repo={repo} number={number} />
+            <StackSection owner={owner} repo={repo} prNumber={number} />
+        </>
+    );
 }
 
 interface SidebarFileTreeProps {

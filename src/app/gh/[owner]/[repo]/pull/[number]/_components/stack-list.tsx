@@ -79,14 +79,14 @@ export function StackList({
     );
 }
 
-function prCircleFill(pr: StackEntry) {
+export function prCircleFill(pr: StackEntry) {
     if (pr.draft) return "bg-state-draft";
     if (pr.state === "merged") return "bg-state-merged";
     if (pr.state === "closed") return "bg-state-closed";
     return "bg-state-open";
 }
 
-function PrStateIcon({ pr }: { pr: StackEntry }) {
+export function PrStateIcon({ pr }: { pr: StackEntry }) {
     if (pr.draft)
         return <GitPullRequestDraft className="size-3.5 text-text-inverse" />;
     if (pr.state === "merged")

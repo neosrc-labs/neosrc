@@ -35,7 +35,7 @@ export default function LeftSidebar({
                 )}
             />
 
-            <div className="min-h-0 flex-1 border-border-subtle border-t pt-4 pr-0">
+            <div className="flex min-h-0 flex-1 flex-col border-border-subtle border-t pt-4 pr-0">
                 <Suspense>
                     <LeftSidebarContentSection
                         number={number}

@@ -196,15 +196,11 @@ export function ReviewThreadsSection({
     }
 
     if (threads.length === 0) {
-        return <p className="text-sm text-text-tertiary">No review threads</p>;
+        return null;
     }
 
     return (
-        <div
-            ref={scrollRef}
-            className="h-full overflow-y-auto"
-            style={{ contain: "strict" }}
-        >
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
             <div
                 style={{
                     height: `${virtualizer.getTotalSize()}px`,
