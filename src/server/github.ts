@@ -466,6 +466,31 @@ export const mergePullRequest = async (
     return response.data;
 };
 
+export const mergePullRequestAsync = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    mergeMethod: MergeMethod,
+    commitTitle?: string,
+    commitMessage?: string,
+) => {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.request(
+        "PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge",
+        {
+            owner,
+            repo,
+            pull_number: pullNumber,
+            merge_method: mergeMethod,
+            commit_title: commitTitle,
+            commit_message: commitMessage,
+            headers: { "X-GitHub-Api-Version": "2026-03-10" },
+        },
+    );
+    return response.data as { merged: boolean; message: string; sha?: string | null };
+};
+
 export const unstackPullRequests = async (
     accessToken: string,
     owner: string,
