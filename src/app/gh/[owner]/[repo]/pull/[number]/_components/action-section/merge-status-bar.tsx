@@ -46,6 +46,7 @@ interface MergeStatusBarProps {
     requiredChecks?: string[];
     checkRuns?: CheckRun[];
     isMergeStatusLoading: boolean;
+    isStackMerge?: boolean;
 }
 
 export function MergeStatusBar({
@@ -69,6 +70,7 @@ export function MergeStatusBar({
     requiredChecks = [],
     checkRuns = [],
     isMergeStatusLoading,
+    isStackMerge = false,
 }: MergeStatusBarProps) {
     const effectiveMergeMode = availableMergeOptions.some(
         (o) => o.value === mergeMode,
@@ -124,12 +126,17 @@ export function MergeStatusBar({
 
     const buttonText = isMerging
         ? "Merging..."
-        : effectiveMergeMode === "squash"
-          ? "Squash and merge"
-          : effectiveMergeMode === "rebase"
-            ? "Rebase and merge"
-            : "Merge pull request";
-
+        : isStackMerge
+          ? effectiveMergeMode === "squash"
+            ? "Squash and merge stack"
+            : effectiveMergeMode === "rebase"
+              ? "Rebase and merge stack"
+              : "Merge stack"
+          : effectiveMergeMode === "squash"
+            ? "Squash and merge"
+            : effectiveMergeMode === "rebase"
+              ? "Rebase and merge"
+              : "Merge pull request";
     return (
         <div className="flex items-stretch">
             {mergeError && (

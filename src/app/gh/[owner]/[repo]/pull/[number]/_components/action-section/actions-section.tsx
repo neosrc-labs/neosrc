@@ -252,6 +252,7 @@ function Buttons({
         !!currentUserLogin && (!pullRequest.locked || canWrite || isAuthor);
     const isMergeBlocked = pullRequest.mergeable_state === "blocked";
     const isMergeStateUnknown = pullRequest.mergeable_state === "unknown";
+    const isStackMerge = (pullRequest.stack?.position ?? 0) > 1;
 
     const mergeOptionDefs = [
         {
@@ -388,6 +389,7 @@ function Buttons({
                     requiredChecks={requiredChecks}
                     checkRuns={checkRuns}
                     isMergeStatusLoading={isMergeStatusLoading}
+                    isStackMerge={isStackMerge}
                 />
             )}
             {effectiveMerged && (
