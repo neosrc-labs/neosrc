@@ -30,6 +30,7 @@ interface StackPopoverProps {
     owner: string;
     repo: string;
     prNumber: number;
+    isLinkToChanges: boolean;
     onClose: () => void;
 }
 
@@ -37,6 +38,7 @@ function StackPopoverContent({
     owner,
     repo,
     prNumber,
+    isLinkToChanges,
     onClose,
 }: StackPopoverProps) {
     const utils = api.useUtils();
@@ -104,6 +106,7 @@ function StackPopoverContent({
                 repo={repo}
                 items={data.pullRequests}
                 baseRef={data.baseRef}
+                isLinkToChanges={isLinkToChanges}
                 currentNumber={prNumber}
             />
             <Dialog open={confirmUnstack} onOpenChange={setConfirmUnstack}>
@@ -147,17 +150,18 @@ function StackPopoverContent({
         </div>
     );
 }
-
 export function StackBadge({
     owner,
     repo,
     stack,
     prNumber,
+    isLinkToChanges = false,
 }: {
     owner: string;
     repo: string;
     stack: { size: number; position: number; number: number };
     prNumber: number;
+    isLinkToChanges?: boolean;
 }) {
     const [open, setOpen] = useState(false);
 
@@ -186,6 +190,7 @@ export function StackBadge({
                     repo={repo}
                     prNumber={prNumber}
                     onClose={() => setOpen(false)}
+                    isLinkToChanges={isLinkToChanges}
                 />
             </PopoverContent>
         </Popover>

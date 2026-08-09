@@ -488,7 +488,11 @@ export const mergePullRequestAsync = async (
             headers: { "X-GitHub-Api-Version": "2026-03-10" },
         },
     );
-    return response.data as { merged: boolean; message: string; sha?: string | null };
+    return response.data as {
+        merged: boolean;
+        message: string;
+        sha?: string | null;
+    };
 };
 
 export const unstackPullRequests = async (

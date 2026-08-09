@@ -17,21 +17,22 @@ interface StackListProps {
     items: StackEntry[];
     baseRef: string;
     currentNumber?: number;
+    isLinkToChanges: boolean;
 }
-
 export function StackList({
     owner,
     repo,
     items,
     baseRef,
     currentNumber,
+    isLinkToChanges,
 }: StackListProps) {
     return (
         <div className="flex flex-col">
             {items.map((pr) => (
                 <Link
                     key={pr.number}
-                    href={`/gh/${owner}/${repo}/pull/${pr.number}`}
+                    href={`/gh/${owner}/${repo}/pull/${pr.number}${isLinkToChanges ? "/changes" : ""}`}
                     className={cn(
                         "flex items-stretch gap-3 px-4 transition-colors hover:bg-surface-selected",
                         currentNumber === pr.number && "bg-surface-selected",
