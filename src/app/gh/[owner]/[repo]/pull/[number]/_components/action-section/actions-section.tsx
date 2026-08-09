@@ -254,11 +254,11 @@ function Buttons({
     const isMergeBlocked = pullRequest.mergeable_state === "blocked";
     const isMergeStateUnknown = pullRequest.mergeable_state === "unknown";
     const isStackMerge = (pullRequest.stack?.position ?? 0) > 1;
-
-    const { data: stackData } = api.pulls.getStack.useQuery(
-        { owner, repo, prNumber: number },
-        { enabled: !!pullRequest.stack },
-    );
+    const { data: stackData, isLoading: stackLoading } =
+        api.pulls.getStack.useQuery(
+            { owner, repo, prNumber: number },
+            { enabled: !!pullRequest.stack },
+        );
     const stackMergeBlocked = stackData
         ? stackData.pullRequests
               .filter(
@@ -407,7 +407,7 @@ function Buttons({
                     requiredApprovalCount={requiredApprovalCount}
                     requiredChecks={requiredChecks}
                     checkRuns={checkRuns}
-                    isMergeStatusLoading={isMergeStatusLoading}
+                    isMergeStatusLoading={isMergeStatusLoading || stackLoading}
                     isStackMerge={isStackMerge}
                     isBlockedByStack={stackMergeBlocked}
                 />

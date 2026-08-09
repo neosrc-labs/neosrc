@@ -88,6 +88,13 @@ export function MergeStatusBar({
         return null;
     }
 
+    if (isMergeStatusLoading) {
+        return (
+            <CannotMerge noWrapper>
+                <div className="h-3 w-20 animate-pulse rounded bg-zinc-300 dark:bg-zinc-600" />
+            </CannotMerge>
+        );
+    }
     if (isBlockedByStack) {
         const isConflict = isBlockedByStack === "conflicts";
         return (
