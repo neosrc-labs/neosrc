@@ -226,6 +226,7 @@ function Buttons({
             setIsMerged(true);
             utils.timeline.list.invalidate();
             utils.reviews.getPending.invalidate();
+            utils.pulls.getStack.invalidate({ owner, repo, prNumber: number });
             router.refresh();
         },
     });
