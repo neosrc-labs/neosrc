@@ -59,6 +59,7 @@ export function CreateStackDialog({
                         items={suggestion.pullRequests}
                         baseRef={suggestion.baseRef}
                         currentNumber={suggestion.pullRequests.at(-1)?.number}
+                        isLinkToChanges={false}
                     />
                 </div>
                 <DialogFooter>
