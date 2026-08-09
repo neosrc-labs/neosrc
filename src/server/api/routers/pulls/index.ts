@@ -1,4 +1,5 @@
 import { graphql as octokitGraphql } from "@octokit/graphql";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
     buildPrStatusBatchQuery,
@@ -669,6 +670,48 @@ export const pullsRouter = createTRPCRouter({
                 sha?: string | null;
             };
             if (pr.stack) {
+                const position = pr.stack.position ?? 0;
+                if (position > 1) {
+                    const stack = await getPullRequestStack(
+                        accessToken,
+                        input.owner,
+                        input.repo,
+                        input.number,
+                    );
+                    if (stack) {
+                        const toMerge = stack.pullRequests
+                            .filter(
+                                (e) =>
+                                    (e.position ?? 0) < position &&
+                                    e.state === "open",
+                            )
+                            .sort(
+                                (a, b) => (a.position ?? 0) - (b.position ?? 0),
+                            );
+                        for (const entry of toMerge) {
+                            result = await mergePullRequestAsync(
+                                accessToken,
+                                input.owner,
+                                input.repo,
+                                entry.number,
+                                input.mergeMethod,
+                            );
+                            if (!result.merged) {
+                                throw new TRPCError({
+                                    code: "INTERNAL_SERVER_ERROR",
+                                    message: `Failed to merge #${entry.number}: ${result.message}`,
+                                });
+                            }
+                            await deleteCache(
+                                prCacheKey(
+                                    input.owner,
+                                    input.repo,
+                                    entry.number,
+                                ),
+                            );
+                        }
+                    }
+                }
                 result = await mergePullRequestAsync(
                     accessToken,
                     input.owner,

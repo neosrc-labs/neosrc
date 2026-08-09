@@ -259,11 +259,11 @@ function Buttons({
         { enabled: !!pullRequest.stack },
     );
 
-    const earlierOpenInStack = stackData
+    const stackMergeBlocked = stackData
         ? stackData.pullRequests.some(
-              (entry) =>
+              (entry: { position?: number; state: string; draft: boolean }) =>
                   (entry.position ?? 0) < (pullRequest.stack?.position ?? 0) &&
-                  entry.state === "open",
+                  (entry.state === "closed" || entry.draft),
           )
         : false;
     const mergeOptionDefs = [
@@ -402,7 +402,7 @@ function Buttons({
                     checkRuns={checkRuns}
                     isMergeStatusLoading={isMergeStatusLoading}
                     isStackMerge={isStackMerge}
-                    isBlockedByStack={earlierOpenInStack}
+                    isBlockedByStack={stackMergeBlocked}
                 />
             )}
             {effectiveMerged && (
