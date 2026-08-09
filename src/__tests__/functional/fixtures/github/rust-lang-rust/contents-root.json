@@ -1,0 +1,137 @@
+[
+    {
+        "name": ".github",
+        "path": ".github",
+        "sha": "abc123",
+        "size": 0,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/.github",
+        "html_url": "https://github.com/rust-lang/rust/tree/master/.github",
+        "type": "dir"
+    },
+    {
+        "name": "compiler",
+        "path": "compiler",
+        "sha": "abc124",
+        "size": 0,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/compiler",
+        "html_url": "https://github.com/rust-lang/rust/tree/master/compiler",
+        "type": "dir"
+    },
+    {
+        "name": "library",
+        "path": "library",
+        "sha": "abc125",
+        "size": 0,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/library",
+        "html_url": "https://github.com/rust-lang/rust/tree/master/library",
+        "type": "dir"
+    },
+    {
+        "name": "src",
+        "path": "src",
+        "sha": "abc126",
+        "size": 0,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/src",
+        "html_url": "https://github.com/rust-lang/rust/tree/master/src",
+        "type": "dir"
+    },
+    {
+        "name": "tests",
+        "path": "tests",
+        "sha": "abc127",
+        "size": 0,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/tests",
+        "html_url": "https://github.com/rust-lang/rust/tree/master/tests",
+        "type": "dir"
+    },
+    {
+        "name": "Cargo.toml",
+        "path": "Cargo.toml",
+        "sha": "abc128",
+        "size": 8192,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/Cargo.toml",
+        "html_url": "https://github.com/rust-lang/rust/blob/master/Cargo.toml",
+        "type": "file"
+    },
+    {
+        "name": "Cargo.lock",
+        "path": "Cargo.lock",
+        "sha": "abc129",
+        "size": 65536,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/Cargo.lock",
+        "html_url": "https://github.com/rust-lang/rust/blob/master/Cargo.lock",
+        "type": "file"
+    },
+    {
+        "name": "README.md",
+        "path": "README.md",
+        "sha": "abc130",
+        "size": 4096,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/README.md",
+        "html_url": "https://github.com/rust-lang/rust/blob/master/README.md",
+        "type": "file"
+    },
+    {
+        "name": "LICENSE-MIT",
+        "path": "LICENSE-MIT",
+        "sha": "abc131",
+        "size": 2048,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/LICENSE-MIT",
+        "html_url": "https://github.com/rust-lang/rust/blob/master/LICENSE-MIT",
+        "type": "file"
+    },
+    {
+        "name": "LICENSE-APACHE",
+        "path": "LICENSE-APACHE",
+        "sha": "abc132",
+        "size": 11264,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/LICENSE-APACHE",
+        "html_url": "https://github.com/rust-lang/rust/blob/master/LICENSE-APACHE",
+        "type": "file"
+    },
+    {
+        "name": "CONTRIBUTING.md",
+        "path": "CONTRIBUTING.md",
+        "sha": "abc133",
+        "size": 3072,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/CONTRIBUTING.md",
+        "html_url": "https://github.com/rust-lang/rust/blob/master/CONTRIBUTING.md",
+        "type": "file"
+    },
+    {
+        "name": "CODE_OF_CONDUCT.md",
+        "path": "CODE_OF_CONDUCT.md",
+        "sha": "abc134",
+        "size": 5632,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/CODE_OF_CONDUCT.md",
+        "html_url": "https://github.com/rust-lang/rust/blob/master/CODE_OF_CONDUCT.md",
+        "type": "file"
+    },
+    {
+        "name": "x.py",
+        "path": "x.py",
+        "sha": "abc135",
+        "size": 1024,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/x.py",
+        "html_url": "https://github.com/rust-lang/rust/blob/master/x.py",
+        "type": "file"
+    },
+    {
+        "name": "configure",
+        "path": "configure",
+        "sha": "abc136",
+        "size": 512,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/configure",
+        "html_url": "https://github.com/rust-lang/rust/blob/master/configure",
+        "type": "file"
+    },
+    {
+        "name": "config.example.toml",
+        "path": "config.example.toml",
+        "sha": "abc137",
+        "size": 2048,
+        "url": "https://api.github.com/repos/rust-lang/rust/contents/config.example.toml",
+        "html_url": "https://github.com/rust-lang/rust/blob/master/config.example.toml",
+        "type": "file"
+    }
+]

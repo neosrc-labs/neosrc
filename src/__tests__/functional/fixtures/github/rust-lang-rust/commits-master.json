@@ -1,0 +1,24 @@
+[
+    {
+        "sha": "def4567890123456789012345678901234567890",
+        "commit": {
+            "author": {
+                "name": "bors",
+                "email": "bors@rust-lang.org",
+                "date": "2026-08-09T10:00:00Z"
+            },
+            "committer": {
+                "name": "bors",
+                "email": "bors@rust-lang.org",
+                "date": "2026-08-09T10:00:00Z"
+            },
+            "message": "Auto merge of #12345 - rust-lang:fix-thing, r=someone\n\nFix a thing in the compiler"
+        },
+        "author": {
+            "login": "bors",
+            "id": 3370662,
+            "avatar_url": "https://avatars.githubusercontent.com/u/3370662?v=4"
+        },
+        "parents": [{ "sha": "def4567890123456789012345678901234567889" }]
+    }
+]
