@@ -1571,10 +1571,10 @@ const getRepoIssuePullCounts = cache(
         const query = `
 query GetRepoIssuePullCounts($owner: String!, $repo: String!) {
   repository(owner: $owner, name: $repo) {
-    issues {
+    issues(states: OPEN) {
       totalCount
     }
-    pullRequests {
+    pullRequests(states: OPEN) {
       totalCount
     }
   }
