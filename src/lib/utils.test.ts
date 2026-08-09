@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { applyArrayOperations, cn, opId, parseTarget } from "~/lib/utils";
+import {
+    applyArrayOperations,
+    cn,
+    formatCount,
+    opId,
+    parseTarget,
+} from "~/lib/utils";
 
 describe("cn", () => {
     it("returns a string for a single class", () => {
@@ -190,5 +196,29 @@ describe("applyArrayOperations", () => {
         const ops = [{ id: 4, op: "add" as const, label: "d" }];
         const result = applyArrayOperations(items, ops, getValue, keyFn);
         expect(result.map((i) => i.id)).toEqual([3, 1, 2, 4]);
+    });
+});
+
+describe("formatCount", () => {
+    it("returns the number as-is for values under 1000", () => {
+        expect(formatCount(0)).toBe("0");
+        expect(formatCount(1)).toBe("1");
+        expect(formatCount(999)).toBe("999");
+    });
+
+    it("formats thousands with K suffix", () => {
+        expect(formatCount(1000)).toBe("1K");
+        expect(formatCount(1499)).toBe("1.5K");
+        expect(formatCount(1500)).toBe("1.5K");
+        expect(formatCount(9999)).toBe("10.0K");
+        expect(formatCount(10000)).toBe("10K");
+        expect(formatCount(999999)).toBe("1000.0K");
+    });
+
+    it("formats millions with M suffix", () => {
+        expect(formatCount(1000000)).toBe("1M");
+        expect(formatCount(1499999)).toBe("1.5M");
+        expect(formatCount(1500000)).toBe("1.5M");
+        expect(formatCount(10000000)).toBe("10M");
     });
 });

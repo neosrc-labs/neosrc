@@ -20,7 +20,7 @@ import type { ElementType } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { Async } from "~/components/async";
 import { GitHubIcon } from "~/components/github-icon";
-import { cn } from "~/lib/utils";
+import { cn, formatCount } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { useSidebar } from "../sidebar-context";
 import { ThemeToggle } from "../theme-toggle";
@@ -487,7 +487,7 @@ function HeaderContent({
                                               {tab.label}
                                               {tab.count != null && (
                                                   <span className="text-text-muted">
-                                                      {tab.count.toLocaleString()}
+                                                      {formatCount(tab.count)}
                                                   </span>
                                               )}
                                           </>
