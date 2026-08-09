@@ -649,53 +649,57 @@ export const pullsRouter = createTRPCRouter({
                 commitMessage: z.string().optional(),
             }),
         )
-    .mutation(async ({ ctx, input }) => {
-        const accessToken = await getGitHubToken(
-            ctx.db,
-            ctx.session?.user?.id,
-        );
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session?.user?.id,
+            );
 
-        const pr = await getCachedPullRequest(
-            accessToken,
-            input.owner,
-            input.repo,
-            input.number,
-            ctx.session?.user?.id,
-        );
-
-        let result: { merged: boolean; message: string; sha?: string | null };
-        if (pr.stack) {
-            result = await mergePullRequestAsync(
+            const pr = await getCachedPullRequest(
                 accessToken,
                 input.owner,
                 input.repo,
                 input.number,
-                input.mergeMethod,
-                input.commitTitle,
-                input.commitMessage,
+                ctx.session?.user?.id,
             );
-        } else {
-            result = await mergePullRequest(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-                input.mergeMethod,
-                input.commitTitle,
-                input.commitMessage,
+
+            let result: {
+                merged: boolean;
+                message: string;
+                sha?: string | null;
+            };
+            if (pr.stack) {
+                result = await mergePullRequestAsync(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                    input.mergeMethod,
+                    input.commitTitle,
+                    input.commitMessage,
+                );
+            } else {
+                result = await mergePullRequest(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                    input.mergeMethod,
+                    input.commitTitle,
+                    input.commitMessage,
+                );
+            }
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
             );
-        }
 
-        await deleteCache(
-            prCacheKey(input.owner, input.repo, input.number),
-        );
-
-        return {
-            success: true as const,
-            sha: result.sha ?? undefined,
-            merged: result.merged,
-        };
-    }),
+            return {
+                success: true as const,
+                sha: result.sha ?? undefined,
+                merged: result.merged,
+            };
+        }),
     revert: protectedProcedure
         .input(
             z.object({

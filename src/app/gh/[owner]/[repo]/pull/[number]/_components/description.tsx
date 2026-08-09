@@ -717,12 +717,8 @@ function SubtitleActionRow({
                         <StackBadge
                             owner={owner}
                             repo={repo}
-                            stack={{
-                                size: pullRequest.stack.size,
-                                position: pullRequest.stack.position,
-                                number: pullRequest.stack.number,
-                            }}
                             prNumber={pullRequest.number}
+                            stack={pullRequest.stack}
                         />
                     ) : stackBannerDismissed ? (
                         <Async fallback={null} promise={stackSuggestionPromise}>

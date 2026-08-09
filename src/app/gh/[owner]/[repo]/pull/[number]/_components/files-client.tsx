@@ -22,6 +22,7 @@ import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
 import { ActionSection } from "./action-section/actions-section";
 import { Branches } from "./description";
+import { StackBadge } from "./stack-popover";
 
 function FileDiffSkeleton() {
     return (
@@ -251,6 +252,15 @@ export function FilesSection({
                                                 owner={owner}
                                                 repo={repo}
                                                 pullRequest={pullRequest}
+                                            />
+                                        ) : null}
+                                        {pullRequest.stack ? (
+                                            <StackBadge
+                                                owner={owner}
+                                                repo={repo}
+                                                prNumber={pullRequest.number}
+                                                stack={pullRequest.stack}
+                                                isLinkToChanges={true}
                                             />
                                         ) : null}
                                     </>
