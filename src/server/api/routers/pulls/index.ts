@@ -36,6 +36,7 @@ import {
     markPullRequestAsDraft,
     markPullRequestAsReady,
     mergePullRequest,
+    mergePullRequestAsync,
     type PullsGetResponseData,
     type ReviewComment2,
     removeAssigneesFromIssue,
@@ -648,13 +649,23 @@ export const pullsRouter = createTRPCRouter({
                 commitMessage: z.string().optional(),
             }),
         )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+    .mutation(async ({ ctx, input }) => {
+        const accessToken = await getGitHubToken(
+            ctx.db,
+            ctx.session?.user?.id,
+        );
 
-            const result = await mergePullRequest(
+        const pr = await getCachedPullRequest(
+            accessToken,
+            input.owner,
+            input.repo,
+            input.number,
+            ctx.session?.user?.id,
+        );
+
+        let result: { merged: boolean; message: string; sha?: string | null };
+        if (pr.stack) {
+            result = await mergePullRequestAsync(
                 accessToken,
                 input.owner,
                 input.repo,
@@ -663,18 +674,28 @@ export const pullsRouter = createTRPCRouter({
                 input.commitTitle,
                 input.commitMessage,
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
+        } else {
+            result = await mergePullRequest(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+                input.mergeMethod,
+                input.commitTitle,
+                input.commitMessage,
             );
+        }
 
-            return {
-                success: true as const,
-                sha: result.sha,
-                merged: result.merged,
-            };
-        }),
+        await deleteCache(
+            prCacheKey(input.owner, input.repo, input.number),
+        );
 
+        return {
+            success: true as const,
+            sha: result.sha ?? undefined,
+            merged: result.merged,
+        };
+    }),
     revert: protectedProcedure
         .input(
             z.object({
