@@ -16,10 +16,10 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ElementType } from "react";
+import type { ElementType, RefObject } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { Async } from "~/components/async";
-import { GitHubIcon } from "~/components/github-icon";
+import { CodebergIcon, GitHubIcon } from "~/components/icons";
 import { cn, formatCount } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { useSidebar } from "../sidebar-context";
@@ -72,20 +72,15 @@ export function HeaderClient({
     );
 
     const pathname = usePathname();
-    const cleanPath = pathname.replace(/^\/(?:gh|cb)(?=\/)/, "");
-    const repoMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)/);
-    const owner = repoMatch?.[1] ?? "";
-    const repo = repoMatch?.[2] ?? "";
-
-    const provider = pathname.startsWith("/cb/") ? "cb" : "gh";
+    const { provider, owner, repo } = usePathParams();
 
     const { data: clientRepoData } = api.repos.getByOwnerAndRepo.useQuery(
-        { provider, owner, repo },
+        { provider, owner: owner as string, repo: repo as string },
         { enabled: !!owner && !!repo },
     );
     const { data: clientCounts, refetch: refetchCounts } =
         api.repos.getCountsByOwnerAndRepo.useQuery(
-            { provider, owner, repo },
+            { provider, owner: owner as string, repo: repo as string },
             { enabled: !!owner && !!repo },
         );
 
@@ -168,17 +163,8 @@ function HeaderContent({
     initialOwner: string | null;
     initialRepo: string | null;
 }) {
-    const pathname = usePathname();
-    // Strip optional /gh or /cb prefix for owner/repo extraction
-    const cleanPath = pathname.replace(/^\/(?:gh|cb)(?=\/)/, "");
-    const prMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
-    const pullsMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pulls/);
-    const issuesMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/issues/);
-    const repoMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)/);
-    const owner = repoMatch?.[1];
-    const repo = repoMatch?.[2];
-    const provider = pathname.startsWith("/cb/") ? "cb" : "gh";
-    const { isLeftOpen, isRightOpen, toggleLeft, toggleRight } = useSidebar();
+    const { provider, owner, repo, pullRequestNumber, pathType } =
+        usePathParams();
 
     const cacheKey = owner && repo ? `${provider}/${owner}/${repo}` : null;
 
@@ -213,8 +199,6 @@ function HeaderContent({
     }
 
     const headerRef = useRef<HTMLDivElement>(null);
-    const leftToggleRef = useRef<HTMLButtonElement>(null);
-    const rightToggleRef = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
         const header = headerRef.current;
@@ -236,28 +220,6 @@ function HeaderContent({
         return () => observer.disconnect();
     }, []);
 
-    useEffect(() => {
-        const header = headerRef.current;
-        if (!prMatch || !header) return;
-
-        const updateTogglePosition = () => {
-            const rect = header.getBoundingClientRect();
-            const visible = Math.min(rect.height, Math.max(0, rect.bottom));
-            if (leftToggleRef.current) {
-                leftToggleRef.current.style.top = `${visible}px`;
-            }
-            if (rightToggleRef.current) {
-                rightToggleRef.current.style.top = `${visible}px`;
-            }
-        };
-
-        updateTogglePosition();
-        window.addEventListener("scroll", updateTogglePosition, {
-            passive: true,
-        });
-        return () => window.removeEventListener("scroll", updateTogglePosition);
-    }, [prMatch]);
-
     // Always show the repo nav when loading to minimize the layout shift on repo pages.
     // We optimize for the happy path. 404 pages may have a bit of layout shift but oh well.
     const showRepoNav = !!owner && !!repo && (isLoading || resolvedRepoData);
@@ -265,25 +227,19 @@ function HeaderContent({
     const tabs = useMemo((): Tab[] => {
         if (!resolvedRepoData || !owner || !repo) return [];
 
-        const isPR = !!prMatch;
-        const isPulls = !!pullsMatch;
-        const isIssues = !!issuesMatch;
-
-        const isCode = cleanPath === `/${owner}/${repo}`;
-
         const allTabs: Tab[] = [
             {
                 label: "Code",
                 path: `/${provider}/${owner}/${repo}`,
                 show: true,
-                isActive: isCode,
+                isActive: pathType === "REPO",
                 icon: Code2,
             },
             {
                 label: "Issues",
                 path: `/${provider}/${owner}/${repo}/issues`,
                 show: resolvedRepoData.hasIssues ?? true,
-                isActive: isIssues,
+                isActive: pathType === "ISSUES_LIST",
                 icon: CircleDot,
                 count: resolvedRepoData.openIssuesCount,
             },
@@ -291,46 +247,35 @@ function HeaderContent({
                 label: "Pull Requests",
                 path: `/${provider}/${owner}/${repo}/pulls`,
                 show: true,
-                isActive: isPR || isPulls,
+                isActive:
+                    pathType === "PULLS_LIST" || pathType === "PULL_REQUEST",
                 icon: GitPullRequest,
                 count: resolvedRepoData.openPullRequestsCount,
             },
             {
                 label: "Actions",
-                path:
-                    provider === "cb"
-                        ? `https://codeberg.org/${owner}/${repo}/actions`
-                        : `https://github.com/${owner}/${repo}/actions`,
+                path: `https://${domain(provider)}/${owner}/${repo}/actions`,
                 show: true,
                 isActive: false,
                 icon: CirclePlay,
             },
             {
                 label: "Projects",
-                path:
-                    provider === "cb"
-                        ? `https://codeberg.org/${owner}/${repo}/projects`
-                        : `https://github.com/${owner}/${repo}/projects`,
+                path: `https://${domain(provider)}/${owner}/${repo}/projects`,
                 show: resolvedRepoData.hasProjects ?? false,
                 isActive: false,
                 icon: Table2,
             },
             {
                 label: "Wiki",
-                path:
-                    provider === "cb"
-                        ? `https://codeberg.org/${owner}/${repo}/wiki`
-                        : `https://github.com/${owner}/${repo}/wiki`,
+                path: `https://${domain(provider)}/${owner}/${repo}/wiki`,
                 show: resolvedRepoData.hasWiki ?? false,
                 isActive: false,
                 icon: BookOpen,
             },
             {
                 label: "Settings",
-                path:
-                    provider === "cb"
-                        ? `https://codeberg.org/${owner}/${repo}/settings`
-                        : `https://github.com/${owner}/${repo}/settings`,
+                path: `https://${domain(provider)}/${owner}/${repo}/settings`,
                 show: resolvedRepoData.permissions.admin ?? false,
                 isActive: false,
                 icon: Settings,
@@ -338,16 +283,7 @@ function HeaderContent({
         ];
 
         return allTabs.filter((t) => t.show);
-    }, [
-        resolvedRepoData,
-        owner,
-        repo,
-        prMatch,
-        pullsMatch,
-        issuesMatch,
-        cleanPath,
-        provider,
-    ]);
+    }, [resolvedRepoData, provider, owner, repo, pathType]);
 
     return (
         <>
@@ -368,166 +304,303 @@ function HeaderContent({
                                 />
                             </Link>
                             {showRepoNav && (
-                                <div className="flex items-center gap-1.5">
-                                    <a
-                                        className="flex shrink-0 items-center"
-                                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    >
-                                        {resolvedRepoData?.ownerAvatarUrl ? (
-                                            <Image
-                                                src={
-                                                    resolvedRepoData.ownerAvatarUrl
-                                                }
-                                                alt={owner}
-                                                className="size-5 rounded-full"
-                                                width={20}
-                                                height={20}
-                                            />
-                                        ) : (
-                                            <div className="size-5 rounded-full bg-surface-selected" />
-                                        )}
-                                    </a>
-                                    <a
-                                        className="font-medium text-sm text-text-secondary hover:text-text-primary dark:hover:text-zinc-100"
-                                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    >
-                                        {owner}
-                                    </a>
-                                    <span className="text-sm text-text-muted">
-                                        /
-                                    </span>
-                                    <a
-                                        className="font-medium text-sm text-text-secondary hover:text-text-primary dark:hover:text-zinc-100"
-                                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    >
-                                        {repo}
-                                    </a>
-                                </div>
+                                <RepoName
+                                    provider={provider}
+                                    owner={owner}
+                                    repo={repo}
+                                    ownerAvatarUrl={
+                                        resolvedRepoData?.ownerAvatarUrl
+                                    }
+                                />
                             )}
                         </div>
 
                         <div className="flex items-center gap-1">
-                            {!!repoMatch && (
-                                <a
-                                    className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
-                                    href={
-                                        prMatch
-                                            ? `https://${provider === "cb" ? "codeberg.org" : "github.com"}/${prMatch[1]}/${prMatch[2]}/pull/${prMatch[3]}${provider === "gh" ? "?neosrc_exit=1" : ""}`
-                                            : issuesMatch
-                                              ? `https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues`
-                                              : pullsMatch
-                                                ? `https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/pulls`
-                                                : `https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}`
-                                    }
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    title={`Back to ${provider === "cb" ? "Codeberg" : "GitHub"}`}
-                                >
-                                    {provider === "cb" ? (
-                                        <Image
-                                            src="/logo-codeberg.svg"
-                                            alt=""
-                                            className="size-[18px] invert dark:invert-0"
-                                            width={18}
-                                            height={18}
-                                            aria-hidden="true"
-                                        />
-                                    ) : (
-                                        <GitHubIcon />
-                                    )}
-                                    <span className="sr-only">
-                                        {`Back to ${provider === "cb" ? "Codeberg" : "GitHub"}`}
-                                    </span>
-                                </a>
+                            {!!owner && !!repo && !!pathType && (
+                                <ProviderIcon
+                                    provider={provider}
+                                    owner={owner}
+                                    repo={repo}
+                                    pullRequestNumber={pullRequestNumber}
+                                    pathType={pathType}
+                                />
                             )}
                             <ThemeToggle />
-                            <Link
-                                className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
-                                href="/profile"
-                            >
-                                {currentUser?.avatarUrl ? (
-                                    <Image
-                                        src={currentUser.avatarUrl}
-                                        alt={currentUser.login}
-                                        className="size-6 rounded-full"
-                                        width={24}
-                                        height={24}
-                                    />
-                                ) : (
-                                    <User size={18} />
-                                )}
-                                <span className="sr-only">
-                                    {currentUser?.login ?? "Profile"}
-                                </span>
-                            </Link>
+                            <UserIcon
+                                avatarUrl={currentUser?.avatarUrl}
+                                login={currentUser?.login}
+                            />
                         </div>
                     </div>
                 </div>
 
-                {showRepoNav && (
-                    <nav aria-label="Repository navigation">
-                        <div className="flex gap-0 overflow-x-auto px-4 sm:px-6 lg:px-8">
-                            {tabs.length > 0
-                                ? tabs.map((tab) => {
-                                      const className = cn(
-                                          "flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 font-medium text-sm transition-colors",
-                                          tab.isActive
-                                              ? "border-blue-500 text-text-primary"
-                                              : "border-transparent text-text-secondary hover:border-gray-300 hover:text-text-primary dark:hover:border-zinc-600 dark:hover:text-zinc-100",
-                                      );
-                                      const children = (
-                                          <>
-                                              <tab.icon className="size-4" />
-                                              {tab.label}
-                                              {tab.count != null && (
-                                                  <span className="text-text-muted">
-                                                      {formatCount(tab.count)}
-                                                  </span>
-                                              )}
-                                          </>
-                                      );
-                                      return tab.path.startsWith("/") ? (
-                                          <Link
-                                              key={tab.path}
-                                              href={tab.path}
-                                              className={className}
-                                          >
-                                              {children}
-                                          </Link>
-                                      ) : (
-                                          <a
-                                              key={tab.path}
-                                              href={tab.path}
-                                              className={className}
-                                          >
-                                              {children}
-                                          </a>
-                                      );
-                                  })
-                                : SKELETON_WIDTHS.map((w) => (
-                                      <div
-                                          key={`skeleton-${w}`}
-                                          className="flex items-center border-transparent border-b-2 px-3 py-2"
-                                          aria-hidden
-                                      >
-                                          <div
-                                              className="h-5 animate-pulse rounded bg-surface-selected"
-                                              style={{ width: `${w}px` }}
-                                          />
-                                      </div>
-                                  ))}
-                        </div>
-                    </nav>
-                )}
+                {showRepoNav && <RepoNavbar tabs={tabs} />}
             </header>
 
-            {prMatch && !isLeftOpen && (
+            {pathType === "PULL_REQUEST" && (
+                <PullRequestSidebarToggles headerRef={headerRef} />
+            )}
+        </>
+    );
+}
+
+function RepoName({
+    provider,
+    owner,
+    repo,
+    ownerAvatarUrl,
+}: {
+    provider: string;
+    owner: string;
+    repo: string;
+    ownerAvatarUrl?: string | null;
+}) {
+    return (
+        <div className="flex items-center gap-1.5">
+            <a
+                className="flex shrink-0 items-center"
+                href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}`}
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                {ownerAvatarUrl ? (
+                    <Image
+                        src={ownerAvatarUrl}
+                        alt={owner}
+                        className="size-5 rounded-full"
+                        width={20}
+                        height={20}
+                    />
+                ) : (
+                    <div className="size-5 rounded-full bg-surface-selected" />
+                )}
+            </a>
+            <a
+                className="font-medium text-sm text-text-secondary hover:text-text-primary dark:hover:text-zinc-100"
+                href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}`}
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                {owner}
+            </a>
+            <span className="text-sm text-text-muted">/</span>
+            <a
+                className="font-medium text-sm text-text-secondary hover:text-text-primary dark:hover:text-zinc-100"
+                href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}`}
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                {repo}
+            </a>
+        </div>
+    );
+}
+
+function ProviderIcon({
+    provider,
+    owner,
+    repo,
+    pullRequestNumber,
+    pathType,
+}: {
+    provider: Provider;
+    owner: string;
+    repo: string;
+    pullRequestNumber?: number | null;
+    pathType: PathType;
+}) {
+    return (
+        <a
+            className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
+            href={
+                pathType === "PULL_REQUEST"
+                    ? `https://${domain(provider)}/${owner}/${repo}/pull/${pullRequestNumber}?neosrc_exit=1`
+                    : pathType === "ISSUES_LIST"
+                      ? `https://${domain(provider)}/${owner}/${repo}/issues`
+                      : pathType === "PULLS_LIST"
+                        ? `https://${domain(provider)}/${owner}/${repo}/pulls`
+                        : `https://${domain(provider)}/${owner}/${repo}`
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Back to ${provider === "cb" ? "Codeberg" : "GitHub"}`}
+        >
+            {provider === "cb" ? <CodebergIcon /> : <GitHubIcon />}
+            <span className="sr-only">
+                {`Back to ${provider === "cb" ? "Codeberg" : "GitHub"}`}
+            </span>
+        </a>
+    );
+}
+
+function RepoNavbar({ tabs }: { tabs: Tab[] }) {
+    return (
+        <nav aria-label="Repository navigation">
+            <div className="flex gap-0 overflow-x-auto px-4 sm:px-6 lg:px-8">
+                {tabs.length > 0
+                    ? tabs.map((tab) => {
+                          const className = cn(
+                              "flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 font-medium text-sm transition-colors",
+                              tab.isActive
+                                  ? "border-blue-500 text-text-primary"
+                                  : "border-transparent text-text-secondary hover:border-gray-300 hover:text-text-primary dark:hover:border-zinc-600 dark:hover:text-zinc-100",
+                          );
+                          const children = (
+                              <>
+                                  <tab.icon className="size-4" />
+                                  {tab.label}
+                                  {tab.count != null && (
+                                      <span className="text-text-muted">
+                                          {formatCount(tab.count)}
+                                      </span>
+                                  )}
+                              </>
+                          );
+                          return tab.path.startsWith("/") ? (
+                              <Link
+                                  key={tab.path}
+                                  href={tab.path}
+                                  className={className}
+                              >
+                                  {children}
+                              </Link>
+                          ) : (
+                              <a
+                                  key={tab.path}
+                                  href={tab.path}
+                                  className={className}
+                              >
+                                  {children}
+                              </a>
+                          );
+                      })
+                    : SKELETON_WIDTHS.map((w) => (
+                          <div
+                              key={`skeleton-${w}`}
+                              className="flex items-center border-transparent border-b-2 px-3 py-2"
+                              aria-hidden
+                          >
+                              <div
+                                  className="h-5 animate-pulse rounded bg-surface-selected"
+                                  style={{ width: `${w}px` }}
+                              />
+                          </div>
+                      ))}
+            </div>
+        </nav>
+    );
+}
+
+type PathType = "REPO" | "PULL_REQUEST" | "ISSUES_LIST" | "PULLS_LIST";
+type Provider = "gh" | "cb";
+
+function usePathParams() {
+    const pathname = usePathname();
+    const provider: Provider = pathname.startsWith("/cb/") ? "cb" : "gh";
+    // Strip optional /gh or /cb prefix for owner/repo extraction
+    const cleanPath = pathname.replace(/^\/(?:gh|cb)(?=\/)/, "");
+
+    const repoMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)/);
+    const owner = repoMatch?.[1];
+    const repo = repoMatch?.[2];
+
+    let pathType: PathType | null = null;
+
+    let pullRequestNumber = null;
+    if (repoMatch) {
+        const prMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
+        const pullsMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pulls/);
+        const issuesMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/issues/);
+        if (pullsMatch) {
+            pathType = "PULLS_LIST";
+        } else if (issuesMatch) {
+            pathType = "ISSUES_LIST";
+        } else if (prMatch) {
+            pathType = "PULL_REQUEST";
+            if (prMatch[3]) {
+                pullRequestNumber = parseInt(prMatch[3], 10);
+            }
+        } else {
+            pathType = "REPO";
+        }
+    }
+
+    return {
+        provider,
+        owner,
+        repo,
+        pullRequestNumber,
+        pathType,
+    };
+}
+
+function domain(provider: Provider) {
+    return provider === "cb" ? "codeberg.org" : "github.com";
+}
+
+function UserIcon({
+    avatarUrl,
+    login,
+}: {
+    avatarUrl?: string | null;
+    login?: string | null;
+}) {
+    return (
+        <Link
+            className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
+            href="/profile"
+        >
+            {avatarUrl ? (
+                <Image
+                    src={avatarUrl}
+                    alt={login ?? "user"}
+                    className="size-6 rounded-full"
+                    width={24}
+                    height={24}
+                />
+            ) : (
+                <User size={18} />
+            )}
+            <span className="sr-only">{login ?? "Profile"}</span>
+        </Link>
+    );
+}
+
+function PullRequestSidebarToggles({
+    headerRef,
+}: {
+    headerRef: RefObject<HTMLDivElement | null>;
+}) {
+    const { isLeftOpen, isRightOpen, toggleLeft, toggleRight } = useSidebar();
+
+    const leftToggleRef = useRef<HTMLButtonElement>(null);
+    const rightToggleRef = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        const header = headerRef.current;
+        if (!header) return;
+
+        const updateTogglePosition = () => {
+            const rect = header.getBoundingClientRect();
+            const visible = Math.min(rect.height, Math.max(0, rect.bottom));
+            if (leftToggleRef.current) {
+                leftToggleRef.current.style.top = `${visible}px`;
+            }
+            if (rightToggleRef.current) {
+                rightToggleRef.current.style.top = `${visible}px`;
+            }
+        };
+
+        updateTogglePosition();
+        window.addEventListener("scroll", updateTogglePosition, {
+            passive: true,
+        });
+        return () => window.removeEventListener("scroll", updateTogglePosition);
+    }, [headerRef.current]);
+
+    return (
+        <>
+            {!isLeftOpen && (
                 <button
                     ref={leftToggleRef}
                     className="fixed left-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-r-md bg-surface text-text-tertiary shadow-sm transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
@@ -540,26 +613,22 @@ function HeaderContent({
                 </button>
             )}
 
-            {prMatch && (
-                <button
-                    ref={rightToggleRef}
-                    className="fixed right-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-l-md bg-surface text-text-tertiary shadow-sm transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
-                    style={{ top: "var(--header-height)" }}
-                    onClick={toggleRight}
-                    title={
-                        isRightOpen
-                            ? "Close right sidebar"
-                            : "Open right sidebar"
-                    }
-                    type="button"
-                >
-                    {isRightOpen ? (
-                        <PanelRightClose size={16} />
-                    ) : (
-                        <PanelRightOpen size={16} />
-                    )}
-                </button>
-            )}
+            <button
+                ref={rightToggleRef}
+                className="fixed right-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-l-md bg-surface text-text-tertiary shadow-sm transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                style={{ top: "var(--header-height)" }}
+                onClick={toggleRight}
+                title={
+                    isRightOpen ? "Close right sidebar" : "Open right sidebar"
+                }
+                type="button"
+            >
+                {isRightOpen ? (
+                    <PanelRightClose size={16} />
+                ) : (
+                    <PanelRightOpen size={16} />
+                )}
+            </button>
         </>
     );
 }
