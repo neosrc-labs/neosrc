@@ -10,6 +10,8 @@ ba_user = "ba_user"
 ba_session = "ba_session"
 ba_account = "ba_account"
 ba_verification = "ba_verification"
+ba_session_userId_idx = "ba_session_userId_idx"
+ba_account_userId_idx = "ba_account_userId_idx"
 
 [default.extend-words]
 # Esy package manager (https://esy.sh)
