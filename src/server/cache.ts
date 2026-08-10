@@ -118,26 +118,36 @@ export function prCacheKey(
 
 export function repoIssuePullCountsCacheKey(
     provider: "gh" | "cb",
+    userId: string,
     owner: string,
     repo: string,
 ): string {
-    return `${provider}:counts:${owner}:${repo}`;
+    return `${provider}:counts:${userId}:${owner}:${repo}`;
 }
 
-export function repoLanguagesCacheKey(owner: string, repo: string): string {
-    return `gh:langs:${owner}:${repo}`;
+export function repoLanguagesCacheKey(
+    userId: string,
+    owner: string,
+    repo: string,
+): string {
+    return `gh:langs:${userId}:${owner}:${repo}`;
 }
 
-export function repoContributorsCacheKey(owner: string, repo: string): string {
-    return `gh:contributors:${owner}:${repo}`;
+export function repoContributorsCacheKey(
+    userId: string,
+    owner: string,
+    repo: string,
+): string {
+    return `gh:contributors:${userId}:${owner}:${repo}`;
 }
 
 export function repoDocFilesCacheKey(
+    userId: string,
     owner: string,
     repo: string,
     ref?: string,
 ): string {
-    return `gh:doc-files:${owner}:${repo}${ref ? `:${ref}` : ""}`;
+    return `gh:doc-files:${userId}:${owner}:${repo}${ref ? `:${ref}` : ""}`;
 }
 
 export function repoStarredCacheKey(

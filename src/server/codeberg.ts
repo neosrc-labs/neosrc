@@ -1091,11 +1091,12 @@ export async function getCachedRepoHeaderData(
 
 export async function getCachedRepoCounts(
     accessToken: string,
+    userId: string,
     owner: string,
     repo: string,
 ): Promise<{ openIssuesCount: number; openPullRequestsCount: number }> {
     return withStaleWhileRevalidate(
-        repoIssuePullCountsCacheKey("cb", owner, repo),
+        repoIssuePullCountsCacheKey("cb", userId, owner, repo),
         () => getRepoCounts(accessToken, owner, repo),
         { staleAfter: 3_000, deleteAfter: 24 * 60 * 60 * 1000 },
     );

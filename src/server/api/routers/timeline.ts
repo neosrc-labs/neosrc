@@ -58,6 +58,7 @@ export const timelineRouter = createTRPCRouter({
                 ? result.events
                 : await attachApprovalAuthorPermissions(
                       accessToken,
+                      ctx.session?.user?.id ?? "anonymous",
                       input.owner,
                       input.repo,
                       result.events,
@@ -88,6 +89,7 @@ type RepoPermission = "admin" | "write" | "read" | "none";
  */
 async function attachApprovalAuthorPermissions(
     accessToken: string,
+    userId: string,
     owner: string,
     repo: string,
     events: GQLTimelineEvent[],
@@ -110,6 +112,7 @@ async function attachApprovalAuthorPermissions(
 
     const collaboratorPermissions = await getRepoCollaboratorPermissions(
         accessToken,
+        userId,
         owner,
         repo,
     );
