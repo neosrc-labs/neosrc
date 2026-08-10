@@ -28,17 +28,27 @@ export async function GET(request: Request) {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
         async start(controller) {
-            for await (const page of getPullRequestFilesStream(
-                accessToken,
-                owner,
-                repo,
-                number,
-                commitSha,
-                userId ?? undefined,
-            )) {
-                controller.enqueue(encoder.encode(`${JSON.stringify(page)}\n`));
+            try {
+                for await (const page of getPullRequestFilesStream(
+                    accessToken,
+                    owner,
+                    repo,
+                    number,
+                    commitSha,
+                    userId ?? undefined,
+                    request.signal,
+                )) {
+                    if (request.signal.aborted) return;
+                    controller.enqueue(
+                        encoder.encode(`${JSON.stringify(page)}\n`),
+                    );
+                }
+                controller.close();
+            } catch (err) {
+                if (!request.signal.aborted) {
+                    controller.error(err);
+                }
             }
-            controller.close();
         },
     });
 
