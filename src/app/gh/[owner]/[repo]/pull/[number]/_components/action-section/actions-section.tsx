@@ -80,11 +80,14 @@ export function ActionSection({
             { staleTime: 30_000 },
         );
 
-    const { data: mergeReqs, isLoading: mergeReqsLoading } =
-        api.pulls.getMergeRequirements.useQuery(
-            { owner, repo, number },
-            { staleTime: 60_000 },
-        );
+    const {
+        data: mergeReqs,
+        isLoading: mergeReqsLoading,
+        isError: mergeReqsError,
+    } = api.pulls.getMergeRequirements.useQuery(
+        { owner, repo, number },
+        { staleTime: 60_000 },
+    );
 
     const skeleton = <div className="h-9 w-full" />;
     return (
@@ -116,6 +119,7 @@ export function ActionSection({
                                             repoData={repoData}
                                             reviews={reviews}
                                             mergeReqs={mergeReqs}
+                                            mergeReqsError={mergeReqsError}
                                             pendingReview={pendingReview}
                                             variant={variant}
                                             isSticky={isSticky}
@@ -150,6 +154,7 @@ function Buttons({
     reviews,
     pendingReview,
     mergeReqs,
+    mergeReqsError,
     currentUserLogin,
     variant,
     isSticky,
@@ -164,6 +169,7 @@ function Buttons({
     reviews?: ReviewComment2[] | null;
     pendingReview?: PendingReview | null;
     mergeReqs?: MergeRequirements | null;
+    mergeReqsError: boolean;
     conflictedFiles: string[];
     currentUserLogin?: string;
     userPermission: string | null;
@@ -399,6 +405,12 @@ function Buttons({
                     isMergeStateUnknown={isMergeStateUnknown}
                     noMergeMethodsAvailable={noMergeMethodsAvailable}
                     mergeError={mergeMutation.isError}
+                    // React Query keeps the last `data` across failed
+                    // background refetches; only treat requirements as
+                    // unavailable when there is genuinely nothing to show.
+                    isMergeRequirementsUnavailable={
+                        mergeReqsError && !mergeReqs
+                    }
                     approvalCount={approvalCount}
                     changesRequestedCount={changesRequestedCount}
                     pendingReviewerCount={pendingCount}

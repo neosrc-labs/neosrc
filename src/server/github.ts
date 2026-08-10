@@ -659,6 +659,20 @@ export type MergeRequirements = {
     requiredChecks: string[];
 };
 
+/**
+ * Octokit's RequestError carries an HTTP status; 404 marks an endpoint as
+ * "not applicable" (rulesets unavailable, branch protection unconfigured)
+ * rather than a genuine failure.
+ */
+function isNotFoundError(error: unknown): boolean {
+    return (
+        error !== null &&
+        typeof error === "object" &&
+        "status" in error &&
+        (error as { status: number }).status === 404
+    );
+}
+
 export const getMergeRequirements = cache(
     async (
         accessToken: string,
@@ -708,8 +722,14 @@ export const getMergeRequirements = cache(
                 }
                 return { requiredApprovingReviewCount, requiredChecks };
             }
-        } catch {
-            // Rulesets API may not be available (404) or lack permissions
+        } catch (error) {
+            // Rulesets are only available on repos that use them; fall back
+            // to classic branch protection when the endpoint is not applicable
+            // (404). Any other failure means the requirements could not be
+            // determined and must surface rather than defaulting to none.
+            if (!isNotFoundError(error)) {
+                throw error;
+            }
         }
 
         try {
@@ -732,8 +752,12 @@ export const getMergeRequirements = cache(
                     requiredChecks.push(context);
                 }
             }
-        } catch {
-            // Branch protection may not be configured
+        } catch (error) {
+            // Branch protection may simply not be configured (404) — that
+            // means there are no requirements. Any other failure must surface.
+            if (!isNotFoundError(error)) {
+                throw error;
+            }
         }
 
         return { requiredApprovingReviewCount, requiredChecks };
