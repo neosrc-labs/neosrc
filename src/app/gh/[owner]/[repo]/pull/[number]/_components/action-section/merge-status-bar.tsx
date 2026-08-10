@@ -39,6 +39,7 @@ interface MergeStatusBarProps {
     isMergeStateUnknown: boolean;
     noMergeMethodsAvailable: boolean;
     mergeError: boolean;
+    isMergeRequirementsUnavailable: boolean;
     approvalCount?: number;
     changesRequestedCount?: number;
     pendingReviewerCount?: number;
@@ -64,6 +65,7 @@ export function MergeStatusBar({
     isMergeStateUnknown,
     noMergeMethodsAvailable,
     mergeError,
+    isMergeRequirementsUnavailable,
     approvalCount = 0,
     changesRequestedCount = 0,
     pendingReviewerCount = 0,
@@ -94,6 +96,9 @@ export function MergeStatusBar({
                 <div className="h-3 w-20 animate-pulse rounded bg-zinc-300 dark:bg-zinc-600" />
             </CannotMerge>
         );
+    }
+    if (isMergeRequirementsUnavailable) {
+        return <CannotMerge>Couldn&apos;t determine mergeability</CannotMerge>;
     }
     if (isBlockedByStack) {
         const isConflict = isBlockedByStack === "conflicts";
