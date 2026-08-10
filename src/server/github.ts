@@ -301,33 +301,25 @@ export const markPullRequestAsDraft = async (
 
     // For some reason the GitHub REST API just doesn't let you update the status of the PR to draft!?
     // The graphql endpoint does work however.
-    const response = await fetch("https://api.github.com/graphql", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            query: `
-				mutation($pullRequestId: ID!) {
-					convertPullRequestToDraft(input: { pullRequestId: $pullRequestId }) {
-						pullRequest {
-							id
-							isDraft
-						}
-					}
-				}
-			`,
-            variables: { pullRequestId: pr.node_id },
-        }),
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
     });
 
-    const result = await response.json();
-    if (result.errors) {
-        throw new Error(
-            `Failed to convert PR to draft: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
-        );
+    const query = `
+mutation($pullRequestId: ID!) {
+  convertPullRequestToDraft(input: { pullRequestId: $pullRequestId }) {
+    pullRequest {
+      id
+      isDraft
     }
+  }
+}`;
+
+    await graphql<{
+        convertPullRequestToDraft: {
+            pullRequest: { id: string; isDraft: boolean };
+        };
+    }>(query, { pullRequestId: pr.node_id });
 
     return pr;
 };
