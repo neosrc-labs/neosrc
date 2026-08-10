@@ -2226,33 +2226,25 @@ export const unresolveReviewThread = async (
     accessToken: string,
     threadId: string,
 ): Promise<void> => {
-    const response = await fetch("https://api.github.com/graphql", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            query: `
-                mutation($threadId: ID!) {
-                    unresolveReviewThread(input: { threadId: $threadId }) {
-                        thread {
-                            id
-                            isResolved
-                        }
-                    }
-                }
-            `,
-            variables: { threadId },
-        }),
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
     });
 
-    const result = await response.json();
-    if (result.errors) {
-        throw new Error(
-            `Failed to unresolve review thread: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
-        );
+    const query = `
+mutation($threadId: ID!) {
+  unresolveReviewThread(input: { threadId: $threadId }) {
+    thread {
+      id
+      isResolved
     }
+  }
+}`;
+
+    await graphql<{
+        unresolveReviewThread: {
+            thread: { id: string; isResolved: boolean };
+        };
+    }>(query, { threadId });
 };
 
 const getFileContentFromBranch = async (
