@@ -49,6 +49,7 @@ export default async function PullRequestPage({ params }: PageProps) {
         number < 1
     ) {
         notFound();
+        return;
     }
 
     if (!accessToken) {
