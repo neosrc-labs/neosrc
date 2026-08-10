@@ -25,6 +25,7 @@ export async function GET(request: Request) {
             repo,
             path,
             ref: sha,
+            request: { signal: request.signal },
         });
 
         const data = response.data;
@@ -42,7 +43,8 @@ export async function GET(request: Request) {
                 "Cache-Control": "public, max-age=31536000, immutable",
             },
         });
-    } catch (_error) {
+    } catch (err) {
+        if (request.signal.aborted) throw err;
         return new Response("Failed to fetch file content", { status: 500 });
     }
 }
