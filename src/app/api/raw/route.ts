@@ -22,6 +22,7 @@ export async function GET(request: Request) {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
             },
+            signal: request.signal,
         },
     );
 
