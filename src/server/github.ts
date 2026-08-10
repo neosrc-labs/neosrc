@@ -2007,68 +2007,61 @@ export const getReviewThreads = async (
     repo: string,
     pullNumber: number,
 ): Promise<ReviewThreadData[]> => {
-    const response = await fetch("https://api.github.com/graphql", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            query: `
-                query($owner: String!, $repo: String!, $number: Int!) {
-                    repository(owner: $owner, name: $repo) {
-                        pullRequest(number: $number) {
-                            id
-                            reviewThreads(first: 100) {
-                                nodes {
-                                    id
-                                    isResolved
-                                    isOutdated
-                                    path
-                                    comments(first: 100) {
-                                        nodes {
-                                            databaseId
-                                            body
-                                            author {
-                                                login
-                                                avatarUrl
-                                                url
-                                            }
-                                            createdAt
-                                            replyTo {
-                                                databaseId
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            `,
-            variables: {
-                owner,
-                repo,
-                number: pullNumber,
-            },
-        }),
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
     });
 
-    const result = await response.json();
-    if (result.errors) {
-        throw new Error(
-            `Failed to fetch review threads: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
-        );
+    const query = `
+query($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      id
+      reviewThreads(first: 100) {
+        nodes {
+          id
+          isResolved
+          isOutdated
+          path
+          comments(first: 100) {
+            nodes {
+              databaseId
+              body
+              author {
+                login
+                avatarUrl
+                url
+              }
+              createdAt
+              replyTo {
+                databaseId
+              }
+            }
+          }
+        }
+      }
     }
+  }
+}`;
+
+    const result = await graphql<{
+        repository?: {
+            pullRequest?: {
+                id: string;
+                reviewThreads?: {
+                    nodes: (RawReviewThreadNode | null)[];
+                };
+            } | null;
+        } | null;
+    }>(query, { owner, repo, number: pullNumber });
 
     const threadNodes =
-        result.data?.repository?.pullRequest?.reviewThreads?.nodes ?? [];
+        result.repository?.pullRequest?.reviewThreads?.nodes ?? [];
 
-    const pullRequestId = result.data?.repository?.pullRequest?.id ?? "";
+    const pullRequestId = result.repository?.pullRequest?.id ?? "";
 
     return threadNodes
-        .filter((thread: unknown) => thread != null)
-        .map((thread: RawReviewThreadNode) => {
+        .filter((thread): thread is RawReviewThreadNode => thread != null)
+        .map((thread) => {
             const comments = (thread.comments?.nodes ?? [])
                 .filter((c): c is RawReviewThreadComment => c != null)
                 .map((c) => ({
