@@ -1,4 +1,5 @@
 import type { StatusContext } from "~/components/ci-status";
+import type { GQLGitSignatureSummary } from "~/server/github-graphql";
 
 export interface CommitListItem {
     sha: string;
@@ -13,12 +14,7 @@ export interface CommitListItem {
     committerName: string | null; // fallback display name when author is null
     statusState: string | null; // "SUCCESS" | "FAILURE" | "PENDING" | "ERROR" | null
     statusContexts: StatusContext[];
-    signature: {
-        __typename: string;
-        isValid: boolean | null;
-        state?: string;
-        keyId?: string;
-    } | null;
+    signature: GQLGitSignatureSummary | null;
 }
 
 export interface ListCommitsResult {
