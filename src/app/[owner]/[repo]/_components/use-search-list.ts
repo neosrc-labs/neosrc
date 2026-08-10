@@ -371,6 +371,7 @@ export function useSearchList<TItem>(
                 cursorPos,
                 key,
                 value,
+                config.qualifiers,
             );
             setSearchInput(newQuery);
             setCursorPos(0);
@@ -381,7 +382,7 @@ export function useSearchList<TItem>(
                 navigate({ q: newQuery || null, page: null });
             }
         },
-        [searchInput, cursorPos, navigate],
+        [searchInput, cursorPos, navigate, config.qualifiers],
     );
 
     const handleClearSearch = useCallback(() => {

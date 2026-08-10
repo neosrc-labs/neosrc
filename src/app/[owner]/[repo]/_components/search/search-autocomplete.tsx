@@ -23,6 +23,9 @@ export function detectQualifier(
     cursorPos: number,
     supportedQualifiers: string[],
 ): (AutocompleteMatch & { start: number; end: number }) | null {
+    // An empty list would produce a pattern matching an empty key at the
+    // cursor, corrupting the query on replacement.
+    if (supportedQualifiers.length === 0) return null;
     const textBeforeCursor = text.slice(0, cursorPos);
     const pattern = `(${supportedQualifiers.join(":|")}:)([\\w-]*)$`;
     const QUALIFIER_RE = new RegExp(pattern);
@@ -44,18 +47,34 @@ export function replaceQualifierValue(
     cursorPos: number,
     key: string,
     value: string,
+    supportedQualifiers: string[],
 ): string {
-    const detection = detectQualifier(
-        text,
-        cursorPos,
-        Object.keys(STATIC_OPTIONS),
-    );
-    if (!detection) return text;
-    const replacement = `${key}:${value.includes(" ") ? `"${value}"` : value}`;
-    const prefix = text.slice(0, detection.start);
-    const suffix = text.slice(detection.end);
+    const detection = detectQualifier(text, cursorPos, supportedQualifiers);
+    // handleSelect pre-wraps values containing spaces (`"good first issue"`)
+    // before calling onSelect, so strip the quotes before re-wrapping here to
+    // avoid `label:""good first issue""`.
+    const unquoted = value.replace(/^"|"$/g, "");
+    const replacement = `${key}:${unquoted.includes(" ") ? `"${unquoted}"` : unquoted}`;
+    const start = detection?.start ?? cursorPos;
+    const end = detection?.end ?? cursorPos;
+    if (!detection) {
+        // No supported qualifier under the cursor: insert `key:value` only on
+        // plain text at a word boundary. Leave the query untouched when the
+        // cursor splits a word or sits right after a qualifier the search does
+        // not support (e.g. `milestone:v1`), so the query is never mangled.
+        const before = text.slice(0, cursorPos);
+        const midWord =
+            before.length > 0 &&
+            !before.endsWith(" ") &&
+            cursorPos < text.length;
+        const afterUnsupportedToken = /(?:^|\s)\w+:[^\s]*$/.test(before);
+        if (midWord || afterUnsupportedToken) return text;
+    }
+    const prefix = text.slice(0, start);
+    const suffix = text.slice(end);
     const spacer = prefix.length > 0 && !prefix.endsWith(" ") ? " " : "";
-    return `${prefix}${spacer}${replacement} ${suffix}`;
+    const trailingSpace = suffix.startsWith(" ") ? "" : " ";
+    return `${prefix}${spacer}${replacement}${trailingSpace}${suffix}`;
 }
 
 interface Suggestion {
