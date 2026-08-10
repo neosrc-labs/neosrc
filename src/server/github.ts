@@ -337,33 +337,25 @@ export const markPullRequestAsReady = async (
         pull_number: pullNumber,
     });
 
-    const response = await fetch("https://api.github.com/graphql", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            query: `
-				mutation($pullRequestId: ID!) {
-					markPullRequestReadyForReview(input: { pullRequestId: $pullRequestId }) {
-						pullRequest {
-							id
-							isDraft
-						}
-					}
-				}
-			`,
-            variables: { pullRequestId: pr.node_id },
-        }),
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
     });
 
-    const result = await response.json();
-    if (result.errors) {
-        throw new Error(
-            `Failed to mark PR as ready: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
-        );
+    const query = `
+mutation($pullRequestId: ID!) {
+  markPullRequestReadyForReview(input: { pullRequestId: $pullRequestId }) {
+    pullRequest {
+      id
+      isDraft
     }
+  }
+}`;
+
+    await graphql<{
+        markPullRequestReadyForReview: {
+            pullRequest: { id: string; isDraft: boolean };
+        };
+    }>(query, { pullRequestId: pr.node_id });
 
     return pr;
 };
