@@ -17,6 +17,18 @@ export const env = createEnv({
         DATA_ENCRYPTION_KEY: z.string().length(64).optional(),
         GITHUB_ANONYMOUS_TOKEN: z.string().optional(),
         REPORTS_OIDC_AUDIENCE: z.url().default("https://neosrc.dev"),
+        // Only legal in development: NODE_ENV defaults to "development" when
+        // unset, so a production deploy that sets the flag without setting
+        // NODE_ENV must fail loudly instead of silently enabling the bypass.
+        ALLOW_UNAUTHENTICATED_REPORTS: z
+            .string()
+            .optional()
+            .refine(
+                (value) =>
+                    value === undefined ||
+                    process.env.NODE_ENV === "development",
+                "ALLOW_UNAUTHENTICATED_REPORTS may only be set when NODE_ENV=development",
+            ),
         NODE_ENV: z
             .enum(["development", "test", "production"])
             .default("development"),
@@ -46,6 +58,8 @@ export const env = createEnv({
         DATA_ENCRYPTION_KEY: process.env.DATA_ENCRYPTION_KEY,
         GITHUB_ANONYMOUS_TOKEN: process.env.GITHUB_ANONYMOUS_TOKEN,
         REPORTS_OIDC_AUDIENCE: process.env.REPORTS_OIDC_AUDIENCE,
+        ALLOW_UNAUTHENTICATED_REPORTS:
+            process.env.ALLOW_UNAUTHENTICATED_REPORTS,
         NODE_ENV: process.env.NODE_ENV,
     },
     /**
