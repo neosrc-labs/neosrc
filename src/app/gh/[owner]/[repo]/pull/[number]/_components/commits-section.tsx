@@ -187,11 +187,9 @@ function CommitsList({
                                         <p className="mt-0.5 font-normal text-text-tertiary text-xs">
                                             {commit.authors[0]?.user?.login ??
                                                 commit.authors[0]?.name ??
-                                                "Unknown"}{" "}
-                                            committed{" "}
-                                            {formatRelativeTime(
-                                                commit.committedDate ?? "",
-                                            )}
+                                                "Unknown"}
+                                            {commit.committedDate &&
+                                                ` committed ${formatRelativeTime(commit.committedDate)}`}
                                         </p>
                                     )}
                                 </Link>
