@@ -3,7 +3,7 @@
 import { RefreshCw, RotateCcw } from "lucide-react";
 import { useState } from "react";
 
-import type { SyncResult } from "~/server/db/sync";
+import type { SyncResult } from "~/server/sync";
 import { api } from "~/trpc/react";
 
 function formatResult(result: SyncResult): string {

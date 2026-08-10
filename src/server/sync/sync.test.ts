@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-    codebergRepoPermissionsToRelation,
-    githubRepoPermissionsToRelation,
-} from "~/server/db/sync";
+import { codebergRepoPermissionsToRelation } from "~/server/sync/codeberg";
+import { githubRepoPermissionsToRelation } from "~/server/sync/github";
 
 // The provider modules only do network calls, which these pure-mapper tests
 // never reach; stubbing them keeps the import side-effect free.

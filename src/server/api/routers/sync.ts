@@ -11,7 +11,7 @@ import {
     refreshOwnerRepos,
     type SyncResult,
     syncCurrentUser,
-} from "~/server/db/sync";
+} from "~/server/sync";
 
 export const syncRouter = createTRPCRouter({
     /**
