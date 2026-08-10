@@ -1083,6 +1083,128 @@ export async function getSubjectReactions(
     );
 }
 
+export type GQLPullRequestReactions = {
+    reactions: Array<{
+        id: number;
+        node_id: string;
+        content: string;
+        created_at: string;
+        user: { login: string } | null;
+    }>;
+    counts: {
+        total_count: number;
+        "+1": number;
+        "-1": number;
+        laugh: number;
+        confused: number;
+        heart: number;
+        hooray: number;
+        rocket: number;
+        eyes: number;
+    };
+};
+
+/**
+ * Fetches a pull request's first page of reactions plus per-content totals
+ * in one graphql call. The shape mirrors the REST reactions list and the
+ * issue-level reactions summary so existing consumers are unaffected.
+ */
+export async function getPullRequestReactionsGraphQL(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+): Promise<GQLPullRequestReactions> {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const result = await graphql<{
+        repository: {
+            pullRequest: {
+                reactions: {
+                    nodes: ({
+                        databaseId: number;
+                        id: string;
+                        content: string;
+                        createdAt: string;
+                        user: { login: string } | null;
+                    } | null)[];
+                } | null;
+                reactionGroups: Array<{
+                    content: string;
+                    count: number;
+                }> | null;
+            } | null;
+        } | null;
+    }>(
+        `
+		query($owner: String!, $repo: String!, $number: Int!) {
+			repository(owner: $owner, name: $repo) {
+				pullRequest(number: $number) {
+					reactions(first: 100) {
+						nodes {
+							databaseId
+							id
+							content
+							createdAt
+							user { login }
+						}
+					}
+					reactionGroups {
+						content
+						count
+					}
+				}
+			}
+		}
+	`,
+        { owner, repo, number: pullNumber },
+    );
+
+    const reactions = (result.repository?.pullRequest?.reactions?.nodes ?? [])
+        .filter(
+            (
+                r,
+            ): r is {
+                databaseId: number;
+                id: string;
+                content: string;
+                createdAt: string;
+                user: { login: string } | null;
+            } => r !== null,
+        )
+        .map((r) => ({
+            id: r.databaseId,
+            node_id: r.id,
+            content: CONTENT_MAP[r.content] ?? r.content.toLowerCase(),
+            created_at: r.createdAt,
+            user: r.user,
+        }));
+
+    const counts: GQLPullRequestReactions["counts"] = {
+        total_count: 0,
+        "+1": 0,
+        "-1": 0,
+        laugh: 0,
+        confused: 0,
+        heart: 0,
+        hooray: 0,
+        rocket: 0,
+        eyes: 0,
+    };
+    for (const group of result.repository?.pullRequest?.reactionGroups ?? []) {
+        const key = CONTENT_MAP[group.content];
+        if (key && key in counts && key !== "total_count") {
+            counts[key as keyof Omit<typeof counts, "total_count">] =
+                group.count;
+            counts.total_count += group.count;
+        }
+    }
+
+    return { reactions, counts };
+}
+
 const GRAPHQL_CONTENT_MAP: Record<string, string> = {
     "+1": "THUMBS_UP",
     "-1": "THUMBS_DOWN",
