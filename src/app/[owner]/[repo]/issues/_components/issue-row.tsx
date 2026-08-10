@@ -78,8 +78,8 @@ export function IssueRow({
                                     avatarUrl: issue.user.avatar_url,
                                 }}
                                 onClick={() => {
-                                    // biome-ignore lint/style/noNonNullAssertion: guarded by enclosing conditional
-                                    onAuthorFilter?.(issue.user!.login);
+                                    const login = issue.user?.login;
+                                    if (login) onAuthorFilter?.(login);
                                 }}
                             />
                         </span>
@@ -114,9 +114,8 @@ export function IssueRow({
                         <button
                             type="button"
                             onClick={() => {
-                                // biome-ignore lint/style/noNonNullAssertion: guarded by enclosing conditional
-                                const login = issue.assignee!.login;
-                                onAssigneesFilter?.(login);
+                                const login = issue.assignee?.login;
+                                if (login) onAssigneesFilter?.(login);
                             }}
                             className="cursor-pointer rounded-full"
                         >
