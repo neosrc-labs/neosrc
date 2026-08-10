@@ -1,7 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+    createTRPCRouter,
+    protectedMutation,
+    protectedProcedure,
+} from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
 import {
     deleteCache,
@@ -356,7 +360,7 @@ export const reposRouter = createTRPCRouter({
                 input.parentBranch,
             );
         }),
-    mergeUpstream: protectedProcedure
+    mergeUpstream: protectedMutation
         .input(
             z.object({
                 provider: z.enum(["gh", "cb"]).default("gh"),

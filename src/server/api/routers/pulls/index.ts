@@ -8,7 +8,11 @@ import {
     type GqlPrData,
     type PrDetailsEntry,
 } from "~/server/api/routers/checks";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+    createTRPCRouter,
+    protectedMutation,
+    protectedProcedure,
+} from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
 import { deleteCache, prCacheKey, readCache } from "~/server/cache";
 import {
@@ -58,7 +62,7 @@ import type { Ctx } from "./provider";
 import type { PrSearchResult } from "./types";
 
 export const pullsRouter = createTRPCRouter({
-    updateBody: protectedProcedure
+    updateBody: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -88,7 +92,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const, body: result.body };
         }),
 
-    updateTitle: protectedProcedure
+    updateTitle: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -118,7 +122,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const, title: result.title };
         }),
 
-    addComment: protectedProcedure
+    addComment: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -148,7 +152,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const, id: comment.id };
         }),
 
-    updateComment: protectedProcedure
+    updateComment: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -174,7 +178,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const, body: comment.body };
         }),
 
-    deleteComment: protectedProcedure
+    deleteComment: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -198,7 +202,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    updateReview: protectedProcedure
+    updateReview: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -255,7 +259,7 @@ export const pullsRouter = createTRPCRouter({
             return listLabelsForRepo(accessToken, input.owner, input.repo);
         }),
 
-    addLabel: protectedProcedure
+    addLabel: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -285,7 +289,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    removeLabel: protectedProcedure
+    removeLabel: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -373,7 +377,7 @@ export const pullsRouter = createTRPCRouter({
             return listRecentIssueAuthors(accessToken, input.owner, input.repo);
         }),
 
-    addAssignee: protectedProcedure
+    addAssignee: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -403,7 +407,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    removeAssignee: protectedProcedure
+    removeAssignee: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -462,7 +466,7 @@ export const pullsRouter = createTRPCRouter({
             return listMilestonesForRepo(accessToken, input.owner, input.repo);
         }),
 
-    setMilestone: protectedProcedure
+    setMilestone: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -492,7 +496,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    addReviewer: protectedProcedure
+    addReviewer: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -522,7 +526,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    removeReviewer: protectedProcedure
+    removeReviewer: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -552,7 +556,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    approve: protectedProcedure
+    approve: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -584,7 +588,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const, id: review.id };
         }),
 
-    markAsDraft: protectedProcedure
+    markAsDraft: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -612,7 +616,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    markReadyForReview: protectedProcedure
+    markReadyForReview: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -640,7 +644,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    merge: protectedProcedure
+    merge: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -756,7 +760,7 @@ export const pullsRouter = createTRPCRouter({
 
             return { success: true as const };
         }),
-    revert: protectedProcedure
+    revert: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -796,7 +800,7 @@ export const pullsRouter = createTRPCRouter({
             };
         }),
 
-    close: protectedProcedure
+    close: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -825,7 +829,7 @@ export const pullsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    reopen: protectedProcedure
+    reopen: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -1053,7 +1057,7 @@ export const pullsRouter = createTRPCRouter({
             );
         }),
 
-    createStack: protectedProcedure
+    createStack: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -1079,7 +1083,7 @@ export const pullsRouter = createTRPCRouter({
             );
         }),
 
-    unstack: protectedProcedure
+    unstack: protectedMutation
         .input(
             z.object({
                 owner: z.string(),

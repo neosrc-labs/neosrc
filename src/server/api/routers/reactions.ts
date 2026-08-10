@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+    createTRPCRouter,
+    protectedMutation,
+    protectedProcedure,
+} from "~/server/api/trpc";
 import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import {
     createIssueCommentReaction,
@@ -54,7 +58,7 @@ export const reactionsRouter = createTRPCRouter({
             };
         }),
 
-    toggleIssueComment: protectedProcedure
+    toggleIssueComment: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -117,7 +121,7 @@ export const reactionsRouter = createTRPCRouter({
             return { action: "added" as const };
         }),
 
-    togglePullRequestReviewComment: protectedProcedure
+    togglePullRequestReviewComment: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -180,7 +184,7 @@ export const reactionsRouter = createTRPCRouter({
             return { action: "added" as const };
         }),
 
-    togglePullRequestReview: protectedProcedure
+    togglePullRequestReview: protectedMutation
         .input(
             z.object({
                 subjectId: z.string(),
@@ -269,7 +273,7 @@ export const reactionsRouter = createTRPCRouter({
             return reactionMap;
         }),
 
-    toggleIssue: protectedProcedure
+    toggleIssue: protectedMutation
         .input(
             z.object({
                 owner: z.string(),

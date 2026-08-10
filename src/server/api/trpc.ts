@@ -141,3 +141,26 @@ export const protectedProcedure = t.procedure
             },
         });
     });
+
+/**
+ * Session-required middleware.
+ *
+ * Throws UNAUTHORIZED when there is no real logged-in session, so anonymous
+ * visitors (who may browse with the shared GITHUB_ANONYMOUS_TOKEN) cannot
+ * perform write operations.
+ */
+export const requireSession = t.middleware(({ ctx, next }) => {
+    if (!ctx.session?.user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+    return next();
+});
+
+/**
+ * Protected mutation procedure — requires a real logged-in session.
+ *
+ * Anonymous visitors can still read through `protectedProcedure`, but every
+ * write path goes through this procedure so mutations always run as a real
+ * user (never with the shared anonymous token).
+ */
+export const protectedMutation = protectedProcedure.use(requireSession);
