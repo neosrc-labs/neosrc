@@ -43,6 +43,7 @@ function ImageWithFallback({
             draggable={false}
             onError={() => setError(true)}
             src={src}
+            unoptimized
             width={0}
             height={0}
             sizes="100vw"
@@ -202,6 +203,7 @@ function SwipeView({
                         className="block max-h-[600px] w-full object-contain"
                         draggable={false}
                         src={newUrl}
+                        unoptimized
                         width={0}
                         height={0}
                         sizes="100vw"
@@ -276,6 +278,7 @@ function OnionSkinView({
                     className="absolute top-1/2 left-1/2 max-h-[600px] max-w-full -translate-x-1/2 -translate-y-1/2 object-contain"
                     draggable={false}
                     src={oldUrl}
+                    unoptimized
                     width={0}
                     height={0}
                     sizes="100vw"
