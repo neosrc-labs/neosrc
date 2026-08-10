@@ -43,7 +43,7 @@ export function computeChecksPollingInterval(
     prState: {
         isMerged: boolean;
         isClosed: boolean;
-        createdAt: string;
+        createdAt: string | null;
     },
     now: number = Date.now(),
 ): number {
@@ -54,7 +54,9 @@ export function computeChecksPollingInterval(
 
     if (prState.isMerged || prState.isClosed) return 90_000;
 
-    const ageMs = now - new Date(prState.createdAt).getTime();
+    const ageMs = prState.createdAt
+        ? now - new Date(prState.createdAt).getTime()
+        : Number.POSITIVE_INFINITY;
     if (ageMs < 60_000) return 5_000;
 
     return 30_000;
