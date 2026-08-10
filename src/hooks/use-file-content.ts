@@ -13,6 +13,7 @@ interface CacheEntry {
     lines: string[] | null;
     error: Error | null;
     subscribers: Set<() => void>;
+    controller: AbortController;
 }
 
 const cache = new Map<string, CacheEntry>();
@@ -43,10 +44,12 @@ export function useFileContent({
         let entry = cache.get(key);
 
         if (!entry) {
+            const controller = new AbortController();
             entry = {
                 lines: null,
                 error: null,
                 subscribers: new Set(),
+                controller,
             };
             cache.set(key, entry);
 
@@ -55,6 +58,7 @@ export function useFileContent({
                 try {
                     const res = await fetch(
                         `/api/raw/content?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&sha=${encodeURIComponent(sha)}&path=${encodeURIComponent(path)}`,
+                        { signal: controller.signal },
                     );
                     if (!res.ok)
                         throw new Error(
@@ -63,10 +67,17 @@ export function useFileContent({
                     const text = await res.text();
                     e.lines = text.split("\n");
                 } catch (err) {
+                    if (
+                        err instanceof DOMException &&
+                        err.name === "AbortError"
+                    )
+                        return;
                     e.error =
                         err instanceof Error ? err : new Error(String(err));
                 } finally {
-                    for (const cb of e.subscribers) cb();
+                    if (!controller.signal.aborted) {
+                        for (const cb of e.subscribers) cb();
+                    }
                 }
             };
 
@@ -92,6 +103,7 @@ export function useFileContent({
             if (entry) {
                 entry.subscribers.delete(update);
                 if (entry.subscribers.size === 0) {
+                    entry.controller.abort();
                     cache.delete(key);
                 }
             }
