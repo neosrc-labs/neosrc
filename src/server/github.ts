@@ -17,7 +17,9 @@ import {
 } from "~/server/cache";
 import {
     type GQLActor,
+    type GQLCommitAuthor,
     getPullRequestStackGraphQL,
+    resolveCommitAuthor,
     type StackData,
 } from "~/server/github-graphql";
 import {
@@ -3008,9 +3010,18 @@ query RepoLatestCommit($owner: String!, $repo: String!, $expression: String!) {
         oid
         messageHeadline
         committedDate
-        author {
-          login
-          avatarUrl
+        authors(first: 1) {
+          nodes {
+            name
+            email
+            avatarUrl
+            user {
+              __typename
+              login
+              avatarUrl
+              url
+            }
+          }
         }
         history {
           totalCount
@@ -3026,7 +3037,7 @@ query RepoLatestCommit($owner: String!, $repo: String!, $expression: String!) {
                 oid: string;
                 messageHeadline: string;
                 committedDate: string | null;
-                author: { login: string; avatarUrl: string } | null;
+                authors: { nodes: (GQLCommitAuthor | null)[] };
                 history: { totalCount: number };
             } | null;
         } | null;
@@ -3037,14 +3048,18 @@ query RepoLatestCommit($owner: String!, $repo: String!, $expression: String!) {
         throw new Error(`No commits found for ${owner}/${repo}`);
     }
 
+    // Commit.author is a GitActor (git identity, no GitHub login); resolve
+    // the GitHub user the same way the commit list does, synthesizing it from
+    // noreply emails when the user connection fails to resolve.
+    const author = commit.authors.nodes[0]
+        ? resolveCommitAuthor(commit.authors.nodes[0]).user
+        : null;
+
     return {
         sha: commit.oid,
         message: commit.messageHeadline,
-        author: commit.author
-            ? {
-                  login: commit.author.login,
-                  avatarUrl: commit.author.avatarUrl,
-              }
+        author: author
+            ? { login: author.login, avatarUrl: author.avatarUrl }
             : null,
         committedDate: commit.committedDate,
         commitCount: commit.history.totalCount,
