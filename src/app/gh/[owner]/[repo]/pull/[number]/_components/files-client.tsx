@@ -180,14 +180,6 @@ export function FilesSection({
                         {(pullRequest) => {
                             if (!pullRequest.title) return null;
 
-                            const displayedSha =
-                                commitSha ?? pullRequest.head?.sha;
-                            const polledHeadSha = currentHeadSha?.headSha;
-                            const isOutdated =
-                                displayedSha !== undefined &&
-                                polledHeadSha !== undefined &&
-                                displayedSha !== polledHeadSha;
-
                             return (
                                 <div className="flex min-w-0 items-center gap-3">
                                     <div className="flex min-w-0 items-center gap-2">
@@ -207,17 +199,6 @@ export function FilesSection({
                                             </CodeTitle>
                                         </h2>
                                     </div>
-                                    {isOutdated && (
-                                        <button
-                                            type="button"
-                                            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-md bg-orange-600 px-3 py-1.5 font-medium text-sm text-white ring-1 ring-orange-700 transition-colors hover:bg-orange-700"
-                                            onClick={handleRefresh}
-                                            title="Refresh to view the latest changes"
-                                        >
-                                            <RefreshCw size={14} />
-                                            Refresh
-                                        </button>
-                                    )}
                                 </div>
                             );
                         }}
@@ -271,22 +252,43 @@ export function FilesSection({
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                     <Async promise={pullRequestPromise}>
-                        {(pullRequest) => (
-                            <div className="flex items-center gap-1.5 text-sm">
-                                {pullRequest.additions > 0 && (
-                                    <span className="font-medium text-green-600 dark:text-green-500">
-                                        +
-                                        {pullRequest.additions.toLocaleString()}
-                                    </span>
-                                )}
-                                {pullRequest.deletions > 0 && (
-                                    <span className="font-medium text-red-600 dark:text-red-500">
-                                        -
-                                        {pullRequest.deletions.toLocaleString()}
-                                    </span>
-                                )}
-                            </div>
-                        )}
+                        {(pullRequest) => {
+                            const isOutdated =
+                                !commitSha &&
+                                pullRequest.head?.sha !== undefined &&
+                                currentHeadSha?.headSha !== undefined &&
+                                pullRequest.head.sha !== currentHeadSha.headSha;
+
+                            return (
+                                <>
+                                    {isOutdated && (
+                                        <button
+                                            type="button"
+                                            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-md bg-orange-600 px-3 py-1.5 font-medium text-sm text-white ring-1 ring-orange-700 transition-colors hover:bg-orange-700"
+                                            onClick={handleRefresh}
+                                            title="Refresh to view the latest changes"
+                                        >
+                                            <RefreshCw size={14} />
+                                            Refresh
+                                        </button>
+                                    )}
+                                    <div className="flex items-center gap-1.5 text-sm">
+                                        {pullRequest.additions > 0 && (
+                                            <span className="font-medium text-green-600 dark:text-green-500">
+                                                +
+                                                {pullRequest.additions.toLocaleString()}
+                                            </span>
+                                        )}
+                                        {pullRequest.deletions > 0 && (
+                                            <span className="font-medium text-red-600 dark:text-red-500">
+                                                -
+                                                {pullRequest.deletions.toLocaleString()}
+                                            </span>
+                                        )}
+                                    </div>
+                                </>
+                            );
+                        }}
                     </Async>
                     {allFiles.length > 0 && (
                         <div className="flex flex-col gap-0.5 text-text-secondary text-xs">
