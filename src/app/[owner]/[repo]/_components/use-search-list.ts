@@ -93,8 +93,13 @@ export function useSearchList<TItem>(
     const activeTab = searchParams.get("state") ?? config.defaultState;
     const currentPage = parseInt(searchParams.get("page") ?? "1", 10);
     const searchQuery = searchParams.get("q") ?? "";
-    const currentSort = searchParams.get("sort") ?? "created";
-    const currentOrder = searchParams.get("order") ?? "desc";
+    const sortParam = searchParams.get("sort");
+    const currentSort =
+        sortParam === "updated" || sortParam === "comments"
+            ? sortParam
+            : "created";
+    const orderParam = searchParams.get("order");
+    const currentOrder = orderParam === "asc" ? "asc" : "desc";
 
     const [pageCursors, setPageCursors] = useState<Record<number, string>>({});
     const pageCursorsRef = useRef(pageCursors);
@@ -136,8 +141,8 @@ export function useSearchList<TItem>(
         page: currentPage,
         after: after ?? undefined,
         first,
-        sort: currentSort as "created" | "updated" | "comments",
-        order: currentOrder as "asc" | "desc",
+        sort: currentSort,
+        order: currentOrder,
     };
 
     const searchResult = procedures.useSearchQuery(searchArgs, {
@@ -179,8 +184,8 @@ export function useSearchList<TItem>(
                         query: apiQuery,
                         after: cursor ?? undefined,
                         first: 30,
-                        sort: currentSort as "created" | "updated" | "comments",
-                        order: currentOrder as "asc" | "desc",
+                        sort: currentSort,
+                        order: currentOrder,
                     };
                     const result = await searchFetch(fetchArgs);
 
