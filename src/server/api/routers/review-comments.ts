@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+    createTRPCRouter,
+    protectedMutation,
+    protectedProcedure,
+} from "~/server/api/trpc";
 import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import { deleteCache, prCacheKey } from "~/server/cache";
 import {
@@ -72,7 +76,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             );
         }),
 
-    create: protectedProcedure
+    create: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -179,7 +183,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             return { success: true as const, id: comment.id };
         }),
 
-    update: protectedProcedure
+    update: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -205,7 +209,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    delete: protectedProcedure
+    delete: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -229,7 +233,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    reply: protectedProcedure
+    reply: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -316,7 +320,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             };
         }),
 
-    resolveThread: protectedProcedure
+    resolveThread: protectedMutation
         .input(
             z.object({
                 threadId: z.string(),
@@ -338,7 +342,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             return { success: true as const, isResolved: input.resolve };
         }),
 
-    applySuggestion: protectedProcedure
+    applySuggestion: protectedMutation
         .input(
             z.object({
                 owner: z.string(),

@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+    createTRPCRouter,
+    protectedMutation,
+    protectedProcedure,
+} from "~/server/api/trpc";
 import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import { deleteCache, prCacheKey } from "~/server/cache";
 import {
@@ -69,7 +73,7 @@ export const reviewsRouter = createTRPCRouter({
             };
         }),
 
-    start: protectedProcedure
+    start: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -112,7 +116,7 @@ export const reviewsRouter = createTRPCRouter({
             return { reviewId: review.id };
         }),
 
-    submit: protectedProcedure
+    submit: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -146,7 +150,7 @@ export const reviewsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    dismiss: protectedProcedure
+    dismiss: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -176,7 +180,7 @@ export const reviewsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    minimize: protectedProcedure
+    minimize: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -211,7 +215,7 @@ export const reviewsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    unminimize: protectedProcedure
+    unminimize: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
