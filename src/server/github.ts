@@ -2979,23 +2979,6 @@ query RepoRefCounts($owner: String!, $repo: String!) {
     };
 }
 
-function parseRefCountFromLinkHeader(
-    linkHeader: string | undefined,
-    currentCount: number,
-): number {
-    if (!linkHeader) return currentCount;
-
-    const linkPattern = /<[^>]*[?&]page=(\d+)[^>]*>;\s*rel="(\w+)"/g;
-    let maxPage = 1;
-    for (const m of linkHeader.matchAll(linkPattern)) {
-        const p = Number.parseInt(m[1] ?? "0", 10);
-        if (p > maxPage) maxPage = p;
-    }
-
-    if (maxPage <= 1) return currentCount;
-    return maxPage;
-}
-
 export interface RepoLatestCommit {
     sha: string;
     message: string;
@@ -3013,37 +2996,58 @@ export async function getRepoLatestCommit(
     repo: string,
     ref?: string,
 ): Promise<RepoLatestCommit> {
-    const octokit = createOctokit(accessToken);
-    const response = await octokit.rest.repos.listCommits({
-        owner,
-        repo,
-        sha: ref,
-        per_page: 1,
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
     });
 
-    const commit = response.data[0];
+    const query = `
+query RepoLatestCommit($owner: String!, $repo: String!, $expression: String!) {
+  repository(owner: $owner, name: $repo) {
+    object(expression: $expression) {
+      ... on Commit {
+        oid
+        messageHeadline
+        committedDate
+        author {
+          login
+          avatarUrl
+        }
+        history {
+          totalCount
+        }
+      }
+    }
+  }
+}`;
+
+    const result = await graphql<{
+        repository?: {
+            object?: {
+                oid: string;
+                messageHeadline: string;
+                committedDate: string | null;
+                author: { login: string; avatarUrl: string } | null;
+                history: { totalCount: number };
+            } | null;
+        } | null;
+    }>(query, { owner, repo, expression: ref ?? "HEAD" });
+
+    const commit = result.repository?.object ?? null;
     if (!commit) {
         throw new Error(`No commits found for ${owner}/${repo}`);
     }
-    const commitCount = parseRefCountFromLinkHeader(
-        response.headers.link,
-        response.data.length,
-    );
-
-    const message = commit.commit.message.split("\n")[0] ?? "";
 
     return {
-        sha: commit.sha,
-        message,
+        sha: commit.oid,
+        message: commit.messageHeadline,
         author: commit.author
             ? {
                   login: commit.author.login,
-                  avatarUrl: commit.author.avatar_url,
+                  avatarUrl: commit.author.avatarUrl,
               }
             : null,
-        committedDate:
-            commit.commit.committer?.date ?? commit.commit.author?.date ?? null,
-        commitCount,
+        committedDate: commit.committedDate,
+        commitCount: commit.history.totalCount,
     };
 }
 
