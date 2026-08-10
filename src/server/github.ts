@@ -934,44 +934,6 @@ export const getPullRequestReactions = cache(
     },
 );
 
-export const getPullRequestReactionsPage = cache(
-    async (
-        accessToken: string,
-        owner: string,
-        repo: string,
-        pullNumber: number,
-        page: number = 1,
-        perPage: number = 100,
-    ) => {
-        const octokit = createOctokit(accessToken);
-        const response = await octokit.rest.reactions.listForIssue({
-            owner,
-            repo,
-            issue_number: pullNumber,
-            per_page: perPage,
-            page,
-        });
-        return response.data;
-    },
-);
-
-export const getIssueReactionCounts = cache(
-    async (
-        accessToken: string,
-        owner: string,
-        repo: string,
-        issueNumber: number,
-    ) => {
-        const octokit = createOctokit(accessToken);
-        const response = await octokit.rest.issues.get({
-            owner,
-            repo,
-            issue_number: issueNumber,
-        });
-        return response.data.reactions ?? null;
-    },
-);
-
 export const getIssueCommentReactions = async (
     accessToken: string,
     owner: string,

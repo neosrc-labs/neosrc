@@ -11,13 +11,12 @@ import {
     deletePullRequestReviewCommentReaction,
     getAuthenticatedUser,
     getIssueCommentReactions,
-    getIssueReactionCounts,
     getPullRequestReactions,
-    getPullRequestReactionsPage,
     getPullRequestReviewCommentReactions,
 } from "~/server/github";
 import {
     addReaction,
+    getPullRequestReactionsGraphQL,
     getSubjectReactions,
     removeReaction,
 } from "~/server/github-graphql";
@@ -41,25 +40,18 @@ export const reactionsRouter = createTRPCRouter({
                 ? null
                 : await getAuthenticatedUser(accessToken);
 
-            const [reactions, reactionCounts] = await Promise.all([
-                getPullRequestReactionsPage(
+            const { reactions, counts } =
+                await getPullRequestReactionsGraphQL(
                     accessToken,
                     input.owner,
                     input.repo,
                     input.number,
-                ),
-                getIssueReactionCounts(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.number,
-                ),
-            ]);
+                );
 
             return {
                 reactions,
                 currentUserLogin: currentUser?.login,
-                counts: reactionCounts,
+                counts,
             };
         }),
 
