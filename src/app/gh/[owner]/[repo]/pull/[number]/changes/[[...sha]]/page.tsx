@@ -5,19 +5,13 @@ import {
     type CommitData,
     getCachedCommit,
     getCachedPullRequest,
-    getCheckRuns,
-    getCommitStatuses,
+    getChecksForCommit,
     getConflictedFiles,
     getPullRequestCommits,
     getUserRepoPermission,
     type PullsListCommitsResponseData,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
-import {
-    deduplicateCommitStatuses,
-    mapGitHubCheckRunToCheckRun,
-    mapStatusToCheckRun,
-} from "~/utils/status-checks";
 import {
     CommitHeader,
     CommitHeaderSkeleton,
@@ -92,19 +86,9 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
         return [];
     });
 
-    const checksPromise = prPromise.then(async (pr) => {
-        const [checksResult, statuses] = await Promise.all([
-            getCheckRuns(accessToken, owner, repo, pr.head.sha),
-            getCommitStatuses(accessToken, owner, repo, pr.head.sha),
-        ]);
-        const checkRunItems = (checksResult.check_runs ?? []).map(
-            mapGitHubCheckRunToCheckRun,
-        );
-        const statusItems = deduplicateCommitStatuses(statuses ?? []).map(
-            mapStatusToCheckRun,
-        );
-        return [...checkRunItems, ...statusItems];
-    });
+    const checksPromise = prPromise.then((pr) =>
+        getChecksForCommit(accessToken, owner, repo, pr.head.sha),
+    );
 
     let commitPromise: Promise<CommitData> | null = null;
     let commitsPromise: Promise<PullsListCommitsResponseData> | null = null;

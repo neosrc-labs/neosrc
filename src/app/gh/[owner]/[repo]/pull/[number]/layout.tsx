@@ -3,17 +3,11 @@ import { getSession, githubAccessToken } from "~/server/auth";
 import {
     type CheckRun,
     getCachedPullRequest,
-    getCheckRuns,
-    getCommitStatuses,
+    getChecksForCommit,
     getUserRepoPermission,
     type PullsGetResponseData,
 } from "~/server/github";
 import { EMPTY_ARRAY_PROMISE, NULL_PROMISE } from "~/utils/promise";
-import {
-    deduplicateCommitStatuses,
-    mapGitHubCheckRunToCheckRun,
-    mapStatusToCheckRun,
-} from "~/utils/status-checks";
 import LeftSidebar from "./_components/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
 import { PullRequestClientLayout } from "./layout-client";
@@ -101,18 +95,5 @@ async function fetchChecks(
     repo: string,
     headSha: string,
 ): Promise<CheckRun[]> {
-    const [checksResult, statuses] = await Promise.all([
-        getCheckRuns(accessToken, owner, repo, headSha),
-        getCommitStatuses(accessToken, owner, repo, headSha),
-    ]);
-
-    const checkRunItems = (checksResult.check_runs ?? []).map(
-        mapGitHubCheckRunToCheckRun,
-    );
-
-    const statusItems = deduplicateCommitStatuses(statuses ?? []).map(
-        mapStatusToCheckRun,
-    );
-
-    return [...checkRunItems, ...statusItems];
+    return getChecksForCommit(accessToken, owner, repo, headSha);
 }
