@@ -9,10 +9,14 @@ function escapeRe2(s) {
 }
 
 function buildExcludedRegexFilter(excludedOwners) {
+    // `neosrc_exit` URLs must never be redirected by DNR: content.js is the
+    // single exit hatch and strips the param to break the redirect loop. This
+    // exclusion only has an effect once the regexFilter also matches query
+    // strings, so keep the two patterns in sync (same hosts, same anchors).
     const parts = ["[?&]neosrc_exit"];
     if (excludedOwners.length > 0) {
         const ownersPattern = excludedOwners.map(escapeRe2).join("|");
-        parts.push(`^https://github\\.com/(${ownersPattern})/`);
+        parts.push(`^https://(?:www\\.)?github\\.com/(${ownersPattern})/`);
     }
     return parts.join("|");
 }
@@ -53,11 +57,15 @@ function buildDnrRule(neosrcUrl, excludedOwners) {
         action: {
             type: "redirect",
             redirect: {
+                // \1 = /owner/repo/pull/<number>, \2 = optional /path (e.g. /files).
+                // Query string and fragment are matched but not substituted, so the
+                // redirect target is the clean neosrc PR page (matches content.js).
                 regexSubstitution: `${substitutionUrl}\\1\\2`,
             },
         },
         condition: {
-            regexFilter: "^https://github\\.com(/[^/]+/[^/]+/pull/\\d+)(/.*)?$",
+            regexFilter:
+                "^https://(?:www\\.)?github\\.com(/[^/]+/[^/]+/pull/\\d+)(/[^?#]*)?(\\?[^#]*)?(#.*)?$",
             resourceTypes: ["main_frame"],
             excludedRegexFilter,
         },
