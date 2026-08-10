@@ -1546,6 +1546,7 @@ export async function* getPullRequestFilesStream(
     pullNumber: number,
     commitSha?: string,
     userId?: string,
+    signal?: AbortSignal,
 ): AsyncGenerator<PullRequestFile[], void, undefined> {
     if (commitSha) {
         const commit = userId
@@ -1556,7 +1557,13 @@ export async function* getPullRequestFilesStream(
         const octokit = createOctokit(accessToken);
         for await (const page of octokit.paginate.iterator(
             octokit.pulls.listFiles,
-            { owner, repo, pull_number: pullNumber, per_page: 30 },
+            {
+                owner,
+                repo,
+                pull_number: pullNumber,
+                per_page: 30,
+                ...(signal ? { request: { signal } } : {}),
+            },
         )) {
             yield page.data;
         }
