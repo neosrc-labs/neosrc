@@ -160,11 +160,20 @@ describe("formatRelativeTime", () => {
             expect(result).toBe("now");
         });
 
-        it("returns negative minutes for future dates", () => {
+        it('returns "now" for future dates (clamped, no negative values)', () => {
             const now = new Date("2025-01-15T12:00:00Z");
-            expect(formatRelativeTime("2025-01-15T13:00:00Z", now)).toBe(
-                "-60 mins ago",
-            );
+            expect(formatRelativeTime("2025-01-15T13:00:00Z", now)).toBe("now");
+        });
+
+        it('returns "now" for small future skews', () => {
+            const now = new Date("2025-01-15T12:00:00Z");
+            expect(formatRelativeTime("2025-01-15T12:00:30Z", now)).toBe("now");
+            expect(formatRelativeTime("2025-01-15T12:01:00Z", now)).toBe("now");
+        });
+
+        it('returns "now" for large future diffs', () => {
+            const now = new Date("2025-01-15T12:00:00Z");
+            expect(formatRelativeTime("2030-01-15T12:00:00Z", now)).toBe("now");
         });
 
         it("handles boundary: 60 minutes -> 1 hour", () => {
@@ -195,10 +204,24 @@ describe("formatRelativeTime", () => {
             );
         });
 
-        it("handles boundary: 360 days falls out of months into years (floor(360/365)=0)", () => {
+        it("handles boundary: 360 days stays in months (12 months ago)", () => {
             const now = new Date("2026-01-10T12:00:00Z");
             expect(formatRelativeTime("2025-01-15T12:00:00Z", now)).toBe(
-                "0 years ago",
+                "12 months ago",
+            );
+        });
+
+        it("handles boundary: 364 days still 12 months, just before year threshold", () => {
+            const now = new Date("2026-01-14T12:00:00Z");
+            expect(formatRelativeTime("2025-01-15T12:00:00Z", now)).toBe(
+                "12 months ago",
+            );
+        });
+
+        it("handles boundary: 365 days enters years (1 year ago)", () => {
+            const now = new Date("2026-01-15T12:00:00Z");
+            expect(formatRelativeTime("2025-01-15T12:00:00Z", now)).toBe(
+                "1 year ago",
             );
         });
     });

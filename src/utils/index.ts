@@ -15,7 +15,9 @@ export function formatRelativeTime(
 ): string {
     const diffMs = now.getTime() - new Date(isoDate).getTime();
     const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin === 0) return "now";
+    // Clamp future timestamps (e.g. client/server clock skew) to "now": a
+    // negative diff must never render as "-N mins ago".
+    if (diffMin <= 0) return "now";
     if (diffMin < 60)
         return diffMin === 1 ? `1 min ago` : `${diffMin} mins ago`;
 
@@ -30,8 +32,10 @@ export function formatRelativeTime(
     if (diffDay < 31)
         return diffWeek === 1 ? `1 week ago` : `${diffWeek} weeks ago`;
 
+    // Months cover up to 364 days so the years branch, which only runs at
+    // 365+ days, can never compute a 0-year diff.
     const diffMonth = Math.floor(diffDay / 30);
-    if (diffMonth < 12)
+    if (diffDay < 365)
         return diffMonth === 1 ? `1 month ago` : `${diffMonth} months ago`;
 
     const diffYear = Math.floor(diffDay / 365);
