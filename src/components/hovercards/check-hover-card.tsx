@@ -149,7 +149,11 @@ export function CheckHoverCard({ check, children }: CheckHoverCardProps) {
     return (
         <HoverCard openDelay={300}>
             <HoverCardTrigger asChild>{children}</HoverCardTrigger>
-            <HoverCardContent className="w-72 bg-surface p-0">
+            <HoverCardContent
+                align="center"
+                side="left"
+                className="w-72 bg-surface p-0"
+            >
                 <CheckHoverCardContent check={check} />
             </HoverCardContent>
         </HoverCard>
