@@ -1,13 +1,12 @@
+import type { Content, Parent, Root } from "mdast";
+
 export function remarkIssuePlugin(owner?: string, repo?: string) {
     return function attacher() {
-        // biome-ignore lint/suspicious/noExplicitAny: FIXME: Should create a dedicated remark node type
-        return function transformer(tree: any) {
-            // biome-ignore lint/suspicious/noExplicitAny: FIXME: Should create a dedicated remark node type
-            function walk(node: any, parent: any) {
-                if (!node) return;
-                if (node.children) {
-                    for (let i = node.children.length - 1; i >= 0; i--) {
-                        walk(node.children[i], node);
+        return function transformer(tree: Root) {
+            function walk(node: Content | Root, parent: Parent | null) {
+                if ("children" in node) {
+                    for (const child of [...node.children].reverse()) {
+                        walk(child, node);
                     }
                 }
 
@@ -18,7 +17,7 @@ export function remarkIssuePlugin(owner?: string, repo?: string) {
                     parent.type !== "inlineCode" &&
                     parent.type !== "code"
                 ) {
-                    const value = node.value as string;
+                    const value = node.value;
                     const combinedRegex =
                         /(\b[\w.-]+\/[\w.-]+#\d+\b)|(?<!\w)(#\d+)\b/g;
                     const parts: Part[] = [];
