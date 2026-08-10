@@ -1439,36 +1439,32 @@ export const minimizePullRequestReview = async (
     subjectId: string,
     classifier: ReviewMinimizeClassifier,
 ) => {
-    const response = await fetch("https://api.github.com/graphql", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            query: `
-				mutation($subjectId: ID!, $classifier: ReportedContentClassifiers!) {
-					minimizeComment(input: { subjectId: $subjectId, classifier: $classifier }) {
-						minimizedComment {
-							... on PullRequestReview {
-								databaseId
-								isMinimized
-								minimizedReason
-							}
-						}
-					}
-				}
-			`,
-            variables: { subjectId, classifier },
-        }),
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
     });
 
-    const result = await response.json();
-    if (result.errors) {
-        throw new Error(
-            `Failed to minimize review: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
-        );
+    const query = `
+mutation($subjectId: ID!, $classifier: ReportedContentClassifiers!) {
+  minimizeComment(input: { subjectId: $subjectId, classifier: $classifier }) {
+    minimizedComment {
+      ... on PullRequestReview {
+        databaseId
+        isMinimized
+        minimizedReason
+      }
     }
+  }
+}`;
+
+    await graphql<{
+        minimizeComment: {
+            minimizedComment: {
+                databaseId: number;
+                isMinimized: boolean;
+                minimizedReason: string | null;
+            } | null;
+        };
+    }>(query, { subjectId, classifier });
 };
 
 export const unminimizePullRequestReview = async (
