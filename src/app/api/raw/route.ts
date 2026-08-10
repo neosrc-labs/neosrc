@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     );
 
     if (!response.ok) {
-        return new Response("Failed to fetch image", {
+        return new Response("Failed to fetch file", {
             status: response.status,
         });
     }
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     return new Response(body, {
         headers: {
             "Content-Type": contentType,
-            "Cache-Control": "public, max-age=31536000, immutable",
+            "Cache-Control": "private, max-age=31536000, immutable",
         },
     });
 }
