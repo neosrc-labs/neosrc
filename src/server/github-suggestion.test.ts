@@ -106,7 +106,7 @@ describe("buildSuggestionNewContent", () => {
         ).toThrow(/out of bounds/);
     });
 
-    it("throws when no line is provided", () => {
+    it("throws a clear error when no line is provided", () => {
         expect(() =>
             buildSuggestionNewContent(
                 "alpha\nbeta\n",
@@ -114,6 +114,36 @@ describe("buildSuggestionNewContent", () => {
                 undefined,
                 undefined,
             ),
-        ).toThrow(/out of bounds/);
+        ).toThrow(/line is required/);
+    });
+
+    it("throws when only startLine is provided (line is required)", () => {
+        expect(() =>
+            buildSuggestionNewContent("alpha\nbeta\n", "X", null, 2),
+        ).toThrow(/line is required/);
+    });
+
+    it("includes the path in the line-required error when given", () => {
+        expect(() =>
+            buildSuggestionNewContent(
+                "alpha\nbeta\n",
+                "X",
+                undefined,
+                undefined,
+                "src/file.ts",
+            ),
+        ).toThrow(/line is required for src\/file\.ts/);
+    });
+
+    it("includes the path in the out-of-bounds error when given", () => {
+        expect(() =>
+            buildSuggestionNewContent(
+                "alpha\nbeta\n",
+                "X",
+                5,
+                5,
+                "src/file.ts",
+            ),
+        ).toThrow(/out of bounds for src\/file\.ts/);
     });
 });

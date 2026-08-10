@@ -2348,8 +2348,8 @@ const detectDominantEol = (content: string): "\n" | "\r\n" => {
 
 /**
  * Resolve the 0-based line range a code suggestion targets and reject ranges
- * that fall outside the file. `startLine` is the first replaced line
- * (defaulting to `line`); `line` is the last replaced line.
+ * that fall outside the file. `line` is the last replaced line and is
+ * required; `startLine` is the first replaced line (defaulting to `line`).
  */
 const resolveSuggestionRange = (
     line: number | null | undefined,
@@ -2357,12 +2357,16 @@ const resolveSuggestionRange = (
     totalLines: number,
     path?: string,
 ): { replaceStart: number; replaceEnd: number } => {
-    const replaceStart = (startLine ?? line ?? NaN) - 1;
-    const replaceEnd = (line ?? NaN) - 1;
+    if (line == null) {
+        throw new Error(
+            `Cannot apply suggestion: line is required${path ? ` for ${path}` : ""} (file has ${totalLines} lines)`,
+        );
+    }
+
+    const replaceStart = (startLine ?? line) - 1;
+    const replaceEnd = line - 1;
 
     if (
-        Number.isNaN(replaceStart) ||
-        Number.isNaN(replaceEnd) ||
         replaceStart < 0 ||
         replaceEnd < replaceStart ||
         replaceEnd >= totalLines
@@ -2388,12 +2392,14 @@ export const buildSuggestionNewContent = (
     suggestionCode: string,
     line: number | null | undefined,
     startLine: number | null | undefined,
+    path?: string,
 ): string => {
     const allLines = currentContent.split(/\r?\n/);
     const { replaceStart, replaceEnd } = resolveSuggestionRange(
         line,
         startLine,
         allLines.length,
+        path,
     );
 
     const suggestionLines = suggestionCode.replace(/\n$/, "").split("\n");
@@ -2488,6 +2494,7 @@ export const applySuggestion = async (
         suggestionCode,
         line,
         startLine,
+        path,
     );
 
     const base64Content = Buffer.from(newContent, "utf-8").toString("base64");
