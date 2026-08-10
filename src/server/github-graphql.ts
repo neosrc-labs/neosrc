@@ -749,6 +749,29 @@ export type GQLGitSignature =
     | GQLSshSignature
     | GQLSmimeSignature;
 
+/**
+ * Signature fields as returned by queries that do not select `keyId`
+ * (e.g. the branch commits query). `isValid` is kept nullable to match
+ * what those queries type it as.
+ */
+export type GQLGitSignatureSummary =
+    | {
+          __typename: "GpgSignature";
+          isValid: boolean | null;
+          state: string;
+          keyId?: string;
+      }
+    | {
+          __typename: "SshSignature";
+          isValid: boolean | null;
+          state: string;
+      }
+    | {
+          __typename: "SmimeSignature";
+          isValid: boolean | null;
+          state: string;
+      };
+
 export type GQLCommitAuthor = {
     name: string | null;
     email?: string | null;
@@ -1546,7 +1569,8 @@ export async function getCommitGraphQL(
 }
 
 export interface BranchCommitsResult {
-    commits: (GQLCommitWithAuthors & {
+    commits: (Omit<GQLCommitWithAuthors, "signature"> & {
+        signature?: GQLGitSignatureSummary | null;
         statusCheckRollup: {
             state: string;
             contexts: {
@@ -1640,11 +1664,7 @@ export async function getBranchCommitsGraphQL(
                                     } | null> | null;
                                 };
                             } | null;
-                            signature: {
-                                __typename: string;
-                                isValid: boolean | null;
-                                state: string;
-                            } | null;
+                            signature: GQLGitSignatureSummary | null;
                         }>;
                     };
                 } | null;
@@ -1677,7 +1697,7 @@ export async function getBranchCommitsGraphQL(
             message: node.message,
             committedDate: node.committedDate,
             authors: toCommitAuthors(node.authors),
-            signature: node.signature as unknown as GQLGitSignature | null,
+            signature: node.signature,
             statusCheckRollup: node.statusCheckRollup,
         })),
         totalCount: history.totalCount,

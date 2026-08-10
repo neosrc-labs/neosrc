@@ -16,7 +16,6 @@ import {
 import { UserLink } from "~/components/user-link";
 import { VerifiedBadge } from "~/components/verified-badge";
 import type { CommitListItem } from "~/server/api/routers/commits/types";
-import type { GQLGitSignature } from "~/server/github-graphql";
 import { formatRelativeTime } from "~/utils";
 
 interface CommitRowProps {
@@ -164,9 +163,7 @@ export function CommitRow({
             {/* Right: verified badge, hash, copy, browse */}
             <span className="flex shrink-0 items-center gap-3">
                 {commit.signature?.isValid && (
-                    <VerifiedBadge
-                        signature={commit.signature as GQLGitSignature}
-                    />
+                    <VerifiedBadge signature={commit.signature} />
                 )}
                 <a
                     href={externalCommitUrl}

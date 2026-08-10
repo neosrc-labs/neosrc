@@ -7,9 +7,9 @@ import {
     HoverCardContent,
     HoverCardTrigger,
 } from "~/components/ui/hover-card";
-import type { GQLGitSignature, GQLGpgSignature } from "~/server/github-graphql";
+import type { GQLGitSignatureSummary } from "~/server/github-graphql";
 
-function signatureTypeLabel(sig: GQLGitSignature): string {
+function signatureTypeLabel(sig: GQLGitSignatureSummary): string {
     switch (sig.__typename) {
         case "GpgSignature":
             return "GPG";
@@ -20,10 +20,10 @@ function signatureTypeLabel(sig: GQLGitSignature): string {
     }
 }
 
-function signatureKeyId(sig: GQLGitSignature): string | null {
+function signatureKeyId(sig: GQLGitSignatureSummary): string | null {
     switch (sig.__typename) {
         case "GpgSignature":
-            return (sig as GQLGpgSignature).keyId;
+            return sig.keyId ?? null;
         case "SshSignature":
         case "SmimeSignature":
             return null;
@@ -56,7 +56,7 @@ function signatureStateLabel(state: string): string {
 function VerifiedBadgeHoverContent({
     signature,
 }: {
-    signature: GQLGitSignature;
+    signature: GQLGitSignatureSummary;
 }) {
     const keyId = signatureKeyId(signature);
     const typeLabel = signatureTypeLabel(signature);
@@ -86,7 +86,11 @@ function VerifiedBadgeHoverContent({
     );
 }
 
-export function VerifiedBadge({ signature }: { signature: GQLGitSignature }) {
+export function VerifiedBadge({
+    signature,
+}: {
+    signature: GQLGitSignatureSummary;
+}) {
     if (!signature) return null;
 
     return (
@@ -108,7 +112,7 @@ export function VerifiedBadgeInline({
     signature,
     children,
 }: {
-    signature: GQLGitSignature | null | undefined;
+    signature: GQLGitSignatureSummary | null | undefined;
     children: ReactNode;
 }) {
     if (!signature) return <>{children}</>;
