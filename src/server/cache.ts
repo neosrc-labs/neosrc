@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 import { after } from "next/server";
 import { db } from "./db";
 import { cache as cacheTable } from "./db/schema";
@@ -8,11 +8,46 @@ export interface CacheOptions {
     deleteAfter?: number;
 }
 
+// Expired cache rows (deleteAt in the past) are refreshed in place whenever a
+// key is requested again, but rows whose keys are never requested after
+// deleteAt would otherwise accumulate forever (keys are per-user and
+// deleteAfter can be up to 7 days). deleteExpiredCacheRows() reclaims them.
+//
+// The sweep runs at most once per process per hour, scheduled lazily from the
+// request path instead of with a global timer (no setInterval): the first
+// withStaleWhileRevalidate call in a window schedules the DELETE via Next's
+// `after()`, so it runs after the response without ever blocking a request.
+// Only rows past deleteAt are removed -- stale-but-not-deleted rows are kept.
+const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
+let lastSweepAt = 0;
+
+export async function deleteExpiredCacheRows(): Promise<void> {
+    try {
+        await db.delete(cacheTable).where(lt(cacheTable.deleteAt, new Date()));
+    } catch {
+        // Swallow -- a failed sweep shouldn't break the request
+    }
+}
+
+function maybeScheduleExpiredCacheSweep(): void {
+    const now = Date.now();
+    if (now - lastSweepAt < SWEEP_INTERVAL_MS) return;
+    lastSweepAt = now;
+    try {
+        after(() => {
+            void deleteExpiredCacheRows();
+        });
+    } catch {
+        // Not in a request scope (e.g. build/test) -- skip the sweep this window.
+    }
+}
+
 export async function withStaleWhileRevalidate<T>(
     key: string,
     fetcher: () => Promise<T>,
     options: CacheOptions,
 ): Promise<T> {
+    maybeScheduleExpiredCacheSweep();
     const now = new Date();
 
     try {
