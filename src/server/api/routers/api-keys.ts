@@ -29,19 +29,19 @@ export const apiKeysRouter = createTRPCRouter({
             .where(eq(apiKey.owner, userId));
 
         const keyIds = keys.map((k) => k.id);
+        const [firstKeyId] = keyIds;
 
         const permissions =
-            keyIds.length > 0
-                ? await ctx.db
+            keyIds.length === 0
+                ? []
+                : await ctx.db
                       .select()
                       .from(apiKeyPermission)
                       .where(
-                          keyIds.length === 1
-                              ? // @ts-expect-error - checked length above
-                                eq(apiKeyPermission.apiKeyId, keyIds[0])
+                          keyIds.length === 1 && firstKeyId !== undefined
+                              ? eq(apiKeyPermission.apiKeyId, firstKeyId)
                               : inArray(apiKeyPermission.apiKeyId, keyIds),
-                      )
-                : [];
+                      );
 
         const permissionsByKeyId = new Map<
             number,
