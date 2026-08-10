@@ -18,8 +18,11 @@ import {
 import {
     type GQLActor,
     type GQLCommitAuthor,
+    type GQLPullRequestReactions,
+    type GqlCommitChecks,
     getCommitChecksGraphQL,
     getPullRequestStackGraphQL,
+    isOrgRestrictionError,
     resolveCommitAuthor,
     type StackData,
 } from "~/server/github-graphql";
@@ -875,14 +878,25 @@ export const getChecksForCommit = cache(
         repo: string,
         commitSha: string,
     ): Promise<CheckRun[]> => {
-        const { checkRuns, statuses } = await getCommitChecksGraphQL(
-            accessToken,
-            owner,
-            repo,
-            commitSha,
-        );
+        let checks: GqlCommitChecks;
+        try {
+            checks = await getCommitChecksGraphQL(
+                accessToken,
+                owner,
+                repo,
+                commitSha,
+            );
+        } catch (error) {
+            if (!isOrgRestrictionError(error)) throw error;
+            checks = await getCommitChecksRest(
+                accessToken,
+                owner,
+                repo,
+                commitSha,
+            );
+        }
 
-        const checkRunItems = checkRuns.map((check) => ({
+        const checkRunItems = checks.checkRuns.map((check) => ({
             name: check.name,
             conclusion: check.conclusion,
             status: check.status,
@@ -902,7 +916,7 @@ export const getChecksForCommit = cache(
         }));
 
         const statusItems = deduplicateCommitStatuses(
-            statuses.map((s) => ({
+            checks.statuses.map((s) => ({
                 state: s.state,
                 target_url: s.targetUrl,
                 description: s.description,
@@ -922,6 +936,61 @@ export const getChecksForCommit = cache(
         return [...checkRunItems, ...statusItems];
     },
 );
+
+/**
+ * REST fallback for getCommitChecksGraphQL. Organizations with OAuth App
+ * access restrictions enabled reject graphql even for public repository
+ * data, so the same data comes from checks.listForRef and
+ * repos.listCommitStatusesForRef instead.
+ */
+async function getCommitChecksRest(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    commitSha: string,
+): Promise<GqlCommitChecks> {
+    const octokit = createOctokit(accessToken);
+    const [checkRunsRes, statusesRes] = await Promise.all([
+        octokit.checks.listForRef({ owner, repo, ref: commitSha }),
+        octokit.repos.listCommitStatusesForRef({
+            owner,
+            repo,
+            ref: commitSha,
+        }),
+    ]);
+
+    const checkRuns = checkRunsRes.data.check_runs.map((run) => ({
+        name: run.name,
+        status: run.status,
+        conclusion: run.conclusion,
+        title: run.output?.title ?? null,
+        summary: run.output?.summary ?? null,
+        detailsUrl: run.details_url ?? null,
+        url: run.html_url ?? null,
+        startedAt: run.started_at ?? null,
+        completedAt: run.completed_at ?? null,
+        // REST check runs carry the app name but not its logo.
+        app: run.app ? { name: run.app.name, logoUrl: null } : null,
+    }));
+
+    const statuses = statusesRes.data.map((s) => ({
+        context: s.context,
+        description: s.description ?? null,
+        state: s.state.toLowerCase(),
+        targetUrl: s.target_url ?? null,
+        createdAt: s.created_at,
+        updatedAt: s.updated_at,
+        creator: s.creator
+            ? {
+                  login: s.creator.login,
+                  avatarUrl: s.creator.avatar_url,
+                  url: s.creator.html_url,
+              }
+            : null,
+    }));
+
+    return { checkRuns, statuses };
+}
 
 const getCommit = cache(
     async (
@@ -980,6 +1049,52 @@ export const getPullRequestReactions = cache(
         return allReactions;
     },
 );
+
+/**
+ * REST fallback for getPullRequestReactionsGraphQL, mirroring its shape:
+ * one page of reactions plus the issue-level reactions summary for the
+ * per-content totals.
+ */
+export async function getPullRequestReactionsRest(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+): Promise<GQLPullRequestReactions> {
+    const octokit = createOctokit(accessToken);
+    const [reactionsRes, issueRes] = await Promise.all([
+        octokit.rest.reactions.listForIssue({
+            owner,
+            repo,
+            issue_number: pullNumber,
+            per_page: 100,
+        }),
+        octokit.rest.issues.get({ owner, repo, issue_number: pullNumber }),
+    ]);
+
+    const reactions = reactionsRes.data.map((r) => ({
+        id: r.id,
+        node_id: r.node_id,
+        content: r.content.toLowerCase(),
+        created_at: r.created_at,
+        user: r.user,
+    }));
+
+    const summary = issueRes.data.reactions;
+    const counts: GQLPullRequestReactions["counts"] = {
+        total_count: summary?.total_count ?? 0,
+        "+1": summary?.["+1"] ?? 0,
+        "-1": summary?.["-1"] ?? 0,
+        laugh: summary?.laugh ?? 0,
+        confused: summary?.confused ?? 0,
+        heart: summary?.heart ?? 0,
+        hooray: summary?.hooray ?? 0,
+        rocket: summary?.rocket ?? 0,
+        eyes: summary?.eyes ?? 0,
+    };
+
+    return { reactions, counts };
+}
 
 export const getIssueCommentReactions = async (
     accessToken: string,
@@ -1932,38 +2047,79 @@ query RecentIssueAuthors($owner: String!, $repo: String!) {
   }
 }`;
 
-    const result = await graphql<{
-        repository?: {
-            issues: {
-                nodes: Array<{
-                    author: { login: string; avatarUrl: string } | null;
-                } | null>;
-            };
-            pullRequests: {
-                nodes: Array<{
-                    author: { login: string; avatarUrl: string } | null;
-                } | null>;
-            };
-        } | null;
-    }>(query, { owner, repo });
+    try {
+        const result = await graphql<{
+            repository?: {
+                issues: {
+                    nodes: Array<{
+                        author: { login: string; avatarUrl: string } | null;
+                    } | null>;
+                };
+                pullRequests: {
+                    nodes: Array<{
+                        author: { login: string; avatarUrl: string } | null;
+                    } | null>;
+                };
+            } | null;
+        }>(query, { owner, repo });
+
+        const seen = new Set<string>();
+        const authors: Array<{
+            login: string;
+            avatar_url: string | null;
+        }> = [];
+        const nodes = [
+            ...(result.repository?.issues?.nodes ?? []),
+            ...(result.repository?.pullRequests?.nodes ?? []),
+        ];
+        for (const node of nodes) {
+            if (!node?.author) continue;
+            if (seen.has(node.author.login)) continue;
+            seen.add(node.author.login);
+            authors.push({
+                login: node.author.login,
+                avatar_url: node.author.avatarUrl,
+            });
+        }
+        return authors;
+    } catch (error) {
+        if (!isOrgRestrictionError(error)) throw error;
+        return listRecentIssueAuthorsRest(accessToken, owner, repo);
+    }
+};
+
+/**
+ * REST fallback for listRecentIssueAuthors. issues.listForRepo returns both
+ * issues and pull requests, matching the graphql query's union.
+ */
+async function listRecentIssueAuthorsRest(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<Array<{ login: string; avatar_url: string | null }>> {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.issues.listForRepo({
+        owner,
+        repo,
+        state: "all",
+        sort: "created",
+        direction: "desc",
+        per_page: 100,
+    });
 
     const seen = new Set<string>();
     const authors: Array<{ login: string; avatar_url: string | null }> = [];
-    const nodes = [
-        ...(result.repository?.issues?.nodes ?? []),
-        ...(result.repository?.pullRequests?.nodes ?? []),
-    ];
-    for (const node of nodes) {
-        if (!node?.author) continue;
-        if (seen.has(node.author.login)) continue;
-        seen.add(node.author.login);
-        authors.push({
-            login: node.author.login,
-            avatar_url: node.author.avatarUrl,
-        });
+    for (const issue of response.data) {
+        if (issue.user && !seen.has(issue.user.login)) {
+            seen.add(issue.user.login);
+            authors.push({
+                login: issue.user.login,
+                avatar_url: issue.user.avatar_url ?? null,
+            });
+        }
     }
     return authors;
-};
+}
 
 export const addReviewersToPullRequest = async (
     accessToken: string,
@@ -2969,37 +3125,92 @@ query RepoDeployments($owner: String!, $repo: String!, $first: Int!) {
   }
 }`;
 
-    const result = await graphql<{
-        repository?: {
-            deployments?: {
-                nodes: Array<{
-                    id: string;
-                    environment: string | null;
-                    createdAt: string;
-                    latestStatus: { state: string } | null;
-                } | null>;
+    try {
+        const result = await graphql<{
+            repository?: {
+                deployments?: {
+                    nodes: Array<{
+                        id: string;
+                        environment: string | null;
+                        createdAt: string;
+                        latestStatus: { state: string } | null;
+                    } | null>;
+                } | null;
             } | null;
-        } | null;
-    }>(query, { owner, repo, first: 100 });
+        }>(query, { owner, repo, first: 100 });
 
-    const deployments = result.repository?.deployments?.nodes ?? [];
+        const deployments = result.repository?.deployments?.nodes ?? [];
+
+        const seen = new Set<string>();
+        const results: RepoDeployment[] = [];
+        for (const d of deployments) {
+            if (!d) continue;
+            // Newest first, so the first deployment seen per environment is
+            // its latest; latestStatus already carries that deployment's
+            // latest state.
+            const env = d.environment ?? "";
+            if (seen.has(env)) continue;
+            seen.add(env);
+            results.push({
+                id: d.id,
+                environment: env,
+                state: d.latestStatus?.state.toLowerCase() ?? "inactive",
+                createdAt: d.createdAt,
+            });
+        }
+
+        return results;
+    } catch (error) {
+        if (!isOrgRestrictionError(error)) throw error;
+        return getRepoDeploymentsRest(accessToken, owner, repo);
+    }
+}
+
+/**
+ * REST fallback for getRepoDeployments: one listDeployments call plus one
+ * listDeploymentStatuses call per environment for its latest state.
+ */
+async function getRepoDeploymentsRest(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<RepoDeployment[]> {
+    const octokit = createOctokit(accessToken);
+    const { data: deployments } = await octokit.rest.repos.listDeployments({
+        owner,
+        repo,
+        per_page: 100,
+    });
+
+    if (!deployments || deployments.length === 0) return [];
 
     const seen = new Set<string>();
-    const results: RepoDeployment[] = [];
+    const latestPerEnv: typeof deployments = [];
     for (const d of deployments) {
-        if (!d) continue;
-        // Newest first, so the first deployment seen per environment is its
-        // latest; latestStatus already carries that deployment's latest state.
         const env = d.environment ?? "";
         if (seen.has(env)) continue;
         seen.add(env);
-        results.push({
-            id: d.id,
-            environment: env,
-            state: d.latestStatus?.state.toLowerCase() ?? "inactive",
-            createdAt: d.createdAt,
-        });
+        latestPerEnv.push(d);
     }
+
+    const results = await Promise.all(
+        latestPerEnv.map(async (d) => {
+            const { data: statuses } =
+                await octokit.rest.repos.listDeploymentStatuses({
+                    owner,
+                    repo,
+                    deployment_id: d.id,
+                    per_page: 1,
+                });
+            const latestStatus = statuses[0];
+            return {
+                id: String(d.id),
+                environment: d.environment ?? "",
+                state: latestStatus?.state ?? "inactive",
+                createdAt: d.created_at,
+            };
+        }),
+    );
 
     return results;
 }
@@ -3151,21 +3362,70 @@ query RepoRefCounts($owner: String!, $repo: String!) {
   }
 }`;
 
-    const result = await graphql<{
-        repository?: {
-            branches: { totalCount: number };
-            tags: { totalCount: number };
-        } | null;
-    }>(query, { owner, repo });
+    try {
+        const result = await graphql<{
+            repository?: {
+                branches: { totalCount: number };
+                tags: { totalCount: number };
+            } | null;
+        }>(query, { owner, repo });
 
-    if (!result.repository) {
-        throw new Error(`Repository not found: ${owner}/${repo}`);
+        if (!result.repository) {
+            throw new Error(`Repository not found: ${owner}/${repo}`);
+        }
+
+        return {
+            branchCount: result.repository.branches.totalCount,
+            tagCount: result.repository.tags.totalCount,
+        };
+    } catch (error) {
+        if (!isOrgRestrictionError(error)) throw error;
+        return getRepoRefCountsRest(accessToken, owner, repo);
     }
+}
+
+/**
+ * REST fallback for getRepoRefCounts: listBranches/listTags with per_page=1,
+ * deriving the totals from the Link header pagination metadata.
+ */
+async function getRepoRefCountsRest(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<RepoRefCounts> {
+    const octokit = createOctokit(accessToken);
+    const [branchRes, tagRes] = await Promise.all([
+        octokit.rest.repos.listBranches({ owner, repo, per_page: 1 }),
+        octokit.rest.repos.listTags({ owner, repo, per_page: 1 }),
+    ]);
 
     return {
-        branchCount: result.repository.branches.totalCount,
-        tagCount: result.repository.tags.totalCount,
+        branchCount: parseRefCountFromLinkHeader(
+            branchRes.headers.link,
+            branchRes.data.length,
+        ),
+        tagCount: parseRefCountFromLinkHeader(
+            tagRes.headers.link,
+            tagRes.data.length,
+        ),
     };
+}
+
+function parseRefCountFromLinkHeader(
+    linkHeader: string | undefined,
+    currentCount: number,
+): number {
+    if (!linkHeader) return currentCount;
+
+    const linkPattern = /<[^>]*[?&]page=(\d+)[^>]*>;\s*rel="(\w+)"/g;
+    let maxPage = 1;
+    for (const m of linkHeader.matchAll(linkPattern)) {
+        const p = Number.parseInt(m[1] ?? "0", 10);
+        if (p > maxPage) maxPage = p;
+    }
+
+    if (maxPage <= 1) return currentCount;
+    return maxPage;
 }
 
 export interface RepoLatestCommit {
@@ -3218,38 +3478,88 @@ query RepoLatestCommit($owner: String!, $repo: String!, $expression: String!) {
   }
 }`;
 
-    const result = await graphql<{
-        repository?: {
-            object?: {
-                oid: string;
-                messageHeadline: string;
-                committedDate: string | null;
-                authors: { nodes: (GQLCommitAuthor | null)[] };
-                history: { totalCount: number };
+    try {
+        const result = await graphql<{
+            repository?: {
+                object?: {
+                    oid: string;
+                    messageHeadline: string;
+                    committedDate: string | null;
+                    authors: { nodes: (GQLCommitAuthor | null)[] };
+                    history: { totalCount: number };
+                } | null;
             } | null;
-        } | null;
-    }>(query, { owner, repo, expression: ref ?? "HEAD" });
+        }>(query, { owner, repo, expression: ref ?? "HEAD" });
 
-    const commit = result.repository?.object ?? null;
+        const commit = result.repository?.object ?? null;
+        if (!commit) {
+            throw new Error(`No commits found for ${owner}/${repo}`);
+        }
+
+        // Commit.author is a GitActor (git identity, no GitHub login); resolve
+        // the GitHub user the same way the commit list does, synthesizing it
+        // from noreply emails when the user connection fails to resolve.
+        const author = commit.authors.nodes[0]
+            ? resolveCommitAuthor(commit.authors.nodes[0]).user
+            : null;
+
+        return {
+            sha: commit.oid,
+            message: commit.messageHeadline,
+            author: author
+                ? { login: author.login, avatarUrl: author.avatarUrl }
+                : null,
+            committedDate: commit.committedDate,
+            commitCount: commit.history.totalCount,
+        };
+    } catch (error) {
+        if (!isOrgRestrictionError(error)) throw error;
+        return getRepoLatestCommitRest(accessToken, owner, repo, ref);
+    }
+}
+
+/**
+ * REST fallback for getRepoLatestCommit: listCommits with per_page=1,
+ * deriving the commit count from the Link header pagination metadata.
+ */
+async function getRepoLatestCommitRest(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    ref?: string,
+): Promise<RepoLatestCommit> {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.rest.repos.listCommits({
+        owner,
+        repo,
+        sha: ref,
+        per_page: 1,
+    });
+
+    const commit = response.data[0];
     if (!commit) {
         throw new Error(`No commits found for ${owner}/${repo}`);
     }
 
-    // Commit.author is a GitActor (git identity, no GitHub login); resolve
-    // the GitHub user the same way the commit list does, synthesizing it from
-    // noreply emails when the user connection fails to resolve.
-    const author = commit.authors.nodes[0]
-        ? resolveCommitAuthor(commit.authors.nodes[0]).user
-        : null;
+    const commitCount = parseRefCountFromLinkHeader(
+        response.headers.link,
+        response.data.length,
+    );
+
+    const message = commit.commit.message.split("\n")[0] ?? "";
 
     return {
-        sha: commit.oid,
-        message: commit.messageHeadline,
-        author: author
-            ? { login: author.login, avatarUrl: author.avatarUrl }
+        sha: commit.sha,
+        message,
+        author: commit.author
+            ? {
+                  login: commit.author.login,
+                  avatarUrl: commit.author.avatar_url,
+              }
             : null,
-        committedDate: commit.committedDate,
-        commitCount: commit.history.totalCount,
+        committedDate:
+            commit.commit.committer?.date ?? commit.commit.author?.date ?? null,
+        commitCount,
     };
 }
 

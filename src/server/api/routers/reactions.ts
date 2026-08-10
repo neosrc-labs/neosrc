@@ -16,12 +16,15 @@ import {
     getAuthenticatedUser,
     getIssueCommentReactions,
     getPullRequestReactions,
+    getPullRequestReactionsRest,
     getPullRequestReviewCommentReactions,
 } from "~/server/github";
 import {
     addReaction,
+    type GQLPullRequestReactions,
     getPullRequestReactionsGraphQL,
     getSubjectReactions,
+    isOrgRestrictionError,
     removeReaction,
 } from "~/server/github-graphql";
 
@@ -44,17 +47,28 @@ export const reactionsRouter = createTRPCRouter({
                 ? null
                 : await getAuthenticatedUser(accessToken);
 
-            const { reactions, counts } = await getPullRequestReactionsGraphQL(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-            );
+            let reactionData: GQLPullRequestReactions;
+            try {
+                reactionData = await getPullRequestReactionsGraphQL(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                );
+            } catch (error) {
+                if (!isOrgRestrictionError(error)) throw error;
+                reactionData = await getPullRequestReactionsRest(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                );
+            }
 
             return {
-                reactions,
+                reactions: reactionData.reactions,
                 currentUserLogin: currentUser?.login,
-                counts,
+                counts: reactionData.counts,
             };
         }),
 

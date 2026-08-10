@@ -1,6 +1,73 @@
+import { GraphqlResponseError } from "@octokit/graphql";
 import { describe, expect, it } from "vitest";
 
-import { resolveCommitAuthor } from "~/server/github-graphql";
+import {
+    isOrgRestrictionError,
+    resolveCommitAuthor,
+} from "~/server/github-graphql";
+
+describe("isOrgRestrictionError", () => {
+    it("detects OAuth App access restriction errors", () => {
+        const error = new GraphqlResponseError(
+            {
+                query: "query CommitChecks($owner: String!, $repo: String!, $expression: String!) { repository(owner: $owner, name: $repo) { object(expression: $expression) { ... on Commit { statusCheckRollup { contexts(first: 100) { nodes { __typename } } } } } } }",
+                variables: {
+                    owner: "rust-lang",
+                    repo: "rust",
+                    expression: "042faa5ce6dbe3509222087ce38e3708e0b2cbc1",
+                },
+                method: "POST",
+                url: "https://api.github.com/graphql",
+            },
+            {},
+            {
+                data: { repository: null },
+                errors: [
+                    {
+                        type: "FORBIDDEN",
+                        message:
+                            "Although you appear to have the correct authorization credentials, the `rust-lang` organization has enabled OAuth App access restrictions, meaning that data access to third-parties is limited.",
+                        path: ["repository"],
+                        extensions: { code: "FORBIDDEN" },
+                        locations: [{ line: 1, column: 1 }],
+                    },
+                ],
+            },
+        );
+
+        expect(isOrgRestrictionError(error)).toBe(true);
+    });
+
+    it("rejects other graphql errors", () => {
+        const error = new GraphqlResponseError(
+            {
+                query: "query { viewer { login } }",
+                variables: {},
+                method: "POST",
+                url: "https://api.github.com/graphql",
+            },
+            {},
+            {
+                data: { viewer: null },
+                errors: [
+                    {
+                        type: "NOT_FOUND",
+                        message: "Could not resolve to a node",
+                        path: ["viewer"],
+                        extensions: { code: "NOT_FOUND" },
+                        locations: [{ line: 1, column: 1 }],
+                    },
+                ],
+            },
+        );
+
+        expect(isOrgRestrictionError(error)).toBe(false);
+    });
+
+    it("returns false for non-graphql errors", () => {
+        expect(isOrgRestrictionError(new Error("boom"))).toBe(false);
+    });
+});
 
 describe("resolveCommitAuthor", () => {
     it("resolves a noreply email to the encoded GitHub account", () => {
