@@ -70,10 +70,14 @@ describe("syncRouter.currentUser", () => {
         expect(syncCurrentUserMock).toHaveBeenCalledWith(expect.anything(), {
             provider: "github",
             accessToken: "gh-token",
+            userId: "user-1",
+            force: true,
         });
         expect(syncCurrentUserMock).toHaveBeenCalledWith(expect.anything(), {
             provider: "codeberg",
             accessToken: "cb-token",
+            userId: "user-1",
+            force: true,
         });
     });
 
@@ -102,6 +106,69 @@ describe("syncRouter.currentUser", () => {
         await expect(caller.currentUser()).rejects.toMatchObject({
             code: "BAD_REQUEST",
         });
+        expect(syncCurrentUserMock).not.toHaveBeenCalled();
+    });
+});
+
+describe("syncRouter.poll", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it("runs the incremental sync and reports per-provider changes", async () => {
+        getGitHubTokenMock.mockResolvedValue("gh-token");
+        getCodebergTokenMock.mockResolvedValue("cb-token");
+        isAnonymousTokenMock.mockReturnValue(false);
+        syncCurrentUserMock.mockResolvedValue(sampleResult);
+
+        const caller = await createCaller();
+        await expect(caller.poll()).resolves.toEqual({
+            github: { changed: true, result: sampleResult },
+            codeberg: { changed: true, result: sampleResult },
+        });
+        // The poll path never forces a full re-sync.
+        expect(syncCurrentUserMock).toHaveBeenCalledWith(expect.anything(), {
+            provider: "github",
+            accessToken: "gh-token",
+            userId: "user-1",
+        });
+        expect(syncCurrentUserMock).toHaveBeenCalledWith(expect.anything(), {
+            provider: "codeberg",
+            accessToken: "cb-token",
+            userId: "user-1",
+        });
+    });
+
+    it("reports up-to-date when the incremental sync changed nothing", async () => {
+        getGitHubTokenMock.mockResolvedValue("gh-token");
+        getCodebergTokenMock.mockRejectedValue(
+            new Error("Codeberg account not connected"),
+        );
+        isAnonymousTokenMock.mockReturnValue(false);
+        syncCurrentUserMock.mockResolvedValue({
+            accountsUpserted: 0,
+            reposUpserted: 0,
+            relationsWritten: 0,
+            relationsRemoved: 0,
+            teamsSkipped: 0,
+        });
+
+        const caller = await createCaller();
+        await expect(caller.poll()).resolves.toEqual({
+            github: { changed: false, result: null },
+        });
+    });
+
+    it("returns an empty map instead of failing when nothing is connected", async () => {
+        getGitHubTokenMock.mockRejectedValue(
+            new Error("GitHub account not connected"),
+        );
+        getCodebergTokenMock.mockRejectedValue(
+            new Error("Codeberg account not connected"),
+        );
+
+        const caller = await createCaller();
+        await expect(caller.poll()).resolves.toEqual({});
         expect(syncCurrentUserMock).not.toHaveBeenCalled();
     });
 });

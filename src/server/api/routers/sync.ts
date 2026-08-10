@@ -39,10 +39,16 @@ export const syncRouter = createTRPCRouter({
 
     /**
      * Updates the current user's account row and permissions (org/team
-     * memberships and repo grants) for every connected provider.
+     * memberships and repo grants) for every connected provider. Always
+     * performs a full re-sync, regardless of the incremental state.
      */
     currentUser: protectedMutation.mutation(async ({ ctx }) => {
-        const userId = ctx.session?.user?.id;
+        // protectedMutation guarantees a session; narrow for the token getters
+        // and the sync layer, which key sync state by userId.
+        if (!ctx.session?.user) {
+            throw new TRPCError({ code: "UNAUTHORIZED" });
+        }
+        const userId = ctx.session.user.id;
         const [githubToken, codebergToken] = await Promise.all([
             getGitHubToken(ctx.db, userId).catch(() => null),
             getCodebergToken(ctx.db, userId).catch(() => null),
@@ -54,6 +60,8 @@ export const syncRouter = createTRPCRouter({
                 ? syncCurrentUser(ctx.db, {
                       provider: "github",
                       accessToken: githubToken,
+                      userId,
+                      force: true,
                   }).then((result) => {
                       results.github = result;
                   })
@@ -62,6 +70,8 @@ export const syncRouter = createTRPCRouter({
                 ? syncCurrentUser(ctx.db, {
                       provider: "codeberg",
                       accessToken: codebergToken,
+                      userId,
+                      force: true,
                   }).then((result) => {
                       results.codeberg = result;
                   })
@@ -74,6 +84,65 @@ export const syncRouter = createTRPCRouter({
                 message: "No connected provider accounts to sync",
             });
         }
+
+        return results;
+    }),
+
+    /**
+     * Lightweight incremental sync for periodic polling: skips all writes and
+     * the permission-view refresh while nothing changed. Silent when no
+     * provider is connected (unlike `currentUser`, which is user-initiated).
+     */
+    poll: protectedMutation.mutation(async ({ ctx }) => {
+        if (!ctx.session?.user) {
+            throw new TRPCError({ code: "UNAUTHORIZED" });
+        }
+        const userId = ctx.session.user.id;
+        const [githubToken, codebergToken] = await Promise.all([
+            getGitHubToken(ctx.db, userId).catch(() => null),
+            getCodebergToken(ctx.db, userId).catch(() => null),
+        ]);
+
+        const hasChanges = (result: SyncResult): boolean =>
+            result.accountsUpserted +
+                result.reposUpserted +
+                result.relationsWritten +
+                result.relationsRemoved +
+                result.teamsSkipped >
+            0;
+
+        const results: Partial<
+            Record<
+                "github" | "codeberg",
+                { changed: boolean; result: SyncResult | null }
+            >
+        > = {};
+        await Promise.all([
+            githubToken && !isAnonymousToken(githubToken)
+                ? syncCurrentUser(ctx.db, {
+                      provider: "github",
+                      accessToken: githubToken,
+                      userId,
+                  }).then((result) => {
+                      results.github = {
+                          changed: hasChanges(result),
+                          result: hasChanges(result) ? result : null,
+                      };
+                  })
+                : Promise.resolve(),
+            codebergToken
+                ? syncCurrentUser(ctx.db, {
+                      provider: "codeberg",
+                      accessToken: codebergToken,
+                      userId,
+                  }).then((result) => {
+                      results.codeberg = {
+                          changed: hasChanges(result),
+                          result: hasChanges(result) ? result : null,
+                      };
+                  })
+                : Promise.resolve(),
+        ]);
 
         return results;
     }),

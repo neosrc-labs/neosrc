@@ -292,6 +292,26 @@ export const relation = createTable(
     ],
 );
 
+// Incremental sync bookkeeping: the snapshot hash of the last applied
+// permission sync per user, so a 30s poll can skip all writes and the
+// materialized-view refresh while nothing changed.
+export const syncState = createTable(
+    "sync_state",
+    (d) => ({
+        provider: providerEnum("provider").notNull(),
+        userId: d
+            .text("user_id")
+            .notNull()
+            .references(() => betterAuthUser.id),
+        snapshotHash: d.text("snapshot_hash").notNull(),
+        updatedAt: d
+            .timestamp("updated_at", { withTimezone: true, mode: "date" })
+            .notNull()
+            .defaultNow(),
+    }),
+    (t) => [primaryKey({ columns: [t.provider, t.userId] })],
+);
+
 export const mvUserRepoPermissions = pgMaterializedView(
     "mv_user_repo_permissions",
     {
