@@ -61,7 +61,7 @@ export default function RightSidebar({
     const commitCount = pullRequest?.commits ?? 0;
     const isMerged = pullRequest?.merged ?? false;
     const isClosed = pullRequest?.state === "closed";
-    const createdAt = pullRequest?.created_at ?? "";
+    const createdAt = pullRequest?.created_at ?? null;
     const sha = pullRequest?.head?.sha;
 
     const { data: checks } = api.checks.list.useQuery(
