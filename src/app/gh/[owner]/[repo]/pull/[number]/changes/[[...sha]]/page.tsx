@@ -45,6 +45,7 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
         number < 1
     ) {
         notFound();
+        return;
     }
 
     const commitSha = sha && sha.length > 0 ? sha[0] : null;

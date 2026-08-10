@@ -35,6 +35,7 @@ export default async function PullRequestLayout({
         number < 1
     ) {
         notFound();
+        return;
     }
 
     let pullRequest: Promise<PullsGetResponseData> | null = null;
