@@ -2311,6 +2311,71 @@ const getFileContentFromBranch = async (
     };
 };
 
+const detectDominantEol = (content: string): "\n" | "\r\n" => {
+    const crlfCount = content.match(/\r\n/g)?.length ?? 0;
+    const lfCount = (content.match(/\n/g)?.length ?? 0) - crlfCount;
+    return crlfCount > lfCount ? "\r\n" : "\n";
+};
+
+/**
+ * Resolve the 0-based line range a code suggestion targets and reject ranges
+ * that fall outside the file. `startLine` is the first replaced line
+ * (defaulting to `line`); `line` is the last replaced line.
+ */
+const resolveSuggestionRange = (
+    line: number | null | undefined,
+    startLine: number | null | undefined,
+    totalLines: number,
+    path?: string,
+): { replaceStart: number; replaceEnd: number } => {
+    const replaceStart = (startLine ?? line ?? NaN) - 1;
+    const replaceEnd = (line ?? NaN) - 1;
+
+    if (
+        Number.isNaN(replaceStart) ||
+        Number.isNaN(replaceEnd) ||
+        replaceStart < 0 ||
+        replaceEnd < replaceStart ||
+        replaceEnd >= totalLines
+    ) {
+        throw new Error(
+            `Line range ${replaceStart + 1}-${replaceEnd + 1} is out of bounds${path ? ` for ${path}` : ""} (${totalLines} lines)`,
+        );
+    }
+
+    return { replaceStart, replaceEnd };
+};
+
+/**
+ * Compute the file content that results from applying a GitHub code
+ * suggestion without touching the remote. The targeted range follows the same
+ * semantics as `getSuggestionPatch` (startLine through line). A single
+ * trailing newline on the suggestion is stripped so suggestion blocks — which
+ * end with a newline — don't inject an empty line, and unchanged lines keep
+ * the file's original line endings.
+ */
+export const buildSuggestionNewContent = (
+    currentContent: string,
+    suggestionCode: string,
+    line: number | null | undefined,
+    startLine: number | null | undefined,
+): string => {
+    const allLines = currentContent.split(/\r?\n/);
+    const { replaceStart, replaceEnd } = resolveSuggestionRange(
+        line,
+        startLine,
+        allLines.length,
+    );
+
+    const suggestionLines = suggestionCode.replace(/\n$/, "").split("\n");
+
+    return [
+        ...allLines.slice(0, replaceStart),
+        ...suggestionLines,
+        ...allLines.slice(replaceEnd + 1),
+    ].join(detectDominantEol(currentContent));
+};
+
 export const getSuggestionPatch = async (
     accessToken: string,
     owner: string,
@@ -2334,18 +2399,12 @@ export const getSuggestionPatch = async (
     );
 
     const allLines = currentContent.split("\n");
-    const replaceStart = (startLine ?? line) - 1;
-    const replaceEnd = line - 1;
-
-    if (
-        replaceStart < 0 ||
-        replaceEnd < replaceStart ||
-        replaceEnd >= allLines.length
-    ) {
-        throw new Error(
-            `Line range ${replaceStart + 1}-${replaceEnd + 1} is out of bounds for ${path} (${allLines.length} lines)`,
-        );
-    }
+    const { replaceStart, replaceEnd } = resolveSuggestionRange(
+        line,
+        startLine,
+        allLines.length,
+        path,
+    );
 
     const contextStart = Math.max(0, replaceStart - contextLines);
     const contextEnd = Math.min(allLines.length - 1, replaceEnd + contextLines);
@@ -2395,14 +2454,12 @@ export const applySuggestion = async (
     const { content: currentContent, sha: fileSha } =
         await getFileContentFromBranch(accessToken, owner, repo, path, headRef);
 
-    const lines = currentContent.split("\n");
-    const startIdx = (startLine ?? line ?? 1) - 1;
-    const endIdx = (line ?? startLine ?? 1) - 1;
-    const suggestionLines = suggestionCode.split("\n");
-
-    const before = lines.slice(0, startIdx);
-    const after = lines.slice(endIdx + 1);
-    const newContent = [...before, ...suggestionLines, ...after].join("\n");
+    const newContent = buildSuggestionNewContent(
+        currentContent,
+        suggestionCode,
+        line,
+        startLine,
+    );
 
     const base64Content = Buffer.from(newContent, "utf-8").toString("base64");
 
