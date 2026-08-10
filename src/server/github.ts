@@ -1471,36 +1471,32 @@ export const unminimizePullRequestReview = async (
     accessToken: string,
     subjectId: string,
 ) => {
-    const response = await fetch("https://api.github.com/graphql", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            query: `
-				mutation($subjectId: ID!) {
-					unminimizeComment(input: { subjectId: $subjectId }) {
-						unminimizedComment {
-							... on PullRequestReview {
-								databaseId
-								isMinimized
-								minimizedReason
-							}
-						}
-					}
-				}
-			`,
-            variables: { subjectId },
-        }),
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
     });
 
-    const result = await response.json();
-    if (result.errors) {
-        throw new Error(
-            `Failed to unminimize review: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
-        );
+    const query = `
+mutation($subjectId: ID!) {
+  unminimizeComment(input: { subjectId: $subjectId }) {
+    unminimizedComment {
+      ... on PullRequestReview {
+        databaseId
+        isMinimized
+        minimizedReason
+      }
     }
+  }
+}`;
+
+    await graphql<{
+        unminimizeComment: {
+            unminimizedComment: {
+                databaseId: number;
+                isMinimized: boolean;
+                minimizedReason: string | null;
+            } | null;
+        };
+    }>(query, { subjectId });
 };
 
 // TODO: Check if generators support cache() or maybe internally we can cache?
