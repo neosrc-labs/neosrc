@@ -2404,26 +2404,83 @@ export type RepoListItem = {
 export async function getUserRepos(
     accessToken: string,
 ): Promise<RepoListItem[]> {
-    const octokit = createOctokit(accessToken);
-    const iterator = octokit.paginate.iterator(
-        octokit.rest.repos.listForAuthenticatedUser,
-        {
-            per_page: 100,
-            sort: "full_name",
-            type: "owner",
-        },
-    );
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const query = `
+query ViewerRepos($first: Int!, $after: String) {
+  viewer {
+    repositories(
+      first: $first
+      after: $after
+      ownerAffiliations: OWNER
+      orderBy: { field: NAME, direction: ASC }
+    ) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        name
+        owner {
+          login
+        }
+        isPrivate
+      }
+    }
+  }
+}`;
+
     const results: RepoListItem[] = [];
-    for await (const { data } of iterator) {
-        for (const r of data) {
+    let cursor: string | null = null;
+    for (;;) {
+        const result: {
+            viewer: {
+                repositories: {
+                    pageInfo: {
+                        hasNextPage: boolean;
+                        endCursor: string | null;
+                    };
+                    nodes: Array<{
+                        name: string;
+                        owner: { login: string };
+                        isPrivate: boolean;
+                    } | null>;
+                };
+            };
+        } = await graphql<
+            {
+                viewer: {
+                    repositories: {
+                        pageInfo: {
+                            hasNextPage: boolean;
+                            endCursor: string | null;
+                        };
+                        nodes: Array<{
+                            name: string;
+                            owner: { login: string };
+                            isPrivate: boolean;
+                        } | null>;
+                    };
+                };
+            }
+        >(query, { first: 100, after: cursor });
+
+        for (const r of result.viewer.repositories.nodes) {
+            if (!r) continue;
             results.push({
                 owner: r.owner.login,
                 name: r.name,
-                fullName: r.full_name,
-                private: r.private,
+                fullName: `${r.owner.login}/${r.name}`,
+                private: r.isPrivate,
             });
         }
+
+        if (!result.viewer.repositories.pageInfo.hasNextPage) break;
+        cursor = result.viewer.repositories.pageInfo.endCursor;
     }
+
     return results;
 }
 
