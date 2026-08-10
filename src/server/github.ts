@@ -1168,11 +1168,12 @@ export const getUserRepoPermission = cache(
 export const getRepoCollaboratorPermissions = cache(
     async (
         accessToken: string,
+        userId: string,
         owner: string,
         repo: string,
     ): Promise<Record<string, "admin" | "write" | "read" | "none"> | null> => {
         return withStaleWhileRevalidate(
-            `gh:collaborators:${owner}:${repo}`,
+            `gh:collaborators:${userId}:${owner}:${repo}`,
             async () => {
                 const octokit = createOctokit(accessToken);
                 const permissions: Record<
@@ -1621,11 +1622,12 @@ query GetRepoIssuePullCounts($owner: String!, $repo: String!) {
 
 export async function getCachedRepoIssuePullCounts(
     accessToken: string,
+    userId: string,
     owner: string,
     repo: string,
 ): Promise<{ openIssuesCount: number; openPullRequestsCount: number } | null> {
     return withStaleWhileRevalidate(
-        repoIssuePullCountsCacheKey("gh", owner, repo),
+        repoIssuePullCountsCacheKey("gh", userId, owner, repo),
         () => getRepoIssuePullCounts(accessToken, owner, repo),
         { staleAfter: 3_000, deleteAfter: 24 * 60 * 60 * 1000 },
     );
@@ -1661,11 +1663,12 @@ export async function getCachedRepoHeaderData(
 
 export async function getCachedRepoLanguages(
     accessToken: string,
+    userId: string,
     owner: string,
     repo: string,
 ): Promise<Record<string, number>> {
     return withStaleWhileRevalidate(
-        repoLanguagesCacheKey(owner, repo),
+        repoLanguagesCacheKey(userId, owner, repo),
         () => getRepoLanguages(accessToken, owner, repo),
         { staleAfter: 5 * 60 * 1000, deleteAfter: 7 * 24 * 60 * 60 * 1000 },
     );
@@ -1673,11 +1676,12 @@ export async function getCachedRepoLanguages(
 
 export async function getCachedRepoContributors(
     accessToken: string,
+    userId: string,
     owner: string,
     repo: string,
 ): Promise<RepoContributor[]> {
     return withStaleWhileRevalidate(
-        repoContributorsCacheKey(owner, repo),
+        repoContributorsCacheKey(userId, owner, repo),
         () => getRepoContributors(accessToken, owner, repo),
         { staleAfter: 5 * 60 * 1000, deleteAfter: 7 * 24 * 60 * 60 * 1000 },
     );
@@ -1685,12 +1689,13 @@ export async function getCachedRepoContributors(
 
 export async function getCachedRepoDocFileNames(
     accessToken: string,
+    userId: string,
     owner: string,
     repo: string,
     ref?: string,
 ): Promise<RepoDocFileName[]> {
     return withStaleWhileRevalidate(
-        repoDocFilesCacheKey(owner, repo, ref),
+        repoDocFilesCacheKey(userId, owner, repo, ref),
         () => getRepoDocFileNames(accessToken, owner, repo, ref),
         { staleAfter: 5 * 60 * 1000, deleteAfter: 7 * 24 * 60 * 60 * 1000 },
     );
@@ -2678,13 +2683,14 @@ export async function getDocFileContent(
 
 export async function getCachedDocFileContent(
     accessToken: string,
+    userId: string,
     owner: string,
     repo: string,
     ref: string,
     path: string,
 ): Promise<{ content: string }> {
     return withStaleWhileRevalidate(
-        `doc-file:${owner}:${repo}:${ref}:${path}`,
+        `doc-file:${userId}:${owner}:${repo}:${ref}:${path}`,
         () => getDocFileContent(accessToken, owner, repo, ref, path),
         {
             staleAfter: 24 * 60 * 60 * 1000,
@@ -3250,6 +3256,7 @@ ${aliases.join("\n")}
 }
 
 function fileCommitsCacheKey(
+    userId: string,
     owner: string,
     repo: string,
     ref: string,
@@ -3257,11 +3264,12 @@ function fileCommitsCacheKey(
 ): string {
     const sorted = [...paths].sort().join(",");
     const hash = createHash("sha256").update(sorted).digest("hex").slice(0, 16);
-    return `file-commits:${owner}:${repo}:${ref}:${hash}`;
+    return `file-commits:${userId}:${owner}:${repo}:${ref}:${hash}`;
 }
 
 export async function getFileLatestCommits(
     accessToken: string,
+    userId: string,
     owner: string,
     repo: string,
     ref: string,
@@ -3270,7 +3278,7 @@ export async function getFileLatestCommits(
     if (paths.length === 0) return {};
 
     return withStaleWhileRevalidate(
-        fileCommitsCacheKey(owner, repo, ref, paths),
+        fileCommitsCacheKey(userId, owner, repo, ref, paths),
         () => fetchFileCommits(accessToken, owner, repo, ref, paths),
         {
             staleAfter: 24 * 60 * 60 * 1000,

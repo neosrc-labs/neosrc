@@ -199,24 +199,21 @@ export const reposRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
+            const userId = ctx.session?.user?.id ?? "anonymous";
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
+                const accessToken = await getCodebergToken(ctx.db, userId);
                 return getCachedRepoCounts(
                     accessToken,
+                    userId,
                     input.owner,
                     input.repo,
                 );
             }
 
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGitHubToken(ctx.db, userId);
             return getCachedRepoIssuePullCounts(
                 accessToken,
+                userId,
                 input.owner,
                 input.repo,
             );
@@ -428,6 +425,7 @@ export const reposRouter = createTRPCRouter({
             );
             return getFileLatestCommits(
                 accessToken,
+                ctx.session?.user?.id ?? "anonymous",
                 input.owner,
                 input.repo,
                 input.ref,
@@ -548,6 +546,7 @@ export const reposRouter = createTRPCRouter({
             );
             return getCachedRepoDocFileNames(
                 accessToken,
+                ctx.session?.user?.id ?? "anonymous",
                 input.owner,
                 input.repo,
                 input.ref,
@@ -577,7 +576,12 @@ export const reposRouter = createTRPCRouter({
                 ctx.db,
                 ctx.session?.user?.id,
             );
-            return getCachedRepoLanguages(accessToken, input.owner, input.repo);
+            return getCachedRepoLanguages(
+                accessToken,
+                ctx.session?.user?.id ?? "anonymous",
+                input.owner,
+                input.repo,
+            );
         }),
     getDocFiles: protectedProcedure
         .input(
@@ -631,6 +635,7 @@ export const reposRouter = createTRPCRouter({
             );
             return getCachedDocFileContent(
                 accessToken,
+                ctx.session?.user?.id ?? "anonymous",
                 input.owner,
                 input.repo,
                 input.ref,
@@ -653,6 +658,7 @@ export const reposRouter = createTRPCRouter({
             );
             return getCachedRepoContributors(
                 accessToken,
+                ctx.session?.user?.id ?? "anonymous",
                 input.owner,
                 input.repo,
             );

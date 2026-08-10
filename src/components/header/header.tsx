@@ -80,7 +80,7 @@ async function getRepoData(
         if (!token) return null;
         const [headerData, counts] = await Promise.all([
             getCachedCodebergRepoHeaderData(token, userId, owner, repo),
-            getCachedRepoCounts(token, owner, repo),
+            getCachedRepoCounts(token, userId, owner, repo),
         ]);
         return {
             ...headerData,
@@ -93,7 +93,7 @@ async function getRepoData(
     if (!token) return null;
     const [headerData, counts] = await Promise.all([
         getCachedRepoHeaderData(token, userId, owner, repo),
-        getCachedRepoIssuePullCounts(token, owner, repo),
+        getCachedRepoIssuePullCounts(token, userId, owner, repo),
     ]);
     return {
         ...headerData,
