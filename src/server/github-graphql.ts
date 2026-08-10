@@ -1154,7 +1154,7 @@ export async function getPullRequestReactionsGraphQL(
                 } | null;
                 reactionGroups: Array<{
                     content: string;
-                    count: number;
+                    reactors: { totalCount: number };
                 }> | null;
             } | null;
         } | null;
@@ -1174,7 +1174,9 @@ export async function getPullRequestReactionsGraphQL(
 					}
 					reactionGroups {
 						content
-						count
+						reactors {
+							totalCount
+						}
 					}
 				}
 			}
@@ -1218,8 +1220,8 @@ export async function getPullRequestReactionsGraphQL(
         const key = CONTENT_MAP[group.content];
         if (key && key in counts && key !== "total_count") {
             counts[key as keyof Omit<typeof counts, "total_count">] =
-                group.count;
-            counts.total_count += group.count;
+                group.reactors.totalCount;
+            counts.total_count += group.reactors.totalCount;
         }
     }
 

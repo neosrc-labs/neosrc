@@ -1,10 +1,82 @@
+import type * as OctokitGraphqlModule from "@octokit/graphql";
 import { GraphqlResponseError } from "@octokit/graphql";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { mockGraphql } = vi.hoisted(() => ({ mockGraphql: vi.fn() }));
+
+vi.mock("@octokit/graphql", async (importOriginal) => {
+    const actual = await importOriginal<typeof OctokitGraphqlModule>();
+    return {
+        ...actual,
+        graphql: {
+            defaults: () => mockGraphql,
+        },
+    };
+});
 
 import {
+    getPullRequestReactionsGraphQL,
     isOrgRestrictionError,
     resolveCommitAuthor,
 } from "~/server/github-graphql";
+
+describe("getPullRequestReactionsGraphQL", () => {
+    beforeEach(() => {
+        mockGraphql.mockReset();
+    });
+
+    it("aggregates per-content totals from reaction group reactors", async () => {
+        mockGraphql.mockResolvedValue({
+            repository: {
+                pullRequest: {
+                    reactions: {
+                        nodes: [
+                            {
+                                databaseId: 1,
+                                id: "node-1",
+                                content: "THUMBS_UP",
+                                createdAt: "2026-01-01T00:00:00Z",
+                                user: { login: "alice" },
+                            },
+                        ],
+                    },
+                    reactionGroups: [
+                        { content: "THUMBS_UP", reactors: { totalCount: 3 } },
+                        { content: "HEART", reactors: { totalCount: 2 } },
+                    ],
+                },
+            },
+        });
+
+        const result = await getPullRequestReactionsGraphQL(
+            "token",
+            "owner",
+            "repo",
+            1,
+        );
+
+        expect(result.reactions).toEqual([
+            {
+                id: 1,
+                node_id: "node-1",
+                content: "+1",
+                created_at: "2026-01-01T00:00:00Z",
+                user: { login: "alice" },
+            },
+        ]);
+        expect(result.counts).toEqual({
+            total_count: 5,
+            "+1": 3,
+            "-1": 0,
+            laugh: 0,
+            confused: 0,
+            heart: 2,
+            hooray: 0,
+            rocket: 0,
+            eyes: 0,
+        });
+    });
+});
 
 describe("isOrgRestrictionError", () => {
     it("detects OAuth App access restriction errors", () => {
