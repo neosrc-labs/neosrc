@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
@@ -26,7 +27,16 @@ export default async function PullRequestLayout({
     params,
 }: LayoutProps) {
     const { owner, repo, number: numberStr } = await params;
-    const number = parseInt(numberStr, 10);
+    const number = Number(numberStr);
+
+    if (
+        !/^[0-9]+$/.test(numberStr) ||
+        !Number.isInteger(number) ||
+        number < 1
+    ) {
+        notFound();
+    }
+
     let pullRequest: Promise<PullsGetResponseData> | null = null;
     let checks: Promise<Array<CheckRun>> | null = EMPTY_ARRAY_PROMISE;
     let userPermission: Promise<string | null> | null = NULL_PROMISE;

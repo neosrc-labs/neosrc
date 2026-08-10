@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
@@ -36,7 +37,16 @@ export async function generateMetadata({
 
 export default async function ChangesPage({ params }: ChangesPageProps) {
     const { owner, repo, number: numberStr, sha } = await params;
-    const number = parseInt(numberStr, 10);
+    const number = Number(numberStr);
+
+    if (
+        !/^[0-9]+$/.test(numberStr) ||
+        !Number.isInteger(number) ||
+        number < 1
+    ) {
+        notFound();
+    }
+
     const commitSha = sha && sha.length > 0 ? sha[0] : null;
 
     const accessToken = await githubAccessToken();

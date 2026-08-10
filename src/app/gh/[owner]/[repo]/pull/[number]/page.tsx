@@ -1,5 +1,6 @@
 import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { Suspense, use } from "react";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
@@ -40,7 +41,15 @@ export async function generateMetadata({
 export default async function PullRequestPage({ params }: PageProps) {
     const { owner, repo, number: numberAsStr } = await params;
     const accessToken = await githubAccessToken();
-    const number = parseInt(numberAsStr, 10);
+    const number = Number(numberAsStr);
+
+    if (
+        !/^[0-9]+$/.test(numberAsStr) ||
+        !Number.isInteger(number) ||
+        number < 1
+    ) {
+        notFound();
+    }
 
     if (!accessToken) {
         return (
