@@ -1,13 +1,12 @@
+import type { Content, Parent, Root } from "mdast";
+
 export function remarkCommitPlugin(owner?: string, repo?: string) {
     return function attacher() {
-        // biome-ignore lint/suspicious/noExplicitAny: FIXME: Should create a dedicated remark node type
-        return function transformer(tree: any) {
-            // biome-ignore lint/suspicious/noExplicitAny: FIXME: Should create a dedicated remark node type
-            function walk(node: any, parent: any) {
-                if (!node) return;
-                if (node.children) {
-                    for (let i = node.children.length - 1; i >= 0; i--) {
-                        walk(node.children[i], node);
+        return function transformer(tree: Root) {
+            function walk(node: Content | Root, parent: Parent | null) {
+                if ("children" in node) {
+                    for (const child of [...node.children].reverse()) {
+                        walk(child, node);
                     }
                 }
 
@@ -18,7 +17,7 @@ export function remarkCommitPlugin(owner?: string, repo?: string) {
                     parent.type !== "inlineCode" &&
                     parent.type !== "code"
                 ) {
-                    const value = node.value as string;
+                    const value = node.value;
                     const commitRegex = /\b([0-9a-f]{7,40})\b/gi;
                     const parts: Part[] = [];
                     let cursor = 0;
