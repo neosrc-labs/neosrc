@@ -1402,14 +1402,13 @@ export const replyToPullRequestReviewComment = async (
     inReplyTo: number,
 ) => {
     const octokit = createOctokit(accessToken);
-    const response = await octokit.pulls.createReviewComment({
+    const response = await octokit.pulls.createReplyForReviewComment({
         owner,
         repo,
         pull_number: pullNumber,
+        comment_id: inReplyTo,
         body,
-        in_reply_to: inReplyTo,
-        // biome-ignore lint/suspicious/noExplicitAny: Octokit type requires commit_id/path even for replies, but API only needs in_reply_to
-    } as any);
+    });
     return response.data;
 };
 
