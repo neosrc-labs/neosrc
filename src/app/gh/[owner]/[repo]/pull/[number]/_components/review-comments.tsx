@@ -37,7 +37,7 @@ import {
 import type { ReactionContent } from "~/lib/reactions";
 import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
-import type { ReviewComment } from "~/server/github";
+import type { ReviewCommentBase } from "~/server/github";
 import { api } from "~/trpc/react";
 
 type Reaction = components["schemas"]["reaction"];
@@ -49,7 +49,7 @@ interface ReviewCommentsProps {
     reviewId: number;
     hasReviewBody: boolean;
     state?: string;
-    allComments: ReviewComment[];
+    allComments: ReviewCommentBase[];
     currentUserLogin: string;
     canInteract: boolean;
 }
@@ -286,7 +286,7 @@ export function ReviewComments({
     };
 
     const replyMap = useMemo(() => {
-        const map = new Map<number, ReviewComment[]>();
+        const map = new Map<number, ReviewCommentBase[]>();
         for (const comment of allComments) {
             if (comment.in_reply_to_id) {
                 const existing = map.get(comment.in_reply_to_id) ?? [];
@@ -510,8 +510,8 @@ function CommentBlock({
     onReact,
     onResolve,
 }: {
-    comment: ReviewComment;
-    replies: ReviewComment[];
+    comment: ReviewCommentBase;
+    replies: ReviewCommentBase[];
     owner: string;
     repo: string;
     number: number;

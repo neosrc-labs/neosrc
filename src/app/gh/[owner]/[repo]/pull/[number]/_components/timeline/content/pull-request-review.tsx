@@ -143,7 +143,7 @@ export function PullRequestReviewContent({
         const newComments = pendingComments.filter(
             (c) => !existingIds.has(c.id),
         );
-        return [...allComments, ...(newComments as unknown as ReviewComment[])];
+        return [...allComments, ...newComments];
     }, [allComments, pendingComments, isPendingByCurrentUser]);
 
     const utils = api.useUtils();

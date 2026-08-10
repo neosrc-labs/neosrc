@@ -57,6 +57,19 @@ export type ReviewComment2 =
     RestEndpointMethodTypes["pulls"]["listReviews"]["response"]["data"][number];
 export type CommentForReview =
     RestEndpointMethodTypes["pulls"]["listCommentsForReview"]["response"]["data"][number];
+/**
+ * Shape shared by listReviewComments and listCommentsForReview items.
+ * The Octokit types differ in position/original_position nullability and
+ * user nullability, so components that mix both sources consume this.
+ */
+export type ReviewCommentBase = Omit<
+    ReviewComment,
+    "position" | "original_position" | "user"
+> & {
+    position?: number | null;
+    original_position?: number | null;
+    user: ReviewComment["user"] | null;
+};
 export type PullRequestFile =
     RestEndpointMethodTypes["pulls"]["listFiles"]["response"]["data"][number];
 export type TeamGetByNameResponseData =
