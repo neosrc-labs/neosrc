@@ -69,7 +69,7 @@ export function PullRequestListShared({
 }) {
     const utils = api.useUtils();
 
-    const list = useSearchList(
+    const list = useSearchList<PrSearchItem>(
         {
             provider: config.provider,
             baseRoute: `${config.basePath}/${owner}/${repo}/pulls`,
@@ -82,15 +82,13 @@ export function PullRequestListShared({
                 tab === "merged" ? "is:merged" : `is:${tab}`,
         },
         {
-            // biome-ignore lint/suspicious/noExplicitAny: tRPC types differ from hook shape
-            useSearchQuery: api.pulls.search.useQuery as any,
-            // biome-ignore lint/suspicious/noExplicitAny: tRPC types differ from hook shape
-            searchFetch: (args) => utils.pulls.search.fetch(args) as any,
+            useSearchQuery: api.pulls.search.useQuery,
+            searchFetch: (args) => utils.pulls.search.fetch(args),
         },
     );
 
     const prNumbers = useMemo(
-        () => ((list.data?.items ?? []) as PrSearchItem[]).map((i) => i.number),
+        () => list.data?.items.map((i) => i.number) ?? [],
         [list.data],
     );
 
@@ -100,8 +98,7 @@ export function PullRequestListShared({
     );
 
     const items = useMemo(() => {
-        const rawItems = (list.data?.items ?? []) as PrSearchItem[];
-        return rawItems.map((item) => {
+        return (list.data?.items ?? []).map((item) => {
             const normalized = normalizeSearchItem(item);
             if (config.fetchStatusChecks) {
                 const details = detailsByPr?.[item.number];

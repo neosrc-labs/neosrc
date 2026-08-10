@@ -25,8 +25,8 @@ export interface SearchArgs {
     order?: "asc" | "desc";
 }
 
-export interface SearchResultData {
-    items: unknown[];
+export interface SearchResultData<TItem> {
+    items: TItem[];
     totalCount: number;
     hasNextPage: boolean;
     endCursor: string | null;
@@ -44,7 +44,7 @@ export interface UseSearchListConfig {
     stateQualifierFn: (activeTab: string) => string;
 }
 
-export interface SearchListResult {
+export interface SearchListResult<TItem> {
     activeTab: string;
     currentPage: number;
     searchQuery: string;
@@ -54,7 +54,7 @@ export interface SearchListResult {
     showLoading: boolean;
     stateCounts: Record<string, number> | undefined;
     totalPages: number;
-    data: SearchResultData | undefined;
+    data: SearchResultData<TItem> | undefined;
     searchInput: string;
     setSearchInput: (value: string) => void;
     cursorPos: number;
@@ -74,19 +74,19 @@ export interface SearchListResult {
     handleClearSearch: () => void;
 }
 
-export function useSearchList(
+export function useSearchList<TItem>(
     config: UseSearchListConfig,
     procedures: {
         useSearchQuery: (
             args: SearchArgs,
             opts?: { enabled?: boolean },
         ) => {
-            data?: SearchResultData;
+            data?: SearchResultData<TItem>;
             isLoading: boolean;
         };
-        searchFetch: (args: SearchArgs) => Promise<SearchResultData>;
+        searchFetch: (args: SearchArgs) => Promise<SearchResultData<TItem>>;
     },
-): SearchListResult {
+): SearchListResult<TItem> {
     const searchParams = useSearchParams();
     const router = useRouter();
 
@@ -394,7 +394,7 @@ export function useSearchList(
         showLoading,
         stateCounts,
         totalPages,
-        data: data as SearchResultData | undefined,
+        data,
         searchInput,
         setSearchInput,
         cursorPos,

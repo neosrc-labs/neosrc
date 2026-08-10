@@ -66,7 +66,7 @@ export function IssueList({
     const utils = api.useUtils();
     const config = buildIssueConfig(provider, owner, repo);
 
-    const list = useSearchList(
+    const list = useSearchList<IssueSearchItem>(
         {
             ...config,
             owner,
@@ -80,10 +80,7 @@ export function IssueList({
     );
 
     const items = useMemo(
-        () =>
-            ((list.data?.items ?? []) as IssueSearchItem[]).map(
-                normalizeSearchItem,
-            ),
+        () => (list.data?.items ?? []).map(normalizeSearchItem),
         [list.data],
     );
 
