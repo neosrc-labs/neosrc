@@ -1313,40 +1313,33 @@ export const createPullRequestReviewComment = async (
     if (startLine != null) variables.startLine = startLine;
     if (startSide != null) variables.startSide = startSide;
 
-    const response = await fetch("https://api.github.com/graphql", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            query: `
-				mutation($pullRequestId: ID!, $pullRequestReviewId: ID, $body: String!, $path: String!, $line: Int!, $side: DiffSide!, $startLine: Int, $startSide: DiffSide) {
-					addPullRequestReviewThread(input: { pullRequestId: $pullRequestId, pullRequestReviewId: $pullRequestReviewId, body: $body, path: $path, line: $line, side: $side, startLine: $startLine, startSide: $startSide }) {
-						thread {
-							comments(first: 1) {
-								nodes {
-									databaseId
-								}
-							}
-						}
-					}
-				}
-			`,
-            variables,
-        }),
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
     });
 
-    const result = await response.json();
-    if (result.errors) {
-        throw new Error(
-            `Failed to create review comment: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
-        );
+    const query = `
+mutation($pullRequestId: ID!, $pullRequestReviewId: ID, $body: String!, $path: String!, $line: Int!, $side: DiffSide!, $startLine: Int, $startSide: DiffSide) {
+  addPullRequestReviewThread(input: { pullRequestId: $pullRequestId, pullRequestReviewId: $pullRequestReviewId, body: $body, path: $path, line: $line, side: $side, startLine: $startLine, startSide: $startSide }) {
+    thread {
+      comments(first: 1) {
+        nodes {
+          databaseId
+        }
+      }
     }
+  }
+}`;
 
-    const comment =
-        result.data.addPullRequestReviewThread.thread.comments.nodes[0];
-    return { id: comment.databaseId as number };
+    const result = await graphql<{
+        addPullRequestReviewThread: {
+            thread: {
+                comments: { nodes: [{ databaseId: number }] };
+            };
+        };
+    }>(query, variables);
+
+    const comment = result.addPullRequestReviewThread.thread.comments.nodes[0];
+    return { id: comment.databaseId };
 };
 
 export const createStandaloneReviewComment = async (
