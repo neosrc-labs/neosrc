@@ -381,49 +381,41 @@ export const revertPullRequest = async (
         pull_number: pullNumber,
     });
 
-    const response = await fetch("https://api.github.com/graphql", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            query: `
-				mutation($input: RevertPullRequestInput!) {
-					revertPullRequest(input: $input) {
-						revertPullRequest {
-							number
-							url
-						}
-					}
-				}
-			`,
-            variables: {
-                input: {
-                    pullRequestId: pr.node_id,
-                    title: title ?? undefined,
-                    body: body ?? undefined,
-                    draft: draft ?? undefined,
-                },
-            },
-        }),
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
     });
 
-    const result = await response.json();
-    if (result.errors) {
-        throw new Error(
-            `Failed to revert pull request: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
-        );
+    const query = `
+mutation($input: RevertPullRequestInput!) {
+  revertPullRequest(input: $input) {
+    revertPullRequest {
+      number
+      url
     }
+  }
+}`;
 
-    const revertPr = result.data?.revertPullRequest?.revertPullRequest;
+    const result = await graphql<{
+        revertPullRequest?: {
+            revertPullRequest?: { number: number; url: string } | null;
+        } | null;
+    }>(query, {
+        input: {
+            pullRequestId: pr.node_id,
+            title: title ?? undefined,
+            body: body ?? undefined,
+            draft: draft ?? undefined,
+        },
+    });
+
+    const revertPr = result.revertPullRequest?.revertPullRequest;
     if (!revertPr) {
         throw new Error("Failed to revert pull request: no revert PR returned");
     }
 
     return {
-        number: revertPr.number as number,
-        url: revertPr.url as string,
+        number: revertPr.number,
+        url: revertPr.url,
     };
 };
 
