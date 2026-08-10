@@ -40,7 +40,7 @@ export async function GET(request: Request) {
         return new Response(content, {
             headers: {
                 "Content-Type": "text/plain; charset=utf-8",
-                "Cache-Control": "public, max-age=31536000, immutable",
+                "Cache-Control": "private, max-age=31536000, immutable",
             },
         });
     } catch (err) {
