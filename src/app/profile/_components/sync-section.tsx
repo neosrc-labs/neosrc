@@ -3,6 +3,7 @@
 import { RefreshCw, RotateCcw } from "lucide-react";
 import { useState } from "react";
 
+import { useIncrementalSync } from "~/hooks/use-incremental-sync";
 import type { SyncResult } from "~/server/sync";
 import { api } from "~/trpc/react";
 
@@ -37,6 +38,7 @@ export function SyncSection({
 }) {
     const syncCurrentUser = api.sync.currentUser.useMutation();
     const refreshOwnerRepos = api.sync.refreshOwnerRepos.useMutation();
+    const poll = useIncrementalSync();
     const [provider, setProvider] = useState<"github" | "codeberg">("github");
     const [owner, setOwner] = useState("");
 
@@ -101,6 +103,13 @@ export function SyncSection({
                                 ),
                             )}
                         </ul>
+                    )}
+                    {poll.data && (
+                        <p className="text-sm text-text-tertiary">
+                            {Object.values(poll.data).some((p) => p?.changed)
+                                ? "Permission changes detected and synced."
+                                : "Permissions are up to date."}
+                        </p>
                     )}
                 </div>
             </section>

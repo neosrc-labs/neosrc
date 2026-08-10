@@ -49,13 +49,32 @@ export async function refreshOwnerRepos(
  * Refreshes the current user's account row, organization/team memberships,
  * and repository grants so mv_user_repo_permissions reflects their current
  * effective permissions.
+ *
+ * Incremental by default: the permission snapshot is hashed and compared to
+ * the last applied hash, skipping all writes and the materialized-view
+ * refresh when nothing changed. Pass `force: true` to always re-sync (e.g.
+ * for the manual button in the UI).
  */
 export async function syncCurrentUser(
     db: Db,
-    input: { provider: SyncProvider; accessToken: string },
+    input: {
+        provider: SyncProvider;
+        accessToken: string;
+        userId: string;
+        force?: boolean;
+    },
 ): Promise<SyncResult> {
+    const force = input.force ?? false;
     if (input.provider === "github") {
-        return syncCurrentUserGitHub(db, input.accessToken);
+        return syncCurrentUserGitHub(db, {
+            accessToken: input.accessToken,
+            userId: input.userId,
+            force,
+        });
     }
-    return syncCurrentUserCodeberg(db, input.accessToken);
+    return syncCurrentUserCodeberg(db, {
+        accessToken: input.accessToken,
+        userId: input.userId,
+        force,
+    });
 }

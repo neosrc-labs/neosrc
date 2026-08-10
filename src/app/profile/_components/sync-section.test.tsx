@@ -20,6 +20,13 @@ const mutationState = vi.hoisted(() => ({
         error: null as Error | null,
         data: null as unknown,
     },
+    poll: {
+        mutate: vi.fn(),
+        reset: vi.fn(),
+        isPending: false,
+        error: null as Error | null,
+        data: null as unknown,
+    },
 }));
 
 vi.mock("~/trpc/react", () => ({
@@ -30,6 +37,9 @@ vi.mock("~/trpc/react", () => ({
             },
             refreshOwnerRepos: {
                 useMutation: vi.fn(() => mutationState.refresh),
+            },
+            poll: {
+                useMutation: vi.fn(() => mutationState.poll),
             },
         },
     },
@@ -135,5 +145,37 @@ describe("SyncSection", () => {
             screen.getByText(/1 account, 22 repos, 2 teams skipped/i),
         ).toBeInTheDocument();
         expect(screen.getByText("sync failed")).toBeInTheDocument();
+    });
+
+    it("polls the incremental sync on mount and reports up-to-date state", () => {
+        mutationState.poll.data = {
+            github: { changed: false, result: null },
+        };
+        render(<SyncSection hasGithub hasCodeberg={false} />);
+
+        expect(mutationState.poll.mutate).toHaveBeenCalled();
+        expect(
+            screen.getByText(/permissions are up to date/i),
+        ).toBeInTheDocument();
+    });
+
+    it("reports when the incremental poll detected permission changes", () => {
+        mutationState.poll.data = {
+            codeberg: {
+                changed: true,
+                result: {
+                    accountsUpserted: 1,
+                    reposUpserted: 3,
+                    relationsWritten: 2,
+                    relationsRemoved: 0,
+                    teamsSkipped: 0,
+                },
+            },
+        };
+        render(<SyncSection hasGithub hasCodeberg />);
+
+        expect(
+            screen.getByText(/permission changes detected and synced/i),
+        ).toBeInTheDocument();
     });
 });

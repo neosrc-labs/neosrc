@@ -13,9 +13,12 @@ import type {
 import {
     createSyncContext,
     deleteRelationsForSubject,
+    getStoredSnapshotHash,
+    hashSnapshot,
     insertRelations,
     newResult,
     refreshPermissionsView,
+    storeSnapshotHash,
 } from "./shared";
 
 export type CodebergSyncRepo = {
@@ -89,23 +92,37 @@ export async function fetchOwnerRepos(
  * Refreshes the current user's account row, organization memberships, and
  * repository grants so mv_user_repo_permissions reflects their current
  * effective permissions.
+ *
+ * Incremental: unless `force` is set, the permission snapshot is hashed and
+ * compared to the last applied hash; when nothing changed, no rows are
+ * written and the materialized view is left alone.
  */
 export async function syncCurrentUserCodeberg(
     db: Db,
-    accessToken: string,
+    input: { accessToken: string; userId: string; force: boolean },
 ): Promise<SyncResult> {
     const result = newResult();
-    const profile = await getCodebergUser(accessToken);
+    const profile = await getCodebergUser(input.accessToken);
     if (!profile) {
         throw new Error("Failed to fetch Codeberg profile");
     }
 
-    const orgs = await getUserOrgs(accessToken);
+    const orgs = await getUserOrgs(input.accessToken);
     const orgIds = new Set(orgs.map((org) => org.providerId));
-    const rawRepos = await getAuthenticatedUserRepos(accessToken);
+    const rawRepos = await getAuthenticatedUserRepos(input.accessToken);
     const repos = rawRepos.map((repo) =>
         toSyncRepo(repo, orgIds.has(repo.owner.providerId) ? "org" : "user"),
     );
+
+    const snapshotHash = codebergSnapshotHash(repos, orgs);
+    const storedHash = await getStoredSnapshotHash(
+        db,
+        "codeberg",
+        input.userId,
+    );
+    if (!input.force && storedHash === snapshotHash) {
+        return result;
+    }
 
     const relations: RelationRow[] = [];
 
@@ -161,7 +178,27 @@ export async function syncCurrentUserCodeberg(
     });
 
     await refreshPermissionsView(db);
+    await storeSnapshotHash(db, "codeberg", input.userId, snapshotHash);
     return result;
+}
+
+/**
+ * Order-insensitive signature of the permission snapshot: repo ids with their
+ * permission flags and the org memberships.
+ */
+export function codebergSnapshotHash(
+    repos: SyncRepo[],
+    orgs: { providerId: number }[],
+): string {
+    return hashSnapshot({
+        repos: repos
+            .map((repo) => ({
+                id: repo.providerId,
+                permissions: repo.permissions,
+            }))
+            .sort((a, b) => a.id - b.id),
+        orgs: orgs.map((org) => org.providerId).sort((a, b) => a - b),
+    });
 }
 
 /** Repositories owned by a user or organization. */

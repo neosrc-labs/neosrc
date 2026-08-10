@@ -15,9 +15,12 @@ import type {
 import {
     createSyncContext,
     deleteRelationsForSubject,
+    getStoredSnapshotHash,
+    hashSnapshot,
     insertRelations,
     newResult,
     refreshPermissionsView,
+    storeSnapshotHash,
 } from "./shared";
 
 export type GitHubSyncRepo = {
@@ -85,18 +88,30 @@ export async function fetchOwnerRepos(
  * and repository grants so mv_user_repo_permissions reflects their current
  * effective permissions. Direct grants always cover the user's own access;
  * team-level grants additionally model the shared team edges.
+ *
+ * Incremental: unless `force` is set, the permission snapshot is hashed and
+ * compared to the last applied hash; when nothing changed, no rows are
+ * written and the materialized view is left alone.
  */
 export async function syncCurrentUserGitHub(
     db: Db,
-    accessToken: string,
+    input: { accessToken: string; userId: string; force: boolean },
 ): Promise<SyncResult> {
     const result = newResult();
-    const profile = await getAuthenticatedUser(accessToken);
+    const profile = await getAuthenticatedUser(input.accessToken);
 
-    // Fetch everything up front so the transaction below only does writes.
-    const repos = await listAuthenticatedUserRepos(accessToken);
-    const memberships = await listAuthenticatedUserOrgMemberships(accessToken);
-    const teams = await listAuthenticatedUserTeams(accessToken);
+    // Fetch the snapshot up front; the per-team GraphQL calls and all writes
+    // are skipped when the snapshot matches the last applied one.
+    const [repos, memberships, teams] = await Promise.all([
+        listAuthenticatedUserRepos(input.accessToken),
+        listAuthenticatedUserOrgMemberships(input.accessToken),
+        listAuthenticatedUserTeams(input.accessToken),
+    ]);
+    const snapshotHash = githubSnapshotHash(repos, memberships, teams);
+    const storedHash = await getStoredSnapshotHash(db, "github", input.userId);
+    if (!input.force && storedHash === snapshotHash) {
+        return result;
+    }
 
     // Team repo grants need one GraphQL call per team; a failing team only
     // skips its shared edges (direct grants above still cover the user).
@@ -106,7 +121,11 @@ export async function syncCurrentUserGitHub(
             try {
                 teamRepos.set(
                     team.providerId,
-                    await listTeamRepos(accessToken, team.org.login, team.slug),
+                    await listTeamRepos(
+                        input.accessToken,
+                        team.org.login,
+                        team.slug,
+                    ),
                 );
             } catch {
                 result.teamsSkipped++;
@@ -212,7 +231,41 @@ export async function syncCurrentUserGitHub(
     });
 
     await refreshPermissionsView(db);
+    await storeSnapshotHash(db, "github", input.userId, snapshotHash);
     return result;
+}
+
+/**
+ * Order-insensitive signature of the permission snapshot: repo ids with their
+ * permission flags, org membership roles, and team identities. Team repo
+ * grants are intentionally excluded - a change there also surfaces in the
+ * authenticated repo list, which is what trips the signature.
+ */
+export function githubSnapshotHash(
+    repos: GitHubSyncRepo[],
+    memberships: GitHubOrgMembership[],
+    teams: GitHubTeam[],
+): string {
+    return hashSnapshot({
+        repos: repos
+            .map((repo) => ({
+                id: repo.providerId,
+                permissions: repo.permissions,
+            }))
+            .sort((a, b) => a.id - b.id),
+        memberships: memberships
+            .map((membership) => ({
+                id: membership.providerId,
+                role: membership.role,
+            }))
+            .sort((a, b) => a.id - b.id),
+        teams: teams
+            .map((team) => ({
+                id: team.providerId,
+                orgId: team.org.providerId,
+            }))
+            .sort((a, b) => a.id - b.id),
+    });
 }
 
 /**

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
@@ -238,3 +240,56 @@ export const newResult = (): SyncResult => ({
     relationsRemoved: 0,
     teamsSkipped: 0,
 });
+
+/**
+ * Stable signature of a permission snapshot. Callers build a canonical,
+ * order-insensitive payload (sorted arrays, fixed key order) so equal
+ * permission states always hash identically regardless of API pagination or
+ * ordering.
+ */
+export function hashSnapshot(payload: unknown): string {
+    return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+}
+
+/** Last-applied snapshot hash for a user's provider sync, if any. */
+export async function getStoredSnapshotHash(
+    db: Db,
+    provider: SyncProvider,
+    userId: string,
+): Promise<string | null> {
+    const [row] = await db
+        .select({ snapshotHash: schema.syncState.snapshotHash })
+        .from(schema.syncState)
+        .where(
+            and(
+                eq(schema.syncState.provider, provider),
+                eq(schema.syncState.userId, userId),
+            ),
+        )
+        .limit(1);
+    return row?.snapshotHash ?? null;
+}
+
+/** Records the applied snapshot hash for a user's provider sync. */
+export async function storeSnapshotHash(
+    db: Db,
+    provider: SyncProvider,
+    userId: string,
+    snapshotHash: string,
+): Promise<void> {
+    await db
+        .insert(schema.syncState)
+        .values({
+            provider,
+            userId,
+            snapshotHash,
+            updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+            target: [schema.syncState.provider, schema.syncState.userId],
+            set: {
+                snapshotHash,
+                updatedAt: new Date(),
+            },
+        });
+}
