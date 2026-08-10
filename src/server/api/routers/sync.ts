@@ -43,7 +43,6 @@ export const syncRouter = createTRPCRouter({
      */
     currentUser: protectedMutation.mutation(async ({ ctx }) => {
         const userId = ctx.session?.user?.id;
-        if (userId) return;
         const [githubToken, codebergToken] = await Promise.all([
             getGitHubToken(ctx.db, userId).catch(() => null),
             getCodebergToken(ctx.db, userId).catch(() => null),
