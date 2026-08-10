@@ -2299,27 +2299,32 @@ export const getSuggestionPatch = async (
     const replaceStart = (startLine ?? line) - 1;
     const replaceEnd = line - 1;
 
+    if (
+        replaceStart < 0 ||
+        replaceEnd < replaceStart ||
+        replaceEnd >= allLines.length
+    ) {
+        throw new Error(
+            `Line range ${replaceStart + 1}-${replaceEnd + 1} is out of bounds for ${path} (${allLines.length} lines)`,
+        );
+    }
+
     const contextStart = Math.max(0, replaceStart - contextLines);
     const contextEnd = Math.min(allLines.length - 1, replaceEnd + contextLines);
 
-    const patchLines: string[] = [];
-
-    for (let i = contextStart; i < replaceStart; i++) {
-        patchLines.push(` ${allLines[i] as string}`);
-    }
-
-    for (let i = replaceStart; i <= replaceEnd; i++) {
-        patchLines.push(`-${allLines[i] as string}`);
-    }
+    const patchLines: string[] = [
+        ...allLines.slice(contextStart, replaceStart).map((l) => ` ${l}`),
+        ...allLines.slice(replaceStart, replaceEnd + 1).map((l) => `-${l}`),
+    ];
 
     const suggestionLines = suggestionCode.replace(/\n$/, "").split("\n");
     for (const l of suggestionLines) {
         patchLines.push(`+${l}`);
     }
 
-    for (let i = replaceEnd + 1; i <= contextEnd; i++) {
-        patchLines.push(` ${allLines[i] as string}`);
-    }
+    patchLines.push(
+        ...allLines.slice(replaceEnd + 1, contextEnd + 1).map((l) => ` ${l}`),
+    );
 
     const contextCount =
         replaceStart - contextStart + (contextEnd - replaceEnd);
