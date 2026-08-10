@@ -59,10 +59,14 @@ export function RepoDocFiles({
     const contentRef = useRef<HTMLDivElement>(null);
 
     const trpcUtils = api.useUtils();
+    // Bumped on every load so a slower, superseded request can't clobber
+    // state written by a newer one (e.g. rapid tab switching).
+    const loadVersionRef = useRef(0);
 
     const loadContent = useCallback(
         async (path: string) => {
             if (fileContentsRef.current[path] !== undefined) return;
+            const version = ++loadVersionRef.current;
             setLoadingPath(path);
             try {
                 const data = await trpcUtils.repos.getDocFileContent.fetch({
@@ -72,6 +76,7 @@ export function RepoDocFiles({
                     path,
                     provider: provider ?? "gh",
                 });
+                if (version !== loadVersionRef.current) return;
                 setFileContents((prev) => ({
                     ...prev,
                     [path]: data.content,
@@ -79,7 +84,7 @@ export function RepoDocFiles({
             } catch {
                 // file not found or API error
             } finally {
-                setLoadingPath(null);
+                if (version === loadVersionRef.current) setLoadingPath(null);
             }
         },
         [owner, repo, ref, provider, trpcUtils],
