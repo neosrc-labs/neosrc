@@ -72,19 +72,22 @@ export default function SvgDiff({
     const [newError, setNewError] = useState(false);
 
     useEffect(() => {
+        const controller = new AbortController();
+        const { signal } = controller;
+
         async function fetchContents() {
             setLoading(true);
 
             if (oldContentUrl) {
                 try {
-                    const res = await fetch(oldContentUrl);
+                    const res = await fetch(oldContentUrl, { signal });
                     if (res.ok) {
                         setOldContent(await res.text());
                     } else {
                         setOldError(true);
                     }
                 } catch {
-                    setOldError(true);
+                    if (!signal.aborted) setOldError(true);
                 }
             } else {
                 setOldContent(null);
@@ -92,22 +95,24 @@ export default function SvgDiff({
 
             if (newContentUrl) {
                 try {
-                    const res = await fetch(newContentUrl);
+                    const res = await fetch(newContentUrl, { signal });
                     if (res.ok) {
                         setNewContent(await res.text());
                     } else {
                         setNewError(true);
                     }
                 } catch {
-                    setNewError(true);
+                    if (!signal.aborted) setNewError(true);
                 }
             } else {
                 setNewContent(null);
             }
 
-            setLoading(false);
+            if (!signal.aborted) setLoading(false);
         }
         fetchContents();
+
+        return () => controller.abort();
     }, [oldContentUrl, newContentUrl]);
 
     const hasBoth = oldContentUrl !== null && newContentUrl !== null;
