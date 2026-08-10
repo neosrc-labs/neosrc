@@ -77,6 +77,59 @@ describe("getMergeRequirements", () => {
         });
     });
 
+    it("falls back to branch protection when rulesets require a paid plan (403)", async () => {
+        mockGetBranchRules.mockRejectedValue({
+            status: 403,
+            message:
+                "Upgrade to GitHub Pro or make this repository public to enable this feature.",
+        });
+        mockGetBranchProtection.mockResolvedValue({
+            data: {
+                required_pull_request_reviews: {
+                    required_approving_review_count: 1,
+                },
+                required_status_checks: {
+                    contexts: ["ci/test"],
+                },
+            },
+        });
+
+        await expect(
+            getMergeRequirements("token", "owner", "repo", "paid-plan"),
+        ).resolves.toEqual({
+            requiredApprovingReviewCount: 1,
+            requiredChecks: ["ci/test"],
+        });
+    });
+
+    it("returns no requirements when branch protection requires a paid plan (403)", async () => {
+        mockGetBranchRules.mockRejectedValue({ status: 404 });
+        mockGetBranchProtection.mockRejectedValue({
+            status: 403,
+            message:
+                "Upgrade to GitHub Pro or make this repository public to enable this feature.",
+        });
+
+        await expect(
+            getMergeRequirements("token", "owner", "repo", "paid-plan"),
+        ).resolves.toEqual({
+            requiredApprovingReviewCount: 0,
+            requiredChecks: [],
+        });
+    });
+
+    it("propagates other 403 rulesets failures (e.g. permission denied)", async () => {
+        mockGetBranchRules.mockRejectedValue({
+            status: 403,
+            message: "Resource not accessible by integration",
+        });
+
+        await expect(
+            getMergeRequirements("token", "owner", "repo", "forbidden"),
+        ).rejects.toMatchObject({ status: 403 });
+        expect(mockGetBranchProtection).not.toHaveBeenCalled();
+    });
+
     it("returns no requirements when neither rulesets nor protection apply (404)", async () => {
         mockGetBranchRules.mockRejectedValue({ status: 404 });
         mockGetBranchProtection.mockRejectedValue({ status: 404 });

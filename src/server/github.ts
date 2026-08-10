@@ -676,6 +676,30 @@ function isNotFoundError(error: unknown): boolean {
     );
 }
 
+/**
+ * GitHub returns 403 with this message on private repositories whose plan
+ * does not include the feature (rulesets and branch protection both require
+ * GitHub Pro on private repos). Like 404, it means "no requirements can
+ * exist here" rather than a genuine failure.
+ */
+function isFeatureUnavailableError(error: unknown): boolean {
+    if (
+        error === null ||
+        typeof error !== "object" ||
+        !("status" in error) ||
+        error.status !== 403 ||
+        !("message" in error)
+    ) {
+        return false;
+    }
+    return (
+        typeof error.message === "string" &&
+        error.message.includes(
+            "make this repository public to enable this feature",
+        )
+    );
+}
+
 export const getMergeRequirements = cache(
     async (
         accessToken: string,
@@ -728,9 +752,11 @@ export const getMergeRequirements = cache(
         } catch (error) {
             // Rulesets are only available on repos that use them; fall back
             // to classic branch protection when the endpoint is not applicable
-            // (404). Any other failure means the requirements could not be
-            // determined and must surface rather than defaulting to none.
-            if (!isNotFoundError(error)) {
+            // (404) or the feature is unavailable on the repo's plan (403 on
+            // private repos without GitHub Pro). Any other failure means the
+            // requirements could not be determined and must surface rather
+            // than defaulting to none.
+            if (!isNotFoundError(error) && !isFeatureUnavailableError(error)) {
                 throw error;
             }
         }
@@ -756,9 +782,11 @@ export const getMergeRequirements = cache(
                 }
             }
         } catch (error) {
-            // Branch protection may simply not be configured (404) — that
-            // means there are no requirements. Any other failure must surface.
-            if (!isNotFoundError(error)) {
+            // Branch protection may simply not be configured (404), or may
+            // be unavailable on the repo's plan (403 on private repos without
+            // GitHub Pro) — both mean there are no requirements. Any other
+            // failure must surface.
+            if (!isNotFoundError(error) && !isFeatureUnavailableError(error)) {
                 throw error;
             }
         }
