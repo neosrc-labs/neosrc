@@ -2946,22 +2946,36 @@ export async function getRepoRefCounts(
     owner: string,
     repo: string,
 ): Promise<RepoRefCounts> {
-    const octokit = createOctokit(accessToken);
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
 
-    const [branchRes, tagRes] = await Promise.all([
-        octokit.rest.repos.listBranches({ owner, repo, per_page: 1 }),
-        octokit.rest.repos.listTags({ owner, repo, per_page: 1 }),
-    ]);
+    const query = `
+query RepoRefCounts($owner: String!, $repo: String!) {
+  repository(owner: $owner, name: $repo) {
+    branches: refs(refPrefix: "refs/heads/") {
+      totalCount
+    }
+    tags: refs(refPrefix: "refs/tags/") {
+      totalCount
+    }
+  }
+}`;
+
+    const result = await graphql<{
+        repository?: {
+            branches: { totalCount: number };
+            tags: { totalCount: number };
+        } | null;
+    }>(query, { owner, repo });
+
+    if (!result.repository) {
+        throw new Error(`Repository not found: ${owner}/${repo}`);
+    }
 
     return {
-        branchCount: parseRefCountFromLinkHeader(
-            branchRes.headers.link,
-            branchRes.data.length,
-        ),
-        tagCount: parseRefCountFromLinkHeader(
-            tagRes.headers.link,
-            tagRes.data.length,
-        ),
+        branchCount: result.repository.branches.totalCount,
+        tagCount: result.repository.tags.totalCount,
     };
 }
 
