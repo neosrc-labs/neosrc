@@ -2766,7 +2766,7 @@ export async function getRepoContributors(
 }
 
 export interface RepoDeployment {
-    id: number;
+    id: string;
     environment: string;
     state: string;
     createdAt: string;
@@ -2777,42 +2777,58 @@ export async function getRepoDeployments(
     owner: string,
     repo: string,
 ): Promise<RepoDeployment[]> {
-    const octokit = createOctokit(accessToken);
-    const { data: deployments } = await octokit.rest.repos.listDeployments({
-        owner,
-        repo,
-        per_page: 100,
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
     });
 
-    if (!deployments || deployments.length === 0) return [];
+    const query = `
+query RepoDeployments($owner: String!, $repo: String!, $first: Int!) {
+  repository(owner: $owner, name: $repo) {
+    deployments(first: $first, orderBy: { field: CREATED_AT, direction: DESC }) {
+      nodes {
+        id
+        environment
+        createdAt
+        latestStatus {
+          state
+        }
+      }
+    }
+  }
+}`;
+
+    const result = await graphql<{
+        repository?: {
+            deployments?: {
+                nodes: Array<{
+                    id: string;
+                    environment: string | null;
+                    createdAt: string;
+                    latestStatus: { state: string } | null;
+                } | null>;
+            } | null;
+        } | null;
+    }>(query, { owner, repo, first: 100 });
+
+    const deployments =
+        result.repository?.deployments?.nodes ?? [];
 
     const seen = new Set<string>();
-    const latestPerEnv: typeof deployments = [];
+    const results: RepoDeployment[] = [];
     for (const d of deployments) {
+        if (!d) continue;
+        // Newest first, so the first deployment seen per environment is its
+        // latest; latestStatus already carries that deployment's latest state.
         const env = d.environment ?? "";
         if (seen.has(env)) continue;
         seen.add(env);
-        latestPerEnv.push(d);
+        results.push({
+            id: d.id,
+            environment: env,
+            state: d.latestStatus?.state.toLowerCase() ?? "inactive",
+            createdAt: d.createdAt,
+        });
     }
-
-    const results = await Promise.all(
-        latestPerEnv.map(async (d) => {
-            const { data: statuses } =
-                await octokit.rest.repos.listDeploymentStatuses({
-                    owner,
-                    repo,
-                    deployment_id: d.id,
-                    per_page: 1,
-                });
-            const latestStatus = statuses[0];
-            return {
-                id: d.id,
-                environment: d.environment ?? "",
-                state: latestStatus?.state ?? "inactive",
-                createdAt: d.created_at,
-            };
-        }),
-    );
 
     return results;
 }

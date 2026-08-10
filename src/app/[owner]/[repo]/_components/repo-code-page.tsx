@@ -36,7 +36,7 @@ export interface DocFileName {
 }
 
 interface Deployment {
-    id: number;
+    id: string;
     environment: string;
     state: string;
     createdAt: string;
