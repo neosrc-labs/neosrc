@@ -40,13 +40,12 @@ export const reactionsRouter = createTRPCRouter({
                 ? null
                 : await getAuthenticatedUser(accessToken);
 
-            const { reactions, counts } =
-                await getPullRequestReactionsGraphQL(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.number,
-                );
+            const { reactions, counts } = await getPullRequestReactionsGraphQL(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+            );
 
             return {
                 reactions,

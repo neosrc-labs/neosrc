@@ -18,6 +18,7 @@ import {
 import {
     type GQLActor,
     type GQLCommitAuthor,
+    getCommitChecksGraphQL,
     getPullRequestStackGraphQL,
     resolveCommitAuthor,
     type StackData,
@@ -28,6 +29,10 @@ import {
     type StackCandidate,
     type StackSuggestion,
 } from "~/server/stack-suggestion";
+import {
+    deduplicateCommitStatuses,
+    mapStatusToCheckRun,
+} from "~/utils/status-checks";
 
 export type {
     StackCandidate,
@@ -76,9 +81,6 @@ export type PullRequestFile =
     RestEndpointMethodTypes["pulls"]["listFiles"]["response"]["data"][number];
 export type TeamGetByNameResponseData =
     RestEndpointMethodTypes["teams"]["getByName"]["response"]["data"];
-export type GhCheckRuns =
-    RestEndpointMethodTypes["checks"]["listForRef"]["response"]["data"];
-export type GhCheckRun = GhCheckRuns["check_runs"][number];
 
 export type CheckRun = {
     name: string;
@@ -842,37 +844,58 @@ export const getConflictedFiles = cache(
     },
 );
 
-export const getCheckRuns = cache(
+export const getChecksForCommit = cache(
     async (
         accessToken: string,
         owner: string,
         repo: string,
         commitSha: string,
-    ): Promise<GhCheckRuns> => {
-        const octokit = createOctokit(accessToken);
-        const response = await octokit.checks.listForRef({
+    ): Promise<CheckRun[]> => {
+        const { checkRuns, statuses } = await getCommitChecksGraphQL(
+            accessToken,
             owner,
             repo,
-            ref: commitSha,
-        });
-        return response.data;
-    },
-);
+            commitSha,
+        );
 
-export const getCommitStatuses = cache(
-    async (
-        accessToken: string,
-        owner: string,
-        repo: string,
-        commitSha: string,
-    ) => {
-        const octokit = createOctokit(accessToken);
-        const response = await octokit.repos.listCommitStatusesForRef({
-            owner,
-            repo,
-            ref: commitSha,
-        });
-        return response.data;
+        const checkRunItems = checkRuns.map((check) => ({
+            name: check.name,
+            conclusion: check.conclusion,
+            status: check.status,
+            description: check.title ?? check.summary,
+            html_url: check.url ?? undefined,
+            details_url: check.detailsUrl,
+            started_at: check.startedAt,
+            completed_at: check.completedAt,
+            app: check.app
+                ? {
+                      name: check.app.name,
+                      owner: check.app.logoUrl
+                          ? { avatar_url: check.app.logoUrl }
+                          : null,
+                  }
+                : null,
+        }));
+
+        const statusItems = deduplicateCommitStatuses(
+            statuses.map((s) => ({
+                state: s.state,
+                target_url: s.targetUrl,
+                description: s.description,
+                context: s.context,
+                created_at: s.createdAt,
+                updated_at: s.updatedAt,
+                creator: s.creator
+                    ? {
+                          login: s.creator.login,
+                          avatar_url: s.creator.avatarUrl,
+                          html_url: s.creator.url,
+                      }
+                    : null,
+            })),
+        ).map(mapStatusToCheckRun);
+
+        return [...checkRunItems, ...statusItems];
     },
 );
 
@@ -2449,23 +2472,21 @@ query ViewerRepos($first: Int!, $after: String) {
                     } | null>;
                 };
             };
-        } = await graphql<
-            {
-                viewer: {
-                    repositories: {
-                        pageInfo: {
-                            hasNextPage: boolean;
-                            endCursor: string | null;
-                        };
-                        nodes: Array<{
-                            name: string;
-                            owner: { login: string };
-                            isPrivate: boolean;
-                        } | null>;
+        } = await graphql<{
+            viewer: {
+                repositories: {
+                    pageInfo: {
+                        hasNextPage: boolean;
+                        endCursor: string | null;
                     };
+                    nodes: Array<{
+                        name: string;
+                        owner: { login: string };
+                        isPrivate: boolean;
+                    } | null>;
                 };
-            }
-        >(query, { first: 100, after: cursor });
+            };
+        }>(query, { first: 100, after: cursor });
 
         for (const r of result.viewer.repositories.nodes) {
             if (!r) continue;
@@ -2867,8 +2888,7 @@ query RepoDeployments($owner: String!, $repo: String!, $first: Int!) {
         } | null;
     }>(query, { owner, repo, first: 100 });
 
-    const deployments =
-        result.repository?.deployments?.nodes ?? [];
+    const deployments = result.repository?.deployments?.nodes ?? [];
 
     const seen = new Set<string>();
     const results: RepoDeployment[] = [];

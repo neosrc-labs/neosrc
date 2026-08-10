@@ -1205,6 +1205,173 @@ export async function getPullRequestReactionsGraphQL(
     return { reactions, counts };
 }
 
+export interface GqlCommitChecks {
+    checkRuns: Array<{
+        name: string;
+        status: string;
+        conclusion: string | null;
+        title: string | null;
+        summary: string | null;
+        detailsUrl: string | null;
+        url: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
+        app: { name: string; logoUrl: string | null } | null;
+    }>;
+    statuses: Array<{
+        context: string;
+        description: string | null;
+        state: string;
+        targetUrl: string | null;
+        createdAt: string;
+        updatedAt: string;
+        creator: { login: string; avatarUrl: string; url: string } | null;
+    }>;
+}
+
+/**
+ * Returns a commit's check runs and legacy commit statuses from its
+ * statusCheckRollup in one call. The rollup mixes CheckRun and StatusContext
+ * nodes, mirroring what REST checks.listForRef + listCommitStatusesForRef
+ * returned separately -- but without check run output text.
+ */
+export async function getCommitChecksGraphQL(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    commitSha: string,
+): Promise<GqlCommitChecks> {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const result = await graphql<{
+        repository: {
+            object: {
+                statusCheckRollup: {
+                    contexts: {
+                        nodes: ({
+                            __typename: string;
+                            name?: string;
+                            status?: string;
+                            conclusion?: string | null;
+                            title?: string | null;
+                            summary?: string | null;
+                            detailsUrl?: string | null;
+                            url?: string | null;
+                            startedAt?: string | null;
+                            completedAt?: string | null;
+                            app?: {
+                                name: string;
+                                logoUrl: string | null;
+                            } | null;
+                            context?: string;
+                            description?: string | null;
+                            state?: string;
+                            targetUrl?: string | null;
+                            createdAt?: string;
+                            updatedAt?: string;
+                            creator?: {
+                                login: string;
+                                avatarUrl: string;
+                                url: string;
+                            } | null;
+                        } | null)[];
+                    } | null;
+                } | null;
+            } | null;
+        } | null;
+    }>(
+        `
+		query CommitChecks($owner: String!, $repo: String!, $expression: String!) {
+			repository(owner: $owner, name: $repo) {
+				object(expression: $expression) {
+					... on Commit {
+						statusCheckRollup {
+							contexts(first: 100) {
+								nodes {
+									__typename
+									... on CheckRun {
+										name
+										status
+										conclusion
+										title
+										summary
+										detailsUrl
+										url
+										startedAt
+										completedAt
+										checkSuite {
+											app {
+												name
+												logoUrl
+											}
+										}
+									}
+									... on StatusContext {
+										context
+										description
+										state
+										targetUrl
+										createdAt
+										updatedAt
+										creator {
+											login
+											avatarUrl
+											url
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	`,
+        { owner, repo, expression: commitSha },
+    );
+
+    const nodes = result.repository?.object?.statusCheckRollup?.contexts?.nodes;
+
+    const checkRuns: GqlCommitChecks["checkRuns"] = [];
+    const statuses: GqlCommitChecks["statuses"] = [];
+    for (const node of nodes ?? []) {
+        if (!node) continue;
+        if (node.__typename === "CheckRun") {
+            checkRuns.push({
+                name: node.name ?? "",
+                status: (node.status ?? "").toLowerCase(),
+                conclusion: node.conclusion?.toLowerCase() ?? null,
+                title: node.title ?? null,
+                summary: node.summary ?? null,
+                detailsUrl: node.detailsUrl ?? null,
+                url: node.url ?? null,
+                startedAt: node.startedAt ?? null,
+                completedAt: node.completedAt ?? null,
+                app: node.app
+                    ? {
+                          name: node.app.name,
+                          logoUrl: node.app.logoUrl,
+                      }
+                    : null,
+            });
+        } else if (node.__typename === "StatusContext") {
+            statuses.push({
+                context: node.context ?? "",
+                description: node.description ?? null,
+                state: (node.state ?? "").toLowerCase(),
+                targetUrl: node.targetUrl ?? null,
+                createdAt: node.createdAt ?? "",
+                updatedAt: node.updatedAt ?? "",
+                creator: node.creator ?? null,
+            });
+        }
+    }
+
+    return { checkRuns, statuses };
+}
+
 const GRAPHQL_CONTENT_MAP: Record<string, string> = {
     "+1": "THUMBS_UP",
     "-1": "THUMBS_DOWN",

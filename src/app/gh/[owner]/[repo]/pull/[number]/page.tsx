@@ -4,18 +4,12 @@ import { Suspense, use } from "react";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
     getCachedPullRequest,
-    getCheckRuns,
-    getCommitStatuses,
+    getChecksForCommit,
     getConflictedFiles,
     getStackSuggestion,
     getUserRepoPermission,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
-import {
-    deduplicateCommitStatuses,
-    mapGitHubCheckRunToCheckRun,
-    mapStatusToCheckRun,
-} from "~/utils/status-checks";
 import { HeaderActionBar } from "./_components/action-section/header-action-bar";
 import { PullRequestDescriptionSection } from "./_components/description";
 import { PullRequestContent } from "./_components/pull-request-content";
@@ -92,19 +86,9 @@ export default async function PullRequestPage({ params }: PageProps) {
         return [];
     });
 
-    const checksPromise = pullRequestPromise.then(async (pr) => {
-        const [checksResult, statuses] = await Promise.all([
-            getCheckRuns(accessToken, owner, repo, pr.head.sha),
-            getCommitStatuses(accessToken, owner, repo, pr.head.sha),
-        ]);
-        const checkRunItems = (checksResult.check_runs ?? []).map(
-            mapGitHubCheckRunToCheckRun,
-        );
-        const statusItems = deduplicateCommitStatuses(statuses ?? []).map(
-            mapStatusToCheckRun,
-        );
-        return [...checkRunItems, ...statusItems];
-    });
+    const checksPromise = pullRequestPromise.then((pr) =>
+        getChecksForCommit(accessToken, owner, repo, pr.head.sha),
+    );
 
     const canInteractPromise = computeCanInteract(
         accessToken,
