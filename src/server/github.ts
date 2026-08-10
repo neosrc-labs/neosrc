@@ -1890,25 +1890,63 @@ export const listRecentIssueAuthors = async (
     owner: string,
     repo: string,
 ) => {
-    const octokit = createOctokit(accessToken);
-    const response = await octokit.issues.listForRepo({
-        owner,
-        repo,
-        state: "all",
-        sort: "created",
-        direction: "desc",
-        per_page: 100,
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
     });
+
+    // REST listForRepo returns both issues and pull requests, so the query
+    // unions both connections to preserve that behavior.
+    const query = `
+query RecentIssueAuthors($owner: String!, $repo: String!) {
+  repository(owner: $owner, name: $repo) {
+    issues(first: 100, orderBy: { field: CREATED_AT, direction: DESC }) {
+      nodes {
+        author {
+          login
+          avatarUrl
+        }
+      }
+    }
+    pullRequests(first: 100, orderBy: { field: CREATED_AT, direction: DESC }) {
+      nodes {
+        author {
+          login
+          avatarUrl
+        }
+      }
+    }
+  }
+}`;
+
+    const result = await graphql<{
+        repository?: {
+            issues: {
+                nodes: Array<{
+                    author: { login: string; avatarUrl: string } | null;
+                } | null>;
+            };
+            pullRequests: {
+                nodes: Array<{
+                    author: { login: string; avatarUrl: string } | null;
+                } | null>;
+            };
+        } | null;
+    }>(query, { owner, repo });
+
     const seen = new Set<string>();
     const authors: Array<{ login: string; avatar_url: string | null }> = [];
-    for (const issue of response.data) {
-        if (issue.user && !seen.has(issue.user.login)) {
-            seen.add(issue.user.login);
-            authors.push({
-                login: issue.user.login,
-                avatar_url: issue.user.avatar_url ?? null,
-            });
-        }
+    const nodes = [
+        ...(result.repository?.issues?.nodes ?? []),
+        ...(result.repository?.pullRequests?.nodes ?? []),
+    ];
+    for (const node of nodes) {
+        if (!node?.author) continue;
+        if (seen.has(node.author.login)) continue;
+        seen.add(node.author.login);
+        authors.push({
+            login: node.author.login,
+            avatar_url: node.author.avatarUrl,
+        });
     }
     return authors;
 };
