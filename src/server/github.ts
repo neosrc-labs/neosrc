@@ -2097,62 +2097,62 @@ export async function getReviewThreadsPage(
 }> {
     const afterVar = after ? ", $after: String!" : "";
     const afterArg = after ? ", after: $after" : "";
-    const response = await fetch("https://api.github.com/graphql", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            query: `
-                query($owner: String!, $repo: String!, $number: Int!, $first: Int!${afterVar}) {
-                    repository(owner: $owner, name: $repo) {
-                        pullRequest(number: $number) {
-                            reviewThreads(first: $first${afterArg}) {
-                                pageInfo {
-                                    hasNextPage
-                                    endCursor
-                                }
-                                nodes {
-                                    id
-                                    isResolved
-                                    isOutdated
-                                    path
-                                    comments(first: 1) {
-                                        totalCount
-                                        nodes {
-                                            databaseId
-                                            body
-                                            author {
-                                                login
-                                                avatarUrl
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            `,
-            variables: {
-                owner,
-                repo,
-                number: pullNumber,
-                first: perPage,
-                ...(after ? { after } : {}),
-            },
-        }),
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
     });
 
-    const result = await response.json();
-    if (result.errors) {
-        throw new Error(
-            `Failed to fetch review threads: ${result.errors.map((e: { message: string }) => e.message).join(", ")}`,
-        );
+    const query = `
+query($owner: String!, $repo: String!, $number: Int!, $first: Int!${afterVar}) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      reviewThreads(first: $first${afterArg}) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          id
+          isResolved
+          isOutdated
+          path
+          comments(first: 1) {
+            totalCount
+            nodes {
+              databaseId
+              body
+              author {
+                login
+                avatarUrl
+              }
+            }
+          }
+        }
+      }
     }
+  }
+}`;
 
-    const reviewThreads = result.data?.repository?.pullRequest?.reviewThreads;
+    const result = await graphql<{
+        repository?: {
+            pullRequest?: {
+                reviewThreads?: {
+                    pageInfo: {
+                        hasNextPage: boolean;
+                        endCursor: string | null;
+                    };
+                    nodes: (RawReviewThreadSummaryNode | null)[];
+                };
+            } | null;
+        } | null;
+    }>(query, {
+        owner,
+        repo,
+        number: pullNumber,
+        first: perPage,
+        ...(after ? { after } : {}),
+    });
+
+    const reviewThreads = result.repository?.pullRequest?.reviewThreads;
     const pageInfo = reviewThreads?.pageInfo ?? {
         hasNextPage: false,
         endCursor: null,
@@ -2160,8 +2160,10 @@ export async function getReviewThreadsPage(
     const threadNodes = reviewThreads?.nodes ?? [];
 
     const threads = threadNodes
-        .filter((thread: unknown) => thread != null)
-        .map((thread: RawReviewThreadSummaryNode) => {
+        .filter(
+            (thread): thread is RawReviewThreadSummaryNode => thread != null,
+        )
+        .map((thread) => {
             const rootNode =
                 thread.comments?.nodes.find(
                     (c): c is RawReviewThreadSummaryComment => c != null,
