@@ -157,8 +157,8 @@ export function PullRequestRow({
                                     avatarUrl: pr.user.avatar_url,
                                 }}
                                 onClick={() => {
-                                    // biome-ignore lint/style/noNonNullAssertion: guarded by enclosing conditional
-                                    onAuthorFilter?.(pr.user!.login);
+                                    const login = pr.user?.login;
+                                    if (login) onAuthorFilter?.(login);
                                 }}
                             />
                         </span>
@@ -222,9 +222,8 @@ export function PullRequestRow({
                         <button
                             type="button"
                             onClick={() => {
-                                // biome-ignore lint/style/noNonNullAssertion: guarded by enclosing conditional
-                                const login = pr.assignee!.login;
-                                onAssigneesFilter?.(login);
+                                const login = pr.assignee?.login;
+                                if (login) onAssigneesFilter?.(login);
                             }}
                             className="cursor-pointer rounded-full"
                         >
