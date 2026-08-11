@@ -16,6 +16,7 @@ import { authClient } from "~/lib/auth-client";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 import { GithubAppSection } from "./github-app-section";
+import { SyncSection } from "./sync-section";
 
 function ProviderProfileCard({
     provider,
@@ -236,6 +237,14 @@ export function ProfileView({
                 <AccountManager
                     githubUsername={githubUsername}
                     codebergUsername={codebergUsername}
+                />
+            </section>
+
+            <section>
+                <h2 className="mb-4 text-text-primary">Sync</h2>
+                <SyncSection
+                    hasGithub={!!githubUsername}
+                    hasCodeberg={!!codebergUsername}
                 />
             </section>
 

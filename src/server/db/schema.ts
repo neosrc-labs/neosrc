@@ -1,6 +1,28 @@
-import { index, pgTableCreator, primaryKey } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+    bigint,
+    foreignKey,
+    index,
+    pgEnum,
+    pgMaterializedView,
+    pgTableCreator,
+    primaryKey,
+    unique,
+} from "drizzle-orm/pg-core";
 
 export const createTable = pgTableCreator((name) => `${name}`);
+
+export const providerEnum = pgEnum("provider", ["github", "codeberg"]);
+
+export const accountTypeEnum = pgEnum("account_type", ["user", "org"]);
+
+export const permissionLevelEnum = pgEnum("permission_level", [
+    "read",
+    "triage",
+    "write",
+    "maintain",
+    "admin",
+]);
 
 export const betterAuthUser = createTable("ba_user", (d) => ({
     id: d.text().notNull().primaryKey(),
@@ -182,3 +204,171 @@ export const pullRequestReport = createTable(
         }),
     ],
 );
+
+export const account = createTable(
+    "account",
+    (d) => ({
+        id: d.bigserial({ mode: "number" }).notNull().primaryKey(),
+        provider: providerEnum("provider").notNull(),
+        providerId: d.bigint("provider_id", { mode: "number" }).notNull(),
+        username: d.varchar({ length: 255 }).notNull(),
+        type: accountTypeEnum("type").notNull(),
+        avatarUrl: d.text("avatar_url"),
+        createdAt: d
+            .timestamp("created_at", { withTimezone: true, mode: "date" })
+            .notNull()
+            .defaultNow(),
+        updatedAt: d
+            .timestamp("updated_at", { withTimezone: true, mode: "date" })
+            .notNull()
+            .defaultNow(),
+    }),
+    (t) => [
+        unique("uk_user_provider_username").on(t.provider, t.username),
+        unique("uk_user_provider_id").on(t.provider, t.providerId),
+    ],
+);
+
+export const repo = createTable(
+    "repo",
+    (d) => ({
+        id: d.bigserial({ mode: "number" }).notNull().primaryKey(),
+        accountId: d.bigint("account_id", { mode: "number" }).notNull(),
+        provider: providerEnum("provider").notNull(),
+        providerId: d.bigint("provider_id", { mode: "number" }).notNull(),
+        name: d.varchar({ length: 255 }).notNull(),
+        rawData: d.jsonb("raw_data"),
+        createdAt: d
+            .timestamp("created_at", { withTimezone: true, mode: "date" })
+            .notNull()
+            .defaultNow(),
+        updatedAt: d
+            .timestamp("updated_at", { withTimezone: true, mode: "date" })
+            .notNull()
+            .defaultNow(),
+    }),
+    (t) => [
+        foreignKey({
+            name: "repo_account_id_fkey",
+            columns: [t.accountId],
+            foreignColumns: [account.id],
+        }).onDelete("cascade"),
+        unique("uk_repo_account_name").on(t.accountId, t.name),
+        unique("uk_repo_provider_id").on(t.provider, t.providerId),
+    ],
+);
+
+// Polymorphic ACL tuple. resource_id/subject_id reference different id spaces
+// depending on resource_type/subject_type:
+//   - user/org subjects and repo/org resources: local account.id / repo.id
+//   - team subjects and team resources: the provider's team id
+export const relation = createTable(
+    "relation",
+    (d) => ({
+        id: d.bigserial({ mode: "number" }).notNull().primaryKey(),
+        resourceType: d.varchar("resource_type", { length: 50 }).notNull(),
+        resourceId: d.bigint("resource_id", { mode: "number" }).notNull(),
+        relation: d.varchar({ length: 50 }).notNull(),
+        subjectType: d.varchar("subject_type", { length: 50 }).notNull(),
+        subjectId: d.bigint("subject_id", { mode: "number" }).notNull(),
+        createdAt: d
+            .timestamp("created_at", { withTimezone: true, mode: "date" })
+            .notNull()
+            .defaultNow(),
+    }),
+    (t) => [
+        // Column order follows drizzle-kit's index introspection (the planner
+        // may reorder multi-column constraints); keeping it aligned avoids a
+        // perpetual drop/re-add diff on every `drizzle-kit push`.
+        unique("uk_relation").on(
+            t.relation,
+            t.resourceId,
+            t.resourceType,
+            t.subjectId,
+            t.subjectType,
+        ),
+        index("idx_tuple_resource").on(t.resourceType, t.resourceId),
+        index("idx_tuple_subject").on(t.subjectType, t.subjectId),
+    ],
+);
+
+export const mvUserRepoPermissions = pgMaterializedView(
+    "mv_user_repo_permissions",
+    {
+        userId: bigint("user_id", { mode: "number" }),
+        repoId: bigint("repo_id", { mode: "number" }),
+        effectivePermission: permissionLevelEnum("effective_permission"),
+    },
+).as(sql`
+    WITH RECURSIVE subject_expansion AS (
+        SELECT
+            id AS user_id,
+            'user'::VARCHAR(50) AS subject_type,
+            id AS subject_id
+        FROM account
+        WHERE type = 'user'
+
+        UNION
+
+        SELECT
+            se.user_id,
+            rt.resource_type AS subject_type,
+            rt.resource_id AS subject_id
+        FROM subject_expansion se
+        JOIN relation rt
+          ON rt.subject_type = se.subject_type
+         AND rt.subject_id = se.subject_id
+        WHERE rt.relation IN ('member', 'owner', 'admin')
+    ),
+    all_grants AS (
+        SELECT
+            se.user_id,
+            rt.resource_id AS repo_id,
+            CASE rt.relation
+                WHEN 'owner'      THEN 'admin'::permission_level
+                WHEN 'admin'      THEN 'admin'::permission_level
+                WHEN 'maintainer' THEN 'maintain'::permission_level
+                WHEN 'writer'     THEN 'write'::permission_level
+                WHEN 'triager'    THEN 'triage'::permission_level
+                WHEN 'reader'     THEN 'read'::permission_level
+            END AS permission
+        FROM subject_expansion se
+        JOIN relation rt
+          ON rt.subject_type = se.subject_type
+         AND rt.subject_id = se.subject_id
+        WHERE rt.resource_type = 'repo'
+          AND rt.relation IN (
+              'owner', 'admin', 'maintainer', 'writer', 'triager', 'reader'
+          )
+
+        UNION ALL
+
+        SELECT
+            r.account_id AS user_id,
+            r.id AS repo_id,
+            'admin'::permission_level AS permission
+        FROM repo r
+        JOIN account a ON a.id = r.account_id
+        WHERE a.type = 'user'
+    )
+    SELECT
+        user_id,
+        repo_id,
+        CASE MAX(
+            CASE permission
+                WHEN 'read'     THEN 1
+                WHEN 'triage'   THEN 2
+                WHEN 'write'    THEN 3
+                WHEN 'maintain' THEN 4
+                WHEN 'admin'    THEN 5
+            END
+        )
+            WHEN 1 THEN 'read'::permission_level
+            WHEN 2 THEN 'triage'::permission_level
+            WHEN 3 THEN 'write'::permission_level
+            WHEN 4 THEN 'maintain'::permission_level
+            WHEN 5 THEN 'admin'::permission_level
+        END AS effective_permission
+    FROM all_grants
+    GROUP BY user_id, repo_id
+`);
