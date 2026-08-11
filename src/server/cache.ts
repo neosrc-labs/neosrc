@@ -1,4 +1,4 @@
-import { eq, lt } from "drizzle-orm";
+import { eq, like, lt } from "drizzle-orm";
 import { after } from "next/server";
 import { db } from "./db";
 import { cache as cacheTable } from "./db/schema";
@@ -207,6 +207,30 @@ export async function deleteCache(key: string): Promise<void> {
     try {
         await db.delete(cacheTable).where(eq(cacheTable.key, key));
     } catch {
-        // Swallow -- cache delete failure shouldn't break the request
+        // Swallow, cache delete failure shouldn't break the request
     }
+}
+
+export async function deleteRepoIssuePullCountsCache(
+    provider: "gh" | "cb",
+    owner: string,
+    repo: string,
+): Promise<void> {
+    try {
+        await db
+            .delete(cacheTable)
+            .where(
+                like(
+                    cacheTable.key,
+                    `${provider}:counts:%:${escapeLikePattern(owner)}:${escapeLikePattern(repo)}`,
+                ),
+            );
+    } catch {
+        // Swallow, cache delete failure shouldn't break the request
+    }
+}
+
+// Postgres' LIKE default escape character is a backslash
+function escapeLikePattern(value: string): string {
+    return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
