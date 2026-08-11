@@ -166,14 +166,12 @@ export function ProfileView({
     image,
     githubUsername,
     codebergUsername,
-    githubAppConfigured,
     githubAppInstallationUrl,
 }: {
     name: string;
     image: string | null;
     githubUsername: string | null;
     codebergUsername: string | null;
-    githubAppConfigured: boolean;
     githubAppInstallationUrl: string | null;
 }) {
     const [loggingOut, setLoggingOut] = useState(false);
@@ -230,7 +228,6 @@ export function ProfileView({
 
             <GithubAppSection
                 githubUsername={githubUsername}
-                configured={githubAppConfigured}
                 githubAppInstallationUrl={githubAppInstallationUrl}
             />
 

@@ -6,19 +6,17 @@ import { api } from "~/trpc/react";
 
 export function GithubAppSection({
     githubUsername,
-    configured,
     githubAppInstallationUrl,
 }: {
     githubUsername: string | null;
-    configured: boolean;
     githubAppInstallationUrl: string | null;
 }) {
     const { data: installations, isLoading } =
         api.onboarding.getGitHubAppInstallations.useQuery(undefined, {
-            enabled: !!githubUsername && configured,
+            enabled: !!githubUsername,
         });
 
-    if (!githubUsername || !configured) return null;
+    if (!githubUsername) return null;
 
     if (isLoading) {
         return (
