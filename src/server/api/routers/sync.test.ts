@@ -71,13 +71,13 @@ describe("syncRouter.currentUser", () => {
             provider: "github",
             accessToken: "gh-token",
             userId: "user-1",
-            force: true,
+            forceFull: true,
         });
         expect(syncCurrentUserMock).toHaveBeenCalledWith(expect.anything(), {
             provider: "codeberg",
             accessToken: "cb-token",
             userId: "user-1",
-            force: true,
+            forceFull: true,
         });
     });
 

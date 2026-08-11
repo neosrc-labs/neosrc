@@ -71,6 +71,13 @@
       "when": 1786378657227,
       "tag": "0009_married_sue_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786466356906,
+      "tag": "0010_easy_proteus",
+      "breakpoints": true
     }
   ]
 }
