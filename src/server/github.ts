@@ -25,6 +25,7 @@ import {
     isOrgRestrictionError,
     resolveCommitAuthor,
     type StackData,
+    type StackEntry,
 } from "~/server/github-graphql";
 import {
     buildStackSuggestion,
@@ -178,9 +179,129 @@ export const getPullRequestStack = cache(
         repo: string,
         prNumber: number,
     ): Promise<StackData | null> => {
-        return getPullRequestStackGraphQL(accessToken, owner, repo, prNumber);
+        try {
+            return await getPullRequestStackGraphQL(
+                accessToken,
+                owner,
+                repo,
+                prNumber,
+            );
+        } catch {
+            // TODO: Properly check the error
+
+            // Currently there is a bug in the Github API where the stack `entries` in the GQL query
+            // causes a 500. So for now we fallback to a REST query.
+            // https://github.com/orgs/community/discussions/204626
+            return await getPullRequestStackREST(
+                accessToken,
+                owner,
+                repo,
+                prNumber,
+            );
+        }
     },
 );
+
+// This is a hack due to the Github API having 500 errors in graphql API
+async function getPullRequestStackREST(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    prNumber: number,
+): Promise<StackData | null> {
+    const octokit = createOctokit(accessToken);
+    const pr = await octokit.pulls.get({
+        owner,
+        repo,
+        pull_number: prNumber,
+    });
+    if (pr.status !== 200) {
+        return null;
+    }
+
+    const prData = pr.data as typeof pr.data & {
+        stack?: { id: number; number: number };
+    };
+
+    if (!prData.stack) {
+        // PR isn't part of a stack
+        return null;
+    }
+
+    const res = await octokit.request(
+        "GET /repos/{owner}/{repo}/stacks/{stack_number}",
+        {
+            owner,
+            repo,
+            stack_number: prData.stack.number,
+        },
+    );
+    if (res.status !== 200) {
+        return null;
+    }
+
+    const stack = res.data as {
+        id: number;
+        number: number;
+        base: { ref: string };
+        pull_requests: {
+            number: number;
+            title: string;
+            state: "open" | "closed";
+            merged_at: string | null;
+            draft: boolean;
+            head: { ref: string };
+            base: { ref: string };
+        }[];
+    };
+
+    const toEntryState = (
+        entry: (typeof stack.pull_requests)[number],
+    ): StackEntry["state"] =>
+        entry.merged_at !== null
+            ? "merged"
+            : entry.state === "open"
+              ? "open"
+              : "closed";
+
+    const pullRequests: StackEntry[] = stack.pull_requests
+        .map((entry, index) => ({
+            number: entry.number,
+            position: index + 1,
+            state: toEntryState(entry),
+            draft: entry.draft,
+            title: entry.title,
+            mergeable: "UNKNOWN" as "CONFLICTING" | "MERGEABLE" | "UNKNOWN",
+            headRef: entry.head.ref,
+        }))
+        .reverse();
+
+    for (const pr of pullRequests) {
+        if (pr.state === "open") {
+            const fullPr = await getPullRequest(
+                accessToken,
+                owner,
+                repo,
+                pr.number,
+            );
+            pr.mergeable =
+                fullPr.mergeable === true
+                    ? "MERGEABLE"
+                    : fullPr.mergeable === false
+                      ? "CONFLICTING"
+                      : "UNKNOWN";
+        }
+    }
+
+    return {
+        id: stack.id,
+        number: stack.number,
+        baseRef: stack.base.ref,
+        open: true as const,
+        createdAt: "",
+        pullRequests,
+    };
+}
 
 async function findOpenPullRequestByHead(
     accessToken: string,
