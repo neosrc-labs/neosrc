@@ -1,11 +1,17 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type {
     IssuesEvent,
+    MemberEvent,
     PullRequestEvent,
     WebhookEvent,
 } from "@octokit/webhooks-types";
+import { and, eq } from "drizzle-orm";
 import { env } from "~/env";
+import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import { deleteRepoIssuePullCountsCache } from "~/server/cache";
+import { db } from "~/server/db";
+import { betterAuthAccount } from "~/server/db/schema";
+import { syncCurrentUser } from "~/server/sync";
 
 const SIGNATURE_PREFIX = "sha256=";
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
@@ -39,6 +45,54 @@ async function handleWebhookEvent(
         const [owner, repo] = body.repository.full_name.split("/");
         if (!owner || !repo) return;
         await deleteRepoIssuePullCountsCache("gh", owner, repo);
+    }
+
+    if (isMemberEvent(event, body)) {
+        await forceSyncMember(body);
+    }
+}
+
+function isMemberEvent(
+    event: string | null,
+    body: WebhookEvent,
+): body is MemberEvent {
+    return event === "member" && "member" in body;
+}
+
+/**
+ * A `member` event fires when a collaborator is added, removed, or re-granted
+ * on a repository, so that user's effective permissions just changed. Force a
+ * full re-sync for them so the permission view is current immediately instead
+ * of waiting for the next poll. Best-effort: a failing sync only logs, the
+ * poll path retries anyway and the webhook must not reject the delivery.
+ */
+async function forceSyncMember(body: MemberEvent): Promise<void> {
+    const [account] = await db
+        .select({ userId: betterAuthAccount.userId })
+        .from(betterAuthAccount)
+        .where(
+            and(
+                eq(betterAuthAccount.providerId, "github"),
+                eq(betterAuthAccount.accountId, String(body.member.id)),
+            ),
+        )
+        .limit(1);
+    if (!account) return;
+
+    try {
+        const accessToken = await getGitHubToken(db, account.userId);
+        if (isAnonymousToken(accessToken)) return;
+        await syncCurrentUser(db, {
+            provider: "github",
+            accessToken,
+            userId: account.userId,
+            forceFull: true,
+        });
+    } catch (error) {
+        console.warn(
+            `[github-webhook] member sync failed for user ${account.userId}:`,
+            error,
+        );
     }
 }
 
