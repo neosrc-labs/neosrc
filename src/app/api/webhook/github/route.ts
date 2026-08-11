@@ -1,5 +1,11 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import type {
+    IssuesEvent,
+    PullRequestEvent,
+    WebhookEvent,
+} from "@octokit/webhooks-types";
 import { env } from "~/env";
+import { deleteRepoIssuePullCountsCache } from "~/server/cache";
 
 const SIGNATURE_PREFIX = "sha256=";
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
@@ -10,19 +16,43 @@ export async function POST(request: Request) {
         return validation.error;
     }
 
-    let body = null;
+    let body: WebhookEvent;
     try {
         const { body: raw } = validation;
-        body = JSON.parse(raw);
+        body = JSON.parse(raw) as WebhookEvent;
     } catch {
         return new Response("body not valid JSON", { status: 400 });
     }
 
-    const { event, delivery } = parseGitHubHeaders(request);
+    const { event } = parseGitHubHeaders(request);
 
-    console.log(`[github-webhook] ${event} (${delivery})`, body);
+    await handleWebhookEvent(event, body);
 
     return new Response("ok", { headers: { "Content-Type": "text/plain" } });
+}
+
+async function handleWebhookEvent(
+    event: string | null,
+    body: WebhookEvent,
+): Promise<void> {
+    if (isOpenStateChange(event, body)) {
+        const [owner, repo] = body.repository.full_name.split("/");
+        if (!owner || !repo) return;
+        await deleteRepoIssuePullCountsCache("gh", owner, repo);
+    }
+}
+
+function isOpenStateChange(
+    event: string | null,
+    body: WebhookEvent,
+): body is IssuesEvent | PullRequestEvent {
+    if (event !== "issues" && event !== "pull_request") return false;
+    if (!("action" in body)) return false;
+    return (
+        body.action === "opened" ||
+        body.action === "closed" ||
+        body.action === "reopened"
+    );
 }
 
 function tooLargeResponse(): Response {
