@@ -1,24 +1,50 @@
 import { createHmac } from "node:crypto";
+import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Stub the DB, env, and Next request-scope modules so importing the route and
-// the cache module it depends on doesn't touch a real postgres connection.
-const { dbMock, deleteWhereMock } = vi.hoisted(() => {
-    const deleteWhere = vi.fn();
-    return {
-        dbMock: {
-            delete: vi.fn(() => ({ where: deleteWhere })),
-        },
-        deleteWhereMock: deleteWhere,
-    };
-});
+// Stub the DB, env, auth, sync, and Next request-scope modules so importing
+// the route and the modules it depends on doesn't touch a real postgres
+// connection or the network.
+const { dbMock, deleteWhereMock, selectWhereMock, selectLimitMock } =
+    vi.hoisted(() => {
+        const deleteWhere = vi.fn();
+        const selectLimit = vi.fn(
+            async (): Promise<{ userId: string }[]> => [],
+        );
+        const selectWhere = vi.fn((_condition: SQL) => ({
+            limit: selectLimit,
+        }));
+        return {
+            dbMock: {
+                delete: vi.fn(() => ({ where: deleteWhere })),
+                select: vi.fn(() => ({
+                    from: vi.fn(() => ({ where: selectWhere })),
+                })),
+            },
+            deleteWhereMock: deleteWhere,
+            selectWhereMock: selectWhere,
+            selectLimitMock: selectLimit,
+        };
+    });
 
 vi.mock("~/env", () => ({ env: { GITHUB_WEBHOOK_SECRET: "webhook-secret" } }));
 vi.mock("next/server", () => ({ after: vi.fn() }));
 vi.mock("~/server/db", () => ({ db: dbMock }));
+vi.mock("~/server/auth", () => ({
+    getGitHubToken: vi.fn(),
+    isAnonymousToken: vi.fn(),
+}));
+vi.mock("~/server/sync", () => ({ syncCurrentUser: vi.fn() }));
+
+import { getGitHubToken, isAnonymousToken } from "~/server/auth";
+import { syncCurrentUser } from "~/server/sync";
 
 import { POST } from "./route";
+
+const getGitHubTokenMock = vi.mocked(getGitHubToken);
+const isAnonymousTokenMock = vi.mocked(isAnonymousToken);
+const syncCurrentUserMock = vi.mocked(syncCurrentUser);
 
 const SECRET = "webhook-secret";
 
@@ -44,6 +70,23 @@ function issuePayload(owner: string, repo: string, action: string): object {
         issue: { number: 1 },
         repository: { full_name: `${owner}/${repo}` },
     };
+}
+
+function memberPayload(memberId: number, login: string): object {
+    return {
+        action: "added",
+        member: { id: memberId, login },
+        repository: { full_name: "neosrc/web" },
+        sender: { id: 1, login: "owner" },
+    };
+}
+
+/** Params of the single account lookup where clause, for matching the query. */
+function selectWhereParams(): string[] | undefined {
+    const condition = selectWhereMock.mock.calls[0]?.[0];
+    if (!condition) return undefined;
+    const { params } = new PgDialect().sqlToQuery(condition);
+    return params as string[];
 }
 
 function deletedCountPattern(): string | undefined {
@@ -135,5 +178,81 @@ describe("webhook event routing", () => {
 
         expect(res.status).toBe(401);
         expect(dbMock.delete).not.toHaveBeenCalled();
+    });
+});
+
+describe("member event webhook", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        selectLimitMock.mockResolvedValue([]);
+        getGitHubTokenMock.mockResolvedValue("gh-token");
+        isAnonymousTokenMock.mockReturnValue(false);
+        syncCurrentUserMock.mockResolvedValue({
+            accountsUpserted: 0,
+            reposUpserted: 0,
+            relationsWritten: 0,
+            relationsRemoved: 0,
+            teamsSkipped: 0,
+        });
+    });
+
+    it("forces a full sync for the member when they are one of our users", async () => {
+        selectLimitMock.mockResolvedValue([{ userId: "user-1" }]);
+
+        const res = await POST(
+            signedRequest("member", memberPayload(9876, "collaborator")),
+        );
+
+        expect(res.status).toBe(200);
+        expect(selectWhereParams()).toEqual(["github", "9876"]);
+        expect(syncCurrentUserMock).toHaveBeenCalledWith(expect.anything(), {
+            provider: "github",
+            accessToken: "gh-token",
+            userId: "user-1",
+            forceFull: true,
+        });
+    });
+
+    it("does nothing when the member is not one of our users", async () => {
+        const res = await POST(
+            signedRequest("member", memberPayload(9876, "collaborator")),
+        );
+
+        expect(res.status).toBe(200);
+        expect(getGitHubTokenMock).not.toHaveBeenCalled();
+        expect(syncCurrentUserMock).not.toHaveBeenCalled();
+    });
+
+    it("skips the sync when the user only has the anonymous token", async () => {
+        selectLimitMock.mockResolvedValue([{ userId: "user-1" }]);
+        isAnonymousTokenMock.mockReturnValue(true);
+
+        const res = await POST(
+            signedRequest("member", memberPayload(9876, "collaborator")),
+        );
+
+        expect(res.status).toBe(200);
+        expect(syncCurrentUserMock).not.toHaveBeenCalled();
+    });
+
+    it("still acks the webhook when the forced sync fails", async () => {
+        selectLimitMock.mockResolvedValue([{ userId: "user-1" }]);
+        syncCurrentUserMock.mockRejectedValue(new Error("sync exploded"));
+
+        const res = await POST(
+            signedRequest("member", memberPayload(9876, "collaborator")),
+        );
+
+        expect(res.status).toBe(200);
+        expect(syncCurrentUserMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("ignores non-member events without touching the account lookup", async () => {
+        await POST(
+            signedRequest("issues", issuePayload("neosrc", "web", "opened")),
+        );
+
+        expect(selectWhereMock).not.toHaveBeenCalled();
+        expect(syncCurrentUserMock).not.toHaveBeenCalled();
     });
 });
