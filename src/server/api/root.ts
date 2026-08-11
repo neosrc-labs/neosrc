@@ -9,6 +9,7 @@ import { reportsRouter } from "~/server/api/routers/reports";
 import { reposRouter } from "~/server/api/routers/repos";
 import { reviewCommentsRouter } from "~/server/api/routers/review-comments";
 import { reviewsRouter } from "~/server/api/routers/reviews";
+import { syncRouter } from "~/server/api/routers/sync";
 import { timelineRouter } from "~/server/api/routers/timeline";
 import { usersRouter } from "~/server/api/routers/users";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
@@ -28,6 +29,7 @@ export const appRouter = createTRPCRouter({
     repos: reposRouter,
     reviewComments: reviewCommentsRouter,
     reviews: reviewsRouter,
+    sync: syncRouter,
     timeline: timelineRouter,
     users: usersRouter,
 });

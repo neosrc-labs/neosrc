@@ -1149,6 +1149,156 @@ export async function getUserRepos(
     return results;
 }
 
+export type CodebergSyncRepo = {
+    providerId: number;
+    name: string;
+    private: boolean;
+    owner: {
+        providerId: number;
+        login: string;
+        avatarUrl: string | null;
+    };
+    permissions: {
+        admin: boolean;
+        push: boolean;
+        pull: boolean;
+    } | null;
+    /** Raw REST API payload for the repository. */
+    rawData: unknown;
+};
+
+type CodebergRepoResponse = {
+    id: number;
+    name: string;
+    private: boolean;
+    owner: {
+        id: number;
+        login: string;
+        avatar_url?: string | null;
+    };
+    permissions?: {
+        admin: boolean;
+        push: boolean;
+        pull: boolean;
+    } | null;
+};
+
+function toSyncRepo(repo: CodebergRepoResponse): CodebergSyncRepo {
+    return {
+        providerId: repo.id,
+        name: repo.name,
+        private: repo.private,
+        owner: {
+            providerId: repo.owner.id,
+            login: repo.owner.login,
+            avatarUrl: repo.owner.avatar_url ?? null,
+        },
+        permissions: repo.permissions
+            ? {
+                  admin: repo.permissions.admin,
+                  push: repo.permissions.push,
+                  pull: repo.permissions.pull,
+              }
+            : null,
+        rawData: repo,
+    };
+}
+
+async function fetchCodebergJson<T>(
+    path: string,
+    accessToken?: string,
+): Promise<T | null> {
+    const res = await fetch(`${CODEBERG_API}${path}`, {
+        headers: accessToken
+            ? {
+                  Authorization: `token ${accessToken}`,
+                  Accept: "application/json",
+              }
+            : { Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<T>;
+}
+
+/** Repositories owned by a user or organization. */
+export async function getReposByOwner(
+    username: string,
+    accessToken?: string,
+): Promise<CodebergSyncRepo[]> {
+    const results: CodebergSyncRepo[] = [];
+    let page = 1;
+    const limit = 100;
+    for (;;) {
+        const data = await fetchCodebergJson<CodebergRepoResponse[]>(
+            `/api/v1/users/${username}/repos?limit=${limit}&page=${page}`,
+            accessToken,
+        );
+        if (!data || data.length === 0) break;
+        for (const repo of data) results.push(toSyncRepo(repo));
+        if (data.length < limit) break;
+        page++;
+    }
+    return results;
+}
+
+/** True when the username belongs to an organization. */
+export async function isOrg(
+    username: string,
+    accessToken?: string,
+): Promise<boolean> {
+    const res = await fetch(`${CODEBERG_API}/api/v1/orgs/${username}`, {
+        headers: accessToken
+            ? {
+                  Authorization: `token ${accessToken}`,
+                  Accept: "application/json",
+              }
+            : { Accept: "application/json" },
+    });
+    return res.ok;
+}
+
+/**
+ * Repositories the authenticated user owns or has access to, with the
+ * effective permission level per repository.
+ */
+export async function getAuthenticatedUserRepos(
+    accessToken: string,
+): Promise<CodebergSyncRepo[]> {
+    const results: CodebergSyncRepo[] = [];
+    let page = 1;
+    const limit = 100;
+    for (;;) {
+        const data = await fetchCodebergJson<CodebergRepoResponse[]>(
+            `/api/v1/user/repos?limit=${limit}&page=${page}`,
+            accessToken,
+        );
+        if (!data || data.length === 0) break;
+        for (const repo of data) results.push(toSyncRepo(repo));
+        if (data.length < limit) break;
+        page++;
+    }
+    return results;
+}
+
+/** Organizations the authenticated user belongs to. */
+export async function getUserOrgs(
+    accessToken: string,
+): Promise<{ providerId: number; login: string; avatarUrl: string | null }[]> {
+    const data = await fetchCodebergJson<
+        Array<{
+            id: number;
+            username: string;
+            avatar_url?: string | null;
+        }>
+    >("/api/v1/user/orgs", accessToken);
+    if (!data) return [];
+    return data.map((org) => ({
+        providerId: org.id,
+        login: org.username,
+        avatarUrl: org.avatar_url ?? null,
+    }));
+}
+
 export interface RepoSubscription {
     subscribed: boolean;
     ignored: boolean;
