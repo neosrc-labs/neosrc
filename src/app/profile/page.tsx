@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 
 import { getSession } from "~/server/auth";
+import {
+    githubAppInstallUrl,
+    isGitHubAppConfigured,
+} from "~/server/auth/github-app";
 import { HydrateClient } from "~/trpc/server";
 import { ProfileView } from "./_components/profile-view";
 
@@ -23,6 +27,8 @@ export default async function ProfilePage() {
                     image={user.image ?? null}
                     githubUsername={user.githubUsername ?? null}
                     codebergUsername={user.codebergUsername ?? null}
+                    githubAppConfigured={isGitHubAppConfigured()}
+                    githubAppInstallationUrl={githubAppInstallUrl()}
                 />
             </main>
         </HydrateClient>

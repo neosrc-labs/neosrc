@@ -16,6 +16,9 @@ export const env = createEnv({
         DATABASE_URL: z.url(),
         DATA_ENCRYPTION_KEY: z.string().length(64).optional(),
         GITHUB_ANONYMOUS_TOKEN: z.string().optional(),
+        GITHUB_APP_ID: z.string().optional(),
+        GITHUB_APP_PRIVATE_KEY: z.string().optional(),
+        GITHUB_APP_SLUG: z.string().optional(),
         REPORTS_OIDC_AUDIENCE: z.url().default("https://neosrc.dev"),
         // Only legal in development: NODE_ENV defaults to "development" when
         // unset, so a production deploy that sets the flag without setting
@@ -57,6 +60,9 @@ export const env = createEnv({
         DATABASE_URL: process.env.DATABASE_URL,
         DATA_ENCRYPTION_KEY: process.env.DATA_ENCRYPTION_KEY,
         GITHUB_ANONYMOUS_TOKEN: process.env.GITHUB_ANONYMOUS_TOKEN,
+        GITHUB_APP_ID: process.env.GITHUB_APP_ID,
+        GITHUB_APP_PRIVATE_KEY: process.env.GITHUB_APP_PRIVATE_KEY,
+        GITHUB_APP_SLUG: process.env.GITHUB_APP_SLUG,
         REPORTS_OIDC_AUDIENCE: process.env.REPORTS_OIDC_AUDIENCE,
         ALLOW_UNAUTHENTICATED_REPORTS:
             process.env.ALLOW_UNAUTHENTICATED_REPORTS,

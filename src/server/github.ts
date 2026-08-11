@@ -3822,3 +3822,25 @@ export async function getRepoFileTree(
             type: item.type as "blob" | "tree",
         }));
 }
+
+type ListInstallationsResponse = Awaited<
+    ReturnType<Octokit["apps"]["listInstallationsForAuthenticatedUser"]>
+>["data"];
+export type Installation = ListInstallationsResponse["installations"][number];
+
+export async function getGitHubAppInstallations(
+    accessToken: string,
+    slug: string,
+): Promise<Installation[]> {
+    const octokit = createOctokit(accessToken);
+    const { data, status } =
+        await octokit.apps.listInstallationsForAuthenticatedUser();
+
+    if (status !== 200) {
+        throw Error(`Failed with ${status}`);
+    }
+
+    return data.installations.filter(
+        (installation) => installation.app_slug === slug,
+    );
+}
