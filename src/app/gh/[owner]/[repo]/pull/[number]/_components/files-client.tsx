@@ -172,6 +172,16 @@ export function FilesSection({
         }
     }, [allCommentsAll]);
 
+    useEffect(() => {
+        if (allFiles.length === 0) return;
+        const hash = window.location.hash;
+        if (!hash || hash.startsWith("#review-thread-")) return;
+        const el = document.getElementById(hash.slice(1));
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    }, [allFiles]);
+
     return (
         <div>
             <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-surface py-2 pr-2">
@@ -373,6 +383,8 @@ export function FilesSection({
                             return (
                                 <div
                                     key={file.filename}
+                                    id={file.filename.replace(/\//g, "-")}
+                                    className="scroll-mt-18"
                                     style={{ contentVisibility: "auto" }}
                                 >
                                     <FileDiff
