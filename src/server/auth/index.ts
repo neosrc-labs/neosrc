@@ -291,7 +291,7 @@ export const getGitHubToken = cache(
             ? decrypt(account.refreshToken)
             : null;
 
-        if (expiresAt < now && refreshToken) {
+        async function refresh(accountId: string, refreshToken: string) {
             const refreshed = await refreshGitHubToken(refreshToken);
             await database
                 .update(betterAuthAccount)
@@ -308,11 +308,23 @@ export const getGitHubToken = cache(
                           )
                         : undefined,
                 })
-                .where(eq(betterAuthAccount.id, account.id));
+                .where(eq(betterAuthAccount.id, accountId));
             return refreshed.access_token;
         }
 
-        return decrypt(account.accessToken);
+        if (expiresAt < now && refreshToken) {
+            return refresh(account.id, refreshToken);
+        }
+
+        try {
+            return decrypt(account.accessToken);
+        } catch (e) {
+            // If the token gets corrupted somehow, just try to refresh it
+            if (refreshToken) {
+                return refresh(account.id, refreshToken);
+            }
+            throw e;
+        }
     },
 );
 
