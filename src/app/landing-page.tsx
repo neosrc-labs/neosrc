@@ -79,7 +79,7 @@ export function LandingPage() {
                                 const res = await auth.api.signInSocial({
                                     body: {
                                         provider: "github",
-                                        callbackURL: "/",
+                                        callbackURL: "/onboarding",
                                     },
                                 });
                                 if (!res.url) {
@@ -103,7 +103,7 @@ export function LandingPage() {
                                 const res = await auth.api.signInWithOAuth2({
                                     body: {
                                         providerId: "codeberg",
-                                        callbackURL: "/",
+                                        callbackURL: "/onboarding",
                                     },
                                 });
                                 if (!res.url) {

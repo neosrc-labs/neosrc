@@ -15,6 +15,7 @@ import { AccountManager } from "~/app/_components/account-manager";
 import { authClient } from "~/lib/auth-client";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
+import { GithubAppSection } from "./github-app-section";
 
 function ProviderProfileCard({
     provider,
@@ -165,11 +166,15 @@ export function ProfileView({
     image,
     githubUsername,
     codebergUsername,
+    githubAppConfigured,
+    githubAppInstallationUrl,
 }: {
     name: string;
     image: string | null;
     githubUsername: string | null;
     codebergUsername: string | null;
+    githubAppConfigured: boolean;
+    githubAppInstallationUrl: string | null;
 }) {
     const [loggingOut, setLoggingOut] = useState(false);
     const router = useRouter();
@@ -222,6 +227,12 @@ export function ProfileView({
                     </p>
                 )}
             </div>
+
+            <GithubAppSection
+                githubUsername={githubUsername}
+                configured={githubAppConfigured}
+                githubAppInstallationUrl={githubAppInstallationUrl}
+            />
 
             <section>
                 <h2 className="mb-4 text-text-primary">Linked Accounts</h2>
