@@ -295,8 +295,8 @@ export const relation = createTable(
 // Incremental sync bookkeeping: the snapshot hash of the last applied
 // permission sync per user, so a 30s poll can skip all writes and the
 // materialized-view refresh while nothing changed.
-export const syncState = createTable(
-    "sync_state",
+export const permissionsSyncState = createTable(
+    "permissions_sync_state",
     (d) => ({
         provider: providerEnum("provider").notNull(),
         userId: d

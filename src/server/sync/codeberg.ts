@@ -13,12 +13,13 @@ import type {
 import {
     createSyncContext,
     deleteRelationsForSubject,
-    getStoredSnapshotHash,
+    getStoredSyncState,
     hashSnapshot,
     insertRelations,
+    isSyncStateFresh,
     newResult,
     refreshPermissionsView,
-    storeSnapshotHash,
+    storeSyncState,
 } from "./shared";
 
 export type CodebergSyncRepo = {
@@ -93,15 +94,36 @@ export async function fetchOwnerRepos(
  * repository grants so mv_user_repo_permissions reflects their current
  * effective permissions.
  *
- * Incremental: unless `force` is set, the permission snapshot is hashed and
- * compared to the last applied hash; when nothing changed, no rows are
- * written and the materialized view is left alone.
+ * Incremental: the permission snapshot is hashed and compared to the last
+ * applied hash; when nothing changed, no rows are written and the
+ * materialized view is left alone. When the last applied sync is under
+ * `SYNC_RECENCY_WINDOW_MS` old, the inputs are not even fetched.
+ * `forceRecent` bypasses only the recency gate, `forceFull` re-syncs
+ * unconditionally.
  */
 export async function syncCurrentUserCodeberg(
     db: Db,
-    input: { accessToken: string; userId: string; force: boolean },
+    input: {
+        accessToken: string;
+        userId: string;
+        forceRecent: boolean;
+        forceFull: boolean;
+    },
 ): Promise<SyncResult> {
     const result = newResult();
+
+    // Recency gate: skip fetching the snapshot inputs entirely when the last
+    // applied sync is fresh, unless forced.
+    const stored = await getStoredSyncState(db, "codeberg", input.userId);
+    if (
+        !input.forceRecent &&
+        !input.forceFull &&
+        stored !== null &&
+        isSyncStateFresh(stored.updatedAt)
+    ) {
+        return result;
+    }
+
     const profile = await getCodebergUser(input.accessToken);
     if (!profile) {
         throw new Error("Failed to fetch Codeberg profile");
@@ -115,12 +137,7 @@ export async function syncCurrentUserCodeberg(
     );
 
     const snapshotHash = codebergSnapshotHash(repos, orgs);
-    const storedHash = await getStoredSnapshotHash(
-        db,
-        "codeberg",
-        input.userId,
-    );
-    if (!input.force && storedHash === snapshotHash) {
+    if (!input.forceFull && stored?.snapshotHash === snapshotHash) {
         return result;
     }
 
@@ -178,7 +195,7 @@ export async function syncCurrentUserCodeberg(
     });
 
     await refreshPermissionsView(db);
-    await storeSnapshotHash(db, "codeberg", input.userId, snapshotHash);
+    await storeSyncState(db, "codeberg", input.userId, snapshotHash);
     return result;
 }
 

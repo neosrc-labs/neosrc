@@ -33,6 +33,12 @@ export type SyncResult = {
     teamsSkipped: number;
 };
 
+/** Last-applied permission sync for a user's provider, from the permissions_sync_state table. */
+export type StoredSyncState = {
+    snapshotHash: string;
+    updatedAt: Date;
+};
+
 export type Db = NodePgDatabase<typeof schema>;
 
 // Insert/delete are the only operations the write helpers need, which lets
@@ -251,34 +257,48 @@ export function hashSnapshot(payload: unknown): string {
     return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
-/** Last-applied snapshot hash for a user's provider sync, if any. */
-export async function getStoredSnapshotHash(
+/** Syncs applied within this window are considered fresh and skipped entirely. */
+export const SYNC_RECENCY_WINDOW_MS = 5 * 60 * 1000;
+
+/** True when the stored sync is fresh enough to skip re-fetching the inputs. */
+export function isSyncStateFresh(
+    updatedAt: Date,
+    now: Date = new Date(),
+): boolean {
+    return now.getTime() - updatedAt.getTime() < SYNC_RECENCY_WINDOW_MS;
+}
+
+/** Last-applied snapshot state for a user's provider sync, if any. */
+export async function getStoredSyncState(
     db: Db,
     provider: SyncProvider,
     userId: string,
-): Promise<string | null> {
+): Promise<StoredSyncState | null> {
     const [row] = await db
-        .select({ snapshotHash: schema.syncState.snapshotHash })
-        .from(schema.syncState)
+        .select({
+            snapshotHash: schema.permissionsSyncState.snapshotHash,
+            updatedAt: schema.permissionsSyncState.updatedAt,
+        })
+        .from(schema.permissionsSyncState)
         .where(
             and(
-                eq(schema.syncState.provider, provider),
-                eq(schema.syncState.userId, userId),
+                eq(schema.permissionsSyncState.provider, provider),
+                eq(schema.permissionsSyncState.userId, userId),
             ),
         )
         .limit(1);
-    return row?.snapshotHash ?? null;
+    return row ?? null;
 }
 
 /** Records the applied snapshot hash for a user's provider sync. */
-export async function storeSnapshotHash(
+export async function storeSyncState(
     db: Db,
     provider: SyncProvider,
     userId: string,
     snapshotHash: string,
 ): Promise<void> {
     await db
-        .insert(schema.syncState)
+        .insert(schema.permissionsSyncState)
         .values({
             provider,
             userId,
@@ -286,7 +306,10 @@ export async function storeSnapshotHash(
             updatedAt: new Date(),
         })
         .onConflictDoUpdate({
-            target: [schema.syncState.provider, schema.syncState.userId],
+            target: [
+                schema.permissionsSyncState.provider,
+                schema.permissionsSyncState.userId,
+            ],
             set: {
                 snapshotHash,
                 updatedAt: new Date(),

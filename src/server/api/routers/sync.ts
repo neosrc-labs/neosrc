@@ -61,7 +61,7 @@ export const syncRouter = createTRPCRouter({
                       provider: "github",
                       accessToken: githubToken,
                       userId,
-                      force: true,
+                      forceFull: true,
                   }).then((result) => {
                       results.github = result;
                   })
@@ -71,7 +71,7 @@ export const syncRouter = createTRPCRouter({
                       provider: "codeberg",
                       accessToken: codebergToken,
                       userId,
-                      force: true,
+                      forceFull: true,
                   }).then((result) => {
                       results.codeberg = result;
                   })
@@ -89,9 +89,11 @@ export const syncRouter = createTRPCRouter({
     }),
 
     /**
-     * Lightweight incremental sync for periodic polling: skips all writes and
-     * the permission-view refresh while nothing changed. Silent when no
-     * provider is connected (unlike `currentUser`, which is user-initiated).
+     * Lightweight incremental sync for periodic polling: short-circuits
+     * entirely when the last applied sync is under 5 minutes old (no input
+     * fetch), otherwise skips all writes and the permission-view refresh
+     * while nothing changed. Silent when no provider is connected (unlike
+     * `currentUser`, which is user-initiated).
      */
     poll: protectedMutation.mutation(async ({ ctx }) => {
         if (!ctx.session?.user) {

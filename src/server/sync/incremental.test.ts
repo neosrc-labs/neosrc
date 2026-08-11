@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getUser as getCodebergUser } from "~/server/codeberg";
 import { createOctokit, getAuthenticatedUser } from "~/server/github";
-import { getStoredSnapshotHash, storeSnapshotHash } from "~/server/sync/shared";
+import { getStoredSyncState, storeSyncState } from "~/server/sync/shared";
 
 // Network modules are stubbed so the flows only exercise fetch -> hash ->
 // compare -> write logic.
@@ -22,8 +22,8 @@ vi.mock("~/server/sync/shared", async (importOriginal) => {
         await importOriginal<typeof import("~/server/sync/shared")>();
     return {
         ...actual,
-        getStoredSnapshotHash: vi.fn(),
-        storeSnapshotHash: vi.fn(),
+        getStoredSyncState: vi.fn(),
+        storeSyncState: vi.fn(),
     };
 });
 
@@ -41,8 +41,8 @@ import type { SyncRepo } from "~/server/sync/shared";
 const getAuthenticatedUserMock = vi.mocked(getAuthenticatedUser);
 const createOctokitMock = vi.mocked(createOctokit);
 const getCodebergUserMock = vi.mocked(getCodebergUser);
-const getStoredSnapshotHashMock = vi.mocked(getStoredSnapshotHash);
-const storeSnapshotHashMock = vi.mocked(storeSnapshotHash);
+const getStoredSyncStateMock = vi.mocked(getStoredSyncState);
+const storeSyncStateMock = vi.mocked(storeSyncState);
 
 const EMPTY_RESULT = {
     accountsUpserted: 0,
@@ -205,15 +205,21 @@ describe("snapshot hashes", () => {
 
 describe("syncCurrentUserGitHub incremental gate", () => {
     const octokit = makeOctokitMock();
-    let storedHash: string | null = null;
+    let stored: { snapshotHash: string; updatedAt: Date } | null = null;
 
     beforeEach(() => {
-        storedHash = null;
+        stored = null;
         vi.clearAllMocks();
-        getStoredSnapshotHashMock.mockImplementation(async () => storedHash);
-        storeSnapshotHashMock.mockImplementation(
+        getStoredSyncStateMock.mockImplementation(async () => stored);
+        storeSyncStateMock.mockImplementation(
             async (_db, _provider, _userId, hash: string) => {
-                storedHash = hash;
+                stored = {
+                    snapshotHash: hash,
+                    // The stored sync is older than the recency window so the
+                    // incremental tests exercise the hash gate rather than
+                    // the recency gate.
+                    updatedAt: new Date(Date.now() - 6 * 60 * 1000),
+                };
             },
         );
         createOctokitMock.mockReturnValue(octokit as never);
@@ -233,14 +239,15 @@ describe("syncCurrentUserGitHub incremental gate", () => {
         const result = await syncCurrentUserGitHub(db as never, {
             accessToken: "tok",
             userId: "u1",
-            force: false,
+            forceRecent: false,
+            forceFull: false,
         });
 
         expect(db.transaction).toHaveBeenCalledTimes(1);
         expect(db.execute).toHaveBeenCalledTimes(1); // refreshPermissionsView
-        expect(storeSnapshotHashMock).toHaveBeenCalledTimes(1);
+        expect(storeSyncStateMock).toHaveBeenCalledTimes(1);
         expect(result.accountsUpserted).toBe(1); // the user account row
-        expect(storedHash).not.toBeNull();
+        expect(stored).not.toBeNull();
     });
 
     it("skips all writes when the snapshot hash matches the stored one", async () => {
@@ -248,39 +255,111 @@ describe("syncCurrentUserGitHub incremental gate", () => {
         await syncCurrentUserGitHub(db as never, {
             accessToken: "tok",
             userId: "u1",
-            force: false,
+            forceRecent: false,
+            forceFull: false,
         });
         const writesAfterFirst = db.transaction.mock.calls.length;
 
         const result = await syncCurrentUserGitHub(db as never, {
             accessToken: "tok",
             userId: "u1",
-            force: false,
+            forceRecent: false,
+            forceFull: false,
         });
 
         expect(result).toEqual(EMPTY_RESULT);
         expect(db.transaction).toHaveBeenCalledTimes(writesAfterFirst);
         expect(db.execute).toHaveBeenCalledTimes(1);
-        expect(storeSnapshotHashMock).toHaveBeenCalledTimes(1);
+        expect(storeSyncStateMock).toHaveBeenCalledTimes(1);
     });
 
-    it("force re-syncs even when the hash matches", async () => {
+    it("forceFull re-syncs even when the hash matches", async () => {
         const { db } = makeDb();
         await syncCurrentUserGitHub(db as never, {
             accessToken: "tok",
             userId: "u1",
-            force: false,
+            forceRecent: false,
+            forceFull: false,
         });
         const writesAfterFirst = db.transaction.mock.calls.length;
 
         await syncCurrentUserGitHub(db as never, {
             accessToken: "tok",
             userId: "u1",
-            force: true,
+            forceRecent: false,
+            forceFull: true,
         });
 
         expect(db.transaction).toHaveBeenCalledTimes(writesAfterFirst + 1);
-        expect(storeSnapshotHashMock).toHaveBeenCalledTimes(2);
+        expect(storeSyncStateMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("short-circuits without fetching inputs when the last sync is fresh", async () => {
+        const { db } = makeDb();
+        stored = { snapshotHash: "h", updatedAt: new Date() };
+
+        const result = await syncCurrentUserGitHub(db as never, {
+            accessToken: "tok",
+            userId: "u1",
+            forceRecent: false,
+            forceFull: false,
+        });
+
+        expect(result).toEqual(EMPTY_RESULT);
+        expect(getAuthenticatedUserMock).not.toHaveBeenCalled();
+        expect(octokit.repos.listForAuthenticatedUser).not.toHaveBeenCalled();
+        expect(db.transaction).not.toHaveBeenCalled();
+    });
+
+    it("forceRecent fetches inputs despite a fresh sync but still hash-compares", async () => {
+        const { db } = makeDb();
+        await syncCurrentUserGitHub(db as never, {
+            accessToken: "tok",
+            userId: "u1",
+            forceRecent: false,
+            forceFull: false,
+        });
+        const writesAfterFirst = db.transaction.mock.calls.length;
+        stored = {
+            snapshotHash: stored!.snapshotHash,
+            updatedAt: new Date(),
+        };
+
+        const result = await syncCurrentUserGitHub(db as never, {
+            accessToken: "tok",
+            userId: "u1",
+            forceRecent: true,
+            forceFull: false,
+        });
+
+        expect(getAuthenticatedUserMock).toHaveBeenCalledTimes(2);
+        expect(result).toEqual(EMPTY_RESULT);
+        expect(db.transaction).toHaveBeenCalledTimes(writesAfterFirst);
+    });
+
+    it("forceFull re-syncs even when the sync is fresh and the hash matches", async () => {
+        const { db } = makeDb();
+        await syncCurrentUserGitHub(db as never, {
+            accessToken: "tok",
+            userId: "u1",
+            forceRecent: false,
+            forceFull: false,
+        });
+        const writesAfterFirst = db.transaction.mock.calls.length;
+        stored = {
+            snapshotHash: stored!.snapshotHash,
+            updatedAt: new Date(),
+        };
+
+        const result = await syncCurrentUserGitHub(db as never, {
+            accessToken: "tok",
+            userId: "u1",
+            forceRecent: false,
+            forceFull: true,
+        });
+
+        expect(db.transaction).toHaveBeenCalledTimes(writesAfterFirst + 1);
+        expect(result.accountsUpserted).toBe(1);
     });
 
     it("re-syncs when the snapshot changed", async () => {
@@ -288,7 +367,8 @@ describe("syncCurrentUserGitHub incremental gate", () => {
         await syncCurrentUserGitHub(db as never, {
             accessToken: "tok",
             userId: "u1",
-            force: false,
+            forceRecent: false,
+            forceFull: false,
         });
         octokit.repos.listForAuthenticatedUser.mockResolvedValue({
             data: [
@@ -317,26 +397,32 @@ describe("syncCurrentUserGitHub incremental gate", () => {
         const result = await syncCurrentUserGitHub(db as never, {
             accessToken: "tok",
             userId: "u1",
-            force: false,
+            forceRecent: false,
+            forceFull: false,
         });
 
         expect(db.transaction).toHaveBeenCalledTimes(writesAfterFirst + 1);
-        expect(storeSnapshotHashMock).toHaveBeenCalledTimes(2);
+        expect(storeSyncStateMock).toHaveBeenCalledTimes(2);
         expect(result.reposUpserted).toBe(1);
         expect(result.relationsWritten).toBe(1);
     });
 });
 
 describe("syncCurrentUserCodeberg incremental gate", () => {
-    let storedHash: string | null = null;
+    let stored: { snapshotHash: string; updatedAt: Date } | null = null;
 
     beforeEach(() => {
-        storedHash = null;
+        stored = null;
         vi.clearAllMocks();
-        getStoredSnapshotHashMock.mockImplementation(async () => storedHash);
-        storeSnapshotHashMock.mockImplementation(
+        getStoredSyncStateMock.mockImplementation(async () => stored);
+        storeSyncStateMock.mockImplementation(
             async (_db, _provider, _userId, hash: string) => {
-                storedHash = hash;
+                stored = {
+                    snapshotHash: hash,
+                    // Older than the recency window so the hash gate is
+                    // exercised rather than the recency gate.
+                    updatedAt: new Date(Date.now() - 6 * 60 * 1000),
+                };
             },
         );
         getCodebergUserMock.mockResolvedValue({
@@ -362,19 +448,38 @@ describe("syncCurrentUserCodeberg incremental gate", () => {
         const first = await syncCurrentUserCodeberg(db as never, {
             accessToken: "tok",
             userId: "u1",
-            force: false,
+            forceRecent: false,
+            forceFull: false,
         });
         const writesAfterFirst = db.transaction.mock.calls.length;
         const second = await syncCurrentUserCodeberg(db as never, {
             accessToken: "tok",
             userId: "u1",
-            force: false,
+            forceRecent: false,
+            forceFull: false,
         });
 
         expect(first.accountsUpserted).toBe(1);
         expect(second).toEqual(EMPTY_RESULT);
         expect(db.transaction).toHaveBeenCalledTimes(writesAfterFirst);
         expect(db.execute).toHaveBeenCalledTimes(1);
-        expect(storeSnapshotHashMock).toHaveBeenCalledTimes(1);
+        expect(storeSyncStateMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("short-circuits without fetching inputs when the last sync is fresh", async () => {
+        const { db } = makeDb();
+        stored = { snapshotHash: "h", updatedAt: new Date() };
+
+        const result = await syncCurrentUserCodeberg(db as never, {
+            accessToken: "tok",
+            userId: "u1",
+            forceRecent: false,
+            forceFull: false,
+        });
+
+        expect(result).toEqual(EMPTY_RESULT);
+        expect(getCodebergUserMock).not.toHaveBeenCalled();
+        expect(fetch).not.toHaveBeenCalled();
+        expect(db.transaction).not.toHaveBeenCalled();
     });
 });

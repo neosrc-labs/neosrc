@@ -15,12 +15,13 @@ import type {
 import {
     createSyncContext,
     deleteRelationsForSubject,
-    getStoredSnapshotHash,
+    getStoredSyncState,
     hashSnapshot,
     insertRelations,
+    isSyncStateFresh,
     newResult,
     refreshPermissionsView,
-    storeSnapshotHash,
+    storeSyncState,
 } from "./shared";
 
 export type GitHubSyncRepo = {
@@ -89,15 +90,36 @@ export async function fetchOwnerRepos(
  * effective permissions. Direct grants always cover the user's own access;
  * team-level grants additionally model the shared team edges.
  *
- * Incremental: unless `force` is set, the permission snapshot is hashed and
- * compared to the last applied hash; when nothing changed, no rows are
- * written and the materialized view is left alone.
+ * Incremental: the permission snapshot is hashed and compared to the last
+ * applied hash; when nothing changed, no rows are written and the
+ * materialized view is left alone. When the last applied sync is under
+ * `SYNC_RECENCY_WINDOW_MS` old, the inputs are not even fetched.
+ * `forceRecent` bypasses only the recency gate, `forceFull` re-syncs
+ * unconditionally.
  */
 export async function syncCurrentUserGitHub(
     db: Db,
-    input: { accessToken: string; userId: string; force: boolean },
+    input: {
+        accessToken: string;
+        userId: string;
+        forceRecent: boolean;
+        forceFull: boolean;
+    },
 ): Promise<SyncResult> {
     const result = newResult();
+
+    // Recency gate: skip fetching the snapshot inputs entirely when the last
+    // applied sync is fresh, unless forced.
+    const stored = await getStoredSyncState(db, "github", input.userId);
+    if (
+        !input.forceRecent &&
+        !input.forceFull &&
+        stored !== null &&
+        isSyncStateFresh(stored.updatedAt)
+    ) {
+        return result;
+    }
+
     const profile = await getAuthenticatedUser(input.accessToken);
 
     // Fetch the snapshot up front; the per-team GraphQL calls and all writes
@@ -108,8 +130,7 @@ export async function syncCurrentUserGitHub(
         listAuthenticatedUserTeams(input.accessToken),
     ]);
     const snapshotHash = githubSnapshotHash(repos, memberships, teams);
-    const storedHash = await getStoredSnapshotHash(db, "github", input.userId);
-    if (!input.force && storedHash === snapshotHash) {
+    if (!input.forceFull && stored?.snapshotHash === snapshotHash) {
         return result;
     }
 
@@ -231,7 +252,7 @@ export async function syncCurrentUserGitHub(
     });
 
     await refreshPermissionsView(db);
-    await storeSnapshotHash(db, "github", input.userId, snapshotHash);
+    await storeSyncState(db, "github", input.userId, snapshotHash);
     return result;
 }
 

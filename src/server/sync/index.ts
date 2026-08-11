@@ -52,8 +52,10 @@ export async function refreshOwnerRepos(
  *
  * Incremental by default: the permission snapshot is hashed and compared to
  * the last applied hash, skipping all writes and the materialized-view
- * refresh when nothing changed. Pass `force: true` to always re-sync (e.g.
- * for the manual button in the UI).
+ * refresh when nothing changed, and skipping the input fetch entirely when
+ * the last sync is under `SYNC_RECENCY_WINDOW_MS` old. `forceRecent` bypasses
+ * only the recency gate (still hash-compares); `forceFull` re-syncs
+ * unconditionally (e.g. for the manual button in the UI).
  */
 export async function syncCurrentUser(
     db: Db,
@@ -61,20 +63,24 @@ export async function syncCurrentUser(
         provider: SyncProvider;
         accessToken: string;
         userId: string;
-        force?: boolean;
+        forceRecent?: boolean;
+        forceFull?: boolean;
     },
 ): Promise<SyncResult> {
-    const force = input.force ?? false;
+    const forceRecent = input.forceRecent ?? false;
+    const forceFull = input.forceFull ?? false;
     if (input.provider === "github") {
         return syncCurrentUserGitHub(db, {
             accessToken: input.accessToken,
             userId: input.userId,
-            force,
+            forceRecent,
+            forceFull,
         });
     }
     return syncCurrentUserCodeberg(db, {
         accessToken: input.accessToken,
         userId: input.userId,
-        force,
+        forceRecent,
+        forceFull,
     });
 }
