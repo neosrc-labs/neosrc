@@ -1,9 +1,9 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { SquareDot } from "lucide-react";
 import Image from "next/image";
 import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import { cn } from "~/lib/utils";
 import type { PullRequestFile } from "~/server/github";
 import { getFileIconName, getFolderIconName } from "~/utils/icons";
 
@@ -310,6 +310,14 @@ function FileTreeNode({
         ]
             .filter(Boolean)
             .join(" ");
+        const statusClass =
+            node.status === "added"
+                ? "text-green-500"
+                : node.status === "modified"
+                  ? "text-white"
+                  : node.status === "removed"
+                    ? "text-red-500"
+                    : undefined;
         return (
             <a
                 className="flex items-center gap-1.5 truncate rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
@@ -328,22 +336,12 @@ function FileTreeNode({
                             "/material-icons/file.svg";
                     }}
                 />
-                <span className="flex-1 truncate">
+                <span
+                    className={cn("flex-1 truncate", statusClass)}
+                    title={diffTooltip}
+                >
                     {filter ? highlightMatch(node.name, filter) : node.name}
                 </span>
-                {node.status === "added" ? (
-                    <span className="flex-shrink-0" title={diffTooltip}>
-                        <SquareDot className="h-3 w-3 text-green-500" />
-                    </span>
-                ) : node.status === "modified" ? (
-                    <span className="flex-shrink-0" title={diffTooltip}>
-                        <SquareDot className="h-3 w-3 text-orange-500" />
-                    </span>
-                ) : node.status === "removed" ? (
-                    <span className="flex-shrink-0" title={diffTooltip}>
-                        <SquareDot className="h-3 w-3 text-red-500" />
-                    </span>
-                ) : null}
             </a>
         );
     }
