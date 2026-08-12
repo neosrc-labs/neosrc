@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Stub the DB, env, auth, sync, and Next request-scope modules so importing
 // the route and the modules it depends on doesn't touch a real postgres
 // connection or the network.
-const { dbMock, deleteWhereMock, selectWhereMock, selectLimitMock } =
+const { dbMock, deleteWhereMock, selectWhereMock, selectLimitMock, afterMock } =
     vi.hoisted(() => {
         const deleteWhere = vi.fn();
         const selectLimit = vi.fn(
@@ -25,11 +25,12 @@ const { dbMock, deleteWhereMock, selectWhereMock, selectLimitMock } =
             deleteWhereMock: deleteWhere,
             selectWhereMock: selectWhere,
             selectLimitMock: selectLimit,
+            afterMock: vi.fn(),
         };
     });
 
 vi.mock("~/env", () => ({ env: { GITHUB_WEBHOOK_SECRET: "webhook-secret" } }));
-vi.mock("next/server", () => ({ after: vi.fn() }));
+vi.mock("next/server", () => ({ after: afterMock }));
 vi.mock("~/server/db", () => ({ db: dbMock }));
 vi.mock("~/server/auth", () => ({
     getGitHubToken: vi.fn(),
@@ -96,9 +97,20 @@ function deletedCountPattern(): string | undefined {
     return params[0] as string;
 }
 
+/**
+ * Runs the callbacks the member branch scheduled via next/server's after(),
+ * so tests observe the deferred sync deterministically.
+ */
+async function flushAfterCallbacks(): Promise<void> {
+    for (const [callback] of afterMock.mock.calls) {
+        await callback();
+    }
+}
+
 beforeEach(() => {
     dbMock.delete.mockClear();
     deleteWhereMock.mockClear();
+    afterMock.mockClear();
 });
 
 describe("webhook event routing", () => {
@@ -202,6 +214,7 @@ describe("member event webhook", () => {
         const res = await POST(
             signedRequest("member", memberPayload(9876, "collaborator")),
         );
+        await flushAfterCallbacks();
 
         expect(res.status).toBe(200);
         expect(selectWhereParams()).toEqual(["github", "9876"]);
@@ -217,6 +230,7 @@ describe("member event webhook", () => {
         const res = await POST(
             signedRequest("member", memberPayload(9876, "collaborator")),
         );
+        await flushAfterCallbacks();
 
         expect(res.status).toBe(200);
         expect(getGitHubTokenMock).not.toHaveBeenCalled();
@@ -230,6 +244,7 @@ describe("member event webhook", () => {
         const res = await POST(
             signedRequest("member", memberPayload(9876, "collaborator")),
         );
+        await flushAfterCallbacks();
 
         expect(res.status).toBe(200);
         expect(syncCurrentUserMock).not.toHaveBeenCalled();
@@ -242,6 +257,7 @@ describe("member event webhook", () => {
         const res = await POST(
             signedRequest("member", memberPayload(9876, "collaborator")),
         );
+        await flushAfterCallbacks();
 
         expect(res.status).toBe(200);
         expect(syncCurrentUserMock).toHaveBeenCalledTimes(1);
