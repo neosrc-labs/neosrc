@@ -97,6 +97,7 @@
         "remark-parse": "^11.0.0",
         "remark-stringify": "^11.0.0",
         "shadcn": "^4.16.2",
+        "smee-client": "^5.0.0",
         "strict-event-emitter": "^0.5.1",
         "tailwindcss": "^4.3.3",
         "typescript": "^7.0.2",
