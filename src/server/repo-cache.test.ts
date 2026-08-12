@@ -13,7 +13,8 @@ type RepoCacheRow =
       }
     | {
           permission: "read" | "triage" | "write" | "maintain" | "admin" | null;
-      };
+      }
+    | { rawData: unknown; lastSynced: Date | null };
 
 const { dbMock, afterMock, limitMock, returningMock, whereCalls } = vi.hoisted(
     () => {
