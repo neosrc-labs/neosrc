@@ -108,7 +108,12 @@ export function SyncSection({
                             )}
                         </ul>
                     )}
-                    {poll.data && (
+                    {poll.error && (
+                        <p className="text-red-600 text-xs dark:text-red-400">
+                            Sync check failed: {poll.error.message}
+                        </p>
+                    )}
+                    {poll.data && !poll.error && (
                         <p className="text-sm text-text-tertiary">
                             {Object.values(poll.data).some((p) => p?.changed)
                                 ? "Permission changes detected and synced."
