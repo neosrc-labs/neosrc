@@ -58,7 +58,16 @@ test.describe
         }) => {
             await test.step("Navigate to the commits page", async () => {
                 await page.goto(`/gh/${OWNER}/${REPO}/commits/${branch}`);
-                await page.waitForLoadState("networkidle");
+                const firstCommit = expectedCommits[0];
+                if (!firstCommit) return;
+                // The commit list is fetched client-side (tRPC) after
+                // hydration, so networkidle does not mean the data is ready.
+                // Wait for the first commit row instead.
+                await expect(
+                    page.getByText(firstCommit.shortSha, {
+                        exact: true,
+                    }),
+                ).toBeVisible({ timeout: 30_000 });
             });
 
             await test.step("Verify the page title", async () => {

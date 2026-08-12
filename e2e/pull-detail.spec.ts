@@ -223,10 +223,12 @@ test.describe
                         page.getByTestId("timeline").getByText(commentText),
                     ).toBeVisible();
 
-                    // Wait for optimistic insert to settle ("Saving..." disappears)
+                    // Wait for optimistic insert to settle ("Saving..." disappears).
+                    // The comment write hits the GitHub API, which can exceed
+                    // the default 5s assertion timeout on a cold call.
                     await expect(
                         page.getByTestId("timeline").getByText("Saving..."),
-                    ).not.toBeAttached();
+                    ).not.toBeAttached({ timeout: 15_000 });
                 });
             });
 
