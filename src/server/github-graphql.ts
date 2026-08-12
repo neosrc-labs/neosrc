@@ -1284,9 +1284,11 @@ export async function getCommitChecksGraphQL(
                             url?: string | null;
                             startedAt?: string | null;
                             completedAt?: string | null;
-                            app?: {
-                                name: string;
-                                logoUrl: string | null;
+                            checkSuite?: {
+                                app: {
+                                    name: string;
+                                    logoUrl: string | null;
+                                } | null;
                             } | null;
                             context?: string;
                             description?: string | null;
@@ -1372,10 +1374,10 @@ export async function getCommitChecksGraphQL(
                 url: node.url ?? null,
                 startedAt: node.startedAt ?? null,
                 completedAt: node.completedAt ?? null,
-                app: node.app
+                app: node.checkSuite?.app
                     ? {
-                          name: node.app.name,
-                          logoUrl: node.app.logoUrl,
+                          name: node.checkSuite.app.name,
+                          logoUrl: node.checkSuite.app.logoUrl,
                       }
                     : null,
             });

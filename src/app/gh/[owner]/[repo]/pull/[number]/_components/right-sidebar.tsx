@@ -1,9 +1,10 @@
 "use client";
 
-import { Check, Circle, CircleX, X, XCircle } from "lucide-react";
+import { Check, Circle, CircleSlash, CircleX, X, XCircle } from "lucide-react";
 import Image from "next/image";
 import { use, useRef, useState } from "react";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
+import { GitHubIcon } from "~/components/icons";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import {
@@ -192,17 +193,21 @@ function ChecksSection({ checks }: ChecksSectionProps) {
                         rel="noopener noreferrer"
                         target="_blank"
                     >
-                        <span className="flex shrink-0 items-center gap-1">
+                        <span className="flex shrink-0 items-center gap-2">
                             {check.conclusion === "success" ? (
                                 <Check className="h-3.5 w-3.5 text-green-600" />
                             ) : check.conclusion === "failure" ? (
                                 <XCircle className="h-3.5 w-3.5 text-red-600" />
+                            ) : check.conclusion === "skipped" ? (
+                                <CircleSlash className="h-3.5 w-3.5 text-text-muted" />
                             ) : check.status === "in_progress" ? (
                                 <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
                             ) : (
                                 <Circle className="h-3.5 w-3.5 text-text-muted" />
                             )}
-                            {check.creator?.avatar_url ? (
+                            {check.app?.name === "GitHub Actions" ? (
+                                <GitHubIcon className="size-5 text-text-primary" />
+                            ) : check.creator?.avatar_url ? (
                                 <Image
                                     src={check.creator.avatar_url}
                                     alt=""

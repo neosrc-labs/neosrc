@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Circle, CircleX, X } from "lucide-react";
+import { Check, Circle, CircleSlash, CircleX, X } from "lucide-react";
 import {
     HoverCard,
     HoverCardContent,
@@ -91,6 +91,9 @@ export function StatusCheckIcon({
     }
     if (state === "CANCELLED") {
         return <CircleX className={cn(className, "text-text-muted")} />;
+    }
+    if (state === "SKIPPED") {
+        return <CircleSlash className={cn(className, "text-text-muted")} />;
     }
     if (
         state === "IN_PROGRESS" ||
