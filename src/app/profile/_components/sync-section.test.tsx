@@ -46,6 +46,19 @@ vi.mock("~/trpc/react", () => ({
 }));
 
 describe("SyncSection", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mutationState.currentUser.isPending = false;
+        mutationState.currentUser.error = null;
+        mutationState.currentUser.data = null;
+        mutationState.refresh.isPending = false;
+        mutationState.refresh.error = null;
+        mutationState.refresh.data = null;
+        mutationState.poll.isPending = false;
+        mutationState.poll.error = null;
+        mutationState.poll.data = null;
+    });
+
     it("prompts to link an account when no provider is connected", () => {
         render(<SyncSection hasGithub={false} hasCodeberg={false} />);
 
@@ -177,5 +190,24 @@ describe("SyncSection", () => {
         expect(
             screen.getByText(/permission changes detected and synced/i),
         ).toBeInTheDocument();
+    });
+
+    it("disables the sync button and shows the pending label while syncing", () => {
+        mutationState.currentUser.isPending = true;
+        render(<SyncSection hasGithub hasCodeberg={false} />);
+
+        expect(screen.getByRole("button", { name: /syncing/i })).toBeDisabled();
+    });
+
+    it("surfaces incremental poll failures instead of a stale verdict", () => {
+        mutationState.poll.error = new Error("poll exploded");
+        render(<SyncSection hasGithub hasCodeberg={false} />);
+
+        expect(
+            screen.getByText(/sync check failed: poll exploded/i),
+        ).toBeInTheDocument();
+        expect(
+            screen.queryByText(/permissions are up to date/i),
+        ).not.toBeInTheDocument();
     });
 });
