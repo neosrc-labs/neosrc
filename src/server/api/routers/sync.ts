@@ -26,15 +26,47 @@ export const syncRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const accessToken =
-                input.provider === "github"
-                    ? await getGitHubToken(ctx.db, ctx.session?.user?.id)
-                    : await getCodebergToken(ctx.db, ctx.session?.user?.id);
-            return refreshOwnerRepos(ctx.db, {
-                provider: input.provider,
-                owner: input.owner,
-                accessToken,
-            });
+            try {
+                const accessToken =
+                    input.provider === "github"
+                        ? await getGitHubToken(ctx.db, ctx.session?.user?.id)
+                        : await getCodebergToken(ctx.db, ctx.session?.user?.id);
+                // The shared anonymous token exists for unauthenticated
+                // browsing; a refresh must never run against it (unbounded
+                // owner fetches would burn its rate limit).
+                if (isAnonymousToken(accessToken)) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "GitHub account not connected",
+                    });
+                }
+                return await refreshOwnerRepos(ctx.db, {
+                    provider: input.provider,
+                    owner: input.owner,
+                    accessToken,
+                });
+            } catch (error) {
+                if (error instanceof TRPCError) throw error;
+                // Unlinked provider (token getters throw "not connected").
+                if (
+                    error instanceof Error &&
+                    error.message.includes("not connected")
+                ) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: error.message,
+                    });
+                }
+                // Unknown owner (Octokit 404 or the codeberg fetcher).
+                if (
+                    (error as { status?: number } | null)?.status === 404 ||
+                    (error instanceof Error &&
+                        error.message.includes("not found"))
+                ) {
+                    throw new TRPCError({ code: "NOT_FOUND" });
+                }
+                throw error;
+            }
         }),
 
     /**
