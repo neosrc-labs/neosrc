@@ -85,6 +85,13 @@
       "when": 1786508039865,
       "tag": "0011_bizarre_fantastic_four",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786508769067,
+      "tag": "0012_massive_joystick",
+      "breakpoints": true
     }
   ]
 }

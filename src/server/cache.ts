@@ -134,15 +134,6 @@ async function revalidate<T>(
     }
 }
 
-export function repoDataCacheKey(
-    provider: "gh" | "cb",
-    userId: string,
-    owner: string,
-    repo: string,
-): string {
-    return `${provider}:repo:${userId}:${owner}:${repo}`;
-}
-
 export function prCacheKey(
     owner: string,
     repo: string,
