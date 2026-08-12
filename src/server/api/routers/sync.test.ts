@@ -28,12 +28,13 @@ import {
     getSession,
     isAnonymousToken,
 } from "~/server/auth";
-import { syncCurrentUser } from "~/server/sync";
+import { refreshOwnerRepos, syncCurrentUser } from "~/server/sync";
 
 const getSessionMock = vi.mocked(getSession);
 const getGitHubTokenMock = vi.mocked(getGitHubToken);
 const getCodebergTokenMock = vi.mocked(getCodebergToken);
 const isAnonymousTokenMock = vi.mocked(isAnonymousToken);
+const refreshOwnerReposMock = vi.mocked(refreshOwnerRepos);
 const syncCurrentUserMock = vi.mocked(syncCurrentUser);
 
 const sampleResult = {
@@ -170,5 +171,94 @@ describe("syncRouter.poll", () => {
         const caller = await createCaller();
         await expect(caller.poll()).resolves.toEqual({});
         expect(syncCurrentUserMock).not.toHaveBeenCalled();
+    });
+});
+
+describe("syncRouter.refreshOwnerRepos", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        refreshOwnerReposMock.mockResolvedValue(sampleResult);
+    });
+
+    it("refreshes a github owner with the caller's token", async () => {
+        getGitHubTokenMock.mockResolvedValue("gh-token");
+        isAnonymousTokenMock.mockReturnValue(false);
+
+        const caller = await createCaller();
+        await expect(
+            caller.refreshOwnerRepos({ provider: "github", owner: "neosrc" }),
+        ).resolves.toEqual(sampleResult);
+        expect(refreshOwnerReposMock).toHaveBeenCalledWith(expect.anything(), {
+            provider: "github",
+            owner: "neosrc",
+            accessToken: "gh-token",
+        });
+    });
+
+    it("refreshes a codeberg owner with the caller's token", async () => {
+        getCodebergTokenMock.mockResolvedValue("cb-token");
+
+        const caller = await createCaller();
+        await expect(
+            caller.refreshOwnerRepos({ provider: "codeberg", owner: "nora" }),
+        ).resolves.toEqual(sampleResult);
+        expect(refreshOwnerReposMock).toHaveBeenCalledWith(expect.anything(), {
+            provider: "codeberg",
+            owner: "nora",
+            accessToken: "cb-token",
+        });
+    });
+
+    it("maps an unlinked provider to BAD_REQUEST", async () => {
+        getGitHubTokenMock.mockRejectedValue(
+            new Error("GitHub account not connected"),
+        );
+
+        const caller = await createCaller();
+        await expect(
+            caller.refreshOwnerRepos({ provider: "github", owner: "neosrc" }),
+        ).rejects.toMatchObject({
+            code: "BAD_REQUEST",
+            message: "GitHub account not connected",
+        });
+        expect(refreshOwnerReposMock).not.toHaveBeenCalled();
+    });
+
+    it("blocks the shared anonymous token instead of syncing with it", async () => {
+        getGitHubTokenMock.mockResolvedValue("anon-token");
+        isAnonymousTokenMock.mockReturnValue(true);
+
+        const caller = await createCaller();
+        await expect(
+            caller.refreshOwnerRepos({ provider: "github", owner: "neosrc" }),
+        ).rejects.toMatchObject({
+            code: "BAD_REQUEST",
+            message: "GitHub account not connected",
+        });
+        expect(refreshOwnerReposMock).not.toHaveBeenCalled();
+    });
+
+    it("maps an unknown owner to NOT_FOUND", async () => {
+        getGitHubTokenMock.mockResolvedValue("gh-token");
+        isAnonymousTokenMock.mockReturnValue(false);
+        refreshOwnerReposMock.mockRejectedValue(
+            new Error('Codeberg account "nope" not found'),
+        );
+
+        const caller = await createCaller();
+        await expect(
+            caller.refreshOwnerRepos({ provider: "codeberg", owner: "nope" }),
+        ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    });
+
+    it("rejects with UNAUTHORIZED when there is no session", async () => {
+        getSessionMock.mockResolvedValue(null);
+        const ctx = await createTRPCContext({ headers: new Headers() });
+        const caller = createCallerFactory(syncRouter)(ctx);
+
+        await expect(
+            caller.refreshOwnerRepos({ provider: "github", owner: "neosrc" }),
+        ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+        expect(getGitHubTokenMock).not.toHaveBeenCalled();
     });
 });
