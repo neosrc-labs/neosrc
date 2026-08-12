@@ -444,10 +444,17 @@ describe("syncCurrentUserCodeberg incremental gate", () => {
             avatar_url: null,
         } as never);
         // The repo/org fetchers hit the network; an unauthenticated response
-        // yields empty snapshots.
+        // yields empty snapshots. Non-OK responses now abort the sync, so the
+        // stub returns empty bodies.
         vi.stubGlobal(
             "fetch",
-            vi.fn(async () => ({ ok: false }) as Response),
+            vi.fn(
+                async () =>
+                    ({
+                        ok: true,
+                        json: async () => [],
+                    }) as unknown as Response,
+            ),
         );
     });
 
