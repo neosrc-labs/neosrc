@@ -231,6 +231,12 @@ export const account = createTable(
     (t) => [
         unique("uk_user_provider_username").on(t.provider, t.username),
         unique("uk_user_provider_id").on(t.provider, t.providerId),
+        // Case-insensitive owner lookups (repo cache + permission checks) filter
+        // on lower(username); a raw-column btree cannot serve that predicate.
+        index("idx_account_provider_lower_username").on(
+            t.provider,
+            sql`lower(${t.username})`,
+        ),
     ],
 );
 
@@ -273,6 +279,12 @@ export const repo = createTable(
         }).onDelete("cascade"),
         unique("uk_repo_account_name").on(t.accountId, t.name),
         unique("uk_repo_provider_id").on(t.provider, t.providerId),
+        // Case-insensitive repo-name lookups filter on lower(name); a raw-column
+        // btree cannot serve that predicate.
+        index("idx_repo_provider_lower_name").on(
+            t.provider,
+            sql`lower(${t.name})`,
+        ),
     ],
 );
 

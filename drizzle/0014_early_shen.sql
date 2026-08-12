@@ -1,0 +1,2 @@
+CREATE INDEX "idx_account_provider_lower_username" ON "account" USING btree ("provider",lower("username"));--> statement-breakpoint
+CREATE INDEX "idx_repo_provider_lower_name" ON "repo" USING btree ("provider",lower("name"));
