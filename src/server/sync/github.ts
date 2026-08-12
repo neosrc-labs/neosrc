@@ -260,7 +260,12 @@ export async function syncCurrentUserGitHub(
     });
 
     await refreshPermissionsView(db);
-    await storeSyncState(db, "github", input.userId, snapshotHash);
+    // A skipped team means the snapshot is incomplete: record nothing so the
+    // next poll re-attempts the team fetches instead of early-returning on
+    // the (partial) hash match.
+    if (result.teamsSkipped === 0) {
+        await storeSyncState(db, "github", input.userId, snapshotHash);
+    }
     return result;
 }
 
@@ -479,7 +484,12 @@ query TeamRepos($org: String!, $teamSlug: String!, $first: Int!, $after: String)
         } = await graphql(query, { org, teamSlug, first: 100, after: cursor });
 
         const team = result.viewer.organization?.team;
-        if (!team) break; // org/team not visible to the token; nothing to sync
+        // An org/team the token cannot see would otherwise silently drop that
+        // team's repo grants; surface it so the caller counts it as skipped
+        // and the sync state is not committed.
+        if (!team) {
+            throw new Error(`Team ${org}/${teamSlug} not visible to the token`);
+        }
         for (const edge of team.repositories.edges) {
             if (!edge?.node) continue;
             // Repos reachable by an org team are owned by the org.
