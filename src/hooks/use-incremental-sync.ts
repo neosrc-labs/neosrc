@@ -13,17 +13,24 @@ const DEFAULT_POLL_INTERVAL_MS = 30_000;
  * materialized-view refresh while the permission snapshot is unchanged, so a
  * tick is just a few list requests plus a hash comparison; a full re-sync
  * only happens when the snapshot actually changed.
+ *
+ * `enabled` gates the whole loop: with no connected provider every tick would
+ * only do a DB round trip, so callers pass `false` until one is linked.
  */
-export function useIncrementalSync(intervalMs = DEFAULT_POLL_INTERVAL_MS) {
+export function useIncrementalSync(
+    enabled: boolean,
+    intervalMs = DEFAULT_POLL_INTERVAL_MS,
+) {
     const poll = api.sync.poll.useMutation();
     const pollRef = useRef(poll);
     pollRef.current = poll;
 
     useEffect(() => {
+        if (!enabled) return;
         pollRef.current.mutate();
         const id = setInterval(() => pollRef.current.mutate(), intervalMs);
         return () => clearInterval(id);
-    }, [intervalMs]);
+    }, [enabled, intervalMs]);
 
     return poll;
 }

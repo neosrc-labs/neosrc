@@ -38,7 +38,7 @@ export function SyncSection({
 }) {
     const syncCurrentUser = api.sync.currentUser.useMutation();
     const refreshOwnerRepos = api.sync.refreshOwnerRepos.useMutation();
-    const poll = useIncrementalSync();
+    const poll = useIncrementalSync(hasGithub || hasCodeberg);
     // Default to the first connected provider: preselecting "github" for a
     // Codeberg-only user would refresh with the wrong (or anonymous) token.
     const [provider, setProvider] = useState<"github" | "codeberg">(() =>
