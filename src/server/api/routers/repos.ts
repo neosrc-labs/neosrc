@@ -69,6 +69,22 @@ import {
     viewerRepoAccess,
 } from "~/server/repo-cache";
 
+/**
+ * Maps the repo cache's miss (its fetcher returned null: repo absent or the
+ * token cannot read it) to a tRPC 404, so the same unauthorized request reads
+ * as NOT_FOUND whether the repo table was already warm or not.
+ */
+async function repoNotFoundAsTrpc<T>(promise: Promise<T>): Promise<T> {
+    try {
+        return await promise;
+    } catch (error) {
+        if (error instanceof Error && error.message === "Repo not found") {
+            throw new TRPCError({ code: "NOT_FOUND" });
+        }
+        throw error;
+    }
+}
+
 export type RepositoryInfo = {
     hasIssues: boolean;
     hasWiki: boolean;
@@ -116,7 +132,13 @@ export const reposRouter = createTRPCRouter({
                 const accessToken = await getCodebergToken(ctx.db, userId);
                 const username = ctx.session?.user?.codebergUsername ?? null;
                 const [data, permission] = await Promise.all([
-                    getCachedCodebergRepo(accessToken, input.owner, input.repo),
+                    repoNotFoundAsTrpc(
+                        getCachedCodebergRepo(
+                            accessToken,
+                            input.owner,
+                            input.repo,
+                        ),
+                    ),
                     getRepoPermissionForUser(
                         "codeberg",
                         username,
@@ -173,7 +195,9 @@ export const reposRouter = createTRPCRouter({
 
             const username = ctx.session?.user?.githubUsername ?? null;
             const [data, permission] = await Promise.all([
-                getCachedRepo(accessToken, input.owner, input.repo),
+                repoNotFoundAsTrpc(
+                    getCachedRepo(accessToken, input.owner, input.repo),
+                ),
                 getRepoPermissionForUser(
                     "github",
                     username,
