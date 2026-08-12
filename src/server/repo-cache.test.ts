@@ -1,3 +1,5 @@
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Stub the DB and Next request-scope modules so importing repo-cache.ts
@@ -13,29 +15,36 @@ type RepoCacheRow =
           permission: "read" | "triage" | "write" | "maintain" | "admin" | null;
       };
 
-const { dbMock, afterMock, limitMock, returningMock } = vi.hoisted(() => {
-    const limit = vi.fn(async (): Promise<RepoCacheRow[]> => []);
-    const returning = vi.fn(async () => [{ id: 1 }]);
-    const chain = {
-        innerJoin: vi.fn(() => chain),
-        where: vi.fn(() => ({ limit })),
-    };
-    return {
-        dbMock: {
-            select: vi.fn(() => ({
-                from: vi.fn(() => chain),
-            })),
-            insert: vi.fn(() => ({
-                values: vi.fn(() => ({
-                    onConflictDoUpdate: vi.fn(() => ({ returning })),
+const { dbMock, afterMock, limitMock, returningMock, whereCalls } = vi.hoisted(
+    () => {
+        const limit = vi.fn(async (): Promise<RepoCacheRow[]> => []);
+        const returning = vi.fn(async () => [{ id: 1 }]);
+        const whereCalls: unknown[][] = [];
+        const chain = {
+            innerJoin: vi.fn(() => chain),
+            where: vi.fn((...args: unknown[]) => {
+                whereCalls.push(args);
+                return { limit };
+            }),
+        };
+        return {
+            dbMock: {
+                select: vi.fn(() => ({
+                    from: vi.fn(() => chain),
                 })),
-            })),
-        },
-        afterMock: vi.fn(),
-        limitMock: limit,
-        returningMock: returning,
-    };
-});
+                insert: vi.fn(() => ({
+                    values: vi.fn(() => ({
+                        onConflictDoUpdate: vi.fn(() => ({ returning })),
+                    })),
+                })),
+            },
+            afterMock: vi.fn(),
+            limitMock: limit,
+            returningMock: returning,
+            whereCalls,
+        };
+    },
+);
 
 vi.mock("next/server", () => ({ after: afterMock }));
 vi.mock("~/server/db", () => ({ db: dbMock }));
@@ -83,6 +92,7 @@ beforeEach(() => {
     dbMock.select.mockClear();
     dbMock.insert.mockClear();
     afterMock.mockClear();
+    whereCalls.length = 0;
     limitMock.mockReset();
     limitMock.mockResolvedValue([]);
     returningMock.mockReset();
@@ -106,14 +116,22 @@ describe("getCachedRepoData", () => {
         expect(dbMock.insert).not.toHaveBeenCalled();
     });
 
-    it("serves a stale row and schedules background revalidation", async () => {
+    it("serves a stale row and revalidates in the background", async () => {
+        const staleRow = {
+            repo: {
+                rawData: payload,
+                lastSynced: new Date(Date.now() - 10 * 60 * 1000),
+            },
+            account: { username: "owner" },
+        };
+        // First select: the served read (full-row shape). Second select: the
+        // recheck inside the after() callback, which selects only the repo
+        // fields (flat shape) and sees the row is still stale.
+        limitMock.mockResolvedValueOnce([staleRow]);
         limitMock.mockResolvedValueOnce([
             {
-                repo: {
-                    rawData: payload,
-                    lastSynced: new Date(Date.now() - 10 * 60 * 1000),
-                },
-                account: { username: "owner" },
+                lastSynced: new Date(Date.now() - 10 * 60 * 1000),
+                rawData: payload,
             },
         ]);
 
@@ -123,7 +141,80 @@ describe("getCachedRepoData", () => {
         expect(result).toEqual(payload);
         expect(fetcher).not.toHaveBeenCalled();
         expect(afterMock).toHaveBeenCalledTimes(1);
+
+        // The scheduled callback fires the recheck + refresh asynchronously.
+        const revalidate = afterMock.mock.calls[0]?.[0] as () => void;
+        revalidate();
+        await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+
+        // Account + repo rows are upserted by the revalidation.
+        expect(dbMock.insert).toHaveBeenCalledTimes(2);
+    });
+
+    it("skips the background fetch when another request already refreshed", async () => {
+        limitMock.mockResolvedValueOnce([
+            {
+                repo: {
+                    rawData: payload,
+                    lastSynced: new Date(Date.now() - 10 * 60 * 1000),
+                },
+                account: { username: "owner" },
+            },
+        ]);
+        // The recheck observes a newer lastSynced with a fresh payload
+        // (flat shape: the recheck selects only the repo fields).
+        const freshPayload = { id: 7, name: "repo-7", description: "fresh" };
+        limitMock.mockResolvedValueOnce([
+            { lastSynced: new Date(), rawData: freshPayload },
+        ]);
+
+        const fetcher = vi.fn(async () => payload);
+        await getCachedRepoData(makeSource({ fetcher }));
+
+        const revalidate = afterMock.mock.calls[0]?.[0] as () => void;
+        revalidate();
+        // The recheck runs a second select before deciding to skip.
+        await vi.waitFor(() => expect(dbMock.select).toHaveBeenCalledTimes(2));
+
+        expect(fetcher).not.toHaveBeenCalled();
         expect(dbMock.insert).not.toHaveBeenCalled();
+    });
+
+    it("looks up the cache row case-insensitively by provider, owner, repo", async () => {
+        limitMock.mockResolvedValueOnce([
+            {
+                repo: { rawData: payload, lastSynced: new Date() },
+                account: { username: "Owner" },
+            },
+        ]);
+
+        await getCachedRepoData(makeSource({ owner: "OwNeR", repo: "RePo-7" }));
+
+        const condition = whereCalls[0]?.[0] as SQL;
+        const { params } = new PgDialect().sqlToQuery(condition);
+        expect(params).toEqual(
+            expect.arrayContaining(["github", "owner", "repo-7"]),
+        );
+    });
+
+    it("fetches fresh when the cache read fails", async () => {
+        limitMock.mockRejectedValue(new Error("select exploded"));
+
+        const fetcher = vi.fn(async () => payload);
+        const result = await getCachedRepoData(makeSource({ fetcher }));
+
+        expect(result).toEqual(payload);
+        expect(fetcher).toHaveBeenCalledTimes(1);
+    });
+
+    it("serves the fetched payload when the cache write fails", async () => {
+        returningMock.mockRejectedValue(new Error("db down"));
+
+        const fetcher = vi.fn(async () => payload);
+        const result = await getCachedRepoData(makeSource({ fetcher }));
+
+        expect(result).toEqual(payload);
+        expect(fetcher).toHaveBeenCalledTimes(1);
     });
 
     it("treats a row with null raw_data as a miss and refetches", async () => {
