@@ -6,6 +6,7 @@ import type {
     WebhookEvent,
 } from "@octokit/webhooks-types";
 import { and, eq } from "drizzle-orm";
+import { after } from "next/server";
 import { env } from "~/env";
 import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import { deleteRepoIssuePullCountsCache } from "~/server/cache";
@@ -48,7 +49,10 @@ async function handleWebhookEvent(
     }
 
     if (isMemberEvent(event, body)) {
-        await forceSyncMember(body);
+        // Run after the response is flushed: a full force-sync is heavy
+        // (multi-API pagination plus a materialized-view refresh) and must
+        // not hold up the webhook ack, which GitHub retries on timeout.
+        after(() => forceSyncMember(body));
     }
 }
 
@@ -67,19 +71,19 @@ function isMemberEvent(
  * poll path retries anyway and the webhook must not reject the delivery.
  */
 async function forceSyncMember(body: MemberEvent): Promise<void> {
-    const [account] = await db
-        .select({ userId: betterAuthAccount.userId })
-        .from(betterAuthAccount)
-        .where(
-            and(
-                eq(betterAuthAccount.providerId, "github"),
-                eq(betterAuthAccount.accountId, String(body.member.id)),
-            ),
-        )
-        .limit(1);
-    if (!account) return;
-
     try {
+        const [account] = await db
+            .select({ userId: betterAuthAccount.userId })
+            .from(betterAuthAccount)
+            .where(
+                and(
+                    eq(betterAuthAccount.providerId, "github"),
+                    eq(betterAuthAccount.accountId, String(body.member.id)),
+                ),
+            )
+            .limit(1);
+        if (!account) return;
+
         const accessToken = await getGitHubToken(db, account.userId);
         if (isAnonymousToken(accessToken)) return;
         await syncCurrentUser(db, {
@@ -90,7 +94,7 @@ async function forceSyncMember(body: MemberEvent): Promise<void> {
         });
     } catch (error) {
         console.warn(
-            `[github-webhook] member sync failed for user ${account.userId}:`,
+            `[github-webhook] member sync failed for user ${body.member.id}:`,
             error,
         );
     }
