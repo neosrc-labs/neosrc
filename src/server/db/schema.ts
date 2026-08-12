@@ -199,6 +199,7 @@ export const pullRequestReport = createTable(
     }),
     (t) => [
         primaryKey({
+            name: "pr_report_pk",
             columns: [
                 t.provider,
                 t.repositorySlug,

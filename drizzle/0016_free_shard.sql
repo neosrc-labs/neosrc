@@ -1,0 +1,2 @@
+ALTER TABLE "pull_request_report" DROP CONSTRAINT "pull_request_report_provider_repositorySlug_prNumber_name_revision_pk";--> statement-breakpoint
+ALTER TABLE "pull_request_report" ADD CONSTRAINT "pr_report_pk" PRIMARY KEY("provider","repositorySlug","prNumber","name","revision");
