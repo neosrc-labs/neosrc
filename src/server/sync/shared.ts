@@ -7,6 +7,9 @@ import * as schema from "~/server/db/schema";
 
 export type SyncProvider = "github" | "codeberg";
 
+/** Canonical repo visibility; more states (e.g. internal) may be added. */
+export type RepoVisibility = "private" | "public";
+
 /** Relation vocabulary understood by mv_user_repo_permissions. */
 export type RelationName =
     | "owner"
@@ -48,6 +51,13 @@ export type Executor = Pick<Db, "insert" | "delete">;
 export type SyncRepo = {
     providerId: number;
     name: string;
+    visibility: RepoVisibility;
+    description: string | null;
+    stars: number;
+    watchers: number;
+    forks: number;
+    defaultBranch: string | null;
+    archived: boolean;
     owner: {
         providerId: number;
         login: string;
@@ -107,6 +117,13 @@ export function createSyncContext(
             provider,
             providerId: repo.providerId,
             name: repo.name,
+            visibility: repo.visibility,
+            description: repo.description,
+            stars: repo.stars,
+            watchers: repo.watchers,
+            forks: repo.forks,
+            defaultBranch: repo.defaultBranch,
+            archived: repo.archived,
             accountId: ownerAccountId,
             rawData: repo.rawData,
         });
@@ -159,6 +176,13 @@ async function upsertRepo(
         provider: SyncProvider;
         providerId: number;
         name: string;
+        visibility: RepoVisibility;
+        description: string | null;
+        stars: number;
+        watchers: number;
+        forks: number;
+        defaultBranch: string | null;
+        archived: boolean;
         accountId: number;
         rawData: unknown;
     },
@@ -169,6 +193,13 @@ async function upsertRepo(
             provider: input.provider,
             providerId: input.providerId,
             name: input.name,
+            visibility: input.visibility,
+            description: input.description,
+            stars: input.stars,
+            watchers: input.watchers,
+            forks: input.forks,
+            defaultBranch: input.defaultBranch,
+            archived: input.archived,
             accountId: input.accountId,
             rawData: input.rawData,
         })
@@ -176,6 +207,13 @@ async function upsertRepo(
             target: [schema.repo.provider, schema.repo.providerId],
             set: {
                 name: input.name,
+                visibility: input.visibility,
+                description: input.description,
+                stars: input.stars,
+                watchers: input.watchers,
+                forks: input.forks,
+                defaultBranch: input.defaultBranch,
+                archived: input.archived,
                 accountId: input.accountId,
                 rawData: input.rawData,
                 updatedAt: new Date(),

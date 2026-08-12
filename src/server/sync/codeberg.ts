@@ -7,6 +7,7 @@ import type {
     Db,
     RelationRow,
     RepoPermission,
+    RepoVisibility,
     SyncRepo,
     SyncResult,
 } from "./shared";
@@ -25,7 +26,13 @@ import {
 export type CodebergSyncRepo = {
     providerId: number;
     name: string;
-    private: boolean;
+    visibility: RepoVisibility;
+    description: string | null;
+    stars: number;
+    watchers: number;
+    forks: number;
+    defaultBranch: string | null;
+    archived: boolean;
     owner: {
         providerId: number;
         login: string;
@@ -44,6 +51,12 @@ type CodebergRepoResponse = {
     id: number;
     name: string;
     private: boolean;
+    description: string | null;
+    stars_count: number;
+    watchers_count: number;
+    forks_count: number;
+    default_branch: string | null;
+    archived: boolean;
     owner: {
         id: number;
         login: string;
@@ -327,7 +340,13 @@ function toCodebergSyncRepo(repo: CodebergRepoResponse): CodebergSyncRepo {
     return {
         providerId: repo.id,
         name: repo.name,
-        private: repo.private,
+        visibility: repo.private ? "private" : "public",
+        description: repo.description,
+        stars: repo.stars_count,
+        watchers: repo.watchers_count,
+        forks: repo.forks_count,
+        defaultBranch: repo.default_branch,
+        archived: repo.archived,
         owner: {
             providerId: repo.owner.id,
             login: repo.owner.login,
@@ -351,6 +370,13 @@ function toSyncRepo(
     return {
         providerId: repo.providerId,
         name: repo.name,
+        visibility: repo.visibility,
+        description: repo.description,
+        stars: repo.stars,
+        watchers: repo.watchers,
+        forks: repo.forks,
+        defaultBranch: repo.defaultBranch,
+        archived: repo.archived,
         owner: { ...repo.owner, type: ownerType },
         permissions: repo.permissions
             ? {
