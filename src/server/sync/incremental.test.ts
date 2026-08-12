@@ -175,6 +175,38 @@ describe("snapshot hashes", () => {
         );
     });
 
+    it("change when the repo owner changes", () => {
+        const ownedByOwner = githubRepo(1, "admin");
+        const ownedBySomeoneElse = {
+            ...githubRepo(1, "admin"),
+            owner: {
+                providerId: 99,
+                login: "elsewhere",
+                avatarUrl: null,
+                type: "org" as const,
+            },
+        };
+        expect(githubSnapshotHash([ownedByOwner], [], [])).not.toBe(
+            githubSnapshotHash([ownedBySomeoneElse], [], []),
+        );
+        expect(codebergSnapshotHash([syncRepo(1, "admin")], [])).not.toBe(
+            codebergSnapshotHash(
+                [
+                    {
+                        ...syncRepo(1, "admin"),
+                        owner: {
+                            providerId: 99,
+                            login: "elsewhere",
+                            avatarUrl: null,
+                            type: "org",
+                        },
+                    },
+                ],
+                [],
+            ),
+        );
+    });
+
     it("include memberships and teams", () => {
         expect(githubSnapshotHash([], [], [])).not.toBe(
             githubSnapshotHash(

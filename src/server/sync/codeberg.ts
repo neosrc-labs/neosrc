@@ -171,7 +171,7 @@ export async function syncCurrentUserCodeberg(
 
 /**
  * Order-insensitive signature of the permission snapshot: repo ids with their
- * permission flags and the org memberships.
+ * owner and permission flags, and the org memberships.
  */
 export function codebergSnapshotHash(
     repos: SyncRepo[],
@@ -181,6 +181,10 @@ export function codebergSnapshotHash(
         repos: repos
             .map((repo) => ({
                 id: repo.providerId,
+                // A repo transfer changes the effective owner grant (the view
+                // grants admin via repo.account_id), so the owner must trip
+                // the hash or transfers would never re-sync.
+                owner: repo.owner.providerId,
                 permissions: repo.permissions,
             }))
             .sort((a, b) => a.id - b.id),

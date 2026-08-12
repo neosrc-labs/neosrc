@@ -271,8 +271,8 @@ export async function syncCurrentUserGitHub(
 
 /**
  * Order-insensitive signature of the permission snapshot: repo ids with their
- * permission flags, org membership roles, and team identities. Team repo
- * grants are intentionally excluded - a change there also surfaces in the
+ * owner and permission flags, org membership roles, and team identities. Team
+ * repo grants are intentionally excluded - a change there also surfaces in the
  * authenticated repo list, which is what trips the signature.
  */
 export function githubSnapshotHash(
@@ -284,6 +284,10 @@ export function githubSnapshotHash(
         repos: repos
             .map((repo) => ({
                 id: repo.providerId,
+                // A repo transfer changes the effective owner grant (the view
+                // grants admin via repo.account_id), so the owner must trip
+                // the hash or transfers would never re-sync.
+                owner: repo.owner.providerId,
                 permissions: repo.permissions,
             }))
             .sort((a, b) => a.id - b.id),
