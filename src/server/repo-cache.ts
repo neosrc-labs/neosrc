@@ -204,7 +204,10 @@ export async function getRepoPermissionForUser(
             viewerAccount,
             and(
                 eq(viewerAccount.provider, provider),
-                eq(viewerAccount.username, providerUsername),
+                eq(
+                    sql`lower(${viewerAccount.username})`,
+                    providerUsername.toLowerCase(),
+                ),
             ),
         )
         .innerJoin(
