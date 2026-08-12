@@ -23,7 +23,12 @@ export function useIncrementalSync(
 ) {
     const poll = api.sync.poll.useMutation();
     const pollRef = useRef(poll);
-    pollRef.current = poll;
+
+    // Keep the ref pointing at the latest mutation without writing during
+    // render: a render-time write can leak from render work React discards.
+    useEffect(() => {
+        pollRef.current = poll;
+    });
 
     useEffect(() => {
         if (!enabled) return;
