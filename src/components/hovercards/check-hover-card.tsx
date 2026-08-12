@@ -116,7 +116,7 @@ function CheckHoverCardContent({ check }: { check: CheckRun }) {
                         {statusLabel(check.status, check.conclusion)}
                     </span>
                 </div>
-                {check.started_at && (
+                {check.started_at && check.conclusion !== "skipped" && (
                     <div className="flex items-center gap-2 text-text-tertiary text-xs">
                         <Clock className="h-3.5 w-3.5 shrink-0" />
                         <span>
