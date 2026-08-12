@@ -315,6 +315,10 @@ export async function getStoredSyncState(
     provider: SyncProvider,
     userId: string,
 ): Promise<StoredSyncState | null> {
+    // Note: this gate read is not locked. Overlapping syncs for the same
+    // user/provider are serialized by a per-provider advisory lock taken
+    // inside the write transaction; a stale gate simply causes one redundant
+    // re-sync, which the next poll corrects.
     const [row] = await db
         .select({
             snapshotHash: schema.permissionsSyncState.snapshotHash,
