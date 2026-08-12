@@ -76,15 +76,17 @@ export async function getCachedRepoData<T>(
     }
 
     const cached = row?.repo;
+    const observedLastSynced = cached?.lastSynced?.getTime() ?? 0;
     if (cached?.rawData != null) {
-        const lastSynced = cached.lastSynced?.getTime() ?? 0;
-        const fresh = Date.now() - lastSynced < staleAfterMs;
+        const fresh = Date.now() - observedLastSynced < staleAfterMs;
         if (fresh) return cached.rawData as T;
 
-        // Stale: serve now, revalidate after the response is flushed.
+        // Stale: serve now, revalidate after the response is flushed. The row
+        // is shared across users, so another request may refresh it between
+        // this read and the callback; re-check before fetching.
         try {
             after(() => {
-                void refresh().catch(() => {
+                void refreshIfStillStale().catch(() => {
                     // Revalidation failure keeps serving the stale payload.
                 });
             });
@@ -95,6 +97,32 @@ export async function getCachedRepoData<T>(
     }
 
     return refresh();
+
+    /** Refreshes only when no other request already refreshed this row. */
+    async function refreshIfStillStale(): Promise<T> {
+        const [current] = await db
+            .select({
+                lastSynced: repo.lastSynced,
+                rawData: repo.rawData,
+            })
+            .from(repo)
+            .innerJoin(account, eq(repo.accountId, account.id))
+            .where(
+                and(
+                    eq(repo.provider, provider),
+                    eq(account.provider, provider),
+                    eq(sql`lower(${account.username})`, owner.toLowerCase()),
+                    eq(sql`lower(${repo.name})`, repoName.toLowerCase()),
+                ),
+            )
+            .limit(1);
+        const currentLastSynced = current?.lastSynced?.getTime() ?? 0;
+        if (current && currentLastSynced > observedLastSynced) {
+            if (current.rawData != null) return current.rawData as T;
+            return refresh();
+        }
+        return refresh();
+    }
 
     async function refresh(): Promise<T> {
         const payload = await source.fetcher();
