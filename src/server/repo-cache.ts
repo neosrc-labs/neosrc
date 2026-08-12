@@ -52,22 +52,28 @@ export async function getCachedRepoData<T>(
 ): Promise<T> {
     const { provider, owner, repo: repoName, staleAfterMs } = source;
 
-    const [row] = await db
-        .select()
-        .from(repo)
-        .innerJoin(account, eq(repo.accountId, account.id))
-        .where(
-            and(
-                eq(repo.provider, provider),
-                eq(account.provider, provider),
-                // Provider APIs are case-insensitive on owner/repo slugs, so
-                // the lookup must be too: the cache row stores canonical
-                // casing from the API, while the URL slug may differ.
-                eq(sql`lower(${account.username})`, owner.toLowerCase()),
-                eq(sql`lower(${repo.name})`, repoName.toLowerCase()),
-            ),
-        )
-        .limit(1);
+    let row: { repo: typeof repo.$inferSelect } | undefined;
+    try {
+        const [found] = await db
+            .select()
+            .from(repo)
+            .innerJoin(account, eq(repo.accountId, account.id))
+            .where(
+                and(
+                    eq(repo.provider, provider),
+                    eq(account.provider, provider),
+                    // Provider APIs are case-insensitive on owner/repo slugs, so
+                    // the lookup must be too: the cache row stores canonical
+                    // casing from the API, while the URL slug may differ.
+                    eq(sql`lower(${account.username})`, owner.toLowerCase()),
+                    eq(sql`lower(${repo.name})`, repoName.toLowerCase()),
+                ),
+            )
+            .limit(1);
+        row = found;
+    } catch {
+        // DB read failure: treat as a miss and fetch fresh rather than 500.
+    }
 
     const cached = row?.repo;
     if (cached?.rawData != null) {
@@ -93,28 +99,33 @@ export async function getCachedRepoData<T>(
     async function refresh(): Promise<T> {
         const payload = await source.fetcher();
         if (!payload) throw new Error("Repo not found");
-        const mapped = source.toRepo(payload);
-        const ownerAccountId = await upsertAccount(db, {
-            provider,
-            providerId: mapped.owner.providerId,
-            username: mapped.owner.login,
-            type: mapped.owner.type,
-            avatarUrl: mapped.owner.avatarUrl,
-        });
-        await upsertRepo(db, {
-            provider,
-            providerId: mapped.providerId,
-            name: mapped.name,
-            visibility: mapped.visibility,
-            description: mapped.description,
-            stars: mapped.stars,
-            watchers: mapped.watchers,
-            forks: mapped.forks,
-            defaultBranch: mapped.defaultBranch,
-            archived: mapped.archived,
-            accountId: ownerAccountId,
-            rawData: payload,
-        });
+        try {
+            const mapped = source.toRepo(payload);
+            const ownerAccountId = await upsertAccount(db, {
+                provider,
+                providerId: mapped.owner.providerId,
+                username: mapped.owner.login,
+                type: mapped.owner.type,
+                avatarUrl: mapped.owner.avatarUrl,
+            });
+            await upsertRepo(db, {
+                provider,
+                providerId: mapped.providerId,
+                name: mapped.name,
+                visibility: mapped.visibility,
+                description: mapped.description,
+                stars: mapped.stars,
+                watchers: mapped.watchers,
+                forks: mapped.forks,
+                defaultBranch: mapped.defaultBranch,
+                archived: mapped.archived,
+                accountId: ownerAccountId,
+                rawData: payload,
+            });
+        } catch {
+            // A cache write failure must not fail the fetch that succeeded;
+            // the payload is served and the next request retries the write.
+        }
         return payload;
     }
 }
