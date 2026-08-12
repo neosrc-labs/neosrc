@@ -1,8 +1,33 @@
 import fs from "node:fs";
 import path from "node:path";
-import { chromium, test as setup } from "@playwright/test";
+import { chromium, type Page, test as setup } from "@playwright/test";
 
 const AUTH_FILE = path.join(import.meta.dirname, ".auth", "user.json");
+
+/**
+ * Populates mv_user_repo_permissions for the signed-in user. The repo page
+ * gates access to private repos on that materialized view, which is fed by
+ * the permission sync (sync.currentUser); without it the first repo-page
+ * request 404s. Run it here so every e2e invocation starts from synced data.
+ */
+async function syncPermissions(page: Page) {
+    const res = await page.request.post("/api/trpc/sync.currentUser", {
+        data: { json: null },
+    });
+    if (!res.ok()) {
+        throw new Error(
+            `Permission sync failed: ${res.status()} ${await res.text()}`,
+        );
+    }
+    const body = (await res.json()) as {
+        result?: { data?: { json?: { github?: unknown } } };
+    };
+    if (!body.result?.data) {
+        throw new Error(
+            `Permission sync returned an error: ${JSON.stringify(body)}`,
+        );
+    }
+}
 
 setup("authenticate", async ({ browser }) => {
     if (fs.existsSync(AUTH_FILE)) {
@@ -15,6 +40,7 @@ setup("authenticate", async ({ browser }) => {
             await page.goto("/profile");
             await page.waitForLoadState("networkidle");
             if (page.url().includes("/profile")) {
+                await syncPermissions(page);
                 await context.close();
                 await headless.close();
                 return;
@@ -41,6 +67,8 @@ setup("authenticate", async ({ browser }) => {
     await page
         .getByRole("heading", { name: /welcome/i })
         .waitFor({ timeout: 300_000 });
+
+    await syncPermissions(page);
 
     const dir = path.dirname(AUTH_FILE);
     if (!fs.existsSync(dir)) {
