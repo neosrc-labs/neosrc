@@ -5,12 +5,12 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-neosrc_user1}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-welikeneosrc1}
-      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES:-neosrc,e2e_test,functional_test}
+      POSTGRES_DB: ${POSTGRES_DB:-neosrc}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql
-      - ./dev/init-docker-database.sh:/docker-entrypoint-initdb.d/init-docker-database.sh:ro
+      - ./dev/init-docker-database.sql:/docker-entrypoint-initdb.d/init-docker-database.sql:ro
     restart: unless-stopped
     healthcheck:
       test:
