@@ -145,22 +145,35 @@ export async function syncCurrentUserGitHub(
 
     // Team repo grants need one GraphQL call per team; a failing team only
     // skips its shared edges (direct grants above still cover the user).
+    // The fan-out is capped: each query costs ~100 rate-limit points, and
+    // firing every team at once could exhaust the GraphQL point budget for
+    // users in many teams.
     const teamRepos = new Map<number, GitHubSyncRepo[]>();
+    const MAX_CONCURRENT_TEAM_FETCHES = 4;
+    let nextTeam = 0;
     await Promise.all(
-        teams.map(async (team) => {
-            try {
-                teamRepos.set(
-                    team.providerId,
-                    await listTeamRepos(
-                        input.accessToken,
-                        team.org.login,
-                        team.slug,
-                    ),
-                );
-            } catch {
-                result.teamsSkipped++;
-            }
-        }),
+        Array.from(
+            { length: Math.min(MAX_CONCURRENT_TEAM_FETCHES, teams.length) },
+            async () => {
+                while (nextTeam < teams.length) {
+                    const team = teams[nextTeam];
+                    nextTeam++;
+                    if (!team) break; // unreachable while the guard holds
+                    try {
+                        teamRepos.set(
+                            team.providerId,
+                            await listTeamRepos(
+                                input.accessToken,
+                                team.org.login,
+                                team.slug,
+                            ),
+                        );
+                    } catch {
+                        result.teamsSkipped++;
+                    }
+                }
+            },
+        ),
     );
 
     const relations: RelationRow[] = [];
