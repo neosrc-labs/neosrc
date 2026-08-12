@@ -1,5 +1,6 @@
 import { aliasedTable, and, eq, sql } from "drizzle-orm";
 import { after } from "next/server";
+import { log } from "~/logging";
 
 import { db } from "./db";
 import { account, mvUserRepoPermissions, repo } from "./db/schema";
@@ -82,8 +83,12 @@ export async function getCachedRepoData<T>(
             )
             .limit(1);
         row = found;
-    } catch {
+    } catch (error) {
         // DB read failure: treat as a miss and fetch fresh rather than 500.
+        log.warn(
+            { err: error, provider, owner, repoName },
+            "repo-cache read failed",
+        );
     }
 
     const cached = row?.repo;
@@ -161,9 +166,13 @@ export async function getCachedRepoData<T>(
                 accountId: ownerAccountId,
                 rawData: payload,
             });
-        } catch {
+        } catch (error) {
             // A cache write failure must not fail the fetch that succeeded;
             // the payload is served and the next request retries the write.
+            log.warn(
+                { err: error, provider, owner, repoName },
+                "repo-cache write failed",
+            );
         }
         return payload;
     }
