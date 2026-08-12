@@ -250,6 +250,25 @@ describe("member event webhook", () => {
         expect(syncCurrentUserMock).not.toHaveBeenCalled();
     });
 
+    it("rejects a member event with an invalid signature before any lookup", async () => {
+        const body = JSON.stringify(memberPayload(9876, "collaborator"));
+        const res = await POST(
+            new Request("http://localhost/api/webhook/github", {
+                method: "POST",
+                headers: {
+                    "x-github-event": "member",
+                    "x-github-delivery": "test-delivery",
+                    "x-hub-signature-256": "sha256=invalid",
+                },
+                body,
+            }),
+        );
+
+        expect(res.status).toBe(401);
+        expect(selectWhereMock).not.toHaveBeenCalled();
+        expect(syncCurrentUserMock).not.toHaveBeenCalled();
+    });
+
     it("still acks the webhook when the forced sync fails", async () => {
         selectLimitMock.mockResolvedValue([{ userId: "user-1" }]);
         syncCurrentUserMock.mockRejectedValue(new Error("sync exploded"));
