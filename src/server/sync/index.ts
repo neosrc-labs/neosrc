@@ -9,14 +9,9 @@ import {
 import type { Db, SyncProvider, SyncResult } from "./shared";
 import { createSyncContext, newResult, refreshPermissionsView } from "./shared";
 
-export type {
-    RelationName,
-    RepoPermission,
-    SyncProvider,
-    SyncRepo,
-    SyncResult,
-} from "./shared";
-export { refreshPermissionsView } from "./shared";
+// The barrel only re-exports what its consumers import from "~/server/sync";
+// other names are imported from the deep paths and must not be re-exported.
+export type { SyncResult } from "./shared";
 
 /**
  * Upserts the account row for `owner` plus every repository it owns.
