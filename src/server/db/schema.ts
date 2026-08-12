@@ -251,6 +251,10 @@ export const repo = createTable(
         forks: d.integer("forks").notNull().default(0),
         defaultBranch: d.varchar("default_branch", { length: 255 }),
         archived: d.boolean("archived").notNull().default(false),
+        lastSynced: d.timestamp("last_synced", {
+            withTimezone: true,
+            mode: "date",
+        }),
         rawData: d.jsonb("raw_data"),
         createdAt: d
             .timestamp("created_at", { withTimezone: true, mode: "date" })

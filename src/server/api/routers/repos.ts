@@ -64,6 +64,10 @@ import {
     unstarRepo,
 } from "~/server/github";
 import { getTopRepositories } from "~/server/github-graphql";
+import {
+    getRepoPermissionForUser,
+    viewerRepoAccess,
+} from "~/server/repo-cache";
 
 export type RepositoryInfo = {
     hasIssues: boolean;
@@ -110,12 +114,26 @@ export const reposRouter = createTRPCRouter({
             const userId = ctx.session?.user?.id ?? "anonymous";
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(ctx.db, userId);
-                const data = await getCachedCodebergRepo(
-                    accessToken,
-                    userId,
-                    input.owner,
-                    input.repo,
-                );
+                const username = ctx.session?.user?.codebergUsername ?? null;
+                const [data, permission] = await Promise.all([
+                    getCachedCodebergRepo(accessToken, input.owner, input.repo),
+                    getRepoPermissionForUser(
+                        "codeberg",
+                        username,
+                        input.owner,
+                        input.repo,
+                    ),
+                ]);
+
+                const access = viewerRepoAccess({
+                    username,
+                    payload: data,
+                    permission,
+                });
+                if (!access.canView) {
+                    throw new TRPCError({ code: "NOT_FOUND" });
+                }
+
                 return {
                     hasIssues: data.has_issues,
                     hasWiki: data.has_wiki,
@@ -123,7 +141,7 @@ export const reposRouter = createTRPCRouter({
                     hasDiscussions: false,
                     isPrivate: data.private,
                     permissions: {
-                        admin: data.permissions.admin,
+                        admin: access.admin,
                     },
                     ownerAvatarUrl: data.owner.avatar_url,
                     allowSquashMerge: data.allow_squash_merge,
@@ -153,12 +171,25 @@ export const reposRouter = createTRPCRouter({
 
             const accessToken = await getGitHubToken(ctx.db, userId);
 
-            const data = await getCachedRepo(
-                accessToken,
-                userId,
-                input.owner,
-                input.repo,
-            );
+            const username = ctx.session?.user?.githubUsername ?? null;
+            const [data, permission] = await Promise.all([
+                getCachedRepo(accessToken, input.owner, input.repo),
+                getRepoPermissionForUser(
+                    "github",
+                    username,
+                    input.owner,
+                    input.repo,
+                ),
+            ]);
+
+            const access = viewerRepoAccess({
+                username,
+                payload: data,
+                permission,
+            });
+            if (!access.canView) {
+                throw new TRPCError({ code: "NOT_FOUND" });
+            }
 
             return {
                 hasIssues: data.has_issues,
@@ -167,7 +198,7 @@ export const reposRouter = createTRPCRouter({
                 hasDiscussions: data.has_discussions,
                 isPrivate: data.private,
                 permissions: {
-                    admin: data.permissions?.admin ?? false,
+                    admin: access.admin,
                 },
                 ownerAvatarUrl: data.owner.avatar_url,
                 allowSquashMerge: data.allow_squash_merge ?? null,

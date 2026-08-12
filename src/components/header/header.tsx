@@ -79,7 +79,12 @@ async function getRepoData(
         const token = await codebergAccessToken();
         if (!token) return null;
         const [headerData, counts] = await Promise.all([
-            getCachedCodebergRepoHeaderData(token, userId, owner, repo),
+            getCachedCodebergRepoHeaderData(
+                token,
+                session?.user?.codebergUsername ?? null,
+                owner,
+                repo,
+            ),
             getCachedRepoCounts(token, userId, owner, repo),
         ]);
         return {
@@ -92,7 +97,12 @@ async function getRepoData(
     const token = await githubAccessToken();
     if (!token) return null;
     const [headerData, counts] = await Promise.all([
-        getCachedRepoHeaderData(token, userId, owner, repo),
+        getCachedRepoHeaderData(
+            token,
+            session?.user?.githubUsername ?? null,
+            owner,
+            repo,
+        ),
         getCachedRepoIssuePullCounts(token, userId, owner, repo),
     ]);
     return {

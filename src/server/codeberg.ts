@@ -1,11 +1,17 @@
+import { notFound } from "next/navigation";
 import { cache } from "react";
 import {
-    repoDataCacheKey,
     repoIssuePullCountsCacheKey,
     repoStarredCacheKey,
     repoSubscriptionCacheKey,
     withStaleWhileRevalidate,
 } from "~/server/cache";
+import {
+    getCachedRepoData,
+    getRepoPermissionForUser,
+    viewerRepoAccess,
+} from "~/server/repo-cache";
+import { codebergRepoToSyncRepo } from "~/server/sync/mappers";
 
 export const CODEBERG_API = "https://codeberg.org";
 
@@ -297,7 +303,7 @@ export const getUserByUsername = cache(
 
 export type CodebergRepo = {
     id: number;
-    owner: { login: string; avatar_url: string };
+    owner: { id: number; login: string; avatar_url: string };
     name: string;
     full_name: string;
     description: string | null;
@@ -353,19 +359,20 @@ export const getRepo = cache(
 
 export async function getCachedRepo(
     accessToken: string,
-    userId: string,
     owner: string,
     repo: string,
 ): Promise<CodebergRepo> {
-    return withStaleWhileRevalidate(
-        repoDataCacheKey("cb", userId, owner, repo),
-        async () => {
-            const repoInfo = await getRepo(accessToken, owner, repo);
-            if (!repoInfo) throw new Error("Repo not found");
-            return repoInfo;
-        },
-        { staleAfter: 5 * 60 * 1000, deleteAfter: 24 * 60 * 60 * 1000 },
-    );
+    return getCachedRepoData({
+        provider: "codeberg",
+        owner,
+        repo,
+        staleAfterMs: 5 * 60 * 1000,
+        fetcher: () => getRepo(accessToken, owner, repo),
+        // The single-repo endpoint does not say whether the owner is an org;
+        // cache-created accounts default to "user" and a later permission
+        // sync corrects the type.
+        toRepo: (payload) => codebergRepoToSyncRepo(payload, "user"),
+    });
 }
 
 type CodebergBranchRaw = {
@@ -1065,18 +1072,31 @@ export interface CodebergRepoHeaderInfo {
 
 export async function getCachedRepoHeaderData(
     accessToken: string,
-    userId: string,
+    username: string | null,
     owner: string,
     repo: string,
 ): Promise<CodebergRepoHeaderInfo> {
-    const repoInfo = await getCachedRepo(accessToken, userId, owner, repo);
+    const [repoInfo, permission] = await Promise.all([
+        getCachedRepo(accessToken, owner, repo),
+        getRepoPermissionForUser("codeberg", username, owner, repo),
+    ]);
+
+    const access = viewerRepoAccess({
+        username,
+        payload: repoInfo,
+        permission,
+    });
+    // The cached payload is shared across users; a viewer without a grant
+    // must not see a private repo through it.
+    if (!access.canView) notFound();
+
     return {
         hasIssues: repoInfo.has_issues,
         hasWiki: repoInfo.has_wiki,
         hasProjects: repoInfo.has_projects,
         hasDiscussions: false,
         isPrivate: repoInfo.private,
-        permissions: { admin: repoInfo.permissions.admin },
+        permissions: { admin: access.admin },
         ownerAvatarUrl: repoInfo.owner.avatar_url,
         allowSquashMerge: repoInfo.allow_squash_merge,
         allowRebaseMerge: repoInfo.allow_rebase,

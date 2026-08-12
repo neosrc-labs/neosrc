@@ -3,11 +3,11 @@ import {
     getUser as getCodebergUser,
     getUserByUsername as getCodebergUserByUsername,
 } from "~/server/codeberg";
+import { type CodebergRepoRaw, codebergRepoToSyncRepo } from "./mappers";
 import type {
     Db,
     RelationRow,
     RepoPermission,
-    RepoVisibility,
     SyncRepo,
     SyncResult,
 } from "./shared";
@@ -22,52 +22,6 @@ import {
     refreshPermissionsView,
     storeSyncState,
 } from "./shared";
-
-export type CodebergSyncRepo = {
-    providerId: number;
-    name: string;
-    visibility: RepoVisibility;
-    description: string | null;
-    stars: number;
-    watchers: number;
-    forks: number;
-    defaultBranch: string | null;
-    archived: boolean;
-    owner: {
-        providerId: number;
-        login: string;
-        avatarUrl: string | null;
-    };
-    permissions: {
-        admin: boolean;
-        push: boolean;
-        pull: boolean;
-    } | null;
-    /** Raw REST API payload for the repository. */
-    rawData: unknown;
-};
-
-type CodebergRepoResponse = {
-    id: number;
-    name: string;
-    private: boolean;
-    description: string | null;
-    stars_count: number;
-    watchers_count: number;
-    forks_count: number;
-    default_branch: string | null;
-    archived: boolean;
-    owner: {
-        id: number;
-        login: string;
-        avatar_url?: string | null;
-    };
-    permissions?: {
-        admin: boolean;
-        push: boolean;
-        pull: boolean;
-    } | null;
-};
 
 /**
  * Upserts the account row for `owner` plus every repository it owns.
@@ -98,7 +52,7 @@ export async function fetchOwnerRepos(
             avatarUrl: profile.avatar_url ?? null,
             type,
         },
-        repos: raw.map((repo) => toSyncRepo(repo, type)),
+        repos: raw.map((repo) => codebergRepoToSyncRepo(repo, type)),
     };
 }
 
@@ -146,7 +100,10 @@ export async function syncCurrentUserCodeberg(
     const orgIds = new Set(orgs.map((org) => org.providerId));
     const rawRepos = await getAuthenticatedUserRepos(input.accessToken);
     const repos = rawRepos.map((repo) =>
-        toSyncRepo(repo, orgIds.has(repo.owner.providerId) ? "org" : "user"),
+        codebergRepoToSyncRepo(
+            repo,
+            orgIds.has(repo.owner.id) ? "org" : "user",
+        ),
     );
 
     const snapshotHash = codebergSnapshotHash(repos, orgs);
@@ -235,17 +192,17 @@ export function codebergSnapshotHash(
 export async function getReposByOwner(
     username: string,
     accessToken?: string,
-): Promise<CodebergSyncRepo[]> {
-    const results: CodebergSyncRepo[] = [];
+): Promise<CodebergRepoRaw[]> {
+    const results: CodebergRepoRaw[] = [];
     let page = 1;
     const limit = 100;
     for (;;) {
-        const data = await fetchCodebergJson<CodebergRepoResponse[]>(
+        const data = await fetchCodebergJson<CodebergRepoRaw[]>(
             `/api/v1/users/${username}/repos?limit=${limit}&page=${page}`,
             accessToken,
         );
         if (!data || data.length === 0) break;
-        for (const repo of data) results.push(toCodebergSyncRepo(repo));
+        for (const repo of data) results.push(repo);
         if (data.length < limit) break;
         page++;
     }
@@ -274,17 +231,17 @@ export async function isOrg(
  */
 export async function getAuthenticatedUserRepos(
     accessToken: string,
-): Promise<CodebergSyncRepo[]> {
-    const results: CodebergSyncRepo[] = [];
+): Promise<CodebergRepoRaw[]> {
+    const results: CodebergRepoRaw[] = [];
     let page = 1;
     const limit = 100;
     for (;;) {
-        const data = await fetchCodebergJson<CodebergRepoResponse[]>(
+        const data = await fetchCodebergJson<CodebergRepoRaw[]>(
             `/api/v1/user/repos?limit=${limit}&page=${page}`,
             accessToken,
         );
         if (!data || data.length === 0) break;
-        for (const repo of data) results.push(toCodebergSyncRepo(repo));
+        for (const repo of data) results.push(repo);
         if (data.length < limit) break;
         page++;
     }
@@ -334,59 +291,4 @@ async function fetchCodebergJson<T>(
     });
     if (!res.ok) return null;
     return res.json() as Promise<T>;
-}
-
-function toCodebergSyncRepo(repo: CodebergRepoResponse): CodebergSyncRepo {
-    return {
-        providerId: repo.id,
-        name: repo.name,
-        visibility: repo.private ? "private" : "public",
-        description: repo.description,
-        stars: repo.stars_count,
-        watchers: repo.watchers_count,
-        forks: repo.forks_count,
-        defaultBranch: repo.default_branch,
-        archived: repo.archived,
-        owner: {
-            providerId: repo.owner.id,
-            login: repo.owner.login,
-            avatarUrl: repo.owner.avatar_url ?? null,
-        },
-        permissions: repo.permissions
-            ? {
-                  admin: repo.permissions.admin,
-                  push: repo.permissions.push,
-                  pull: repo.permissions.pull,
-              }
-            : null,
-        rawData: repo,
-    };
-}
-
-function toSyncRepo(
-    repo: CodebergSyncRepo,
-    ownerType: "user" | "org",
-): SyncRepo {
-    return {
-        providerId: repo.providerId,
-        name: repo.name,
-        visibility: repo.visibility,
-        description: repo.description,
-        stars: repo.stars,
-        watchers: repo.watchers,
-        forks: repo.forks,
-        defaultBranch: repo.defaultBranch,
-        archived: repo.archived,
-        owner: { ...repo.owner, type: ownerType },
-        permissions: repo.permissions
-            ? {
-                  admin: repo.permissions.admin,
-                  maintain: false,
-                  push: repo.permissions.push,
-                  triage: false,
-                  pull: repo.permissions.pull,
-              }
-            : null,
-        rawData: repo.rawData,
-    };
 }

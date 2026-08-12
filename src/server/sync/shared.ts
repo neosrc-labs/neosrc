@@ -135,7 +135,7 @@ export function createSyncContext(
     return { ensureAccount, ensureRepo };
 }
 
-async function upsertAccount(
+export async function upsertAccount(
     executor: Executor,
     input: {
         provider: SyncProvider;
@@ -170,7 +170,7 @@ async function upsertAccount(
     return row.id;
 }
 
-async function upsertRepo(
+export async function upsertRepo(
     executor: Executor,
     input: {
         provider: SyncProvider;
@@ -187,6 +187,7 @@ async function upsertRepo(
         rawData: unknown;
     },
 ): Promise<number> {
+    const lastSynced = new Date();
     const [row] = await executor
         .insert(schema.repo)
         .values({
@@ -202,6 +203,7 @@ async function upsertRepo(
             archived: input.archived,
             accountId: input.accountId,
             rawData: input.rawData,
+            lastSynced,
         })
         .onConflictDoUpdate({
             target: [schema.repo.provider, schema.repo.providerId],
@@ -216,6 +218,7 @@ async function upsertRepo(
                 archived: input.archived,
                 accountId: input.accountId,
                 rawData: input.rawData,
+                lastSynced,
                 updatedAt: new Date(),
             },
         })

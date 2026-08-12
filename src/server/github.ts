@@ -7,7 +7,6 @@ import {
     prCacheKey,
     readCache,
     repoContributorsCacheKey,
-    repoDataCacheKey,
     repoDocFilesCacheKey,
     repoIssuePullCountsCacheKey,
     repoLanguagesCacheKey,
@@ -28,11 +27,17 @@ import {
     type StackEntry,
 } from "~/server/github-graphql";
 import {
+    getCachedRepoData,
+    getRepoPermissionForUser,
+    viewerRepoAccess,
+} from "~/server/repo-cache";
+import {
     buildStackSuggestion,
     MAX_STACK_SIZE,
     type StackCandidate,
     type StackSuggestion,
 } from "~/server/stack-suggestion";
+import { githubRepoToSyncRepo } from "~/server/sync/mappers";
 import {
     deduplicateCommitStatuses,
     mapStatusToCheckRun,
@@ -1842,6 +1847,7 @@ export const getGitHubTeam = cache(
 
 export const getRepo = cache(
     async (accessToken: string, owner: string, repo: string) => {
+        console.log("fetching repo");
         const octokit = createOctokit(accessToken);
         const response = await octokit.rest.repos.get({ owner, repo });
         return response.data;
@@ -1850,15 +1856,26 @@ export const getRepo = cache(
 
 export async function getCachedRepo(
     accessToken: string,
-    userId: string,
     owner: string,
     repo: string,
-) {
-    return withStaleWhileRevalidate(
-        repoDataCacheKey("gh", userId, owner, repo),
-        () => getRepo(accessToken, owner, repo),
-        { staleAfter: 5 * 60 * 1000, deleteAfter: 24 * 60 * 60 * 1000 },
-    );
+): Promise<RestEndpointMethodTypes["repos"]["get"]["response"]["data"]> {
+    return getCachedRepoData({
+        provider: "github",
+        owner,
+        repo,
+        staleAfterMs: 5 * 60 * 1000,
+        fetcher: async () => {
+            try {
+                return await getRepo(accessToken, owner, repo);
+            } catch (error) {
+                // A missing repo surfaces as a 404 from the REST client; any
+                // other failure (rate limit, outage) must propagate as-is.
+                if ((error as { status?: number }).status === 404) return null;
+                throw error;
+            }
+        },
+        toRepo: (payload) => githubRepoToSyncRepo(payload),
+    });
 }
 
 const getRepoIssuePullCounts = cache(
@@ -1935,18 +1952,31 @@ export interface RepoHeaderInfo {
 
 export async function getCachedRepoHeaderData(
     accessToken: string,
-    userId: string,
+    username: string | null,
     owner: string,
     repo: string,
 ): Promise<RepoHeaderInfo> {
-    const repoInfo = await getCachedRepo(accessToken, userId, owner, repo);
+    const [repoInfo, permission] = await Promise.all([
+        getCachedRepo(accessToken, owner, repo),
+        getRepoPermissionForUser("github", username, owner, repo),
+    ]);
+
+    const access = viewerRepoAccess({
+        username,
+        payload: repoInfo,
+        permission,
+    });
+    // The cached payload is shared across users; a viewer without a grant
+    // must not see a private repo through it.
+    if (!access.canView) notFound();
+
     return {
         hasIssues: repoInfo.has_issues,
         hasWiki: repoInfo.has_wiki,
         hasProjects: repoInfo.has_projects,
         hasDiscussions: repoInfo.has_discussions,
         isPrivate: repoInfo.private,
-        permissions: { admin: repoInfo.permissions?.admin ?? false },
+        permissions: { admin: access.admin },
         ownerAvatarUrl: repoInfo.owner.avatar_url,
     };
 }
