@@ -60,6 +60,16 @@ describe("githubRepoPermissionsToRelation", () => {
             ),
         ).toBe("admin");
     });
+
+    it("prefers maintainer over writer", () => {
+        // Pins the maintain-vs-push ordering; a regression swapping the two
+        // checks would silently map maintain+push repos to writer.
+        expect(
+            githubRepoPermissionsToRelation(
+                perms({ maintain: true, push: true }),
+            ),
+        ).toBe("maintainer");
+    });
 });
 
 describe("codebergRepoPermissionsToRelation", () => {
@@ -85,5 +95,15 @@ describe("codebergRepoPermissionsToRelation", () => {
                 perms({ admin: true, push: true, pull: true }),
             ),
         ).toBe("admin");
+    });
+
+    it("prefers writer over reader", () => {
+        // Pins the push-vs-pull ordering; a regression swapping the two
+        // checks would silently map push+pull repos to reader.
+        expect(
+            codebergRepoPermissionsToRelation(
+                perms({ push: true, pull: true }),
+            ),
+        ).toBe("writer");
     });
 });
