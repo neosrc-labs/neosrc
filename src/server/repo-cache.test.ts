@@ -192,10 +192,12 @@ describe("getCachedRepoData", () => {
         await getCachedRepoData(makeSource({ owner: "OwNeR", repo: "RePo-7" }));
 
         const condition = whereCalls[0]?.[0] as SQL;
-        const { params } = new PgDialect().sqlToQuery(condition);
+        const { sql: text, params } = new PgDialect().sqlToQuery(condition);
         expect(params).toEqual(
             expect.arrayContaining(["github", "owner", "repo-7"]),
         );
+        expect(text).toContain('lower("account"."username")');
+        expect(text).toContain('lower("repo"."name")');
     });
 
     it("fetches fresh when the cache read fails", async () => {
