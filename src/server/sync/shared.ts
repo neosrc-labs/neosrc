@@ -40,13 +40,15 @@ export type SyncResult = {
 export type StoredSyncState = {
     snapshotHash: string;
     updatedAt: Date;
+    /** When the stored snapshot was read from the provider; null pre-migration. */
+    snapshotFetchedAt: Date | null;
 };
 
 export type Db = NodePgDatabase<typeof schema>;
 
-// Insert/delete are the only operations the write helpers need, which lets
+// Insert/delete/select are the only operations these helpers need, which lets
 // them run against either the database or a transaction.
-export type Executor = Pick<Db, "insert" | "delete">;
+export type Executor = Pick<Db, "insert" | "delete" | "select">;
 
 export type SyncRepo = {
     providerId: number;
@@ -311,18 +313,18 @@ export function isSyncStateFresh(
 
 /** Last-applied snapshot state for a user's provider sync, if any. */
 export async function getStoredSyncState(
-    db: Db,
+    db: Executor,
     provider: SyncProvider,
     userId: string,
 ): Promise<StoredSyncState | null> {
-    // Note: this gate read is not locked. Overlapping syncs for the same
-    // user/provider are serialized by a per-provider advisory lock taken
-    // inside the write transaction; a stale gate simply causes one redundant
-    // re-sync, which the next poll corrects.
+    // Callers use this both for the unlocked recency/hash gate (a stale read
+    // there only causes one redundant re-sync) and for the ordering guard read
+    // taken while holding the per-user advisory lock.
     const [row] = await db
         .select({
             snapshotHash: schema.permissionsSyncState.snapshotHash,
             updatedAt: schema.permissionsSyncState.updatedAt,
+            snapshotFetchedAt: schema.permissionsSyncState.snapshotFetchedAt,
         })
         .from(schema.permissionsSyncState)
         .where(
@@ -337,10 +339,11 @@ export async function getStoredSyncState(
 
 /** Records the applied snapshot hash for a user's provider sync. */
 export async function storeSyncState(
-    db: Db,
+    db: Executor,
     provider: SyncProvider,
     userId: string,
     snapshotHash: string,
+    snapshotFetchedAt: Date,
 ): Promise<void> {
     await db
         .insert(schema.permissionsSyncState)
@@ -348,6 +351,7 @@ export async function storeSyncState(
             provider,
             userId,
             snapshotHash,
+            snapshotFetchedAt,
             updatedAt: new Date(),
         })
         .onConflictDoUpdate({
@@ -357,6 +361,7 @@ export async function storeSyncState(
             ],
             set: {
                 snapshotHash,
+                snapshotFetchedAt,
                 updatedAt: new Date(),
             },
         });

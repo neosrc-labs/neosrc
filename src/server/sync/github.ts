@@ -129,6 +129,10 @@ export async function syncCurrentUserGitHub(
         return result;
     }
 
+    // Snapshot ordering token: captured before the provider reads so the guard
+    // under the advisory lock can reject a snapshot older than the applied one.
+    const snapshotFetchedAt = new Date();
+
     const profile = await getAuthenticatedUser(input.accessToken);
 
     // Fetch the snapshot up front; the per-team GraphQL calls and all writes
@@ -178,6 +182,7 @@ export async function syncCurrentUserGitHub(
 
     const relations: RelationRow[] = [];
     const teamIds: number[] = [];
+    let didApply = false;
 
     await db.transaction(async (tx) => {
         // Serialize overlapping syncs for the same user/provider: the
@@ -187,6 +192,16 @@ export async function syncCurrentUserGitHub(
         await tx.execute(
             sql`SELECT pg_advisory_xact_lock(hashtext('github'), hashtext(${input.userId}))`,
         );
+        // Refuse to apply a snapshot older than the one already committed under
+        // this lock; otherwise an older concurrent sync could restore grants a
+        // newer sync just removed.
+        const applied = await getStoredSyncState(tx, "github", input.userId);
+        if (
+            applied?.snapshotFetchedAt &&
+            applied.snapshotFetchedAt.getTime() > snapshotFetchedAt.getTime()
+        ) {
+            return;
+        }
         const ctx = createSyncContext(tx, "github", result);
         const userAccountId = await ctx.ensureAccount({
             providerId: profile.id,
@@ -278,15 +293,22 @@ export async function syncCurrentUserGitHub(
             );
         }
         result.relationsWritten += await insertRelations(tx, relations);
+        // A skipped team means the snapshot is incomplete: leave the state
+        // unstored so the next poll re-attempts the team fetches instead of
+        // early-returning on the partial hash match.
+        if (result.teamsSkipped === 0) {
+            await storeSyncState(
+                tx,
+                "github",
+                input.userId,
+                snapshotHash,
+                snapshotFetchedAt,
+            );
+        }
+        didApply = true;
     });
 
-    await refreshPermissionsView(db);
-    // A skipped team means the snapshot is incomplete: record nothing so the
-    // next poll re-attempts the team fetches instead of early-returning on
-    // the (partial) hash match.
-    if (result.teamsSkipped === 0) {
-        await storeSyncState(db, "github", input.userId, snapshotHash);
-    }
+    if (didApply) await refreshPermissionsView(db);
     return result;
 }
 

@@ -334,6 +334,14 @@ export const permissionsSyncState = createTable(
             .notNull()
             .references(() => betterAuthUser.id),
         snapshotHash: d.text("snapshot_hash").notNull(),
+        // When the snapshot this row reflects was read from the provider. Used
+        // as a monotonic ordering token: a sync holding the per-user advisory
+        // lock refuses to apply a snapshot older than the one already stored,
+        // so an older concurrent sync cannot restore revoked grants.
+        snapshotFetchedAt: d.timestamp("snapshot_fetched_at", {
+            withTimezone: true,
+            mode: "date",
+        }),
         updatedAt: d
             .timestamp("updated_at", { withTimezone: true, mode: "date" })
             .notNull()

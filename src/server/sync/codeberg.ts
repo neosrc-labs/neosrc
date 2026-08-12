@@ -93,6 +93,10 @@ export async function syncCurrentUserCodeberg(
         return result;
     }
 
+    // Snapshot ordering token: captured before the provider reads so the guard
+    // under the advisory lock can reject a snapshot older than the applied one.
+    const snapshotFetchedAt = new Date();
+
     const profile = await getCodebergUser(input.accessToken);
     if (!profile) {
         throw new Error("Failed to fetch Codeberg profile");
@@ -114,6 +118,7 @@ export async function syncCurrentUserCodeberg(
     }
 
     const relations: RelationRow[] = [];
+    let didApply = false;
 
     await db.transaction(async (tx) => {
         // Serialize overlapping syncs for the same user/provider: the
@@ -123,6 +128,16 @@ export async function syncCurrentUserCodeberg(
         await tx.execute(
             sql`SELECT pg_advisory_xact_lock(hashtext('codeberg'), hashtext(${input.userId}))`,
         );
+        // Refuse to apply a snapshot older than the one already committed under
+        // this lock; otherwise an older concurrent sync could restore grants a
+        // newer sync just removed.
+        const applied = await getStoredSyncState(tx, "codeberg", input.userId);
+        if (
+            applied?.snapshotFetchedAt &&
+            applied.snapshotFetchedAt.getTime() > snapshotFetchedAt.getTime()
+        ) {
+            return;
+        }
         const ctx = createSyncContext(tx, "codeberg", result);
         const userAccountId = await ctx.ensureAccount({
             providerId: profile.id,
@@ -171,10 +186,17 @@ export async function syncCurrentUserCodeberg(
             userAccountId,
         ]);
         result.relationsWritten += await insertRelations(tx, relations);
+        await storeSyncState(
+            tx,
+            "codeberg",
+            input.userId,
+            snapshotHash,
+            snapshotFetchedAt,
+        );
+        didApply = true;
     });
 
-    await refreshPermissionsView(db);
-    await storeSyncState(db, "codeberg", input.userId, snapshotHash);
+    if (didApply) await refreshPermissionsView(db);
     return result;
 }
 

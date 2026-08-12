@@ -72,56 +72,66 @@ function deleteChain() {
  * storeSyncState run end to end.
  */
 function makeDb() {
-    const executor = {
-        insert: vi.fn(() => insertChain()),
-        delete: vi.fn(() => deleteChain()),
-        execute: vi.fn(async () => {}),
-    };
     const state = {
-        row: null as { snapshotHash: string; updatedAt: Date } | null,
+        row: null as {
+            snapshotHash: string;
+            updatedAt: Date;
+            snapshotFetchedAt?: Date | null;
+        } | null,
+    };
+    const selectImpl = () => ({
+        from: vi.fn(() => ({
+            where: vi.fn(() => ({
+                limit: vi.fn(async () =>
+                    state.row
+                        ? [
+                              {
+                                  snapshotHash: state.row.snapshotHash,
+                                  updatedAt: state.row.updatedAt,
+                                  snapshotFetchedAt:
+                                      state.row.snapshotFetchedAt ?? null,
+                              },
+                          ]
+                        : [],
+                ),
+            })),
+        })),
+    });
+    const insertImpl = (table: unknown) => {
+        if (table === schema.permissionsSyncState) {
+            return {
+                values: vi.fn(
+                    (values: {
+                        snapshotHash: string;
+                        snapshotFetchedAt: Date;
+                    }) => {
+                        state.row = {
+                            snapshotHash: values.snapshotHash,
+                            // Backdated past the recency window so later polls
+                            // exercise the hash gate, not the recency gate.
+                            updatedAt: new Date(Date.now() - 6 * 60 * 1000),
+                            snapshotFetchedAt: values.snapshotFetchedAt,
+                        };
+                        return { onConflictDoUpdate: vi.fn(async () => {}) };
+                    },
+                ),
+            };
+        }
+        return insertChain();
+    };
+    const executor = {
+        insert: vi.fn(insertImpl),
+        delete: vi.fn(() => deleteChain()),
+        select: vi.fn(selectImpl),
+        execute: vi.fn(async () => {}),
     };
     const db = {
         transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
             fn(executor),
         ),
         execute: vi.fn(async () => {}),
-        select: vi.fn(() => ({
-            from: vi.fn(() => ({
-                where: vi.fn(() => ({
-                    limit: vi.fn(async () =>
-                        state.row
-                            ? [
-                                  {
-                                      snapshotHash: state.row.snapshotHash,
-                                      updatedAt: state.row.updatedAt,
-                                  },
-                              ]
-                            : [],
-                    ),
-                })),
-            })),
-        })),
-        insert: vi.fn((table: unknown) => {
-            if (table === schema.permissionsSyncState) {
-                return {
-                    values: vi.fn(
-                        (values: { snapshotHash: string; updatedAt: Date }) => {
-                            state.row = {
-                                snapshotHash: values.snapshotHash,
-                                // Backdated past the recency window so later
-                                // polls exercise the hash gate, not the
-                                // recency gate.
-                                updatedAt: new Date(Date.now() - 6 * 60 * 1000),
-                            };
-                            return {
-                                onConflictDoUpdate: vi.fn(async () => {}),
-                            };
-                        },
-                    ),
-                };
-            }
-            return insertChain();
-        }),
+        select: vi.fn(selectImpl),
+        insert: vi.fn(insertImpl),
     };
     return { executor, db, state };
 }
@@ -477,6 +487,57 @@ describe("syncCurrentUserGitHub incremental gate", () => {
         expect(result.relationsWritten).toBe(1);
     });
 
+    it("refuses to restore access from a snapshot older than the applied one", async () => {
+        const { db, executor, state } = makeDb();
+        // A newer sync already committed under the lock, having read its
+        // snapshot in the future relative to this run.
+        const newerFetchedAt = new Date(Date.now() + 60_000);
+        state.row = {
+            snapshotHash: "newer-hash",
+            updatedAt: new Date(Date.now() - 6 * 60 * 1000),
+            snapshotFetchedAt: newerFetchedAt,
+        };
+        // This older run still sees a grant the newer sync had revoked.
+        octokit.repos.listForAuthenticatedUser.mockResolvedValue({
+            data: [
+                {
+                    id: 7,
+                    name: "granted",
+                    private: false,
+                    owner: {
+                        id: 2,
+                        login: "other",
+                        avatar_url: null,
+                        type: "User",
+                    },
+                    permissions: {
+                        admin: false,
+                        maintain: false,
+                        push: false,
+                        triage: false,
+                        pull: true,
+                    },
+                },
+            ],
+        });
+
+        // forceFull bypasses the recency and hash gates, so only the ordering
+        // guard under the lock can stop the stale write.
+        const result = await syncCurrentUserGitHub(db as never, {
+            accessToken: "tok",
+            userId: "u1",
+            forceRecent: false,
+            forceFull: true,
+        });
+
+        expect(executor.execute).toHaveBeenCalledTimes(1); // lock acquired
+        expect(executor.insert).not.toHaveBeenCalled(); // no upserts or store
+        expect(executor.delete).not.toHaveBeenCalled(); // relations untouched
+        expect(db.execute).not.toHaveBeenCalled(); // no view refresh
+        expect(result).toEqual(EMPTY_RESULT);
+        expect(state.row?.snapshotFetchedAt).toEqual(newerFetchedAt);
+    });
+
     it("does not commit sync state when a team fetch was skipped", async () => {
         octokit.teams.listForAuthenticatedUser.mockResolvedValue({
             data: [
@@ -573,6 +634,34 @@ describe("syncCurrentUserCodeberg incremental gate", () => {
         expect(db.transaction).toHaveBeenCalledTimes(writesAfterFirst);
         expect(db.execute).toHaveBeenCalledTimes(1);
         expect(state.row).not.toBeNull();
+    });
+
+    it("refuses to restore access from a snapshot older than the applied one", async () => {
+        const { db, executor, state } = makeDb();
+        // A newer sync already committed under the lock, having read its
+        // snapshot in the future relative to this run.
+        const newerFetchedAt = new Date(Date.now() + 60_000);
+        state.row = {
+            snapshotHash: "newer-hash",
+            updatedAt: new Date(Date.now() - 6 * 60 * 1000),
+            snapshotFetchedAt: newerFetchedAt,
+        };
+
+        // forceFull bypasses the recency and hash gates, so only the ordering
+        // guard under the lock can stop the stale write.
+        const result = await syncCurrentUserCodeberg(db as never, {
+            accessToken: "tok",
+            userId: "u1",
+            forceRecent: false,
+            forceFull: true,
+        });
+
+        expect(executor.execute).toHaveBeenCalledTimes(1); // lock acquired
+        expect(executor.insert).not.toHaveBeenCalled(); // no upserts or store
+        expect(executor.delete).not.toHaveBeenCalled(); // relations untouched
+        expect(db.execute).not.toHaveBeenCalled(); // no view refresh
+        expect(result).toEqual(EMPTY_RESULT);
+        expect(state.row?.snapshotFetchedAt).toEqual(newerFetchedAt);
     });
 
     it("short-circuits without fetching inputs when the last sync is fresh", async () => {

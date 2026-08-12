@@ -1,0 +1,1 @@
+ALTER TABLE "permissions_sync_state" ADD COLUMN "snapshot_fetched_at" timestamp with time zone;
