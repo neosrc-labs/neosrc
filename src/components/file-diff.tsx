@@ -697,7 +697,7 @@ function FileDiffHeader({
     return (
         <div
             ref={headerRef}
-            className="sticky top-[64px] z-[1] flex items-center gap-2 border-border border-b bg-surface-secondary px-4 py-2"
+            className="sticky top-[64px] z-[1] flex items-center gap-2 rounded-t border-border border-b bg-surface-secondary px-4 py-2"
         >
             <button
                 className="cursor-pointer text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"

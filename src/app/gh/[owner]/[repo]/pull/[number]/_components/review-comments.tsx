@@ -338,7 +338,7 @@ export function ReviewComments({
                         data-testid="review-thread-block"
                         className="mt-3 rounded border border-border"
                     >
-                        <div className="flex items-center gap-2 border-border border-b bg-surface-secondary px-4 py-2">
+                        <div className="flex items-center gap-2 rounded-t border-border border-b bg-surface-secondary px-4 py-2">
                             <span className="flex-1 truncate font-mono text-text-label text-xs">
                                 {comment.path}
                             </span>

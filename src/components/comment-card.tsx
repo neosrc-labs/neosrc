@@ -124,7 +124,7 @@ export function CommentCard({
             <div
                 className={`flex items-center justify-between gap-2 px-4 py-2 ${
                     variant === "standalone"
-                        ? "border-border border-b bg-surface-secondary"
+                        ? "rounded-t border-border border-b bg-surface-secondary"
                         : ""
                 }`}
             >
