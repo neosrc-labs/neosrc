@@ -1,4 +1,5 @@
 import { graphql as octokitGraphql } from "@octokit/graphql";
+import { sql } from "drizzle-orm";
 
 import {
     createOctokit,
@@ -166,6 +167,13 @@ export async function syncCurrentUserGitHub(
     const teamIds: number[] = [];
 
     await db.transaction(async (tx) => {
+        // Serialize overlapping syncs for the same user/provider: the
+        // delete-then-insert replace below is not idempotent under overlap,
+        // and without the lock a stale snapshot could commit last and leave
+        // revoked grants visible past the hash gate.
+        await tx.execute(
+            sql`SELECT pg_advisory_xact_lock(hashtext('github'), hashtext(${input.userId}))`,
+        );
         const ctx = createSyncContext(tx, "github", result);
         const userAccountId = await ctx.ensureAccount({
             providerId: profile.id,

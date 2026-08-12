@@ -70,11 +70,12 @@ function deleteChain() {
     return { where: vi.fn(() => chain) };
 }
 
-/** Minimal db/tx stand-in: the flows only touch transaction + execute. */
+/** Minimal db/tx stand-in: the flows only touch transaction, execute, insert, delete. */
 function makeDb() {
     const executor = {
         insert: vi.fn(() => insertChain()),
         delete: vi.fn(() => deleteChain()),
+        execute: vi.fn(async () => {}),
     };
     return {
         executor,
@@ -280,7 +281,7 @@ describe("syncCurrentUserGitHub incremental gate", () => {
     });
 
     it("performs a full sync on the first run and stores the snapshot hash", async () => {
-        const { db } = makeDb();
+        const { db, executor } = makeDb();
         const result = await syncCurrentUserGitHub(db as never, {
             accessToken: "tok",
             userId: "u1",
@@ -289,6 +290,7 @@ describe("syncCurrentUserGitHub incremental gate", () => {
         });
 
         expect(db.transaction).toHaveBeenCalledTimes(1);
+        expect(executor.execute).toHaveBeenCalledTimes(1); // advisory lock
         expect(db.execute).toHaveBeenCalledTimes(1); // refreshPermissionsView
         expect(storeSyncStateMock).toHaveBeenCalledTimes(1);
         expect(result.accountsUpserted).toBe(1); // the user account row
