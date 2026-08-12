@@ -87,6 +87,8 @@ async function getRepoData(
             ),
             getCachedRepoCounts(token, userId, owner, repo),
         ]);
+        // Unauthorized viewer of a private repo: no repo data in the header.
+        if (!headerData) return null;
         return {
             ...headerData,
             openIssuesCount: counts.openIssuesCount,
@@ -105,6 +107,7 @@ async function getRepoData(
         ),
         getCachedRepoIssuePullCounts(token, userId, owner, repo),
     ]);
+    if (!headerData) return null;
     return {
         ...headerData,
         openIssuesCount: counts?.openIssuesCount ?? 0,

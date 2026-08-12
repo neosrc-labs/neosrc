@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { cache } from "react";
 import {
     repoIssuePullCountsCacheKey,
@@ -1075,7 +1074,7 @@ export async function getCachedRepoHeaderData(
     username: string | null,
     owner: string,
     repo: string,
-): Promise<CodebergRepoHeaderInfo> {
+): Promise<CodebergRepoHeaderInfo | null> {
     const [repoInfo, permission] = await Promise.all([
         getCachedRepo(accessToken, owner, repo),
         getRepoPermissionForUser("codeberg", username, owner, repo),
@@ -1087,8 +1086,10 @@ export async function getCachedRepoHeaderData(
         permission,
     });
     // The cached payload is shared across users; a viewer without a grant
-    // must not see a private repo through it.
-    if (!access.canView) notFound();
+    // must not see a private repo through it. Callers decide how to surface
+    // the denial (this is resolved into a promise the header consumes, so a
+    // server notFound() here could never produce a 404).
+    if (!access.canView) return null;
 
     return {
         hasIssues: repoInfo.has_issues,
