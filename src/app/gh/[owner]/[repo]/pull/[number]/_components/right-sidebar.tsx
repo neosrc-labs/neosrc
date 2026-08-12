@@ -1,17 +1,18 @@
 "use client";
 
-import { Check, Circle, CircleSlash, CircleX, X, XCircle } from "lucide-react";
+import { Check, Circle, CircleSlash, XCircle } from "lucide-react";
 import Image from "next/image";
 import { use, useRef, useState } from "react";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
 import { GitHubIcon } from "~/components/icons";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "~/components/ui/tooltip";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
-import {
-    type CheckStatusRollup,
-    computeCheckStatusRollup,
-    computeChecksPollingInterval,
-} from "~/utils/checks-polling";
+import { computeChecksPollingInterval } from "~/utils/checks-polling";
 import { CommitsSection } from "./commits-section";
 import { MetadataSection } from "./metadata-section";
 
@@ -24,22 +25,177 @@ interface RightSidebarProps {
     number: number;
 }
 
-function RollupIcon({ rollup }: { rollup: CheckStatusRollup | null }) {
-    if (rollup === "SUCCESS") {
-        return <Check className="size-3.5 text-green-600" />;
+// Ordered categories for the checks breakdown. Each check is assigned to the
+// first matching category; anything unmatched falls through to "other". The
+// colors mirror the Tailwind palette used elsewhere for check states and drive
+// both the progress-ring arcs and the tooltip legend dots.
+const CHECK_CATEGORIES: {
+    label: string;
+    color: string;
+    match: (check: CheckRun) => boolean;
+}[] = [
+    {
+        label: "pending",
+        color: "#eab308",
+        match: (c) => c.status !== "completed",
+    },
+    {
+        label: "passed",
+        color: "#16a34a",
+        match: (c) => c.conclusion === "success",
+    },
+    {
+        label: "failed",
+        color: "#dc2626",
+        match: (c) =>
+            c.conclusion === "failure" ||
+            c.conclusion === "error" ||
+            c.conclusion === "timed_out",
+    },
+    {
+        label: "action required",
+        color: "#ca8a04",
+        match: (c) => c.conclusion === "action_required",
+    },
+    {
+        label: "skipped",
+        color: "#9ca3af",
+        match: (c) => c.conclusion === "skipped",
+    },
+    {
+        label: "cancelled",
+        color: "#9ca3af",
+        match: (c) => c.conclusion === "cancelled",
+    },
+    {
+        label: "neutral",
+        color: "#6b7280",
+        match: (c) => c.conclusion === "neutral",
+    },
+];
+
+const OTHER_CATEGORY_COLOR = "#6b7280";
+
+function checkBreakdown(
+    checks: CheckRun[],
+): { label: string; color: string; count: number }[] {
+    const counts = CHECK_CATEGORIES.map((cat) => ({ ...cat, count: 0 }));
+    let other = 0;
+    for (const check of checks) {
+        const bucket = counts.find((cat) => cat.match(check));
+        if (bucket) {
+            bucket.count++;
+        } else {
+            other++;
+        }
     }
-    if (rollup === "FAILURE" || rollup === "ERROR" || rollup === "TIMED_OUT") {
-        return <X className="size-3.5 text-red-600" />;
+    const result = counts
+        .filter((entry) => entry.count > 0)
+        .map((entry) => ({
+            label: entry.label,
+            color: entry.color,
+            count: entry.count,
+        }));
+    if (other > 0) {
+        result.push({
+            label: "other",
+            color: OTHER_CATEGORY_COLOR,
+            count: other,
+        });
     }
-    if (rollup === "CANCELLED") {
-        return <CircleX className="size-3.5 text-text-muted" />;
-    }
-    if (rollup === "IN_PROGRESS" || rollup === "PENDING") {
-        return (
+    return result;
+}
+
+function ChecksRing({
+    checks,
+    className,
+}: {
+    checks: CheckRun[];
+    className?: string;
+}) {
+    const total = checks.length;
+    const segments = checkBreakdown(checks);
+
+    let offset = 0;
+    return (
+        <svg viewBox="0 0 36 36" className={className} aria-hidden="true">
+            <circle
+                cx="18"
+                cy="18"
+                r="15.9155"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4"
+                className="text-border-subtle"
+            />
+            {segments.map((segment) => {
+                const pct = (segment.count / total) * 100;
+                const arc = (
+                    <circle
+                        key={segment.label}
+                        cx="18"
+                        cy="18"
+                        r="15.9155"
+                        fill="none"
+                        stroke={segment.color}
+                        strokeWidth="4"
+                        pathLength={100}
+                        strokeDasharray={`${pct} ${100 - pct}`}
+                        strokeDashoffset={-offset}
+                        transform="rotate(-90 18 18)"
+                    />
+                );
+                offset += pct;
+                return arc;
+            })}
+        </svg>
+    );
+}
+
+function ChecksTabIcon({ checks }: { checks: CheckRun[] }) {
+    let icon: React.ReactNode;
+    if (!checks.length) {
+        icon = <Circle className="size-3.5 text-text-muted" />;
+    } else if (checks.some((c) => c.status !== "completed")) {
+        icon = (
             <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
         );
+    } else if (checks.every((c) => c.conclusion === "success")) {
+        icon = <Check className="size-3.5 text-green-600" />;
+    } else {
+        icon = <ChecksRing checks={checks} className="size-3.5" />;
     }
-    return <Circle className="size-3.5 text-text-muted" />;
+
+    const breakdown = checkBreakdown(checks);
+    if (!breakdown.length) {
+        return icon;
+    }
+
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="flex items-center">{icon}</span>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+                <div className="flex flex-col gap-1">
+                    {breakdown.map((entry) => (
+                        <div
+                            key={entry.label}
+                            className="flex items-center gap-1.5"
+                        >
+                            <span
+                                className="size-2 shrink-0 rounded-full"
+                                style={{ backgroundColor: entry.color }}
+                            />
+                            <span>
+                                {entry.count} {entry.label}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </TooltipContent>
+        </Tooltip>
+    );
 }
 
 export default function RightSidebar({
@@ -85,7 +241,6 @@ export default function RightSidebar({
 
     const displayChecks = checks ?? initialChecks;
     const checkCount = displayChecks?.length ?? 0;
-    const rollup = computeCheckStatusRollup(displayChecks ?? []);
 
     if (!pullRequestPromise) {
         return (
@@ -109,7 +264,7 @@ export default function RightSidebar({
             ? [
                   {
                       key: "checks" as const,
-                      icon: <RollupIcon rollup={rollup} />,
+                      icon: <ChecksTabIcon checks={displayChecks ?? []} />,
                       label: `Checks (${checkCount})`,
                   },
               ]
