@@ -18,6 +18,17 @@ import { upsertAccount, upsertRepo } from "./sync/shared";
  * upsert before returning.
  */
 
+/**
+ * Thrown by the repo cache when the source fetcher reports the repo is absent
+ * or unreadable. Callers identify the miss by type rather than by message.
+ */
+export class RepoNotFoundError extends Error {
+    constructor() {
+        super("Repo not found");
+        this.name = "RepoNotFoundError";
+    }
+}
+
 export type CachedRepoSource<T> = {
     provider: SyncProvider;
     /** Owner login/username, as it appears in the URL slug. */
@@ -126,7 +137,7 @@ export async function getCachedRepoData<T>(
 
     async function refresh(): Promise<T> {
         const payload = await source.fetcher();
-        if (!payload) throw new Error("Repo not found");
+        if (!payload) throw new RepoNotFoundError();
         try {
             const mapped = source.toRepo(payload);
             const ownerAccountId = await upsertAccount(db, {

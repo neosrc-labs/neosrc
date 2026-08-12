@@ -66,6 +66,7 @@ import {
 import { getTopRepositories } from "~/server/github-graphql";
 import {
     getRepoPermissionForUser,
+    RepoNotFoundError,
     viewerRepoAccess,
 } from "~/server/repo-cache";
 
@@ -78,7 +79,7 @@ async function repoNotFoundAsTrpc<T>(promise: Promise<T>): Promise<T> {
     try {
         return await promise;
     } catch (error) {
-        if (error instanceof Error && error.message === "Repo not found") {
+        if (error instanceof RepoNotFoundError) {
             throw new TRPCError({ code: "NOT_FOUND" });
         }
         throw error;
