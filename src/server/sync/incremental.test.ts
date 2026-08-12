@@ -194,7 +194,9 @@ function makeOctokitMock() {
             })),
         },
         teams: {
-            listForAuthenticatedUser: vi.fn(async () => ({ data: [] })),
+            listForAuthenticatedUser: vi.fn(async () => ({
+                data: [] as unknown[],
+            })),
         },
     };
 }
