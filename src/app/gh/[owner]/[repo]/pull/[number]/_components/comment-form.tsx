@@ -4,6 +4,7 @@ import { Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { MarkdownEditor } from "~/components/markdown/markdown-editor";
+import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { GQLIssueComment } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
@@ -21,7 +22,9 @@ export function CommentForm({
     number,
     disabled,
 }: CommentFormProps) {
-    const [body, setBody] = useState("");
+    const commentKey = `pr-autosave:comment:${owner}:${repo}:${number}`;
+    const [body, setBody] = useState(() => readAutosave(commentKey) ?? "");
+    const { clear: clearComment } = useAutosave(commentKey, body);
     const router = useRouter();
     const utils = api.useUtils();
     const { data: currentUserData } = api.users.currentUser.useQuery();
@@ -93,6 +96,9 @@ export function CommentForm({
                 );
             }
             setBody(body);
+        },
+        onSuccess: () => {
+            clearComment();
         },
         onSettled: () => {
             utils.timeline.list.invalidate({

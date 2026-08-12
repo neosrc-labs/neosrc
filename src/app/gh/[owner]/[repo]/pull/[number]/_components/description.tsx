@@ -21,6 +21,7 @@ import {
     extractPullRequestState,
     StatusPill,
 } from "~/components/ui/status-pill";
+import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import type { ReactionContent } from "~/lib/reactions";
 import type { PullsGetResponseData, StackSuggestion } from "~/server/github";
 import { ConflictedFiles } from "./conflicted-files";
@@ -61,7 +62,11 @@ export function PullRequestDescriptionSection({
     stackSuggestionPromise,
 }: PullRequestDescriptionSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
-    const [editBody, setEditBody] = useState("");
+    const descBodyKey = `pr-autosave:desc-body:${owner}:${repo}:${number}`;
+    const [editBody, setEditBody] = useState(
+        () => readAutosave(descBodyKey) ?? "",
+    );
+    const { clear: clearDescBody } = useAutosave(descBodyKey, editBody);
     const [savedBody, setSavedBody] = useState<string | null>(null);
     const [stackDialogOpen, setStackDialogOpen] = useState(false);
     const [stackBannerDismissed, setStackBannerDismissed] = useLocalStorage(
@@ -76,6 +81,10 @@ export function PullRequestDescriptionSection({
         onError: () => {
             setSavedBody(null);
             setIsEditing(true);
+        },
+        onSuccess: () => {
+            clearDescBody();
+            setEditBody("");
         },
     });
 
@@ -196,7 +205,7 @@ export function PullRequestDescriptionSection({
     );
 
     const handleStartEdit = useCallback((currentBody: string) => {
-        setEditBody(currentBody);
+        setEditBody((prev) => prev || currentBody);
         setIsEditing(true);
     }, []);
 
@@ -519,9 +528,13 @@ function TitleRow({
     pullRequestPromise: Promise<PullsGetResponseData>;
     canInteractPromise: Promise<boolean>;
 }) {
+    const titleKey = `pr-autosave:desc-title:${owner}:${repo}:${number}`;
     const [isEditingTitle, setIsEditingTitle] = useState(false);
-    const [editTitle, setEditTitle] = useState("");
+    const [editTitle, setEditTitle] = useState(
+        () => readAutosave(titleKey) ?? "",
+    );
     const [savedTitle, setSavedTitle] = useState<string | null>(null);
+    const { clear: clearTitle } = useAutosave(titleKey, editTitle);
 
     const updateTitleMutation = api.pulls.updateTitle.useMutation({
         onMutate: () => {
@@ -532,10 +545,14 @@ function TitleRow({
             setSavedTitle(null);
             setIsEditingTitle(true);
         },
+        onSuccess: () => {
+            clearTitle();
+            setEditTitle("");
+        },
     });
 
     const handleStartEditTitle = useCallback((currentTitle: string) => {
-        setEditTitle(currentTitle);
+        setEditTitle((prev) => prev || currentTitle);
         setIsEditingTitle(true);
     }, []);
 

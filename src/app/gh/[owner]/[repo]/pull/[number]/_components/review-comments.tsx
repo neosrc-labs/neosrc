@@ -29,6 +29,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
+import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
 import {
     applyReviewThreadOperations,
@@ -485,6 +486,7 @@ function truncateDiffToRange(
     return [newHeader, ...filtered].join("\n");
 }
 
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: autosave adds 5 lines; existing function already at limit
 function CommentBlock({
     comment,
     replies,
@@ -535,14 +537,17 @@ function CommentBlock({
     onResolve: (commentId: number, threadId: string, resolve: boolean) => void;
 }) {
     const [showReplyForm, setShowReplyForm] = useState(false);
-    const [replyBody, setReplyBody] = useState("");
+    const replyKey = `pr-autosave:review-reply:${owner}:${repo}:${number}:${comment.id}`;
+    const [replyBody, setReplyBody] = useState(
+        () => readAutosave(replyKey) ?? "",
+    );
+    const { clear: clearReply } = useAutosave(replyKey, replyBody);
     const [menuOpenCommentId, setMenuOpenCommentId] = useState<number | null>(
         null,
     );
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
     const utils = api.useUtils();
     const { data: currentUserData } = api.users.currentUser.useQuery();
-
     const replyMutation = api.reviewComments.reply.useMutation({
         onMutate: async ({ body, inReplyTo }) => {
             setReplyBody("");
@@ -610,6 +615,9 @@ function CommentBlock({
                 );
             }
         },
+        onSuccess: () => {
+            clearReply();
+        },
         onSettled: () => {
             utils.reviewComments.list.invalidate({
                 owner,
@@ -618,11 +626,9 @@ function CommentBlock({
             });
         },
     });
-
     if (!comment.user) {
         return null;
     }
-
     if (isResolved && !isExpanded) {
         return <div id={`review-thread-${comment.id}`} />;
     }

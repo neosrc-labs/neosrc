@@ -18,6 +18,7 @@ import {
     extractPullRequestState,
     StatusPill,
 } from "~/components/ui/status-pill";
+import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useLocalStorage } from "~/hooks/use-local-storage";
 import type { RepositoryInfo } from "~/server/api/routers/repos";
 import type { PendingReview } from "~/server/api/routers/reviews";
@@ -526,7 +527,9 @@ function SubmitReviewButton({
 }) {
     const utils = api.useUtils();
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-    const [body, setBody] = useState("");
+    const reviewBodyKey = `pr-autosave:review-body:${owner}:${repo}:${number}`;
+    const [body, setBody] = useState(() => readAutosave(reviewBodyKey) ?? "");
+    const { clear: clearReviewBody } = useAutosave(reviewBodyKey, body);
     const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
     const approveMutation = api.pulls.approve.useMutation({
@@ -552,6 +555,7 @@ function SubmitReviewButton({
                 setIsPopoverOpen(false);
                 setBody("");
                 setShowDiscardConfirm(false);
+                clearReviewBody();
             };
 
             if (pendingReview) {
@@ -583,6 +587,7 @@ function SubmitReviewButton({
             body,
             approveMutation,
             submitReviewMutation,
+            clearReviewBody,
         ],
     );
     return (
@@ -749,12 +754,25 @@ function RevertButton({
     const utils = api.useUtils();
     const router = useRouter();
     const [isRevertPopoverOpen, setIsRevertPopoverOpen] = useState(false);
-    const [revertTitle, setRevertTitle] = useState("");
-    const [revertBody, setRevertBody] = useState("");
+    const revertTitleKey = `pr-autosave:revert-title:${owner}:${repo}:${number}`;
+    const revertBodyKey = `pr-autosave:revert-body:${owner}:${repo}:${number}`;
+    const [revertTitle, setRevertTitle] = useState(
+        () => readAutosave(revertTitleKey) ?? "",
+    );
+    const [revertBody, setRevertBody] = useState(
+        () => readAutosave(revertBodyKey) ?? "",
+    );
     const [revertDraft, setRevertDraft] = useState(false);
+    const { clear: clearRevertTitle } = useAutosave(
+        revertTitleKey,
+        revertTitle,
+    );
+    const { clear: clearRevertBody } = useAutosave(revertBodyKey, revertBody);
 
     const revertMutation = api.pulls.revert.useMutation({
         onSuccess: (data) => {
+            clearRevertTitle();
+            clearRevertBody();
             setIsRevertPopoverOpen(false);
             utils.timeline.list.invalidate();
             utils.reviews.getPending.invalidate();
@@ -766,8 +784,10 @@ function RevertButton({
 
     const openRevertDialog = useCallback(
         (pullRequest: PullsGetResponseData) => {
-            setRevertTitle(`Revert "${pullRequest.title}"`);
-            setRevertBody(`Reverts ${owner}/${repo}#${number}`);
+            setRevertTitle((prev) => prev || `Revert "${pullRequest.title}"`);
+            setRevertBody(
+                (prev) => prev || `Reverts ${owner}/${repo}#${number}`,
+            );
             setRevertDraft(false);
             setIsRevertPopoverOpen(true);
         },

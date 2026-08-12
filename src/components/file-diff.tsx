@@ -15,6 +15,7 @@ function isLineComment(c: ReviewComment): boolean {
     return !isFileLevelComment(c);
 }
 
+import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { api } from "~/trpc/react";
 import { isGeneratedFile } from "~/utils/generated-files";
 import { isImageFile } from "~/utils/image-file";
@@ -81,6 +82,7 @@ export default function FileDiff({
         toggleViewed,
         onToggleFileComment,
         isFileCommentOpen,
+        clearComment,
     } = useFileDiffState({ owner, repo, number, filename: file.filename });
 
     const recentlyAddedIds = useRef(new Set<number>());
@@ -180,6 +182,7 @@ export default function FileDiff({
         recentlyAddedIds,
         setActiveComment,
         setCommentBody,
+        onCommentSuccess: clearComment,
     });
 
     return (
@@ -288,7 +291,11 @@ function useFileDiffState({
     const [activeComment, setActiveComment] = useState<ActiveComment | null>(
         null,
     );
-    const [commentBody, setCommentBody] = useState("");
+    const commentKey = `pr-autosave:inline:${owner}:${repo}:${number}:${filename}`;
+    const [commentBody, setCommentBody] = useState(
+        () => readAutosave(commentKey) ?? "",
+    );
+    const { clear: clearComment } = useAutosave(commentKey, commentBody);
     const [expandedAll, setExpandedAll] = useState(false);
     const headerRef = useRef<HTMLDivElement>(null);
 
@@ -374,6 +381,7 @@ function useFileDiffState({
         toggleViewed,
         onToggleFileComment,
         isFileCommentOpen: activeComment?.type === "file",
+        clearComment,
     };
 }
 
@@ -389,6 +397,7 @@ interface UseFileCommentActionsParams {
     recentlyAddedIds: React.RefObject<Set<number>>;
     setActiveComment: (comment: ActiveComment | null) => void;
     setCommentBody: (body: string) => void;
+    onCommentSuccess: () => void;
 }
 
 function useFileCommentActions({
@@ -403,6 +412,7 @@ function useFileCommentActions({
     recentlyAddedIds,
     setActiveComment,
     setCommentBody,
+    onCommentSuccess,
 }: UseFileCommentActionsParams) {
     const utils = api.useUtils();
     const { data: currentUserData } = api.users.currentUser.useQuery();
@@ -450,6 +460,7 @@ function useFileCommentActions({
             }
         },
         onSuccess: (data) => {
+            onCommentSuccess();
             if (!showComments && data?.id) {
                 recentlyAddedIds.current.add(data.id);
             }

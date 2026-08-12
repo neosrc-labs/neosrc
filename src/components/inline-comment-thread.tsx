@@ -27,6 +27,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
+import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
 import {
     applyReviewThreadOperations,
@@ -72,6 +73,7 @@ interface InlineCommentThreadProps {
     canInteract?: boolean;
 }
 
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: autosave adds 5 lines; existing function already at limit
 export function InlineCommentThread({
     parentComment,
     replies,
@@ -91,7 +93,11 @@ export function InlineCommentThread({
     const [showReplyForm, setShowReplyForm] = useState(
         () => savedState?.visible ?? false,
     );
-    const [replyBody, setReplyBody] = useState(() => savedState?.body ?? "");
+    const replyKey = `pr-autosave:reply:${owner}:${repo}:${number}:${threadIdentity}`;
+    const [replyBody, setReplyBody] = useState(
+        () => readAutosave(replyKey) ?? savedState?.body ?? "",
+    );
+    const { clear: clearReply } = useAutosave(replyKey, replyBody);
     const [expandedResolved, setExpandedResolved] = useState(false);
     const [editingCommentId, setEditingCommentId] = useState<number | null>(
         null,
@@ -201,6 +207,9 @@ export function InlineCommentThread({
                     ctx.prevData,
                 );
             }
+        },
+        onSuccess: () => {
+            clearReply();
         },
         onSettled: () => {
             utils.reviewComments.list.invalidate({
