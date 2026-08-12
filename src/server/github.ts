@@ -58,8 +58,6 @@ export type PullsGetResponseData =
             position: number;
         };
     };
-export type PullsListCommitsResponseData =
-    RestEndpointMethodTypes["pulls"]["listCommits"]["response"]["data"];
 export type CommitData =
     RestEndpointMethodTypes["repos"]["getCommit"]["response"]["data"];
 export type Label = NonNullable<PullsGetResponseData["labels"]>[number];
@@ -395,23 +393,6 @@ export const listPullRequests = cache(
             pulls: response.data,
             hasNext: response.data.length >= perPage,
         };
-    },
-);
-
-export const getPullRequestCommits = cache(
-    async (
-        accessToken: string,
-        owner: string,
-        repo: string,
-        pullNumber: number,
-    ) => {
-        const octokit = createOctokit(accessToken);
-        const response = await octokit.pulls.listCommits({
-            owner,
-            repo,
-            pull_number: pullNumber,
-        });
-        return response.data;
     },
 );
 

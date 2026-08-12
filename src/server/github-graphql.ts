@@ -1825,6 +1825,30 @@ export async function getPullRequestCommitsGraphQL(
     };
 }
 
+export async function getAllPullRequestCommitsGraphQL(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+): Promise<GQLCommitWithAuthors[]> {
+    const commits: GQLCommitWithAuthors[] = [];
+    let after: string | undefined;
+    while (true) {
+        const page = await getPullRequestCommitsGraphQL(
+            accessToken,
+            owner,
+            repo,
+            pullNumber,
+            100,
+            after,
+        );
+        commits.push(...page.commits);
+        if (!page.hasNext || page.endCursor === undefined) break;
+        after = page.endCursor;
+    }
+    return commits;
+}
+
 export async function getPullRequestHeadShaGraphQL(
     accessToken: string,
     owner: string,

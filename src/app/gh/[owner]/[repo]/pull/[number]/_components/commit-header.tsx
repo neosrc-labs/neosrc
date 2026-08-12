@@ -1,10 +1,11 @@
 import Image from "next/image";
 import { CommitSubject } from "~/components/commit-subject";
-import type { CommitData, PullsListCommitsResponseData } from "~/server/github";
+import type { CommitData } from "~/server/github";
+import type { GQLCommitWithAuthors } from "~/server/github-graphql";
 
 interface CommitHeaderProps {
     commitPromise: Promise<CommitData> | null;
-    commitsPromise: Promise<PullsListCommitsResponseData> | null;
+    commitsPromise: Promise<GQLCommitWithAuthors[]> | null;
     owner: string;
     repo: string;
     number: number;
@@ -26,7 +27,9 @@ export async function CommitHeader({
     const commit = await commitPromise;
     const commits = await commitsPromise;
 
-    const currentIndex = commits.findIndex((c) => c.sha === commitSha);
+    const currentIndex = commitSha
+        ? commits.findIndex((c) => c.oid.startsWith(commitSha))
+        : -1;
     const prevCommit = currentIndex > 0 ? commits[currentIndex - 1] : null;
     const nextCommit =
         currentIndex >= 0 && currentIndex < commits.length - 1
@@ -52,7 +55,7 @@ export async function CommitHeader({
                     {prevCommit ? (
                         <a
                             className="whitespace-nowrap rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
-                            href={`/gh/${owner}/${repo}/pull/${number}/changes/${prevCommit.sha}`}
+                            href={`/gh/${owner}/${repo}/pull/${number}/changes/${prevCommit.oid}`}
                         >
                             ← Previous
                         </a>
@@ -68,7 +71,7 @@ export async function CommitHeader({
                     {nextCommit ? (
                         <a
                             className="whitespace-nowrap rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
-                            href={`/gh/${owner}/${repo}/pull/${number}/changes/${nextCommit.sha}`}
+                            href={`/gh/${owner}/${repo}/pull/${number}/changes/${nextCommit.oid}`}
                         >
                             Next →
                         </a>

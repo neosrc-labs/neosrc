@@ -8,10 +8,12 @@ import {
     getCachedPullRequest,
     getChecksForCommit,
     getConflictedFiles,
-    getPullRequestCommits,
     getUserRepoPermission,
-    type PullsListCommitsResponseData,
 } from "~/server/github";
+import {
+    type GQLCommitWithAuthors,
+    getAllPullRequestCommitsGraphQL,
+} from "~/server/github-graphql";
 import { generatePRMetadata } from "~/server/metadata";
 import {
     CommitHeader,
@@ -102,7 +104,7 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
     );
 
     let commitPromise: Promise<CommitData> | null = null;
-    let commitsPromise: Promise<PullsListCommitsResponseData> | null = null;
+    let commitsPromise: Promise<GQLCommitWithAuthors[]> | null = null;
     if (commitSha) {
         commitPromise = getCachedCommit(
             accessToken,
@@ -111,7 +113,7 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
             commitSha,
             userId,
         );
-        commitsPromise = getPullRequestCommits(
+        commitsPromise = getAllPullRequestCommitsGraphQL(
             accessToken,
             owner,
             repo,
