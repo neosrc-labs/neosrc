@@ -225,7 +225,15 @@ export async function isOrg(
               }
             : { Accept: "application/json" },
     });
-    return res.ok;
+    // Only a 404 means "this is not an org"; a 429/5xx must propagate or a
+    // rate-limited lookup would misclassify orgs as users.
+    if (res.status === 404) return false;
+    if (!res.ok) {
+        throw new Error(
+            `Codeberg org lookup for "${username}" failed with status ${res.status}`,
+        );
+    }
+    return true;
 }
 
 /**
@@ -293,6 +301,15 @@ async function fetchCodebergJson<T>(
               }
             : { Accept: "application/json" },
     });
-    if (!res.ok) return null;
+    // 404 means the resource does not exist: end of pagination, no orgs, etc.
+    if (res.status === 404) return null;
+    // Any other failure must abort the sync: a transient 429/5xx treated as
+    // "no data" would turn the delete-then-insert rebuild below into a
+    // destructive wipe of the user's grants.
+    if (!res.ok) {
+        throw new Error(
+            `Codeberg API ${path} failed with status ${res.status}`,
+        );
+    }
     return res.json() as Promise<T>;
 }
