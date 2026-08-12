@@ -615,7 +615,7 @@ function TitleRow({
                                 </>
                             ) : (
                                 <>
-                                    <h1 className="text-text-primary">
+                                    <h1 className="font-medium text-3xl text-text-primary">
                                         <CodeTitle
                                             provider="gh"
                                             owner={owner}
