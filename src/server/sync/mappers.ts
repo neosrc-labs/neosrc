@@ -43,7 +43,9 @@ export function githubRepoToSyncRepo(repo: GitHubRepoRaw): SyncRepo {
         visibility: repo.private ? "private" : "public",
         description: repo.description ?? null,
         stars: repo.stargazers_count ?? 0,
-        watchers: repo.subscribers_count ?? repo.watchers_count ?? 0,
+        // watchers_count is a deprecated alias of stargazers_count, so never
+        // fall back to it: the watchers column would silently store stars.
+        watchers: repo.subscribers_count ?? 0,
         forks: repo.forks_count ?? 0,
         defaultBranch: repo.default_branch ?? null,
         archived: repo.archived ?? false,
