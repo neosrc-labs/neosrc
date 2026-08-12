@@ -1110,6 +1110,8 @@
   "_meta": {
     "columns": {},
     "schemas": {},
-    "tables": {}
+    "tables": {
+      "\"sync_state\"": "\"permissions_sync_state\""
+    }
   }
 }
