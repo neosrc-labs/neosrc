@@ -39,7 +39,11 @@ export function SyncSection({
     const syncCurrentUser = api.sync.currentUser.useMutation();
     const refreshOwnerRepos = api.sync.refreshOwnerRepos.useMutation();
     const poll = useIncrementalSync();
-    const [provider, setProvider] = useState<"github" | "codeberg">("github");
+    // Default to the first connected provider: preselecting "github" for a
+    // Codeberg-only user would refresh with the wrong (or anonymous) token.
+    const [provider, setProvider] = useState<"github" | "codeberg">(() =>
+        hasGithub ? "github" : "codeberg",
+    );
     const [owner, setOwner] = useState("");
 
     if (!hasGithub && !hasCodeberg) {
@@ -136,8 +140,12 @@ export function SyncSection({
                             }}
                             className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                         >
-                            <option value="github">GitHub</option>
-                            <option value="codeberg">Codeberg</option>
+                            {hasGithub && (
+                                <option value="github">GitHub</option>
+                            )}
+                            {hasCodeberg && (
+                                <option value="codeberg">Codeberg</option>
+                            )}
                         </select>
                         <input
                             value={owner}
