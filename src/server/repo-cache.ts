@@ -1,4 +1,4 @@
-import { aliasedTable, and, eq } from "drizzle-orm";
+import { aliasedTable, and, eq, sql } from "drizzle-orm";
 import { after } from "next/server";
 
 import { db } from "./db";
@@ -60,8 +60,11 @@ export async function getCachedRepoData<T>(
             and(
                 eq(repo.provider, provider),
                 eq(account.provider, provider),
-                eq(account.username, owner),
-                eq(repo.name, repoName),
+                // Provider APIs are case-insensitive on owner/repo slugs, so
+                // the lookup must be too: the cache row stores canonical
+                // casing from the API, while the URL slug may differ.
+                eq(sql`lower(${account.username})`, owner.toLowerCase()),
+                eq(sql`lower(${repo.name})`, repoName.toLowerCase()),
             ),
         )
         .limit(1);
@@ -164,8 +167,10 @@ export async function getRepoPermissionForUser(
         .where(
             and(
                 eq(repo.provider, provider),
-                eq(ownerAccount.username, owner),
-                eq(repo.name, repoName),
+                // Same case-insensitive slug matching as the cache lookup: the
+                // stored rows carry canonical API casing.
+                eq(sql`lower(${ownerAccount.username})`, owner.toLowerCase()),
+                eq(sql`lower(${repo.name})`, repoName.toLowerCase()),
             ),
         )
         .limit(1);
