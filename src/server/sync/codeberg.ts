@@ -195,7 +195,10 @@ export async function getReposByOwner(
 ): Promise<CodebergRepoRaw[]> {
     const results: CodebergRepoRaw[] = [];
     let page = 1;
-    const limit = 100;
+    // Codeberg caps the effective page size at MAX_RESPONSE_ITEMS (50), so
+    // requesting more would make `data.length < limit` break after page 1 and
+    // silently drop repos beyond the first 50.
+    const limit = 50;
     for (;;) {
         const data = await fetchCodebergJson<CodebergRepoRaw[]>(
             `/api/v1/users/${username}/repos?limit=${limit}&page=${page}`,
@@ -234,7 +237,8 @@ export async function getAuthenticatedUserRepos(
 ): Promise<CodebergRepoRaw[]> {
     const results: CodebergRepoRaw[] = [];
     let page = 1;
-    const limit = 100;
+    // See getReposByOwner: the server caps page size at 50.
+    const limit = 50;
     for (;;) {
         const data = await fetchCodebergJson<CodebergRepoRaw[]>(
             `/api/v1/user/repos?limit=${limit}&page=${page}`,
