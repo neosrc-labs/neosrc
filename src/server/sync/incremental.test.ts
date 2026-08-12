@@ -94,7 +94,13 @@ function githubRepo(
     return {
         providerId: id,
         name: `repo-${id}`,
-        private: false,
+        visibility: "public",
+        description: null,
+        stars: 0,
+        watchers: 0,
+        forks: 0,
+        defaultBranch: null,
+        archived: false,
         owner: { providerId: 1, login: "owner", avatarUrl: null, type: "org" },
         permissions: permission
             ? {
@@ -113,6 +119,13 @@ function syncRepo(id: number, permission: "admin" | "read" | null): SyncRepo {
     return {
         providerId: id,
         name: `repo-${id}`,
+        visibility: "public",
+        description: null,
+        stars: 0,
+        watchers: 0,
+        forks: 0,
+        defaultBranch: null,
+        archived: false,
         owner: { providerId: 1, login: "owner", avatarUrl: null, type: "org" },
         permissions: permission
             ? {

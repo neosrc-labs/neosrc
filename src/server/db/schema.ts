@@ -14,6 +14,11 @@ export const createTable = pgTableCreator((name) => `${name}`);
 
 export const providerEnum = pgEnum("provider", ["github", "codeberg"]);
 
+export const repoVisibilityEnum = pgEnum("repo_visibility", [
+    "private",
+    "public",
+]);
+
 export const accountTypeEnum = pgEnum("account_type", ["user", "org"]);
 
 export const permissionLevelEnum = pgEnum("permission_level", [
@@ -237,6 +242,15 @@ export const repo = createTable(
         provider: providerEnum("provider").notNull(),
         providerId: d.bigint("provider_id", { mode: "number" }).notNull(),
         name: d.varchar({ length: 255 }).notNull(),
+        description: d.text("description"),
+        visibility: repoVisibilityEnum("visibility")
+            .notNull()
+            .default("public"),
+        stars: d.integer("stars").notNull().default(0),
+        watchers: d.integer("watchers").notNull().default(0),
+        forks: d.integer("forks").notNull().default(0),
+        defaultBranch: d.varchar("default_branch", { length: 255 }),
+        archived: d.boolean("archived").notNull().default(false),
         rawData: d.jsonb("raw_data"),
         createdAt: d
             .timestamp("created_at", { withTimezone: true, mode: "date" })

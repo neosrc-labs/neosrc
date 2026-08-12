@@ -9,6 +9,7 @@ import type {
     Db,
     RelationRow,
     RepoPermission,
+    RepoVisibility,
     SyncRepo,
     SyncResult,
 } from "./shared";
@@ -27,7 +28,13 @@ import {
 export type GitHubSyncRepo = {
     providerId: number;
     name: string;
-    private: boolean;
+    visibility: RepoVisibility;
+    description: string | null;
+    stars: number;
+    watchers: number;
+    forks: number;
+    defaultBranch: string | null;
+    archived: boolean;
     owner: {
         providerId: number;
         login: string;
@@ -395,7 +402,17 @@ query TeamRepos($org: String!, $teamSlug: String!, $first: Int!, $after: String)
             node {
               databaseId
               name
+              description
               isPrivate
+              isArchived
+              stargazerCount
+              forkCount
+              watchers {
+                totalCount
+              }
+              defaultBranchRef {
+                name
+              }
               owner {
                 __typename
                 login
@@ -439,7 +456,13 @@ query TeamRepos($org: String!, $teamSlug: String!, $first: Int!, $after: String)
                                 node: {
                                     databaseId: number;
                                     name: string;
+                                    description: string | null;
                                     isPrivate: boolean;
+                                    isArchived: boolean;
+                                    stargazerCount: number;
+                                    forkCount: number;
+                                    watchers: { totalCount: number };
+                                    defaultBranchRef: { name: string } | null;
                                     owner: {
                                         __typename: "User" | "Organization";
                                         login: string;
@@ -464,7 +487,13 @@ query TeamRepos($org: String!, $teamSlug: String!, $first: Int!, $after: String)
             results.push({
                 providerId: edge.node.databaseId,
                 name: edge.node.name,
-                private: edge.node.isPrivate,
+                visibility: edge.node.isPrivate ? "private" : "public",
+                description: edge.node.description,
+                stars: edge.node.stargazerCount,
+                watchers: edge.node.watchers.totalCount,
+                forks: edge.node.forkCount,
+                defaultBranch: edge.node.defaultBranchRef?.name ?? null,
+                archived: edge.node.isArchived,
                 owner: {
                     providerId: owner.databaseId,
                     login: owner.login,
@@ -552,6 +581,15 @@ function toSyncRepo(repo: {
     id: number;
     name: string;
     private: boolean;
+    description?: string | null;
+    stargazers_count?: number;
+    // GitHub's watchers_count is a deprecated alias of stargazers_count;
+    // subscribers_count is the real "watching" count.
+    subscribers_count?: number;
+    watchers_count?: number;
+    forks_count?: number;
+    default_branch?: string;
+    archived?: boolean;
     owner: {
         id: number;
         login: string;
@@ -569,7 +607,13 @@ function toSyncRepo(repo: {
     return {
         providerId: repo.id,
         name: repo.name,
-        private: repo.private,
+        visibility: repo.private ? "private" : "public",
+        description: repo.description ?? null,
+        stars: repo.stargazers_count ?? 0,
+        watchers: repo.subscribers_count ?? repo.watchers_count ?? 0,
+        forks: repo.forks_count ?? 0,
+        defaultBranch: repo.default_branch ?? null,
+        archived: repo.archived ?? false,
         owner: {
             providerId: repo.owner.id,
             login: repo.owner.login,
