@@ -1429,8 +1429,6 @@ export const getUserRepoPermission = cache(
                                 username,
                             },
                         );
-                    console.log(response);
-                    console.log(response.data.user?.permissions);
                     return response.data.permission as
                         | "admin"
                         | "write"
@@ -1847,7 +1845,6 @@ export const getGitHubTeam = cache(
 
 export const getRepo = cache(
     async (accessToken: string, owner: string, repo: string) => {
-        console.log("fetching repo");
         const octokit = createOctokit(accessToken);
         const response = await octokit.rest.repos.get({ owner, repo });
         return response.data;
