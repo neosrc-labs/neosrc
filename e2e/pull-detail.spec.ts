@@ -281,6 +281,7 @@ test.describe
 
         test("should collapse and expand sidebars", async ({ page }) => {
             await navigateToPr(page, prNumber);
+            await page.waitForLoadState("networkidle");
 
             await test.step("Verify both sidebars start visible", async () => {
                 await expect(page.getByTestId("left-sidebar")).toBeVisible();

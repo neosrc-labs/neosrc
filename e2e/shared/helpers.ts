@@ -17,14 +17,17 @@ export async function gotoChanges(page: Page, prNumber: number) {
 }
 
 export async function collapseRightSidebar(page: Page) {
-    await page.getByTitle("Close right sidebar").click();
+    await page.waitForLoadState("load");
+    await page.getByTitle("Close right sidebar").first().click();
+    await page.getByTitle("Open right sidebar").first().waitFor();
 }
 
 export async function expandRightSidebar(page: Page) {
-    await page.getByTitle("Open right sidebar").click();
+    await page.getByTitle("Open right sidebar").first().click();
+    await page.getByTitle("Close right sidebar").first().waitFor();
 }
-
 export async function collapseLeftSidebar(page: Page) {
+    await page.waitForLoadState("load");
     const dragHandle = page.locator(".cursor-col-resize").first();
     const box = await dragHandle.boundingBox();
     if (!box) throw new Error("Could not find left sidebar drag handle");
@@ -32,8 +35,10 @@ export async function collapseLeftSidebar(page: Page) {
     await page.mouse.down();
     await page.mouse.move(box.x - 300, box.y + box.height / 2, { steps: 10 });
     await page.mouse.up();
+    await page.locator('button[title="Open left sidebar"]').waitFor();
 }
 
 export async function expandLeftSidebar(page: Page) {
     await page.locator('button[title="Open left sidebar"]').click();
+    await page.locator(".cursor-col-resize").first().waitFor();
 }
