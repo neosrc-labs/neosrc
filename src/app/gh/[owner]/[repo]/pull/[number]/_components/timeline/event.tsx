@@ -313,6 +313,7 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
     );
 }
 
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: FIXME: cleanup the complex mutations
 function EventContent({
     event,
     owner,
