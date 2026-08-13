@@ -134,4 +134,78 @@ test.describe
                 }
             });
         });
+        test("should support editing reacting to and deleting a single comment", async ({
+            page,
+        }) => {
+            const commentFile = testPullRequest.files.find(
+                (file) => file.status === "modified",
+            );
+            if (!commentFile) throw new Error("Test PR has no modified file");
+
+            await page.goto(
+                `/gh/${OWNER}/${REPO}/pull/${testPullRequest.number}/changes`,
+            );
+            await page.waitForLoadState("networkidle");
+
+            const fileDiff = page.locator(
+                `[id="${commentFile.filename.replace(/\//g, "-")}"]`,
+            );
+            const commentText = `Single comment ${Date.now()}`;
+            const editedCommentText = `${commentText} edited`;
+
+            await test.step("Add a single line comment", async () => {
+                const line = fileDiff.locator("tr:has(td.d2h-ins)").first();
+                await line.hover();
+                await line.locator("td.d2h-code-linenumber svg").click();
+                await fileDiff
+                    .getByPlaceholder("Add a comment...")
+                    .fill(commentText);
+                await fileDiff
+                    .getByRole("button", { name: "Add single comment" })
+                    .click();
+            });
+
+            const thread = fileDiff
+                .locator('[id^="review-thread-"]')
+                .filter({ hasText: commentText });
+            await test.step("Verify the comment was added", async () => {
+                await expect(thread).toBeVisible();
+            });
+
+            await test.step("Edit the comment", async () => {
+                await thread
+                    .getByRole("button", { name: "Edit comment" })
+                    .click();
+                await thread.locator("textarea").fill(editedCommentText);
+                await thread.getByRole("button", { name: "Save" }).click();
+                await expect(thread.getByText(editedCommentText)).toBeVisible();
+            });
+
+            await test.step("Add a reaction to the comment", async () => {
+                await thread
+                    .locator('button[aria-label="Add reaction"]')
+                    .click();
+                await page
+                    .locator("[data-radix-popper-content-wrapper]")
+                    .locator('button[aria-label="+1"]')
+                    .click();
+                await expect(
+                    thread.locator('button[aria-label$="(1)"]'),
+                ).toBeVisible();
+            });
+
+            await test.step("Delete the comment", async () => {
+                await thread
+                    .getByRole("button", { name: "More options" })
+                    .click();
+                await page
+                    .locator("[data-radix-popper-content-wrapper]")
+                    .getByRole("button", { name: "Delete comment" })
+                    .click();
+                const dialog = page.getByRole("dialog");
+                await expect(dialog).toBeVisible();
+                await dialog.getByRole("button", { name: "Delete" }).click();
+                await expect(thread).not.toBeAttached();
+            });
+        });
     });
