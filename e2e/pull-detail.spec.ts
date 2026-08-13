@@ -1,5 +1,6 @@
 import { Octokit } from "@octokit/rest";
 import { expect, test } from "@playwright/test";
+import { createTestPullRequest } from "./shared/data";
 import {
     collapseLeftSidebar,
     collapseRightSidebar,
@@ -26,73 +27,13 @@ test.describe
                 "GITHUB_TOKEN not set — skipping API-based test",
             );
 
-            const octokit = new Octokit({ auth: GITHUB_TOKEN });
-
-            const { data: repo } = await octokit.rest.repos.get({
-                owner: OWNER,
-                repo: REPO,
-            });
-
-            const { data: user } = await octokit.rest.users.getAuthenticated();
-            authorLogin = user.login;
-
-            const branchName = `e2e-test-${Date.now()}`;
-            headBranch = branchName;
-            baseBranch = repo.default_branch;
-            const filePath = `e2e-${Date.now()}.md`;
-            commitMessage = "e2e test commit";
-
-            const { data: baseRef } = await octokit.rest.git.getRef({
-                owner: OWNER,
-                repo: REPO,
-                ref: `heads/${repo.default_branch}`,
-            });
-
-            await octokit.rest.git.createRef({
-                owner: OWNER,
-                repo: REPO,
-                ref: `refs/heads/${branchName}`,
-                sha: baseRef.object.sha,
-            });
-
-            await octokit.rest.repos.createOrUpdateFileContents({
-                owner: OWNER,
-                repo: REPO,
-                path: filePath,
-                message: commitMessage,
-                content: Buffer.from("# E2E Test\n").toString("base64"),
-                branch: branchName,
-            });
-
-            prTitle = `E2E Test PR ${Date.now()}`;
-            const { data: pr } = await octokit.rest.pulls.create({
-                owner: OWNER,
-                repo: REPO,
-                title: prTitle,
-                head: branchName,
-                base: repo.default_branch,
-                body: "Created by e2e test.",
-            });
-            prNumber = pr.number;
-
-            try {
-                await octokit.rest.issues.createLabel({
-                    owner: OWNER,
-                    repo: REPO,
-                    name: "e2e",
-                    color: "FF0000",
-                    description: "E2E test label",
-                });
-            } catch {
-                // Label may already exist from a previous run
-            }
-
-            await octokit.rest.issues.addLabels({
-                owner: OWNER,
-                repo: REPO,
-                issue_number: prNumber,
-                labels: ["e2e"],
-            });
+            const createdPullRequest = await createTestPullRequest();
+            prNumber = createdPullRequest.number;
+            prTitle = createdPullRequest.title;
+            authorLogin = createdPullRequest.authorLogin;
+            commitMessage = createdPullRequest.commitMessage;
+            baseBranch = createdPullRequest.baseBranch;
+            headBranch = createdPullRequest.headBranch;
         });
 
         test.afterAll(async () => {
