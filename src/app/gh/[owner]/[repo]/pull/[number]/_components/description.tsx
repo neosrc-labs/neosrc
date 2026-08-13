@@ -440,12 +440,14 @@ export function PullRequestDescriptionSection({
                                                           .eyes,
                                                   }
                                                 : undefined;
-                                        const _canInteract =
-                                            canInteract(permissionContext);
+
+                                        if (!canInteract(permissionContext)) {
+                                            return null;
+                                        }
+
                                         return (
                                             <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
                                                 <ReactionPicker
-                                                    disabled={!_canInteract}
                                                     reactions={
                                                         reactionsData?.reactions ??
                                                         []
@@ -456,7 +458,6 @@ export function PullRequestDescriptionSection({
                                                     onReact={handleReact}
                                                 />
                                                 <ReactionBar
-                                                    disabled={!_canInteract}
                                                     reactions={
                                                         reactionsData?.reactions ??
                                                         []
