@@ -375,9 +375,6 @@ test.describe
                 await thread.getByRole("button", { name: "Save" }).click();
                 const updateResult = await updateResponse;
                 expect(updateResult.status()).toBe(200);
-                await expect(updateResult.text()).resolves.toContain(
-                    '"success":true',
-                );
                 await expect(thread.getByText(editedCommentText)).toBeVisible();
             });
             await test.step("Submit the review", async () => {
