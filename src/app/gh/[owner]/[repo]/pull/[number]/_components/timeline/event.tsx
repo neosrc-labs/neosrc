@@ -457,6 +457,10 @@ function EventContent({
     const commentReactionMutation =
         api.reactions.toggleIssueComment.useMutation({
             onMutate: async ({ commentId, content }) => {
+                const user = permissionContext.currentUser;
+                if (!user) {
+                    return;
+                }
                 await utils.timeline.list.cancel();
 
                 const prevData = utils.timeline.list.getInfiniteData({
@@ -483,7 +487,7 @@ function EventContent({
                                         [commentId]: toggleReactionInList(
                                             page.commentReactions[commentId] ??
                                                 [],
-                                            permissionContext.currentUser!,
+                                            user,
                                             content,
                                         ),
                                     },
@@ -516,6 +520,10 @@ function EventContent({
     const reviewReactionMutation =
         api.reactions.togglePullRequestReview.useMutation({
             onMutate: async ({ content, databaseId }) => {
+                const user = permissionContext.currentUser;
+                if (!user) {
+                    return;
+                }
                 await utils.timeline.list.cancel({
                     owner,
                     repo,
@@ -547,7 +555,7 @@ function EventContent({
                                         [databaseId]: toggleReactionInList(
                                             page.commentReactions[databaseId] ??
                                                 [],
-                                            permissionContext.currentUser!,
+                                            user,
                                             content,
                                         ),
                                     },
