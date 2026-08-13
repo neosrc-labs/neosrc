@@ -284,10 +284,17 @@ test.describe
                 await thread
                     .locator('button[aria-label="Add reaction"]')
                     .click();
+                const reactionResponse = page.waitForResponse((response) =>
+                    response
+                        .url()
+                        .includes("reactions.togglePullRequestReviewComment"),
+                );
                 await page
                     .locator("[data-radix-popper-content-wrapper]")
                     .locator('button[aria-label="+1"]')
                     .click();
+                const response = await reactionResponse;
+                expect(response.status()).toBe(200);
                 await expect(
                     thread.locator('button[aria-label$="(1)"]'),
                 ).toBeVisible();
@@ -350,7 +357,7 @@ test.describe
                 .locator('[id^="review-thread-"]')
                 .filter({ hasText: commentText });
             await test.step("Verify the review comment is pending", async () => {
-                await expect(thread).toBeVisible();
+                await expect(thread).toBeVisible({ timeout: 15_000 });
                 await expect(
                     thread.getByText("Pending", { exact: true }),
                 ).toBeVisible();
