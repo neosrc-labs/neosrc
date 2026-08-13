@@ -8,7 +8,6 @@ import {
     getCachedPullRequest,
     getChecksForCommit,
     getConflictedFiles,
-    getUserRepoPermission,
 } from "~/server/github";
 import {
     type GQLCommitWithAuthors,
@@ -20,6 +19,7 @@ import {
     CommitHeaderSkeleton,
 } from "../../_components/commit-header";
 import { FilesSection } from "../../_components/files-client";
+import { getPullRequestPermissionContext } from "../../permissions-server";
 
 interface ChangesPageProps {
     params: Promise<{
@@ -66,7 +66,6 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
 
     const session = await getSession();
     const userId = session?.user?.id;
-    const currentUserLogin = session?.user?.githubUsername ?? undefined;
 
     const prPromise = getCachedPullRequest(
         accessToken,
@@ -76,15 +75,13 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
         userId,
     );
 
-    const userPermissionPromise = currentUserLogin
-        ? getUserRepoPermission(
-              accessToken,
-              owner,
-              repo,
-              currentUserLogin,
-              userId ?? "",
-          ).catch(() => null)
-        : null;
+    const permissionContextPromise = getPullRequestPermissionContext(
+        accessToken,
+        owner,
+        repo,
+        prPromise,
+        userId,
+    );
 
     const conflictedFilesPromise = prPromise.then(async (pr) => {
         if (pr.mergeable_state === "dirty") {
@@ -144,8 +141,7 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
                     repo={repo}
                     commitSha={commitSha ?? undefined}
                     pullRequestPromise={prPromise}
-                    currentUserLogin={currentUserLogin}
-                    userPermissionPromise={userPermissionPromise}
+                    permissionContextPromise={permissionContextPromise}
                     conflictedFilesPromise={conflictedFilesPromise}
                     checkRunsPromise={checksPromise}
                 />

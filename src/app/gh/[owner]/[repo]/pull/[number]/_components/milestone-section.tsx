@@ -6,19 +6,23 @@ import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn, opId } from "~/lib/utils";
 import type { Milestone, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
+import {
+    canEdit,
+    type PullRequestPermissionContext,
+} from "../permissions-utils";
 import { FieldSkeleton } from "./metadata-section";
 
 type MilestoneOperation = { id: number; milestone: Milestone | null };
 
 export function MilestoneSection({
     pullRequestPromise,
-    userPermission,
+    permissionContextPromise,
     owner,
     repo,
     number,
 }: {
     pullRequestPromise: Promise<PullsGetResponseData>;
-    userPermission: Promise<string | null>;
+    permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;
     number: number;
@@ -56,17 +60,17 @@ export function MilestoneSection({
                 <h3 className="text-text-primary">Milestone</h3>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
-                        <Async promise={userPermission} fallback={null}>
-                            {(permission) => (
+                        <Async
+                            promise={permissionContextPromise}
+                            fallback={null}
+                        >
+                            {(permissionContext) => (
                                 <MilestoneSectionSettings
                                     repoMilestones={milestonesData}
                                     milestone={pullRequest.milestone}
                                     operations={operations}
                                     onSetMilestone={handleSet}
-                                    disabled={
-                                        permission !== "admin" &&
-                                        permission !== "write"
-                                    }
+                                    disabled={!canEdit(permissionContext)}
                                 />
                             )}
                         </Async>

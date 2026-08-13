@@ -78,6 +78,9 @@ vi.mock("~/trpc/react", () => ({
             },
             threads: { useQuery: mockThreadsQuery },
         },
+        repos: {
+            getPermission: { useQuery: vi.fn(() => ({ data: null })) },
+        },
     },
 }));
 
@@ -322,6 +325,12 @@ const defaultProps = {
     owner: "test-owner",
     repo: "test-repo",
     number: 42,
+    permissionContext: {
+        currentUser: "testuser",
+        isPullRequestAuthor: false,
+        repoPermission: "write" as const,
+        isPullRequestLocked: false,
+    },
 };
 
 // ---- Tests ----
@@ -430,8 +439,16 @@ describe("InlineCommentThread", () => {
     });
 
     it("does not render reply controls when canInteract is false", () => {
-        render(<InlineCommentThread {...defaultProps} canInteract={false} />);
-
+        render(
+            <InlineCommentThread
+                {...defaultProps}
+                permissionContext={{
+                    ...defaultProps.permissionContext,
+                    repoPermission: null,
+                    isPullRequestLocked: true,
+                }}
+            />,
+        );
         expect(screen.queryByText("Reply...")).not.toBeInTheDocument();
         expect(screen.queryByTestId("resolve-button")).not.toBeInTheDocument();
     });

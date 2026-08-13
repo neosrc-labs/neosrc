@@ -188,6 +188,12 @@ function renderDiffView(props?: {
             owner={props?.owner}
             repo={props?.repo}
             pullNumber={props?.pullNumber}
+            permissionContext={{
+                currentUser: "testuser",
+                isPullRequestAuthor: false,
+                repoPermission: "write",
+                isPullRequestLocked: false,
+            }}
         />,
     );
 }

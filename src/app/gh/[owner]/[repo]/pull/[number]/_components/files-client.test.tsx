@@ -82,6 +82,12 @@ function renderFiles(files: PullRequestFile[], hash?: string) {
             repo="repo"
             number={1}
             pullRequestPromise={resolvedPromise(makePullRequest())}
+            permissionContextPromise={resolvedPromise({
+                currentUser: "testuser",
+                isPullRequestAuthor: false,
+                repoPermission: "write" as const,
+                isPullRequestLocked: false,
+            })}
         />,
     );
 }

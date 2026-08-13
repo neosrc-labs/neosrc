@@ -35,11 +35,17 @@ import {
     applyReviewThreadOperations,
     useReviewThreadOperations,
 } from "~/hooks/use-review-thread-operations";
+import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
 import type { ReactionContent } from "~/lib/reactions";
 import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewCommentBase } from "~/server/github";
 import { api } from "~/trpc/react";
+import {
+    canEdit,
+    canInteract,
+    type PullRequestPermissionContext,
+} from "../permissions-utils";
 
 type Reaction = components["schemas"]["reaction"];
 
@@ -51,8 +57,7 @@ interface ReviewCommentsProps {
     hasReviewBody: boolean;
     state?: string;
     allComments: ReviewCommentBase[];
-    currentUserLogin: string;
-    canInteract: boolean;
+    permissionContext: PullRequestPermissionContext;
 }
 
 export function ReviewComments({
@@ -63,8 +68,7 @@ export function ReviewComments({
     hasReviewBody,
     state,
     allComments,
-    currentUserLogin,
-    canInteract,
+    permissionContext,
 }: ReviewCommentsProps) {
     const [editingCommentId, setEditingCommentId] = useState<number | null>(
         null,
@@ -152,6 +156,18 @@ export function ReviewComments({
                 return next;
             });
             setEditingCommentId(commentId);
+        },
+    });
+    const taskToggleMutation = api.reviewComments.update.useMutation({
+        onMutate: ({ commentId, body }) => {
+            setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
+        },
+        onError: (_, { commentId }) => {
+            setSavedBodies((prev) => {
+                const next = { ...prev };
+                delete next[commentId];
+                return next;
+            });
         },
     });
 
@@ -270,7 +286,7 @@ export function ReviewComments({
         owner,
         repo,
         allCommentIds,
-        currentUserLogin,
+        permissionContext.currentUser ?? "",
     );
 
     const handleReact = (commentId: number, content: ReactionContent) => {
@@ -380,8 +396,7 @@ export function ReviewComments({
                                 repo={repo}
                                 number={number}
                                 state={state}
-                                canInteract={canInteract}
-                                currentUserLogin={currentUserLogin}
+                                permissionContext={permissionContext}
                                 reactionMap={reactionMap}
                                 editingCommentId={editingCommentId}
                                 editBody={editBody}
@@ -403,6 +418,10 @@ export function ReviewComments({
                                 onDelete={handleDelete}
                                 onReact={handleReact}
                                 onResolve={handleResolve}
+                                toggleMutation={{
+                                    mutate: taskToggleMutation.mutate,
+                                    isPending: taskToggleMutation.isPending,
+                                }}
                             />
                         </div>
                     </div>
@@ -486,7 +505,6 @@ function truncateDiffToRange(
     return [newHeader, ...filtered].join("\n");
 }
 
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: autosave adds 5 lines; existing function already at limit
 function CommentBlock({
     comment,
     replies,
@@ -494,8 +512,7 @@ function CommentBlock({
     repo,
     number,
     state,
-    canInteract,
-    currentUserLogin,
+    permissionContext,
     reactionMap,
     editingCommentId,
     editBody,
@@ -511,15 +528,15 @@ function CommentBlock({
     onDelete,
     onReact,
     onResolve,
+    toggleMutation,
 }: {
-    comment: ReviewCommentBase;
-    replies: ReviewCommentBase[];
     owner: string;
     repo: string;
     number: number;
+    comment: ReviewCommentBase;
+    replies: ReviewCommentBase[];
     state?: string;
-    canInteract: boolean;
-    currentUserLogin: string;
+    permissionContext: PullRequestPermissionContext;
     reactionMap: Record<number, Reaction[]>;
     editingCommentId: number | null;
     editBody: string;
@@ -535,6 +552,12 @@ function CommentBlock({
     onDelete: (commentId: number) => void;
     onReact: (commentId: number, content: ReactionContent) => void;
     onResolve: (commentId: number, threadId: string, resolve: boolean) => void;
+    toggleMutation: TaskToggleApi<{
+        owner: string;
+        repo: string;
+        commentId: number;
+        body: string;
+    }>;
 }) {
     const [showReplyForm, setShowReplyForm] = useState(false);
     const replyKey = `pr-autosave:review-reply:${owner}:${repo}:${number}:${comment.id}`;
@@ -547,7 +570,13 @@ function CommentBlock({
     );
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
     const utils = api.useUtils();
+    // TODO: I think we dont need to load this until a reply happens
     const { data: currentUserData } = api.users.currentUser.useQuery();
+    const { onToggleTask: onToggleParentTask } = useTaskToggle({
+        mutation: toggleMutation,
+        staticInput: { owner, repo, commentId: comment.id },
+    });
+
     const replyMutation = api.reviewComments.reply.useMutation({
         onMutate: async ({ body, inReplyTo }) => {
             setReplyBody("");
@@ -634,6 +663,8 @@ function CommentBlock({
     }
 
     const parentReactions = reactionMap[comment.id] ?? [];
+    const _canInteract = canInteract(permissionContext);
+    const _canEdit = canEdit(permissionContext);
 
     return (
         <>
@@ -653,6 +684,7 @@ function CommentBlock({
                                 comment.line,
                             )}
                             filename={comment.path}
+                            permissionContext={permissionContext}
                         />
                     </div>
                 )}
@@ -670,7 +702,7 @@ function CommentBlock({
                     onCancelEdit={onCancelEdit}
                     onSaveEdit={() => onSaveEdit(comment.id)}
                     headerActions={
-                        canInteract && (
+                        _canInteract && (
                             <Popover
                                 open={menuOpenCommentId === comment.id}
                                 onOpenChange={(open) =>
@@ -692,8 +724,9 @@ function CommentBlock({
                                     className="w-44 bg-surface p-1"
                                     align="end"
                                 >
-                                    {comment.user?.login ===
-                                        currentUserLogin && (
+                                    {(comment.user?.login ===
+                                        permissionContext.currentUser ||
+                                        _canEdit) && (
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -728,17 +761,17 @@ function CommentBlock({
                     footer={
                         <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
                             <ReactionPicker
-                                disabled={!canInteract}
+                                disabled={!_canInteract}
                                 reactions={parentReactions}
-                                currentUserLogin={currentUserLogin}
+                                currentUserLogin={permissionContext.currentUser}
                                 onReact={(content) =>
                                     onReact(comment.id, content)
                                 }
                             />
                             <ReactionBar
-                                disabled={!canInteract}
+                                disabled={!_canInteract}
                                 reactions={parentReactions}
-                                currentUserLogin={currentUserLogin}
+                                currentUserLogin={permissionContext.currentUser}
                                 onReact={(content) =>
                                     onReact(comment.id, content)
                                 }
@@ -755,6 +788,13 @@ function CommentBlock({
                         commentLine={comment.line}
                         commentStartLine={comment.start_line}
                         commentThreadId={threadId}
+                        onToggleTask={onToggleParentTask}
+                        canToggleTasks={
+                            (comment.user?.login ===
+                                permissionContext.currentUser ||
+                                _canEdit) &&
+                            _canInteract
+                        }
                     />
                 </CommentCard>
                 {replies.map((reply) => {
@@ -780,7 +820,7 @@ function CommentBlock({
                                 onCancelEdit={onCancelEdit}
                                 onSaveEdit={() => onSaveEdit(reply.id)}
                                 headerActions={
-                                    canInteract && (
+                                    _canInteract && (
                                         <Popover
                                             open={
                                                 menuOpenCommentId === reply.id
@@ -804,8 +844,9 @@ function CommentBlock({
                                                 className="w-44 bg-surface p-1"
                                                 align="end"
                                             >
-                                                {reply.user?.login ===
-                                                    currentUserLogin && (
+                                                {(reply.user?.login ===
+                                                    permissionContext.currentUser ||
+                                                    _canEdit) && (
                                                     <button
                                                         type="button"
                                                         onClick={() => {
@@ -847,17 +888,21 @@ function CommentBlock({
                                 footer={
                                     <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
                                         <ReactionPicker
-                                            disabled={!canInteract}
+                                            disabled={!_canInteract}
                                             reactions={replyReactions}
-                                            currentUserLogin={currentUserLogin}
+                                            currentUserLogin={
+                                                permissionContext.currentUser
+                                            }
                                             onReact={(content) =>
                                                 onReact(reply.id, content)
                                             }
                                         />
                                         <ReactionBar
-                                            disabled={!canInteract}
+                                            disabled={!_canInteract}
                                             reactions={replyReactions}
-                                            currentUserLogin={currentUserLogin}
+                                            currentUserLogin={
+                                                permissionContext.currentUser
+                                            }
                                             onReact={(content) =>
                                                 onReact(reply.id, content)
                                             }
@@ -876,12 +921,27 @@ function CommentBlock({
                                     commentLine={comment.line}
                                     commentStartLine={comment.start_line}
                                     commentThreadId={threadId}
+                                    onToggleTask={(body) => {
+                                        if (toggleMutation.isPending) return;
+                                        toggleMutation.mutate({
+                                            owner,
+                                            repo,
+                                            commentId: reply.id,
+                                            body,
+                                        });
+                                    }}
+                                    canToggleTasks={
+                                        (reply.user?.login ===
+                                            permissionContext.currentUser ||
+                                            _canEdit) &&
+                                        _canInteract
+                                    }
                                 />
                             </CommentCard>
                         </div>
                     );
                 })}
-                {canInteract ? (
+                {_canInteract ? (
                     showReplyForm ? (
                         <div className="p-2">
                             <MarkdownEditor

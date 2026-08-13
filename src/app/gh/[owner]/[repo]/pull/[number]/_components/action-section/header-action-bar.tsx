@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Async } from "~/components/async";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
+import type { PullRequestPermissionContext } from "../../permissions-utils";
 import { ActionSection } from "./actions-section";
 
 interface HeaderActionBarProps {
@@ -12,8 +13,7 @@ interface HeaderActionBarProps {
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData> | null;
     conflictedFilesPromise?: Promise<string[]> | null;
-    userPermissionPromise?: Promise<string | null> | null;
-    currentUserLogin?: string;
+    permissionContextPromise: Promise<PullRequestPermissionContext>;
     checkRunsPromise?: Promise<CheckRun[]> | null;
 }
 
@@ -27,8 +27,7 @@ export function HeaderActionBar({
     number,
     pullRequestPromise,
     conflictedFilesPromise,
-    userPermissionPromise,
-    currentUserLogin,
+    permissionContextPromise,
     checkRunsPromise,
 }: HeaderActionBarProps) {
     const sentinelRef = useRef<HTMLDivElement>(null);
@@ -179,8 +178,9 @@ export function HeaderActionBar({
                                 number={number}
                                 pullRequestPromise={pullRequestPromise}
                                 conflictedFilesPromise={conflictedFilesPromise}
-                                userPermissionPromise={userPermissionPromise}
-                                currentUserLogin={currentUserLogin}
+                                permissionContextPromise={
+                                    permissionContextPromise
+                                }
                                 checkRuns={checkRuns}
                             />
                         )}

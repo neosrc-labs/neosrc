@@ -39,7 +39,7 @@ import {
     canEdit,
     canInteract,
     type PullRequestPermissionContext,
-} from "../permissions";
+} from "./../permissions-utils";
 import { StackCreateBadge } from "./stack-create-badge";
 import { StackBadge } from "./stack-popover";
 

@@ -3,13 +3,7 @@ import {
     getUserRepoPermission,
     type PullsGetResponseData,
 } from "~/server/github";
-
-export type PullRequestPermissionContext = {
-    isPullRequestLocked: boolean;
-    isPullRequestAuthor: boolean;
-    repoPermission: "admin" | "none" | "read" | "write" | null;
-    currentUser: string | null;
-};
+import type { PullRequestPermissionContext } from "./permissions-utils";
 
 export async function getPullRequestPermissionContext(
     accessToken: string,
@@ -47,29 +41,4 @@ export async function getPullRequestPermissionContext(
         isPullRequestLocked: pr.locked,
         isPullRequestAuthor: currentUser === pr.user?.login,
     };
-}
-
-export function canInteract({
-    isPullRequestAuthor,
-    isPullRequestLocked,
-    repoPermission,
-}: PullRequestPermissionContext): boolean {
-    return (
-        !isPullRequestLocked ||
-        repoPermission === "admin" ||
-        repoPermission === "write" ||
-        repoPermission === "read" ||
-        isPullRequestAuthor
-    );
-}
-
-export function canEdit({
-    isPullRequestAuthor,
-    repoPermission,
-}: PullRequestPermissionContext): boolean {
-    return (
-        repoPermission === "admin" ||
-        repoPermission === "write" ||
-        isPullRequestAuthor
-    );
 }

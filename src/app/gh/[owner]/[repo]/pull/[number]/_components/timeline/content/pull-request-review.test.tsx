@@ -64,6 +64,9 @@ vi.mock("~/trpc/react", () => ({
             minimize: { useMutation: mockMinimize },
             unminimize: { useMutation: mockUnminimize },
         },
+        repos: {
+            getPermission: { useQuery: vi.fn(() => ({ data: null })) },
+        },
     },
 }));
 
@@ -189,8 +192,12 @@ const baseProps = {
     owner: "ranger-ross",
     repo: "jj-fun-times",
     number: 29,
-    currentUserLogin: "testuser",
-    canInteract: true,
+    permissionContext: {
+        currentUser: "testuser",
+        isPullRequestAuthor: false,
+        repoPermission: null,
+        isPullRequestLocked: false,
+    },
     allComments: [],
     commentReactions: {},
     editingCommentId: null,
@@ -203,6 +210,7 @@ const baseProps = {
     onReactToReview: vi.fn(),
     expandedMinimized: {},
     onToggleMinimized: vi.fn(),
+    reviewToggleMutation: { mutate: vi.fn(), isPending: false },
 };
 
 function ToggleHarness({ event }: { event: GQLPullRequestReview }) {
@@ -332,7 +340,10 @@ describe("PullRequestReviewContent minimized reviews", () => {
         render(
             <PullRequestReviewContent
                 {...baseProps}
-                canInteract={false}
+                permissionContext={{
+                    ...baseProps.permissionContext,
+                    isPullRequestLocked: true,
+                }}
                 event={makeReview({ isMinimized: false })}
             />,
         );

@@ -2,6 +2,7 @@
 
 import { FoldVertical, MessageSquare, UnfoldVertical } from "lucide-react";
 import { Fragment, useCallback, useMemo, useRef, useState } from "react";
+import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
 import type { ReviewComment } from "~/server/github";
 
 function isFileLevelComment(c: ReviewComment): boolean {
@@ -49,6 +50,7 @@ interface FileDiffProps {
     comments?: ReviewComment[];
     showComments?: boolean;
     pendingReviewId?: number | null;
+    permissionContext: PullRequestPermissionContext;
     performanceHidden?: boolean;
     showPerformanceDiff?: boolean;
     onTogglePerformanceDiff?: () => void;
@@ -64,6 +66,7 @@ export default function FileDiff({
     comments = [],
     showComments = true,
     pendingReviewId,
+    permissionContext,
     performanceHidden = false,
     showPerformanceDiff = true,
     onTogglePerformanceDiff,
@@ -223,6 +226,7 @@ export default function FileDiff({
                 repo={repo}
                 pullNumber={number}
                 pendingReviewId={pendingReviewId}
+                permissionContext={permissionContext}
             />
 
             <div className="overflow-hidden rounded-b">
@@ -256,6 +260,7 @@ export default function FileDiff({
                         }}
                         footerActions={footerActions}
                         pendingReviewId={pendingReviewId}
+                        permissionContext={permissionContext}
                         owner={owner}
                         repo={repo}
                         pullNumber={number}
@@ -880,6 +885,7 @@ interface FileCommentThreadsProps {
     repo: string;
     pullNumber: string;
     pendingReviewId?: number | null;
+    permissionContext: PullRequestPermissionContext;
 }
 
 function FileCommentThreads({
@@ -888,6 +894,7 @@ function FileCommentThreads({
     repo,
     pullNumber,
     pendingReviewId,
+    permissionContext,
 }: FileCommentThreadsProps) {
     return (
         <>
@@ -901,6 +908,7 @@ function FileCommentThreads({
                             repo={repo}
                             number={Number(pullNumber)}
                             pendingReviewId={pendingReviewId}
+                            permissionContext={permissionContext}
                         />
                     </Fragment>
                 ))}
@@ -928,6 +936,7 @@ interface DiffContentProps {
     onCancelComment: () => void;
     footerActions: FooterAction[];
     pendingReviewId?: number | null;
+    permissionContext: PullRequestPermissionContext;
     owner: string;
     repo: string;
     pullNumber: string;
@@ -955,6 +964,7 @@ function DiffContent({
     onCancelComment,
     footerActions,
     pendingReviewId,
+    permissionContext,
     owner,
     repo,
     pullNumber,
@@ -990,6 +1000,7 @@ function DiffContent({
             onCancelComment={onCancelComment}
             footerActions={footerActions}
             pendingReviewId={pendingReviewId}
+            permissionContext={permissionContext}
             owner={owner}
             repo={repo}
             pullNumber={pullNumber}
@@ -1010,6 +1021,7 @@ function DiffContent({
             onCancelComment={onCancelComment}
             footerActions={footerActions}
             pendingReviewId={pendingReviewId}
+            permissionContext={permissionContext}
             owner={owner}
             repo={repo}
             pullNumber={pullNumber}

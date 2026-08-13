@@ -29,7 +29,8 @@ import type {
     ReviewComment2,
 } from "~/server/github";
 import { api } from "~/trpc/react";
-import { EMPTY_ARRAY_PROMISE, NULL_PROMISE } from "~/utils/promise";
+import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
+import type { PullRequestPermissionContext } from "../../permissions-utils";
 import { ConflictedFiles } from "../conflicted-files";
 import { MergeStatusBar } from "./merge-status-bar";
 
@@ -39,8 +40,7 @@ interface ActionSectionProps {
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData> | null;
     conflictedFilesPromise?: Promise<string[]> | null;
-    userPermissionPromise?: Promise<string | null> | null;
-    currentUserLogin?: string;
+    permissionContextPromise: Promise<PullRequestPermissionContext>;
     variant?: "header" | "inline";
     isSticky?: boolean;
     checkRuns?: Array<{
@@ -58,8 +58,7 @@ export function ActionSection({
     number,
     pullRequestPromise,
     conflictedFilesPromise,
-    userPermissionPromise,
-    currentUserLogin,
+    permissionContextPromise,
     variant,
     isSticky,
     checkRuns,
@@ -105,18 +104,18 @@ export function ActionSection({
                             {(files) => (
                                 <Async
                                     fallback={null}
-                                    promise={
-                                        userPermissionPromise ?? NULL_PROMISE
-                                    }
+                                    promise={permissionContextPromise}
                                 >
-                                    {(userPermission) => (
+                                    {(permissionContext) => (
                                         <Buttons
                                             owner={owner}
                                             repo={repo}
                                             number={number}
                                             pullRequest={pullRequest}
                                             conflictedFiles={files}
-                                            userPermission={userPermission}
+                                            permissionContext={
+                                                permissionContext
+                                            }
                                             repoData={repoData}
                                             reviews={reviews}
                                             mergeReqs={mergeReqs}
@@ -125,7 +124,6 @@ export function ActionSection({
                                             variant={variant}
                                             isSticky={isSticky}
                                             checkRuns={checkRuns}
-                                            currentUserLogin={currentUserLogin}
                                             isMergeStatusLoading={
                                                 reviewsLoading ||
                                                 mergeReqsLoading
@@ -150,13 +148,12 @@ function Buttons({
     number,
     pullRequest,
     conflictedFiles,
-    userPermission,
+    permissionContext,
     repoData,
     reviews,
     pendingReview,
     mergeReqs,
     mergeReqsError,
-    currentUserLogin,
     variant,
     isSticky,
     checkRuns,
@@ -172,8 +169,7 @@ function Buttons({
     mergeReqs?: MergeRequirements | null;
     mergeReqsError: boolean;
     conflictedFiles: string[];
-    currentUserLogin?: string;
-    userPermission: string | null;
+    permissionContext: PullRequestPermissionContext;
     variant?: "header" | "inline";
     isSticky?: boolean;
     checkRuns?: Array<{
@@ -251,13 +247,16 @@ function Buttons({
     const pendingCommentsCount = pendingReview?.comments.length ?? 0;
     const isDraft = !!pullRequest.draft && !markedReady;
     const effectiveMerged = pullRequest.merged || isMerged;
-    const isAuthor = currentUserLogin === pullRequest.user?.login;
+    const isAuthor = permissionContext.isPullRequestAuthor;
 
-    const canWrite = userPermission === "admin" || userPermission === "write";
+    const canWrite =
+        permissionContext.repoPermission === "admin" ||
+        permissionContext.repoPermission === "write";
     const canManagePR = isAuthor || canWrite;
     const canMerge = canWrite;
     const canInteract =
-        !!currentUserLogin && (!pullRequest.locked || canWrite || isAuthor);
+        !!permissionContext.currentUser &&
+        (!permissionContext.isPullRequestLocked || canWrite || isAuthor);
     const isMergeBlocked = pullRequest.mergeable_state === "blocked";
     const isMergeStateUnknown = pullRequest.mergeable_state === "unknown";
     const isStackMerge = (pullRequest.stack?.position ?? 0) > 1;

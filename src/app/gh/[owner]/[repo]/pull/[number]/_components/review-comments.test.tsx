@@ -84,6 +84,9 @@ vi.mock("~/trpc/react", () => ({
                 })),
             },
         },
+        repos: {
+            getPermission: { useQuery: vi.fn(() => ({ data: null })) },
+        },
     },
 }));
 
@@ -259,8 +262,12 @@ const defaultProps = {
     hasReviewBody: false,
     state: "commented",
     allComments: [unresolvedComment, outdatedResolvedComment, resolvedComment],
-    currentUserLogin: "testuser",
-    canInteract: false,
+    permissionContext: {
+        currentUser: "testuser",
+        isPullRequestAuthor: false,
+        repoPermission: null,
+        isPullRequestLocked: true,
+    },
 };
 
 function makeThread(

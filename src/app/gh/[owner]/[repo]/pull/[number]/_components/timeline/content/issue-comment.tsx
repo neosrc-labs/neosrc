@@ -27,16 +27,21 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
+import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
 import type { ReactionContent } from "~/lib/reactions";
 import type { GQLIssueComment, GQLReactionNode } from "~/server/github-graphql";
+import {
+    canEdit,
+    canInteract,
+    type PullRequestPermissionContext,
+} from "../../../permissions-utils";
 import { formatReason } from "../event";
 
 interface IssueCommentContentProps {
     event: GQLIssueComment;
     owner: string;
     repo: string;
-    currentUserLogin: string;
-    canInteract: boolean;
+    permissionContext: PullRequestPermissionContext;
     commentReactions: Record<number, GQLReactionNode[]>;
     editingCommentId: number | null;
     editBody: string;
@@ -49,14 +54,19 @@ interface IssueCommentContentProps {
     onDelete: (commentId: number) => void;
     onReactToComment: (commentId: number, content: ReactionContent) => void;
     onToggleMinimized: (commentId: number, expanded: boolean) => void;
+    commentToggleMutation: TaskToggleApi<{
+        owner: string;
+        repo: string;
+        commentId: number;
+        body: string;
+    }>;
 }
 
 export function IssueCommentContent({
     event,
     owner,
     repo,
-    currentUserLogin,
-    canInteract,
+    permissionContext,
     commentReactions,
     editingCommentId,
     editBody,
@@ -69,10 +79,15 @@ export function IssueCommentContent({
     onDelete,
     onReactToComment,
     onToggleMinimized,
+    commentToggleMutation,
 }: IssueCommentContentProps) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [copied, setCopied] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const { onToggleTask } = useTaskToggle({
+        mutation: commentToggleMutation,
+        staticInput: { owner, repo, commentId: event.databaseId },
+    });
 
     const handleCopyLink = useCallback(async () => {
         const url = `${window.location.origin}${window.location.pathname}#issuecomment-${event.databaseId}`;
@@ -84,11 +99,13 @@ export function IssueCommentContent({
     if (!event.body) return null;
 
     const isEditing = editingCommentId === event.databaseId;
-    const isAuthor = event.author?.login === currentUserLogin;
+    const isAuthor = event.author?.login === permissionContext.currentUser;
     const isPending = event.databaseId < 0;
     const displayBody = savedBodies[event.databaseId] ?? event.body;
     const isMinimized =
         event.isMinimized && !expandedMinimized[event.databaseId];
+    const _canInteract = canInteract(permissionContext);
+    const _canEdit = canEdit(permissionContext);
 
     if (isMinimized) {
         return (
@@ -193,7 +210,7 @@ export function IssueCommentContent({
                                         )}
                                         {copied ? "Copied" : "Copy link"}
                                     </button>
-                                    {isAuthor && canInteract && (
+                                    {(isAuthor || _canEdit) && _canInteract && (
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -209,7 +226,7 @@ export function IssueCommentContent({
                                             Edit
                                         </button>
                                     )}
-                                    {canInteract && (
+                                    {_canInteract && (
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -236,17 +253,17 @@ export function IssueCommentContent({
                     !isEditing && (
                         <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
                             <ReactionPicker
-                                disabled={!canInteract || isPending}
+                                disabled={!_canInteract || isPending}
                                 reactions={commentReactionsArr}
-                                currentUserLogin={currentUserLogin}
+                                currentUserLogin={permissionContext.currentUser}
                                 onReact={(content) =>
                                     onReactToComment(event.databaseId, content)
                                 }
                             />
                             <ReactionBar
-                                disabled={!canInteract || isPending}
+                                disabled={!_canInteract || isPending}
                                 reactions={commentReactionsArr}
-                                currentUserLogin={currentUserLogin}
+                                currentUserLogin={permissionContext.currentUser}
                                 onReact={(content) =>
                                     onReactToComment(event.databaseId, content)
                                 }
@@ -259,6 +276,10 @@ export function IssueCommentContent({
                     content={displayBody}
                     owner={owner}
                     repo={repo}
+                    onToggleTask={onToggleTask}
+                    canToggleTasks={
+                        (isAuthor || _canEdit) && _canInteract && !isPending
+                    }
                 />
             </CommentCard>
             <Dialog

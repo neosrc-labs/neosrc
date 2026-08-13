@@ -40,6 +40,7 @@ import type {
 } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import type { PullRequestPermissionContext } from "../../permissions-utils";
 import { AssignedEventContent } from "./content/assigned-event";
 import { AutoMergeEventContent } from "./content/auto-merge-event";
 import { BaseRefChangedContent } from "./content/base-ref-changed";
@@ -75,9 +76,8 @@ interface TimelineEventProps {
     repo: string;
     number: number;
     commentReactions: Record<number, GQLReactionNode[]>;
-    currentUserLogin: string;
     allComments: ReviewComment[];
-    canInteract: boolean;
+    permissionContext: PullRequestPermissionContext;
 }
 
 export function TimelineEvent({
@@ -86,9 +86,8 @@ export function TimelineEvent({
     repo,
     number,
     commentReactions,
-    currentUserLogin,
     allComments,
-    canInteract,
+    permissionContext,
 }: TimelineEventProps) {
     if (wrapper.type === "aggregated-label") {
         return <AggregatedLabel wrapper={wrapper} />;
@@ -117,9 +116,8 @@ export function TimelineEvent({
                     repo={repo}
                     number={number}
                     commentReactions={commentReactions}
-                    currentUserLogin={currentUserLogin}
                     allComments={allComments}
-                    canInteract={canInteract}
+                    permissionContext={permissionContext}
                 />
             </div>
         </div>
@@ -321,18 +319,16 @@ function EventContent({
     repo,
     number,
     commentReactions,
-    currentUserLogin,
     allComments,
-    canInteract,
+    permissionContext,
 }: {
     event: GQLTimelineEvent;
     owner: string;
     repo: string;
     number: number;
     commentReactions: Record<number, GQLReactionNode[]>;
-    currentUserLogin: string;
     allComments: ReviewComment[];
-    canInteract: boolean;
+    permissionContext: PullRequestPermissionContext;
 }) {
     const [editingCommentId, setEditingCommentId] = useState<number | null>(
         null,
@@ -372,6 +368,34 @@ function EventContent({
                 return next;
             });
             setEditingCommentId(reviewId);
+        },
+    });
+    // Task-list checkbox toggles. Separate mutations from the edit flow so
+    // their onMutate/onError contract mirrors the toggle flow (optimistic body
+    // overlay, no edit-mode transitions) while sharing `savedBodies`.
+    const commentTaskToggleMutation = api.pulls.updateComment.useMutation({
+        onMutate: ({ commentId, body }) => {
+            setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
+        },
+        onError: (_, { commentId }) => {
+            setSavedBodies((prev) => {
+                const next = { ...prev };
+                delete next[commentId];
+                return next;
+            });
+        },
+    });
+
+    const reviewTaskToggleMutation = api.pulls.updateReview.useMutation({
+        onMutate: ({ reviewId, body }) => {
+            setSavedBodies((prev) => ({ ...prev, [reviewId]: body }));
+        },
+        onError: (_, { reviewId }) => {
+            setSavedBodies((prev) => {
+                const next = { ...prev };
+                delete next[reviewId];
+                return next;
+            });
         },
     });
 
@@ -458,7 +482,7 @@ function EventContent({
                                         [commentId]: toggleReactionInList(
                                             page.commentReactions[commentId] ??
                                                 [],
-                                            currentUserLogin,
+                                            permissionContext.currentUser!,
                                             content,
                                         ),
                                     },
@@ -522,7 +546,7 @@ function EventContent({
                                         [databaseId]: toggleReactionInList(
                                             page.commentReactions[databaseId] ??
                                                 [],
-                                            currentUserLogin,
+                                            permissionContext.currentUser!,
                                             content,
                                         ),
                                     },
@@ -586,7 +610,7 @@ function EventContent({
         }));
     };
 
-    const baseProps = { owner, repo, currentUserLogin, canInteract };
+    const baseProps = { owner, repo, permissionContext };
 
     switch (event.__typename) {
         case "IssueComment":
@@ -609,6 +633,10 @@ function EventContent({
                     onDelete={handleDeleteComment}
                     onReactToComment={handleCommentReaction}
                     onToggleMinimized={handleToggleMinimized}
+                    commentToggleMutation={{
+                        mutate: commentTaskToggleMutation.mutate,
+                        isPending: commentTaskToggleMutation.isPending,
+                    }}
                 />
             );
 
@@ -633,6 +661,10 @@ function EventContent({
                     onReactToReview={handleReviewReaction}
                     expandedMinimized={expandedMinimized}
                     onToggleMinimized={handleToggleMinimized}
+                    reviewToggleMutation={{
+                        mutate: reviewTaskToggleMutation.mutate,
+                        isPending: reviewTaskToggleMutation.isPending,
+                    }}
                 />
             );
 
