@@ -1,9 +1,8 @@
 "use client";
 
 import { defaultDiff2HtmlConfig, parse } from "diff2html";
-import type { ColorSchemeType } from "diff2html/lib/types";
+import type { ColorSchemeType, DiffBlock, DiffFile } from "diff2html/lib/types";
 import "diff2html/bundles/css/diff2html.min.css";
-import type { DiffBlock } from "diff2html/lib/types";
 import hljs from "highlight.js";
 import { Plus, UnfoldVertical } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -344,31 +343,33 @@ export function DiffView({
         void expandAllContext;
     }, [language, parsed, expandedGapKeys, expandAllContext]);
 
+    const positionMap = useMemo(() => buildDiffPositionMap(parsed), [parsed]);
+
     const commentsByLine = useMemo(() => {
         const map = new Map<string, ReviewComment[]>();
         for (const comment of comments) {
-            const side = comment.side ?? "RIGHT";
-            const endLine = comment.line ?? comment.position ?? 0;
-            const startLine = comment.start_line ?? endLine;
-            for (let line = startLine; line <= endLine; line++) {
-                const key = `${line}-${side}`;
+            const anchor = resolveCommentAnchor(comment, positionMap);
+            if (!anchor) continue;
+            const startLine = comment.start_line ?? anchor.line;
+            for (let line = startLine; line <= anchor.line; line++) {
+                const key = `${line}-${anchor.side}`;
                 const existing = map.get(key) ?? [];
                 existing.push(comment);
                 map.set(key, existing);
             }
         }
         return map;
-    }, [comments]);
+    }, [comments, positionMap]);
 
     const multiLineRanges = useMemo(() => {
         const ranges = new Map<string, string[]>();
         for (const comment of comments) {
-            const side = comment.side ?? "RIGHT";
-            const endLine = comment.line ?? comment.position ?? 0;
+            const anchor = resolveCommentAnchor(comment, positionMap);
+            if (!anchor) continue;
             const startLine = comment.start_line;
-            if (startLine == null || startLine === endLine) continue;
-            for (let line = startLine; line <= endLine; line++) {
-                const key = `${line}-${side}`;
+            if (startLine == null || startLine === anchor.line) continue;
+            for (let line = startLine; line <= anchor.line; line++) {
+                const key = `${line}-${anchor.side}`;
                 const existing = ranges.get(key) ?? [];
                 const rangeId = `${comment.id}`;
                 if (!existing.includes(rangeId)) {
@@ -378,7 +379,7 @@ export function DiffView({
             }
         }
         return ranges;
-    }, [comments]);
+    }, [comments, positionMap]);
 
     const renderItems = useMemo(() => {
         if (!parsed?.blocks) return [];
@@ -493,6 +494,7 @@ export function DiffView({
                             onLineSelect={handleLineSelect}
                             onLineMouseDown={handleLineMouseDown}
                             commentsByLine={commentsByLine}
+                            positionMap={positionMap}
                             multiLineRanges={multiLineRanges}
                             activeComment={activeComment}
                             onStartComment={onStartComment}
@@ -560,9 +562,52 @@ export function groupThreads(
     }));
 }
 
+type DiffCommentAnchor = {
+    side: "LEFT" | "RIGHT";
+    line: number;
+};
+
+/**
+ * Maps GitHub's deprecated diff `position` (a 1-based index into the unified
+ * diff, counting every line across hunks) to the (side, file line) the diff
+ * view renders. Draft review comments only carry `position`; submitted
+ * comments carry `line`/`side`.
+ */
+function buildDiffPositionMap(
+    parsed: DiffFile | null,
+): Map<number, DiffCommentAnchor> {
+    const map = new Map<number, DiffCommentAnchor>();
+    if (!parsed) return map;
+    let position = 0;
+    for (const block of parsed.blocks) {
+        for (const line of block.lines) {
+            position += 1;
+            if (line.type === "delete") {
+                map.set(position, { side: "LEFT", line: line.oldNumber });
+            } else {
+                map.set(position, { side: "RIGHT", line: line.newNumber });
+            }
+        }
+    }
+    return map;
+}
+
+function resolveCommentAnchor(
+    comment: ReviewComment,
+    positionMap: Map<number, DiffCommentAnchor>,
+): DiffCommentAnchor | null {
+    if (comment.line != null) {
+        return { side: comment.side ?? "RIGHT", line: comment.line };
+    }
+    const position = comment.position ?? comment.original_position ?? null;
+    if (position == null) return null;
+    return positionMap.get(position) ?? null;
+}
+
 interface BlockRowsProps {
     block: NonNullable<ReturnType<typeof parse>>[number]["blocks"][number];
     commentsByLine: Map<string, ReviewComment[]>;
+    positionMap: Map<number, DiffCommentAnchor>;
     multiLineRanges: Map<string, string[]>;
     activeComment: ActiveComment | null;
     onStartComment: ((ac: ActiveComment | null) => void) | undefined;
@@ -605,6 +650,7 @@ interface BlockRowsProps {
 function BlockRows({
     block,
     commentsByLine,
+    positionMap,
     multiLineRanges,
     activeComment,
     onStartComment,
@@ -788,7 +834,8 @@ function BlockRows({
                 const content = line.content.slice(1);
 
                 const isLastLineOfRange = (c: ReviewComment) =>
-                    (c.line ?? c.position ?? 0) === commentLine;
+                    (resolveCommentAnchor(c, positionMap)?.line ?? 0) ===
+                    commentLine;
 
                 const lineId = fileHash
                     ? `diff-${fileHash}${newNum != null ? `R${newNum}` : `L${oldNum}`}`
@@ -1279,6 +1326,7 @@ interface DiffTableBodyProps {
     onLineSelect: (lineNum: number, side: string, shiftKey: boolean) => void;
     onLineMouseDown: (lineNum: number, side: string) => void;
     commentsByLine: Map<string, ReviewComment[]>;
+    positionMap: Map<number, DiffCommentAnchor>;
     multiLineRanges: Map<string, string[]>;
     activeComment: ActiveComment | null;
     onStartComment: ((ac: ActiveComment | null) => void) | undefined;
@@ -1315,6 +1363,7 @@ function DiffTableBody({
     onLineSelect,
     onLineMouseDown,
     commentsByLine,
+    positionMap,
     multiLineRanges,
     activeComment,
     onStartComment,
@@ -1397,6 +1446,7 @@ function DiffTableBody({
                         onLineSelect={onLineSelect}
                         onLineMouseDown={onLineMouseDown}
                         commentsByLine={commentsByLine}
+                        positionMap={positionMap}
                         multiLineRanges={multiLineRanges}
                         activeComment={activeComment}
                         onStartComment={onStartComment}

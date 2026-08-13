@@ -147,12 +147,14 @@ function mb(
 function makeMockComments(
     comments: Array<{
         id: number;
-        line: number;
+        line?: number | null;
         side?: string;
-        start_line?: number;
+        start_line?: number | null;
         path?: string;
         body?: string;
         in_reply_to_id?: number;
+        position?: number | null;
+        original_position?: number | null;
     }>,
 ): ReviewComment[] {
     return comments as unknown as ReviewComment[];
@@ -562,6 +564,40 @@ describe("DiffView rendering", () => {
             expect(
                 screen.queryByTestId("inline-comment-thread"),
             ).not.toBeInTheDocument();
+        });
+
+        it("anchors draft comments (position only, no line/side) to the correct diff line", () => {
+            const lines = [mc(" ctx", 10, 10), mc("+added", 11)];
+            mockParse.mockReturnValue([
+                {
+                    addedLines: 1,
+                    deletedLines: 0,
+                    isCombined: false,
+                    isGitDiff: true,
+                    language: "",
+                    oldName: "a/test.ts",
+                    newName: "b/test.ts",
+                    blocks: [mb(10, lines, 10)],
+                },
+            ]);
+
+            const comments = makeMockComments([
+                { id: 99, position: 2, path: "test.ts" },
+            ]);
+
+            renderDiffView({
+                showComments: true,
+                comments,
+            });
+
+            const thread = screen.getByTestId("inline-comment-thread");
+            expect(thread).toHaveAttribute("data-comment-id", "99");
+
+            // The thread must be anchored to new line 11 (insert), not diff
+            // position 2: its row immediately follows the R11 line row.
+            const threadRow = thread.closest("tr");
+            const lineRow = threadRow?.previousElementSibling;
+            expect(lineRow?.id.endsWith("R11")).toBe(true);
         });
     });
 
