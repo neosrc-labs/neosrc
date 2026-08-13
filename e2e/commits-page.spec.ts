@@ -57,7 +57,9 @@ test.describe
             page,
         }) => {
             await test.step("Navigate to the commits page", async () => {
-                await page.goto(`/gh/${OWNER}/${REPO}/commits/${branch}`);
+                await page.goto(`/gh/${OWNER}/${REPO}/commits/${branch}`, {
+                    waitUntil: "domcontentloaded",
+                });
                 const firstCommit = expectedCommits[0];
                 if (!firstCommit) return;
                 // The commit list is fetched client-side (tRPC) after

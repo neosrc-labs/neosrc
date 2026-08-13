@@ -5,8 +5,15 @@ export const [OWNER, REPO] = TEST_REPO.split("/") as [string, string];
 export const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 export async function gotoPr(page: Page, prNumber: number) {
-    await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`);
-    await page.waitForLoadState("networkidle");
+    await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}`, {
+        waitUntil: "domcontentloaded",
+    });
+}
+
+export async function gotoChanges(page: Page, prNumber: number) {
+    await page.goto(`/gh/${OWNER}/${REPO}/pull/${prNumber}/changes`, {
+        waitUntil: "domcontentloaded",
+    });
 }
 
 export async function collapseRightSidebar(page: Page) {

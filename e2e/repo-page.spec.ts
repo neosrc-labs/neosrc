@@ -18,54 +18,59 @@ test.describe
                 !GITHUB_TOKEN,
                 "GITHUB_TOKEN not set -- skipping API-based test",
             );
-
             const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
-            const { data: repo } = await octokit.rest.repos.get({
-                owner: OWNER,
-                repo: REPO,
-            });
+            const [
+                { data: repo },
+                { data: contributors },
+                { data: langData },
+                release,
+            ] = await Promise.all([
+                octokit.rest.repos.get({
+                    owner: OWNER,
+                    repo: REPO,
+                }),
+                octokit.rest.repos.listContributors({
+                    owner: OWNER,
+                    repo: REPO,
+                    per_page: 5,
+                }),
+                octokit.rest.repos.listLanguages({
+                    owner: OWNER,
+                    repo: REPO,
+                }),
+                octokit.rest.repos
+                    .getLatestRelease({
+                        owner: OWNER,
+                        repo: REPO,
+                    })
+                    .then(({ data }) => data)
+                    .catch(() => null),
+            ]);
 
             description = repo.description ?? "";
             topics = repo.topics ?? [];
             isPrivate = repo.private;
             language = repo.language ?? null;
 
-            const { data: contributors } =
-                await octokit.rest.repos.listContributors({
-                    owner: OWNER,
-                    repo: REPO,
-                    per_page: 5,
-                });
             contributorLogins = (contributors ?? [])
                 .filter((c) => c?.login)
                 .map((c) => (c as { login: string }).login);
 
-            const { data: langData } = await octokit.rest.repos.listLanguages({
-                owner: OWNER,
-                repo: REPO,
-            });
             languages = langData as Record<string, number>;
 
-            try {
-                const { data: release } =
-                    await octokit.rest.repos.getLatestRelease({
-                        owner: OWNER,
-                        repo: REPO,
-                    });
+            if (release) {
                 hasRelease = true;
                 releaseName = release.name ?? release.tag_name;
-            } catch {
-                hasRelease = false;
             }
         });
-
         test("should render repo data from the GitHub API", async ({
             page,
         }) => {
             await test.step("Navigate to the repo page", async () => {
-                await page.goto(`/${TEST_REPO}`);
-                await page.waitForLoadState("networkidle");
+                await page.goto(`/${TEST_REPO}`, {
+                    waitUntil: "domcontentloaded",
+                });
             });
 
             await test.step("Verify the page title", async () => {

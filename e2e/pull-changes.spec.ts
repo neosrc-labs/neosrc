@@ -5,7 +5,7 @@ import {
     createTestChangesPullRequest,
     type TestChangesPullRequest,
 } from "./shared/data";
-import { GITHUB_TOKEN, OWNER, REPO } from "./shared/helpers";
+import { GITHUB_TOKEN, gotoChanges, OWNER, REPO } from "./shared/helpers";
 
 async function runReplyPromotionScenario(
     page: Page,
@@ -16,10 +16,7 @@ async function runReplyPromotionScenario(
     );
     if (!commentFile) throw new Error("Test PR has no modified file");
 
-    await page.goto(
-        `/gh/${OWNER}/${REPO}/pull/${testPullRequest.number}/changes`,
-    );
-    await page.waitForLoadState("networkidle");
+    await gotoChanges(page, testPullRequest.number);
 
     const fileDiff = page.locator(
         `[id="${commentFile.filename.replace(/\//g, "-")}"]`,
@@ -91,7 +88,6 @@ async function runReplyPromotionScenario(
         expect(response.status()).toBe(200);
     });
     await page.reload();
-    await page.waitForLoadState("networkidle");
 
     thread = fileDiff
         .locator('[id^="review-thread-"]')
@@ -148,10 +144,7 @@ test.describe
         });
 
         test("should render the changes header data", async ({ page }) => {
-            await page.goto(
-                `/gh/${OWNER}/${REPO}/pull/${testPullRequest.number}/changes`,
-            );
-            await page.waitForLoadState("networkidle");
+            await gotoChanges(page, testPullRequest.number);
             const changesHeader = page.locator("div.sticky").first();
             await test.step("Verify the PR title", async () => {
                 await expect(
@@ -209,10 +202,7 @@ test.describe
         });
 
         test("should render the file tree data", async ({ page }) => {
-            await page.goto(
-                `/gh/${OWNER}/${REPO}/pull/${testPullRequest.number}/changes`,
-            );
-            await page.waitForLoadState("networkidle");
+            await gotoChanges(page, testPullRequest.number);
 
             const leftSidebar = page.getByTestId("left-sidebar");
 
@@ -254,10 +244,7 @@ test.describe
             );
             if (!commentFile) throw new Error("Test PR has no modified file");
 
-            await page.goto(
-                `/gh/${OWNER}/${REPO}/pull/${testPullRequest.number}/changes`,
-            );
-            await page.waitForLoadState("networkidle");
+            await gotoChanges(page, testPullRequest.number);
 
             const fileDiff = page.locator(
                 `[id="${commentFile.filename.replace(/\//g, "-")}"]`,
@@ -328,10 +315,7 @@ test.describe
             );
             if (!commentFile) throw new Error("Test PR has no modified file");
 
-            await page.goto(
-                `/gh/${OWNER}/${REPO}/pull/${testPullRequest.number}/changes`,
-            );
-            await page.waitForLoadState("networkidle");
+            await gotoChanges(page, testPullRequest.number);
 
             const fileDiff = page.locator(
                 `[id="${commentFile.filename.replace(/\//g, "-")}"]`,
@@ -398,10 +382,7 @@ test.describe
             });
 
             await test.step("Verify the submitted comment is no longer pending", async () => {
-                await page.goto(
-                    `/gh/${OWNER}/${REPO}/pull/${testPullRequest.number}/changes`,
-                );
-                await page.waitForLoadState("networkidle");
+                await gotoChanges(page, testPullRequest.number);
                 const submittedThread = fileDiff
                     .locator('[id^="review-thread-"]')
                     .filter({ hasText: commentText });
