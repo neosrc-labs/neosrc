@@ -6,10 +6,14 @@ export type PullRequestPermissionContext = {
 };
 
 export function canInteract({
+    currentUser,
     isPullRequestAuthor,
     isPullRequestLocked,
     repoPermission,
 }: PullRequestPermissionContext): boolean {
+    if (!currentUser) {
+        return false;
+    }
     return (
         !isPullRequestLocked ||
         repoPermission === "admin" ||
@@ -20,9 +24,13 @@ export function canInteract({
 }
 
 export function canEdit({
+    currentUser,
     isPullRequestAuthor,
     repoPermission,
 }: PullRequestPermissionContext): boolean {
+    if (!currentUser) {
+        return false;
+    }
     return (
         repoPermission === "admin" ||
         repoPermission === "write" ||

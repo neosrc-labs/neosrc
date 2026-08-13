@@ -760,22 +760,28 @@ function CommentBlock({
                     }
                     footer={
                         <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                            <ReactionPicker
-                                disabled={!_canInteract}
-                                reactions={parentReactions}
-                                currentUserLogin={permissionContext.currentUser}
-                                onReact={(content) =>
-                                    onReact(comment.id, content)
-                                }
-                            />
-                            <ReactionBar
-                                disabled={!_canInteract}
-                                reactions={parentReactions}
-                                currentUserLogin={permissionContext.currentUser}
-                                onReact={(content) =>
-                                    onReact(comment.id, content)
-                                }
-                            />
+                            {_canInteract && (
+                                <>
+                                    <ReactionPicker
+                                        reactions={parentReactions}
+                                        currentUserLogin={
+                                            permissionContext.currentUser
+                                        }
+                                        onReact={(content) =>
+                                            onReact(comment.id, content)
+                                        }
+                                    />
+                                    <ReactionBar
+                                        reactions={parentReactions}
+                                        currentUserLogin={
+                                            permissionContext.currentUser
+                                        }
+                                        onReact={(content) =>
+                                            onReact(comment.id, content)
+                                        }
+                                    />
+                                </>
+                            )}
                         </div>
                     }
                 >
@@ -887,26 +893,34 @@ function CommentBlock({
                                 }
                                 footer={
                                     <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                                        <ReactionPicker
-                                            disabled={!_canInteract}
-                                            reactions={replyReactions}
-                                            currentUserLogin={
-                                                permissionContext.currentUser
-                                            }
-                                            onReact={(content) =>
-                                                onReact(reply.id, content)
-                                            }
-                                        />
-                                        <ReactionBar
-                                            disabled={!_canInteract}
-                                            reactions={replyReactions}
-                                            currentUserLogin={
-                                                permissionContext.currentUser
-                                            }
-                                            onReact={(content) =>
-                                                onReact(reply.id, content)
-                                            }
-                                        />
+                                        {_canInteract && (
+                                            <>
+                                                <ReactionPicker
+                                                    reactions={replyReactions}
+                                                    currentUserLogin={
+                                                        permissionContext.currentUser
+                                                    }
+                                                    onReact={(content) =>
+                                                        onReact(
+                                                            reply.id,
+                                                            content,
+                                                        )
+                                                    }
+                                                />
+                                                <ReactionBar
+                                                    reactions={replyReactions}
+                                                    currentUserLogin={
+                                                        permissionContext.currentUser
+                                                    }
+                                                    onReact={(content) =>
+                                                        onReact(
+                                                            reply.id,
+                                                            content,
+                                                        )
+                                                    }
+                                                />
+                                            </>
+                                        )}
                                     </div>
                                 }
                             >
