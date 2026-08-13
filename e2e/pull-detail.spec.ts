@@ -200,6 +200,7 @@ test.describe
 
         test("should allow ability to comment", async ({ page }) => {
             const commentText = `E2E test comment ${Date.now()}`;
+            const editedCommentText = `${commentText} edited`;
 
             await navigateToPr(page, prNumber);
 
@@ -232,6 +233,45 @@ test.describe
                 });
             });
 
+            await test.step("Verify ability to edit a comment", async () => {
+                const commentCard = page
+                    .getByTestId("timeline")
+                    .locator('[id^="issuecomment-"]')
+                    .filter({ hasText: commentText });
+
+                await test.step("Open the comment menu and choose Edit", async () => {
+                    await commentCard
+                        .getByRole("button", { name: "More options" })
+                        .click();
+
+                    const editButton = page
+                        .locator("[data-radix-popper-content-wrapper]")
+                        .getByRole("button", { name: "Edit" });
+                    await expect(editButton).toBeVisible();
+                    await editButton.click();
+                });
+
+                await test.step("Replace the comment body", async () => {
+                    const editor = commentCard.locator("textarea");
+                    await expect(editor).toBeVisible();
+                    await editor.fill(editedCommentText);
+                });
+
+                await test.step("Save the edit", async () => {
+                    await commentCard
+                        .getByRole("button", { name: "Save" })
+                        .click();
+                });
+
+                await test.step("Verify the edited comment appears in the timeline", async () => {
+                    await expect(
+                        page
+                            .getByTestId("timeline")
+                            .getByText(editedCommentText),
+                    ).toBeVisible();
+                });
+            });
+
             await test.step("Verify ability to add and remove reactions", async () => {
                 const commentCard = page
                     .getByTestId("timeline")
@@ -260,6 +300,39 @@ test.describe
 
                     await expect(
                         commentCard.locator('button[aria-label="👍 (1)"]'),
+                    ).not.toBeVisible();
+                });
+            });
+
+            await test.step("Verify ability to delete a comment", async () => {
+                const commentCard = page
+                    .getByTestId("timeline")
+                    .locator('[id^="issuecomment-"]')
+                    .filter({ hasText: commentText });
+
+                await test.step("Open the comment menu and choose Delete comment", async () => {
+                    await commentCard
+                        .getByRole("button", { name: "More options" })
+                        .click();
+
+                    const deleteMenuItem = page
+                        .locator("[data-radix-popper-content-wrapper]")
+                        .getByRole("button", { name: "Delete comment" });
+                    await expect(deleteMenuItem).toBeVisible();
+                    await deleteMenuItem.click();
+                });
+
+                await test.step("Confirm deletion in the dialog", async () => {
+                    const dialog = page.getByRole("dialog");
+                    await expect(dialog).toBeVisible();
+                    await dialog
+                        .getByRole("button", { name: "Delete" })
+                        .click();
+                });
+
+                await test.step("Verify the comment is removed from the timeline", async () => {
+                    await expect(
+                        page.getByTestId("timeline").getByText(commentText),
                     ).not.toBeVisible();
                 });
             });
