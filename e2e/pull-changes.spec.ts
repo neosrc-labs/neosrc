@@ -1,4 +1,5 @@
 import { Octokit } from "@octokit/rest";
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import {
     createTestChangesPullRequest,
@@ -6,6 +7,117 @@ import {
 } from "./shared/data";
 import { GITHUB_TOKEN, OWNER, REPO } from "./shared/helpers";
 
+async function runReplyPromotionScenario(
+    page: Page,
+    testPullRequest: TestChangesPullRequest,
+) {
+    const commentFile = testPullRequest.files.find(
+        (file) => file.status === "modified",
+    );
+    if (!commentFile) throw new Error("Test PR has no modified file");
+
+    await page.goto(
+        `/gh/${OWNER}/${REPO}/pull/${testPullRequest.number}/changes`,
+    );
+    await page.waitForLoadState("networkidle");
+
+    const fileDiff = page.locator(
+        `[id="${commentFile.filename.replace(/\//g, "-")}"]`,
+    );
+    const parentText = `Parent comment ${Date.now()}`;
+    const replyText = `Reply comment ${Date.now()}`;
+    const editedReplyText = `${replyText} edited`;
+
+    await test.step("Add a parent comment", async () => {
+        const line = fileDiff.locator("tr:has(td.d2h-ins)").first();
+        await line.hover();
+        await line.locator("td.d2h-code-linenumber svg").click();
+        await fileDiff.getByPlaceholder("Add a comment...").fill(parentText);
+        await fileDiff
+            .getByRole("button", { name: "Add single comment" })
+            .click();
+    });
+
+    let thread = fileDiff
+        .locator('[id^="review-thread-"]')
+        .filter({ hasText: parentText });
+    await expect(thread).toBeVisible();
+    await expect(
+        thread.getByText("Saving...", { exact: true }),
+    ).not.toBeAttached({ timeout: 15_000 });
+
+    await test.step("Add a reply to the comment", async () => {
+        await thread.getByRole("button", { name: "Reply..." }).click();
+        await thread.getByPlaceholder("Write a reply...").fill(replyText);
+        await thread
+            .getByRole("button", { name: "Reply", exact: true })
+            .click();
+        await expect(thread.getByText(replyText)).toBeVisible();
+    });
+
+    const replyBody = thread.getByText(replyText, { exact: true });
+    const replyCard = replyBody.locator(
+        "xpath=ancestor::div[contains(@class, 'relative')][1]",
+    );
+
+    await test.step("Update the reply", async () => {
+        await replyCard.getByRole("button", { name: "Edit comment" }).click();
+        await replyCard.locator("textarea").fill(editedReplyText);
+        const updateResponse = page.waitForResponse((response) =>
+            response.url().includes("reviewComments.update"),
+        );
+        await thread.getByRole("button", { name: "Save" }).click();
+        const response = await updateResponse;
+        expect(response.status()).toBe(200);
+        await expect(thread.getByText(editedReplyText)).toBeVisible();
+    });
+
+    await test.step("Delete the parent comment", async () => {
+        const parentCard = thread
+            .getByText(parentText, { exact: true })
+            .locator("xpath=ancestor::div[contains(@class, 'relative')][1]");
+        await parentCard.getByRole("button", { name: "More options" }).click();
+        await page
+            .locator("[data-radix-popper-content-wrapper]")
+            .getByRole("button", { name: "Delete comment" })
+            .click();
+        const dialog = page.getByRole("dialog");
+        await expect(dialog).toBeVisible();
+        const deleteResponse = page.waitForResponse((response) =>
+            response.url().includes("reviewComments.delete"),
+        );
+        await dialog.getByRole("button", { name: "Delete" }).click();
+        const response = await deleteResponse;
+        expect(response.status()).toBe(200);
+    });
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+
+    thread = fileDiff
+        .locator('[id^="review-thread-"]')
+        .filter({ hasText: editedReplyText });
+    await test.step("Verify the reply became the parent", async () => {
+        await expect(thread).toBeVisible();
+        const promotedReplyCard = thread
+            .getByText(editedReplyText, { exact: true })
+            .locator("xpath=ancestor::div[contains(@class, 'relative')][1]");
+        await expect(promotedReplyCard).toHaveClass(/border-b-1/);
+    });
+
+    await test.step("Resolve the comment thread", async () => {
+        const resolveResponse = page.waitForResponse((response) =>
+            response.url().includes("reviewComments.resolveThread"),
+        );
+        await thread
+            .getByRole("button", { name: "Resolve", exact: true })
+            .click();
+        const response = await resolveResponse;
+        expect(response.status()).toBe(200);
+        await expect(
+            fileDiff.getByRole("button", { name: "Show thread" }),
+        ).toBeVisible();
+    });
+}
 test.describe
     .serial("Pull request changes", { tag: ["@github"] }, () => {
         let testPullRequest: TestChangesPullRequest;
@@ -301,5 +413,10 @@ test.describe
                     submittedThread.getByText("Pending", { exact: true }),
                 ).not.toBeAttached({ timeout: 15_000 });
             });
+        });
+        test("should promote replies and resolve the comment thread", async ({
+            page,
+        }) => {
+            await runReplyPromotionScenario(page, testPullRequest);
         });
     });
