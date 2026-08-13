@@ -708,16 +708,110 @@ export const updateReviewComment = async (
     repo: string,
     commentId: number,
     body: string,
+    pullNumber?: number,
 ) => {
     const octokit = createOctokit(accessToken);
-    const response = await octokit.pulls.updateReviewComment({
-        owner,
-        repo,
-        comment_id: commentId,
-        body,
-    });
-    return response.data;
+    try {
+        const response = await octokit.pulls.updateReviewComment({
+            owner,
+            repo,
+            comment_id: commentId,
+            body,
+        });
+        return response.data;
+    } catch (error) {
+        if (
+            pullNumber == null ||
+            (error as { status?: number }).status !== 404
+        ) {
+            throw error;
+        }
+
+        const reviews = await getPullRequestReviews(
+            accessToken,
+            owner,
+            repo,
+            pullNumber,
+        );
+        for (const review of reviews.filter((r) => r.state === "PENDING")) {
+            const comments = await getPullRequestReviewCommentsForReview(
+                accessToken,
+                owner,
+                repo,
+                pullNumber,
+                review.id,
+            );
+            const comment = comments.find(
+                (candidate) => candidate.id === commentId,
+            );
+            if (!comment?.node_id) continue;
+
+            await updatePendingPullRequestReviewComment(
+                accessToken,
+                comment.node_id,
+                body,
+            );
+            return comment;
+        }
+
+        throw error;
+    }
 };
+
+async function updatePendingPullRequestReviewComment(
+    accessToken: string,
+    commentNodeId: string,
+    body: string,
+) {
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${accessToken}` },
+    });
+
+    const result = await graphql<{
+        updatePullRequestReviewComment: {
+            pullRequestReviewComment: { body: string };
+        };
+    }>(
+        `
+        mutation($commentId: ID!, $body: String!) {
+            updatePullRequestReviewComment(
+                input: {
+                    pullRequestReviewCommentId: $commentId
+                    body: $body
+                }
+            ) {
+                pullRequestReviewComment {
+                    body
+                }
+            }
+        }
+    `,
+        { commentId: commentNodeId, body },
+    );
+
+    const readback = await graphql<{
+        node: { body: string } | null;
+    }>(
+        `
+        query($commentId: ID!) {
+            node(id: $commentId) {
+                ... on PullRequestReviewComment {
+                    body
+                }
+            }
+        }
+    `,
+        { commentId: commentNodeId },
+    );
+
+    if (
+        result.updatePullRequestReviewComment.pullRequestReviewComment.body !==
+            body ||
+        readback.node?.body !== body
+    ) {
+        throw new Error("GitHub did not update the pending review comment");
+    }
+}
 
 export const updatePullRequestReview = async (
     accessToken: string,
