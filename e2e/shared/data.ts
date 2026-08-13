@@ -16,14 +16,15 @@ export async function createTestPullRequest(): Promise<TestPullRequest> {
             "GITHUB_TOKEN is required to create a test pull request",
         );
     }
-
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
-    const { data: repo } = await octokit.rest.repos.get({
-        owner: OWNER,
-        repo: REPO,
-    });
 
-    const { data: user } = await octokit.rest.users.getAuthenticated();
+    const [{ data: repo }, { data: user }] = await Promise.all([
+        octokit.rest.repos.get({
+            owner: OWNER,
+            repo: REPO,
+        }),
+        octokit.rest.users.getAuthenticated(),
+    ]);
     const branchName = `e2e-test-${Date.now()}`;
     const baseBranch = repo.default_branch;
     const filePath = `e2e-${Date.now()}.md`;
@@ -61,17 +62,7 @@ export async function createTestPullRequest(): Promise<TestPullRequest> {
         body: "Created by e2e test.",
     });
 
-    try {
-        await octokit.rest.issues.createLabel({
-            owner: OWNER,
-            repo: REPO,
-            name: "e2e",
-            color: "FF0000",
-            description: "E2E test label",
-        });
-    } catch {
-        // Label may already exist from a previous run
-    }
+    await ensureE2eLabel(octokit);
 
     await octokit.rest.issues.addLabels({
         owner: OWNER,
@@ -110,13 +101,15 @@ export async function createTestChangesPullRequest(): Promise<TestChangesPullReq
             "GITHUB_TOKEN is required to create a test pull request",
         );
     }
-
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
-    const { data: repo } = await octokit.rest.repos.get({
-        owner: OWNER,
-        repo: REPO,
-    });
-    const { data: user } = await octokit.rest.users.getAuthenticated();
+
+    const [{ data: repo }, { data: user }] = await Promise.all([
+        octokit.rest.repos.get({
+            owner: OWNER,
+            repo: REPO,
+        }),
+        octokit.rest.users.getAuthenticated(),
+    ]);
 
     const timestamp = Date.now();
     const branchName = `e2e-changes-${timestamp}`;
@@ -124,12 +117,19 @@ export async function createTestChangesPullRequest(): Promise<TestChangesPullReq
     const newFilePath = `e2e-changes-added-${timestamp}.md`;
     const commitMessage = "e2e changes test commit";
 
-    const { data: rootContents } = await octokit.rest.repos.getContent({
-        owner: OWNER,
-        repo: REPO,
-        path: "",
-        ref: baseBranch,
-    });
+    const [{ data: rootContents }, { data: baseRef }] = await Promise.all([
+        octokit.rest.repos.getContent({
+            owner: OWNER,
+            repo: REPO,
+            path: "",
+            ref: baseBranch,
+        }),
+        octokit.rest.git.getRef({
+            owner: OWNER,
+            repo: REPO,
+            ref: `heads/${baseBranch}`,
+        }),
+    ]);
     const rootFiles = Array.isArray(rootContents)
         ? rootContents.filter((entry) => entry.type === "file")
         : [];
@@ -143,12 +143,20 @@ export async function createTestChangesPullRequest(): Promise<TestChangesPullReq
         );
     }
 
-    const { data: existingContent } = await octokit.rest.repos.getContent({
-        owner: OWNER,
-        repo: REPO,
-        path: existingFile.path,
-        ref: baseBranch,
-    });
+    const [{ data: existingContent }] = await Promise.all([
+        octokit.rest.repos.getContent({
+            owner: OWNER,
+            repo: REPO,
+            path: existingFile.path,
+            ref: baseBranch,
+        }),
+        octokit.rest.git.createRef({
+            owner: OWNER,
+            repo: REPO,
+            ref: `refs/heads/${branchName}`,
+            sha: baseRef.object.sha,
+        }),
+    ]);
 
     if (
         Array.isArray(existingContent) ||
@@ -168,19 +176,6 @@ export async function createTestChangesPullRequest(): Promise<TestChangesPullReq
         throw new Error("The file to modify is empty");
     }
     lines[lineToReplace] = `E2E test modification ${timestamp}`;
-
-    const { data: baseRef } = await octokit.rest.git.getRef({
-        owner: OWNER,
-        repo: REPO,
-        ref: `heads/${baseBranch}`,
-    });
-
-    await octokit.rest.git.createRef({
-        owner: OWNER,
-        repo: REPO,
-        ref: `refs/heads/${branchName}`,
-        sha: baseRef.object.sha,
-    });
 
     await octokit.rest.repos.createOrUpdateFileContents({
         owner: OWNER,
@@ -211,17 +206,7 @@ export async function createTestChangesPullRequest(): Promise<TestChangesPullReq
         body: "Created by e2e changes test.",
     });
 
-    try {
-        await octokit.rest.issues.createLabel({
-            owner: OWNER,
-            repo: REPO,
-            name: "e2e",
-            color: "FF0000",
-            description: "E2E test label",
-        });
-    } catch {
-        // Label may already exist from a previous run
-    }
+    await ensureE2eLabel(octokit);
 
     await octokit.rest.issues.addLabels({
         owner: OWNER,
@@ -229,18 +214,19 @@ export async function createTestChangesPullRequest(): Promise<TestChangesPullReq
         issue_number: createdPullRequest.number,
         labels: ["e2e"],
     });
-
-    const { data: pullRequest } = await octokit.rest.pulls.get({
-        owner: OWNER,
-        repo: REPO,
-        pull_number: createdPullRequest.number,
-    });
-    const { data: files } = await octokit.rest.pulls.listFiles({
-        owner: OWNER,
-        repo: REPO,
-        pull_number: createdPullRequest.number,
-        per_page: 100,
-    });
+    const [{ data: pullRequest }, { data: files }] = await Promise.all([
+        octokit.rest.pulls.get({
+            owner: OWNER,
+            repo: REPO,
+            pull_number: createdPullRequest.number,
+        }),
+        octokit.rest.pulls.listFiles({
+            owner: OWNER,
+            repo: REPO,
+            pull_number: createdPullRequest.number,
+            per_page: 100,
+        }),
+    ]);
 
     return {
         number: pullRequest.number,
@@ -259,4 +245,29 @@ export async function createTestChangesPullRequest(): Promise<TestChangesPullReq
             deletions: file.deletions,
         })),
     };
+}
+
+let e2eLabelPromise: Promise<void> | undefined;
+
+async function ensureE2eLabel(octokit: Octokit) {
+    e2eLabelPromise ??= (async () => {
+        try {
+            await octokit.rest.issues.getLabel({
+                owner: OWNER,
+                repo: REPO,
+                name: "e2e",
+            });
+        } catch (error) {
+            if ((error as { status?: number }).status !== 404) throw error;
+            await octokit.rest.issues.createLabel({
+                owner: OWNER,
+                repo: REPO,
+                name: "e2e",
+                color: "FF0000",
+                description: "E2E test label",
+            });
+        }
+    })();
+
+    await e2eLabelPromise;
 }

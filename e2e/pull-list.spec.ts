@@ -4,7 +4,9 @@ import { TEST_REPO } from "./shared/helpers";
 test.describe("Pull request list", { tag: ["@github"] }, () => {
     test("loads the pull request list page", async ({ page }) => {
         await test.step("Navigate to the pull requests list page", async () => {
-            await page.goto(`/${TEST_REPO}/pulls`);
+            await page.goto(`/${TEST_REPO}/pulls`, {
+                waitUntil: "domcontentloaded",
+            });
         });
 
         await test.step("Verify the page title contains 'pulls'", async () => {
