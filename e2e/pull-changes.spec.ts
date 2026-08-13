@@ -330,9 +330,20 @@ test.describe
                 await fileDiff
                     .getByPlaceholder("Add a comment...")
                     .fill(commentText);
+                const startReviewResponse = page.waitForResponse(
+                    (response) =>
+                        response.url().includes("reviews.start") &&
+                        response.ok(),
+                );
+                const createCommentResponse = page.waitForResponse(
+                    (response) =>
+                        response.url().includes("reviewComments.create") &&
+                        response.ok(),
+                );
                 await fileDiff
                     .getByRole("button", { name: "Start a Review" })
                     .click();
+                await Promise.all([startReviewResponse, createCommentResponse]);
             });
 
             const thread = fileDiff
