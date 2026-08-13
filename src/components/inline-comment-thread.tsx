@@ -658,18 +658,26 @@ function Comment({
                 }
                 footer={
                     <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                        <ReactionPicker
-                            disabled={!_canInteract || isStub}
-                            reactions={reactions}
-                            currentUserLogin={permissionContext.currentUser}
-                            onReact={onReact}
-                        />
-                        <ReactionBar
-                            disabled={!_canInteract || isStub}
-                            reactions={reactions}
-                            currentUserLogin={permissionContext.currentUser}
-                            onReact={onReact}
-                        />
+                        {_canInteract && (
+                            <>
+                                <ReactionPicker
+                                    disabled={isStub}
+                                    reactions={reactions}
+                                    currentUserLogin={
+                                        permissionContext.currentUser
+                                    }
+                                    onReact={onReact}
+                                />
+                                <ReactionBar
+                                    disabled={isStub}
+                                    reactions={reactions}
+                                    currentUserLogin={
+                                        permissionContext.currentUser
+                                    }
+                                    onReact={onReact}
+                                />
+                            </>
+                        )}
                     </div>
                 }
             >

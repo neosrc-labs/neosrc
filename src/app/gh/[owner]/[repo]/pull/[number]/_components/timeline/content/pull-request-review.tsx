@@ -423,10 +423,10 @@ export function PullRequestReviewContent({
                             </div>
                         }
                         footer={
-                            !isEditing && (
+                            !isEditing &&
+                            _canInteract && (
                                 <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
                                     <ReactionPicker
-                                        disabled={!_canInteract}
                                         reactions={reviewReactionsArr}
                                         currentUserLogin={
                                             permissionContext.currentUser
@@ -440,7 +440,6 @@ export function PullRequestReviewContent({
                                         }
                                     />
                                     <ReactionBar
-                                        disabled={!_canInteract}
                                         reactions={reviewReactionsArr}
                                         currentUserLogin={
                                             permissionContext.currentUser

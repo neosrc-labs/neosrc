@@ -250,10 +250,11 @@ export function IssueCommentContent({
                     </>
                 }
                 footer={
-                    !isEditing && (
+                    !isEditing &&
+                    _canInteract && (
                         <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
                             <ReactionPicker
-                                disabled={!_canInteract || isPending}
+                                disabled={isPending}
                                 reactions={commentReactionsArr}
                                 currentUserLogin={permissionContext.currentUser}
                                 onReact={(content) =>
@@ -261,7 +262,7 @@ export function IssueCommentContent({
                                 }
                             />
                             <ReactionBar
-                                disabled={!_canInteract || isPending}
+                                disabled={isPending}
                                 reactions={commentReactionsArr}
                                 currentUserLogin={permissionContext.currentUser}
                                 onReact={(content) =>
