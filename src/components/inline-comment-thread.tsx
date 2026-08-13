@@ -79,6 +79,7 @@ interface InlineCommentThreadProps {
     permissionContext: PullRequestPermissionContext;
 }
 
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: FIXME: split this up
 export function InlineCommentThread({
     parentComment,
     replies,

@@ -505,6 +505,7 @@ function truncateDiffToRange(
     return [newHeader, ...filtered].join("\n");
 }
 
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: FIXME: split this up
 function CommentBlock({
     comment,
     replies,
