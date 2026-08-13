@@ -29,6 +29,7 @@ import {
     PopoverTrigger,
 } from "~/components/ui/popover";
 import { UserLink } from "~/components/user-link";
+import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
 import type { ReactionContent } from "~/lib/reactions";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewComment, ReviewMinimizeClassifier } from "~/server/github";
@@ -38,6 +39,11 @@ import type {
 } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import {
+    canEdit,
+    canInteract,
+    type PullRequestPermissionContext,
+} from "../../../permissions-utils";
 import { ReviewComments } from "../../review-comments";
 import { formatReason } from "../event";
 
@@ -57,8 +63,7 @@ interface PullRequestReviewContentProps {
     owner: string;
     repo: string;
     number: number;
-    currentUserLogin: string;
-    canInteract: boolean;
+    permissionContext: PullRequestPermissionContext;
     allComments: ReviewComment[];
     commentReactions: Record<number, GQLReactionNode[]>;
     editingCommentId: number | null;
@@ -75,6 +80,13 @@ interface PullRequestReviewContentProps {
     ) => void;
     expandedMinimized: Record<number, boolean>;
     onToggleMinimized: (reviewId: number, expanded: boolean) => void;
+    reviewToggleMutation: TaskToggleApi<{
+        owner: string;
+        repo: string;
+        number: number;
+        reviewId: number;
+        body: string;
+    }>;
 }
 
 export function PullRequestReviewContent({
@@ -82,8 +94,7 @@ export function PullRequestReviewContent({
     owner,
     repo,
     number,
-    currentUserLogin,
-    canInteract,
+    permissionContext,
     allComments,
     commentReactions,
     editingCommentId,
@@ -96,10 +107,16 @@ export function PullRequestReviewContent({
     onReactToReview,
     expandedMinimized,
     onToggleMinimized,
+    reviewToggleMutation,
 }: PullRequestReviewContentProps) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [copied, setCopied] = useState(false);
     const [hideDialogOpen, setHideDialogOpen] = useState(false);
+
+    const { onToggleTask } = useTaskToggle({
+        mutation: reviewToggleMutation,
+        staticInput: { owner, repo, number, reviewId: event.databaseId },
+    });
 
     const handleCopyLink = useCallback(async () => {
         const url = `${window.location.origin}${window.location.pathname}#pullrequestreview-${event.databaseId}`;
@@ -109,9 +126,11 @@ export function PullRequestReviewContent({
     }, [event.databaseId]);
 
     const isEditing = editingCommentId === event.databaseId;
-    const isAuthor = event.author?.login === currentUserLogin;
+    const isAuthor = event.author?.login === permissionContext.currentUser;
     const displayBody = savedBodies[event.databaseId] ?? event.body;
     const reviewReactionsArr = commentReactions[event.databaseId] ?? [];
+    const _canInteract = canInteract(permissionContext);
+    const _canEdit = canEdit(permissionContext);
 
     const timestamp = formatRelativeTime(event.submittedAt ?? event.createdAt);
     const fullDate = formatDateTime(event.submittedAt ?? event.createdAt);
@@ -124,7 +143,8 @@ export function PullRequestReviewContent({
     const stateLabel = STATE_LABELS[state] ?? "reviewed";
 
     const isPendingByCurrentUser =
-        state === "pending" && event.author?.login === currentUserLogin;
+        state === "pending" &&
+        event.author?.login === permissionContext.currentUser;
 
     const isMinimized =
         event.isMinimized && !expandedMinimized[event.databaseId];
@@ -343,23 +363,24 @@ export function PullRequestReviewContent({
                                                     ? "Copied"
                                                     : "Copy link"}
                                             </button>
-                                            {isAuthor && canInteract && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        onStartEdit(
-                                                            event.databaseId,
-                                                            displayBody,
-                                                        );
-                                                        setMenuOpen(false);
-                                                    }}
-                                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                                >
-                                                    <SquarePen size={14} />
-                                                    Edit
-                                                </button>
-                                            )}
-                                            {canInteract &&
+                                            {(isAuthor || _canEdit) &&
+                                                _canInteract && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            onStartEdit(
+                                                                event.databaseId,
+                                                                displayBody,
+                                                            );
+                                                            setMenuOpen(false);
+                                                        }}
+                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                                                    >
+                                                        <SquarePen size={14} />
+                                                        Edit
+                                                    </button>
+                                                )}
+                                            {_canInteract &&
                                                 !isPendingByCurrentUser &&
                                                 (event.isMinimized ? (
                                                     <button
@@ -405,9 +426,11 @@ export function PullRequestReviewContent({
                             !isEditing && (
                                 <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
                                     <ReactionPicker
-                                        disabled={!canInteract}
+                                        disabled={!_canInteract}
                                         reactions={reviewReactionsArr}
-                                        currentUserLogin={currentUserLogin}
+                                        currentUserLogin={
+                                            permissionContext.currentUser
+                                        }
                                         onReact={(content) =>
                                             onReactToReview(
                                                 event.id,
@@ -417,9 +440,11 @@ export function PullRequestReviewContent({
                                         }
                                     />
                                     <ReactionBar
-                                        disabled={!canInteract}
+                                        disabled={!_canInteract}
                                         reactions={reviewReactionsArr}
-                                        currentUserLogin={currentUserLogin}
+                                        currentUserLogin={
+                                            permissionContext.currentUser
+                                        }
                                         onReact={(content) =>
                                             onReactToReview(
                                                 event.id,
@@ -436,6 +461,10 @@ export function PullRequestReviewContent({
                             content={displayBody}
                             owner={owner}
                             repo={repo}
+                            onToggleTask={onToggleTask}
+                            canToggleTasks={
+                                (isAuthor || _canEdit) && _canInteract
+                            }
                         />
                     </CommentCard>
                 </div>
@@ -448,8 +477,7 @@ export function PullRequestReviewContent({
                 hasReviewBody={Boolean(event.body)}
                 state={state}
                 allComments={mergedComments}
-                currentUserLogin={currentUserLogin}
-                canInteract={canInteract}
+                permissionContext={permissionContext}
             />
             <Dialog open={hideDialogOpen} onOpenChange={setHideDialogOpen}>
                 <DialogContent showCloseButton={false}>

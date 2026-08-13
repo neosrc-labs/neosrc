@@ -11,6 +11,11 @@ import {
 
 type Reaction = components["schemas"]["reaction"];
 
+import {
+    canEdit,
+    canInteract,
+    type PullRequestPermissionContext,
+} from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
 import { ReactionBar } from "~/components/reaction-bar";
 import { ReactionPicker } from "~/components/reaction-picker";
 import { Button } from "~/components/ui/button";
@@ -33,6 +38,7 @@ import {
     applyReviewThreadOperations,
     useReviewThreadOperations,
 } from "~/hooks/use-review-thread-operations";
+import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
 import type { ReactionContent } from "~/lib/reactions";
 import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
 import type { ReviewComment } from "~/server/github";
@@ -70,10 +76,9 @@ interface InlineCommentThreadProps {
     repo: string;
     number: number;
     pendingReviewId?: number | null;
-    canInteract?: boolean;
+    permissionContext: PullRequestPermissionContext;
 }
 
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: autosave adds 5 lines; existing function already at limit
 export function InlineCommentThread({
     parentComment,
     replies,
@@ -81,7 +86,7 @@ export function InlineCommentThread({
     repo,
     number,
     pendingReviewId,
-    canInteract = true,
+    permissionContext,
 }: InlineCommentThreadProps) {
     const threadIdentity = useMemo(
         () => getThreadIdentity(parentComment),
@@ -104,6 +109,7 @@ export function InlineCommentThread({
     );
     const [editBody, setEditBody] = useState("");
     const [savedBodies, setSavedBodies] = useState<Record<number, string>>({});
+    const _canInteract = canInteract(permissionContext);
 
     // Persist reply state so it survives stub -> real remount cycles
     useEffect(() => {
@@ -232,6 +238,18 @@ export function InlineCommentThread({
                 return next;
             });
             setEditingCommentId(commentId);
+        },
+    });
+    const taskToggleMutation = api.reviewComments.update.useMutation({
+        onMutate: ({ commentId, body }) => {
+            setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
+        },
+        onError: (_, { commentId }) => {
+            setSavedBodies((prev) => {
+                const next = { ...prev };
+                delete next[commentId];
+                return next;
+            });
         },
     });
 
@@ -378,21 +396,22 @@ export function InlineCommentThread({
     return (
         <div className="font-sans" id={`review-thread-${parentComment.id}`}>
             <Comment
+                owner={owner}
+                repo={repo}
+                number={number}
                 comment={parentComment}
                 isPending={
                     pendingReviewId != null &&
                     parentComment.pull_request_review_id === pendingReviewId
                 }
                 isOutdated={threadInfo?.isOutdated ?? false}
-                isAuthor={parentComment.user?.login === currentUserLogin}
                 isEditing={editingCommentId === parentComment.id}
                 editBody={editingCommentId === parentComment.id ? editBody : ""}
                 displayBody={
                     savedBodies[parentComment.id] ?? parentComment.body
                 }
                 reactions={reactionMap[parentComment.id] ?? []}
-                currentUserLogin={currentUserLogin}
-                canInteract={canInteract}
+                permissionContext={permissionContext}
                 isStub={parentComment.id < 0}
                 onStartEdit={() => {
                     setEditBody(parentComment.body);
@@ -406,11 +425,12 @@ export function InlineCommentThread({
                 onSaveEdit={() => handleSaveEdit(parentComment.id)}
                 onReact={(content) => handleReact(parentComment.id, content)}
                 onDelete={() => handleDelete(parentComment.id)}
-                owner={owner}
-                repo={repo}
-                number={number}
                 threadId={threadInfo?.id ?? ""}
                 variant="parent"
+                toggleMutation={{
+                    mutate: taskToggleMutation.mutate,
+                    isPending: taskToggleMutation.isPending,
+                }}
             />
 
             {replies.map((comment) => (
@@ -425,15 +445,13 @@ export function InlineCommentThread({
                             comment.pull_request_review_id === pendingReviewId
                         }
                         isOutdated={threadInfo?.isOutdated ?? false}
-                        isAuthor={comment.user?.login === currentUserLogin}
                         isEditing={editingCommentId === comment.id}
                         editBody={
                             editingCommentId === comment.id ? editBody : ""
                         }
                         displayBody={savedBodies[comment.id] ?? comment.body}
                         reactions={reactionMap[comment.id] ?? []}
-                        currentUserLogin={currentUserLogin}
-                        canInteract={canInteract}
+                        permissionContext={permissionContext}
                         isStub={comment.id < 0}
                         onStartEdit={() => {
                             setEditBody(comment.body);
@@ -452,10 +470,14 @@ export function InlineCommentThread({
                         number={number}
                         threadId={threadInfo?.id ?? ""}
                         variant="reply"
+                        toggleMutation={{
+                            mutate: taskToggleMutation.mutate,
+                            isPending: taskToggleMutation.isPending,
+                        }}
                     />
                 </div>
             ))}
-            {canInteract ? (
+            {_canInteract ? (
                 showReplyForm ? (
                     <div className="p-2">
                         <MarkdownEditor
@@ -512,13 +534,11 @@ function Comment({
     comment,
     isPending,
     isOutdated,
-    isAuthor,
     isEditing,
     editBody,
     displayBody,
     reactions,
-    currentUserLogin,
-    canInteract,
+    permissionContext,
     isStub,
     onStartEdit,
     onEditBodyChange,
@@ -531,17 +551,16 @@ function Comment({
     number,
     threadId,
     variant,
+    toggleMutation,
 }: {
     comment: ReviewComment;
     isPending: boolean;
     isOutdated: boolean;
-    isAuthor: boolean;
     isEditing: boolean;
     editBody: string;
     displayBody: string;
     reactions: Reaction[];
-    currentUserLogin: string;
-    canInteract: boolean;
+    permissionContext: PullRequestPermissionContext;
     isStub: boolean;
     onStartEdit: () => void;
     onEditBodyChange: (body: string) => void;
@@ -554,13 +573,29 @@ function Comment({
     number: number;
     threadId: string;
     variant: "parent" | "reply";
+    toggleMutation: TaskToggleApi<{
+        owner: string;
+        repo: string;
+        commentId: number;
+        body: string;
+    }>;
 }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const { onToggleTask } = useTaskToggle({
+        mutation: toggleMutation,
+        staticInput: { owner, repo, commentId: comment.id },
+    });
+
+    const _canInteract = canInteract(permissionContext);
+    const _canEdit = canEdit(permissionContext);
+    const isAuthor = permissionContext.currentUser === comment.user.login;
 
     return (
         <>
             <CommentCard
+                owner={owner}
+                repo={repo}
                 user={comment.user}
                 userHref={comment.user?.html_url}
                 createdAt={comment.created_at}
@@ -572,12 +607,10 @@ function Comment({
                 onEditBodyChange={onEditBodyChange}
                 onCancelEdit={onCancelEdit}
                 onSaveEdit={onSaveEdit}
-                owner={owner}
-                repo={repo}
                 variant={variant === "parent" ? "default" : "nested"}
                 headerActions={
                     <>
-                        {isAuthor && canInteract && !isStub && (
+                        {(isAuthor || _canEdit) && _canInteract && !isStub && (
                             <button
                                 type="button"
                                 aria-label="Edit comment"
@@ -587,7 +620,7 @@ function Comment({
                                 <SquarePen size={14} />
                             </button>
                         )}
-                        {canInteract && !isStub && (
+                        {_canInteract && !isStub && (
                             <Popover open={menuOpen} onOpenChange={setMenuOpen}>
                                 <PopoverTrigger asChild>
                                     <button
@@ -626,15 +659,15 @@ function Comment({
                 footer={
                     <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
                         <ReactionPicker
-                            disabled={!canInteract || isStub}
+                            disabled={!_canInteract || isStub}
                             reactions={reactions}
-                            currentUserLogin={currentUserLogin}
+                            currentUserLogin={permissionContext.currentUser}
                             onReact={onReact}
                         />
                         <ReactionBar
-                            disabled={!canInteract || isStub}
+                            disabled={!_canInteract || isStub}
                             reactions={reactions}
-                            currentUserLogin={currentUserLogin}
+                            currentUserLogin={permissionContext.currentUser}
                             onReact={onReact}
                         />
                     </div>
@@ -649,6 +682,10 @@ function Comment({
                     commentLine={comment.line}
                     commentStartLine={comment.start_line}
                     commentThreadId={threadId}
+                    onToggleTask={onToggleTask}
+                    canToggleTasks={
+                        (isAuthor || _canEdit) && _canInteract && !isStub
+                    }
                 />
             </CommentCard>
             <Dialog

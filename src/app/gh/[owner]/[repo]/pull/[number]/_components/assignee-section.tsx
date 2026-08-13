@@ -8,6 +8,10 @@ import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { applyArrayOperations, opId } from "~/lib/utils";
 import type { Assignee, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
+import {
+    canEdit,
+    type PullRequestPermissionContext,
+} from "../permissions-utils";
 import { FieldSkeleton } from "./metadata-section";
 
 type AssigneeOperation = {
@@ -18,13 +22,13 @@ type AssigneeOperation = {
 
 export function AssigneeSection({
     pullRequestPromise,
-    userPermission,
+    permissionContextPromise,
     owner,
     repo,
     number,
 }: {
     pullRequestPromise: Promise<PullsGetResponseData>;
-    userPermission: Promise<string | null>;
+    permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;
     number: number;
@@ -82,18 +86,18 @@ export function AssigneeSection({
                 <h3 className="text-text-primary">Assignees</h3>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
-                        <Async promise={userPermission} fallback={null}>
-                            {(permission) => (
+                        <Async
+                            promise={permissionContextPromise}
+                            fallback={null}
+                        >
+                            {(permissionContext) => (
                                 <AssigneeSectionSettings
                                     repoAssignees={assigneesData}
                                     assignees={pullRequest.assignees ?? []}
                                     operations={operations}
                                     onAddAssignee={handleAdd}
                                     onRemoveAssignee={handleRemove}
-                                    disabled={
-                                        permission !== "admin" &&
-                                        permission !== "write"
-                                    }
+                                    disabled={!canEdit(permissionContext)}
                                 />
                             )}
                         </Async>
@@ -109,16 +113,13 @@ export function AssigneeSection({
                 }
             >
                 {(pullRequest) => (
-                    <Async promise={userPermission} fallback={null}>
-                        {(permission) => (
+                    <Async promise={permissionContextPromise} fallback={null}>
+                        {(permissionContext) => (
                             <AssigneeSectionContent
                                 assignees={pullRequest.assignees ?? []}
                                 operations={operations}
                                 onRemoveAssignee={handleRemove}
-                                canEdit={
-                                    permission === "admin" ||
-                                    permission === "write"
-                                }
+                                canEdit={canEdit(permissionContext)}
                             />
                         )}
                     </Async>

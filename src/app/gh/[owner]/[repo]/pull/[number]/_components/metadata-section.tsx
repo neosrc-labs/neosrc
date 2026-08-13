@@ -1,6 +1,7 @@
 "use client";
 
 import type { PullsGetResponseData } from "~/server/github";
+import type { PullRequestPermissionContext } from "../permissions-utils";
 import { AssigneeSection } from "./assignee-section";
 import { LabelsSection } from "./label-section";
 import { MilestoneSection } from "./milestone-section";
@@ -8,7 +9,7 @@ import { ReviewerSection } from "./reviewer-section";
 
 interface MetadataSectionProps {
     pullRequestPromise: Promise<PullsGetResponseData>;
-    userPermission: Promise<string | null>;
+    permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;
     number: number;
@@ -16,7 +17,7 @@ interface MetadataSectionProps {
 
 export function MetadataSection({
     pullRequestPromise,
-    userPermission,
+    permissionContextPromise,
     owner,
     repo,
     number,
@@ -26,7 +27,7 @@ export function MetadataSection({
             {/* Reviewers Section */}
             <section>
                 <ReviewerSection
-                    userPermission={userPermission}
+                    permissionContextPromise={permissionContextPromise}
                     pullRequestPromise={pullRequestPromise}
                     owner={owner}
                     repo={repo}
@@ -37,7 +38,7 @@ export function MetadataSection({
             {/* Assignees Section */}
             <section>
                 <AssigneeSection
-                    userPermission={userPermission}
+                    permissionContextPromise={permissionContextPromise}
                     pullRequestPromise={pullRequestPromise}
                     owner={owner}
                     repo={repo}
@@ -48,7 +49,7 @@ export function MetadataSection({
             {/* Milestone Section */}
             <section>
                 <MilestoneSection
-                    userPermission={userPermission}
+                    permissionContextPromise={permissionContextPromise}
                     pullRequestPromise={pullRequestPromise}
                     owner={owner}
                     repo={repo}
@@ -59,7 +60,7 @@ export function MetadataSection({
             {/* Labels Section */}
             <section className="min-h-30">
                 <LabelsSection
-                    userPermission={userPermission}
+                    permissionContextPromise={permissionContextPromise}
                     pullRequestPromise={pullRequestPromise}
                     owner={owner}
                     repo={repo}

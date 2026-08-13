@@ -7,7 +7,6 @@ import {
     getChecksForCommit,
     getConflictedFiles,
     getStackSuggestion,
-    getUserRepoPermission,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
 import { HeaderActionBar } from "./_components/action-section/header-action-bar";
@@ -18,10 +17,8 @@ import {
     TimelineSkeleton,
 } from "./_components/timeline/section";
 import { PullRequestTitleSetter } from "./_components/title-setter";
-import {
-    getPullRequestPermissionContext,
-    type PullRequestPermissionContext,
-} from "./permissions";
+import { getPullRequestPermissionContext } from "./permissions-server";
+import type { PullRequestPermissionContext } from "./permissions-utils";
 
 interface PageProps {
     params: Promise<{
@@ -64,7 +61,6 @@ export default async function PullRequestPage({ params }: PageProps) {
 
     const session = await getSession();
     const userId = session?.user?.id;
-    const currentUserLogin = session?.user?.githubUsername ?? undefined;
     const pullRequestPromise = getCachedPullRequest(
         accessToken,
         owner,
@@ -72,16 +68,6 @@ export default async function PullRequestPage({ params }: PageProps) {
         number,
         userId,
     );
-
-    const userPermissionPromise = currentUserLogin
-        ? getUserRepoPermission(
-              accessToken,
-              owner,
-              repo,
-              currentUserLogin,
-              userId ?? "",
-          ).catch(() => null)
-        : null;
 
     const conflictedFilesPromise = pullRequestPromise.then(async (pr) => {
         if (pr.mergeable_state === "dirty") {
@@ -131,8 +117,7 @@ export default async function PullRequestPage({ params }: PageProps) {
                         number={number}
                         pullRequestPromise={pullRequestPromise}
                         conflictedFilesPromise={conflictedFilesPromise}
-                        userPermissionPromise={userPermissionPromise}
-                        currentUserLogin={currentUserLogin}
+                        permissionContextPromise={permissionContextPromise}
                         checkRunsPromise={checksPromise}
                     />
                 }

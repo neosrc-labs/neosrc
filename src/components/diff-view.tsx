@@ -15,6 +15,7 @@ import {
     useRef,
     useState,
 } from "react";
+import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
 import { useFileContent } from "~/hooks/use-file-content";
 import type { ReviewComment } from "~/server/github";
 import { filenameHash } from "~/utils/filename-hash";
@@ -75,6 +76,7 @@ interface DiffViewProps {
     repo?: string;
     pullNumber?: number | string;
     pendingReviewId?: number | null;
+    permissionContext: PullRequestPermissionContext;
     headSha?: string;
     expandAllContext?: boolean;
 }
@@ -97,6 +99,7 @@ export function DiffView({
     repo,
     pullNumber,
     pendingReviewId,
+    permissionContext,
     headSha,
     expandAllContext = false,
 }: DiffViewProps) {
@@ -505,6 +508,7 @@ export function DiffView({
                             commentDragRange={commentDragRange}
                             onCommentDragStart={handleCommentDragStart}
                             pendingReviewId={pendingReviewId}
+                            permissionContext={permissionContext}
                         />
                     </tbody>
                 </table>
@@ -580,6 +584,7 @@ interface BlockRowsProps {
     } | null;
     onCommentDragStart?: (line: number, side: "LEFT" | "RIGHT") => void;
     pendingReviewId?: number | null;
+    permissionContext: PullRequestPermissionContext;
     hideHeader?: boolean;
     gap?: Gap;
     gapKey?: string;
@@ -617,6 +622,7 @@ function BlockRows({
     commentDragRange,
     onCommentDragStart,
     pendingReviewId,
+    permissionContext,
     hideHeader,
     gap,
     gapKey,
@@ -908,6 +914,9 @@ function BlockRows({
                                                 number={Number(pullNumber ?? 0)}
                                                 pendingReviewId={
                                                     pendingReviewId
+                                                }
+                                                permissionContext={
+                                                    permissionContext
                                                 }
                                             />
                                         </td>
@@ -1289,6 +1298,7 @@ interface DiffTableBodyProps {
     } | null;
     onCommentDragStart: (line: number, side: "LEFT" | "RIGHT") => void;
     pendingReviewId: number | null | undefined;
+    permissionContext: PullRequestPermissionContext;
 }
 
 function DiffTableBody({
@@ -1320,6 +1330,7 @@ function DiffTableBody({
     commentDragRange,
     onCommentDragStart,
     pendingReviewId,
+    permissionContext,
 }: DiffTableBodyProps) {
     return (
         <>
@@ -1403,6 +1414,7 @@ function DiffTableBody({
                         commentDragRange={commentDragRange}
                         onCommentDragStart={onCommentDragStart}
                         pendingReviewId={pendingReviewId}
+                        permissionContext={permissionContext}
                     />
                 );
             })}

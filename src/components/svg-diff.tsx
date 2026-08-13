@@ -2,6 +2,7 @@
 
 import { Code, Eye } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
 import type { ReviewComment } from "~/server/github";
 import type { ActiveComment } from "./diff-view";
 import { DiffView } from "./diff-view";
@@ -41,6 +42,7 @@ interface SvgDiffProps {
     repo?: string;
     pullNumber?: number | string;
     pendingReviewId?: number | null;
+    permissionContext: PullRequestPermissionContext;
 }
 
 export default function SvgDiff({
@@ -63,6 +65,7 @@ export default function SvgDiff({
     repo,
     pullNumber,
     pendingReviewId,
+    permissionContext,
 }: SvgDiffProps) {
     const [mode, setMode] = useState<ViewMode>("rendered");
     const [oldContent, setOldContent] = useState<string | null>(null);
@@ -163,6 +166,7 @@ export default function SvgDiff({
                     repo={repo}
                     pullNumber={pullNumber}
                     pendingReviewId={pendingReviewId}
+                    permissionContext={permissionContext}
                 />
             ) : (
                 <div>

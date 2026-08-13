@@ -12,7 +12,7 @@ import { api } from "~/trpc/react";
 import {
     canInteract,
     type PullRequestPermissionContext,
-} from "../../permissions";
+} from "../../permissions-utils";
 import { CommentForm } from "../comment-form";
 import { TimelineEvent } from "./event";
 import { RevertedBanner, type RevertedByEntry } from "./reverted-banner";
@@ -299,7 +299,6 @@ export function TimelineSection({
         );
     }
 
-    const currentUserLogin = data?.pages[0]?.currentUserLogin ?? "";
     const mergeQueueEntry = data?.pages[0]?.mergeQueueEntry ?? null;
     const filteredEvents = filterTimelineEvents(allEvents);
 
@@ -363,9 +362,8 @@ export function TimelineSection({
                         owner={owner}
                         repo={repo}
                         commentReactions={allCommentReactions}
-                        currentUserLogin={currentUserLogin}
                         allComments={allComments}
-                        canInteract={canInteract(permissionContext)}
+                        permissionContext={permissionContext}
                     />
                 ))}
             </div>

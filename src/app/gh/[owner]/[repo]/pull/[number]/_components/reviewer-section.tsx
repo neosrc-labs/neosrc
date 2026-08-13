@@ -20,6 +20,10 @@ import {
 import { applyArrayOperations, opId } from "~/lib/utils";
 import type { Assignee, PullsGetResponseData, Reviewer } from "~/server/github";
 import { api } from "~/trpc/react";
+import {
+    canEdit,
+    type PullRequestPermissionContext,
+} from "../permissions-utils";
 import { FieldSkeleton } from "./metadata-section";
 
 const MAX_VISIBLE_REVIEWERS = 10;
@@ -32,13 +36,13 @@ type ReviewerOperation = {
 
 export function ReviewerSection({
     pullRequestPromise,
-    userPermission,
+    permissionContextPromise,
     owner,
     repo,
     number,
 }: {
     pullRequestPromise: Promise<PullsGetResponseData>;
-    userPermission: Promise<string | null>;
+    permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;
     number: number;
@@ -166,8 +170,11 @@ export function ReviewerSection({
                 <h3 className="text-text-primary">Reviewers</h3>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
-                        <Async promise={userPermission} fallback={null}>
-                            {(permission) => (
+                        <Async
+                            promise={permissionContextPromise}
+                            fallback={null}
+                        >
+                            {(permissionContext) => (
                                 <ReviewerSectionSettings
                                     repoUsers={usersData.filter(
                                         (u) =>
@@ -181,10 +188,7 @@ export function ReviewerSection({
                                     operations={operations}
                                     onAddReviewer={handleAdd}
                                     onRemoveReviewer={handleRemove}
-                                    disabled={
-                                        permission !== "admin" &&
-                                        permission !== "write"
-                                    }
+                                    disabled={!canEdit(permissionContext)}
                                 />
                             )}
                         </Async>

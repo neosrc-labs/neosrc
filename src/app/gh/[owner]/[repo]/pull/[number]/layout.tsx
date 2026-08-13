@@ -5,13 +5,17 @@ import {
     type CheckRun,
     getCachedPullRequest,
     getChecksForCommit,
-    getUserRepoPermission,
     type PullsGetResponseData,
 } from "~/server/github";
-import { EMPTY_ARRAY_PROMISE, NULL_PROMISE } from "~/utils/promise";
+import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 import LeftSidebar from "./_components/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
 import { PullRequestClientLayout } from "./layout-client";
+import { getPullRequestPermissionContext } from "./permissions-server";
+import {
+    disabled,
+    type PullRequestPermissionContext,
+} from "./permissions-utils";
 
 interface LayoutProps {
     children: ReactNode;
@@ -40,15 +44,14 @@ export default async function PullRequestLayout({
 
     let pullRequest: Promise<PullsGetResponseData> | null = null;
     let checks: Promise<Array<CheckRun>> | null = EMPTY_ARRAY_PROMISE;
-    let userPermission: Promise<string | null> | null = NULL_PROMISE;
-    let currentUserLogin: string | undefined;
+    let permissionContextPromise: Promise<PullRequestPermissionContext> =
+        Promise.resolve(disabled());
 
     const accessToken = await githubAccessToken();
     const session = await getSession();
 
     if (accessToken) {
         const userId = session?.user?.id ?? null;
-        currentUserLogin = session?.user?.githubUsername ?? undefined;
 
         pullRequest = getCachedPullRequest(
             accessToken,
@@ -58,15 +61,13 @@ export default async function PullRequestLayout({
             userId,
         );
 
-        if (currentUserLogin) {
-            userPermission = getUserRepoPermission(
-                accessToken,
-                owner,
-                repo,
-                currentUserLogin,
-                userId ?? "",
-            ).catch(() => null);
-        }
+        permissionContextPromise = getPullRequestPermissionContext(
+            accessToken,
+            owner,
+            repo,
+            pullRequest,
+            userId ?? undefined,
+        );
 
         // Fetch check runs and commit statuses if we have the PR head SHA
         checks = pullRequest.then((pullRequest) =>
@@ -86,7 +87,7 @@ export default async function PullRequestLayout({
             }
             rightSidebar={
                 <RightSidebar
-                    userPermission={userPermission}
+                    permissionContextPromise={permissionContextPromise}
                     checksPromise={checks}
                     pullRequestPromise={pullRequest}
                     owner={owner}

@@ -204,6 +204,12 @@ const BASE_PROPS = {
     repo: "test-repo",
     number: "42",
     showComments: true,
+    permissionContext: {
+        currentUser: "testuser",
+        isPullRequestAuthor: false,
+        repoPermission: "write" as const,
+        isPullRequestLocked: false,
+    },
 };
 
 function renderFileDiff(props?: Partial<Parameters<typeof FileDiff>[0]>) {

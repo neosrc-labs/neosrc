@@ -20,6 +20,7 @@ import type {
 import { api } from "~/trpc/react";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
+import type { PullRequestPermissionContext } from "../permissions-utils";
 import { ActionSection } from "./action-section/actions-section";
 import { Branches } from "./description";
 import { StackBadge } from "./stack-popover";
@@ -53,8 +54,7 @@ interface FilesSectionProps {
     number: number;
     commitSha?: string;
     pullRequestPromise: Promise<PullsGetResponseData>;
-    currentUserLogin?: string;
-    userPermissionPromise?: Promise<string | null> | null;
+    permissionContextPromise: Promise<PullRequestPermissionContext>;
     conflictedFilesPromise?: Promise<string[]> | null;
     checkRunsPromise?: Promise<CheckRun[]> | null;
 }
@@ -65,8 +65,7 @@ export function FilesSection({
     number,
     commitSha,
     pullRequestPromise,
-    currentUserLogin,
-    userPermissionPromise,
+    permissionContextPromise,
     conflictedFilesPromise,
     checkRunsPromise,
 }: FilesSectionProps) {
@@ -351,8 +350,9 @@ export function FilesSection({
                                 number={number}
                                 pullRequestPromise={pullRequestPromise}
                                 conflictedFilesPromise={conflictedFilesPromise}
-                                userPermissionPromise={userPermissionPromise}
-                                currentUserLogin={currentUserLogin}
+                                permissionContextPromise={
+                                    permissionContextPromise
+                                }
                                 checkRuns={checkRuns}
                             />
                         )}
@@ -368,49 +368,66 @@ export function FilesSection({
             )}
             <Async promise={pullRequestPromise}>
                 {(pullRequest) => (
-                    <div className="flex flex-col gap-6">
-                        {allFiles.map((file, index) => {
-                            const fileComments = allCommentsAll.filter(
-                                (c) => c.path === file.filename,
-                            );
-                            const totalChanged =
-                                file.additions + file.deletions;
-                            const isOverflow =
-                                index >= OVERFLOW_THRESHOLD ||
-                                file.status === "removed" ||
-                                totalChanged > 1000;
+                    <Async promise={permissionContextPromise}>
+                        {(permissionContext) => (
+                            <div className="flex flex-col gap-6">
+                                {allFiles.map((file, index) => {
+                                    const fileComments = allCommentsAll.filter(
+                                        (c) => c.path === file.filename,
+                                    );
+                                    const totalChanged =
+                                        file.additions + file.deletions;
+                                    const isOverflow =
+                                        index >= OVERFLOW_THRESHOLD ||
+                                        file.status === "removed" ||
+                                        totalChanged > 1000;
 
-                            return (
-                                <div
-                                    key={file.filename}
-                                    id={file.filename.replace(/\//g, "-")}
-                                    className="scroll-mt-18"
-                                    style={{ contentVisibility: "auto" }}
-                                >
-                                    <FileDiff
-                                        baseSha={pullRequest.base.sha}
-                                        headSha={
-                                            pullRequest.head.sha ?? commitSha
-                                        }
-                                        comments={fileComments}
-                                        file={file}
-                                        number={number.toString()}
-                                        onTogglePerformanceDiff={() =>
-                                            toggleOverflowFile(file.filename)
-                                        }
-                                        owner={owner}
-                                        pendingReviewId={pendingReviewId}
-                                        performanceHidden={isOverflow}
-                                        repo={repo}
-                                        showComments={showComments}
-                                        showPerformanceDiff={expandedOverflowFiles.has(
-                                            file.filename,
-                                        )}
-                                    />
-                                </div>
-                            );
-                        })}
-                    </div>
+                                    return (
+                                        <div
+                                            key={file.filename}
+                                            id={file.filename.replace(
+                                                /\//g,
+                                                "-",
+                                            )}
+                                            className="scroll-mt-18"
+                                            style={{
+                                                contentVisibility: "auto",
+                                            }}
+                                        >
+                                            <FileDiff
+                                                baseSha={pullRequest.base.sha}
+                                                headSha={
+                                                    pullRequest.head.sha ??
+                                                    commitSha
+                                                }
+                                                comments={fileComments}
+                                                file={file}
+                                                number={number.toString()}
+                                                onTogglePerformanceDiff={() =>
+                                                    toggleOverflowFile(
+                                                        file.filename,
+                                                    )
+                                                }
+                                                owner={owner}
+                                                pendingReviewId={
+                                                    pendingReviewId
+                                                }
+                                                permissionContext={
+                                                    permissionContext
+                                                }
+                                                performanceHidden={isOverflow}
+                                                repo={repo}
+                                                showComments={showComments}
+                                                showPerformanceDiff={expandedOverflowFiles.has(
+                                                    file.filename,
+                                                )}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </Async>
                 )}
             </Async>
         </div>

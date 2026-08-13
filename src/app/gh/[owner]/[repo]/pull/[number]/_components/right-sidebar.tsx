@@ -13,13 +13,14 @@ import {
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { computeChecksPollingInterval } from "~/utils/checks-polling";
+import type { PullRequestPermissionContext } from "../permissions-utils";
 import { CommitsSection } from "./commits-section";
 import { MetadataSection } from "./metadata-section";
 
 interface RightSidebarProps {
     pullRequestPromise: Promise<PullsGetResponseData> | null;
     checksPromise: Promise<Array<CheckRun>> | null;
-    userPermission: Promise<string | null>;
+    permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;
     number: number;
@@ -201,7 +202,7 @@ function ChecksTabIcon({ checks }: { checks: CheckRun[] }) {
 export default function RightSidebar({
     pullRequestPromise,
     checksPromise,
-    userPermission,
+    permissionContextPromise,
     owner,
     repo,
     number,
@@ -283,7 +284,7 @@ export default function RightSidebar({
         >
             <div className="sticky top-0 z-10 space-y-4 bg-surface pb-4">
                 <MetadataSection
-                    userPermission={userPermission}
+                    permissionContextPromise={permissionContextPromise}
                     pullRequestPromise={pullRequestPromise}
                     owner={owner}
                     repo={repo}

@@ -5,19 +5,23 @@ import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { applyArrayOperations, opId } from "~/lib/utils";
 import type { Label, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
+import {
+    canEdit,
+    type PullRequestPermissionContext,
+} from "../permissions-utils";
 import { FieldSkeleton } from "./metadata-section";
 
 type LabelOperation = { id: number; op: "add" | "remove"; label: Label };
 
 export function LabelsSection({
     pullRequestPromise,
-    userPermission,
+    permissionContextPromise,
     owner,
     repo,
     number,
 }: {
     pullRequestPromise: Promise<PullsGetResponseData>;
-    userPermission: Promise<string | null>;
+    permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;
     number: number;
@@ -78,18 +82,18 @@ export function LabelsSection({
                 <h3 className="text-text-primary">Labels</h3>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
-                        <Async promise={userPermission} fallback={null}>
-                            {(permission) => (
+                        <Async
+                            promise={permissionContextPromise}
+                            fallback={null}
+                        >
+                            {(permissionContext) => (
                                 <LabelSectionSettings
                                     repoLabels={labelsData}
                                     labels={pullRequest.labels}
                                     operations={operations}
                                     onAddLabel={handleAdd}
                                     onRemoveLabel={handleRemove}
-                                    disabled={
-                                        permission !== "admin" &&
-                                        permission !== "write"
-                                    }
+                                    disabled={!canEdit(permissionContext)}
                                 />
                             )}
                         </Async>
@@ -105,16 +109,13 @@ export function LabelsSection({
                 }
             >
                 {(pullRequest) => (
-                    <Async promise={userPermission} fallback={null}>
-                        {(permission) => (
+                    <Async promise={permissionContextPromise} fallback={null}>
+                        {(permissionContext) => (
                             <LabelSectionContent
                                 labels={pullRequest.labels}
                                 operations={operations}
                                 onRemoveLabel={handleRemove}
-                                canEdit={
-                                    permission === "admin" ||
-                                    permission === "write"
-                                }
+                                canEdit={canEdit(permissionContext)}
                             />
                         )}
                     </Async>
