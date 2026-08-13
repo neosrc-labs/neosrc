@@ -1,4 +1,3 @@
-import type { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense, use } from "react";
@@ -19,9 +18,10 @@ import {
     TimelineSkeleton,
 } from "./_components/timeline/section";
 import { PullRequestTitleSetter } from "./_components/title-setter";
-
-type PullsGetResponseData =
-    RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
+import {
+    getPullRequestPermissionContext,
+    type PullRequestPermissionContext,
+} from "./permissions";
 
 interface PageProps {
     params: Promise<{
@@ -99,15 +99,7 @@ export default async function PullRequestPage({ params }: PageProps) {
     const checksPromise = pullRequestPromise.then((pr) =>
         getChecksForCommit(accessToken, owner, repo, pr.head.sha),
     );
-
-    const canInteractPromise = computeCanInteract(
-        accessToken,
-        owner,
-        repo,
-        pullRequestPromise,
-        userId,
-    );
-    const canEditPromise = computeCanEdit(
+    const permissionContextPromise = getPullRequestPermissionContext(
         accessToken,
         owner,
         repo,
@@ -125,12 +117,11 @@ export default async function PullRequestPage({ params }: PageProps) {
         <div className="px-6 py-8">
             <PullRequestTitleSetter pullRequestPromise={pullRequestPromise} />
             <PullRequestDescriptionSection
-                canEditPromise={canEditPromise}
-                canInteractPromise={canInteractPromise}
-                pullRequestPromise={pullRequestPromise}
                 owner={owner}
                 repo={repo}
                 number={number}
+                pullRequestPromise={pullRequestPromise}
+                permissionContextPromise={permissionContextPromise}
                 conflictedFilesPromise={conflictedFilesPromise}
                 stackSuggestionPromise={stackSuggestionPromise}
                 actionSection={
@@ -164,10 +155,10 @@ export default async function PullRequestPage({ params }: PageProps) {
                         }
                     >
                         <TimelineSectionWithCanInteract
-                            canInteractPromise={canInteractPromise}
                             number={number}
                             owner={owner}
                             repo={repo}
+                            permissionContextPromise={permissionContextPromise}
                         />
                     </Suspense>
                 }
@@ -176,89 +167,21 @@ export default async function PullRequestPage({ params }: PageProps) {
     );
 }
 
-async function computeCanInteract(
-    accessToken: string,
-    owner: string,
-    repo: string,
-    pullRequestPromise: Promise<PullsGetResponseData>,
-    userId: string | undefined,
-) {
-    const session = await getSession();
-    const currentUser = session?.user.githubUsername;
-    if (!currentUser || !userId) {
-        return false;
-    }
-    const [pr, userPermission] = await Promise.all([
-        pullRequestPromise,
-        getUserRepoPermission(
-            accessToken,
-            owner,
-            repo,
-            currentUser,
-            userId,
-        ).catch(() => null),
-    ]);
-
-    return (
-        !pr.locked ||
-        userPermission === "admin" ||
-        userPermission === "write" ||
-        userPermission === "read" ||
-        currentUser === pr.user?.login
-    );
-}
-
-/**
- * Strict capability check for edit-class operations on the PR body (e.g.
- * clicking a task-list checkbox). Unlike {@link computeCanInteract}, this is
- * not granted for read-only viewers on unlocked PRs -- only repo maintainers
- * (write/admin) or the PR author may edit. Anonymous users never have edit
- * capability. The locked state is not modeled here because GitHub itself
- * permits body edits on locked PRs by maintainers, and the permission/author
- * checks already cover who can edit.
- */
-async function computeCanEdit(
-    accessToken: string,
-    owner: string,
-    repo: string,
-    pullRequestPromise: Promise<PullsGetResponseData>,
-    userId: string | undefined,
-) {
-    const session = await getSession();
-    const currentUser = session?.user.githubUsername;
-    if (!currentUser || !userId) return false;
-    const [pr, userPermission] = await Promise.all([
-        pullRequestPromise,
-        getUserRepoPermission(
-            accessToken,
-            owner,
-            repo,
-            currentUser,
-            userId,
-        ).catch(() => null),
-    ]);
-    return (
-        userPermission === "admin" ||
-        userPermission === "write" ||
-        currentUser === pr.user?.login
-    );
-}
-
 function TimelineSectionWithCanInteract({
-    canInteractPromise,
     owner,
     repo,
     number,
+    permissionContextPromise,
 }: {
-    canInteractPromise: Promise<boolean>;
     owner: string;
     repo: string;
     number: number;
+    permissionContextPromise: Promise<PullRequestPermissionContext>;
 }) {
-    const canInteract = use(canInteractPromise);
+    const permissionContext = use(permissionContextPromise);
     return (
         <TimelineSection
-            canInteract={canInteract}
+            permissionContext={permissionContext}
             number={number}
             owner={owner}
             repo={repo}

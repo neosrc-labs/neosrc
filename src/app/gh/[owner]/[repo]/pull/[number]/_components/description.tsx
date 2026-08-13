@@ -35,6 +35,11 @@ import { useLocalStorage } from "~/hooks/use-local-storage";
 import { useTaskToggle } from "~/hooks/use-task-toggle";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import {
+    canEdit,
+    canInteract,
+    type PullRequestPermissionContext,
+} from "../permissions";
 import { StackCreateBadge } from "./stack-create-badge";
 import { StackBadge } from "./stack-popover";
 
@@ -43,8 +48,7 @@ interface PullRequestDescriptionSectionProps {
     repo: string;
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData>;
-    canInteractPromise: Promise<boolean>;
-    canEditPromise: Promise<boolean>;
+    permissionContextPromise: Promise<PullRequestPermissionContext>;
     actionSection?: ReactNode;
     conflictedFilesPromise?: Promise<string[]> | null;
     stackSuggestionPromise: Promise<StackSuggestion | null>;
@@ -55,8 +59,7 @@ export function PullRequestDescriptionSection({
     repo,
     number,
     pullRequestPromise,
-    canInteractPromise,
-    canEditPromise,
+    permissionContextPromise,
     actionSection,
     conflictedFilesPromise,
     stackSuggestionPromise,
@@ -139,6 +142,7 @@ export function PullRequestDescriptionSection({
                               : old.counts[content] + 1,
                       }
                     : old.counts;
+
                 return {
                     ...old,
                     reactions: existing
@@ -150,28 +154,7 @@ export function PullRequestDescriptionSection({
                                   node_id: "",
                                   content,
                                   created_at: new Date().toISOString(),
-                                  user: {
-                                      login: userLogin,
-                                      id: 0,
-                                      node_id: "",
-                                      avatar_url: "",
-                                      gravatar_id: null,
-                                      url: "",
-                                      html_url: "",
-                                      followers_url: "",
-                                      following_url: "",
-                                      gists_url: "",
-                                      starred_url: "",
-                                      subscriptions_url: "",
-                                      organizations_url: "",
-                                      repos_url: "",
-                                      events_url: "",
-                                      received_events_url: "",
-                                      type: "",
-                                      site_admin: false,
-                                      name: null,
-                                      email: null,
-                                  } satisfies SimpleUser,
+                                  user: placeholderUser(userLogin),
                               },
                           ],
                     counts: updatedCounts,
@@ -227,7 +210,7 @@ export function PullRequestDescriptionSection({
                     repo={repo}
                     number={number}
                     pullRequestPromise={pullRequestPromise}
-                    canInteractPromise={canInteractPromise}
+                    permissionContextPromise={permissionContextPromise}
                 />
                 <SubtitleActionRow
                     owner={owner}
@@ -313,10 +296,11 @@ export function PullRequestDescriptionSection({
                                     />
                                     <Async
                                         fallback={null}
-                                        promise={canInteractPromise}
+                                        promise={permissionContextPromise}
                                     >
-                                        {(canInteract) =>
-                                            !isEditing && canInteract ? (
+                                        {(permissionContext) =>
+                                            !isEditing &&
+                                            canInteract(permissionContext) ? (
                                                 <Popover
                                                     open={menuOpen}
                                                     onOpenChange={setMenuOpen}
@@ -391,11 +375,15 @@ export function PullRequestDescriptionSection({
                                                         repo={repo}
                                                     />
                                                 }
-                                                promise={canEditPromise}
+                                                promise={
+                                                    permissionContextPromise
+                                                }
                                             >
-                                                {(canEdit) => (
+                                                {(permissionContext) => (
                                                     <MarkdownRenderer
-                                                        canToggleTasks={canEdit}
+                                                        canToggleTasks={canEdit(
+                                                            permissionContext,
+                                                        )}
                                                         content={displayBody}
                                                         onToggleTask={
                                                             onToggleTask
@@ -427,9 +415,9 @@ export function PullRequestDescriptionSection({
                                             </button>
                                         </div>
                                     }
-                                    promise={canInteractPromise}
+                                    promise={permissionContextPromise}
                                 >
-                                    {(canInteract) => {
+                                    {(permissionContext) => {
                                         const reactionCounts =
                                             reactionsData?.counts
                                                 ? {
@@ -452,10 +440,12 @@ export function PullRequestDescriptionSection({
                                                           .eyes,
                                                   }
                                                 : undefined;
+                                        const _canInteract =
+                                            canInteract(permissionContext);
                                         return (
                                             <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
                                                 <ReactionPicker
-                                                    disabled={!canInteract}
+                                                    disabled={!_canInteract}
                                                     reactions={
                                                         reactionsData?.reactions ??
                                                         []
@@ -466,7 +456,7 @@ export function PullRequestDescriptionSection({
                                                     onReact={handleReact}
                                                 />
                                                 <ReactionBar
-                                                    disabled={!canInteract}
+                                                    disabled={!_canInteract}
                                                     reactions={
                                                         reactionsData?.reactions ??
                                                         []
@@ -520,13 +510,13 @@ function TitleRow({
     repo,
     number,
     pullRequestPromise,
-    canInteractPromise,
+    permissionContextPromise,
 }: {
     owner: string;
     repo: string;
     number: number;
     pullRequestPromise: Promise<PullsGetResponseData>;
-    canInteractPromise: Promise<boolean>;
+    permissionContextPromise: Promise<PullRequestPermissionContext>;
 }) {
     const titleKey = `pr-autosave:desc-title:${owner}:${repo}:${number}`;
     const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -646,10 +636,10 @@ function TitleRow({
                                     </span>
                                     <Async
                                         fallback={null}
-                                        promise={canInteractPromise}
+                                        promise={permissionContextPromise}
                                     >
-                                        {(canInteract) =>
-                                            canInteract ? (
+                                        {(permissionContext) =>
+                                            canInteract(permissionContext) ? (
                                                 <button
                                                     className="cursor-pointer text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
                                                     onClick={() =>
@@ -821,4 +811,29 @@ function useMainSectionWidth() {
     }, []);
 
     return width;
+}
+
+function placeholderUser(login: string): SimpleUser {
+    return {
+        login,
+        id: 0,
+        node_id: "",
+        avatar_url: "",
+        gravatar_id: null,
+        url: "",
+        html_url: "",
+        followers_url: "",
+        following_url: "",
+        gists_url: "",
+        starred_url: "",
+        subscriptions_url: "",
+        organizations_url: "",
+        repos_url: "",
+        events_url: "",
+        received_events_url: "",
+        type: "",
+        site_admin: false,
+        name: null,
+        email: null,
+    } satisfies SimpleUser;
 }

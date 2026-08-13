@@ -9,6 +9,10 @@ import type {
     GQLReactionNode,
 } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
+import {
+    canInteract,
+    type PullRequestPermissionContext,
+} from "../../permissions";
 import { CommentForm } from "../comment-form";
 import { TimelineEvent } from "./event";
 import { RevertedBanner, type RevertedByEntry } from "./reverted-banner";
@@ -52,14 +56,14 @@ interface TimelineSectionProps {
     owner: string;
     repo: string;
     number: number;
-    canInteract: boolean;
+    permissionContext: PullRequestPermissionContext;
 }
 
 export function TimelineSection({
     owner,
     repo,
     number,
-    canInteract,
+    permissionContext,
 }: TimelineSectionProps) {
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
         api.timeline.list.useInfiniteQuery(
@@ -361,7 +365,7 @@ export function TimelineSection({
                         commentReactions={allCommentReactions}
                         currentUserLogin={currentUserLogin}
                         allComments={allComments}
-                        canInteract={canInteract}
+                        canInteract={canInteract(permissionContext)}
                     />
                 ))}
             </div>
@@ -376,7 +380,7 @@ export function TimelineSection({
 
             <div ref={timelineEndRef}>
                 <CommentForm
-                    disabled={!canInteract}
+                    disabled={!canInteract(permissionContext)}
                     number={number}
                     owner={owner}
                     repo={repo}
