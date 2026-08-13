@@ -208,4 +208,98 @@ test.describe
                 await expect(thread).not.toBeAttached();
             });
         });
+        test("should support updating and submitting a review comment", async ({
+            page,
+        }) => {
+            const commentFile = testPullRequest.files.find(
+                (file) => file.status === "modified",
+            );
+            if (!commentFile) throw new Error("Test PR has no modified file");
+
+            await page.goto(
+                `/gh/${OWNER}/${REPO}/pull/${testPullRequest.number}/changes`,
+            );
+            await page.waitForLoadState("networkidle");
+
+            const fileDiff = page.locator(
+                `[id="${commentFile.filename.replace(/\//g, "-")}"]`,
+            );
+            const commentText = `Review comment ${Date.now()}`;
+            const editedCommentText = `${commentText} edited`;
+
+            await test.step("Add a comment as a review", async () => {
+                const line = fileDiff.locator("tr:has(td.d2h-ins)").first();
+                await line.hover();
+                await line.locator("td.d2h-code-linenumber svg").click();
+                await fileDiff
+                    .getByPlaceholder("Add a comment...")
+                    .fill(commentText);
+                await fileDiff
+                    .getByRole("button", { name: "Start a Review" })
+                    .click();
+            });
+
+            const thread = fileDiff
+                .locator('[id^="review-thread-"]')
+                .filter({ hasText: commentText });
+            await test.step("Verify the review comment is pending", async () => {
+                await expect(thread).toBeVisible();
+                await expect(
+                    thread.getByText("Pending", { exact: true }),
+                ).toBeVisible();
+                await expect(
+                    thread.getByText("Saving...", { exact: true }),
+                ).not.toBeAttached({ timeout: 15_000 });
+            });
+
+            await test.step("Update the pending review comment", async () => {
+                await thread
+                    .getByRole("button", { name: "Edit comment" })
+                    .click();
+                await thread.locator("textarea").fill(editedCommentText);
+                const updateResponse = page.waitForResponse((response) =>
+                    response.url().includes("reviewComments.update"),
+                );
+                await thread.getByRole("button", { name: "Save" }).click();
+                const updateResult = await updateResponse;
+                expect(updateResult.status()).toBe(200);
+                await expect(updateResult.text()).resolves.toContain(
+                    '"success":true',
+                );
+                await expect(thread.getByText(editedCommentText)).toBeVisible();
+            });
+            await test.step("Submit the review", async () => {
+                await page
+                    .getByRole("button", { name: /Submit Review/ })
+                    .last()
+                    .click();
+                const reviewPopover = page.locator(
+                    "[data-radix-popper-content-wrapper]",
+                );
+                await reviewPopover
+                    .getByPlaceholder("Leave a review comment")
+                    .fill(`Review submission ${Date.now()}`);
+                const submitResponse = page.waitForResponse((response) =>
+                    response.url().includes("reviews.submit"),
+                );
+                await reviewPopover
+                    .getByRole("button", { name: "Comment", exact: true })
+                    .click();
+                await submitResponse;
+            });
+
+            await test.step("Verify the submitted comment is no longer pending", async () => {
+                await page.goto(
+                    `/gh/${OWNER}/${REPO}/pull/${testPullRequest.number}/changes`,
+                );
+                await page.waitForLoadState("networkidle");
+                const submittedThread = fileDiff
+                    .locator('[id^="review-thread-"]')
+                    .filter({ hasText: commentText });
+                await expect(submittedThread).toBeVisible();
+                await expect(
+                    submittedThread.getByText("Pending", { exact: true }),
+                ).not.toBeAttached({ timeout: 15_000 });
+            });
+        });
     });

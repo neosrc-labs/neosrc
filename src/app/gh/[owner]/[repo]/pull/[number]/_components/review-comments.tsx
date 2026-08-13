@@ -295,7 +295,13 @@ export function ReviewComments({
 
     const handleSaveEdit = (commentId: number) => {
         if (!editBody.trim()) return;
-        updateMutation.mutate({ owner, repo, commentId, body: editBody });
+        updateMutation.mutate({
+            owner,
+            repo,
+            number,
+            commentId,
+            body: editBody,
+        });
     };
 
     const handleDelete = (commentId: number) => {

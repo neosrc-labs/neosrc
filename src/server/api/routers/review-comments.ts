@@ -188,6 +188,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             z.object({
                 owner: z.string(),
                 repo: z.string(),
+                number: z.number().optional(),
                 commentId: z.number(),
                 body: z.string(),
             }),
@@ -204,6 +205,7 @@ export const reviewCommentsRouter = createTRPCRouter({
                 input.repo,
                 input.commentId,
                 input.body,
+                input.number,
             );
 
             return { success: true as const };
