@@ -28,11 +28,10 @@ import {
     syncCurrentUserCodeberg,
 } from "~/server/sync/codeberg";
 import {
-    type GitHubSyncRepo,
     githubSnapshotHash,
     syncCurrentUserGitHub,
 } from "~/server/sync/github";
-import type { SyncRepo } from "~/server/sync/shared";
+import type { Db, SyncRepo, SyncResult } from "~/server/sync/shared";
 
 const getAuthenticatedUserMock = vi.mocked(getAuthenticatedUser);
 const createOctokitMock = vi.mocked(createOctokit);
@@ -136,35 +135,7 @@ function makeDb() {
     return { executor, db, state };
 }
 
-function githubRepo(
-    id: number,
-    permission: "admin" | "read" | null,
-): GitHubSyncRepo {
-    return {
-        providerId: id,
-        name: `repo-${id}`,
-        visibility: "public",
-        description: null,
-        stars: 0,
-        watchers: 0,
-        forks: 0,
-        defaultBranch: null,
-        archived: false,
-        owner: { providerId: 1, login: "owner", avatarUrl: null, type: "org" },
-        permissions: permission
-            ? {
-                  admin: permission === "admin",
-                  maintain: false,
-                  push: false,
-                  triage: false,
-                  pull: permission === "read",
-              }
-            : null,
-        rawData: null,
-    };
-}
-
-function syncRepo(id: number, permission: "admin" | "read" | null): SyncRepo {
+function repo(id: number, permission: "admin" | "read" | null): SyncRepo {
     return {
         providerId: id,
         name: `repo-${id}`,
@@ -211,25 +182,184 @@ function makeOctokitMock() {
     };
 }
 
+type SyncInput = {
+    accessToken: string;
+    userId: string;
+    forceRecent: boolean;
+    forceFull: boolean;
+};
+
+type SyncFn = (db: Db, input: SyncInput) => Promise<SyncResult>;
+
+/**
+ * Stubs the global fetch for the codeberg repo/org fetchers, which hit the
+ * network during a sync. An unauthenticated response yields empty snapshots;
+ * non-OK responses abort the sync, so the stub returns empty bodies.
+ */
+function stubEmptyCodebergFetch() {
+    vi.stubGlobal(
+        "fetch",
+        vi.fn(
+            async () =>
+                ({
+                    ok: true,
+                    json: async () => [],
+                }) as unknown as Response,
+        ),
+    );
+}
+
+/** Seeds the state row with a snapshot fetched in the future relative to now. */
+function seedNewerSnapshot(state: ReturnType<typeof makeDb>["state"]): Date {
+    // A newer sync already committed under the lock, having read its snapshot
+    // in the future relative to this run.
+    const newerFetchedAt = new Date(Date.now() + 60_000);
+    state.row = {
+        snapshotHash: "newer-hash",
+        updatedAt: new Date(Date.now() - 6 * 60 * 1000),
+        snapshotFetchedAt: newerFetchedAt,
+    };
+    return newerFetchedAt;
+}
+
+/** Stub the authenticated repo list with one repo granted to the user. */
+function mockSingleGrantedRepo(octokit: ReturnType<typeof makeOctokitMock>) {
+    octokit.repos.listForAuthenticatedUser.mockResolvedValue({
+        data: [
+            {
+                id: 7,
+                name: "granted",
+                private: false,
+                owner: {
+                    id: 2,
+                    login: "other",
+                    avatar_url: null,
+                    type: "User",
+                },
+                permissions: {
+                    admin: false,
+                    maintain: false,
+                    push: false,
+                    triage: false,
+                    pull: true,
+                },
+            },
+        ],
+    });
+}
+
+/**
+ * Runs a sync twice with an unchanged snapshot and asserts the second run
+ * writes nothing (the hash gate short-circuits). Returns the first result.
+ */
+async function expectSecondSyncSkips(
+    db: ReturnType<typeof makeDb>["db"],
+    state: ReturnType<typeof makeDb>["state"],
+    sync: SyncFn,
+): Promise<SyncResult> {
+    const first = await sync(db as never, {
+        accessToken: "tok",
+        userId: "u1",
+        forceRecent: false,
+        forceFull: false,
+    });
+    const writesAfterFirst = db.transaction.mock.calls.length;
+
+    const result = await sync(db as never, {
+        accessToken: "tok",
+        userId: "u1",
+        forceRecent: false,
+        forceFull: false,
+    });
+
+    expect(result).toEqual(EMPTY_RESULT);
+    expect(db.transaction).toHaveBeenCalledTimes(writesAfterFirst);
+    expect(db.execute).toHaveBeenCalledTimes(1);
+    expect(state.row).not.toBeNull();
+    return first;
+}
+
+/**
+ * Runs a first sync (storing the snapshot), marks the stored state fresh so
+ * the recency gate no longer applies, then runs a second sync with the given
+ * flags. Returns the second result and the transaction count after the first
+ * sync.
+ */
+async function primeAndRunSecondSync(
+    db: ReturnType<typeof makeDb>["db"],
+    state: ReturnType<typeof makeDb>["state"],
+    sync: SyncFn,
+    forceRecent: boolean,
+    forceFull: boolean,
+): Promise<{ result: SyncResult; writesAfterFirst: number }> {
+    await sync(db as never, {
+        accessToken: "tok",
+        userId: "u1",
+        forceRecent: false,
+        forceFull: false,
+    });
+    const writesAfterFirst = db.transaction.mock.calls.length;
+    state.row = {
+        snapshotHash: state.row!.snapshotHash,
+        updatedAt: new Date(),
+    };
+
+    const result = await sync(db as never, {
+        accessToken: "tok",
+        userId: "u1",
+        forceRecent,
+        forceFull,
+    });
+    return { result, writesAfterFirst };
+}
+
+/**
+ * Runs a forceFull sync against a stored snapshot fetched in the future and
+ * asserts the ordering guard blocked every write.
+ */
+async function expectForceFullAborts(
+    db: ReturnType<typeof makeDb>["db"],
+    executor: ReturnType<typeof makeDb>["executor"],
+    state: ReturnType<typeof makeDb>["state"],
+    sync: SyncFn,
+    newerFetchedAt: Date,
+): Promise<void> {
+    // forceFull bypasses the recency and hash gates, so only the ordering
+    // guard under the lock can stop the stale write.
+    const result = await sync(db as never, {
+        accessToken: "tok",
+        userId: "u1",
+        forceRecent: false,
+        forceFull: true,
+    });
+
+    expect(executor.execute).toHaveBeenCalledTimes(1); // lock acquired
+    expect(executor.insert).not.toHaveBeenCalled(); // no upserts or store
+    expect(executor.delete).not.toHaveBeenCalled(); // relations untouched
+    expect(db.execute).not.toHaveBeenCalled(); // no view refresh
+    expect(result).toEqual(EMPTY_RESULT);
+    expect(state.row?.snapshotFetchedAt).toEqual(newerFetchedAt);
+}
+
 describe("snapshot hashes", () => {
     it("are order-insensitive", () => {
-        const a = [githubRepo(1, "admin"), githubRepo(2, "read")];
-        const b = [githubRepo(2, "read"), githubRepo(1, "admin")];
+        const a = [repo(1, "admin"), repo(2, "read")];
+        const b = [repo(2, "read"), repo(1, "admin")];
         expect(githubSnapshotHash(a, [], [])).toBe(
             githubSnapshotHash(b, [], []),
         );
     });
 
     it("change when a permission changes", () => {
-        expect(githubSnapshotHash([githubRepo(1, "admin")], [], [])).not.toBe(
-            githubSnapshotHash([githubRepo(1, "read")], [], []),
+        expect(githubSnapshotHash([repo(1, "admin")], [], [])).not.toBe(
+            githubSnapshotHash([repo(1, "read")], [], []),
         );
     });
 
     it("change when the repo owner changes", () => {
-        const ownedByOwner = githubRepo(1, "admin");
+        const ownedByOwner = repo(1, "admin");
         const ownedBySomeoneElse = {
-            ...githubRepo(1, "admin"),
+            ...repo(1, "admin"),
             owner: {
                 providerId: 99,
                 login: "elsewhere",
@@ -240,11 +370,11 @@ describe("snapshot hashes", () => {
         expect(githubSnapshotHash([ownedByOwner], [], [])).not.toBe(
             githubSnapshotHash([ownedBySomeoneElse], [], []),
         );
-        expect(codebergSnapshotHash([syncRepo(1, "admin")], [])).not.toBe(
+        expect(codebergSnapshotHash([repo(1, "admin")], [])).not.toBe(
             codebergSnapshotHash(
                 [
                     {
-                        ...syncRepo(1, "admin"),
+                        ...repo(1, "admin"),
                         owner: {
                             providerId: 99,
                             login: "elsewhere",
@@ -290,8 +420,8 @@ describe("snapshot hashes", () => {
     });
 
     it("hashes codeberg repos and orgs order-insensitively", () => {
-        const a = [syncRepo(1, "admin"), syncRepo(2, "read")];
-        const b = [syncRepo(2, "read"), syncRepo(1, "admin")];
+        const a = [repo(1, "admin"), repo(2, "read")];
+        const b = [repo(2, "read"), repo(1, "admin")];
         expect(codebergSnapshotHash(a, [])).toBe(codebergSnapshotHash(b, []));
         expect(codebergSnapshotHash(a, [{ providerId: 7 }])).not.toBe(
             codebergSnapshotHash(a, []),
@@ -334,25 +464,7 @@ describe("syncCurrentUserGitHub incremental gate", () => {
 
     it("skips all writes when the snapshot hash matches the stored one", async () => {
         const { db, state } = makeDb();
-        await syncCurrentUserGitHub(db as never, {
-            accessToken: "tok",
-            userId: "u1",
-            forceRecent: false,
-            forceFull: false,
-        });
-        const writesAfterFirst = db.transaction.mock.calls.length;
-
-        const result = await syncCurrentUserGitHub(db as never, {
-            accessToken: "tok",
-            userId: "u1",
-            forceRecent: false,
-            forceFull: false,
-        });
-
-        expect(result).toEqual(EMPTY_RESULT);
-        expect(db.transaction).toHaveBeenCalledTimes(writesAfterFirst);
-        expect(db.execute).toHaveBeenCalledTimes(1);
-        expect(state.row).not.toBeNull();
+        await expectSecondSyncSkips(db, state, syncCurrentUserGitHub);
     });
 
     it("forceFull re-syncs even when the hash matches", async () => {
@@ -394,24 +506,13 @@ describe("syncCurrentUserGitHub incremental gate", () => {
 
     it("forceRecent fetches inputs despite a fresh sync but still hash-compares", async () => {
         const { db, state } = makeDb();
-        await syncCurrentUserGitHub(db as never, {
-            accessToken: "tok",
-            userId: "u1",
-            forceRecent: false,
-            forceFull: false,
-        });
-        const writesAfterFirst = db.transaction.mock.calls.length;
-        state.row = {
-            snapshotHash: state.row!.snapshotHash,
-            updatedAt: new Date(),
-        };
-
-        const result = await syncCurrentUserGitHub(db as never, {
-            accessToken: "tok",
-            userId: "u1",
-            forceRecent: true,
-            forceFull: false,
-        });
+        const { result, writesAfterFirst } = await primeAndRunSecondSync(
+            db,
+            state,
+            syncCurrentUserGitHub,
+            true,
+            false,
+        );
 
         expect(getAuthenticatedUserMock).toHaveBeenCalledTimes(2);
         expect(result).toEqual(EMPTY_RESULT);
@@ -420,24 +521,13 @@ describe("syncCurrentUserGitHub incremental gate", () => {
 
     it("forceFull re-syncs even when the sync is fresh and the hash matches", async () => {
         const { db, state } = makeDb();
-        await syncCurrentUserGitHub(db as never, {
-            accessToken: "tok",
-            userId: "u1",
-            forceRecent: false,
-            forceFull: false,
-        });
-        const writesAfterFirst = db.transaction.mock.calls.length;
-        state.row = {
-            snapshotHash: state.row!.snapshotHash,
-            updatedAt: new Date(),
-        };
-
-        const result = await syncCurrentUserGitHub(db as never, {
-            accessToken: "tok",
-            userId: "u1",
-            forceRecent: false,
-            forceFull: true,
-        });
+        const { result, writesAfterFirst } = await primeAndRunSecondSync(
+            db,
+            state,
+            syncCurrentUserGitHub,
+            false,
+            true,
+        );
 
         expect(db.transaction).toHaveBeenCalledTimes(writesAfterFirst + 1);
         expect(result.accountsUpserted).toBe(1);
@@ -451,28 +541,7 @@ describe("syncCurrentUserGitHub incremental gate", () => {
             forceRecent: false,
             forceFull: false,
         });
-        octokit.repos.listForAuthenticatedUser.mockResolvedValue({
-            data: [
-                {
-                    id: 7,
-                    name: "granted",
-                    private: false,
-                    owner: {
-                        id: 2,
-                        login: "other",
-                        avatar_url: null,
-                        type: "User",
-                    },
-                    permissions: {
-                        admin: false,
-                        maintain: false,
-                        push: false,
-                        triage: false,
-                        pull: true,
-                    },
-                },
-            ],
-        });
+        mockSingleGrantedRepo(octokit);
         const writesAfterFirst = db.transaction.mock.calls.length;
 
         const result = await syncCurrentUserGitHub(db as never, {
@@ -489,53 +558,17 @@ describe("syncCurrentUserGitHub incremental gate", () => {
 
     it("refuses to restore access from a snapshot older than the applied one", async () => {
         const { db, executor, state } = makeDb();
-        // A newer sync already committed under the lock, having read its
-        // snapshot in the future relative to this run.
-        const newerFetchedAt = new Date(Date.now() + 60_000);
-        state.row = {
-            snapshotHash: "newer-hash",
-            updatedAt: new Date(Date.now() - 6 * 60 * 1000),
-            snapshotFetchedAt: newerFetchedAt,
-        };
+        const newerFetchedAt = seedNewerSnapshot(state);
         // This older run still sees a grant the newer sync had revoked.
-        octokit.repos.listForAuthenticatedUser.mockResolvedValue({
-            data: [
-                {
-                    id: 7,
-                    name: "granted",
-                    private: false,
-                    owner: {
-                        id: 2,
-                        login: "other",
-                        avatar_url: null,
-                        type: "User",
-                    },
-                    permissions: {
-                        admin: false,
-                        maintain: false,
-                        push: false,
-                        triage: false,
-                        pull: true,
-                    },
-                },
-            ],
-        });
+        mockSingleGrantedRepo(octokit);
 
-        // forceFull bypasses the recency and hash gates, so only the ordering
-        // guard under the lock can stop the stale write.
-        const result = await syncCurrentUserGitHub(db as never, {
-            accessToken: "tok",
-            userId: "u1",
-            forceRecent: false,
-            forceFull: true,
-        });
-
-        expect(executor.execute).toHaveBeenCalledTimes(1); // lock acquired
-        expect(executor.insert).not.toHaveBeenCalled(); // no upserts or store
-        expect(executor.delete).not.toHaveBeenCalled(); // relations untouched
-        expect(db.execute).not.toHaveBeenCalled(); // no view refresh
-        expect(result).toEqual(EMPTY_RESULT);
-        expect(state.row?.snapshotFetchedAt).toEqual(newerFetchedAt);
+        await expectForceFullAborts(
+            db,
+            executor,
+            state,
+            syncCurrentUserGitHub,
+            newerFetchedAt,
+        );
     });
 
     it("does not commit sync state when a team fetch was skipped", async () => {
@@ -593,19 +626,7 @@ describe("syncCurrentUserCodeberg incremental gate", () => {
             login: "tester",
             avatar_url: null,
         } as never);
-        // The repo/org fetchers hit the network; an unauthenticated response
-        // yields empty snapshots. Non-OK responses now abort the sync, so the
-        // stub returns empty bodies.
-        vi.stubGlobal(
-            "fetch",
-            vi.fn(
-                async () =>
-                    ({
-                        ok: true,
-                        json: async () => [],
-                    }) as unknown as Response,
-            ),
-        );
+        stubEmptyCodebergFetch();
     });
 
     afterEach(() => {
@@ -615,53 +636,26 @@ describe("syncCurrentUserCodeberg incremental gate", () => {
     it("skips all writes on a second poll with an unchanged snapshot", async () => {
         const { db, state } = makeDb();
 
-        const first = await syncCurrentUserCodeberg(db as never, {
-            accessToken: "tok",
-            userId: "u1",
-            forceRecent: false,
-            forceFull: false,
-        });
-        const writesAfterFirst = db.transaction.mock.calls.length;
-        const second = await syncCurrentUserCodeberg(db as never, {
-            accessToken: "tok",
-            userId: "u1",
-            forceRecent: false,
-            forceFull: false,
-        });
+        const first = await expectSecondSyncSkips(
+            db,
+            state,
+            syncCurrentUserCodeberg,
+        );
 
         expect(first.accountsUpserted).toBe(1);
-        expect(second).toEqual(EMPTY_RESULT);
-        expect(db.transaction).toHaveBeenCalledTimes(writesAfterFirst);
-        expect(db.execute).toHaveBeenCalledTimes(1);
-        expect(state.row).not.toBeNull();
     });
 
     it("refuses to restore access from a snapshot older than the applied one", async () => {
         const { db, executor, state } = makeDb();
-        // A newer sync already committed under the lock, having read its
-        // snapshot in the future relative to this run.
-        const newerFetchedAt = new Date(Date.now() + 60_000);
-        state.row = {
-            snapshotHash: "newer-hash",
-            updatedAt: new Date(Date.now() - 6 * 60 * 1000),
-            snapshotFetchedAt: newerFetchedAt,
-        };
+        const newerFetchedAt = seedNewerSnapshot(state);
 
-        // forceFull bypasses the recency and hash gates, so only the ordering
-        // guard under the lock can stop the stale write.
-        const result = await syncCurrentUserCodeberg(db as never, {
-            accessToken: "tok",
-            userId: "u1",
-            forceRecent: false,
-            forceFull: true,
-        });
-
-        expect(executor.execute).toHaveBeenCalledTimes(1); // lock acquired
-        expect(executor.insert).not.toHaveBeenCalled(); // no upserts or store
-        expect(executor.delete).not.toHaveBeenCalled(); // relations untouched
-        expect(db.execute).not.toHaveBeenCalled(); // no view refresh
-        expect(result).toEqual(EMPTY_RESULT);
-        expect(state.row?.snapshotFetchedAt).toEqual(newerFetchedAt);
+        await expectForceFullAborts(
+            db,
+            executor,
+            state,
+            syncCurrentUserCodeberg,
+            newerFetchedAt,
+        );
     });
 
     it("short-circuits without fetching inputs when the last sync is fresh", async () => {
@@ -716,16 +710,7 @@ describe("syncCurrentUser dispatch", () => {
             login: "tester",
             avatar_url: null,
         } as never);
-        vi.stubGlobal(
-            "fetch",
-            vi.fn(
-                async () =>
-                    ({
-                        ok: true,
-                        json: async () => [],
-                    }) as unknown as Response,
-            ),
-        );
+        stubEmptyCodebergFetch();
     });
 
     afterEach(() => {

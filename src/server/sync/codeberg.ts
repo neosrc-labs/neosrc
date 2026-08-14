@@ -6,41 +6,12 @@ import {
     getUserByUsername as getCodebergUserByUsername,
 } from "~/server/codeberg";
 import { type CodebergRepoRaw, codebergRepoToSyncRepo } from "./mappers";
-import type {
-    Db,
-    RelationRow,
-    RepoPermission,
-    SyncRepo,
-    SyncResult,
-} from "./shared";
-import {
-    createSyncContext,
-    deleteRelationsForSubject,
-    getStoredSyncState,
-    hashSnapshot,
-    insertRelations,
-    isSyncStateFresh,
-    newResult,
-    refreshPermissionsView,
-    storeSyncState,
-} from "./shared";
+import * as shared from "./shared";
 
-/**
- * Upserts the account row for `owner` plus every repository it owns.
- * Refreshes the permission view afterwards.
- */
 export async function fetchOwnerRepos(
     accessToken: string,
     owner: string,
-): Promise<{
-    owner: {
-        providerId: number;
-        login: string;
-        avatarUrl: string | null;
-        type: "user" | "org";
-    };
-    repos: SyncRepo[];
-}> {
+): Promise<shared.OwnerRepos> {
     const profile = await getCodebergUserByUsername(accessToken, owner);
     if (!profile) {
         throw new Error(`Codeberg account "${owner}" not found`);
@@ -71,27 +42,12 @@ export async function fetchOwnerRepos(
  * unconditionally.
  */
 export async function syncCurrentUserCodeberg(
-    db: Db,
-    input: {
-        accessToken: string;
-        userId: string;
-        forceRecent: boolean;
-        forceFull: boolean;
-    },
-): Promise<SyncResult> {
-    const result = newResult();
-
-    // Recency gate: skip fetching the snapshot inputs entirely when the last
-    // applied sync is fresh, unless forced.
-    const stored = await getStoredSyncState(db, "codeberg", input.userId);
-    if (
-        !input.forceRecent &&
-        !input.forceFull &&
-        stored !== null &&
-        isSyncStateFresh(stored.updatedAt)
-    ) {
-        return result;
-    }
+    db: shared.Db,
+    input: shared.SyncUserInput,
+): Promise<shared.SyncResult> {
+    const result = shared.newResult();
+    const gate = await shared.readSyncState(db, "codeberg", input);
+    if (gate.skip) return result;
 
     // Snapshot ordering token: captured before the provider reads so the guard
     // under the advisory lock can reject a snapshot older than the applied one.
@@ -113,11 +69,11 @@ export async function syncCurrentUserCodeberg(
     );
 
     const snapshotHash = codebergSnapshotHash(repos, orgs);
-    if (!input.forceFull && stored?.snapshotHash === snapshotHash) {
+    if (!input.forceFull && gate.stored?.snapshotHash === snapshotHash) {
         return result;
     }
 
-    const relations: RelationRow[] = [];
+    const relations: shared.RelationRow[] = [];
     let didApply = false;
 
     await db.transaction(async (tx) => {
@@ -131,38 +87,29 @@ export async function syncCurrentUserCodeberg(
         // Refuse to apply a snapshot older than the one already committed under
         // this lock; otherwise an older concurrent sync could restore grants a
         // newer sync just removed.
-        const applied = await getStoredSyncState(tx, "codeberg", input.userId);
+        const applied = await shared.getStoredSyncState(
+            tx,
+            "codeberg",
+            input.userId,
+        );
         if (
             applied?.snapshotFetchedAt &&
             applied.snapshotFetchedAt.getTime() > snapshotFetchedAt.getTime()
         ) {
             return;
         }
-        const ctx = createSyncContext(tx, "codeberg", result);
-        const userAccountId = await ctx.ensureAccount({
-            providerId: profile.id,
-            login: profile.login,
-            avatarUrl: profile.avatar_url ?? null,
-            type: "user",
-        });
+        const ctx = shared.createSyncContext(tx, "codeberg", result);
+        const userAccountId = await shared.ensureUserAccount(ctx, profile);
 
-        for (const repo of repos) {
-            const repoId = await ctx.ensureRepo(repo);
-            // Personal repos already grant admin via mv_user_repo_permissions.
-            if (repo.owner.login === profile.login) continue;
-            if (!repo.permissions) continue;
-            const relation = codebergRepoPermissionsToRelation(
-                repo.permissions,
-            );
-            if (!relation) continue;
-            relations.push({
-                resourceType: "repo",
-                resourceId: repoId,
-                relation,
-                subjectType: "user",
-                subjectId: userAccountId,
-            });
-        }
+        relations.push(
+            ...(await shared.collectUserRepoRelations(
+                repos,
+                userAccountId,
+                profile.login,
+                (repo) => ctx.ensureRepo(repo),
+                codebergRepoPermissionsToRelation,
+            )),
+        );
 
         // Forgejo does not expose org membership roles, so every membership is
         // recorded as "member"; the permission view expands it regardless.
@@ -182,11 +129,13 @@ export async function syncCurrentUserCodeberg(
             });
         }
 
-        result.relationsRemoved += await deleteRelationsForSubject(tx, "user", [
-            userAccountId,
-        ]);
-        result.relationsWritten += await insertRelations(tx, relations);
-        await storeSyncState(
+        result.relationsRemoved += await shared.deleteRelationsForSubject(
+            tx,
+            "user",
+            [userAccountId],
+        );
+        result.relationsWritten += await shared.insertRelations(tx, relations);
+        await shared.storeSyncState(
             tx,
             "codeberg",
             input.userId,
@@ -196,7 +145,7 @@ export async function syncCurrentUserCodeberg(
         didApply = true;
     });
 
-    if (didApply) await refreshPermissionsView(db);
+    if (didApply) await shared.refreshPermissionsView(db);
     return result;
 }
 
@@ -205,38 +154,32 @@ export async function syncCurrentUserCodeberg(
  * owner and permission flags, and the org memberships.
  */
 export function codebergSnapshotHash(
-    repos: SyncRepo[],
+    repos: shared.SyncRepo[],
     orgs: { providerId: number }[],
 ): string {
-    return hashSnapshot({
-        repos: repos
-            .map((repo) => ({
-                id: repo.providerId,
-                // A repo transfer changes the effective owner grant (the view
-                // grants admin via repo.account_id), so the owner must trip
-                // the hash or transfers would never re-sync.
-                owner: repo.owner.providerId,
-                permissions: repo.permissions,
-            }))
-            .sort((a, b) => a.id - b.id),
+    return shared.hashSnapshot({
+        repos: shared.snapshotRepos(repos),
         orgs: orgs.map((org) => org.providerId).sort((a, b) => a - b),
     });
 }
 
-/** Repositories owned by a user or organization. */
-export async function getReposByOwner(
-    username: string,
+/**
+ * Fetches every page of a paginated Codeberg repo list endpoint.
+ *
+ * Codeberg caps the effective page size at MAX_RESPONSE_ITEMS (50), so
+ * requesting more would make `data.length < limit` break after page 1 and
+ * silently drop repos beyond the first 50.
+ */
+async function fetchAllRepoPages(
+    basePath: string,
     accessToken?: string,
 ): Promise<CodebergRepoRaw[]> {
     const results: CodebergRepoRaw[] = [];
     let page = 1;
-    // Codeberg caps the effective page size at MAX_RESPONSE_ITEMS (50), so
-    // requesting more would make `data.length < limit` break after page 1 and
-    // silently drop repos beyond the first 50.
     const limit = 50;
     for (;;) {
         const data = await fetchCodebergJson<CodebergRepoRaw[]>(
-            `/api/v1/users/${username}/repos?limit=${limit}&page=${page}`,
+            `${basePath}?limit=${limit}&page=${page}`,
             accessToken,
         );
         if (!data || data.length === 0) break;
@@ -245,6 +188,14 @@ export async function getReposByOwner(
         page++;
     }
     return results;
+}
+
+/** Repositories owned by a user or organization. */
+export async function getReposByOwner(
+    username: string,
+    accessToken?: string,
+): Promise<CodebergRepoRaw[]> {
+    return fetchAllRepoPages(`/api/v1/users/${username}/repos`, accessToken);
 }
 
 /** True when the username belongs to an organization. */
@@ -278,21 +229,7 @@ export async function isOrg(
 export async function getAuthenticatedUserRepos(
     accessToken: string,
 ): Promise<CodebergRepoRaw[]> {
-    const results: CodebergRepoRaw[] = [];
-    let page = 1;
-    // See getReposByOwner: the server caps page size at 50.
-    const limit = 50;
-    for (;;) {
-        const data = await fetchCodebergJson<CodebergRepoRaw[]>(
-            `/api/v1/user/repos?limit=${limit}&page=${page}`,
-            accessToken,
-        );
-        if (!data || data.length === 0) break;
-        for (const repo of data) results.push(repo);
-        if (data.length < limit) break;
-        page++;
-    }
-    return results;
+    return fetchAllRepoPages("/api/v1/user/repos", accessToken);
 }
 
 /** Organizations the authenticated user belongs to. */
@@ -316,7 +253,7 @@ export async function getUserOrgs(
 
 /** Codeberg permission flags -> relation vocabulary used by the permission view. */
 export function codebergRepoPermissionsToRelation(
-    permissions: Pick<RepoPermission, "admin" | "push" | "pull">,
+    permissions: Pick<shared.RepoPermission, "admin" | "push" | "pull">,
 ): "admin" | "writer" | "reader" | null {
     if (permissions.admin) return "admin";
     if (permissions.push) return "writer";

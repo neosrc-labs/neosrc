@@ -7,52 +7,13 @@ import {
     getGitHubUser,
 } from "~/server/github";
 import { githubRepoToSyncRepo } from "./mappers";
-import type {
-    Db,
-    RelationRow,
-    RepoPermission,
-    RepoVisibility,
-    SyncRepo,
-    SyncResult,
-} from "./shared";
-import {
-    createSyncContext,
-    deleteRelationsForSubject,
-    getStoredSyncState,
-    hashSnapshot,
-    insertRelations,
-    isSyncStateFresh,
-    newResult,
-    refreshPermissionsView,
-    storeSyncState,
-} from "./shared";
+import * as shared from "./shared";
 
-export type GitHubSyncRepo = {
-    providerId: number;
-    name: string;
-    visibility: RepoVisibility;
-    description: string | null;
-    stars: number;
-    watchers: number;
-    forks: number;
-    defaultBranch: string | null;
-    archived: boolean;
-    owner: {
-        providerId: number;
-        login: string;
-        avatarUrl: string | null;
-        type: "user" | "org";
-    };
-    permissions: {
-        admin: boolean;
-        maintain: boolean;
-        push: boolean;
-        triage: boolean;
-        pull: boolean;
-    } | null;
-    /** Raw REST API payload for the repository; null when fetched via GraphQL. */
-    rawData: unknown;
-};
+/**
+ * GitHub-flavored sync repo: same canonical shape as shared.SyncRepo; rawData is the
+ * raw REST API payload, null when fetched via GraphQL.
+ */
+export type GitHubSyncRepo = shared.SyncRepo;
 
 export type GitHubOrgMembership = {
     providerId: number;
@@ -72,22 +33,10 @@ export type GitHubTeam = {
     };
 };
 
-/**
- * Upserts the account row for `owner` plus every repository it owns.
- * Refreshes the permission view afterwards.
- */
 export async function fetchOwnerRepos(
     accessToken: string,
     owner: string,
-): Promise<{
-    owner: {
-        providerId: number;
-        login: string;
-        avatarUrl: string | null;
-        type: "user" | "org";
-    };
-    repos: SyncRepo[];
-}> {
+): Promise<shared.OwnerRepos> {
     const profile = await getOwnerProfile(accessToken, owner);
     const repos = await listReposForOwner(accessToken, owner, profile.type);
     return { owner: profile, repos };
@@ -107,27 +56,12 @@ export async function fetchOwnerRepos(
  * unconditionally.
  */
 export async function syncCurrentUserGitHub(
-    db: Db,
-    input: {
-        accessToken: string;
-        userId: string;
-        forceRecent: boolean;
-        forceFull: boolean;
-    },
-): Promise<SyncResult> {
-    const result = newResult();
-
-    // Recency gate: skip fetching the snapshot inputs entirely when the last
-    // applied sync is fresh, unless forced.
-    const stored = await getStoredSyncState(db, "github", input.userId);
-    if (
-        !input.forceRecent &&
-        !input.forceFull &&
-        stored !== null &&
-        isSyncStateFresh(stored.updatedAt)
-    ) {
-        return result;
-    }
+    db: shared.Db,
+    input: shared.SyncUserInput,
+): Promise<shared.SyncResult> {
+    const result = shared.newResult();
+    const gate = await shared.readSyncState(db, "github", input);
+    if (gate.skip) return result;
 
     // Snapshot ordering token: captured before the provider reads so the guard
     // under the advisory lock can reject a snapshot older than the applied one.
@@ -143,7 +77,7 @@ export async function syncCurrentUserGitHub(
         listAuthenticatedUserTeams(input.accessToken),
     ]);
     const snapshotHash = githubSnapshotHash(repos, memberships, teams);
-    if (!input.forceFull && stored?.snapshotHash === snapshotHash) {
+    if (!input.forceFull && gate.stored?.snapshotHash === snapshotHash) {
         return result;
     }
 
@@ -180,7 +114,7 @@ export async function syncCurrentUserGitHub(
         ),
     );
 
-    const relations: RelationRow[] = [];
+    const relations: shared.RelationRow[] = [];
     const teamIds: number[] = [];
     let didApply = false;
 
@@ -195,36 +129,29 @@ export async function syncCurrentUserGitHub(
         // Refuse to apply a snapshot older than the one already committed under
         // this lock; otherwise an older concurrent sync could restore grants a
         // newer sync just removed.
-        const applied = await getStoredSyncState(tx, "github", input.userId);
+        const applied = await shared.getStoredSyncState(
+            tx,
+            "github",
+            input.userId,
+        );
         if (
             applied?.snapshotFetchedAt &&
             applied.snapshotFetchedAt.getTime() > snapshotFetchedAt.getTime()
         ) {
             return;
         }
-        const ctx = createSyncContext(tx, "github", result);
-        const userAccountId = await ctx.ensureAccount({
-            providerId: profile.id,
-            login: profile.login,
-            avatarUrl: profile.avatar_url ?? null,
-            type: "user",
-        });
+        const ctx = shared.createSyncContext(tx, "github", result);
+        const userAccountId = await shared.ensureUserAccount(ctx, profile);
 
-        for (const repo of repos) {
-            const repoId = await ctx.ensureRepo(repo);
-            // Personal repos already grant admin via mv_user_repo_permissions.
-            if (repo.owner.login === profile.login) continue;
-            if (!repo.permissions) continue;
-            const relation = githubRepoPermissionsToRelation(repo.permissions);
-            if (!relation) continue;
-            relations.push({
-                resourceType: "repo",
-                resourceId: repoId,
-                relation,
-                subjectType: "user",
-                subjectId: userAccountId,
-            });
-        }
+        relations.push(
+            ...(await shared.collectUserRepoRelations(
+                repos,
+                userAccountId,
+                profile.login,
+                (repo) => ctx.ensureRepo(repo),
+                githubRepoPermissionsToRelation,
+            )),
+        );
 
         for (const membership of memberships) {
             const orgAccountId = await ctx.ensureAccount({
@@ -282,22 +209,24 @@ export async function syncCurrentUserGitHub(
         }
 
         // Replace this user's rows with the freshly fetched state.
-        result.relationsRemoved += await deleteRelationsForSubject(tx, "user", [
-            userAccountId,
-        ]);
+        result.relationsRemoved += await shared.deleteRelationsForSubject(
+            tx,
+            "user",
+            [userAccountId],
+        );
         if (teamIds.length > 0) {
-            result.relationsRemoved += await deleteRelationsForSubject(
+            result.relationsRemoved += await shared.deleteRelationsForSubject(
                 tx,
                 "team",
                 teamIds,
             );
         }
-        result.relationsWritten += await insertRelations(tx, relations);
+        result.relationsWritten += await shared.insertRelations(tx, relations);
         // A skipped team means the snapshot is incomplete: leave the state
         // unstored so the next poll re-attempts the team fetches instead of
         // early-returning on the partial hash match.
         if (result.teamsSkipped === 0) {
-            await storeSyncState(
+            await shared.storeSyncState(
                 tx,
                 "github",
                 input.userId,
@@ -308,7 +237,7 @@ export async function syncCurrentUserGitHub(
         didApply = true;
     });
 
-    if (didApply) await refreshPermissionsView(db);
+    if (didApply) await shared.refreshPermissionsView(db);
     return result;
 }
 
@@ -323,17 +252,8 @@ export function githubSnapshotHash(
     memberships: GitHubOrgMembership[],
     teams: GitHubTeam[],
 ): string {
-    return hashSnapshot({
-        repos: repos
-            .map((repo) => ({
-                id: repo.providerId,
-                // A repo transfer changes the effective owner grant (the view
-                // grants admin via repo.account_id), so the owner must trip
-                // the hash or transfers would never re-sync.
-                owner: repo.owner.providerId,
-                permissions: repo.permissions,
-            }))
-            .sort((a, b) => a.id - b.id),
+    return shared.hashSnapshot({
+        repos: shared.snapshotRepos(repos),
         memberships: memberships
             .map((membership) => ({
                 id: membership.providerId,
@@ -625,7 +545,7 @@ export async function listReposForOwner(
 
 /** GitHub permission flags -> relation vocabulary used by the permission view. */
 export function githubRepoPermissionsToRelation(
-    permissions: RepoPermission,
+    permissions: shared.RepoPermission,
 ): "admin" | "maintainer" | "writer" | "triager" | "reader" | null {
     if (permissions.admin) return "admin";
     if (permissions.maintain) return "maintainer";

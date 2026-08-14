@@ -123,3 +123,53 @@ export function codebergRepoToSyncRepo(
         rawData: repo,
     };
 }
+
+/** Latest-commit summary produced from a REST commit payload. */
+export type CommitSummary = {
+    sha: string;
+    message: string;
+    author: { login: string; avatarUrl: string } | null;
+    committedDate: string | null;
+    commitCount: number;
+};
+
+/** Minimal REST commit payload shape shared by both providers' list endpoints. */
+export type RestCommitLike = {
+    sha: string;
+    // GitHub's listCommits types anonymous/empty author objects as
+    // Record<string, never>; both providers always populate login/avatar_url
+    // when author is non-null.
+    author:
+        | Record<string, never>
+        | { login: string; avatar_url: string }
+        | null;
+    commit: {
+        message: string;
+        committer?: { date?: string | null } | null;
+        author?: { date?: string | null } | null;
+    };
+};
+
+/**
+ * Maps a REST commit payload to the shared latest-commit summary used by both
+ * providers: first line of the message, the author, and the commit date.
+ */
+export function mapRestCommitToSummary(
+    commit: RestCommitLike,
+    commitCount: number,
+): CommitSummary {
+    const message = commit.commit.message.split("\n")[0] ?? "";
+    return {
+        sha: commit.sha,
+        message,
+        author: commit.author
+            ? {
+                  login: commit.author.login,
+                  avatarUrl: commit.author.avatar_url,
+              }
+            : null,
+        committedDate:
+            commit.commit.committer?.date ?? commit.commit.author?.date ?? null,
+        commitCount,
+    };
+}

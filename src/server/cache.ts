@@ -194,6 +194,58 @@ export function repoSubscriptionCacheKey(
     return `${provider}:subscription:${userId}:${owner}:${repo}`;
 }
 
+/**
+ * Star/subscription-style repo flag cache: short stale window with a 24h hard
+ * expiry. Both providers use the same TTLs for these per-user flags.
+ */
+function withRepoFlagCache<T>(
+    key: string,
+    fetcher: () => Promise<T>,
+): Promise<T> {
+    return withStaleWhileRevalidate(key, fetcher, {
+        staleAfter: 30_000,
+        deleteAfter: 24 * 60 * 60 * 1000,
+    });
+}
+
+/** Cached starred flag and subscription wrappers, keyed per provider/user. */
+export function createRepoFlagCache<TSubscription>(
+    provider: "gh" | "cb",
+    checkStarred: (
+        accessToken: string,
+        owner: string,
+        repo: string,
+    ) => Promise<boolean>,
+    fetchSubscription: (
+        accessToken: string,
+        owner: string,
+        repo: string,
+    ) => Promise<TSubscription>,
+) {
+    return {
+        getCachedRepoStarred: (
+            accessToken: string,
+            owner: string,
+            repo: string,
+            userId: string,
+        ) =>
+            withRepoFlagCache(
+                repoStarredCacheKey(provider, userId, owner, repo),
+                () => checkStarred(accessToken, owner, repo),
+            ),
+        getCachedRepoSubscription: (
+            accessToken: string,
+            owner: string,
+            repo: string,
+            userId: string,
+        ) =>
+            withRepoFlagCache(
+                repoSubscriptionCacheKey(provider, userId, owner, repo),
+                () => fetchSubscription(accessToken, owner, repo),
+            ),
+    };
+}
+
 export async function deleteCache(key: string): Promise<void> {
     try {
         await db.delete(cacheTable).where(eq(cacheTable.key, key));

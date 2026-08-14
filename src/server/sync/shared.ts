@@ -44,6 +44,14 @@ export type StoredSyncState = {
     snapshotFetchedAt: Date | null;
 };
 
+/** Input shape of the per-provider sync entry points. */
+export type SyncUserInput = {
+    accessToken: string;
+    userId: string;
+    forceRecent: boolean;
+    forceFull: boolean;
+};
+
 export type Db = NodePgDatabase<typeof schema>;
 
 // Insert/delete/select are the only operations these helpers need, which lets
@@ -79,6 +87,20 @@ export type RelationRow = {
 };
 
 /**
+ * Upserts the account row for `owner` plus every repository it owns.
+ * Refreshes the permission view afterwards.
+ */
+export type OwnerRepos = {
+    owner: {
+        providerId: number;
+        login: string;
+        avatarUrl: string | null;
+        type: "user" | "org";
+    };
+    repos: SyncRepo[];
+};
+
+/**
  * Sync-scoped upsert helpers. Caches account/repo ids by provider id so
  * repeated encounters of the same entity (e.g. a repo owner appearing in many
  * repos) only hit the database once per sync.
@@ -87,7 +109,7 @@ export function createSyncContext(
     executor: Executor,
     provider: SyncProvider,
     result: SyncResult,
-) {
+): SyncContext {
     const accountIds = new Map<number, number>();
     const repoIds = new Map<number, number>();
 
@@ -135,6 +157,60 @@ export function createSyncContext(
     };
 
     return { ensureAccount, ensureRepo };
+}
+
+export type SyncContext = {
+    ensureAccount: (account: {
+        providerId: number;
+        login: string;
+        avatarUrl: string | null;
+        type: "user" | "org";
+    }) => Promise<number>;
+    ensureRepo: (repo: SyncRepo) => Promise<number>;
+};
+
+/** Upserts the user's own account row from a provider profile. */
+export async function ensureUserAccount(
+    ctx: SyncContext,
+    profile: { id: number; login: string; avatar_url: string | null },
+): Promise<number> {
+    return ctx.ensureAccount({
+        providerId: profile.id,
+        login: profile.login,
+        avatarUrl: profile.avatar_url ?? null,
+        type: "user",
+    });
+}
+
+/**
+ * Direct repo grants for the authenticated user: every repo they can see is
+ * linked to them. Personal repos already grant admin via
+ * mv_user_repo_permissions, so they are skipped, as are repos without
+ * permission info or with no mapped relation.
+ */
+export async function collectUserRepoRelations(
+    repos: SyncRepo[],
+    userAccountId: number,
+    profileLogin: string,
+    ensureRepo: (repo: SyncRepo) => Promise<number>,
+    toRelation: (permissions: RepoPermission) => RelationName | null,
+): Promise<RelationRow[]> {
+    const relations: RelationRow[] = [];
+    for (const repo of repos) {
+        const repoId = await ensureRepo(repo);
+        if (repo.owner.login === profileLogin) continue;
+        if (!repo.permissions) continue;
+        const relation = toRelation(repo.permissions);
+        if (!relation) continue;
+        relations.push({
+            resourceType: "repo",
+            resourceId: repoId,
+            relation,
+            subjectType: "user",
+            subjectId: userAccountId,
+        });
+    }
+    return relations;
 }
 
 export async function upsertAccount(
@@ -190,37 +266,30 @@ export async function upsertRepo(
     },
 ): Promise<number> {
     const lastSynced = new Date();
+    const columns = {
+        name: input.name,
+        visibility: input.visibility,
+        description: input.description,
+        stars: input.stars,
+        watchers: input.watchers,
+        forks: input.forks,
+        defaultBranch: input.defaultBranch,
+        archived: input.archived,
+        accountId: input.accountId,
+        rawData: input.rawData,
+        lastSynced,
+    };
     const [row] = await executor
         .insert(schema.repo)
         .values({
             provider: input.provider,
             providerId: input.providerId,
-            name: input.name,
-            visibility: input.visibility,
-            description: input.description,
-            stars: input.stars,
-            watchers: input.watchers,
-            forks: input.forks,
-            defaultBranch: input.defaultBranch,
-            archived: input.archived,
-            accountId: input.accountId,
-            rawData: input.rawData,
-            lastSynced,
+            ...columns,
         })
         .onConflictDoUpdate({
             target: [schema.repo.provider, schema.repo.providerId],
             set: {
-                name: input.name,
-                visibility: input.visibility,
-                description: input.description,
-                stars: input.stars,
-                watchers: input.watchers,
-                forks: input.forks,
-                defaultBranch: input.defaultBranch,
-                archived: input.archived,
-                accountId: input.accountId,
-                rawData: input.rawData,
-                lastSynced,
+                ...columns,
                 updatedAt: new Date(),
             },
         })
@@ -300,6 +369,21 @@ export function hashSnapshot(payload: unknown): string {
     return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
+/**
+ * Canonical repo entries for a permission snapshot. A repo transfer changes
+ * the effective owner grant (the view grants admin via repo.account_id), so
+ * the owner must trip the hash or transfers would never re-sync.
+ */
+export function snapshotRepos(repos: SyncRepo[]) {
+    return repos
+        .map((repo) => ({
+            id: repo.providerId,
+            owner: repo.owner.providerId,
+            permissions: repo.permissions,
+        }))
+        .sort((a, b) => a.id - b.id);
+}
+
 /** Syncs applied within this window are considered fresh and skipped entirely. */
 export const SYNC_RECENCY_WINDOW_MS = 5 * 60 * 1000;
 
@@ -335,6 +419,26 @@ export async function getStoredSyncState(
         )
         .limit(1);
     return row ?? null;
+}
+
+/**
+ * Recency gate: reads the stored sync state and reports whether the last
+ * applied sync is fresh enough to skip fetching the provider inputs entirely
+ * (unless forced). The state itself is returned so callers can still
+ * hash-compare against it after a forced fetch.
+ */
+export async function readSyncState(
+    db: Executor,
+    provider: SyncProvider,
+    input: SyncUserInput,
+): Promise<{ stored: StoredSyncState | null; skip: boolean }> {
+    const stored = await getStoredSyncState(db, provider, input.userId);
+    const skip =
+        !input.forceRecent &&
+        !input.forceFull &&
+        stored !== null &&
+        isSyncStateFresh(stored.updatedAt);
+    return { stored, skip };
 }
 
 /** Records the applied snapshot hash for a user's provider sync. */

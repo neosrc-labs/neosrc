@@ -4,7 +4,7 @@ import { log } from "~/logging";
 
 import { db } from "./db";
 import { account, mvUserRepoPermissions, repo } from "./db/schema";
-import type { RepoVisibility, SyncProvider } from "./sync/shared";
+import type { SyncProvider, SyncRepo } from "./sync/shared";
 import { upsertAccount, upsertRepo } from "./sync/shared";
 
 /**
@@ -40,24 +40,26 @@ export type CachedRepoSource<T> = {
     /** Fetch the full provider payload; null when the repo does not exist. */
     fetcher: () => Promise<T | null>;
     /** Map the payload to the canonical repo columns (see sync/mappers.ts). */
-    toRepo: (payload: T) => {
-        providerId: number;
-        name: string;
-        visibility: RepoVisibility;
-        description: string | null;
-        stars: number;
-        watchers: number;
-        forks: number;
-        defaultBranch: string | null;
-        archived: boolean;
-        owner: {
-            providerId: number;
-            login: string;
-            avatarUrl: string | null;
-            type: "user" | "org";
-        };
-    };
+    toRepo: (payload: T) => Omit<SyncRepo, "permissions" | "rawData">;
 };
+
+/**
+ * Case-insensitive owner/repo lookup on the repo cache row. Provider APIs are
+ * case-insensitive on owner/repo slugs, so the lookup must be too: the cache
+ * row stores canonical casing from the API, while the URL slug may differ.
+ */
+function repoLookupWhere(
+    provider: SyncProvider,
+    owner: string,
+    repoName: string,
+) {
+    return and(
+        eq(repo.provider, provider),
+        eq(account.provider, provider),
+        eq(sql`lower(${account.username})`, owner.toLowerCase()),
+        eq(sql`lower(${repo.name})`, repoName.toLowerCase()),
+    );
+}
 
 export async function getCachedRepoData<T>(
     source: CachedRepoSource<T>,
@@ -70,17 +72,7 @@ export async function getCachedRepoData<T>(
             .select()
             .from(repo)
             .innerJoin(account, eq(repo.accountId, account.id))
-            .where(
-                and(
-                    eq(repo.provider, provider),
-                    eq(account.provider, provider),
-                    // Provider APIs are case-insensitive on owner/repo slugs, so
-                    // the lookup must be too: the cache row stores canonical
-                    // casing from the API, while the URL slug may differ.
-                    eq(sql`lower(${account.username})`, owner.toLowerCase()),
-                    eq(sql`lower(${repo.name})`, repoName.toLowerCase()),
-                ),
-            )
+            .where(repoLookupWhere(provider, owner, repoName))
             .limit(1);
         row = found;
     } catch (error) {
@@ -123,14 +115,7 @@ export async function getCachedRepoData<T>(
             })
             .from(repo)
             .innerJoin(account, eq(repo.accountId, account.id))
-            .where(
-                and(
-                    eq(repo.provider, provider),
-                    eq(account.provider, provider),
-                    eq(sql`lower(${account.username})`, owner.toLowerCase()),
-                    eq(sql`lower(${repo.name})`, repoName.toLowerCase()),
-                ),
-            )
+            .where(repoLookupWhere(provider, owner, repoName))
             .limit(1);
         const currentLastSynced = current?.lastSynced?.getTime() ?? 0;
         if (current && currentLastSynced > observedLastSynced) {
@@ -263,4 +248,43 @@ export function viewerRepoAccess(params: {
         canView: !payload.private || isOwner || permission !== null,
         admin: isOwner || permission === "admin",
     };
+}
+
+/**
+ * Fetches a cached repo payload plus the viewer's effective permission,
+ * applies the shared viewer-access gate, and maps the result. The cached
+ * payload is shared across users; a viewer without a grant must not see a
+ * private repo through it. Returns null when access is denied; callers decide
+ * how to surface the denial (this is resolved into a promise the header
+ * consumes, so a server notFound() here could never produce a 404).
+ */
+export async function getCachedRepoHeaderInfo<
+    T extends { owner: { login: string }; private: boolean },
+    R,
+>(
+    provider: SyncProvider,
+    accessToken: string,
+    username: string | null,
+    owner: string,
+    repo: string,
+    getRepoInfo: (
+        accessToken: string,
+        owner: string,
+        repo: string,
+    ) => Promise<T>,
+    map: (repoInfo: T, access: ViewerRepoAccess) => R,
+): Promise<R | null> {
+    const [repoInfo, permission] = await Promise.all([
+        getRepoInfo(accessToken, owner, repo),
+        getRepoPermissionForUser(provider, username, owner, repo),
+    ]);
+
+    const access = viewerRepoAccess({
+        username,
+        payload: repoInfo,
+        permission,
+    });
+    if (!access.canView) return null;
+
+    return map(repoInfo, access);
 }
