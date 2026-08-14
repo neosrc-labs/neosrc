@@ -1,14 +1,10 @@
 import { redirect } from "next/navigation";
+import type { PullChangesPageParams } from "~/app/[owner]/[repo]/_components/repo-pages/changes-page-params";
 
 export default async function CbChangesPage({
     params,
 }: {
-    params: Promise<{
-        owner: string;
-        repo: string;
-        number: string;
-        sha?: string[];
-    }>;
+    params: Promise<PullChangesPageParams>;
 }) {
     const { owner, repo, number, sha } = await params;
     const shaPath = sha && sha.length > 0 ? `/${sha.join("/")}` : "";

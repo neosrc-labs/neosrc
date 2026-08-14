@@ -1,32 +1,11 @@
-import type { Metadata } from "next";
-import { CommitsList } from "~/app/[owner]/[repo]/commits/_components/commits-list";
+import {
+    CommitsPage,
+    type CommitsPageProps,
+} from "~/app/[owner]/[repo]/_components/repo-pages/commits-page";
 import { ghConfig } from "~/app/[owner]/[repo]/commits/_components/commits-list-config";
 
-export async function generateMetadata({
-    params,
-}: {
-    params: Promise<{ owner: string; repo: string; branch: string }>;
-}): Promise<Metadata> {
-    const { owner, repo, branch } = await params;
-    return { title: `Commits - ${owner}/${repo}/${branch}` };
-}
+export { generateCommitsMetadata as generateMetadata } from "~/app/[owner]/[repo]/_components/repo-pages/commits-page";
 
-export default async function CommitsPage({
-    params,
-}: {
-    params: Promise<{ owner: string; repo: string; branch: string }>;
-}) {
-    const { owner, repo, branch } = await params;
-    return (
-        <main className="min-h-[calc(100svh-var(--header-height))] min-w-0 border-border-subtle border-r bg-surface">
-            <div className="mx-auto max-w-7xl px-6 py-8">
-                <CommitsList
-                    owner={owner}
-                    repo={repo}
-                    branch={branch}
-                    config={ghConfig}
-                />
-            </div>
-        </main>
-    );
+export default function Page(props: CommitsPageProps) {
+    return <CommitsPage {...props} config={ghConfig} />;
 }
