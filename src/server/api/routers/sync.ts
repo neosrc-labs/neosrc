@@ -1,17 +1,33 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-
+import { requireUserId } from "~/server/api/routers/helpers";
 import { createTRPCRouter, protectedMutation } from "~/server/api/trpc";
 import {
     getCodebergToken,
     getGitHubToken,
     isAnonymousToken,
 } from "~/server/auth";
+import type { db } from "~/server/db";
 import {
     refreshOwnerRepos,
     type SyncResult,
     syncCurrentUser,
 } from "~/server/sync";
+
+/**
+ * Both providers' tokens for a user, tolerating unlinked providers (the
+ * token getters throw "not connected" when there is no account).
+ */
+async function getConnectedTokens(
+    database: typeof db,
+    userId: string,
+): Promise<{ githubToken: string | null; codebergToken: string | null }> {
+    const [githubToken, codebergToken] = await Promise.all([
+        getGitHubToken(database, userId).catch(() => null),
+        getCodebergToken(database, userId).catch(() => null),
+    ]);
+    return { githubToken, codebergToken };
+}
 
 export const syncRouter = createTRPCRouter({
     /**
@@ -77,14 +93,11 @@ export const syncRouter = createTRPCRouter({
     currentUser: protectedMutation.mutation(async ({ ctx }) => {
         // protectedMutation guarantees a session; narrow for the token getters
         // and the sync layer, which key sync state by userId.
-        if (!ctx.session?.user) {
-            throw new TRPCError({ code: "UNAUTHORIZED" });
-        }
-        const userId = ctx.session.user.id;
-        const [githubToken, codebergToken] = await Promise.all([
-            getGitHubToken(ctx.db, userId).catch(() => null),
-            getCodebergToken(ctx.db, userId).catch(() => null),
-        ]);
+        const userId = requireUserId(ctx);
+        const { githubToken, codebergToken } = await getConnectedTokens(
+            ctx.db,
+            userId,
+        );
 
         const results: Partial<Record<"github" | "codeberg", SyncResult>> = {};
         await Promise.all([
@@ -128,14 +141,11 @@ export const syncRouter = createTRPCRouter({
      * `currentUser`, which is user-initiated).
      */
     poll: protectedMutation.mutation(async ({ ctx }) => {
-        if (!ctx.session?.user) {
-            throw new TRPCError({ code: "UNAUTHORIZED" });
-        }
-        const userId = ctx.session.user.id;
-        const [githubToken, codebergToken] = await Promise.all([
-            getGitHubToken(ctx.db, userId).catch(() => null),
-            getCodebergToken(ctx.db, userId).catch(() => null),
-        ]);
+        const userId = requireUserId(ctx);
+        const { githubToken, codebergToken } = await getConnectedTokens(
+            ctx.db,
+            userId,
+        );
 
         const hasChanges = (result: SyncResult): boolean =>
             result.accountsUpserted +

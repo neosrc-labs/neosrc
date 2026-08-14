@@ -1,5 +1,6 @@
+import type { SearchParams } from "~/server/api/routers/search-shared";
 import type { db } from "~/server/db";
-import type { IssueSearchResult, SearchParams } from "./types";
+import type { IssueSearchResult } from "./types";
 
 export interface IssueProvider {
     search(params: SearchParams & { ctx: Ctx }): Promise<IssueSearchResult>;

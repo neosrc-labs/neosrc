@@ -1,7 +1,5 @@
-import { z } from "zod";
-
+import { getGhToken, shaTargetInput } from "~/server/api/routers/helpers";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getGitHubToken } from "~/server/auth";
 import { getChecksForCommit } from "~/server/github";
 
 export interface StatusContext {
@@ -131,18 +129,9 @@ export interface PrDetailsEntry {
 
 export const checksRouter = createTRPCRouter({
     list: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                sha: z.string(),
-            }),
-        )
+        .input(shaTargetInput)
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             return getChecksForCommit(
                 accessToken,

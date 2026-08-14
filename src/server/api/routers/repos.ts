@@ -1,6 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-
+import {
+    getGhToken,
+    getProviderToken,
+    providerTargetInput,
+    requireUserId,
+} from "~/server/api/routers/helpers";
 import {
     createTRPCRouter,
     protectedMutation,
@@ -118,6 +123,66 @@ export type RepositoryInfo = {
     parentDefaultBranch: string | null;
 };
 
+/**
+ * Fetches a repo payload (mapping cache misses to a tRPC 404) plus the
+ * viewer's effective permission, then enforces the shared viewer-access gate.
+ * Throws NOT_FOUND when the repo is absent or the viewer cannot see it.
+ */
+async function getViewableRepo<
+    TData extends { owner: { login: string }; private: boolean },
+>(args: {
+    provider: "codeberg" | "github";
+    accessToken: string;
+    username: string | null;
+    owner: string;
+    repo: string;
+    fetch: (accessToken: string, owner: string, repo: string) => Promise<TData>;
+}): Promise<{ data: TData; access: ReturnType<typeof viewerRepoAccess> }> {
+    const [data, permission] = await Promise.all([
+        repoNotFoundAsTrpc(args.fetch(args.accessToken, args.owner, args.repo)),
+        getRepoPermissionForUser(
+            args.provider,
+            args.username,
+            args.owner,
+            args.repo,
+        ),
+    ]);
+
+    const access = viewerRepoAccess({
+        username: args.username,
+        payload: data,
+        permission,
+    });
+    if (!access.canView) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+    }
+    return { data, access };
+}
+
+/**
+ * The shared tail of the repo-info mapping: timestamps, fork state, and the
+ * parent reference. Kept in one place so the codeberg/github branches can't
+ * drift apart.
+ */
+function repositoryInfoTail(data: {
+    created_at: string | null;
+    fork: boolean;
+    parent?: {
+        full_name: string | null;
+        default_branch: string | null;
+    } | null;
+}): Pick<
+    RepositoryInfo,
+    "createdAt" | "isFork" | "parentFullName" | "parentDefaultBranch"
+> {
+    return {
+        createdAt: data.created_at,
+        isFork: data.fork,
+        parentFullName: data.parent?.full_name ?? null,
+        parentDefaultBranch: data.parent?.default_branch ?? null,
+    };
+}
+
 export const reposRouter = createTRPCRouter({
     getByOwnerAndRepo: protectedProcedure
         .input(
@@ -132,30 +197,14 @@ export const reposRouter = createTRPCRouter({
             if (input.provider === "cb") {
                 const accessToken = await getCodebergToken(ctx.db, userId);
                 const username = ctx.session?.user?.codebergUsername ?? null;
-                const [data, permission] = await Promise.all([
-                    repoNotFoundAsTrpc(
-                        getCachedCodebergRepo(
-                            accessToken,
-                            input.owner,
-                            input.repo,
-                        ),
-                    ),
-                    getRepoPermissionForUser(
-                        "codeberg",
-                        username,
-                        input.owner,
-                        input.repo,
-                    ),
-                ]);
-
-                const access = viewerRepoAccess({
+                const { data, access } = await getViewableRepo({
+                    provider: "codeberg",
+                    accessToken,
                     username,
-                    payload: data,
-                    permission,
+                    owner: input.owner,
+                    repo: input.repo,
+                    fetch: getCachedCodebergRepo,
                 });
-                if (!access.canView) {
-                    throw new TRPCError({ code: "NOT_FOUND" });
-                }
 
                 return {
                     hasIssues: data.has_issues,
@@ -185,36 +234,21 @@ export const reposRouter = createTRPCRouter({
                               url: data.license.url ?? null,
                           }
                         : null,
-                    createdAt: data.created_at,
-                    isFork: data.fork,
-                    parentFullName: data.parent?.full_name ?? null,
-                    parentDefaultBranch: data.parent?.default_branch ?? null,
+                    ...repositoryInfoTail(data),
                 } satisfies RepositoryInfo;
             }
 
             const accessToken = await getGitHubToken(ctx.db, userId);
 
             const username = ctx.session?.user?.githubUsername ?? null;
-            const [data, permission] = await Promise.all([
-                repoNotFoundAsTrpc(
-                    getCachedRepo(accessToken, input.owner, input.repo),
-                ),
-                getRepoPermissionForUser(
-                    "github",
-                    username,
-                    input.owner,
-                    input.repo,
-                ),
-            ]);
-
-            const access = viewerRepoAccess({
+            const { data, access } = await getViewableRepo({
+                provider: "github",
+                accessToken,
                 username,
-                payload: data,
-                permission,
+                owner: input.owner,
+                repo: input.repo,
+                fetch: getCachedRepo,
             });
-            if (!access.canView) {
-                throw new TRPCError({ code: "NOT_FOUND" });
-            }
 
             return {
                 hasIssues: data.has_issues,
@@ -244,39 +278,27 @@ export const reposRouter = createTRPCRouter({
                           url: data.license.url ?? null,
                       }
                     : null,
-                createdAt: data.created_at,
-                isFork: data.fork,
-                parentFullName: data.parent?.full_name ?? null,
-                parentDefaultBranch: data.parent?.default_branch ?? null,
+                ...repositoryInfoTail(data),
             } satisfies RepositoryInfo;
         }),
     getCountsByOwnerAndRepo: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .query(async ({ ctx, input }) => {
             const userId = ctx.session?.user?.id ?? "anonymous";
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(ctx.db, userId);
-                return getCachedRepoCounts(
-                    accessToken,
-                    userId,
-                    input.owner,
-                    input.repo,
-                );
-            }
-
-            const accessToken = await getGitHubToken(ctx.db, userId);
-            return getCachedRepoIssuePullCounts(
-                accessToken,
-                userId,
-                input.owner,
-                input.repo,
-            );
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? getCachedRepoCounts(
+                      accessToken,
+                      userId,
+                      input.owner,
+                      input.repo,
+                  )
+                : getCachedRepoIssuePullCounts(
+                      accessToken,
+                      userId,
+                      input.owner,
+                      input.repo,
+                  );
         }),
     getTopRepos: protectedProcedure.query(async ({ ctx }) => {
         if (ctx.isAnonymous) return [];
@@ -284,118 +306,50 @@ export const reposRouter = createTRPCRouter({
         return getTopRepositories(accessToken);
     }),
     getBranches: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return getCodebergBranches(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                );
-            }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-            return getRepoBranches(accessToken, input.owner, input.repo);
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? getCodebergBranches(accessToken, input.owner, input.repo)
+                : getRepoBranches(accessToken, input.owner, input.repo);
         }),
     getTags: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return getCodebergTags(accessToken, input.owner, input.repo);
-            }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-            return getRepoTags(accessToken, input.owner, input.repo);
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? getCodebergTags(accessToken, input.owner, input.repo)
+                : getRepoTags(accessToken, input.owner, input.repo);
         }),
     getRefCounts: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return getCodebergRefCounts(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                );
-            }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-            return getRepoRefCounts(accessToken, input.owner, input.repo);
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? getCodebergRefCounts(accessToken, input.owner, input.repo)
+                : getRepoRefCounts(accessToken, input.owner, input.repo);
         }),
     getLatestCommit: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-                ref: z.string().optional(),
-            }),
-        )
+        .input(providerTargetInput.extend({ ref: z.string().optional() }))
         .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return getCodebergLatestCommit(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.ref,
-                );
-            }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-            return getRepoLatestCommit(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.ref,
-            );
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? getCodebergLatestCommit(
+                      accessToken,
+                      input.owner,
+                      input.repo,
+                      input.ref,
+                  )
+                : getRepoLatestCommit(
+                      accessToken,
+                      input.owner,
+                      input.repo,
+                      input.ref,
+                  );
         }),
     getForkComparison: protectedProcedure
         .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
+            providerTargetInput.extend({
                 upstreamFullName: z.string(),
                 forkBranch: z.string(),
                 parentBranch: z.string(),
@@ -403,10 +357,7 @@ export const reposRouter = createTRPCRouter({
         )
         .query(async ({ ctx, input }) => {
             if (input.provider === "cb") return null;
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
             return getForkComparison(
                 accessToken,
                 input.owner,
@@ -417,14 +368,7 @@ export const reposRouter = createTRPCRouter({
             );
         }),
     mergeUpstream: protectedMutation
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-                branch: z.string(),
-            }),
-        )
+        .input(providerTargetInput.extend({ branch: z.string() }))
         .mutation(async ({ ctx, input }) => {
             if (input.provider === "cb") {
                 throw new TRPCError({
@@ -432,10 +376,7 @@ export const reposRouter = createTRPCRouter({
                     message: "Merging upstream is not supported on Codeberg",
                 });
             }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
             return mergeForkUpstream(
                 accessToken,
                 input.owner,
@@ -445,20 +386,14 @@ export const reposRouter = createTRPCRouter({
         }),
     getFileLatestCommits: protectedProcedure
         .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
+            providerTargetInput.extend({
                 ref: z.string(),
                 paths: z.array(z.string()),
             }),
         )
         .query(async ({ ctx, input }) => {
+            const accessToken = await getProviderToken(ctx, input.provider);
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
                 const result: Record<
                     string,
                     {
@@ -479,10 +414,6 @@ export const reposRouter = createTRPCRouter({
                 await Promise.all(promises);
                 return result;
             }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
             return getFileLatestCommits(
                 accessToken,
                 ctx.session?.user?.id ?? "anonymous",
@@ -494,88 +425,52 @@ export const reposRouter = createTRPCRouter({
         }),
     getContents: protectedProcedure
         .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
+            providerTargetInput.extend({
                 path: z.string().optional(),
                 ref: z.string().optional(),
             }),
         )
         .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return getCodebergRepoContents(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.path,
-                    input.ref,
-                );
-            }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-            return getRepoContents(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.path,
-                input.ref,
-            );
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? getCodebergRepoContents(
+                      accessToken,
+                      input.owner,
+                      input.repo,
+                      input.path,
+                      input.ref,
+                  )
+                : getRepoContents(
+                      accessToken,
+                      input.owner,
+                      input.repo,
+                      input.path,
+                      input.ref,
+                  );
         }),
     getFileTree: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-                ref: z.string(),
-            }),
-        )
+        .input(providerTargetInput.extend({ ref: z.string() }))
         .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return getCodebergFileTree(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.ref,
-                );
-            }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-            return getRepoFileTree(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.ref,
-            );
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? getCodebergFileTree(
+                      accessToken,
+                      input.owner,
+                      input.repo,
+                      input.ref,
+                  )
+                : getRepoFileTree(
+                      accessToken,
+                      input.owner,
+                      input.repo,
+                      input.ref,
+                  );
         }),
     getDocFileNames: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-                ref: z.string().optional(),
-            }),
-        )
+        .input(providerTargetInput.extend({ ref: z.string().optional() }))
         .query(async ({ ctx, input }) => {
+            const accessToken = await getProviderToken(ctx, input.provider);
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
                 const items = await getCodebergRepoContents(
                     accessToken,
                     input.owner,
@@ -600,10 +495,6 @@ export const reposRouter = createTRPCRouter({
                         ),
                     );
             }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
             return getCachedRepoDocFileNames(
                 accessToken,
                 ctx.session?.user?.id ?? "anonymous",
@@ -613,51 +504,23 @@ export const reposRouter = createTRPCRouter({
             );
         }),
     getRepoLanguages: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return getCodebergRepoLanguages(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                );
-            }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-            return getCachedRepoLanguages(
-                accessToken,
-                ctx.session?.user?.id ?? "anonymous",
-                input.owner,
-                input.repo,
-            );
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? getCodebergRepoLanguages(accessToken, input.owner, input.repo)
+                : getCachedRepoLanguages(
+                      accessToken,
+                      ctx.session?.user?.id ?? "anonymous",
+                      input.owner,
+                      input.repo,
+                  );
         }),
     getDocFiles: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-                ref: z.string().optional(),
-            }),
-        )
+        .input(providerTargetInput.extend({ ref: z.string().optional() }))
         .query(async ({ ctx, input }) => {
             if (input.provider === "cb") return [];
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
             return getRepoDocFiles(
                 accessToken,
                 input.owner,
@@ -667,55 +530,35 @@ export const reposRouter = createTRPCRouter({
         }),
     getDocFileContent: protectedProcedure
         .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
+            providerTargetInput.extend({
                 ref: z.string(),
                 path: z.string(),
             }),
         )
         .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return getCodebergFileContent(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.path,
-                    input.ref,
-                );
-            }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-            return getCachedDocFileContent(
-                accessToken,
-                ctx.session?.user?.id ?? "anonymous",
-                input.owner,
-                input.repo,
-                input.ref,
-                input.path,
-            );
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? getCodebergFileContent(
+                      accessToken,
+                      input.owner,
+                      input.repo,
+                      input.path,
+                      input.ref,
+                  )
+                : getCachedDocFileContent(
+                      accessToken,
+                      ctx.session?.user?.id ?? "anonymous",
+                      input.owner,
+                      input.repo,
+                      input.ref,
+                      input.path,
+                  );
         }),
     getContributors: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .query(async ({ ctx, input }) => {
             if (input.provider === "cb") return [];
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
             return getCachedRepoContributors(
                 accessToken,
                 ctx.session?.user?.id ?? "anonymous",
@@ -724,170 +567,104 @@ export const reposRouter = createTRPCRouter({
             );
         }),
     getDeployments: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .query(async ({ ctx, input }) => {
             if (input.provider === "cb") return [];
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
             return getRepoDeployments(accessToken, input.owner, input.repo);
         }),
     getLatestRelease: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return getCodebergLatestRelease(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                );
-            }
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-            return getLatestRelease(accessToken, input.owner, input.repo);
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? getCodebergLatestRelease(accessToken, input.owner, input.repo)
+                : getLatestRelease(accessToken, input.owner, input.repo);
         }),
     getStarred: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .query(async ({ ctx, input }) => {
             if (!ctx.session?.user) return false;
             const userId = ctx.session.user.id;
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(ctx.db, userId);
-                return getCachedCodebergRepoStarred(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    userId,
-                );
-            }
-            const accessToken = await getGitHubToken(ctx.db, userId);
-            return getCachedRepoStarred(
-                accessToken,
-                input.owner,
-                input.repo,
-                userId,
-            );
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? getCachedCodebergRepoStarred(
+                      accessToken,
+                      input.owner,
+                      input.repo,
+                      userId,
+                  )
+                : getCachedRepoStarred(
+                      accessToken,
+                      input.owner,
+                      input.repo,
+                      userId,
+                  );
         }),
     star: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.session?.user)
-                throw new TRPCError({ code: "UNAUTHORIZED" });
-            const userId = ctx.session.user.id;
+            const userId = requireUserId(ctx);
+            const accessToken = await getProviderToken(ctx, input.provider);
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(ctx.db, userId);
                 await starCodebergRepo(accessToken, input.owner, input.repo);
                 await deleteCache(
                     repoStarredCacheKey("cb", userId, input.owner, input.repo),
                 );
                 return;
             }
-            const accessToken = await getGitHubToken(ctx.db, userId);
             await starRepo(accessToken, input.owner, input.repo);
             await deleteCache(
                 repoStarredCacheKey("gh", userId, input.owner, input.repo),
             );
         }),
     unstar: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.session?.user)
-                throw new TRPCError({ code: "UNAUTHORIZED" });
-            const userId = ctx.session.user.id;
+            const userId = requireUserId(ctx);
+            const accessToken = await getProviderToken(ctx, input.provider);
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(ctx.db, userId);
                 await unstarCodebergRepo(accessToken, input.owner, input.repo);
                 await deleteCache(
                     repoStarredCacheKey("cb", userId, input.owner, input.repo),
                 );
                 return;
             }
-            const accessToken = await getGitHubToken(ctx.db, userId);
             await unstarRepo(accessToken, input.owner, input.repo);
             await deleteCache(
                 repoStarredCacheKey("gh", userId, input.owner, input.repo),
             );
         }),
     getSubscription: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .query(async ({ ctx, input }) => {
             const userId = ctx.session?.user?.id ?? "anonymous";
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(ctx.db, userId);
-                return getCachedCodebergRepoSubscription(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    userId,
-                );
-            }
-            const accessToken = await getGitHubToken(ctx.db, userId);
-            return getCachedRepoSubscription(
-                accessToken,
-                input.owner,
-                input.repo,
-                userId,
-            );
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? getCachedCodebergRepoSubscription(
+                      accessToken,
+                      input.owner,
+                      input.repo,
+                      userId,
+                  )
+                : getCachedRepoSubscription(
+                      accessToken,
+                      input.owner,
+                      input.repo,
+                      userId,
+                  );
         }),
     setSubscription: protectedProcedure
         .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
+            providerTargetInput.extend({
                 subscribed: z.boolean(),
                 ignored: z.boolean(),
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.session?.user)
-                throw new TRPCError({ code: "UNAUTHORIZED" });
-            const userId = ctx.session.user.id;
+            const userId = requireUserId(ctx);
+            const accessToken = await getProviderToken(ctx, input.provider);
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(ctx.db, userId);
                 await setCodebergRepoSubscription(
                     accessToken,
                     input.owner,
@@ -905,7 +682,6 @@ export const reposRouter = createTRPCRouter({
                 );
                 return;
             }
-            const accessToken = await getGitHubToken(ctx.db, userId);
             await setRepoSubscription(
                 accessToken,
                 input.owner,
@@ -918,19 +694,11 @@ export const reposRouter = createTRPCRouter({
             );
         }),
     deleteSubscription: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.session?.user)
-                throw new TRPCError({ code: "UNAUTHORIZED" });
-            const userId = ctx.session.user.id;
+            const userId = requireUserId(ctx);
+            const accessToken = await getProviderToken(ctx, input.provider);
             if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(ctx.db, userId);
                 await deleteCodebergRepoSubscription(
                     accessToken,
                     input.owner,
@@ -946,7 +714,6 @@ export const reposRouter = createTRPCRouter({
                 );
                 return;
             }
-            const accessToken = await getGitHubToken(ctx.db, userId);
             await deleteRepoSubscription(accessToken, input.owner, input.repo);
             await deleteCache(
                 repoSubscriptionCacheKey("gh", userId, input.owner, input.repo),

@@ -9,11 +9,24 @@ import {
     type PrDetailsEntry,
 } from "~/server/api/routers/checks";
 import {
+    getGhToken,
+    getProviderToken,
+    invalidatePrCache,
+    prAssigneeInput,
+    prCommentIdInput,
+    prLabelInput,
+    providerTargetInput,
+    prReviewerInput,
+    prTargetInput,
+    reviewEventInput,
+    runPrMutation,
+    searchParamsInput,
+} from "~/server/api/routers/helpers";
+import {
     createTRPCRouter,
     protectedMutation,
     protectedProcedure,
 } from "~/server/api/trpc";
-import { getCodebergToken, getGitHubToken } from "~/server/auth";
 import { deleteCache, prCacheKey, readCache } from "~/server/cache";
 import {
     listAssignees as listCodebergAssignees,
@@ -63,19 +76,9 @@ import type { PrSearchResult } from "./types";
 
 export const pullsRouter = createTRPCRouter({
     updateBody: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                body: z.string(),
-            }),
-        )
+        .input(prTargetInput.extend({ body: z.string() }))
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const result = await updatePullRequest(
                 accessToken,
@@ -85,27 +88,15 @@ export const pullsRouter = createTRPCRouter({
                 { body: input.body },
             );
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return { success: true as const, body: result.body };
         }),
 
     updateTitle: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                title: z.string(),
-            }),
-        )
+        .input(prTargetInput.extend({ title: z.string() }))
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const result = await updatePullRequest(
                 accessToken,
@@ -115,27 +106,15 @@ export const pullsRouter = createTRPCRouter({
                 { title: input.title },
             );
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return { success: true as const, title: result.title };
         }),
 
     addComment: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                body: z.string().min(1),
-            }),
-        )
+        .input(prTargetInput.extend({ body: z.string().min(1) }))
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const comment = await createIssueComment(
                 accessToken,
@@ -145,27 +124,15 @@ export const pullsRouter = createTRPCRouter({
                 input.body,
             );
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return { success: true as const, id: comment.id };
         }),
 
     updateComment: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                commentId: z.number(),
-                body: z.string(),
-            }),
-        )
+        .input(prCommentIdInput.extend({ body: z.string() }))
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const comment = await updateIssueComment(
                 accessToken,
@@ -179,18 +146,9 @@ export const pullsRouter = createTRPCRouter({
         }),
 
     deleteComment: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                commentId: z.number(),
-            }),
-        )
+        .input(prCommentIdInput)
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             await deleteIssueComment(
                 accessToken,
@@ -204,19 +162,13 @@ export const pullsRouter = createTRPCRouter({
 
     updateReview: protectedMutation
         .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
+            prTargetInput.extend({
                 reviewId: z.number(),
                 body: z.string(),
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const review = await updatePullRequestReview(
                 accessToken,
@@ -227,259 +179,111 @@ export const pullsRouter = createTRPCRouter({
                 input.body,
             );
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return { success: true as const, body: review.body };
         }),
 
     listLabels: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return listCodebergLabels(accessToken, input.owner, input.repo);
-            }
-
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            return listLabelsForRepo(accessToken, input.owner, input.repo);
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? listCodebergLabels(accessToken, input.owner, input.repo)
+                : listLabelsForRepo(accessToken, input.owner, input.repo);
         }),
 
     addLabel: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                label: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            await addLabelsToIssue(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-                [input.label],
-            );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
-            return { success: true as const };
-        }),
-
-    removeLabel: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                label: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            await removeLabelFromIssue(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-                input.label,
-            );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
-            return { success: true as const };
-        }),
-
-    listAssignees: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
-        .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return listCodebergAssignees(
+        .input(prLabelInput)
+        .mutation(async ({ ctx, input }) =>
+            runPrMutation(ctx, input, (accessToken) =>
+                addLabelsToIssue(
                     accessToken,
                     input.owner,
                     input.repo,
-                );
-            }
+                    input.number,
+                    [input.label],
+                ),
+            ),
+        ),
 
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+    removeLabel: protectedMutation
+        .input(prLabelInput)
+        .mutation(async ({ ctx, input }) =>
+            runPrMutation(ctx, input, (accessToken) =>
+                removeLabelFromIssue(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                    input.label,
+                ),
+            ),
+        ),
 
-            return listRepoAssignees(accessToken, input.owner, input.repo);
+    listAssignees: protectedProcedure
+        .input(providerTargetInput)
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? listCodebergAssignees(accessToken, input.owner, input.repo)
+                : listRepoAssignees(accessToken, input.owner, input.repo);
         }),
 
     listRecentAuthors: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
+        .input(providerTargetInput)
         .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return listCodebergRecentAuthors(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                );
-            }
-
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            return listRecentIssueAuthors(accessToken, input.owner, input.repo);
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? listCodebergRecentAuthors(
+                      accessToken,
+                      input.owner,
+                      input.repo,
+                  )
+                : listRecentIssueAuthors(accessToken, input.owner, input.repo);
         }),
 
     addAssignee: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                assignee: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            await addAssigneesToIssue(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-                [input.assignee],
-            );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
-            return { success: true as const };
-        }),
-
-    removeAssignee: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                assignee: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            await removeAssigneesFromIssue(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-                [input.assignee],
-            );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
-            return { success: true as const };
-        }),
-
-    listMilestones: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
-        .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return listCodebergMilestones(
+        .input(prAssigneeInput)
+        .mutation(async ({ ctx, input }) =>
+            runPrMutation(ctx, input, (accessToken) =>
+                addAssigneesToIssue(
                     accessToken,
                     input.owner,
                     input.repo,
-                );
-            }
+                    input.number,
+                    [input.assignee],
+                ),
+            ),
+        ),
 
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+    removeAssignee: protectedMutation
+        .input(prAssigneeInput)
+        .mutation(async ({ ctx, input }) =>
+            runPrMutation(ctx, input, (accessToken) =>
+                removeAssigneesFromIssue(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                    [input.assignee],
+                ),
+            ),
+        ),
 
-            return listMilestonesForRepo(accessToken, input.owner, input.repo);
+    listMilestones: protectedProcedure
+        .input(providerTargetInput)
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getProviderToken(ctx, input.provider);
+            return input.provider === "cb"
+                ? listCodebergMilestones(accessToken, input.owner, input.repo)
+                : listMilestonesForRepo(accessToken, input.owner, input.repo);
         }),
 
     setMilestone: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                milestone: z.number().nullable(),
-            }),
-        )
+        .input(prTargetInput.extend({ milestone: z.number().nullable() }))
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             await updateIssueMilestone(
                 accessToken,
@@ -489,88 +293,43 @@ export const pullsRouter = createTRPCRouter({
                 input.milestone,
             );
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return { success: true as const };
         }),
 
     addReviewer: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                reviewer: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            await addReviewersToPullRequest(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-                [input.reviewer],
-            );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
-            return { success: true as const };
-        }),
+        .input(prReviewerInput)
+        .mutation(async ({ ctx, input }) =>
+            runPrMutation(ctx, input, (accessToken) =>
+                addReviewersToPullRequest(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                    [input.reviewer],
+                ),
+            ),
+        ),
 
     removeReviewer: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                reviewer: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            await removeReviewersFromPullRequest(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-                [input.reviewer],
-            );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
-            return { success: true as const };
-        }),
+        .input(prReviewerInput)
+        .mutation(async ({ ctx, input }) =>
+            runPrMutation(ctx, input, (accessToken) =>
+                removeReviewersFromPullRequest(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                    [input.reviewer],
+                ),
+            ),
+        ),
 
     approve: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                event: z.enum(["APPROVE", "COMMENT", "REQUEST_CHANGES"]),
-                body: z.string().optional(),
-            }),
-        )
+        .input(reviewEventInput)
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const review = await createPullRequestReview(
                 accessToken,
@@ -581,85 +340,47 @@ export const pullsRouter = createTRPCRouter({
                 input.body,
             );
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return { success: true as const, id: review.id };
         }),
 
     markAsDraft: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            await markPullRequestAsDraft(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-            );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
-            return { success: true as const };
-        }),
+        .input(prTargetInput)
+        .mutation(async ({ ctx, input }) =>
+            runPrMutation(ctx, input, (accessToken) =>
+                markPullRequestAsDraft(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                ),
+            ),
+        ),
 
     markReadyForReview: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            await markPullRequestAsReady(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-            );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
-            return { success: true as const };
-        }),
+        .input(prTargetInput)
+        .mutation(async ({ ctx, input }) =>
+            runPrMutation(ctx, input, (accessToken) =>
+                markPullRequestAsReady(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                ),
+            ),
+        ),
 
     merge: protectedMutation
         .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
+            prTargetInput.extend({
                 mergeMethod: z.enum(["merge", "squash", "rebase"]),
                 commitTitle: z.string().optional(),
                 commitMessage: z.string().optional(),
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const pr = await getCachedPullRequest(
                 accessToken,
@@ -753,29 +474,21 @@ export const pullsRouter = createTRPCRouter({
                     input.commitMessage,
                 );
 
-                await deleteCache(
-                    prCacheKey(input.owner, input.repo, input.number),
-                );
+                await invalidatePrCache(input.owner, input.repo, input.number);
             }
 
             return { success: true as const };
         }),
     revert: protectedMutation
         .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
+            prTargetInput.extend({
                 title: z.string().optional(),
                 body: z.string().optional(),
                 draft: z.boolean().optional(),
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const result = await revertPullRequest(
                 accessToken,
@@ -787,9 +500,7 @@ export const pullsRouter = createTRPCRouter({
                 input.draft,
             );
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return {
                 success: true as const,
@@ -801,62 +512,32 @@ export const pullsRouter = createTRPCRouter({
         }),
 
     close: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            await updatePullRequest(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-                { state: "closed" },
-            );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
-            return { success: true as const };
-        }),
+        .input(prTargetInput)
+        .mutation(async ({ ctx, input }) =>
+            runPrMutation(ctx, input, (accessToken) =>
+                updatePullRequest(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                    { state: "closed" },
+                ),
+            ),
+        ),
 
     reopen: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            await updatePullRequest(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-                { state: "open" },
-            );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
-            return { success: true as const };
-        }),
+        .input(prTargetInput)
+        .mutation(async ({ ctx, input }) =>
+            runPrMutation(ctx, input, (accessToken) =>
+                updatePullRequest(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                    { state: "open" },
+                ),
+            ),
+        ),
 
     list: protectedProcedure
         .input(
@@ -868,10 +549,7 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             return listPullRequests(
                 accessToken,
@@ -883,19 +561,7 @@ export const pullsRouter = createTRPCRouter({
         }),
 
     search: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-                query: z.string(),
-                page: z.number().optional(),
-                after: z.string().optional(),
-                first: z.number().optional(),
-                sort: z.enum(["created", "updated", "comments"]).optional(),
-                order: z.enum(["asc", "desc"]).optional(),
-            }),
-        )
+        .input(searchParamsInput)
         .query(async ({ ctx, input }): Promise<PrSearchResult> => {
             const providerCtx: Ctx = {
                 db: ctx.db,
@@ -922,10 +588,7 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const graphql = octokitGraphql.defaults({
                 headers: { authorization: `bearer ${accessToken}` },
@@ -953,18 +616,9 @@ export const pullsRouter = createTRPCRouter({
         }),
 
     headSha: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
+        .input(prTargetInput)
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const headSha = await getPullRequestHeadShaGraphQL(
                 accessToken,
@@ -985,18 +639,9 @@ export const pullsRouter = createTRPCRouter({
         }),
 
     getMergeRequirements: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
+        .input(prTargetInput)
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const pr = await getCachedPullRequest(
                 accessToken,
@@ -1015,18 +660,9 @@ export const pullsRouter = createTRPCRouter({
         }),
 
     listReviews: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
+        .input(prTargetInput)
         .query(async ({ ctx, input }): Promise<ReviewComment2[]> => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
             return getPullRequestReviews(
                 accessToken,
                 input.owner,
@@ -1044,10 +680,7 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             return getPullRequestStack(
                 accessToken,
@@ -1066,10 +699,7 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
             await createPullRequestStack(
                 accessToken,
                 input.owner,
@@ -1093,10 +723,7 @@ export const pullsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
             await unstackPullRequests(
                 accessToken,
                 input.owner,

@@ -4,6 +4,10 @@ import {
     mapCbLabel,
     nullSafe,
 } from "~/server/api/routers/mappers";
+import {
+    parseCodebergSearch,
+    type SearchParams,
+} from "~/server/api/routers/search-shared";
 import { getCodebergToken } from "~/server/auth";
 import {
     type CodebergPrListParams,
@@ -12,7 +16,7 @@ import {
     listPullRequests,
 } from "~/server/codeberg";
 import type { Ctx, PullRequestProvider } from "./provider";
-import type { PrSearchItem, PrSearchResult, SearchParams } from "./types";
+import type { PrSearchItem, PrSearchResult } from "./types";
 
 export class CodebergPullRequestProvider implements PullRequestProvider {
     async search(params: SearchParams & { ctx: Ctx }): Promise<PrSearchResult> {
@@ -30,33 +34,8 @@ export class CodebergPullRequestProvider implements PullRequestProvider {
             | "closed"
             | "merged";
 
-        const authorMatch = params.query.match(/author:(\S+)/);
-        const authorQualifier = authorMatch?.[1];
-
-        const labelRegex = /label:\s*("[^"]*"|\S+)/g;
-        const labelQualifiers: string[] = [];
-        const allLabelMatches = params.query.matchAll(labelRegex);
-        for (const m of allLabelMatches) {
-            const name = (m[1] ?? "").replace(/^"|"$/g, "");
-            if (name) labelQualifiers.push(name);
-        }
-
-        const sortMap: Record<string, string | undefined> = {
-            "created-desc": "newest",
-            "created-asc": "oldest",
-            "updated-desc": "recentupdate",
-            "updated-asc": "leastupdate",
-            "comments-desc": "mostcomment",
-            "comments-asc": "leastcomment",
-        };
-        const sortKey =
-            params.sort && params.order
-                ? `${params.sort}-${params.order}`
-                : "created-desc";
-        const cbSort = sortMap[sortKey] ?? "newest";
-
-        const page = params.page ?? 1;
-        const limit = params.first ?? 30;
+        const { authorQualifier, labelQualifiers, cbSort, page, limit } =
+            parseCodebergSearch(params);
 
         const prParams: CodebergPrListParams = {
             state: codebergState(activeState),
@@ -87,11 +66,14 @@ export class CodebergPullRequestProvider implements PullRequestProvider {
             }),
         ]);
 
+        const hasNextPage =
+            "hasNextPage" in result ? result.hasNextPage : false;
+
         return {
             items: result.items.map(mapCodebergPr),
             totalCount: result.totalCount,
-            hasNextPage: result.hasNextPage ?? false,
-            endCursor: result.hasNextPage ? String(page + 1) : null,
+            hasNextPage,
+            endCursor: hasNextPage ? String(page + 1) : null,
             stateCounts: {
                 open: openCount.totalCount,
                 closed: closedCount.totalCount,

@@ -1,19 +1,22 @@
 import { z } from "zod";
-
+import {
+    findPendingReview,
+    getCurrentUserOrNull,
+    getGhToken,
+    invalidatePrCache,
+    prTargetInput,
+    reviewEventInput,
+} from "~/server/api/routers/helpers";
 import {
     createTRPCRouter,
     protectedMutation,
     protectedProcedure,
 } from "~/server/api/trpc";
-import { getGitHubToken, isAnonymousToken } from "~/server/auth";
-import { deleteCache, prCacheKey } from "~/server/cache";
 import {
     type CommentForReview,
     createPullRequestReview,
     deletePendingReview,
-    getAuthenticatedUser,
     getPullRequestReviewCommentsForReview,
-    getPullRequestReviews,
     minimizePullRequestReview,
     type ReviewMinimizeClassifier,
     submitPullRequestReview,
@@ -27,32 +30,18 @@ export type PendingReview = {
 
 export const reviewsRouter = createTRPCRouter({
     getPending: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
+        .input(prTargetInput)
         .query(async ({ ctx, input }): Promise<PendingReview | null> => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-            if (isAnonymousToken(accessToken)) return null;
-            const currentUser = await getAuthenticatedUser(accessToken);
+            const accessToken = await getGhToken(ctx);
+            const currentUser = await getCurrentUserOrNull(accessToken);
+            if (!currentUser) return null;
 
-            const reviews = await getPullRequestReviews(
+            const pendingReview = await findPendingReview(
                 accessToken,
                 input.owner,
                 input.repo,
                 input.number,
-            );
-
-            const pendingReview = reviews.find(
-                (r) =>
-                    r.state === "PENDING" &&
-                    r.user?.login === currentUser.login,
+                currentUser.login,
             );
 
             if (!pendingReview) {
@@ -74,32 +63,18 @@ export const reviewsRouter = createTRPCRouter({
         }),
 
     start: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
+        .input(prTargetInput)
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-            if (isAnonymousToken(accessToken)) return null;
-            const currentUser = await getAuthenticatedUser(accessToken);
+            const accessToken = await getGhToken(ctx);
+            const currentUser = await getCurrentUserOrNull(accessToken);
+            if (!currentUser) return null;
 
-            const existing = await getPullRequestReviews(
+            const existingPending = await findPendingReview(
                 accessToken,
                 input.owner,
                 input.repo,
                 input.number,
-            );
-
-            const existingPending = existing.find(
-                (r) =>
-                    r.state === "PENDING" &&
-                    r.user?.login === currentUser.login,
+                currentUser.login,
             );
 
             if (existingPending) {
@@ -117,21 +92,9 @@ export const reviewsRouter = createTRPCRouter({
         }),
 
     submit: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                reviewId: z.number(),
-                event: z.enum(["APPROVE", "COMMENT", "REQUEST_CHANGES"]),
-                body: z.string().optional(),
-            }),
-        )
+        .input(reviewEventInput.extend({ reviewId: z.number() }))
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             await submitPullRequestReview(
                 accessToken,
@@ -143,27 +106,15 @@ export const reviewsRouter = createTRPCRouter({
                 input.body,
             );
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return { success: true as const };
         }),
 
     dismiss: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                reviewId: z.number(),
-            }),
-        )
+        .input(prTargetInput.extend({ reviewId: z.number() }))
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             await deletePendingReview(
                 accessToken,
@@ -173,19 +124,14 @@ export const reviewsRouter = createTRPCRouter({
                 input.reviewId,
             );
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return { success: true as const };
         }),
 
     minimize: protectedMutation
         .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
+            prTargetInput.extend({
                 subjectId: z.string(),
                 classifier: z.enum([
                     "OUTDATED",
@@ -197,10 +143,7 @@ export const reviewsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             await minimizePullRequestReview(
                 accessToken,
@@ -208,33 +151,19 @@ export const reviewsRouter = createTRPCRouter({
                 input.classifier satisfies ReviewMinimizeClassifier,
             );
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return { success: true as const };
         }),
 
     unminimize: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                subjectId: z.string(),
-            }),
-        )
+        .input(prTargetInput.extend({ subjectId: z.string() }))
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             await unminimizePullRequestReview(accessToken, input.subjectId);
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return { success: true as const };
         }),

@@ -1,11 +1,16 @@
 import { z } from "zod";
-
+import {
+    getCurrentUserOrNull,
+    getGhToken,
+    prCommentIdInput,
+    prTargetInput,
+} from "~/server/api/routers/helpers";
 import {
     createTRPCRouter,
     protectedMutation,
     protectedProcedure,
 } from "~/server/api/trpc";
-import { getGitHubToken, isAnonymousToken } from "~/server/auth";
+
 import {
     createIssueCommentReaction,
     createIssueReaction,
@@ -13,7 +18,6 @@ import {
     deleteIssueCommentReaction,
     deleteIssueReaction,
     deletePullRequestReviewCommentReaction,
-    getAuthenticatedUser,
     getIssueCommentReactions,
     getPullRequestReactions,
     getPullRequestReactionsRest,
@@ -28,24 +32,65 @@ import {
     removeReaction,
 } from "~/server/github-graphql";
 
+const reactionContent = z.enum([
+    "+1",
+    "-1",
+    "laugh",
+    "confused",
+    "heart",
+    "hooray",
+    "rocket",
+    "eyes",
+]);
+
+const reactionCommentInput = prCommentIdInput.extend({
+    content: reactionContent,
+});
+
+type ReactionItem = {
+    id?: string | number;
+    content: string;
+    user?: { login?: string | null } | null;
+};
+
+/**
+ * Shared toggle flow for all reaction targets: fetch the viewer and the
+ * subject's reactions in parallel, remove the matching reaction when it
+ * exists, otherwise add it.
+ */
+async function toggleReaction<T extends ReactionItem>(args: {
+    content: string;
+    currentUser: Promise<{ login?: string } | null>;
+    list: Promise<readonly T[]>;
+    remove: (reaction: T) => Promise<unknown>;
+    add: () => Promise<unknown>;
+}): Promise<{ action: "added" } | { action: "removed" }> {
+    const [currentUser, existingReactions] = await Promise.all([
+        args.currentUser,
+        args.list,
+    ]);
+
+    const existing = existingReactions.find(
+        (r) =>
+            r.user?.login === currentUser?.login && r.content === args.content,
+    );
+
+    if (existing) {
+        await args.remove(existing);
+        return { action: "removed" as const };
+    }
+
+    await args.add();
+    return { action: "added" as const };
+}
+
 export const reactionsRouter = createTRPCRouter({
     get: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
+        .input(prTargetInput)
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
-            const currentUser = isAnonymousToken(accessToken)
-                ? null
-                : await getAuthenticatedUser(accessToken);
+            const currentUser = await getCurrentUserOrNull(accessToken);
 
             let reactionData: GQLPullRequestReactions;
             try {
@@ -73,178 +118,91 @@ export const reactionsRouter = createTRPCRouter({
         }),
 
     toggleIssueComment: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                commentId: z.number(),
-                content: z.enum([
-                    "+1",
-                    "-1",
-                    "laugh",
-                    "confused",
-                    "heart",
-                    "hooray",
-                    "rocket",
-                    "eyes",
-                ]),
-            }),
-        )
+        .input(reactionCommentInput)
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
-            const [currentUser, existingReactions] = await Promise.all([
-                isAnonymousToken(accessToken)
-                    ? null
-                    : getAuthenticatedUser(accessToken),
-                getIssueCommentReactions(
+            return toggleReaction({
+                content: input.content,
+                currentUser: getCurrentUserOrNull(accessToken),
+                list: getIssueCommentReactions(
                     accessToken,
                     input.owner,
                     input.repo,
                     input.commentId,
                 ),
-            ]);
-
-            const existing = existingReactions.find(
-                (r) =>
-                    r.user?.login === currentUser?.login &&
-                    r.content === input.content,
-            );
-
-            if (existing) {
-                await deleteIssueCommentReaction(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.commentId,
-                    existing.id,
-                );
-                return { action: "removed" as const };
-            }
-
-            await createIssueCommentReaction(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.commentId,
-                input.content,
-            );
-            return { action: "added" as const };
+                remove: (existing) =>
+                    deleteIssueCommentReaction(
+                        accessToken,
+                        input.owner,
+                        input.repo,
+                        input.commentId,
+                        existing.id as number,
+                    ),
+                add: () =>
+                    createIssueCommentReaction(
+                        accessToken,
+                        input.owner,
+                        input.repo,
+                        input.commentId,
+                        input.content,
+                    ),
+            });
         }),
 
     togglePullRequestReviewComment: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                commentId: z.number(),
-                content: z.enum([
-                    "+1",
-                    "-1",
-                    "laugh",
-                    "confused",
-                    "heart",
-                    "hooray",
-                    "rocket",
-                    "eyes",
-                ]),
-            }),
-        )
+        .input(reactionCommentInput)
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
-            const [currentUser, existingReactions] = await Promise.all([
-                isAnonymousToken(accessToken)
-                    ? null
-                    : getAuthenticatedUser(accessToken),
-                getPullRequestReviewCommentReactions(
+            return toggleReaction({
+                content: input.content,
+                currentUser: getCurrentUserOrNull(accessToken),
+                list: getPullRequestReviewCommentReactions(
                     accessToken,
                     input.owner,
                     input.repo,
                     input.commentId,
                 ),
-            ]);
-
-            const existing = existingReactions.find(
-                (r) =>
-                    r.user?.login === currentUser?.login &&
-                    r.content === input.content,
-            );
-
-            if (existing) {
-                await deletePullRequestReviewCommentReaction(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.commentId,
-                    existing.id,
-                );
-                return { action: "removed" as const };
-            }
-
-            await createPullRequestReviewCommentReaction(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.commentId,
-                input.content,
-            );
-            return { action: "added" as const };
+                remove: (existing) =>
+                    deletePullRequestReviewCommentReaction(
+                        accessToken,
+                        input.owner,
+                        input.repo,
+                        input.commentId,
+                        existing.id as number,
+                    ),
+                add: () =>
+                    createPullRequestReviewCommentReaction(
+                        accessToken,
+                        input.owner,
+                        input.repo,
+                        input.commentId,
+                        input.content,
+                    ),
+            });
         }),
 
     togglePullRequestReview: protectedMutation
         .input(
             z.object({
                 subjectId: z.string(),
-                content: z.enum([
-                    "+1",
-                    "-1",
-                    "laugh",
-                    "confused",
-                    "heart",
-                    "hooray",
-                    "rocket",
-                    "eyes",
-                ]),
+                content: reactionContent,
                 databaseId: z.number().optional(),
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
-            const [currentUser, existingReactions] = await Promise.all([
-                isAnonymousToken(accessToken)
-                    ? null
-                    : getAuthenticatedUser(accessToken),
-                getSubjectReactions(accessToken, input.subjectId),
-            ]);
-
-            const existing = existingReactions.find(
-                (r) =>
-                    r.user?.login === currentUser?.login &&
-                    r.content === input.content,
-            );
-
-            if (existing) {
-                await removeReaction(
-                    accessToken,
-                    input.subjectId,
-                    input.content,
-                );
-                return { action: "removed" as const };
-            }
-
-            await addReaction(accessToken, input.subjectId, input.content);
-            return { action: "added" as const };
+            return toggleReaction({
+                content: input.content,
+                currentUser: getCurrentUserOrNull(accessToken),
+                list: getSubjectReactions(accessToken, input.subjectId),
+                remove: () =>
+                    removeReaction(accessToken, input.subjectId, input.content),
+                add: () =>
+                    addReaction(accessToken, input.subjectId, input.content),
+            });
         }),
 
     getForReviewComments: protectedProcedure
@@ -256,10 +214,7 @@ export const reactionsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const token = accessToken;
 
@@ -288,65 +243,35 @@ export const reactionsRouter = createTRPCRouter({
         }),
 
     toggleIssue: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                content: z.enum([
-                    "+1",
-                    "-1",
-                    "laugh",
-                    "confused",
-                    "heart",
-                    "hooray",
-                    "rocket",
-                    "eyes",
-                ]),
-            }),
-        )
+        .input(prTargetInput.extend({ content: reactionContent }))
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
-            const [currentUser, existingReactions] = await Promise.all([
-                isAnonymousToken(accessToken)
-                    ? null
-                    : getAuthenticatedUser(accessToken),
-                getPullRequestReactions(
+            return toggleReaction({
+                content: input.content,
+                currentUser: getCurrentUserOrNull(accessToken),
+                list: getPullRequestReactions(
                     accessToken,
                     input.owner,
                     input.repo,
                     input.number,
                 ),
-            ]);
-
-            const existing = existingReactions.find(
-                (r) =>
-                    r.user?.login === currentUser?.login &&
-                    r.content === input.content,
-            );
-
-            if (existing) {
-                await deleteIssueReaction(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.number,
-                    existing.id,
-                );
-                return { action: "removed" as const };
-            }
-
-            await createIssueReaction(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
-                input.content,
-            );
-            return { action: "added" as const };
+                remove: (existing) =>
+                    deleteIssueReaction(
+                        accessToken,
+                        input.owner,
+                        input.repo,
+                        input.number,
+                        existing.id as number,
+                    ),
+                add: () =>
+                    createIssueReaction(
+                        accessToken,
+                        input.owner,
+                        input.repo,
+                        input.number,
+                        input.content,
+                    ),
+            });
         }),
 });

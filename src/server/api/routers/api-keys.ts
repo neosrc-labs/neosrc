@@ -1,7 +1,6 @@
-import { TRPCError } from "@trpc/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-
+import { requireUserId } from "~/server/api/routers/helpers";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { generateApiKey } from "~/server/api-keys";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
@@ -21,8 +20,7 @@ const permissionSchema = z.discriminatedUnion("kind", [
 
 export const apiKeysRouter = createTRPCRouter({
     getAll: protectedProcedure.query(async ({ ctx }) => {
-        if (!ctx.session?.user) throw new TRPCError({ code: "UNAUTHORIZED" });
-        const userId = ctx.session.user.id;
+        const userId = requireUserId(ctx);
         const keys = await ctx.db
             .select()
             .from(apiKey)
@@ -75,9 +73,7 @@ export const apiKeysRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.session?.user)
-                throw new TRPCError({ code: "UNAUTHORIZED" });
-            const userId = ctx.session.user.id;
+            const userId = requireUserId(ctx);
             const [user] = await ctx.db
                 .select({
                     githubUsername: betterAuthUser.githubUsername,
@@ -223,9 +219,7 @@ export const apiKeysRouter = createTRPCRouter({
     revoke: protectedProcedure
         .input(z.object({ id: z.number() }))
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.session?.user)
-                throw new TRPCError({ code: "UNAUTHORIZED" });
-            const userId = ctx.session.user.id;
+            const userId = requireUserId(ctx);
             const [key] = await ctx.db
                 .select()
                 .from(apiKey)

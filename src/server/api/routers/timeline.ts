@@ -1,7 +1,7 @@
 import { z } from "zod";
-
+import { getGhToken } from "~/server/api/routers/helpers";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getGitHubToken, isAnonymousToken } from "~/server/auth";
+import { isAnonymousToken } from "~/server/auth";
 import {
     getRepoCollaboratorPermissions,
     getUserRepoPermission,
@@ -40,10 +40,7 @@ export const timelineRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const result = await getPullRequestTimelineGraphQL(
                 accessToken,

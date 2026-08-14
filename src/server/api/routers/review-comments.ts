@@ -1,12 +1,17 @@
 import { z } from "zod";
-
+import {
+    findPendingReview,
+    getGhToken,
+    invalidatePrCache,
+    prCommentIdInput,
+    prTargetInput,
+} from "~/server/api/routers/helpers";
 import {
     createTRPCRouter,
     protectedMutation,
     protectedProcedure,
 } from "~/server/api/trpc";
-import { getGitHubToken, isAnonymousToken } from "~/server/auth";
-import { deleteCache, prCacheKey } from "~/server/cache";
+import { isAnonymousToken } from "~/server/auth";
 import {
     applySuggestion,
     createPullRequestReviewComment,
@@ -17,7 +22,6 @@ import {
     getPullRequest,
     getPullRequestReviewComments,
     getPullRequestReviewCommentsForReview,
-    getPullRequestReviews,
     getReviewThreads,
     getReviewThreadsPage,
     getSuggestionPatch,
@@ -29,18 +33,9 @@ import {
 
 export const reviewCommentsRouter = createTRPCRouter({
     list: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
+        .input(prTargetInput)
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const comments = await getPullRequestReviewComments(
                 accessToken,
@@ -53,19 +48,9 @@ export const reviewCommentsRouter = createTRPCRouter({
         }),
 
     byReviewId: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                reviewId: z.number(),
-            }),
-        )
+        .input(prTargetInput.extend({ reviewId: z.number() }))
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             return getPullRequestReviewCommentsForReview(
                 accessToken,
@@ -92,10 +77,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const pr = await getPullRequest(
                 accessToken,
@@ -112,17 +94,12 @@ export const reviewCommentsRouter = createTRPCRouter({
                         );
                     }
                     const currentUser = await getAuthenticatedUser(accessToken);
-                    const reviews = await getPullRequestReviews(
+                    const pendingReview = await findPendingReview(
                         accessToken,
                         input.owner,
                         input.repo,
                         input.number,
-                    );
-
-                    const pendingReview = reviews.find(
-                        (r) =>
-                            r.state === "PENDING" &&
-                            r.user?.login === currentUser.login,
+                        currentUser.login,
                     );
 
                     const comment = await createPullRequestReviewComment(
@@ -137,8 +114,10 @@ export const reviewCommentsRouter = createTRPCRouter({
                         input.startSide,
                     );
 
-                    await deleteCache(
-                        prCacheKey(input.owner, input.repo, input.number),
+                    await invalidatePrCache(
+                        input.owner,
+                        input.repo,
+                        input.number,
                     );
 
                     return { success: true as const, id: comment.id };
@@ -158,9 +137,7 @@ export const reviewCommentsRouter = createTRPCRouter({
                     input.startSide,
                 );
 
-                await deleteCache(
-                    prCacheKey(input.owner, input.repo, input.number),
-                );
+                await invalidatePrCache(input.owner, input.repo, input.number);
 
                 return { success: true as const, id: comment.id };
             }
@@ -176,9 +153,7 @@ export const reviewCommentsRouter = createTRPCRouter({
                 input.filePath,
             );
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return { success: true as const, id: comment.id };
         }),
@@ -194,10 +169,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             await updateReviewComment(
                 accessToken,
@@ -212,18 +184,9 @@ export const reviewCommentsRouter = createTRPCRouter({
         }),
 
     delete: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                commentId: z.number(),
-            }),
-        )
+        .input(prCommentIdInput)
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             await deleteReviewComment(
                 accessToken,
@@ -246,10 +209,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const comment = await replyToPullRequestReviewComment(
                 accessToken,
@@ -260,26 +220,15 @@ export const reviewCommentsRouter = createTRPCRouter({
                 input.inReplyTo,
             );
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return { success: true as const, id: comment.id };
         }),
 
     threads: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
+        .input(prTargetInput)
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             return getReviewThreads(
                 accessToken,
@@ -300,10 +249,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const result = await getReviewThreadsPage(
                 accessToken,
@@ -330,10 +276,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             if (input.resolve) {
                 await resolveReviewThread(accessToken, input.threadId);
@@ -357,10 +300,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             await applySuggestion(
                 accessToken,
@@ -373,9 +313,7 @@ export const reviewCommentsRouter = createTRPCRouter({
                 input.startLine,
             );
 
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
+            await invalidatePrCache(input.owner, input.repo, input.number);
 
             return { success: true as const };
         }),
@@ -393,10 +331,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const patch = await getSuggestionPatch(
                 accessToken,

@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-
+import { getGhToken, shaTargetInput } from "~/server/api/routers/helpers";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getCodebergToken, getGitHubToken } from "~/server/auth";
+import { getCodebergToken } from "~/server/auth";
 import { getCommitCombinedStatus, listBranchCommits } from "~/server/codeberg";
 import {
     getBranchCommitsGraphQL,
@@ -15,18 +15,9 @@ import type { ListCommitsResult } from "./types";
 
 export const commitsRouter = createTRPCRouter({
     getBySha: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                sha: z.string(),
-            }),
-        )
+        .input(shaTargetInput)
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const commit = await getCommitGraphQL(
                 accessToken,
@@ -49,10 +40,7 @@ export const commitsRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const result = await getPullRequestCommitsGraphQL(
                 accessToken,
@@ -142,10 +130,7 @@ export const commitsRouter = createTRPCRouter({
                         hasNextPage: page * input.perPage < totalCount,
                     };
                 }
-                const accessToken = await getGitHubToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
+                const accessToken = await getGhToken(ctx);
 
                 let authorId: string | undefined;
                 if (input.author) {

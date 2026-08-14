@@ -1,12 +1,7 @@
 import { z } from "zod";
-
+import { getGhToken, getProviderToken } from "~/server/api/routers/helpers";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import {
-    getCodebergToken,
-    getGitHubToken,
-    getGithubUsername,
-    isAnonymousToken,
-} from "~/server/auth";
+import { getGithubUsername, isAnonymousToken } from "~/server/auth";
 import { getUserByUsername as getCodebergUserByUsername } from "~/server/codeberg";
 import {
     getAuthenticatedUser,
@@ -37,7 +32,7 @@ export const usersRouter = createTRPCRouter({
             return { login: githubUsername, avatarUrl };
         }
 
-        const accessToken = await getGitHubToken(ctx.db, ctx.session?.user?.id);
+        const accessToken = await getGhToken(ctx);
         if (isAnonymousToken(accessToken)) return null;
         const user = await getAuthenticatedUser(accessToken);
 
@@ -60,11 +55,8 @@ export const usersRouter = createTRPCRouter({
         )
         .query(
             async ({ ctx, input }): Promise<{ user: UserProfile | null }> => {
+                const accessToken = await getProviderToken(ctx, input.provider);
                 if (input.provider === "cb") {
-                    const accessToken = await getCodebergToken(
-                        ctx.db,
-                        ctx.session?.user?.id,
-                    );
                     const raw = await getCodebergUserByUsername(
                         accessToken,
                         input.username,
@@ -87,11 +79,6 @@ export const usersRouter = createTRPCRouter({
                     };
                 }
 
-                const accessToken = await getGitHubToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-
                 const user = await getGitHubUser(accessToken, input.username);
 
                 return { user };
@@ -105,10 +92,7 @@ export const usersRouter = createTRPCRouter({
             }),
         )
         .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const accessToken = await getGhToken(ctx);
 
             const team = await getGitHubTeam(
                 accessToken,

@@ -1,26 +1,14 @@
 import type { StatusContext } from "~/components/ci-status";
 import type { CodebergCommitRaw } from "~/server/codeberg";
-import type { BranchCommitsResult } from "~/server/github-graphql";
+import type {
+    BranchCommitsResult,
+    GQLStatusCheckNode,
+} from "~/server/github-graphql";
 import type { CommitListItem } from "./types";
 
-type GQLCheckNode = {
-    __typename?: string;
-    state?: string;
-    targetUrl?: string | null;
-    description?: string | null;
-    context?: string;
-    name?: string;
-    status?: string;
-    conclusion?: string | null;
-    detailsUrl?: string | null;
-    createdAt?: string;
-    startedAt?: string;
-    completedAt?: string;
-};
-
 function isCheckRunNode(
-    node: NonNullable<GQLCheckNode>,
-): node is GQLCheckNode & { name: string } {
+    node: GQLStatusCheckNode,
+): node is GQLStatusCheckNode & { name: string } {
     return "name" in node && typeof node.name === "string";
 }
 

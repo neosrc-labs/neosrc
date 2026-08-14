@@ -1,7 +1,10 @@
 import { z } from "zod";
-
+import {
+    getProviderToken,
+    providerTargetInput,
+    searchParamsInput,
+} from "~/server/api/routers/helpers";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getCodebergToken, getGitHubToken } from "~/server/auth";
 import {
     getIssue as getCodebergIssue,
     searchIssues as searchCodebergIssues,
@@ -14,19 +17,9 @@ import type { IssueSearchResult } from "./types";
 
 export const issuesRouter = createTRPCRouter({
     getByNumber: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-                issueNumber: z.number(),
-            }),
-        )
+        .input(providerTargetInput.extend({ issueNumber: z.number() }))
         .query(async ({ ctx, input }) => {
-            const accessToken =
-                input.provider === "cb"
-                    ? await getCodebergToken(ctx.db, ctx.session?.user?.id)
-                    : await getGitHubToken(ctx.db, ctx.session?.user?.id);
+            const accessToken = await getProviderToken(ctx, input.provider);
 
             if (input.provider === "cb") {
                 return getCodebergIssue(
@@ -45,19 +38,7 @@ export const issuesRouter = createTRPCRouter({
         }),
 
     search: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-                query: z.string(),
-                page: z.number().optional(),
-                after: z.string().optional(),
-                first: z.number().optional(),
-                sort: z.enum(["created", "updated", "comments"]).optional(),
-                order: z.enum(["asc", "desc"]).optional(),
-            }),
-        )
+        .input(searchParamsInput)
         .query(async ({ ctx, input }): Promise<IssueSearchResult> => {
             const provider: IssueProvider =
                 input.provider === "cb"
@@ -71,19 +52,9 @@ export const issuesRouter = createTRPCRouter({
         }),
 
     searchAutocomplete: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-                query: z.string(),
-            }),
-        )
+        .input(providerTargetInput.extend({ query: z.string() }))
         .query(async ({ ctx, input }) => {
-            const accessToken =
-                input.provider === "cb"
-                    ? await getCodebergToken(ctx.db, ctx.session?.user?.id)
-                    : await getGitHubToken(ctx.db, ctx.session?.user?.id);
+            const accessToken = await getProviderToken(ctx, input.provider);
 
             if (input.provider === "cb") {
                 return searchCodebergIssues(

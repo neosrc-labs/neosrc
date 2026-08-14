@@ -1,5 +1,6 @@
+import type { SearchParams } from "~/server/api/routers/search-shared";
 import type { db } from "~/server/db";
-import type { PrSearchResult, SearchParams } from "./types";
+import type { PrSearchResult } from "./types";
 
 export interface PullRequestProvider {
     search(params: SearchParams & { ctx: Ctx }): Promise<PrSearchResult>;
