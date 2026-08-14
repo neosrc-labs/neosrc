@@ -2,7 +2,6 @@
 
 import { Fzf } from "fzf";
 import { GitBranchIcon, HistoryIcon, Search, TagIcon, X } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -20,6 +19,7 @@ import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 import { getFileIconName, getFolderIconName } from "~/utils/icons";
 import { ClonePopover } from "./clone-popover";
+import { FileTypeIcon } from "./file-type-icon";
 import { ForkSyncRow } from "./fork-sync-row";
 import { RefSelector } from "./ref-selector";
 
@@ -241,18 +241,9 @@ function FileTable({
                                     href={href}
                                     className="flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                                 >
-                                    <Image
-                                        alt=""
-                                        className="h-4 w-4 shrink-0"
-                                        src={`/material-icons/${iconName}.svg`}
-                                        width={16}
-                                        height={16}
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).src =
-                                                isDir
-                                                    ? "/material-icons/folder.svg"
-                                                    : "/material-icons/file.svg";
-                                        }}
+                                    <FileTypeIcon
+                                        iconName={iconName}
+                                        isDir={isDir}
                                     />
                                     <span>{item.name}</span>
                                 </a>
@@ -312,18 +303,9 @@ function SearchResultsTable({
                                     href={item.htmlUrl}
                                     className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                                 >
-                                    <Image
-                                        alt=""
-                                        className="h-4 w-4 shrink-0"
-                                        src={`/material-icons/${iconName}.svg`}
-                                        width={16}
-                                        height={16}
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).src =
-                                                isDir
-                                                    ? "/material-icons/folder.svg"
-                                                    : "/material-icons/file.svg";
-                                        }}
+                                    <FileTypeIcon
+                                        iconName={iconName}
+                                        isDir={isDir}
                                     />
                                     <div className="flex flex-col">
                                         <span>{item.name}</span>

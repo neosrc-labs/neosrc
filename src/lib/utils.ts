@@ -56,3 +56,12 @@ export function formatCount(n: number): string {
     const m = n / 1_000_000;
     return `${m % 1 === 0 ? m : m.toFixed(1)}M`;
 }
+
+/** Stable tab/hash id for a repo doc file (README, CONTRIBUTING, LICENSE, ...). */
+export function getDocFileHashName(name: string): string {
+    if (/^readme/i.test(name)) return "readme";
+    if (/^contributing/i.test(name)) return "contributing";
+    if (/^code_of_conduct/i.test(name)) return "code-of-conduct";
+    if (/^(licen[cs]e|copying)/i.test(name)) return "license";
+    return name.toLowerCase().replace(/\.[^.]+$/, "");
+}

@@ -198,6 +198,11 @@ function WatchDropdown({
     const countRef = useRef(watchers);
     const utils = api.useUtils();
 
+    const rollbackSubscription = () => {
+        setSubscription(confirmed.current);
+        setWatcherCount(countRef.current);
+    };
+
     const setSub = api.repos.setSubscription.useMutation({
         onMutate: ({ subscribed, ignored }) => {
             confirmed.current = subscription;
@@ -211,10 +216,7 @@ function WatchDropdown({
             if (!wasWatching && nowWatching) setWatcherCount((c) => c + 1);
             if (wasWatching && !nowWatching) setWatcherCount((c) => c - 1);
         },
-        onError: () => {
-            setSubscription(confirmed.current);
-            setWatcherCount(countRef.current);
-        },
+        onError: rollbackSubscription,
         onSettled: () => {
             utils.repos.getSubscription.invalidate({ owner, repo });
         },
@@ -231,10 +233,7 @@ function WatchDropdown({
             setSubscription(null);
             if (wasWatching) setWatcherCount((c) => c - 1);
         },
-        onError: () => {
-            setSubscription(confirmed.current);
-            setWatcherCount(countRef.current);
-        },
+        onError: rollbackSubscription,
         onSettled: () => {
             utils.repos.getSubscription.invalidate({ owner, repo });
         },
@@ -399,6 +398,12 @@ function StarButton({
     const confirmed = useRef({ starred, count });
     const utils = api.useUtils();
 
+    const rollbackStar = () => {
+        setStarred(confirmed.current.starred);
+        setCount(confirmed.current.count);
+        setPending(false);
+    };
+
     const starMutation = api.repos.star.useMutation({
         onMutate: () => {
             confirmed.current = { starred, count };
@@ -406,11 +411,7 @@ function StarButton({
             setCount((c) => c + 1);
             setPending(true);
         },
-        onError: () => {
-            setStarred(confirmed.current.starred);
-            setCount(confirmed.current.count);
-            setPending(false);
-        },
+        onError: rollbackStar,
         onSettled: () => {
             setPending(false);
             utils.repos.getStarred.invalidate({ owner, repo });
@@ -424,11 +425,7 @@ function StarButton({
             setCount((c) => c - 1);
             setPending(true);
         },
-        onError: () => {
-            setStarred(confirmed.current.starred);
-            setCount(confirmed.current.count);
-            setPending(false);
-        },
+        onError: rollbackStar,
         onSettled: () => {
             setPending(false);
             utils.repos.getStarred.invalidate({ owner, repo });
