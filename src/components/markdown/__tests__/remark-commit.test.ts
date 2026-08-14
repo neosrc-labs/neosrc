@@ -4,7 +4,7 @@ import remarkParse from "remark-parse";
 import remarkStringify from "remark-stringify";
 import { unified } from "unified";
 import { describe, expect, it } from "vitest";
-import { remarkCommitPlugin } from "./remark-commit";
+import { remarkCommitPlugin } from "../plugins/remark-commit";
 
 function process(content: string, owner?: string, repo?: string) {
     return unified()

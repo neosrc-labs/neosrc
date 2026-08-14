@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { remarkEmojiPlugin } from "./remark-emoji";
+import { remarkEmojiPlugin } from "../plugins/remark-emoji";
 
 /**
  * Helper: call the plugin transformer on a mock mdast tree.

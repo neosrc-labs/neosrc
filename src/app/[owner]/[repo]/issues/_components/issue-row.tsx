@@ -1,7 +1,7 @@
 import { Circle, CircleCheck, MessageSquare } from "lucide-react";
 import Image from "next/image";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
-import { CodeTitle } from "~/components/markdown/code-title";
+import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { Label } from "~/components/ui/label";
 import { UserLink } from "~/components/user-link";
 import { formatRelativeTime } from "~/utils";

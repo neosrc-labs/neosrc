@@ -1,6 +1,6 @@
 import { TriangleAlert } from "lucide-react";
 import { CommitTypeBadge } from "~/components/commit-type-badge";
-import { CodeTitle } from "~/components/markdown/code-title";
+import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { cn } from "~/lib/utils";
 import { parseCommitMessage } from "~/utils/commit-message";
 

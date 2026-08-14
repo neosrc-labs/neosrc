@@ -13,7 +13,7 @@ import Link from "next/link";
 import type { StatusContext } from "~/components/ci-status";
 import { StatusChecksHoverCard } from "~/components/ci-status";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
-import { CodeTitle } from "~/components/markdown/code-title";
+import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { Label } from "~/components/ui/label";
 import {
     Tooltip,

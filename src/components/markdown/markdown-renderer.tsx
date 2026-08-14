@@ -28,11 +28,11 @@ import { IssueHoverCard } from "~/components/hovercards/issue-hover-card";
 import { TeamHoverCard } from "~/components/hovercards/team-hover-card";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { cn } from "~/lib/utils";
+import { SuggestionBlock } from "./accessories/suggestion-block";
 import { remarkCommitPlugin } from "./plugins/remark-commit";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
-import { SuggestionBlock } from "./suggestion-block";
 
 interface MarkdownRendererProps {
     content: string;

@@ -8,7 +8,7 @@ import remarkStringify from "remark-stringify";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { unified } from "unified";
 import { describe, expect, it } from "vitest";
-import { remarkMentionPlugin } from "./remark-mention";
+import { remarkMentionPlugin } from "../plugins/remark-mention";
 
 function format(input: string): string {
     const file = unified()

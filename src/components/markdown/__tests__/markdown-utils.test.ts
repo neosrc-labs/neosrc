@@ -14,7 +14,7 @@ import {
     getListPrefixLength,
     getNextOrderedNumber,
     handleEnterKey,
-} from "./markdown-utils";
+} from "../accessories/markdown-utils";
 
 describe("findLineStart", () => {
     it("returns 0 for position 0 in a single line", () => {

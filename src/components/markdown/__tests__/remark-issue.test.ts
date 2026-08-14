@@ -4,7 +4,7 @@ import remarkParse from "remark-parse";
 import remarkStringify from "remark-stringify";
 import { unified } from "unified";
 import { describe, expect, it } from "vitest";
-import { remarkIssuePlugin } from "./remark-issue";
+import { remarkIssuePlugin } from "../plugins/remark-issue";
 
 function process(markdown: string, owner?: string, repo?: string): string {
     const result = unified()
