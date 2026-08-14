@@ -659,8 +659,8 @@ export type GQLDemilestonedEvent = {
     milestoneTitle: string | null;
 };
 
-export type GQLReviewRequestedEvent = {
-    __typename: "ReviewRequestedEvent";
+export type GQLReviewRequestEventBase = {
+    __typename: "ReviewRequestedEvent" | "ReviewRequestRemovedEvent";
     id: string;
     actor: GQLActor | null;
     createdAt: string;
@@ -670,15 +670,12 @@ export type GQLReviewRequestedEvent = {
         | null;
 };
 
-export type GQLReviewRequestRemovedEvent = {
+export type GQLReviewRequestedEvent = GQLReviewRequestEventBase & {
+    __typename: "ReviewRequestedEvent";
+};
+
+export type GQLReviewRequestRemovedEvent = GQLReviewRequestEventBase & {
     __typename: "ReviewRequestRemovedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
-    requestedReviewer:
-        | { __typename: "User"; login: string; avatarUrl: string; url: string }
-        | { __typename: "Team"; name?: string; slug: string }
-        | null;
 };
 
 export type GQLConvertToDraftEvent = {
@@ -1445,15 +1442,8 @@ export async function addReaction(
     return result.addReaction.reaction;
 }
 
-export interface GqlPrSearchItem {
-    databaseId: number;
-    number: number;
-    title: string;
-    state: string;
-    isDraft: boolean;
-    createdAt: string;
-    mergedAt: string | null;
-    author: { login: string; avatarUrl: string; url: string } | null;
+/** Label/assignee/comment fields shared by the issue and PR search items. */
+export interface GqlSearchItemMeta {
     labels: {
         nodes: Array<{
             id: string;
@@ -1464,6 +1454,17 @@ export interface GqlPrSearchItem {
     };
     assignees: { nodes: Array<{ login: string; avatarUrl: string }> };
     comments: { totalCount: number };
+}
+
+export interface GqlPrSearchItem extends GqlSearchItemMeta {
+    databaseId: number;
+    number: number;
+    title: string;
+    state: string;
+    isDraft: boolean;
+    createdAt: string;
+    mergedAt: string | null;
+    author: { login: string; avatarUrl: string; url: string } | null;
     reviewDecision: string | null;
     stack: { size: number; number: number } | null;
     stackEntry: { position: number } | null;
@@ -1535,6 +1536,47 @@ type CountPrQueryResult = {
     merged: { issueCount: number };
 };
 
+/**
+ * Shared tail of the search endpoints: pagination plus the open/closed state
+ * counts from the parallel count queries. Extra state counts (e.g. merged for
+ * pull requests) are appended by the caller.
+ */
+function searchResultTail<TItem>(
+    result: {
+        search: {
+            issueCount: number;
+            pageInfo: { endCursor: string | null; hasNextPage: boolean };
+        };
+    },
+    countResult:
+        | {
+              open?: { issueCount: number };
+              closed?: { issueCount: number };
+          }
+        | null
+        | undefined,
+    items: TItem[],
+    extraStateCounts: Record<string, number> = {},
+): {
+    items: TItem[];
+    totalCount: number;
+    hasNextPage: boolean;
+    endCursor: string | null;
+    stateCounts: { open: number; closed: number } & Record<string, number>;
+} {
+    return {
+        items,
+        totalCount: result.search.issueCount,
+        hasNextPage: result.search.pageInfo.hasNextPage,
+        endCursor: result.search.pageInfo.endCursor,
+        stateCounts: {
+            open: countResult?.open?.issueCount ?? 0,
+            closed: countResult?.closed?.issueCount ?? 0,
+            ...extraStateCounts,
+        },
+    };
+}
+
 export async function searchPullRequestsWithStatus(
     accessToken: string,
     query: string,
@@ -1569,20 +1611,12 @@ export async function searchPullRequestsWithStatus(
             n?.__typename === "PullRequest",
     );
 
-    return {
-        items,
-        totalCount: result.search.issueCount,
-        hasNextPage: result.search.pageInfo.hasNextPage,
-        endCursor: result.search.pageInfo.endCursor,
-        stateCounts: {
-            open: countResult?.open?.issueCount ?? 0,
-            closed: countResult?.closed?.issueCount ?? 0,
-            merged: countResult?.merged?.issueCount ?? 0,
-        },
-    };
+    return searchResultTail(result, countResult, items, {
+        merged: countResult?.merged?.issueCount ?? 0,
+    });
 }
 
-export interface GqlIssueSearchItem {
+export interface GqlIssueSearchItem extends GqlSearchItemMeta {
     databaseId: number;
     number: number;
     title: string;
@@ -1590,16 +1624,6 @@ export interface GqlIssueSearchItem {
     createdAt: string;
     closedAt: string | null;
     author: { login: string; avatarUrl: string; url: string } | null;
-    labels: {
-        nodes: Array<{
-            id: string;
-            name: string;
-            color: string;
-            description: string | null;
-        }>;
-    };
-    assignees: { nodes: Array<{ login: string; avatarUrl: string }> };
-    comments: { totalCount: number };
 }
 
 const ISSUE_SEARCH_QUERY = `
@@ -1690,16 +1714,7 @@ export async function searchIssuesWithMetadata(
             n?.__typename === "Issue",
     );
 
-    return {
-        items,
-        totalCount: result.search.issueCount,
-        hasNextPage: result.search.pageInfo.hasNextPage,
-        endCursor: result.search.pageInfo.endCursor,
-        stateCounts: {
-            open: countResult?.open?.issueCount ?? 0,
-            closed: countResult?.closed?.issueCount ?? 0,
-        },
-    };
+    return searchResultTail(result, countResult, items);
 }
 
 export async function removeReaction(
@@ -1906,28 +1921,34 @@ export async function getCommitGraphQL(
     };
 }
 
+/** A single context node inside a commit's statusCheckRollup. */
+export type GQLStatusCheckNode = {
+    __typename?: string;
+    state?: string;
+    targetUrl?: string | null;
+    description?: string | null;
+    context?: string;
+    name?: string;
+    status?: string;
+    conclusion?: string | null;
+    detailsUrl?: string | null;
+    createdAt?: string;
+    startedAt?: string;
+    completedAt?: string;
+};
+
+/** statusCheckRollup shape returned by the branch-commits query. */
+export type GQLStatusCheckRollup = {
+    state: string;
+    contexts: {
+        nodes: Array<GQLStatusCheckNode | null> | null;
+    };
+};
+
 export interface BranchCommitsResult {
     commits: (Omit<GQLCommitWithAuthors, "signature"> & {
         signature?: GQLGitSignatureSummary | null;
-        statusCheckRollup: {
-            state: string;
-            contexts: {
-                nodes: Array<{
-                    __typename?: string;
-                    state?: string;
-                    targetUrl?: string | null;
-                    description?: string | null;
-                    context?: string;
-                    name?: string;
-                    status?: string;
-                    conclusion?: string | null;
-                    detailsUrl?: string | null;
-                    createdAt?: string;
-                    startedAt?: string;
-                    completedAt?: string;
-                } | null> | null;
-            };
-        } | null;
+        statusCheckRollup: GQLStatusCheckRollup | null;
     })[];
     totalCount: number;
     pageInfo: {
@@ -1983,25 +2004,7 @@ export async function getBranchCommitsGraphQL(
                                     } | null;
                                 } | null>;
                             };
-                            statusCheckRollup: {
-                                state: string;
-                                contexts: {
-                                    nodes: Array<{
-                                        __typename?: string;
-                                        state?: string;
-                                        targetUrl?: string | null;
-                                        description?: string | null;
-                                        context?: string;
-                                        name?: string;
-                                        status?: string;
-                                        conclusion?: string | null;
-                                        detailsUrl?: string | null;
-                                        createdAt?: string;
-                                        startedAt?: string;
-                                        completedAt?: string;
-                                    } | null> | null;
-                                };
-                            } | null;
+                            statusCheckRollup: GQLStatusCheckRollup | null;
                             signature: GQLGitSignatureSummary | null;
                         }>;
                     };

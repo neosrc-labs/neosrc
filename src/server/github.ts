@@ -4,14 +4,13 @@ import { Octokit, type RestEndpointMethodTypes } from "@octokit/rest";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import {
+    createRepoFlagCache,
     prCacheKey,
     readCache,
     repoContributorsCacheKey,
     repoDocFilesCacheKey,
     repoIssuePullCountsCacheKey,
     repoLanguagesCacheKey,
-    repoStarredCacheKey,
-    repoSubscriptionCacheKey,
     withStaleWhileRevalidate,
 } from "~/server/cache";
 import {
@@ -28,8 +27,7 @@ import {
 } from "~/server/github-graphql";
 import {
     getCachedRepoData,
-    getRepoPermissionForUser,
-    viewerRepoAccess,
+    getCachedRepoHeaderInfo,
 } from "~/server/repo-cache";
 import {
     buildStackSuggestion,
@@ -37,7 +35,10 @@ import {
     type StackCandidate,
     type StackSuggestion,
 } from "~/server/stack-suggestion";
-import { githubRepoToSyncRepo } from "~/server/sync/mappers";
+import {
+    githubRepoToSyncRepo,
+    mapRestCommitToSummary,
+} from "~/server/sync/mappers";
 import {
     deduplicateCommitStatuses,
     mapStatusToCheckRun,
@@ -413,12 +414,17 @@ export const updatePullRequest = async (
     return response.data;
 };
 
-export const markPullRequestAsDraft = async (
+/**
+ * Fetches a pull request and prepares a GraphQL client for the mutation
+ * endpoints. The REST API cannot perform these mutations (e.g. toggling the
+ * draft state), so they go through GraphQL.
+ */
+async function getPullRequestForMutation(
     accessToken: string,
     owner: string,
     repo: string,
     pullNumber: number,
-) => {
+): Promise<{ pr: PullsGetResponseData; graphql: typeof octokitGraphql }> {
     const octokit = createOctokit(accessToken);
     const { data: pr } = await octokit.pulls.get({
         owner,
@@ -426,11 +432,25 @@ export const markPullRequestAsDraft = async (
         pull_number: pullNumber,
     });
 
-    // For some reason the GitHub REST API just doesn't let you update the status of the PR to draft!?
-    // The graphql endpoint does work however.
     const graphql = octokitGraphql.defaults({
         headers: { authorization: `bearer ${accessToken}` },
     });
+
+    return { pr, graphql };
+}
+
+export const markPullRequestAsDraft = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+) => {
+    const { pr, graphql } = await getPullRequestForMutation(
+        accessToken,
+        owner,
+        repo,
+        pullNumber,
+    );
 
     const query = `
 mutation($pullRequestId: ID!) {
@@ -457,16 +477,12 @@ export const markPullRequestAsReady = async (
     repo: string,
     pullNumber: number,
 ) => {
-    const octokit = createOctokit(accessToken);
-    const { data: pr } = await octokit.pulls.get({
+    const { pr, graphql } = await getPullRequestForMutation(
+        accessToken,
         owner,
         repo,
-        pull_number: pullNumber,
-    });
-
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+        pullNumber,
+    );
 
     const query = `
 mutation($pullRequestId: ID!) {
@@ -501,16 +517,12 @@ export const revertPullRequest = async (
     body?: string,
     draft?: boolean,
 ): Promise<RevertPullRequestResult> => {
-    const octokit = createOctokit(accessToken);
-    const { data: pr } = await octokit.pulls.get({
+    const { pr, graphql } = await getPullRequestForMutation(
+        accessToken,
         owner,
         repo,
-        pull_number: pullNumber,
-    });
-
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+        pullNumber,
+    );
 
     const query = `
 mutation($input: RevertPullRequestInput!) {
@@ -2028,31 +2040,23 @@ export async function getCachedRepoHeaderData(
     owner: string,
     repo: string,
 ): Promise<RepoHeaderInfo | null> {
-    const [repoInfo, permission] = await Promise.all([
-        getCachedRepo(accessToken, owner, repo),
-        getRepoPermissionForUser("github", username, owner, repo),
-    ]);
-
-    const access = viewerRepoAccess({
+    return getCachedRepoHeaderInfo(
+        "github",
+        accessToken,
         username,
-        payload: repoInfo,
-        permission,
-    });
-    // The cached payload is shared across users; a viewer without a grant
-    // must not see a private repo through it. Callers decide how to surface
-    // the denial (this is resolved into a promise the header consumes, so a
-    // server notFound() here could never produce a 404).
-    if (!access.canView) return null;
-
-    return {
-        hasIssues: repoInfo.has_issues,
-        hasWiki: repoInfo.has_wiki,
-        hasProjects: repoInfo.has_projects,
-        hasDiscussions: repoInfo.has_discussions,
-        isPrivate: repoInfo.private,
-        permissions: { admin: access.admin },
-        ownerAvatarUrl: repoInfo.owner.avatar_url,
-    };
+        owner,
+        repo,
+        getCachedRepo,
+        (repoInfo, access) => ({
+            hasIssues: repoInfo.has_issues,
+            hasWiki: repoInfo.has_wiki,
+            hasProjects: repoInfo.has_projects,
+            hasDiscussions: repoInfo.has_discussions,
+            isPrivate: repoInfo.private,
+            permissions: { admin: access.admin },
+            ownerAvatarUrl: repoInfo.owner.avatar_url,
+        }),
+    );
 }
 
 export async function getCachedRepoLanguages(
@@ -2095,31 +2099,14 @@ export async function getCachedRepoDocFileNames(
     );
 }
 
-export async function getCachedRepoStarred(
-    accessToken: string,
-    owner: string,
-    repo: string,
-    userId: string,
-): Promise<boolean> {
-    return withStaleWhileRevalidate(
-        repoStarredCacheKey("gh", userId, owner, repo),
-        () => checkRepoStarred(accessToken, owner, repo),
-        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
-    );
-}
-
-export async function getCachedRepoSubscription(
-    accessToken: string,
-    owner: string,
-    repo: string,
-    userId: string,
-): Promise<RepoSubscription | null> {
-    return withStaleWhileRevalidate(
-        repoSubscriptionCacheKey("gh", userId, owner, repo),
-        () => getRepoSubscription(accessToken, owner, repo),
-        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
-    );
-}
+const cachedRepoFlags = createRepoFlagCache(
+    "gh",
+    checkRepoStarred,
+    getRepoSubscription,
+);
+export const getCachedRepoStarred = cachedRepoFlags.getCachedRepoStarred;
+export const getCachedRepoSubscription =
+    cachedRepoFlags.getCachedRepoSubscription;
 
 export type Milestone = NonNullable<PullsGetResponseData["milestone"]>;
 
@@ -2928,6 +2915,22 @@ export type RepoListItem = {
     private: boolean;
 };
 
+type ViewerReposPage = {
+    viewer: {
+        repositories: {
+            pageInfo: {
+                hasNextPage: boolean;
+                endCursor: string | null;
+            };
+            nodes: Array<{
+                name: string;
+                owner: { login: string };
+                isPrivate: boolean;
+            } | null>;
+        };
+    };
+};
+
 export async function getUserRepos(
     accessToken: string,
 ): Promise<RepoListItem[]> {
@@ -2962,35 +2965,10 @@ query ViewerRepos($first: Int!, $after: String) {
     const results: RepoListItem[] = [];
     let cursor: string | null = null;
     for (;;) {
-        const result: {
-            viewer: {
-                repositories: {
-                    pageInfo: {
-                        hasNextPage: boolean;
-                        endCursor: string | null;
-                    };
-                    nodes: Array<{
-                        name: string;
-                        owner: { login: string };
-                        isPrivate: boolean;
-                    } | null>;
-                };
-            };
-        } = await graphql<{
-            viewer: {
-                repositories: {
-                    pageInfo: {
-                        hasNextPage: boolean;
-                        endCursor: string | null;
-                    };
-                    nodes: Array<{
-                        name: string;
-                        owner: { login: string };
-                        isPrivate: boolean;
-                    } | null>;
-                };
-            };
-        }>(query, { first: 100, after: cursor });
+        const result: ViewerReposPage = await graphql<ViewerReposPage>(query, {
+            first: 100,
+            after: cursor,
+        });
 
         for (const r of result.viewer.repositories.nodes) {
             if (!r) continue;
@@ -3107,14 +3085,13 @@ export function getDocFileDisplayName(name: string): string {
     return base;
 }
 
-export async function getRepoDocFileNames(
-    accessToken: string,
+/** Root-level doc files of a repo (files only, matching DOC_FILE_PATTERNS). */
+async function fetchRootDocFiles(
+    octokit: Octokit,
     owner: string,
     repo: string,
     ref?: string,
-): Promise<RepoDocFileName[]> {
-    const octokit = createOctokit(accessToken);
-
+): Promise<Array<{ name: string; path: string }>> {
     const { data: rootData } = await octokit.rest.repos.getContent({
         owner,
         repo,
@@ -3124,11 +3101,21 @@ export async function getRepoDocFileNames(
 
     const items = Array.isArray(rootData) ? rootData : [rootData];
 
-    const docItems = items.filter(
+    return items.filter(
         (item) =>
             item.type === "file" &&
             DOC_FILE_PATTERNS.some((p) => p.test(item.name)),
     );
+}
+
+export async function getRepoDocFileNames(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    ref?: string,
+): Promise<RepoDocFileName[]> {
+    const octokit = createOctokit(accessToken);
+    const docItems = await fetchRootDocFiles(octokit, owner, repo, ref);
 
     return docItems
         .map((item) => ({
@@ -3205,21 +3192,7 @@ export async function getRepoDocFiles(
     ref?: string,
 ): Promise<RepoDocFile[]> {
     const octokit = createOctokit(accessToken);
-
-    const { data: rootData } = await octokit.rest.repos.getContent({
-        owner,
-        repo,
-        ref,
-        path: "",
-    });
-
-    const items = Array.isArray(rootData) ? rootData : [rootData];
-
-    const docItems = items.filter(
-        (item) =>
-            item.type === "file" &&
-            DOC_FILE_PATTERNS.some((p) => p.test(item.name)),
-    );
+    const docItems = await fetchRootDocFiles(octokit, owner, repo, ref);
 
     const results = await Promise.all(
         docItems.map(async (item) => {
@@ -3801,21 +3774,7 @@ async function getRepoLatestCommitRest(
         response.data.length,
     );
 
-    const message = commit.commit.message.split("\n")[0] ?? "";
-
-    return {
-        sha: commit.sha,
-        message,
-        author: commit.author
-            ? {
-                  login: commit.author.login,
-                  avatarUrl: commit.author.avatar_url,
-              }
-            : null,
-        committedDate:
-            commit.commit.committer?.date ?? commit.commit.author?.date ?? null,
-        commitCount,
-    };
+    return mapRestCommitToSummary(commit, commitCount);
 }
 
 export interface ForkComparison {

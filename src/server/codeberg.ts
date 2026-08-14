@@ -1,16 +1,17 @@
 import { cache } from "react";
 import {
+    createRepoFlagCache,
     repoIssuePullCountsCacheKey,
-    repoStarredCacheKey,
-    repoSubscriptionCacheKey,
     withStaleWhileRevalidate,
 } from "~/server/cache";
 import {
     getCachedRepoData,
-    getRepoPermissionForUser,
-    viewerRepoAccess,
+    getCachedRepoHeaderInfo,
 } from "~/server/repo-cache";
-import { codebergRepoToSyncRepo } from "~/server/sync/mappers";
+import {
+    codebergRepoToSyncRepo,
+    mapRestCommitToSummary,
+} from "~/server/sync/mappers";
 
 export const CODEBERG_API = "https://codeberg.org";
 
@@ -117,6 +118,48 @@ function parseTotalCountFromLinkHeader(
     return currentCount;
 }
 
+/**
+ * GETs a Codeberg API URL with the token. Returns the parsed payload plus the
+ * Link header (pagination metadata); null when the request failed.
+ */
+async function fetchCodebergJson<T>(
+    accessToken: string,
+    url: string,
+): Promise<{ data: T; linkHeader: string | null } | null> {
+    const res = await fetch(url, {
+        headers: {
+            Authorization: `token ${accessToken}`,
+            Accept: "application/json",
+        },
+    });
+    if (!res.ok) return null;
+    return {
+        data: (await res.json()) as T,
+        linkHeader: res.headers.get("Link"),
+    };
+}
+
+/**
+ * Shared tail of the issue/pr list endpoints: next-page flag from the Link
+ * header and the total count estimated from the same header.
+ */
+function paginatedListResult<T>(
+    items: T[],
+    linkHeader: string | null,
+    params: { limit?: number; page?: number },
+): { items: T[]; totalCount: number; hasNextPage: boolean } {
+    const limit = params.limit ?? 30;
+    const hasNextPage = linkHeader?.includes('rel="next"') ?? false;
+    const page = params.page ?? 1;
+    const totalCount = parseTotalCountFromLinkHeader(
+        linkHeader,
+        limit,
+        items.length,
+        page,
+    );
+    return { items, totalCount, hasNextPage };
+}
+
 export const listPullRequests = cache(
     async (
         accessToken: string,
@@ -130,17 +173,13 @@ export const listPullRequests = cache(
         if (params.page) searchParams.set("page", String(params.page));
         if (params.limit) searchParams.set("limit", String(params.limit));
 
-        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/pulls?${searchParams}`;
+        const fetched = await fetchCodebergJson<CodebergPullRequest[]>(
+            accessToken,
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/pulls?${searchParams}`,
+        );
+        if (!fetched) return { items: [], totalCount: 0 };
 
-        const res = await fetch(url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
-        if (!res.ok) return { items: [], totalCount: 0 };
-
-        let items = (await res.json()) as CodebergPullRequest[];
+        let items = fetched.data;
 
         if (params.author) {
             items = items.filter(
@@ -161,20 +200,7 @@ export const listPullRequests = cache(
             });
         }
 
-        const limit = params.limit ?? 30;
-
-        const linkHeader = res.headers.get("Link");
-        const hasNextPage = linkHeader?.includes('rel="next"') ?? false;
-
-        const page = params.page ?? 1;
-        const totalCount = parseTotalCountFromLinkHeader(
-            linkHeader,
-            limit,
-            items.length,
-            page,
-        );
-
-        return { items, totalCount, hasNextPage };
+        return paginatedListResult(items, fetched.linkHeader, params);
     },
 );
 
@@ -496,21 +522,17 @@ export const getLatestCommit = cache(
         const params = new URLSearchParams({ limit: "1" });
         if (ref) params.set("sha", ref);
 
-        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`;
+        const fetched = await fetchCodebergJson<CodebergCommitRaw[]>(
+            accessToken,
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`,
+        );
+        if (!fetched) throw new Error(`No commits found for ${owner}/${repo}`);
 
-        const res = await fetch(url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
-        if (!res.ok) throw new Error(`No commits found for ${owner}/${repo}`);
-
-        const commits = (await res.json()) as CodebergCommitRaw[];
+        const commits = fetched.data;
         const commit = commits[0];
         if (!commit) throw new Error(`No commits found for ${owner}/${repo}`);
 
-        const linkHeader = res.headers.get("Link");
+        const linkHeader = fetched.linkHeader;
         let commitCount = 1;
         if (linkHeader) {
             const lastMatch = /<[^>]*[?&]page=(\d+)[^>]*>;\s*rel="last"/.exec(
@@ -519,23 +541,7 @@ export const getLatestCommit = cache(
             if (lastMatch?.[1]) commitCount = Number.parseInt(lastMatch[1], 10);
         }
 
-        const message = commit.commit.message.split("\n")[0] ?? "";
-
-        return {
-            sha: commit.sha,
-            message,
-            author: commit.author
-                ? {
-                      login: commit.author.login,
-                      avatarUrl: commit.author.avatar_url,
-                  }
-                : null,
-            committedDate:
-                commit.commit.committer?.date ??
-                commit.commit.author?.date ??
-                null,
-            commitCount,
-        };
+        return mapRestCommitToSummary(commit, commitCount);
     },
 );
 
@@ -553,18 +559,13 @@ export const getFileLatestCommit = cache(
         });
         if (ref) params.set("sha", ref);
 
-        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`;
+        const fetched = await fetchCodebergJson<CodebergCommitRaw[]>(
+            accessToken,
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`,
+        );
+        if (!fetched) return null;
 
-        const res = await fetch(url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
-        if (!res.ok) return null;
-
-        const commits = (await res.json()) as CodebergCommitRaw[];
-        const commit = commits[0];
+        const commit = fetched.data[0];
         if (!commit) return null;
 
         return {
@@ -593,17 +594,12 @@ export const getRepoContents = cache(
         const query = params.toString();
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/contents${urlPath}${query ? `?${query}` : ""}`;
 
-        const res = await fetch(url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
-        if (!res.ok) return [];
+        const fetched = await fetchCodebergJson<
+            CodebergContentRaw | CodebergContentRaw[]
+        >(accessToken, url);
+        if (!fetched) return [];
 
-        const data = (await res.json()) as
-            | CodebergContentRaw
-            | CodebergContentRaw[];
+        const data = fetched.data;
         const items = Array.isArray(data) ? data : [data];
 
         return items.map((item) => ({
@@ -621,19 +617,12 @@ export const getFileTree = cache(
     async (accessToken: string, owner: string, repo: string, ref: string) => {
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
 
-        const res = await fetch(url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
-        if (!res.ok) return [];
-
-        const data = (await res.json()) as {
+        const fetched = await fetchCodebergJson<{
             tree: CodebergTreeItemRaw[];
-        };
+        }>(accessToken, url);
+        if (!fetched) return [];
 
-        return data.tree.map((item) => ({
+        return fetched.data.tree.map((item) => ({
             name: item.path.split("/").pop() ?? item.path,
             path: item.path,
             sha: item.sha,
@@ -882,38 +871,10 @@ export const listBranchCommits = cache(
     },
 );
 
-export type CodebergIssue = {
-    id: number;
-    number: number;
-    title: string;
-    state: "open" | "closed";
-    html_url: string;
-    created_at: string;
-    updated_at: string;
-    closed_at: string | null;
-    body: string;
-    user: {
-        id: number;
-        login: string;
-        full_name: string;
-        avatar_url: string;
-    } | null;
-    assignees: Array<{
-        id: number;
-        login: string;
-        avatar_url: string;
-    }> | null;
-    labels: Array<{
-        id: number;
-        name: string;
-        color: string;
-        description: string | null;
-    }> | null;
-    milestone: {
-        id: number;
-        title: string;
-    } | null;
-    comments: number | null;
+export type CodebergIssue = Omit<
+    CodebergPullRequest,
+    "draft" | "merged_at" | "head" | "base"
+> & {
     pull_request?: {
         url: string;
     } | null;
@@ -950,17 +911,13 @@ export const listIssues = cache(
         if (params.page) searchParams.set("page", String(params.page));
         if (params.limit) searchParams.set("limit", String(params.limit));
 
-        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?${searchParams}`;
+        const fetched = await fetchCodebergJson<CodebergIssue[]>(
+            accessToken,
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?${searchParams}`,
+        );
+        if (!fetched) return { items: [], totalCount: 0 };
 
-        const res = await fetch(url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
-        if (!res.ok) return { items: [], totalCount: 0 };
-
-        let items = (await res.json()) as CodebergIssue[];
+        let items = fetched.data;
 
         items = items.filter((issue) => !issue.pull_request);
 
@@ -983,20 +940,7 @@ export const listIssues = cache(
             });
         }
 
-        const limit = params.limit ?? 30;
-
-        const linkHeader = res.headers.get("Link");
-        const hasNextPage = linkHeader?.includes('rel="next"') ?? false;
-
-        const page = params.page ?? 1;
-        const totalCount = parseTotalCountFromLinkHeader(
-            linkHeader,
-            limit,
-            items.length,
-            page,
-        );
-
-        return { items, totalCount, hasNextPage };
+        return paginatedListResult(items, fetched.linkHeader, params);
     },
 );
 
@@ -1075,39 +1019,31 @@ export async function getCachedRepoHeaderData(
     owner: string,
     repo: string,
 ): Promise<CodebergRepoHeaderInfo | null> {
-    const [repoInfo, permission] = await Promise.all([
-        getCachedRepo(accessToken, owner, repo),
-        getRepoPermissionForUser("codeberg", username, owner, repo),
-    ]);
-
-    const access = viewerRepoAccess({
+    return getCachedRepoHeaderInfo(
+        "codeberg",
+        accessToken,
         username,
-        payload: repoInfo,
-        permission,
-    });
-    // The cached payload is shared across users; a viewer without a grant
-    // must not see a private repo through it. Callers decide how to surface
-    // the denial (this is resolved into a promise the header consumes, so a
-    // server notFound() here could never produce a 404).
-    if (!access.canView) return null;
-
-    return {
-        hasIssues: repoInfo.has_issues,
-        hasWiki: repoInfo.has_wiki,
-        hasProjects: repoInfo.has_projects,
-        hasDiscussions: false,
-        isPrivate: repoInfo.private,
-        permissions: { admin: access.admin },
-        ownerAvatarUrl: repoInfo.owner.avatar_url,
-        allowSquashMerge: repoInfo.allow_squash_merge,
-        allowRebaseMerge: repoInfo.allow_rebase,
-        allowMergeCommit: repoInfo.allow_merge_commits,
-        defaultBranch: repoInfo.default_branch,
-        description: repoInfo.description ?? null,
-        stars: repoInfo.stars_count,
-        forks: repoInfo.forks_count,
-        language: repoInfo.language ?? null,
-    };
+        owner,
+        repo,
+        getCachedRepo,
+        (repoInfo, access) => ({
+            hasIssues: repoInfo.has_issues,
+            hasWiki: repoInfo.has_wiki,
+            hasProjects: repoInfo.has_projects,
+            hasDiscussions: false,
+            isPrivate: repoInfo.private,
+            permissions: { admin: access.admin },
+            ownerAvatarUrl: repoInfo.owner.avatar_url,
+            allowSquashMerge: repoInfo.allow_squash_merge,
+            allowRebaseMerge: repoInfo.allow_rebase,
+            allowMergeCommit: repoInfo.allow_merge_commits,
+            defaultBranch: repoInfo.default_branch,
+            description: repoInfo.description ?? null,
+            stars: repoInfo.stars_count,
+            forks: repoInfo.forks_count,
+            language: repoInfo.language ?? null,
+        }),
+    );
 }
 
 export async function getCachedRepoCounts(
@@ -1306,28 +1242,11 @@ export async function deleteRepoSubscription(
     }
 }
 
-export async function getCachedRepoStarred(
-    accessToken: string,
-    owner: string,
-    repo: string,
-    userId: string,
-): Promise<boolean> {
-    return withStaleWhileRevalidate(
-        repoStarredCacheKey("cb", userId, owner, repo),
-        () => checkRepoStarred(accessToken, owner, repo),
-        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
-    );
-}
-
-export async function getCachedRepoSubscription(
-    accessToken: string,
-    owner: string,
-    repo: string,
-    userId: string,
-): Promise<RepoSubscription | null> {
-    return withStaleWhileRevalidate(
-        repoSubscriptionCacheKey("cb", userId, owner, repo),
-        () => getRepoSubscription(accessToken, owner, repo),
-        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
-    );
-}
+const cachedRepoFlags = createRepoFlagCache(
+    "cb",
+    checkRepoStarred,
+    getRepoSubscription,
+);
+export const getCachedRepoStarred = cachedRepoFlags.getCachedRepoStarred;
+export const getCachedRepoSubscription =
+    cachedRepoFlags.getCachedRepoSubscription;
