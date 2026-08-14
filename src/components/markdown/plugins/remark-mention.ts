@@ -1,73 +1,31 @@
-import type { Content, Parent, Root } from "mdast";
+import type { Root } from "mdast";
+import { matchToParts, transformTextNodes } from "./plugin-utils";
+
+const MENTION_REGEX =
+    /(?<!\w)@([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)(?:\/([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?))?\b/g;
+const TEXT_PARENT_EXCLUSIONS = ["link", "inlineCode", "code"];
 
 export function remarkMentionPlugin() {
     return function transformer(tree: Root) {
-        function walk(node: Content | Root, parent: Parent | null) {
-            if ("children" in node) {
-                for (const child of [...node.children].reverse()) {
-                    walk(child, node);
-                }
-            }
-
-            if (
-                node.type === "text" &&
-                parent &&
-                parent.type !== "link" &&
-                parent.type !== "inlineCode" &&
-                parent.type !== "code"
-            ) {
-                const value = node.value;
-                const mentionRegex =
-                    /(?<!\w)@([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)(?:\/([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?))?\b/g;
-                const parts: Part[] = [];
-                let cursor = 0;
-                let match: RegExpExecArray | null;
-
-                match = mentionRegex.exec(value);
-                while (match !== null) {
-                    if (match.index > cursor) {
-                        parts.push({
-                            type: "text",
-                            value: value.slice(cursor, match.index),
-                        });
-                    }
-
-                    if (match[2]) {
-                        parts.push({
+        transformTextNodes(tree, TEXT_PARENT_EXCLUSIONS, (value) =>
+            matchToParts(value, MENTION_REGEX, (match) => {
+                if (match[2]) {
+                    return [
+                        {
                             type: "link",
                             url: `https://github.com/orgs/${match[1]}/teams/${match[2]}`,
                             children: [{ type: "text", value: match[0] }],
-                        });
-                    } else {
-                        parts.push({
-                            type: "link",
-                            url: `https://github.com/${match[1]}`,
-                            children: [{ type: "text", value: match[0] }],
-                        });
-                    }
-
-                    cursor = match.index + match[0].length;
-
-                    match = mentionRegex.exec(value);
+                        },
+                    ];
                 }
-
-                if (cursor < value.length) {
-                    parts.push({ type: "text", value: value.slice(cursor) });
-                }
-
-                if (parts.length > 0) {
-                    const childIndex = parent.children.indexOf(node);
-                    if (childIndex !== -1) {
-                        parent.children.splice(childIndex, 1, ...parts);
-                    }
-                }
-            }
-        }
-
-        walk(tree, null);
+                return [
+                    {
+                        type: "link",
+                        url: `https://github.com/${match[1]}`,
+                        children: [{ type: "text", value: match[0] }],
+                    },
+                ];
+            }),
+        );
     };
 }
-
-type Part =
-    | { type: "text"; value: string }
-    | { type: "link"; url: string; children: Part[] };
