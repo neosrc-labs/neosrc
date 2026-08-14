@@ -258,70 +258,125 @@ const getUserId = async (userId?: string) => {
     return session?.user?.id ?? null;
 };
 
+type RefreshedToken = {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+    refresh_token_expires_in?: number;
+};
+
+/**
+ * Loads the stored account row for a provider, including the encrypted token
+ * fields needed for refresh decisions.
+ */
+async function findAccountByProvider(
+    database: typeof db,
+    userId: string,
+    providerId: string,
+) {
+    const [account] = await database
+        .select({
+            id: betterAuthAccount.id,
+            accessToken: betterAuthAccount.accessToken,
+            accessTokenExpiresAt: betterAuthAccount.accessTokenExpiresAt,
+            refreshToken: betterAuthAccount.refreshToken,
+        })
+        .from(betterAuthAccount)
+        .where(
+            and(
+                eq(betterAuthAccount.userId, userId),
+                eq(betterAuthAccount.providerId, providerId),
+            ),
+        )
+        .limit(1);
+
+    return account;
+}
+
+/**
+ * The decrypted refresh token when the account's access token has expired,
+ * else null. Callers refresh via refreshAndStoreToken.
+ */
+function getExpiredRefreshToken(account: {
+    accessTokenExpiresAt: Date | null;
+    refreshToken: string | null;
+}): string | null {
+    const now = Date.now();
+    const expiresAt = account.accessTokenExpiresAt?.getTime() ?? Infinity;
+    const refreshToken = account.refreshToken
+        ? decrypt(account.refreshToken)
+        : null;
+
+    return expiresAt < now ? refreshToken : null;
+}
+
+/**
+ * Refreshes a token with the provider, stores the new encrypted tokens on the
+ * account row, and returns the fresh access token.
+ */
+async function refreshAndStoreToken(
+    database: typeof db,
+    accountId: string,
+    refreshToken: string,
+    refresh: (refreshToken: string) => Promise<RefreshedToken>,
+): Promise<string> {
+    const refreshed = await refresh(refreshToken);
+    await database
+        .update(betterAuthAccount)
+        .set({
+            accessToken: encrypt(refreshed.access_token),
+            refreshToken: encrypt(refreshed.refresh_token),
+            accessTokenExpiresAt: new Date(
+                Date.now() + refreshed.expires_in * 1000,
+            ),
+            refreshTokenExpiresAt: refreshed.refresh_token_expires_in
+                ? new Date(
+                      Date.now() + refreshed.refresh_token_expires_in * 1000,
+                  )
+                : undefined,
+        })
+        .where(eq(betterAuthAccount.id, accountId));
+    return refreshed.access_token;
+}
+
 export const getGitHubToken = cache(
     async (database: typeof db, userId: string | null | undefined) => {
         if (!userId) {
             if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
             throw new Error("GitHub account not connected");
         }
-        const [account] = await database
-            .select({
-                id: betterAuthAccount.id,
-                accessToken: betterAuthAccount.accessToken,
-                accessTokenExpiresAt: betterAuthAccount.accessTokenExpiresAt,
-                refreshToken: betterAuthAccount.refreshToken,
-            })
-            .from(betterAuthAccount)
-            .where(
-                and(
-                    eq(betterAuthAccount.userId, userId),
-                    eq(betterAuthAccount.providerId, "github"),
-                ),
-            )
-            .limit(1);
+        const account = await findAccountByProvider(database, userId, "github");
 
         if (!account?.accessToken) {
             if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
             throw new Error("GitHub account not connected");
         }
 
-        const now = Date.now();
-        const expiresAt = account.accessTokenExpiresAt?.getTime() ?? Infinity;
-        const refreshToken = account.refreshToken
-            ? decrypt(account.refreshToken)
-            : null;
+        const refreshToken = getExpiredRefreshToken(account);
 
-        async function refresh(accountId: string, refreshToken: string) {
-            const refreshed = await refreshGitHubToken(refreshToken);
-            await database
-                .update(betterAuthAccount)
-                .set({
-                    accessToken: encrypt(refreshed.access_token),
-                    refreshToken: encrypt(refreshed.refresh_token),
-                    accessTokenExpiresAt: new Date(
-                        Date.now() + refreshed.expires_in * 1000,
-                    ),
-                    refreshTokenExpiresAt: refreshed.refresh_token_expires_in
-                        ? new Date(
-                              Date.now() +
-                                  refreshed.refresh_token_expires_in * 1000,
-                          )
-                        : undefined,
-                })
-                .where(eq(betterAuthAccount.id, accountId));
-            return refreshed.access_token;
-        }
-
-        if (expiresAt < now && refreshToken) {
-            return refresh(account.id, refreshToken);
+        if (refreshToken) {
+            return refreshAndStoreToken(
+                database,
+                account.id,
+                refreshToken,
+                refreshGitHubToken,
+            );
         }
 
         try {
             return decrypt(account.accessToken);
         } catch (e) {
             // If the token gets corrupted somehow, just try to refresh it
-            if (refreshToken) {
-                return refresh(account.id, refreshToken);
+            const retryToken = account.refreshToken
+                ? decrypt(account.refreshToken)
+                : null;
+            if (retryToken) {
+                return refreshAndStoreToken(
+                    database,
+                    account.id,
+                    retryToken,
+                    refreshGitHubToken,
+                );
             }
             throw e;
         }
@@ -365,24 +420,12 @@ export const githubAccessToken = cache(async () => {
         const expiresAt = account.accessTokenExpiresAt?.getTime() ?? Infinity;
 
         if (expiresAt < now && account.refreshToken) {
-            const refreshed = await refreshGitHubToken(account.refreshToken);
-            await db
-                .update(betterAuthAccount)
-                .set({
-                    accessToken: encrypt(refreshed.access_token),
-                    refreshToken: encrypt(refreshed.refresh_token),
-                    accessTokenExpiresAt: new Date(
-                        Date.now() + refreshed.expires_in * 1000,
-                    ),
-                    refreshTokenExpiresAt: refreshed.refresh_token_expires_in
-                        ? new Date(
-                              Date.now() +
-                                  refreshed.refresh_token_expires_in * 1000,
-                          )
-                        : undefined,
-                })
-                .where(eq(betterAuthAccount.id, account.id));
-            return refreshed.access_token;
+            return refreshAndStoreToken(
+                db,
+                account.id,
+                account.refreshToken,
+                refreshGitHubToken,
+            );
         }
 
         return account.accessToken;
@@ -394,51 +437,25 @@ export const githubAccessToken = cache(async () => {
 export const getCodebergToken = cache(
     async (database: typeof db, userId: string | null | undefined) => {
         if (!userId) throw new Error("Codeberg account not connected");
-        const [account] = await database
-            .select({
-                id: betterAuthAccount.id,
-                accessToken: betterAuthAccount.accessToken,
-                accessTokenExpiresAt: betterAuthAccount.accessTokenExpiresAt,
-                refreshToken: betterAuthAccount.refreshToken,
-            })
-            .from(betterAuthAccount)
-            .where(
-                and(
-                    eq(betterAuthAccount.userId, userId),
-                    eq(betterAuthAccount.providerId, "codeberg"),
-                ),
-            )
-            .limit(1);
+        const account = await findAccountByProvider(
+            database,
+            userId,
+            "codeberg",
+        );
 
         if (!account?.accessToken) {
             throw new Error("Codeberg account not connected");
         }
 
-        const now = Date.now();
-        const expiresAt = account.accessTokenExpiresAt?.getTime() ?? Infinity;
-        const refreshToken = account.refreshToken
-            ? decrypt(account.refreshToken)
-            : null;
+        const refreshToken = getExpiredRefreshToken(account);
 
-        if (expiresAt < now && refreshToken) {
-            const refreshed = await refreshCodebergToken(refreshToken);
-            await database
-                .update(betterAuthAccount)
-                .set({
-                    accessToken: encrypt(refreshed.access_token),
-                    refreshToken: encrypt(refreshed.refresh_token),
-                    accessTokenExpiresAt: new Date(
-                        Date.now() + refreshed.expires_in * 1000,
-                    ),
-                    refreshTokenExpiresAt: refreshed.refresh_token_expires_in
-                        ? new Date(
-                              Date.now() +
-                                  refreshed.refresh_token_expires_in * 1000,
-                          )
-                        : undefined,
-                })
-                .where(eq(betterAuthAccount.id, account.id));
-            return refreshed.access_token;
+        if (refreshToken) {
+            return refreshAndStoreToken(
+                database,
+                account.id,
+                refreshToken,
+                refreshCodebergToken,
+            );
         }
 
         return decrypt(account.accessToken);
@@ -454,24 +471,12 @@ export const codebergAccessToken = cache(async () => {
     const expiresAt = account.accessTokenExpiresAt?.getTime() ?? Infinity;
 
     if (expiresAt < now && account.refreshToken) {
-        const refreshed = await refreshCodebergToken(account.refreshToken);
-        await db
-            .update(betterAuthAccount)
-            .set({
-                accessToken: encrypt(refreshed.access_token),
-                refreshToken: encrypt(refreshed.refresh_token),
-                accessTokenExpiresAt: new Date(
-                    Date.now() + refreshed.expires_in * 1000,
-                ),
-                refreshTokenExpiresAt: refreshed.refresh_token_expires_in
-                    ? new Date(
-                          Date.now() +
-                              refreshed.refresh_token_expires_in * 1000,
-                      )
-                    : undefined,
-            })
-            .where(eq(betterAuthAccount.id, account.id));
-        return refreshed.access_token;
+        return refreshAndStoreToken(
+            db,
+            account.id,
+            account.refreshToken,
+            refreshCodebergToken,
+        );
     }
 
     return account.accessToken;
