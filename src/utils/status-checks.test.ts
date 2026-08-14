@@ -139,37 +139,26 @@ describe("deduplicateCommitStatuses", () => {
         ]);
     });
 
-    it("keeps the latest status per context by updated_at", () => {
-        const older = makeStatus({
-            context: "ci/build",
-            updated_at: "2025-01-15T12:00:00Z",
-            description: "older",
-        });
-        const newer = makeStatus({
-            context: "ci/build",
-            updated_at: "2025-01-15T12:05:00Z",
-            description: "newer",
-        });
-        const result = deduplicateCommitStatuses([older, newer]);
-        expect(result).toHaveLength(1);
-        expect(result[0]?.description).toBe("newer");
-    });
-
-    it("keeps the earlier status when the later one is older", () => {
-        const older = makeStatus({
-            context: "ci/build",
-            updated_at: "2025-01-15T12:00:00Z",
-            description: "older",
-        });
-        const newer = makeStatus({
-            context: "ci/build",
-            updated_at: "2025-01-15T12:05:00Z",
-            description: "newer",
-        });
-        const result = deduplicateCommitStatuses([newer, older]);
-        expect(result).toHaveLength(1);
-        expect(result[0]?.description).toBe("newer");
-    });
+    it.each(["older-first", "newer-first"] as const)(
+        "keeps the latest status per context by updated_at (%s)",
+        (order) => {
+            const older = makeStatus({
+                context: "ci/build",
+                updated_at: "2025-01-15T12:00:00Z",
+                description: "older",
+            });
+            const newer = makeStatus({
+                context: "ci/build",
+                updated_at: "2025-01-15T12:05:00Z",
+                description: "newer",
+            });
+            const result = deduplicateCommitStatuses(
+                order === "newer-first" ? [newer, older] : [older, newer],
+            );
+            expect(result).toHaveLength(1);
+            expect(result[0]?.description).toBe("newer");
+        },
+    );
 
     it("on equal updated_at, the later array element wins", () => {
         const a = makeStatus({
