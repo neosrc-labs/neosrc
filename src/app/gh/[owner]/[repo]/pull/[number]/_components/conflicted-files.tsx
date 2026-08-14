@@ -75,17 +75,7 @@ function CompactConflictedFiles({
                                     key={file}
                                     className="group flex min-w-0 items-center gap-1.5 rounded px-1.5 py-0.5 font-mono text-text-secondary text-xs"
                                 >
-                                    <Image
-                                        alt=""
-                                        className="h-3.5 w-3.5 shrink-0"
-                                        src={`/material-icons/${getFileIconName(file)}.svg`}
-                                        width={14}
-                                        height={14}
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).src =
-                                                "/material-icons/file.svg";
-                                        }}
-                                    />
+                                    <FileIcon file={file} />
                                     <span className="break-all">{file}</span>
                                     <button
                                         type="button"
@@ -123,6 +113,21 @@ function CompactConflictedFiles({
                 </div>
             )}
         </div>
+    );
+}
+
+function FileIcon({ file }: { file: string }) {
+    return (
+        <Image
+            alt=""
+            className="h-3.5 w-3.5 shrink-0"
+            src={`/material-icons/${getFileIconName(file)}.svg`}
+            width={14}
+            height={14}
+            onError={(e) => {
+                (e.target as HTMLImageElement).src = "/material-icons/file.svg";
+            }}
+        />
     );
 }
 
@@ -171,17 +176,7 @@ export function ConflictedFiles({
                         key={file}
                         className="flex min-w-0 items-center gap-1.5 font-mono text-text-secondary text-xs"
                     >
-                        <Image
-                            alt=""
-                            className="h-3.5 w-3.5 shrink-0"
-                            src={`/material-icons/${getFileIconName(file)}.svg`}
-                            width={14}
-                            height={14}
-                            onError={(e) => {
-                                (e.target as HTMLImageElement).src =
-                                    "/material-icons/file.svg";
-                            }}
-                        />
+                        <FileIcon file={file} />
                         <span className="truncate">{file}</span>
                     </li>
                 ))}
