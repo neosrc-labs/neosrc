@@ -470,6 +470,21 @@ function useSlashAutocomplete(opts: {
         }
     }, []);
 
+    const insertGeneratedAtSlashLine = (
+        generated: { text: string; cursorPos: number },
+        linePos: number,
+    ) => {
+        const newText =
+            valueRef.current.slice(0, linePos) +
+            generated.text +
+            valueRef.current.slice(linePos);
+        const adjustedCursor = linePos + generated.cursorPos;
+        cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
+        onChangeRef.current(newText);
+        dismissSlashMenu();
+        textareaRef.current?.focus();
+    };
+
     // biome-ignore lint/correctness/useExhaustiveDependencies: refs are stable across renders
     const handleSlashMenuItemSelect = useCallback(
         (itemId: string) => {
@@ -504,15 +519,7 @@ function useSlashAutocomplete(opts: {
                 }
             }
 
-            const newText =
-                valueRef.current.slice(0, linePos) +
-                generated.text +
-                valueRef.current.slice(linePos);
-            const adjustedCursor = linePos + generated.cursorPos;
-            cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
-            onChangeRef.current(newText);
-            dismissSlashMenu();
-            textareaRef.current?.focus();
+            insertGeneratedAtSlashLine(generated, linePos);
         },
         [dismissSlashMenu],
     );
@@ -522,16 +529,7 @@ function useSlashAutocomplete(opts: {
         (columns: number, rows: number) => {
             const linePos = slashLinePosRef.current;
             if (linePos === null) return;
-            const generated = generateTable(columns, rows);
-            const newText =
-                valueRef.current.slice(0, linePos) +
-                generated.text +
-                valueRef.current.slice(linePos);
-            const adjustedCursor = linePos + generated.cursorPos;
-            cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
-            onChangeRef.current(newText);
-            dismissSlashMenu();
-            textareaRef.current?.focus();
+            insertGeneratedAtSlashLine(generateTable(columns, rows), linePos);
         },
         [dismissSlashMenu],
     );
@@ -541,16 +539,7 @@ function useSlashAutocomplete(opts: {
         (type: string) => {
             const linePos = slashLinePosRef.current;
             if (linePos === null) return;
-            const generated = generateAlert(type);
-            const newText =
-                valueRef.current.slice(0, linePos) +
-                generated.text +
-                valueRef.current.slice(linePos);
-            const adjustedCursor = linePos + generated.cursorPos;
-            cursorRef.current = { start: adjustedCursor, end: adjustedCursor };
-            onChangeRef.current(newText);
-            dismissSlashMenu();
-            textareaRef.current?.focus();
+            insertGeneratedAtSlashLine(generateAlert(type), linePos);
         },
         [dismissSlashMenu],
     );
