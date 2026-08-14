@@ -2,6 +2,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { pullsStackUtils } from "~/__tests__/helpers/trpc-mocks";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { StackBadge } from "./stack-popover";
 
@@ -10,12 +11,7 @@ const mockUseUnstackMutation = vi.hoisted(() => vi.fn());
 
 vi.mock("~/trpc/react", () => ({
     api: {
-        useUtils: vi.fn(() => ({
-            pulls: {
-                getStack: { invalidate: vi.fn() },
-                list: { invalidate: vi.fn() },
-            },
-        })),
+        ...pullsStackUtils(),
         pulls: {
             getStack: { useQuery: mockUseGetStackQuery },
             unstack: { useMutation: mockUseUnstackMutation },

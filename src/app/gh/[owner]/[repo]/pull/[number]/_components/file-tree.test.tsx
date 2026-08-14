@@ -33,26 +33,19 @@ function leaf(name: string, path: string): FileNode {
     return { name, path, isFile: true };
 }
 
+/** Builds a directory node whose name is the last path segment (deep chain idiom). */
+function chainDir(path: string, children: FileNode[]): FileNode {
+    return dir({ name: path.split("/").at(-1)!, path, children });
+}
+
 describe("compressTree", () => {
     it("compresses a single chain into one node", () => {
         const tree = [
-            dir({
-                name: "a",
-                path: "a",
-                children: [
-                    dir({
-                        name: "b",
-                        path: "a/b",
-                        children: [
-                            dir({
-                                name: "c",
-                                path: "a/b/c",
-                                children: [leaf("file.txt", "a/b/c/file.txt")],
-                            }),
-                        ],
-                    }),
-                ],
-            }),
+            chainDir("a", [
+                chainDir("a/b", [
+                    chainDir("a/b/c", [leaf("file.txt", "a/b/c/file.txt")]),
+                ]),
+            ]),
         ];
         const result = compressTree(tree);
         expect(result).toHaveLength(1);
@@ -105,28 +98,12 @@ describe("compressTree", () => {
 
     it("compresses mixed: chain + sibling directory at different levels", () => {
         const tree = [
-            dir({
-                name: "a",
-                path: "a",
-                children: [
-                    dir({
-                        name: "b",
-                        path: "a/b",
-                        children: [
-                            dir({
-                                name: "c",
-                                path: "a/b/c",
-                                children: [leaf("f.txt", "a/b/c/f.txt")],
-                            }),
-                        ],
-                    }),
-                    dir({
-                        name: "d",
-                        path: "a/d",
-                        children: [leaf("g.txt", "a/d/g.txt")],
-                    }),
-                ],
-            }),
+            chainDir("a", [
+                chainDir("a/b", [
+                    chainDir("a/b/c", [leaf("f.txt", "a/b/c/f.txt")]),
+                ]),
+                chainDir("a/d", [leaf("g.txt", "a/d/g.txt")]),
+            ]),
         ];
         const result = compressTree(tree);
         expect(result).toHaveLength(1);
