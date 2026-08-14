@@ -53,6 +53,12 @@ interface MarkdownRendererProps {
     canToggleTasks?: boolean;
     className?: string;
     linkableHeadings?: boolean;
+    imageBaseUrl?: string;
+    /**
+     * Directory of the markdown document relative to the repo root.
+     * Used together with {@link imageBaseUrl} to resolve relative image srcs
+     */
+    imageDocDir?: string;
 }
 
 const schema = {
@@ -88,6 +94,8 @@ export function MarkdownRenderer({
     canToggleTasks = true,
     className,
     linkableHeadings = false,
+    imageBaseUrl,
+    imageDocDir,
 }: MarkdownRendererProps) {
     const headingSlugsRef = useRef(new Map<string, number>());
     useEffect(() => {
@@ -266,12 +274,24 @@ export function MarkdownRenderer({
                             </CodeElement>
                         );
                     },
-                    img({ width, height, ...props }) {
+                    img({ width, height, src, ...props }) {
+                        const resolvedSrc =
+                            src &&
+                            typeof src === "string" &&
+                            imageBaseUrl &&
+                            isRelativeImageSrc(src)
+                                ? resolveImageSrc(
+                                      imageBaseUrl,
+                                      imageDocDir ?? "",
+                                      src,
+                                  )
+                                : src;
                         return (
                             // biome-ignore lint/performance/noImgElement: markdown images are user content with arbitrary hosts/dimensions that next/image cannot optimize
                             <img
                                 className="m-0 inline-block align-middle"
                                 {...props}
+                                src={resolvedSrc}
                                 width={width}
                                 height={height}
                                 alt={props.alt ?? ""}
@@ -590,4 +610,27 @@ function CodeElement({
         );
     }
     return <InlineCode {...props}>{children}</InlineCode>;
+}
+
+function isRelativeImageSrc(src: string): boolean {
+    return (
+        src.length > 0 &&
+        !/^[a-z][a-z0-9+.-]*:/i.test(src) &&
+        !src.startsWith("//") &&
+        !src.startsWith("/") &&
+        !src.startsWith("#")
+    );
+}
+
+function resolveImageSrc(baseUrl: string, docDir: string, src: string): string {
+    const dirSegments = docDir ? docDir.split("/") : [];
+    for (const segment of src.split("/")) {
+        if (segment === "" || segment === ".") continue;
+        if (segment === "..") dirSegments.pop();
+        else dirSegments.push(segment);
+    }
+    const resolvedDir = dirSegments.join("/");
+    return resolvedDir
+        ? `${baseUrl.replace(/\/+$/, "")}/${resolvedDir}`
+        : baseUrl.replace(/\/+$/, "");
 }
