@@ -4,6 +4,7 @@ import { BookOpen } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
+import { getDocFileHashName } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
 interface RepoDocFilesProps {
@@ -29,14 +30,6 @@ function getDisplayName(name: string): string {
     if (/mpl/i.test(lowerBase)) return "MPL License";
 
     return base;
-}
-
-function getDocFileHashName(name: string): string {
-    if (/^readme/i.test(name)) return "readme";
-    if (/^contributing/i.test(name)) return "contributing";
-    if (/^code_of_conduct/i.test(name)) return "code-of-conduct";
-    if (/^(licen[cs]e|copying)/i.test(name)) return "license";
-    return name.toLowerCase().replace(/\.[^.]+$/, "");
 }
 
 export function RepoDocFiles({
