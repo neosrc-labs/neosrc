@@ -1,44 +1,43 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { ChevronDown, MoreVertical, SquarePen, Trash2 } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { CommentCard } from "~/components/comment-card";
+import { CommentDeleteDialog } from "~/components/comment-delete-dialog";
+import {
+    CommentMenu,
+    DeleteMenuItem,
+    EditMenuItem,
+} from "~/components/comment-menu";
+import { CommentReactionFooter } from "~/components/comment-reaction-footer";
+import {
+    CommentReplyForm,
+    ThreadReplyBar,
+} from "~/components/comment-reply-form";
 import { DiffView } from "~/components/diff-view";
-import { ReplyTextboxButton } from "~/components/inline-comment-thread";
-import { MarkdownEditor } from "~/components/markdown/markdown-editor";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
-import { ReactionBar } from "~/components/reaction-bar";
-import { ReactionPicker } from "~/components/reaction-picker";
-import { ResolveButton } from "~/components/resolved-thread-banner";
 import {
-    createReviewCommentStub,
-    findAuthorAssociation,
-} from "~/components/review-comment-utils";
-import { Button } from "~/components/ui/button";
+    captureReviewCommentLists,
+    invalidateReviewCommentLists,
+    removeReviewCommentFromLists,
+    restoreReviewCommentLists,
+    useReviewCommentEditMutations,
+    useReviewCommentReplyMutation,
+    useReviewThreads,
+} from "~/components/review-comment-mutations";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "~/components/ui/dialog";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "~/components/ui/popover";
+    cancelTimelineList,
+    filterTimelineEvents,
+    getTimelineListData,
+    invalidateTimelineList,
+    restoreTimelineListData,
+    timelineListKey,
+} from "~/components/timeline-cache";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
-import {
-    applyReviewThreadOperations,
-    useReviewThreadOperations,
-} from "~/hooks/use-review-thread-operations";
 import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
 import type { ReactionContent } from "~/lib/reactions";
-import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewCommentBase } from "~/server/github";
 import { api } from "~/trpc/react";
 import {
@@ -80,31 +79,11 @@ export function ReviewComments({
     );
     const utils = api.useUtils();
 
-    const { data: threads, isPending: threadsPending } =
-        api.reviewComments.threads.useQuery(
-            { owner, repo, number },
-            { staleTime: 30_000 },
-        );
-
-    const resolveOps = useReviewThreadOperations({ owner, repo, number });
-    const displayThreads = applyReviewThreadOperations(
-        threads,
-        resolveOps.operations,
-    );
-
-    const threadByCommentId = useMemo(() => {
-        const map = new Map<
-            number,
-            NonNullable<typeof displayThreads>[number]
-        >();
-        if (!displayThreads) return map;
-        for (const thread of displayThreads) {
-            for (const c of thread.comments) {
-                map.set(c.id, thread);
-            }
-        }
-        return map;
-    }, [displayThreads]);
+    const { threadsPending, threadByCommentId, resolveOps } = useReviewThreads({
+        owner,
+        repo,
+        number,
+    });
 
     const handleResolve = useCallback(
         (commentId: number, threadId: string, resolve: boolean) => {
@@ -144,44 +123,12 @@ export function ReviewComments({
             { enabled: allCommentIds.length > 0, staleTime: 30_000 },
         );
 
-    const updateMutation = api.reviewComments.update.useMutation({
-        onMutate: ({ commentId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
-            setEditingCommentId(null);
-        },
-        onError: (_, { commentId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[commentId];
-                return next;
-            });
-            setEditingCommentId(commentId);
-        },
-    });
-    const taskToggleMutation = api.reviewComments.update.useMutation({
-        onMutate: ({ commentId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
-        },
-        onError: (_, { commentId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[commentId];
-                return next;
-            });
-        },
-    });
+    const { updateMutation, taskToggleMutation } =
+        useReviewCommentEditMutations({ setSavedBodies, setEditingCommentId });
 
     const deleteMutation = api.reviewComments.delete.useMutation({
         onMutate: async ({ commentId }) => {
-            await utils.reviewComments.list.cancel({ owner, repo, number });
-            const prevListData = utils.reviewComments.list.getData({
-                owner,
-                repo,
-                number,
-            });
-
-            await utils.reviews.getPending.cancel({ owner, repo, number });
-            const prevPendingData = utils.reviews.getPending.getData({
+            const captured = await captureReviewCommentLists(utils, {
                 owner,
                 repo,
                 number,
@@ -195,90 +142,42 @@ export function ReviewComments({
                         comment.id !== commentId,
                 );
 
-            await utils.timeline.list.cancel({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
-            const prevTimelineData = utils.timeline.list.getInfiniteData({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
+            const timelineKey = timelineListKey({ owner, repo, number });
+            await cancelTimelineList(utils, timelineKey);
+            const prevTimelineData = getTimelineListData(utils, timelineKey);
 
-            utils.reviewComments.list.setData(
+            removeReviewCommentFromLists(
+                utils,
                 { owner, repo, number },
-                (old) => {
-                    if (!old) return old;
-                    return removeCommentFromFlatList(old, commentId);
-                },
+                commentId,
             );
 
-            utils.reviews.getPending.setData({ owner, repo, number }, (old) => {
-                if (!old) return old;
-                return {
-                    ...old,
-                    comments: removeCommentFromFlatList(
-                        old.comments,
-                        commentId,
-                    ),
-                };
-            });
-
             if (removesLastReviewComment) {
-                utils.timeline.list.setInfiniteData(
-                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                    (old) => {
-                        if (!old) return old;
-                        return {
-                            ...old,
-                            pages: old.pages.map((page) => ({
-                                ...page,
-                                events: page.events.filter(
-                                    (event) =>
-                                        event.__typename !==
-                                            "PullRequestReview" ||
-                                        event.databaseId !== reviewId,
-                                ),
-                            })),
-                        };
-                    },
+                filterTimelineEvents(
+                    utils,
+                    timelineKey,
+                    (event) =>
+                        event.__typename !== "PullRequestReview" ||
+                        event.databaseId !== reviewId,
                 );
             }
 
-            return { prevListData, prevPendingData, prevTimelineData };
+            return { ...captured, prevTimelineData };
         },
         onError: (_err, _vars, ctx) => {
-            if (ctx?.prevListData) {
-                utils.reviewComments.list.setData(
-                    { owner, repo, number },
-                    ctx.prevListData,
-                );
-            }
-            if (ctx?.prevPendingData) {
-                utils.reviews.getPending.setData(
-                    { owner, repo, number },
-                    ctx.prevPendingData,
-                );
-            }
-            if (ctx?.prevTimelineData) {
-                utils.timeline.list.setInfiniteData(
-                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                    ctx.prevTimelineData,
-                );
-            }
+            restoreReviewCommentLists(utils, { owner, repo, number }, ctx);
+            restoreTimelineListData(
+                utils,
+                timelineListKey({ owner, repo, number }),
+                ctx?.prevTimelineData,
+            );
         },
         onSettled: () => {
-            utils.reviewComments.list.invalidate({ owner, repo, number });
-            utils.reviews.getPending.invalidate({ owner, repo, number });
-            utils.timeline.list.invalidate({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
+            invalidateReviewCommentLists(utils, { owner, repo, number });
+            invalidateTimelineList(
+                utils,
+                timelineListKey({ owner, repo, number }),
+            );
         },
     });
 
@@ -511,7 +410,6 @@ function truncateDiffToRange(
     return [newHeader, ...filtered].join("\n");
 }
 
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: FIXME: split this up
 function CommentBlock({
     comment,
     replies,
@@ -576,7 +474,6 @@ function CommentBlock({
         null,
     );
     const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
-    const utils = api.useUtils();
     // TODO: I think we dont need to load this until a reply happens
     const { data: currentUserData } = api.users.currentUser.useQuery();
     const { onToggleTask: onToggleParentTask } = useTaskToggle({
@@ -584,83 +481,17 @@ function CommentBlock({
         staticInput: { owner, repo, commentId: comment.id },
     });
 
-    const replyMutation = api.reviewComments.reply.useMutation({
-        onMutate: async ({ body, inReplyTo }) => {
+    const replyMutation = useReviewCommentReplyMutation({
+        owner,
+        repo,
+        number,
+        anchor: comment,
+        currentUser: currentUserData,
+        onStart: () => {
             setReplyBody("");
             setShowReplyForm(false);
-
-            await utils.reviewComments.list.cancel({
-                owner,
-                repo,
-                number,
-            });
-            const prevData = utils.reviewComments.list.getData({
-                owner,
-                repo,
-                number,
-            });
-
-            const userLogin = currentUserData?.login;
-            if (userLogin) {
-                const listData = utils.reviewComments.list.getData({
-                    owner,
-                    repo,
-                    number,
-                });
-                const pendingData = utils.reviews.getPending.getData({
-                    owner,
-                    repo,
-                    number,
-                });
-                const authorAssociation =
-                    findAuthorAssociation(listData ?? [], userLogin) ??
-                    findAuthorAssociation(
-                        pendingData?.comments ?? [],
-                        userLogin,
-                    );
-
-                const stub = createReviewCommentStub({
-                    body,
-                    filePath: comment.path,
-                    currentUser: {
-                        login: userLogin,
-                        avatarUrl: currentUserData.avatarUrl,
-                    },
-                    lineNumber: comment.line,
-                    side: comment.side,
-                    inReplyTo,
-                    authorAssociation,
-                });
-
-                utils.reviewComments.list.setData(
-                    { owner, repo, number },
-                    (old) => {
-                        if (!old) return old;
-                        return [...old, stub];
-                    },
-                );
-            }
-
-            return { prevData };
         },
-        onError: (_err, _vars, ctx) => {
-            if (ctx?.prevData) {
-                utils.reviewComments.list.setData(
-                    { owner, repo, number },
-                    ctx.prevData,
-                );
-            }
-        },
-        onSuccess: () => {
-            clearReply();
-        },
-        onSettled: () => {
-            utils.reviewComments.list.invalidate({
-                owner,
-                repo,
-                number,
-            });
-        },
+        onSuccess: clearReply,
     });
     if (!comment.user) {
         return null;
@@ -710,7 +541,7 @@ function CommentBlock({
                     onSaveEdit={() => onSaveEdit(comment.id)}
                     headerActions={
                         _canInteract && (
-                            <Popover
+                            <CommentMenu
                                 open={menuOpenCommentId === comment.id}
                                 onOpenChange={(open) =>
                                     setMenuOpenCommentId(
@@ -718,78 +549,42 @@ function CommentBlock({
                                     )
                                 }
                             >
-                                <PopoverTrigger asChild>
-                                    <button
-                                        type="button"
-                                        aria-label="More options"
-                                        className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
-                                    >
-                                        <MoreVertical size={14} />
-                                    </button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                    className="w-44 bg-surface p-1"
-                                    align="end"
-                                >
-                                    {(comment.user?.login ===
-                                        permissionContext.currentUser ||
-                                        _canEdit) && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                onStartEdit(
-                                                    comment.id,
-                                                    savedBodies[comment.id] ??
-                                                        comment.body,
-                                                );
-                                                setMenuOpenCommentId(null);
-                                            }}
-                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                        >
-                                            <SquarePen size={14} />
-                                            Edit
-                                        </button>
-                                    )}
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setMenuOpenCommentId(null);
-                                            setDeleteConfirmId(comment.id);
-                                        }}
-                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
-                                    >
-                                        <Trash2 size={14} />
-                                        Delete comment
-                                    </button>
-                                </PopoverContent>
-                            </Popover>
+                                {(comment.user?.login ===
+                                    permissionContext.currentUser ||
+                                    _canEdit) && (
+                                    <EditMenuItem
+                                        onClick={() =>
+                                            onStartEdit(
+                                                comment.id,
+                                                savedBodies[comment.id] ??
+                                                    comment.body,
+                                            )
+                                        }
+                                        onClose={() =>
+                                            setMenuOpenCommentId(null)
+                                        }
+                                    />
+                                )}
+                                <DeleteMenuItem
+                                    onClick={() =>
+                                        setDeleteConfirmId(comment.id)
+                                    }
+                                    onClose={() => setMenuOpenCommentId(null)}
+                                />
+                            </CommentMenu>
                         )
                     }
                     footer={
-                        <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                            {_canInteract && (
-                                <>
-                                    <ReactionPicker
-                                        reactions={parentReactions}
-                                        currentUserLogin={
-                                            permissionContext.currentUser
-                                        }
-                                        onReact={(content) =>
-                                            onReact(comment.id, content)
-                                        }
-                                    />
-                                    <ReactionBar
-                                        reactions={parentReactions}
-                                        currentUserLogin={
-                                            permissionContext.currentUser
-                                        }
-                                        onReact={(content) =>
-                                            onReact(comment.id, content)
-                                        }
-                                    />
-                                </>
-                            )}
-                        </div>
+                        _canInteract && (
+                            <CommentReactionFooter
+                                reactions={parentReactions}
+                                currentUserLogin={permissionContext.currentUser}
+                                onReact={(content) =>
+                                    onReact(comment.id, content)
+                                }
+                                className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3"
+                            />
+                        )
                     }
                 >
                     <MarkdownRenderer
@@ -834,7 +629,7 @@ function CommentBlock({
                                 onSaveEdit={() => onSaveEdit(reply.id)}
                                 headerActions={
                                     _canInteract && (
-                                        <Popover
+                                        <CommentMenu
                                             open={
                                                 menuOpenCommentId === reply.id
                                             }
@@ -844,91 +639,49 @@ function CommentBlock({
                                                 )
                                             }
                                         >
-                                            <PopoverTrigger asChild>
-                                                <button
-                                                    type="button"
-                                                    aria-label="More options"
-                                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
-                                                >
-                                                    <MoreVertical size={14} />
-                                                </button>
-                                            </PopoverTrigger>
-                                            <PopoverContent
-                                                className="w-44 bg-surface p-1"
-                                                align="end"
-                                            >
-                                                {(reply.user?.login ===
-                                                    permissionContext.currentUser ||
-                                                    _canEdit) && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            onStartEdit(
-                                                                reply.id,
-                                                                savedBodies[
-                                                                    reply.id
-                                                                ] ?? reply.body,
-                                                            );
-                                                            setMenuOpenCommentId(
-                                                                null,
-                                                            );
-                                                        }}
-                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                                    >
-                                                        <SquarePen size={14} />
-                                                        Edit
-                                                    </button>
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
+                                            {(reply.user?.login ===
+                                                permissionContext.currentUser ||
+                                                _canEdit) && (
+                                                <EditMenuItem
+                                                    onClick={() =>
+                                                        onStartEdit(
+                                                            reply.id,
+                                                            savedBodies[
+                                                                reply.id
+                                                            ] ?? reply.body,
+                                                        )
+                                                    }
+                                                    onClose={() =>
                                                         setMenuOpenCommentId(
                                                             null,
-                                                        );
-                                                        setDeleteConfirmId(
-                                                            reply.id,
-                                                        );
-                                                    }}
-                                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
-                                                >
-                                                    <Trash2 size={14} />
-                                                    Delete comment
-                                                </button>
-                                            </PopoverContent>
-                                        </Popover>
+                                                        )
+                                                    }
+                                                />
+                                            )}
+                                            <DeleteMenuItem
+                                                onClick={() =>
+                                                    setDeleteConfirmId(reply.id)
+                                                }
+                                                onClose={() =>
+                                                    setMenuOpenCommentId(null)
+                                                }
+                                            />
+                                        </CommentMenu>
                                     )
                                 }
                                 footer={
-                                    <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                                        {_canInteract && (
-                                            <>
-                                                <ReactionPicker
-                                                    reactions={replyReactions}
-                                                    currentUserLogin={
-                                                        permissionContext.currentUser
-                                                    }
-                                                    onReact={(content) =>
-                                                        onReact(
-                                                            reply.id,
-                                                            content,
-                                                        )
-                                                    }
-                                                />
-                                                <ReactionBar
-                                                    reactions={replyReactions}
-                                                    currentUserLogin={
-                                                        permissionContext.currentUser
-                                                    }
-                                                    onReact={(content) =>
-                                                        onReact(
-                                                            reply.id,
-                                                            content,
-                                                        )
-                                                    }
-                                                />
-                                            </>
-                                        )}
-                                    </div>
+                                    _canInteract && (
+                                        <CommentReactionFooter
+                                            reactions={replyReactions}
+                                            currentUserLogin={
+                                                permissionContext.currentUser
+                                            }
+                                            onReact={(content) =>
+                                                onReact(reply.id, content)
+                                            }
+                                            className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3"
+                                        />
+                                    )
                                 }
                             >
                                 <MarkdownRenderer
@@ -965,96 +718,52 @@ function CommentBlock({
                 {_canInteract ? (
                     showReplyForm ? (
                         <div className="p-2">
-                            <MarkdownEditor
-                                autoFocus
-                                disabled={replyMutation.isPending}
+                            <CommentReplyForm
+                                value={replyBody}
                                 onChange={setReplyBody}
                                 onCancel={() => {
                                     setShowReplyForm(false);
                                     setReplyBody("");
                                 }}
-                                placeholder="Write a reply..."
-                                value={replyBody}
+                                onSubmit={() => {
+                                    if (!replyBody.trim()) return;
+                                    replyMutation.mutate({
+                                        owner,
+                                        repo,
+                                        number,
+                                        body: replyBody,
+                                        inReplyTo: comment.id,
+                                    });
+                                }}
+                                isPending={replyMutation.isPending}
+                                isError={replyMutation.isError}
                                 owner={owner}
                                 repo={repo}
-                                footerActions={[
-                                    {
-                                        label: "Reply",
-                                        onClick: () => {
-                                            if (!replyBody.trim()) return;
-                                            replyMutation.mutate({
-                                                owner,
-                                                repo,
-                                                number,
-                                                body: replyBody,
-                                                inReplyTo: comment.id,
-                                            });
-                                        },
-                                        variant: "approve",
-                                        disabled: (text: string) =>
-                                            !text.trim(),
-                                    },
-                                ]}
                             />
-                            {replyMutation.isError && (
-                                <p className="mt-1 text-red-600 text-xs">
-                                    Failed to post reply. Please try again.
-                                </p>
-                            )}
                         </div>
                     ) : (
-                        <div className="flex w-full items-center gap-2 px-6 py-2">
-                            <div className="min-w-0 flex-1">
-                                <ReplyTextboxButton
-                                    onClick={() => setShowReplyForm(true)}
-                                />
-                            </div>
-                            <ResolveButton
-                                onClick={() =>
-                                    onResolve(comment.id, threadId, !isResolved)
-                                }
-                                isPending={isResolvePending(threadId)}
-                                isUnresolve={isResolved}
-                            />
-                        </div>
+                        <ThreadReplyBar
+                            onReply={() => setShowReplyForm(true)}
+                            onResolve={() =>
+                                onResolve(comment.id, threadId, !isResolved)
+                            }
+                            resolvePending={isResolvePending(threadId)}
+                            isUnresolve={isResolved}
+                        />
                     )
                 ) : null}
             </div>
-            <Dialog
+            <CommentDeleteDialog
                 open={deleteConfirmId !== null}
                 onOpenChange={(open) => {
                     if (!open) setDeleteConfirmId(null);
                 }}
-            >
-                <DialogContent showCloseButton={false}>
-                    <DialogHeader>
-                        <DialogTitle>Delete comment</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to delete this comment? This
-                            action cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setDeleteConfirmId(null)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={() => {
-                                if (deleteConfirmId !== null) {
-                                    onDelete(deleteConfirmId);
-                                    setDeleteConfirmId(null);
-                                }
-                            }}
-                        >
-                            Delete
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                onConfirm={() => {
+                    if (deleteConfirmId !== null) {
+                        onDelete(deleteConfirmId);
+                    }
+                }}
+            />
         </>
     );
 }

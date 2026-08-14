@@ -1,13 +1,17 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { MoreVertical, SquarePen, Trash2 } from "lucide-react";
+import { SquarePen } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CommentCard } from "~/components/comment-card";
+import { CommentDeleteDialog } from "~/components/comment-delete-dialog";
+import { CommentMenu, DeleteMenuItem } from "~/components/comment-menu";
+import { CommentReactionFooter } from "~/components/comment-reaction-footer";
 import {
-    ResolveButton,
-    ResolvedThreadBanner,
-} from "~/components/resolved-thread-banner";
+    CommentReplyForm,
+    ThreadReplyBar,
+} from "~/components/comment-reply-form";
+import { ResolvedThreadBanner } from "~/components/resolved-thread-banner";
 
 type Reaction = components["schemas"]["reaction"];
 
@@ -16,39 +20,24 @@ import {
     canInteract,
     type PullRequestPermissionContext,
 } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
-import { ReactionBar } from "~/components/reaction-bar";
-import { ReactionPicker } from "~/components/reaction-picker";
-import { Button } from "~/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "~/components/ui/dialog";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "~/components/ui/popover";
+    captureReviewCommentLists,
+    invalidateReviewCommentLists,
+    removeReviewCommentFromLists,
+    restoreReviewCommentLists,
+    useReviewCommentEditMutations,
+    useReviewCommentReplyMutation,
+    useReviewThreads,
+} from "~/components/review-comment-mutations";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
-import {
-    applyReviewThreadOperations,
-    useReviewThreadOperations,
-} from "~/hooks/use-review-thread-operations";
 import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
 import type { ReactionContent } from "~/lib/reactions";
-import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
-import { MarkdownEditor } from "./markdown/markdown-editor";
 import { MarkdownRenderer } from "./markdown/markdown-renderer";
-import {
-    createReviewCommentStub,
-    findAuthorAssociation,
-} from "./review-comment-utils";
+
+export { ReplyTextboxButton } from "./comment-reply-form";
 
 // Cache for preserving in-progress reply state across stub -> real comment
 // transitions. When a new comment is posted with optimistic update, the stub
@@ -79,7 +68,6 @@ interface InlineCommentThreadProps {
     permissionContext: PullRequestPermissionContext;
 }
 
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: FIXME: split this up
 export function InlineCommentThread({
     parentComment,
     replies,
@@ -148,111 +136,21 @@ export function InlineCommentThread({
             { staleTime: 30_000 },
         );
 
-    const replyMutation = api.reviewComments.reply.useMutation({
-        onMutate: async ({ body, inReplyTo }) => {
+    const replyMutation = useReviewCommentReplyMutation({
+        owner,
+        repo,
+        number,
+        anchor: parentComment,
+        currentUser: currentUserData,
+        onStart: () => {
             setReplyBody("");
             setShowReplyForm(false);
-
-            await utils.reviewComments.list.cancel({
-                owner,
-                repo,
-                number,
-            });
-            const prevData = utils.reviewComments.list.getData({
-                owner,
-                repo,
-                number,
-            });
-
-            const userLogin = currentUserData?.login;
-            if (userLogin) {
-                const listData = utils.reviewComments.list.getData({
-                    owner,
-                    repo,
-                    number,
-                });
-                const pendingData = utils.reviews.getPending.getData({
-                    owner,
-                    repo,
-                    number,
-                });
-                const authorAssociation =
-                    findAuthorAssociation(listData ?? [], userLogin) ??
-                    findAuthorAssociation(
-                        pendingData?.comments ?? [],
-                        userLogin,
-                    );
-
-                const stub = createReviewCommentStub({
-                    body,
-                    filePath: parentComment.path,
-                    currentUser: {
-                        login: userLogin,
-                        avatarUrl: currentUserData.avatarUrl,
-                    },
-                    lineNumber: parentComment.line,
-                    side: parentComment.side,
-                    inReplyTo,
-                    authorAssociation,
-                });
-
-                utils.reviewComments.list.setData(
-                    { owner, repo, number },
-                    (old) => {
-                        if (!old) return old;
-                        return [...old, stub];
-                    },
-                );
-            }
-
-            return { prevData };
         },
-        onError: (_err, _vars, ctx) => {
-            if (ctx?.prevData) {
-                utils.reviewComments.list.setData(
-                    { owner, repo, number },
-                    ctx.prevData,
-                );
-            }
-        },
-        onSuccess: () => {
-            clearReply();
-        },
-        onSettled: () => {
-            utils.reviewComments.list.invalidate({
-                owner,
-                repo,
-                number,
-            });
-        },
+        onSuccess: clearReply,
     });
 
-    const updateMutation = api.reviewComments.update.useMutation({
-        onMutate: ({ commentId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
-            setEditingCommentId(null);
-        },
-        onError: (_, { commentId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[commentId];
-                return next;
-            });
-            setEditingCommentId(commentId);
-        },
-    });
-    const taskToggleMutation = api.reviewComments.update.useMutation({
-        onMutate: ({ commentId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
-        },
-        onError: (_, { commentId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[commentId];
-                return next;
-            });
-        },
-    });
+    const { updateMutation, taskToggleMutation } =
+        useReviewCommentEditMutations({ setSavedBodies, setEditingCommentId });
 
     const reactMutation = useTogglePullRequestReviewCommentReaction(
         owner,
@@ -292,81 +190,38 @@ export function InlineCommentThread({
 
     const deleteMutation = api.reviewComments.delete.useMutation({
         onMutate: async ({ commentId }) => {
-            await utils.reviewComments.list.cancel({ owner, repo, number });
-            const prevListData = utils.reviewComments.list.getData({
+            const captured = await captureReviewCommentLists(utils, {
                 owner,
                 repo,
                 number,
             });
 
-            await utils.reviews.getPending.cancel({ owner, repo, number });
-            const prevPendingData = utils.reviews.getPending.getData({
-                owner,
-                repo,
-                number,
-            });
-
-            utils.reviewComments.list.setData(
+            removeReviewCommentFromLists(
+                utils,
                 { owner, repo, number },
-                (old) => {
-                    if (!old) return old;
-                    return removeCommentFromFlatList(old, commentId);
-                },
+                commentId,
             );
 
-            utils.reviews.getPending.setData({ owner, repo, number }, (old) => {
-                if (!old) return old;
-                return {
-                    ...old,
-                    comments: removeCommentFromFlatList(
-                        old.comments,
-                        commentId,
-                    ),
-                };
-            });
-
-            return { prevListData, prevPendingData };
+            return captured;
         },
         onError: (_err, _vars, ctx) => {
-            if (ctx?.prevListData) {
-                utils.reviewComments.list.setData(
-                    { owner, repo, number },
-                    ctx.prevListData,
-                );
-            }
-            if (ctx?.prevPendingData) {
-                utils.reviews.getPending.setData(
-                    { owner, repo, number },
-                    ctx.prevPendingData,
-                );
-            }
+            restoreReviewCommentLists(utils, { owner, repo, number }, ctx);
         },
         onSettled: () => {
-            utils.reviewComments.list.invalidate({ owner, repo, number });
-            utils.reviews.getPending.invalidate({ owner, repo, number });
+            invalidateReviewCommentLists(utils, { owner, repo, number });
         },
     });
 
-    const { data: threads, isPending: threadsPending } =
-        api.reviewComments.threads.useQuery(
-            { owner, repo, number },
-            { staleTime: 30_000 },
-        );
+    const { threadsPending, threadByCommentId, resolveOps } = useReviewThreads({
+        owner,
+        repo,
+        number,
+    });
 
-    const resolveOps = useReviewThreadOperations({ owner, repo, number });
-    const displayThreads = applyReviewThreadOperations(
-        threads,
-        resolveOps.operations,
+    const threadInfo = useMemo(
+        () => threadByCommentId.get(parentComment.id) ?? null,
+        [threadByCommentId, parentComment.id],
     );
-
-    const threadInfo = useMemo(() => {
-        if (!displayThreads) return null;
-        return (
-            displayThreads.find((t) =>
-                t.comments.some((c) => c.id === parentComment.id),
-            ) ?? null
-        );
-    }, [displayThreads, parentComment.id]);
 
     const handleResolve = useCallback(() => {
         if (!threadInfo) return;
@@ -487,50 +342,31 @@ export function InlineCommentThread({
             {_canInteract ? (
                 showReplyForm ? (
                     <div className="p-2">
-                        <MarkdownEditor
-                            autoFocus
-                            disabled={replyMutation.isPending}
+                        <CommentReplyForm
+                            value={replyBody}
                             onChange={setReplyBody}
                             onCancel={() => {
                                 setShowReplyForm(false);
                                 setReplyBody("");
                             }}
-                            placeholder="Write a reply..."
-                            value={replyBody}
+                            onSubmit={() => handleReply()}
+                            isPending={replyMutation.isPending}
+                            isError={replyMutation.isError}
                             owner={owner}
                             repo={repo}
-                            footerActions={[
-                                {
-                                    label: "Reply",
-                                    onClick: () => handleReply(),
-                                    variant: "approve",
-                                    disabled: (text: string) => !text.trim(),
-                                },
-                            ]}
                         />
-                        {replyMutation.isError && (
-                            <p className="mt-1 text-red-600 text-xs">
-                                Failed to post reply. Please try again.
-                            </p>
-                        )}
                     </div>
                 ) : (
-                    <div className="flex w-full items-center gap-2 px-6 py-2">
-                        <div className="min-w-0 flex-1">
-                            <ReplyTextboxButton
-                                onClick={() => setShowReplyForm(true)}
-                            />
-                        </div>
-                        <ResolveButton
-                            onClick={handleResolve}
-                            isPending={
-                                threadInfo
-                                    ? resolveOps.isPending(threadInfo.id)
-                                    : false
-                            }
-                            isUnresolve={threadInfo?.isResolved ?? false}
-                        />
-                    </div>
+                    <ThreadReplyBar
+                        onReply={() => setShowReplyForm(true)}
+                        onResolve={handleResolve}
+                        resolvePending={
+                            threadInfo
+                                ? resolveOps.isPending(threadInfo.id)
+                                : false
+                        }
+                        isUnresolve={threadInfo?.isResolved ?? false}
+                    />
                 )
             ) : null}
         </div>
@@ -628,33 +464,15 @@ function Comment({
                             </button>
                         )}
                         {_canInteract && !isStub && (
-                            <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-                                <PopoverTrigger asChild>
-                                    <button
-                                        type="button"
-                                        aria-label="More options"
-                                        className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
-                                    >
-                                        <MoreVertical size={14} />
-                                    </button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                    className="w-44 bg-surface p-1"
-                                    align="end"
-                                >
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setMenuOpen(false);
-                                            setDeleteConfirmOpen(true);
-                                        }}
-                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
-                                    >
-                                        <Trash2 size={14} />
-                                        Delete comment
-                                    </button>
-                                </PopoverContent>
-                            </Popover>
+                            <CommentMenu
+                                open={menuOpen}
+                                onOpenChange={setMenuOpen}
+                            >
+                                <DeleteMenuItem
+                                    onClick={() => setDeleteConfirmOpen(true)}
+                                    onClose={() => setMenuOpen(false)}
+                                />
+                            </CommentMenu>
                         )}
                         {isStub && (
                             <span className="inline-flex animate-pulse items-center rounded p-1 font-medium text-text-muted text-xs">
@@ -664,28 +482,15 @@ function Comment({
                     </>
                 }
                 footer={
-                    <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                        {_canInteract && (
-                            <>
-                                <ReactionPicker
-                                    disabled={isStub}
-                                    reactions={reactions}
-                                    currentUserLogin={
-                                        permissionContext.currentUser
-                                    }
-                                    onReact={onReact}
-                                />
-                                <ReactionBar
-                                    disabled={isStub}
-                                    reactions={reactions}
-                                    currentUserLogin={
-                                        permissionContext.currentUser
-                                    }
-                                    onReact={onReact}
-                                />
-                            </>
-                        )}
-                    </div>
+                    _canInteract && (
+                        <CommentReactionFooter
+                            disabled={isStub}
+                            reactions={reactions}
+                            currentUserLogin={permissionContext.currentUser}
+                            onReact={onReact}
+                            className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3"
+                        />
+                    )
                 }
             >
                 <MarkdownRenderer
@@ -703,49 +508,11 @@ function Comment({
                     }
                 />
             </CommentCard>
-            <Dialog
+            <CommentDeleteDialog
                 open={deleteConfirmOpen}
                 onOpenChange={setDeleteConfirmOpen}
-            >
-                <DialogContent showCloseButton={false}>
-                    <DialogHeader>
-                        <DialogTitle>Delete comment</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to delete this comment? This
-                            action cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setDeleteConfirmOpen(false)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={() => {
-                                onDelete();
-                                setDeleteConfirmOpen(false);
-                            }}
-                        >
-                            Delete
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                onConfirm={onDelete}
+            />
         </>
-    );
-}
-
-export function ReplyTextboxButton({ onClick }: { onClick: () => void }) {
-    return (
-        <button
-            type="button"
-            className="flex w-full cursor-text items-center rounded-md border border-gray-200 bg-surface-elevated px-3 py-1.5 text-text-muted text-xs transition-colors duration-200 hover:border-gray-400 dark:border-zinc-600 dark:hover:border-zinc-400"
-            onClick={onClick}
-        >
-            Reply...
-        </button>
     );
 }

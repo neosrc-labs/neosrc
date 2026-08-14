@@ -1,19 +1,24 @@
 "use client";
 
+import { Eye, EyeOff } from "lucide-react";
+import { useMemo, useState } from "react";
 import {
-    Check,
-    ChevronDown,
-    Eye,
-    EyeOff,
-    Link,
-    MoreVertical,
-    SquarePen,
-} from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { CommentCard } from "~/components/comment-card";
+    CommentMenu,
+    CommentMenuItem,
+    CopyLinkMenuItem,
+    EditMenuItem,
+} from "~/components/comment-menu";
+import { CommentReactionFooter } from "~/components/comment-reaction-footer";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
-import { ReactionBar } from "~/components/reaction-bar";
-import { ReactionPicker } from "~/components/reaction-picker";
+import { MinimizedCommentBanner } from "~/components/minimized-comment-banner";
+import {
+    cancelTimelineList,
+    getTimelineListData,
+    timelineListKey,
+    timelineRollbackHandlers,
+    updateReviewMinimizedInTimeline,
+} from "~/components/timeline-cache";
+import { TimelineCommentCard } from "~/components/timeline-comment-card";
 import { Button } from "~/components/ui/button";
 import {
     Dialog,
@@ -23,15 +28,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from "~/components/ui/dialog";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "~/components/ui/popover";
 import { UserLink } from "~/components/user-link";
 import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
 import type { ReactionContent } from "~/lib/reactions";
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewComment, ReviewMinimizeClassifier } from "~/server/github";
 import type {
     GQLPullRequestReview,
@@ -45,7 +44,6 @@ import {
     type PullRequestPermissionContext,
 } from "../../../permissions-utils";
 import { ReviewComments } from "../../review-comments";
-import { formatReason } from "../event";
 
 const REVIEW_MINIMIZE_REASONS: {
     value: ReviewMinimizeClassifier;
@@ -110,20 +108,12 @@ export function PullRequestReviewContent({
     reviewToggleMutation,
 }: PullRequestReviewContentProps) {
     const [menuOpen, setMenuOpen] = useState(false);
-    const [copied, setCopied] = useState(false);
     const [hideDialogOpen, setHideDialogOpen] = useState(false);
 
     const { onToggleTask } = useTaskToggle({
         mutation: reviewToggleMutation,
         staticInput: { owner, repo, number, reviewId: event.databaseId },
     });
-
-    const handleCopyLink = useCallback(async () => {
-        const url = `${window.location.origin}${window.location.pathname}#pullrequestreview-${event.databaseId}`;
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    }, [event.databaseId]);
 
     const isEditing = editingCommentId === event.databaseId;
     const isAuthor = event.author?.login === permissionContext.currentUser;
@@ -167,128 +157,57 @@ export function PullRequestReviewContent({
     }, [allComments, pendingComments, isPendingByCurrentUser]);
 
     const utils = api.useUtils();
-    const timelineCacheKey = {
-        owner,
-        repo,
-        number,
-        limit: TIMELINE_PAGE_SIZE,
-    } as const;
+    const timelineKey = timelineListKey({ owner, repo, number });
 
     const minimizeMutation = api.reviews.minimize.useMutation({
         onMutate: async ({ subjectId, classifier }) => {
-            await utils.timeline.list.cancel(timelineCacheKey);
+            await cancelTimelineList(utils, timelineKey);
 
-            const prevData =
-                utils.timeline.list.getInfiniteData(timelineCacheKey);
+            const prevData = getTimelineListData(utils, timelineKey);
 
-            utils.timeline.list.setInfiniteData(timelineCacheKey, (old) => {
-                if (!old) return old;
-                return {
-                    ...old,
-                    pages: old.pages.map((page) => ({
-                        ...page,
-                        events: page.events.map((ev) =>
-                            ev.__typename === "PullRequestReview" &&
-                            ev.id === subjectId
-                                ? {
-                                      ...ev,
-                                      isMinimized: true,
-                                      minimizedReason: classifier.toLowerCase(),
-                                  }
-                                : ev,
-                        ),
-                    })),
-                };
-            });
+            updateReviewMinimizedInTimeline(
+                utils,
+                timelineKey,
+                subjectId,
+                true,
+                classifier.toLowerCase(),
+            );
 
             return { prevData };
-        },
-        onError: (_err, _vars, ctx) => {
-            if (ctx?.prevData) {
-                utils.timeline.list.setInfiniteData(
-                    timelineCacheKey,
-                    ctx.prevData,
-                );
-            }
         },
         onSuccess: () => {
             onToggleMinimized(event.databaseId, false);
         },
-        onSettled: () => {
-            utils.timeline.list.invalidate(timelineCacheKey);
-        },
+        ...timelineRollbackHandlers(utils, timelineKey),
     });
 
     const unminimizeMutation = api.reviews.unminimize.useMutation({
         onMutate: async ({ subjectId }) => {
-            await utils.timeline.list.cancel(timelineCacheKey);
+            await cancelTimelineList(utils, timelineKey);
 
-            const prevData =
-                utils.timeline.list.getInfiniteData(timelineCacheKey);
+            const prevData = getTimelineListData(utils, timelineKey);
 
-            utils.timeline.list.setInfiniteData(timelineCacheKey, (old) => {
-                if (!old) return old;
-                return {
-                    ...old,
-                    pages: old.pages.map((page) => ({
-                        ...page,
-                        events: page.events.map((ev) =>
-                            ev.__typename === "PullRequestReview" &&
-                            ev.id === subjectId
-                                ? {
-                                      ...ev,
-                                      isMinimized: false,
-                                      minimizedReason: null,
-                                  }
-                                : ev,
-                        ),
-                    })),
-                };
-            });
+            updateReviewMinimizedInTimeline(
+                utils,
+                timelineKey,
+                subjectId,
+                false,
+                null,
+            );
 
             return { prevData };
         },
-        onError: (_err, _vars, ctx) => {
-            if (ctx?.prevData) {
-                utils.timeline.list.setInfiniteData(
-                    timelineCacheKey,
-                    ctx.prevData,
-                );
-            }
-        },
-        onSettled: () => {
-            utils.timeline.list.invalidate(timelineCacheKey);
-        },
+        ...timelineRollbackHandlers(utils, timelineKey),
     });
 
     if (isMinimized) {
         return (
-            <div className="/50 rounded-lg border border-border bg-surface-secondary p-3">
-                <div className="flex items-center justify-between">
-                    <p className="text-sm text-text-tertiary">
-                        A review by{" "}
-                        <span className="font-medium text-text-label">
-                            {event.author?.login ?? "unknown"}
-                        </span>{" "}
-                        was minimized as{" "}
-                        <span className="font-medium text-text-label">
-                            {event.minimizedReason
-                                ? formatReason(event.minimizedReason)
-                                : "outdated"}
-                        </span>
-                    </p>
-                    <button
-                        type="button"
-                        onClick={() =>
-                            onToggleMinimized(event.databaseId, true)
-                        }
-                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label dark:hover:text-zinc-300"
-                    >
-                        <ChevronDown size={14} />
-                        Show review
-                    </button>
-                </div>
-            </div>
+            <MinimizedCommentBanner
+                subject="review"
+                authorLogin={event.author?.login}
+                minimizedReason={event.minimizedReason}
+                onShow={() => onToggleMinimized(event.databaseId, true)}
+            />
         );
     }
 
@@ -301,7 +220,7 @@ export function PullRequestReviewContent({
             </p>
             {event.body && (
                 <div className="mt-3">
-                    <CommentCard
+                    <TimelineCommentCard
                         id={`pullrequestreview-${event.databaseId}`}
                         user={
                             event.author
@@ -311,148 +230,94 @@ export function PullRequestReviewContent({
                                   }
                                 : null
                         }
-                        variant="standalone"
-                        hideAvatar
                         tailDirection="up"
                         userHref={event.author?.url}
+                        databaseId={event.databaseId}
                         createdAt={event.submittedAt ?? event.createdAt}
                         authorAssociation={event.authorAssociation}
                         isEditing={isEditing}
                         editBody={editBody}
                         onEditBodyChange={onEditBodyChange}
                         onCancelEdit={onCancelEdit}
-                        onSaveEdit={() => {
-                            onSaveEdit(event.databaseId, editBody);
-                        }}
+                        onSaveEdit={onSaveEdit}
                         owner={owner}
                         repo={repo}
                         headerActions={
                             <div className="flex items-center gap-1">
                                 {event.body && !isEditing && (
-                                    <Popover
+                                    <CommentMenu
                                         open={menuOpen}
                                         onOpenChange={setMenuOpen}
                                     >
-                                        <PopoverTrigger asChild>
-                                            <button
-                                                type="button"
-                                                aria-label="More options"
-                                                className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
-                                            >
-                                                <MoreVertical size={14} />
-                                            </button>
-                                        </PopoverTrigger>
-                                        <PopoverContent
-                                            className="w-44 bg-surface p-1"
-                                            align="end"
-                                        >
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    handleCopyLink();
-                                                    setMenuOpen(false);
-                                                }}
-                                                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                            >
-                                                {copied ? (
-                                                    <Check size={14} />
-                                                ) : (
-                                                    <Link size={14} />
-                                                )}
-                                                {copied
-                                                    ? "Copied"
-                                                    : "Copy link"}
-                                            </button>
-                                            {(isAuthor || _canEdit) &&
-                                                _canInteract && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            onStartEdit(
-                                                                event.databaseId,
-                                                                displayBody,
-                                                            );
-                                                            setMenuOpen(false);
-                                                        }}
-                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                                    >
-                                                        <SquarePen size={14} />
-                                                        Edit
-                                                    </button>
-                                                )}
-                                            {_canInteract &&
-                                                !isPendingByCurrentUser &&
-                                                (event.isMinimized ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setMenuOpen(false);
-                                                            unminimizeMutation.mutate(
-                                                                {
-                                                                    owner,
-                                                                    repo,
-                                                                    number,
-                                                                    subjectId:
-                                                                        event.id,
-                                                                },
-                                                            );
-                                                        }}
-                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                                    >
-                                                        <Eye size={14} />
-                                                        Unhide
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setMenuOpen(false);
-                                                            setHideDialogOpen(
-                                                                true,
-                                                            );
-                                                        }}
-                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                                    >
-                                                        <EyeOff size={14} />
-                                                        Hide
-                                                    </button>
-                                                ))}
-                                        </PopoverContent>
-                                    </Popover>
+                                        <CopyLinkMenuItem
+                                            anchor={`pullrequestreview-${event.databaseId}`}
+                                            onClose={() => setMenuOpen(false)}
+                                        />
+                                        {(isAuthor || _canEdit) &&
+                                            _canInteract && (
+                                                <EditMenuItem
+                                                    onClick={() =>
+                                                        onStartEdit(
+                                                            event.databaseId,
+                                                            displayBody,
+                                                        )
+                                                    }
+                                                    onClose={() =>
+                                                        setMenuOpen(false)
+                                                    }
+                                                />
+                                            )}
+                                        {_canInteract &&
+                                            !isPendingByCurrentUser &&
+                                            (event.isMinimized ? (
+                                                <CommentMenuItem
+                                                    onClick={() => {
+                                                        setMenuOpen(false);
+                                                        unminimizeMutation.mutate(
+                                                            {
+                                                                owner,
+                                                                repo,
+                                                                number,
+                                                                subjectId:
+                                                                    event.id,
+                                                            },
+                                                        );
+                                                    }}
+                                                >
+                                                    <Eye size={14} />
+                                                    Unhide
+                                                </CommentMenuItem>
+                                            ) : (
+                                                <CommentMenuItem
+                                                    onClick={() => {
+                                                        setMenuOpen(false);
+                                                        setHideDialogOpen(true);
+                                                    }}
+                                                >
+                                                    <EyeOff size={14} />
+                                                    Hide
+                                                </CommentMenuItem>
+                                            ))}
+                                    </CommentMenu>
                                 )}
                             </div>
                         }
                         footer={
                             !isEditing &&
                             _canInteract && (
-                                <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                                    <ReactionPicker
-                                        reactions={reviewReactionsArr}
-                                        currentUserLogin={
-                                            permissionContext.currentUser
-                                        }
-                                        onReact={(content) =>
-                                            onReactToReview(
-                                                event.id,
-                                                event.databaseId,
-                                                content,
-                                            )
-                                        }
-                                    />
-                                    <ReactionBar
-                                        reactions={reviewReactionsArr}
-                                        currentUserLogin={
-                                            permissionContext.currentUser
-                                        }
-                                        onReact={(content) =>
-                                            onReactToReview(
-                                                event.id,
-                                                event.databaseId,
-                                                content,
-                                            )
-                                        }
-                                    />
-                                </div>
+                                <CommentReactionFooter
+                                    reactions={reviewReactionsArr}
+                                    currentUserLogin={
+                                        permissionContext.currentUser
+                                    }
+                                    onReact={(content) =>
+                                        onReactToReview(
+                                            event.id,
+                                            event.databaseId,
+                                            content,
+                                        )
+                                    }
+                                />
                             )
                         }
                     >
@@ -465,7 +330,7 @@ export function PullRequestReviewContent({
                                 (isAuthor || _canEdit) && _canInteract
                             }
                         />
-                    </CommentCard>
+                    </TimelineCommentCard>
                 </div>
             )}
             <ReviewComments

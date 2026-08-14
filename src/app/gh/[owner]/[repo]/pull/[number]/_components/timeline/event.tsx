@@ -28,11 +28,18 @@ import {
 import Image from "next/image";
 import { useState } from "react";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import { savedBodyMutationHandlers } from "~/components/saved-body-mutations";
+import {
+    cancelTimelineList,
+    filterTimelineEvents,
+    getTimelineListData,
+    timelineListKey,
+    timelineRollbackHandlers,
+    toggleTimelineCommentReactions,
+} from "~/components/timeline-cache";
 import { Label } from "~/components/ui/label";
 import { UserLink } from "~/components/user-link";
 import type { ReactionContent } from "~/lib/reactions";
-import { toggleReactionInList } from "~/lib/reactions";
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewComment } from "~/server/github";
 import type {
     GQLReactionNode,
@@ -61,14 +68,10 @@ import { RenamedTitleContent } from "./content/renamed-title";
 import { ReviewDismissedContent } from "./content/review-dismissed";
 import { ReviewRequestEventContent } from "./content/review-request-event";
 import { StateEventContent } from "./content/state-event";
-import type { TimelineWrapper } from "./types";
+import type { LabelChange, TimelineWrapper } from "./types";
 import { approvalHasWriteAccess } from "./utils";
 
-export const formatReason = (reason: string) =>
-    reason
-        .toLowerCase()
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase());
+export { formatReason } from "~/components/minimized-comment-banner";
 
 interface TimelineEventProps {
     wrapper: TimelineWrapper;
@@ -146,40 +149,14 @@ function AggregatedLabel({
                 {added.length > 0 && (
                     <>
                         {" added "}
-                        {added.map((c, i) => (
-                            <span key={c.label.name}>
-                                {i > 0 && i === added.length - 1 ? " and " : ""}
-                                <Label
-                                    color={c.label.color}
-                                    description={
-                                        c.label.description ?? undefined
-                                    }
-                                >
-                                    {c.label.name}
-                                </Label>
-                            </span>
-                        ))}
+                        <LabelChips changes={added} />
                     </>
                 )}
                 {added.length > 0 && removed.length > 0 && " and "}
                 {removed.length > 0 && (
                     <>
                         {" removed "}
-                        {removed.map((c, i) => (
-                            <span key={c.label.name}>
-                                {i > 0 && i === removed.length - 1
-                                    ? " and "
-                                    : ""}
-                                <Label
-                                    color={c.label.color}
-                                    description={
-                                        c.label.description ?? undefined
-                                    }
-                                >
-                                    {c.label.name}
-                                </Label>
-                            </span>
-                        ))}
+                        <LabelChips changes={removed} />
                     </>
                 )}
                 <span
@@ -187,6 +164,24 @@ function AggregatedLabel({
                 >{` ${total === 1 ? "label" : "labels"} ${timestamp}`}</span>
             </div>
         </div>
+    );
+}
+
+function LabelChips({ changes }: { changes: LabelChange[] }) {
+    return (
+        <>
+            {changes.map((c, i) => (
+                <span key={c.label.name}>
+                    {i > 0 && i === changes.length - 1 ? " and " : ""}
+                    <Label
+                        color={c.label.color}
+                        description={c.label.description ?? undefined}
+                    >
+                        {c.label.name}
+                    </Label>
+                </span>
+            ))}
+        </>
     );
 }
 
@@ -313,7 +308,6 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
     );
 }
 
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: FIXME: cleanup the complex mutations
 function EventContent({
     event,
     owner,
@@ -342,116 +336,51 @@ function EventContent({
 
     const utils = api.useUtils();
 
-    const updateCommentMutation = api.pulls.updateComment.useMutation({
-        onMutate: ({ commentId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
-            setEditingCommentId(null);
-        },
-        onError: (_, { commentId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[commentId];
-                return next;
-            });
-            setEditingCommentId(commentId);
-        },
-    });
+    const updateCommentMutation = api.pulls.updateComment.useMutation(
+        savedBodyMutationHandlers({
+            idKey: "commentId",
+            setSavedBodies,
+            setEditingCommentId,
+        }),
+    );
 
-    const updateReviewMutation = api.pulls.updateReview.useMutation({
-        onMutate: ({ reviewId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [reviewId]: body }));
-            setEditingCommentId(null);
-        },
-        onError: (_, { reviewId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[reviewId];
-                return next;
-            });
-            setEditingCommentId(reviewId);
-        },
-    });
+    const updateReviewMutation = api.pulls.updateReview.useMutation(
+        savedBodyMutationHandlers({
+            idKey: "reviewId",
+            setSavedBodies,
+            setEditingCommentId,
+        }),
+    );
     // Task-list checkbox toggles. Separate mutations from the edit flow so
     // their onMutate/onError contract mirrors the toggle flow (optimistic body
     // overlay, no edit-mode transitions) while sharing `savedBodies`.
-    const commentTaskToggleMutation = api.pulls.updateComment.useMutation({
-        onMutate: ({ commentId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
-        },
-        onError: (_, { commentId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[commentId];
-                return next;
-            });
-        },
-    });
+    const commentTaskToggleMutation = api.pulls.updateComment.useMutation(
+        savedBodyMutationHandlers({ idKey: "commentId", setSavedBodies }),
+    );
 
-    const reviewTaskToggleMutation = api.pulls.updateReview.useMutation({
-        onMutate: ({ reviewId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [reviewId]: body }));
-        },
-        onError: (_, { reviewId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[reviewId];
-                return next;
-            });
-        },
-    });
+    const reviewTaskToggleMutation = api.pulls.updateReview.useMutation(
+        savedBodyMutationHandlers({ idKey: "reviewId", setSavedBodies }),
+    );
+
+    const timelineKey = timelineListKey({ owner, repo, number });
 
     const deleteCommentMutation = api.pulls.deleteComment.useMutation({
         onMutate: async ({ commentId }) => {
-            await utils.timeline.list.cancel({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
+            await cancelTimelineList(utils, timelineKey);
 
-            const prevData = utils.timeline.list.getInfiniteData({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
+            const prevData = getTimelineListData(utils, timelineKey);
 
-            utils.timeline.list.setInfiniteData(
-                { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                (old) => {
-                    if (!old) return old;
-                    return {
-                        ...old,
-                        pages: old.pages.map((page) => ({
-                            ...page,
-                            events: page.events.filter(
-                                (event) =>
-                                    event.__typename !== "IssueComment" ||
-                                    event.databaseId !== commentId,
-                            ),
-                        })),
-                    };
-                },
+            filterTimelineEvents(
+                utils,
+                timelineKey,
+                (event) =>
+                    event.__typename !== "IssueComment" ||
+                    event.databaseId !== commentId,
             );
 
             return { prevData };
         },
-        onError: (_err, _vars, ctx) => {
-            if (ctx?.prevData) {
-                utils.timeline.list.setInfiniteData(
-                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                    ctx.prevData,
-                );
-            }
-        },
-        onSettled: () => {
-            utils.timeline.list.invalidate({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
-        },
+        ...timelineRollbackHandlers(utils, timelineKey),
     });
 
     const commentReactionMutation =
@@ -459,62 +388,23 @@ function EventContent({
             onMutate: async ({ commentId, content }) => {
                 const user = permissionContext.currentUser;
                 if (!user) {
-                    return;
+                    return { prevData: undefined };
                 }
-                await utils.timeline.list.cancel();
+                await cancelTimelineList(utils, timelineKey);
 
-                const prevData = utils.timeline.list.getInfiniteData({
-                    owner,
-                    repo,
-                    number,
-                    limit: TIMELINE_PAGE_SIZE,
-                });
+                const prevData = getTimelineListData(utils, timelineKey);
 
-                utils.timeline.list.setInfiniteData(
-                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                    (old) => {
-                        if (!old) return old;
-                        return {
-                            ...old,
-                            pages: old.pages.map((page) => {
-                                if (!(commentId in page.commentReactions)) {
-                                    return page;
-                                }
-                                return {
-                                    ...page,
-                                    commentReactions: {
-                                        ...page.commentReactions,
-                                        [commentId]: toggleReactionInList(
-                                            page.commentReactions[commentId] ??
-                                                [],
-                                            user,
-                                            content,
-                                        ),
-                                    },
-                                };
-                            }),
-                        };
-                    },
+                toggleTimelineCommentReactions(
+                    utils,
+                    timelineKey,
+                    commentId,
+                    user,
+                    content,
                 );
 
                 return { prevData };
             },
-            onError: (_err, _vars, ctx) => {
-                if (ctx?.prevData) {
-                    utils.timeline.list.setInfiniteData(
-                        { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                        ctx.prevData,
-                    );
-                }
-            },
-            onSettled: () => {
-                utils.timeline.list.invalidate({
-                    owner,
-                    repo,
-                    number,
-                    limit: TIMELINE_PAGE_SIZE,
-                });
-            },
+            ...timelineRollbackHandlers(utils, timelineKey),
         });
 
     const reviewReactionMutation =
@@ -522,67 +412,25 @@ function EventContent({
             onMutate: async ({ content, databaseId }) => {
                 const user = permissionContext.currentUser;
                 if (!user) {
-                    return;
+                    return { prevData: undefined };
                 }
-                await utils.timeline.list.cancel({
-                    owner,
-                    repo,
-                    number,
-                    limit: TIMELINE_PAGE_SIZE,
-                });
+                await cancelTimelineList(utils, timelineKey);
 
-                const prevData = utils.timeline.list.getInfiniteData({
-                    owner,
-                    repo,
-                    number,
-                    limit: TIMELINE_PAGE_SIZE,
-                });
+                const prevData = getTimelineListData(utils, timelineKey);
 
-                utils.timeline.list.setInfiniteData(
-                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                    (old) => {
-                        if (!old || !databaseId) return old;
-                        return {
-                            ...old,
-                            pages: old.pages.map((page) => {
-                                if (!(databaseId in page.commentReactions)) {
-                                    return page;
-                                }
-                                return {
-                                    ...page,
-                                    commentReactions: {
-                                        ...page.commentReactions,
-                                        [databaseId]: toggleReactionInList(
-                                            page.commentReactions[databaseId] ??
-                                                [],
-                                            user,
-                                            content,
-                                        ),
-                                    },
-                                };
-                            }),
-                        };
-                    },
-                );
+                if (databaseId) {
+                    toggleTimelineCommentReactions(
+                        utils,
+                        timelineKey,
+                        databaseId,
+                        user,
+                        content,
+                    );
+                }
 
                 return { prevData };
             },
-            onError: (_err, _vars, ctx) => {
-                if (ctx?.prevData) {
-                    utils.timeline.list.setInfiniteData(
-                        { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                        ctx.prevData,
-                    );
-                }
-            },
-            onSettled: () => {
-                utils.timeline.list.invalidate({
-                    owner,
-                    repo,
-                    number,
-                    limit: TIMELINE_PAGE_SIZE,
-                });
-            },
+            ...timelineRollbackHandlers(utils, timelineKey),
         });
 
     const handleSaveComment = (commentId: number, body: string) => {
