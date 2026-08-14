@@ -1,25 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { env } from "~/env";
-import {
-    codebergAccessToken,
-    getSession,
-    githubAccessToken,
-} from "~/server/auth";
-import { getRepo as getCodebergRepo } from "~/server/codeberg";
-import { getRepo as getGitHubRepo } from "~/server/github";
-
-async function checkGitHubRepo(token: string, owner: string, repo: string) {
-    try {
-        await getGitHubRepo(token, owner, repo);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-async function checkCodebergRepo(token: string, owner: string, repo: string) {
-    return (await getCodebergRepo(token, owner, repo)) !== null;
-}
+import { resolveRepoProviders } from "../_components/repo-redirect";
 
 export default async function IssuesRedirectPage({
     params,
@@ -36,22 +16,11 @@ export default async function IssuesRedirectPage({
     }
     const qString = qs.toString();
 
-    const session = await getSession();
-    if (!session && !env.GITHUB_ANONYMOUS_TOKEN) notFound();
+    const { github, codeberg } = await resolveRepoProviders(owner, repo);
 
-    const [githubToken, codebergToken] = await Promise.all([
-        githubAccessToken(),
-        codebergAccessToken(),
-    ]);
-
-    const [githubExists, codebergExists] = await Promise.all([
-        githubToken ? checkGitHubRepo(githubToken, owner, repo) : false,
-        codebergToken ? checkCodebergRepo(codebergToken, owner, repo) : false,
-    ]);
-
-    if (githubExists)
+    if (github)
         redirect(`/gh/${owner}/${repo}/issues${qString ? `?${qString}` : ""}`);
-    if (codebergExists)
+    if (codeberg)
         redirect(`/cb/${owner}/${repo}/issues${qString ? `?${qString}` : ""}`);
     notFound();
 }
