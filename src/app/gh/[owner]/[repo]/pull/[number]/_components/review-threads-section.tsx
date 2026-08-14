@@ -3,10 +3,11 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { CheckCircle, Circle, Code2, MessageSquare } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { cn } from "~/lib/utils";
 import type { ReviewThreadSummary } from "~/server/github";
 import { api } from "~/trpc/react";
+import { useInfiniteScrollSentinel, VirtualItemFrame } from "./virtual-list";
 
 const THREAD_ITEM_HEIGHT = 50;
 
@@ -166,24 +167,11 @@ export function ReviewThreadsSection({
         overscan: 5,
     });
 
-    const sentinelRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const el = sentinelRef.current;
-        const scrollEl = scrollRef.current;
-        if (!el || !scrollEl || !hasNextPage) return;
-
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry?.isIntersecting) {
-                    fetchNextPage();
-                }
-            },
-            { root: scrollEl, rootMargin: "400px" },
-        );
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, [hasNextPage, fetchNextPage]);
+    const sentinelRef = useInfiniteScrollSentinel({
+        hasNextPage,
+        fetchNextPage,
+        scrollRef,
+    });
 
     if (isLoading) {
         return (
@@ -211,19 +199,12 @@ export function ReviewThreadsSection({
                     const thread = threads[virtualItem.index];
                     if (!thread) return null;
                     return (
-                        <div
+                        <VirtualItemFrame
                             key={virtualItem.key}
-                            style={{
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                width: "100%",
-                                height: `${virtualItem.size}px`,
-                                transform: `translateY(${virtualItem.start}px)`,
-                            }}
+                            virtualItem={virtualItem}
                         >
                             <ThreadCard thread={thread} />
-                        </div>
+                        </VirtualItemFrame>
                     );
                 })}
             </div>

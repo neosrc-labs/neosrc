@@ -4,7 +4,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type React from "react";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { Async } from "~/components/async";
 import { CommitAuthors } from "~/components/commit-authors";
 import { CommitSubject } from "~/components/commit-subject";
@@ -12,6 +12,7 @@ import type { PullsGetResponseData } from "~/server/github";
 import type { GQLCommitWithAuthors } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
+import { useInfiniteScrollSentinel, VirtualItemFrame } from "./virtual-list";
 
 const COMMIT_ITEM_HEIGHT = 52;
 
@@ -107,24 +108,11 @@ function CommitsList({
         overscan: 5,
     });
 
-    const sentinelRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const el = sentinelRef.current;
-        const scrollEl = scrollRef.current;
-        if (!el || !scrollEl || !hasNextPage) return;
-
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry?.isIntersecting) {
-                    fetchNextPage();
-                }
-            },
-            { root: scrollEl, rootMargin: "400px" },
-        );
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, [hasNextPage, fetchNextPage, scrollRef]);
+    const sentinelRef = useInfiniteScrollSentinel({
+        hasNextPage,
+        fetchNextPage,
+        scrollRef,
+    });
 
     const baseUrl = `/gh/${pullRequest.base.repo.owner.login}/${pullRequest.base.repo.name}/pull/${pullRequest.number}/changes`;
 
@@ -143,16 +131,9 @@ function CommitsList({
                         ? commit.oid.startsWith(currentSha)
                         : false;
                     return (
-                        <div
+                        <VirtualItemFrame
                             key={virtualItem.key}
-                            style={{
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                width: "100%",
-                                height: `${virtualItem.size}px`,
-                                transform: `translateY(${virtualItem.start}px)`,
-                            }}
+                            virtualItem={virtualItem}
                         >
                             <div
                                 className={`flex items-start gap-2 rounded-md px-2 py-1 text-sm transition-colors hover:bg-surface-tertiary ${
@@ -194,7 +175,7 @@ function CommitsList({
                                     )}
                                 </Link>
                             </div>
-                        </div>
+                        </VirtualItemFrame>
                     );
                 })}
             </div>
