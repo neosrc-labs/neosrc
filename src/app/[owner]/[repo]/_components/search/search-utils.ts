@@ -65,6 +65,22 @@ export function removeQualifier(
     return formatQuery(parsed);
 }
 
+export function toggleLabelQualifier(query: string, name: string): string {
+    return hasQualifier(query, "label", name)
+        ? removeQualifier(query, "label", name)
+        : addQualifier(query, "label", name);
+}
+
+export function toggleValueQualifier(
+    query: string,
+    key: string,
+    value: string,
+): string {
+    return hasQualifier(query, key, value)
+        ? removeQualifier(query, key, value)
+        : replaceQualifier(query, key, value);
+}
+
 const HIGHLIGHT_RE = /(\w+:"[^"]*"|\w+:\S+)/g;
 
 export interface QuerySegment {
