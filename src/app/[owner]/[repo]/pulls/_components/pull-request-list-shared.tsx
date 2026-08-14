@@ -1,27 +1,19 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-    addQualifier,
-    hasQualifier,
-    removeQualifier,
-    replaceQualifier,
-} from "~/app/[owner]/[repo]/_components/search/search-utils";
+import { toggleValueQualifier } from "~/app/[owner]/[repo]/_components/search/search-utils";
+import { SearchResultListShell } from "~/app/[owner]/[repo]/_components/search-result-list";
 import { useSearchList } from "~/app/[owner]/[repo]/_components/use-search-list";
 import type { PrRowData } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
 import { PullRequestRow } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
 import { computeStatusState } from "~/components/ci-status";
-import { Pagination } from "~/components/ui/pagination";
 import type { PrSearchItem } from "~/server/api/routers/pulls/types";
 import { api } from "~/trpc/react";
-import { PullRequestEmptyState } from "./pull-request-empty-state";
+import { ReviewFilterDropdown, StatusFilterDropdown } from "./filter-dropdowns";
 import type {
     FilterState,
     PullRequestListConfig,
 } from "./pull-request-list-config";
-import { PullRequestSearchBar } from "./pull-request-search-bar";
-import { PullRequestSkeleton } from "./pull-request-skeleton";
-import { PullRequestToolbar } from "./pull-request-toolbar";
 
 function normalizeSearchItem(item: PrSearchItem): PrRowData {
     return {
@@ -71,15 +63,11 @@ export function PullRequestListShared({
 
     const list = useSearchList<PrSearchItem>(
         {
-            provider: config.provider,
+            ...config,
             baseRoute: `${config.basePath}/${owner}/${repo}/pulls`,
             owner,
             repo,
             defaultState,
-            qualifiers: config.qualifiers,
-            autocompleteOptions: config.autocompleteOptions,
-            stateQualifierFn: (tab: string) =>
-                tab === "merged" ? "is:merged" : `is:${tab}`,
         },
         {
             useSearchQuery: api.pulls.search.useQuery,
@@ -114,153 +102,48 @@ export function PullRequestListShared({
         });
     }, [list.data, detailsByPr, config.fetchStatusChecks]);
 
+    const toggleFilter = (key: string, value: string) => {
+        const newQuery = toggleValueQualifier(list.searchQuery, key, value);
+        list.setSearchInput(newQuery);
+        list.navigate({
+            q: newQuery || null,
+            page: null,
+        });
+    };
+
     return (
-        <div>
-            <PullRequestSearchBar
-                searchInput={list.searchInput}
-                setSearchInput={list.setSearchInput}
-                cursorPos={list.cursorPos}
-                setCursorPos={list.setCursorPos}
-                inputRef={list.inputRef}
-                searchBarRef={list.searchBarRef}
-                autocompleteRef={list.autocompleteRef}
-                config={config}
-                owner={owner}
-                repo={repo}
-                onSearch={list.handleSearch}
-                onClear={list.handleClearSearch}
-                onAutocompleteSelect={list.handleAutocompleteSelect}
-            />
-
-            <PullRequestToolbar
-                activeTab={list.activeTab as FilterState}
-                searchQuery={list.searchQuery}
-                setSearchInput={list.setSearchInput}
-                currentSort={list.currentSort}
-                currentOrder={list.currentOrder}
-                config={config}
-                owner={owner}
-                repo={repo}
-                stateCounts={
-                    list.stateCounts as
-                        | { open: number; closed: number; merged: number }
-                        | undefined
-                }
-                onTabChange={list.setTab}
-                onNavigate={list.navigate}
-                onAddQualifier={list.handleAddQualifier}
-                onRemoveQualifier={list.handleRemoveQualifier}
-            />
-
-            <div className="flex items-center gap-3 border-border-subtle border-b px-4 py-1.5 text-text-muted text-xs">
-                <div className="size-4 shrink-0" />
-                <div className="flex-1" />
-                <div className="flex w-20 shrink-0 items-center justify-center">
-                    <span>Assignee</span>
-                </div>
-                <div className="flex w-16 shrink-0 items-center justify-end">
-                    <span>Comments</span>
-                </div>
-            </div>
-
-            <div>
-                {list.showLoading ? (
-                    <PullRequestSkeleton />
-                ) : items.length === 0 ? (
-                    <PullRequestEmptyState
-                        searchQuery={list.searchQuery}
-                        activeTab={list.activeTab}
-                    />
-                ) : (
-                    <div>
-                        {items.map((pr) => (
-                            <PullRequestRow
-                                key={pr.id}
-                                provider={config.provider}
-                                pr={pr}
-                                owner={owner}
-                                repo={repo}
-                                onLabelFilter={(name) => {
-                                    const newQuery = hasQualifier(
-                                        list.searchQuery,
-                                        "label",
-                                        name,
-                                    )
-                                        ? removeQualifier(
-                                              list.searchQuery,
-                                              "label",
-                                              name,
-                                          )
-                                        : addQualifier(
-                                              list.searchQuery,
-                                              "label",
-                                              name,
-                                          );
-                                    list.setSearchInput(newQuery);
-                                    list.navigate({
-                                        q: newQuery || null,
-                                        page: null,
-                                    });
-                                }}
-                                onAuthorFilter={(login) => {
-                                    const newQuery = hasQualifier(
-                                        list.searchQuery,
-                                        "author",
-                                        login,
-                                    )
-                                        ? removeQualifier(
-                                              list.searchQuery,
-                                              "author",
-                                              login,
-                                          )
-                                        : replaceQualifier(
-                                              list.searchQuery,
-                                              "author",
-                                              login,
-                                          );
-                                    list.setSearchInput(newQuery);
-                                    list.navigate({
-                                        q: newQuery || null,
-                                        page: null,
-                                    });
-                                }}
-                                onAssigneesFilter={(login) => {
-                                    const newQuery = hasQualifier(
-                                        list.searchQuery,
-                                        "assignee",
-                                        login,
-                                    )
-                                        ? removeQualifier(
-                                              list.searchQuery,
-                                              "assignee",
-                                              login,
-                                          )
-                                        : replaceQualifier(
-                                              list.searchQuery,
-                                              "assignee",
-                                              login,
-                                          );
-                                    list.setSearchInput(newQuery);
-                                    list.navigate({
-                                        q: newQuery || null,
-                                        page: null,
-                                    });
-                                }}
-                            />
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {!list.showLoading && items.length > 0 && (
-                <Pagination
-                    currentPage={list.currentPage}
-                    totalPages={list.totalPages}
-                    onPageChange={(page) =>
-                        list.navigate({ page: String(page) })
-                    }
+        <SearchResultListShell
+            config={config}
+            owner={owner}
+            repo={repo}
+            list={list}
+            items={items}
+            toolbarChildren={
+                <>
+                    {config.showStatusFilter && (
+                        <StatusFilterDropdown
+                            currentQuery={list.searchQuery}
+                            onToggle={toggleFilter}
+                        />
+                    )}
+                    {config.showReviewFilter && (
+                        <ReviewFilterDropdown
+                            currentQuery={list.searchQuery}
+                            onToggle={toggleFilter}
+                        />
+                    )}
+                </>
+            }
+            renderRow={(pr, handlers) => (
+                <PullRequestRow
+                    key={pr.id}
+                    provider={config.provider}
+                    pr={pr}
+                    owner={owner}
+                    repo={repo}
+                    {...handlers}
                 />
             )}
-        </div>
+        />
     );
 }

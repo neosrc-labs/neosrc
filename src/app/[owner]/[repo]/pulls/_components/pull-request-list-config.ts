@@ -1,28 +1,22 @@
+import type { LucideIcon } from "lucide-react";
+import { GitMerge, GitPullRequest, GitPullRequestClosed } from "lucide-react";
+import {
+    type SearchListConfig,
+    SORT_AUTOCOMPLETE_OPTIONS,
+} from "~/app/[owner]/[repo]/_components/search-result-list";
+
 export type FilterState = "open" | "closed" | "merged";
 
-export interface PullRequestListConfig {
-    provider: "gh" | "cb";
-    basePath: string;
-    qualifiers: string[];
-    autocompleteOptions: Record<string, { label: string; subtitle?: string }[]>;
-    showAssigneeFilter: boolean;
+export interface PullRequestListConfig extends SearchListConfig {
     showStatusFilter: boolean;
     showReviewFilter: boolean;
     fetchStatusChecks: boolean;
-    externalUrls: (
-        owner: string,
-        repo: string,
-    ) => {
-        labels: string;
-        milestones: string;
-        newPr: string;
-    };
 }
 
-export const TABS: { key: FilterState; label: string }[] = [
-    { key: "open", label: "Open" },
-    { key: "closed", label: "Closed" },
-    { key: "merged", label: "Merged" },
+export const TABS: { key: FilterState; label: string; icon: LucideIcon }[] = [
+    { key: "open", label: "Open", icon: GitPullRequest },
+    { key: "closed", label: "Closed", icon: GitPullRequestClosed },
+    { key: "merged", label: "Merged", icon: GitMerge },
 ];
 
 const PR_QUALIFIERS = [
@@ -39,12 +33,7 @@ const GH_AUTOCOMPLETE_OPTIONS: Record<
     string,
     { label: string; subtitle?: string }[]
 > = {
-    sort: [
-        { label: "created-desc", subtitle: "Newest" },
-        { label: "created-asc", subtitle: "Oldest" },
-        { label: "updated-desc", subtitle: "Recently updated" },
-        { label: "comments-desc", subtitle: "Most commented" },
-    ],
+    sort: SORT_AUTOCOMPLETE_OPTIONS,
     review: [
         { label: "none", subtitle: "Not reviewed" },
         { label: "required", subtitle: "Review required" },
@@ -67,12 +56,7 @@ const CB_AUTOCOMPLETE_OPTIONS: Record<
     string,
     { label: string; subtitle?: string }[]
 > = {
-    sort: [
-        { label: "created-desc", subtitle: "Newest" },
-        { label: "created-asc", subtitle: "Oldest" },
-        { label: "updated-desc", subtitle: "Recently updated" },
-        { label: "comments-desc", subtitle: "Most commented" },
-    ],
+    sort: SORT_AUTOCOMPLETE_OPTIONS,
     is: [
         { label: "open", subtitle: "Open pull requests" },
         { label: "closed", subtitle: "Closed pull requests" },
@@ -80,20 +64,31 @@ const CB_AUTOCOMPLETE_OPTIONS: Record<
     ],
 };
 
+const SHARED_OPTIONS = {
+    stateQualifierFn: (tab: string) =>
+        tab === "merged" ? "is:merged" : `is:${tab}`,
+    tabs: TABS,
+    itemName: "pull requests",
+    placeholder: "Search pull requests by title, body, or comments",
+    newItemIcon: GitPullRequest,
+    newItemLabel: "New Pull Request",
+};
+
 export const ghConfig: PullRequestListConfig = {
     provider: "gh",
     basePath: "/gh",
     qualifiers: [...PR_QUALIFIERS],
     autocompleteOptions: GH_AUTOCOMPLETE_OPTIONS,
+    externalUrls: (owner: string, repo: string) => ({
+        labels: `https://github.com/${owner}/${repo}/labels`,
+        milestones: `https://github.com/${owner}/${repo}/milestones`,
+        new: `https://github.com/${owner}/${repo}/compare`,
+    }),
     showAssigneeFilter: true,
     showStatusFilter: true,
     showReviewFilter: true,
     fetchStatusChecks: true,
-    externalUrls: (owner: string, repo: string) => ({
-        labels: `https://github.com/${owner}/${repo}/labels`,
-        milestones: `https://github.com/${owner}/${repo}/milestones`,
-        newPr: `https://github.com/${owner}/${repo}/compare`,
-    }),
+    ...SHARED_OPTIONS,
 };
 
 export const cbConfig: PullRequestListConfig = {
@@ -101,13 +96,14 @@ export const cbConfig: PullRequestListConfig = {
     basePath: "/cb",
     qualifiers: ["author", "label", "assignee", "sort", "is"],
     autocompleteOptions: CB_AUTOCOMPLETE_OPTIONS,
+    externalUrls: (owner: string, repo: string) => ({
+        labels: `https://codeberg.org/${owner}/${repo}/labels`,
+        milestones: `https://codeberg.org/${owner}/${repo}/milestones`,
+        new: `https://codeberg.org/${owner}/${repo}/compare`,
+    }),
     showAssigneeFilter: false,
     showStatusFilter: false,
     showReviewFilter: false,
     fetchStatusChecks: false,
-    externalUrls: (owner: string, repo: string) => ({
-        labels: `https://codeberg.org/${owner}/${repo}/labels`,
-        milestones: `https://codeberg.org/${owner}/${repo}/milestones`,
-        newPr: `https://codeberg.org/${owner}/${repo}/compare`,
-    }),
+    ...SHARED_OPTIONS,
 };
