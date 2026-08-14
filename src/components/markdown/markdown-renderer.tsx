@@ -20,7 +20,6 @@ import darkTheme from "react-syntax-highlighter/dist/esm/styles/hljs/atom-one-da
 import lightTheme from "react-syntax-highlighter/dist/esm/styles/hljs/docco";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
-import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { remarkAlert } from "remark-github-blockquote-alert";
 import { MarkdownCommitHoverCard } from "~/components/hovercards/commit-hover-card";
@@ -32,6 +31,7 @@ import { SuggestionBlock } from "./accessories/suggestion-block";
 import { remarkCommitPlugin } from "./plugins/remark-commit";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
+import { remarkLinebreaksPlugin } from "./plugins/remark-linebreaks";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
 
 interface MarkdownRendererProps {
@@ -53,6 +53,7 @@ interface MarkdownRendererProps {
     canToggleTasks?: boolean;
     className?: string;
     linkableHeadings?: boolean;
+    proseSize?: "sm" | "base";
     imageBaseUrl?: string;
     /**
      * Directory of the markdown document relative to the repo root.
@@ -96,6 +97,7 @@ export function MarkdownRenderer({
     linkableHeadings = false,
     imageBaseUrl,
     imageDocDir,
+    proseSize = "sm",
 }: MarkdownRendererProps) {
     const headingSlugsRef = useRef(new Map<string, number>());
     useEffect(() => {
@@ -115,13 +117,14 @@ export function MarkdownRenderer({
     return (
         <div
             className={cn(
-                "prose prose-sm dark:prose-invert max-w-none",
+                "prose dark:prose-invert max-w-none",
+                proseSize === "sm" && "prose-sm",
                 className,
             )}
         >
             <ReactMarkdown
                 remarkPlugins={[
-                    remarkBreaks,
+                    remarkLinebreaksPlugin,
                     remarkGfm,
                     remarkIssuePlugin(owner, repo),
                     remarkCommitPlugin(owner, repo),
