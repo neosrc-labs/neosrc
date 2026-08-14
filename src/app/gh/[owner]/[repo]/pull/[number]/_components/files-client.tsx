@@ -22,6 +22,7 @@ import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
 import type { PullRequestPermissionContext } from "../permissions-utils";
 import { ActionSection } from "./action-section/actions-section";
+import { AdditionsDeletionsBadge } from "./additions-deletions-badge";
 import { Branches } from "./description";
 import { StackBadge } from "./stack-popover";
 
@@ -281,20 +282,10 @@ export function FilesSection({
                                             Refresh
                                         </button>
                                     )}
-                                    <div className="flex items-center gap-1.5 text-sm">
-                                        {pullRequest.additions > 0 && (
-                                            <span className="font-medium text-green-600 dark:text-green-500">
-                                                +
-                                                {pullRequest.additions.toLocaleString()}
-                                            </span>
-                                        )}
-                                        {pullRequest.deletions > 0 && (
-                                            <span className="font-medium text-red-600 dark:text-red-500">
-                                                -
-                                                {pullRequest.deletions.toLocaleString()}
-                                            </span>
-                                        )}
-                                    </div>
+                                    <AdditionsDeletionsBadge
+                                        additions={pullRequest.additions}
+                                        deletions={pullRequest.deletions}
+                                    />
                                 </>
                             );
                         }}

@@ -24,6 +24,7 @@ import {
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import type { ReactionContent } from "~/lib/reactions";
 import type { PullsGetResponseData, StackSuggestion } from "~/server/github";
+import { AdditionsDeletionsBadge } from "./additions-deletions-badge";
 import { ConflictedFiles } from "./conflicted-files";
 import { CreateStackDialog } from "./create-stack-dialog";
 import { StackBanner } from "./stack-banner";
@@ -655,20 +656,11 @@ function TitleRow({
                                             ) : null
                                         }
                                     </Async>
-                                    <div className="ml-auto flex items-center gap-1.5 text-sm">
-                                        {pullRequest.additions > 0 && (
-                                            <span className="font-medium text-green-600 dark:text-green-500">
-                                                +
-                                                {pullRequest.additions.toLocaleString()}
-                                            </span>
-                                        )}
-                                        {pullRequest.deletions > 0 && (
-                                            <span className="font-medium text-red-600 dark:text-red-500">
-                                                -
-                                                {pullRequest.deletions.toLocaleString()}
-                                            </span>
-                                        )}
-                                    </div>
+                                    <AdditionsDeletionsBadge
+                                        additions={pullRequest.additions}
+                                        deletions={pullRequest.deletions}
+                                        className="ml-auto"
+                                    />
                                 </>
                             )}
                         </div>
