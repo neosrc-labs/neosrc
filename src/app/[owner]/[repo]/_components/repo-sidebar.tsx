@@ -18,7 +18,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
-import { cn } from "~/lib/utils";
+import { cn, getDocFileHashName } from "~/lib/utils";
 import { formatRelativeTime } from "~/utils";
 import type { DocFileName } from "./repo-code-page";
 
@@ -364,14 +364,6 @@ function DeployStatusIcon({
         return <Loader2 className={cn(className, "text-amber-500")} />;
     }
     return <Circle className={cn(className, "text-text-muted")} />;
-}
-
-function getDocFileHashName(name: string): string {
-    if (/^readme/i.test(name)) return "readme";
-    if (/^contributing/i.test(name)) return "contributing";
-    if (/^code_of_conduct/i.test(name)) return "code-of-conduct";
-    if (/^(licen[cs]e|copying)/i.test(name)) return "license";
-    return name.toLowerCase().replace(/\.[^.]+$/, "");
 }
 
 function hashColor(name: string): string {

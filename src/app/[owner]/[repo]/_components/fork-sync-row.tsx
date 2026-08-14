@@ -1,7 +1,7 @@
 "use client";
 
 import { GitForkIcon, RefreshCwIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { api } from "~/trpc/react";
 
 interface ForkSyncRowProps {
@@ -10,6 +10,31 @@ interface ForkSyncRowProps {
     parentFullName: string;
     defaultBranch: string;
     parentDefaultBranch: string;
+}
+
+function BranchLink({ href, children }: { href: string; children: ReactNode }) {
+    return (
+        <a
+            href={href}
+            className="font-semibold text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
+        >
+            {children}
+        </a>
+    );
+}
+
+function ComparePhrase({
+    compareUrl,
+    text,
+}: {
+    compareUrl: string | null;
+    text: string;
+}) {
+    return compareUrl ? (
+        <BranchLink href={compareUrl}>{text}</BranchLink>
+    ) : (
+        <strong>{text}</strong>
+    );
 }
 
 export function ForkSyncRow({
@@ -81,85 +106,47 @@ export function ForkSyncRow({
                 {behindBy > 0 && aheadBy > 0 ? (
                     <>
                         This branch is{" "}
-                        {compareUrl ? (
-                            <a
-                                href={compareUrl}
-                                className="font-semibold text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-                            >
-                                {behindBy.toLocaleString()} commits behind and{" "}
-                                {aheadBy.toLocaleString()} commits ahead
-                            </a>
-                        ) : (
-                            <strong>
-                                {behindBy.toLocaleString()} commits behind and{" "}
-                                {aheadBy.toLocaleString()} commits ahead
-                            </strong>
-                        )}{" "}
+                        <ComparePhrase
+                            compareUrl={compareUrl}
+                            text={`${behindBy.toLocaleString()} commits behind and ${aheadBy.toLocaleString()} commits ahead`}
+                        />{" "}
                         of{" "}
-                        <a
-                            href={`/gh/${parentFullName}`}
-                            className="font-semibold text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-                        >
+                        <BranchLink href={`/gh/${parentFullName}`}>
                             {parentFullName}
-                        </a>
+                        </BranchLink>
                         .
                     </>
                 ) : behindBy > 0 ? (
                     <>
                         This branch is{" "}
-                        {compareUrl ? (
-                            <a
-                                href={compareUrl}
-                                className="font-semibold text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-                            >
-                                {behindBy.toLocaleString()} commits behind
-                            </a>
-                        ) : (
-                            <strong>
-                                {behindBy.toLocaleString()} commits behind
-                            </strong>
-                        )}{" "}
-                        <a
-                            href={`/gh/${parentFullName}`}
-                            className="font-semibold text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-                        >
+                        <ComparePhrase
+                            compareUrl={compareUrl}
+                            text={`${behindBy.toLocaleString()} commits behind`}
+                        />{" "}
+                        <BranchLink href={`/gh/${parentFullName}`}>
                             {parentFullName}
-                        </a>
+                        </BranchLink>
                         .
                     </>
                 ) : aheadBy > 0 ? (
                     <>
                         This branch is{" "}
-                        {compareUrl ? (
-                            <a
-                                href={compareUrl}
-                                className="font-semibold text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-                            >
-                                {aheadBy.toLocaleString()} commits ahead
-                            </a>
-                        ) : (
-                            <strong>
-                                {aheadBy.toLocaleString()} commits ahead
-                            </strong>
-                        )}{" "}
+                        <ComparePhrase
+                            compareUrl={compareUrl}
+                            text={`${aheadBy.toLocaleString()} commits ahead`}
+                        />{" "}
                         of{" "}
-                        <a
-                            href={`/gh/${parentFullName}`}
-                            className="font-semibold text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-                        >
+                        <BranchLink href={`/gh/${parentFullName}`}>
                             {parentFullName}
-                        </a>
+                        </BranchLink>
                         .
                     </>
                 ) : (
                     <>
                         This branch is up to date with{" "}
-                        <a
-                            href={`/gh/${parentFullName}`}
-                            className="font-semibold text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-                        >
+                        <BranchLink href={`/gh/${parentFullName}`}>
                             {parentFullName}
-                        </a>
+                        </BranchLink>
                         .
                     </>
                 )}
