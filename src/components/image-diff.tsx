@@ -4,6 +4,7 @@ import { ArrowLeftRight, Columns2, Layers } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "~/lib/utils";
+import { DiffModeToggle } from "./diff-mode-toggle";
 
 type DiffMode = "2up" | "swipe" | "onion";
 
@@ -49,6 +50,38 @@ function ImageWithFallback({
             sizes="100vw"
             style={{ width: "auto", height: "auto" }}
         />
+    );
+}
+
+function MissingImageFallback({
+    oldUrl,
+    newUrl,
+}: {
+    oldUrl: string | null;
+    newUrl: string | null;
+}) {
+    return (
+        <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
+            {oldUrl && (
+                <ImageWithFallback
+                    alt="Old version"
+                    className="max-h-[600px] max-w-full object-contain"
+                    src={oldUrl}
+                />
+            )}
+            {newUrl && (
+                <ImageWithFallback
+                    alt="New version"
+                    className="max-h-[600px] max-w-full object-contain"
+                    src={newUrl}
+                />
+            )}
+            {!oldUrl && !newUrl && (
+                <span className="text-sm text-text-tertiary">
+                    No image available
+                </span>
+            )}
+        </div>
     );
 }
 
@@ -145,29 +178,7 @@ function SwipeView({
     }, [isDragging, updatePosition]);
 
     if (!oldUrl || !newUrl) {
-        return (
-            <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
-                {oldUrl && (
-                    <ImageWithFallback
-                        alt="Old version"
-                        className="max-h-[600px] max-w-full object-contain"
-                        src={oldUrl}
-                    />
-                )}
-                {newUrl && (
-                    <ImageWithFallback
-                        alt="New version"
-                        className="max-h-[600px] max-w-full object-contain"
-                        src={newUrl}
-                    />
-                )}
-                {!oldUrl && !newUrl && (
-                    <span className="text-sm text-text-tertiary">
-                        No image available
-                    </span>
-                )}
-            </div>
-        );
+        return <MissingImageFallback oldUrl={oldUrl} newUrl={newUrl} />;
     }
 
     return (
@@ -240,29 +251,7 @@ function OnionSkinView({
     const [opacity, setOpacity] = useState(50);
 
     if (!oldUrl || !newUrl) {
-        return (
-            <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
-                {oldUrl && (
-                    <ImageWithFallback
-                        alt="Old version"
-                        className="max-h-[600px] max-w-full object-contain"
-                        src={oldUrl}
-                    />
-                )}
-                {newUrl && (
-                    <ImageWithFallback
-                        alt="New version"
-                        className="max-h-[600px] max-w-full object-contain"
-                        src={newUrl}
-                    />
-                )}
-                {!oldUrl && !newUrl && (
-                    <span className="text-sm text-text-tertiary">
-                        No image available
-                    </span>
-                )}
-            </div>
-        );
+        return <MissingImageFallback oldUrl={oldUrl} newUrl={newUrl} />;
     }
 
     return (
@@ -354,23 +343,11 @@ export default function ImageDiff({ oldUrl, newUrl }: ImageDiffProps) {
                 <OnionSkinView newUrl={newUrl} oldUrl={oldUrl} />
             )}
             {hasBoth && (
-                <div className="flex items-center justify-center gap-1 border-border border-t bg-surface-secondary px-4 py-1.5">
-                    {modes.map(({ icon: Icon, label, value }) => (
-                        <button
-                            className={`cursor-pointer rounded px-2 py-1 font-medium text-xs transition-colors ${
-                                mode === value
-                                    ? "bg-surface-selected text-gray-800 dark:text-zinc-200"
-                                    : "text-text-tertiary hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
-                            }`}
-                            key={value}
-                            onClick={() => setMode(value)}
-                            title={label}
-                            type="button"
-                        >
-                            <Icon className="h-3.5 w-3.5" />
-                        </button>
-                    ))}
-                </div>
+                <DiffModeToggle
+                    mode={mode}
+                    modes={modes}
+                    onModeChange={setMode}
+                />
             )}
         </div>
     );

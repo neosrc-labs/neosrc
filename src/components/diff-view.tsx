@@ -60,6 +60,12 @@ export type ActiveComment =
 interface DiffViewProps {
     patch: string;
     filename: string;
+    headSha?: string;
+    expandAllContext?: boolean;
+}
+
+/** Comment-related props shared by the diff views (DiffView, SvgDiff). */
+export interface DiffCommentProps {
     comments?: ReviewComment[];
     showComments?: boolean;
     showCommentButton?: boolean;
@@ -76,8 +82,46 @@ interface DiffViewProps {
     pullNumber?: number | string;
     pendingReviewId?: number | null;
     permissionContext: PullRequestPermissionContext;
+}
+
+/** Comment-related props threaded through the diff table rows. */
+interface DiffRowCommentProps {
+    activeComment: ActiveComment | null;
+    onStartComment: ((ac: ActiveComment | null) => void) | undefined;
+    pullNumber: number | string | undefined;
+    commentBody: string;
+    onCommentBodyChange: ((body: string) => void) | undefined;
+    footerActions?: FooterAction[];
+    commentPending: boolean;
+    commentError: boolean;
+    onCancelComment: (() => void) | undefined;
+    showComments: boolean;
+    showCommentButton: boolean;
+    commentDragRange: {
+        startLine: number;
+        endLine: number;
+        side: "LEFT" | "RIGHT";
+    } | null;
+    onCommentDragStart?: (line: number, side: "LEFT" | "RIGHT") => void;
+    pendingReviewId?: number | null;
+    permissionContext: PullRequestPermissionContext;
+}
+
+/** Gap/navigation props shared by the diff table row components. */
+interface DiffRowNavigationProps {
+    gapKey?: string;
+    isGapExpanded?: boolean;
+    onGapExpand?: (key: string) => void;
     headSha?: string;
-    expandAllContext?: boolean;
+    filename?: string;
+    fileHash?: string;
+    selectedRange?: {
+        startLine: number;
+        endLine: number;
+        side: string;
+    } | null;
+    onLineSelect?: (lineNum: number, side: string, shiftKey: boolean) => void;
+    onLineMouseDown?: (lineNum: number, side: string) => void;
 }
 
 export function DiffView({
@@ -101,7 +145,7 @@ export function DiffView({
     permissionContext,
     headSha,
     expandAllContext = false,
-}: DiffViewProps) {
+}: DiffViewProps & DiffCommentProps) {
     const { resolvedTheme } = useTheme();
 
     const parsed = useMemo(() => {
@@ -449,6 +493,24 @@ export function DiffView({
         return null;
     }
 
+    const commentProps: DiffRowCommentProps = {
+        activeComment,
+        onStartComment,
+        pullNumber,
+        commentBody,
+        onCommentBodyChange,
+        footerActions,
+        commentPending,
+        commentError,
+        onCancelComment,
+        showComments,
+        showCommentButton,
+        commentDragRange,
+        onCommentDragStart: handleCommentDragStart,
+        pendingReviewId,
+        permissionContext,
+    };
+
     return (
         <div className="overflow-x-auto">
             <style>{`
@@ -496,21 +558,7 @@ export function DiffView({
                             commentsByLine={commentsByLine}
                             positionMap={positionMap}
                             multiLineRanges={multiLineRanges}
-                            activeComment={activeComment}
-                            onStartComment={onStartComment}
-                            pullNumber={pullNumber}
-                            commentBody={commentBody}
-                            onCommentBodyChange={onCommentBodyChange}
-                            footerActions={footerActions}
-                            commentPending={commentPending}
-                            commentError={commentError}
-                            onCancelComment={onCancelComment}
-                            showComments={showComments}
-                            showCommentButton={showCommentButton}
-                            commentDragRange={commentDragRange}
-                            onCommentDragStart={handleCommentDragStart}
-                            pendingReviewId={pendingReviewId}
-                            permissionContext={permissionContext}
+                            commentProps={commentProps}
                         />
                     </tbody>
                 </table>
@@ -604,47 +652,16 @@ function resolveCommentAnchor(
     return positionMap.get(position) ?? null;
 }
 
-interface BlockRowsProps {
+interface BlockRowsProps extends DiffRowNavigationProps {
     block: NonNullable<ReturnType<typeof parse>>[number]["blocks"][number];
     commentsByLine: Map<string, ReviewComment[]>;
     positionMap: Map<number, DiffCommentAnchor>;
     multiLineRanges: Map<string, string[]>;
-    activeComment: ActiveComment | null;
-    onStartComment: ((ac: ActiveComment | null) => void) | undefined;
     owner: string | undefined;
     repo: string | undefined;
-    pullNumber: number | string | undefined;
-    commentBody: string;
-    onCommentBodyChange: ((body: string) => void) | undefined;
-    footerActions?: FooterAction[];
-    commentPending: boolean;
-    commentError: boolean;
-    onCancelComment: (() => void) | undefined;
-    showComments: boolean;
-    showCommentButton: boolean;
-    commentDragRange: {
-        startLine: number;
-        endLine: number;
-        side: "LEFT" | "RIGHT";
-    } | null;
-    onCommentDragStart?: (line: number, side: "LEFT" | "RIGHT") => void;
-    pendingReviewId?: number | null;
-    permissionContext: PullRequestPermissionContext;
     hideHeader?: boolean;
     gap?: Gap;
-    gapKey?: string;
-    isGapExpanded?: boolean;
-    onGapExpand?: (key: string) => void;
-    headSha?: string;
-    filename?: string;
-    fileHash?: string;
-    selectedRange?: {
-        startLine: number;
-        endLine: number;
-        side: string;
-    } | null;
-    onLineSelect?: (lineNum: number, side: string, shiftKey: boolean) => void;
-    onLineMouseDown?: (lineNum: number, side: string) => void;
+    commentProps: DiffRowCommentProps;
 }
 
 function BlockRows({
@@ -652,23 +669,8 @@ function BlockRows({
     commentsByLine,
     positionMap,
     multiLineRanges,
-    activeComment,
-    onStartComment,
     owner,
     repo,
-    pullNumber,
-    commentBody,
-    onCommentBodyChange,
-    footerActions,
-    commentPending,
-    commentError,
-    onCancelComment,
-    showComments,
-    showCommentButton,
-    commentDragRange,
-    onCommentDragStart,
-    pendingReviewId,
-    permissionContext,
     hideHeader,
     gap,
     gapKey,
@@ -680,7 +682,25 @@ function BlockRows({
     selectedRange,
     onLineSelect,
     onLineMouseDown,
+    commentProps,
 }: BlockRowsProps) {
+    const {
+        activeComment,
+        onStartComment,
+        pullNumber,
+        commentBody,
+        onCommentBodyChange,
+        footerActions,
+        commentPending,
+        commentError,
+        onCancelComment,
+        showComments,
+        showCommentButton,
+        commentDragRange,
+        onCommentDragStart,
+        pendingReviewId,
+        permissionContext,
+    } = commentProps;
     const {
         lines: fileLines,
         isLoading,
@@ -1004,7 +1024,7 @@ function BlockRows({
     );
 }
 
-interface GapRowProps {
+interface GapRowProps extends DiffRowNavigationProps {
     startLine: number;
     isExpanded: boolean;
     onExpand: (key: string) => void;
@@ -1013,14 +1033,6 @@ interface GapRowProps {
     repo: string | undefined;
     headSha: string | undefined;
     filename: string;
-    fileHash?: string;
-    selectedRange?: {
-        startLine: number;
-        endLine: number;
-        side: string;
-    } | null;
-    onLineSelect?: (lineNum: number, side: string, shiftKey: boolean) => void;
-    onLineMouseDown?: (lineNum: number, side: string) => void;
 }
 
 function GapRow({
@@ -1328,25 +1340,7 @@ interface DiffTableBodyProps {
     commentsByLine: Map<string, ReviewComment[]>;
     positionMap: Map<number, DiffCommentAnchor>;
     multiLineRanges: Map<string, string[]>;
-    activeComment: ActiveComment | null;
-    onStartComment: ((ac: ActiveComment | null) => void) | undefined;
-    pullNumber: number | string | undefined;
-    commentBody: string;
-    onCommentBodyChange: ((body: string) => void) | undefined;
-    footerActions: FooterAction[] | undefined;
-    commentPending: boolean;
-    commentError: boolean;
-    onCancelComment: (() => void) | undefined;
-    showComments: boolean;
-    showCommentButton: boolean;
-    commentDragRange: {
-        startLine: number;
-        endLine: number;
-        side: "LEFT" | "RIGHT";
-    } | null;
-    onCommentDragStart: (line: number, side: "LEFT" | "RIGHT") => void;
-    pendingReviewId: number | null | undefined;
-    permissionContext: PullRequestPermissionContext;
+    commentProps: DiffRowCommentProps;
 }
 
 function DiffTableBody({
@@ -1365,21 +1359,7 @@ function DiffTableBody({
     commentsByLine,
     positionMap,
     multiLineRanges,
-    activeComment,
-    onStartComment,
-    pullNumber,
-    commentBody,
-    onCommentBodyChange,
-    footerActions,
-    commentPending,
-    commentError,
-    onCancelComment,
-    showComments,
-    showCommentButton,
-    commentDragRange,
-    onCommentDragStart,
-    pendingReviewId,
-    permissionContext,
+    commentProps,
 }: DiffTableBodyProps) {
     return (
         <>
@@ -1448,23 +1428,9 @@ function DiffTableBody({
                         commentsByLine={commentsByLine}
                         positionMap={positionMap}
                         multiLineRanges={multiLineRanges}
-                        activeComment={activeComment}
-                        onStartComment={onStartComment}
                         owner={owner}
                         repo={repo}
-                        pullNumber={pullNumber}
-                        commentBody={commentBody}
-                        onCommentBodyChange={onCommentBodyChange}
-                        footerActions={footerActions}
-                        commentPending={commentPending}
-                        commentError={commentError}
-                        onCancelComment={onCancelComment}
-                        showComments={showComments}
-                        showCommentButton={showCommentButton}
-                        commentDragRange={commentDragRange}
-                        onCommentDragStart={onCommentDragStart}
-                        pendingReviewId={pendingReviewId}
-                        permissionContext={permissionContext}
+                        commentProps={commentProps}
                     />
                 );
             })}
