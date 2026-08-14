@@ -1,8 +1,9 @@
-import { Circle, CircleCheck, MessageSquare } from "lucide-react";
-import Image from "next/image";
-import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import { Circle, CircleCheck } from "lucide-react";
+import {
+    ListRowLabels,
+    ListRowMetaCells,
+} from "~/app/[owner]/[repo]/_components/list-row-cells";
 import { CodeTitle } from "~/components/markdown/code-title";
-import { Label } from "~/components/ui/label";
 import { UserLink } from "~/components/user-link";
 import { formatRelativeTime } from "~/utils";
 
@@ -87,64 +88,18 @@ export function IssueRow({
                         <span>by unknown</span>
                     )}
                 </div>
-                {issue.labels && issue.labels.length > 0 && (
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                        {[...issue.labels]
-                            .sort((a, b) => a.name.localeCompare(b.name))
-                            .map((label) => (
-                                <Label
-                                    key={label.name}
-                                    color={label.color}
-                                    description={label.description ?? undefined}
-                                    className="cursor-pointer"
-                                    onClick={() => onLabelFilter?.(label.name)}
-                                >
-                                    {label.name}
-                                </Label>
-                            ))}
-                    </div>
-                )}
+                <ListRowLabels
+                    labels={issue.labels}
+                    onLabelFilter={onLabelFilter}
+                />
             </div>
-            <div className="flex w-20 shrink-0 items-center justify-center">
-                {issue.assignee ? (
-                    <UserHoverCard
-                        login={issue.assignee.login}
-                        provider={provider}
-                    >
-                        <button
-                            type="button"
-                            onClick={() => {
-                                const login = issue.assignee?.login;
-                                if (login) onAssigneesFilter?.(login);
-                            }}
-                            className="cursor-pointer rounded-full"
-                        >
-                            <Image
-                                src={issue.assignee.avatar_url}
-                                alt={issue.assignee.login}
-                                className="size-5 rounded-full"
-                                width={20}
-                                height={20}
-                            />
-                        </button>
-                    </UserHoverCard>
-                ) : (
-                    <span className="size-5" />
-                )}
-            </div>
-            <div className="flex w-16 shrink-0 items-center justify-end">
-                {issue.comments_count > 0 ? (
-                    <a
-                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues/${issue.number}`}
-                        className="flex items-center gap-1 text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-                    >
-                        <MessageSquare className="size-4" />
-                        <span>{issue.comments_count}</span>
-                    </a>
-                ) : (
-                    <span className="size-4" />
-                )}
-            </div>
+            <ListRowMetaCells
+                assignee={issue.assignee}
+                commentsHref={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues/${issue.number}`}
+                commentsCount={issue.comments_count}
+                provider={provider}
+                onAssigneesFilter={onAssigneesFilter}
+            />
         </div>
     );
 }

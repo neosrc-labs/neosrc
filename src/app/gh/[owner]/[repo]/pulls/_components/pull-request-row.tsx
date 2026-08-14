@@ -4,17 +4,17 @@ import {
     GitPullRequest,
     GitPullRequestClosed,
     GitPullRequestDraft,
-    MessageSquare,
     TriangleAlert,
     XCircle,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+import {
+    ListRowLabels,
+    ListRowMetaCells,
+} from "~/app/[owner]/[repo]/_components/list-row-cells";
 import type { StatusContext } from "~/components/ci-status";
 import { StatusChecksHoverCard } from "~/components/ci-status";
-import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/code-title";
-import { Label } from "~/components/ui/label";
 import {
     Tooltip,
     TooltipContent,
@@ -195,64 +195,18 @@ export function PullRequestRow({
                         />
                     )}
                 </div>
-                {pr.labels && pr.labels.length > 0 && (
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                        {[...pr.labels]
-                            .sort((a, b) => a.name.localeCompare(b.name))
-                            .map((label) => (
-                                <Label
-                                    key={label.id ?? label.name}
-                                    color={label.color}
-                                    description={label.description ?? undefined}
-                                    className="cursor-pointer"
-                                    onClick={() => onLabelFilter?.(label.name)}
-                                >
-                                    {label.name}
-                                </Label>
-                            ))}
-                    </div>
-                )}
+                <ListRowLabels
+                    labels={pr.labels}
+                    onLabelFilter={onLabelFilter}
+                />
             </div>
-            <div className="flex w-20 shrink-0 items-center justify-center">
-                {pr.assignee ? (
-                    <UserHoverCard
-                        login={pr.assignee.login}
-                        provider={provider}
-                    >
-                        <button
-                            type="button"
-                            onClick={() => {
-                                const login = pr.assignee?.login;
-                                if (login) onAssigneesFilter?.(login);
-                            }}
-                            className="cursor-pointer rounded-full"
-                        >
-                            <Image
-                                src={pr.assignee.avatar_url}
-                                alt={pr.assignee.login}
-                                className="size-5 rounded-full"
-                                width={20}
-                                height={20}
-                            />
-                        </button>
-                    </UserHoverCard>
-                ) : (
-                    <span className="size-5" />
-                )}
-            </div>
-            <div className="flex w-16 shrink-0 items-center justify-end">
-                {pr.comments_count > 0 ? (
-                    <a
-                        href={`${prHref}#issuecomment`}
-                        className="flex items-center gap-1 text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-                    >
-                        <MessageSquare className="size-4" />
-                        <span>{pr.comments_count}</span>
-                    </a>
-                ) : (
-                    <span className="size-4" />
-                )}
-            </div>
+            <ListRowMetaCells
+                assignee={pr.assignee}
+                commentsHref={`${prHref}#issuecomment`}
+                commentsCount={pr.comments_count}
+                provider={provider}
+                onAssigneesFilter={onAssigneesFilter}
+            />
         </div>
     );
 }
