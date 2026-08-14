@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { CommitAuthors } from "~/components/commit-authors";
 import { CommitSubject } from "~/components/commit-subject";
 import {
-    HoverCard,
-    HoverCardContent,
-    HoverCardTrigger,
-} from "~/components/ui/hover-card";
+    LazyHoverCard,
+    useLazyHoverCardState,
+} from "~/components/hovercards/hover-card-shared";
 import { VerifiedBadgeInline } from "~/components/verified-badge";
 import type { GQLCommitWithAuthors } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
@@ -89,8 +88,7 @@ export function MarkdownCommitHoverCard({
     sha,
     children,
 }: MarkdownCommitHoverCardProps) {
-    const [open, setOpen] = useState(false);
-    const [hasBeenHovered, setHasBeenHovered] = useState(false);
+    const { open, hasBeenHovered, handleOpenChange } = useLazyHoverCardState();
 
     const { data } = api.commits.getBySha.useQuery(
         { owner, repo, sha },
@@ -100,27 +98,20 @@ export function MarkdownCommitHoverCard({
         },
     );
 
-    const showCard = open && !!data;
-
     return (
-        <HoverCard
-            open={showCard}
-            onOpenChange={(isOpen) => {
-                setOpen(isOpen);
-                if (isOpen) {
-                    setHasBeenHovered(true);
-                }
-            }}
-        >
-            <HoverCardTrigger asChild>{children}</HoverCardTrigger>
-            <HoverCardContent className="w-80 bg-surface p-0">
-                {data && (
+        <LazyHoverCard
+            open={open && !!data}
+            onOpenChange={handleOpenChange}
+            content={
+                data && (
                     <CommitHoverCardContent
                         commit={data.commit}
                         baseUrl={`https://github.com/${owner}/${repo}/commit`}
                     />
-                )}
-            </HoverCardContent>
-        </HoverCard>
+                )
+            }
+        >
+            {children}
+        </LazyHoverCard>
     );
 }

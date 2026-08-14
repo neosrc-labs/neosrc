@@ -3,13 +3,12 @@
 import { MessageSquare } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { type ReactNode, useState } from "react";
-import { CodeTitle } from "~/components/markdown/code-title";
+import type { ReactNode } from "react";
 import {
-    HoverCard,
-    HoverCardContent,
-    HoverCardTrigger,
-} from "~/components/ui/hover-card";
+    LazyHoverCard,
+    useLazyHoverCardState,
+} from "~/components/hovercards/hover-card-shared";
+import { CodeTitle } from "~/components/markdown/code-title";
 import {
     extractPullRequestState,
     StatusPill,
@@ -145,8 +144,7 @@ export function IssueHoverCard({
     issueNumber,
     children,
 }: IssueHoverCardProps) {
-    const [open, setOpen] = useState(false);
-    const [hasBeenHovered, setHasBeenHovered] = useState(false);
+    const { open, hasBeenHovered, handleOpenChange } = useLazyHoverCardState();
 
     const { data } = api.issues.getByNumber.useQuery(
         { owner, repo, issueNumber },
@@ -156,29 +154,22 @@ export function IssueHoverCard({
         },
     );
 
-    const showCard = open && !!data;
-
     return (
-        <HoverCard
-            open={showCard}
-            onOpenChange={(isOpen) => {
-                setOpen(isOpen);
-                if (isOpen) {
-                    setHasBeenHovered(true);
-                }
-            }}
-        >
-            <HoverCardTrigger asChild>{children}</HoverCardTrigger>
-            <HoverCardContent className="w-80 bg-surface p-0">
-                {data && (
+        <LazyHoverCard
+            open={open && !!data}
+            onOpenChange={handleOpenChange}
+            content={
+                data && (
                     <IssueHoverCardContent
                         issue={data as IssueGetResponseData}
                         owner={owner}
                         repo={repo}
                         issueNumber={issueNumber}
                     />
-                )}
-            </HoverCardContent>
-        </HoverCard>
+                )
+            }
+        >
+            {children}
+        </LazyHoverCard>
     );
 }

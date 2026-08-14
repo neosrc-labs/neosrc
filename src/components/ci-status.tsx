@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Circle, CircleSlash, CircleX, X } from "lucide-react";
+import { formatDurationMs } from "~/components/hovercards/hover-card-shared";
 import {
     HoverCard,
     HoverCardContent,
@@ -55,13 +56,7 @@ function formatDuration(
     if (Number.isNaN(end)) return null;
     const diffMs = end - start;
     if (diffMs < 1000) return null;
-    const totalSec = Math.floor(diffMs / 1000);
-    const min = Math.floor(totalSec / 60);
-    const sec = totalSec % 60;
-    if (min > 0) {
-        return `${min}m ${sec}s`;
-    }
-    return `${sec}s`;
+    return formatDurationMs(diffMs);
 }
 
 function statusLabel(state: string): string | null {
