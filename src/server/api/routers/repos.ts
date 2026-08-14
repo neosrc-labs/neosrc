@@ -33,6 +33,7 @@ import {
     starRepo as starCodebergRepo,
     unstarRepo as unstarCodebergRepo,
 } from "~/server/codeberg";
+import type { db } from "~/server/db";
 import {
     DOC_FILE_PATTERNS,
     deleteRepoSubscription,
@@ -117,6 +118,43 @@ export type RepositoryInfo = {
     parentFullName: string | null;
     parentDefaultBranch: string | null;
 };
+
+/**
+ * Shared auth + provider-token + cache-invalidation preamble for the repo
+ * mutation procedures (star/unstar/set/delete subscription). Each was a ~17
+ * line copy of the same provider branch; only the action and cache key differ.
+ */
+async function runRepoMutation(
+    ctx: {
+        db: typeof db;
+        session: { user?: { id: string } | null } | null;
+    },
+    provider: "gh" | "cb",
+    owner: string,
+    repo: string,
+    cacheKey: (
+        provider: "gh" | "cb",
+        userId: string,
+        owner: string,
+        repo: string,
+    ) => string,
+    action: {
+        cb: (accessToken: string) => Promise<void>;
+        gh: (accessToken: string) => Promise<void>;
+    },
+): Promise<void> {
+    if (!ctx.session?.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+    const userId = ctx.session.user.id;
+    if (provider === "cb") {
+        const accessToken = await getCodebergToken(ctx.db, userId);
+        await action.cb(accessToken);
+        await deleteCache(cacheKey("cb", userId, owner, repo));
+        return;
+    }
+    const accessToken = await getGitHubToken(ctx.db, userId);
+    await action.gh(accessToken);
+    await deleteCache(cacheKey("gh", userId, owner, repo));
+}
 
 export const reposRouter = createTRPCRouter({
     getByOwnerAndRepo: protectedProcedure
@@ -801,24 +839,20 @@ export const reposRouter = createTRPCRouter({
                 repo: z.string(),
             }),
         )
-        .mutation(async ({ ctx, input }) => {
-            if (!ctx.session?.user)
-                throw new TRPCError({ code: "UNAUTHORIZED" });
-            const userId = ctx.session.user.id;
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(ctx.db, userId);
-                await starCodebergRepo(accessToken, input.owner, input.repo);
-                await deleteCache(
-                    repoStarredCacheKey("cb", userId, input.owner, input.repo),
-                );
-                return;
-            }
-            const accessToken = await getGitHubToken(ctx.db, userId);
-            await starRepo(accessToken, input.owner, input.repo);
-            await deleteCache(
-                repoStarredCacheKey("gh", userId, input.owner, input.repo),
-            );
-        }),
+        .mutation(async ({ ctx, input }) =>
+            runRepoMutation(
+                ctx,
+                input.provider,
+                input.owner,
+                input.repo,
+                repoStarredCacheKey,
+                {
+                    cb: (token) =>
+                        starCodebergRepo(token, input.owner, input.repo),
+                    gh: (token) => starRepo(token, input.owner, input.repo),
+                },
+            ),
+        ),
     unstar: protectedProcedure
         .input(
             z.object({
@@ -827,24 +861,20 @@ export const reposRouter = createTRPCRouter({
                 repo: z.string(),
             }),
         )
-        .mutation(async ({ ctx, input }) => {
-            if (!ctx.session?.user)
-                throw new TRPCError({ code: "UNAUTHORIZED" });
-            const userId = ctx.session.user.id;
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(ctx.db, userId);
-                await unstarCodebergRepo(accessToken, input.owner, input.repo);
-                await deleteCache(
-                    repoStarredCacheKey("cb", userId, input.owner, input.repo),
-                );
-                return;
-            }
-            const accessToken = await getGitHubToken(ctx.db, userId);
-            await unstarRepo(accessToken, input.owner, input.repo);
-            await deleteCache(
-                repoStarredCacheKey("gh", userId, input.owner, input.repo),
-            );
-        }),
+        .mutation(async ({ ctx, input }) =>
+            runRepoMutation(
+                ctx,
+                input.provider,
+                input.owner,
+                input.repo,
+                repoStarredCacheKey,
+                {
+                    cb: (token) =>
+                        unstarCodebergRepo(token, input.owner, input.repo),
+                    gh: (token) => unstarRepo(token, input.owner, input.repo),
+                },
+            ),
+        ),
     getSubscription: protectedProcedure
         .input(
             z.object({
@@ -882,41 +912,33 @@ export const reposRouter = createTRPCRouter({
                 ignored: z.boolean(),
             }),
         )
-        .mutation(async ({ ctx, input }) => {
-            if (!ctx.session?.user)
-                throw new TRPCError({ code: "UNAUTHORIZED" });
-            const userId = ctx.session.user.id;
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(ctx.db, userId);
-                await setCodebergRepoSubscription(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.subscribed,
-                    input.ignored,
-                );
-                await deleteCache(
-                    repoSubscriptionCacheKey(
-                        "cb",
-                        userId,
-                        input.owner,
-                        input.repo,
-                    ),
-                );
-                return;
-            }
-            const accessToken = await getGitHubToken(ctx.db, userId);
-            await setRepoSubscription(
-                accessToken,
+        .mutation(async ({ ctx, input }) =>
+            runRepoMutation(
+                ctx,
+                input.provider,
                 input.owner,
                 input.repo,
-                input.subscribed,
-                input.ignored,
-            );
-            await deleteCache(
-                repoSubscriptionCacheKey("gh", userId, input.owner, input.repo),
-            );
-        }),
+                repoSubscriptionCacheKey,
+                {
+                    cb: (token) =>
+                        setCodebergRepoSubscription(
+                            token,
+                            input.owner,
+                            input.repo,
+                            input.subscribed,
+                            input.ignored,
+                        ),
+                    gh: (token) =>
+                        setRepoSubscription(
+                            token,
+                            input.owner,
+                            input.repo,
+                            input.subscribed,
+                            input.ignored,
+                        ),
+                },
+            ),
+        ),
     deleteSubscription: protectedProcedure
         .input(
             z.object({
@@ -925,33 +947,25 @@ export const reposRouter = createTRPCRouter({
                 repo: z.string(),
             }),
         )
-        .mutation(async ({ ctx, input }) => {
-            if (!ctx.session?.user)
-                throw new TRPCError({ code: "UNAUTHORIZED" });
-            const userId = ctx.session.user.id;
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(ctx.db, userId);
-                await deleteCodebergRepoSubscription(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                );
-                await deleteCache(
-                    repoSubscriptionCacheKey(
-                        "cb",
-                        userId,
-                        input.owner,
-                        input.repo,
-                    ),
-                );
-                return;
-            }
-            const accessToken = await getGitHubToken(ctx.db, userId);
-            await deleteRepoSubscription(accessToken, input.owner, input.repo);
-            await deleteCache(
-                repoSubscriptionCacheKey("gh", userId, input.owner, input.repo),
-            );
-        }),
+        .mutation(async ({ ctx, input }) =>
+            runRepoMutation(
+                ctx,
+                input.provider,
+                input.owner,
+                input.repo,
+                repoSubscriptionCacheKey,
+                {
+                    cb: (token) =>
+                        deleteCodebergRepoSubscription(
+                            token,
+                            input.owner,
+                            input.repo,
+                        ),
+                    gh: (token) =>
+                        deleteRepoSubscription(token, input.owner, input.repo),
+                },
+            ),
+        ),
     getAllMyRepos: protectedProcedure.query(async ({ ctx }) => {
         if (!ctx.session?.user) return [];
         const userId = ctx.session.user.id;
