@@ -18,13 +18,14 @@ import {
     TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { applyArrayOperations, opId } from "~/lib/utils";
-import type { Assignee, PullsGetResponseData, Reviewer } from "~/server/github";
+import type { Assignee, Reviewer } from "~/server/github";
 import { api } from "~/trpc/react";
+import { canEdit } from "../permissions-utils";
 import {
-    canEdit,
-    type PullRequestPermissionContext,
-} from "../permissions-utils";
-import { FieldSkeleton } from "./metadata-section";
+    FieldSkeleton,
+    type MetadataSectionProps,
+    mutationRollback,
+} from "./metadata-section";
 
 const MAX_VISIBLE_REVIEWERS = 10;
 
@@ -40,13 +41,7 @@ export function ReviewerSection({
     owner,
     repo,
     number,
-}: {
-    pullRequestPromise: Promise<PullsGetResponseData>;
-    permissionContextPromise: Promise<PullRequestPermissionContext>;
-    owner: string;
-    repo: string;
-    number: number;
-}) {
+}: MetadataSectionProps) {
     const [operations, setOperations] = useState<ReviewerOperation[]>([]);
     const [showAll, setShowAll] = useState(false);
 
@@ -77,11 +72,7 @@ export function ReviewerSection({
         setOperations((prev) => [...prev, { id, op: "add", reviewer }]);
         addMutation.mutate(
             { owner, repo, number, reviewer: reviewer.login },
-            {
-                onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id !== id));
-                },
-            },
+            mutationRollback(id, setOperations),
         );
     };
 
@@ -90,11 +81,7 @@ export function ReviewerSection({
         setOperations((prev) => [...prev, { id, op: "remove", reviewer }]);
         removeMutation.mutate(
             { owner, repo, number, reviewer: reviewer.login },
-            {
-                onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id !== id));
-                },
-            },
+            mutationRollback(id, setOperations),
         );
     };
 

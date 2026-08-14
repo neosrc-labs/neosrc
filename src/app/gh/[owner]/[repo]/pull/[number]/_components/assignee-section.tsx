@@ -2,17 +2,18 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { applyArrayOperations, opId } from "~/lib/utils";
-import type { Assignee, PullsGetResponseData } from "~/server/github";
+import type { Assignee } from "~/server/github";
 import { api } from "~/trpc/react";
+import { canEdit } from "../permissions-utils";
 import {
-    canEdit,
-    type PullRequestPermissionContext,
-} from "../permissions-utils";
-import { FieldSkeleton } from "./metadata-section";
+    type MetadataSectionProps,
+    mutationRollback,
+    SectionContentFrame,
+    SectionHeaderFrame,
+} from "./metadata-section";
 
 type AssigneeOperation = {
     id: number;
@@ -26,13 +27,7 @@ export function AssigneeSection({
     owner,
     repo,
     number,
-}: {
-    pullRequestPromise: Promise<PullsGetResponseData>;
-    permissionContextPromise: Promise<PullRequestPermissionContext>;
-    owner: string;
-    repo: string;
-    number: number;
-}) {
+}: MetadataSectionProps) {
     const [operations, setOperations] = useState<AssigneeOperation[]>([]);
 
     // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the operations
@@ -59,11 +54,7 @@ export function AssigneeSection({
         setOperations((prev) => [...prev, { id, op: "add", assignee }]);
         addMutation.mutate(
             { owner, repo, number, assignee: assignee.login },
-            {
-                onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id !== id));
-                },
-            },
+            mutationRollback(id, setOperations),
         );
     };
 
@@ -72,59 +63,41 @@ export function AssigneeSection({
         setOperations((prev) => [...prev, { id, op: "remove", assignee }]);
         removeMutation.mutate(
             { owner, repo, number, assignee: assignee.login },
-            {
-                onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id !== id));
-                },
-            },
+            mutationRollback(id, setOperations),
         );
     };
 
     return (
         <>
-            <div className="flex items-start justify-between">
-                <h3 className="text-text-primary">Assignees</h3>
-                <Async promise={pullRequestPromise} fallback={null}>
-                    {(pullRequest) => (
-                        <Async
-                            promise={permissionContextPromise}
-                            fallback={null}
-                        >
-                            {(permissionContext) => (
-                                <AssigneeSectionSettings
-                                    repoAssignees={assigneesData}
-                                    assignees={pullRequest.assignees ?? []}
-                                    operations={operations}
-                                    onAddAssignee={handleAdd}
-                                    onRemoveAssignee={handleRemove}
-                                    disabled={!canEdit(permissionContext)}
-                                />
-                            )}
-                        </Async>
-                    )}
-                </Async>
-            </div>
-            <Async
-                promise={pullRequestPromise}
-                fallback={
-                    <div className="mt-2">
-                        <FieldSkeleton />
-                    </div>
-                }
+            <SectionHeaderFrame
+                title="Assignees"
+                pullRequestPromise={pullRequestPromise}
+                permissionContextPromise={permissionContextPromise}
             >
-                {(pullRequest) => (
-                    <Async promise={permissionContextPromise} fallback={null}>
-                        {(permissionContext) => (
-                            <AssigneeSectionContent
-                                assignees={pullRequest.assignees ?? []}
-                                operations={operations}
-                                onRemoveAssignee={handleRemove}
-                                canEdit={canEdit(permissionContext)}
-                            />
-                        )}
-                    </Async>
+                {({ pullRequest, permissionContext }) => (
+                    <AssigneeSectionSettings
+                        repoAssignees={assigneesData}
+                        assignees={pullRequest.assignees ?? []}
+                        operations={operations}
+                        onAddAssignee={handleAdd}
+                        onRemoveAssignee={handleRemove}
+                        disabled={!canEdit(permissionContext)}
+                    />
                 )}
-            </Async>
+            </SectionHeaderFrame>
+            <SectionContentFrame
+                pullRequestPromise={pullRequestPromise}
+                permissionContextPromise={permissionContextPromise}
+            >
+                {({ pullRequest, permissionContext }) => (
+                    <AssigneeSectionContent
+                        assignees={pullRequest.assignees ?? []}
+                        operations={operations}
+                        onRemoveAssignee={handleRemove}
+                        canEdit={canEdit(permissionContext)}
+                    />
+                )}
+            </SectionContentFrame>
         </>
     );
 }

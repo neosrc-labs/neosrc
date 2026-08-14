@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Async } from "~/components/async";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn, opId } from "~/lib/utils";
-import type { Milestone, PullsGetResponseData } from "~/server/github";
+import type { Milestone } from "~/server/github";
 import { api } from "~/trpc/react";
+import { canEdit } from "../permissions-utils";
 import {
-    canEdit,
-    type PullRequestPermissionContext,
-} from "../permissions-utils";
-import { FieldSkeleton } from "./metadata-section";
+    type MetadataSectionProps,
+    mutationRollback,
+    SectionContentFrame,
+    SectionHeaderFrame,
+} from "./metadata-section";
 
 type MilestoneOperation = { id: number; milestone: Milestone | null };
 
@@ -20,13 +21,7 @@ export function MilestoneSection({
     owner,
     repo,
     number,
-}: {
-    pullRequestPromise: Promise<PullsGetResponseData>;
-    permissionContextPromise: Promise<PullRequestPermissionContext>;
-    owner: string;
-    repo: string;
-    number: number;
-}) {
+}: MetadataSectionProps) {
     const [operations, setOperations] = useState<MilestoneOperation[]>([]);
 
     // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the operations
@@ -46,52 +41,38 @@ export function MilestoneSection({
         setOperations((prev) => [...prev, { id, milestone }]);
         setMutation.mutate(
             { owner, repo, number, milestone: milestone?.number ?? null },
-            {
-                onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id !== id));
-                },
-            },
+            mutationRollback(id, setOperations),
         );
     };
 
     return (
         <>
-            <div className="flex items-start justify-between">
-                <h3 className="text-text-primary">Milestone</h3>
-                <Async promise={pullRequestPromise} fallback={null}>
-                    {(pullRequest) => (
-                        <Async
-                            promise={permissionContextPromise}
-                            fallback={null}
-                        >
-                            {(permissionContext) => (
-                                <MilestoneSectionSettings
-                                    repoMilestones={milestonesData}
-                                    milestone={pullRequest.milestone}
-                                    operations={operations}
-                                    onSetMilestone={handleSet}
-                                    disabled={!canEdit(permissionContext)}
-                                />
-                            )}
-                        </Async>
-                    )}
-                </Async>
-            </div>
-            <Async
-                promise={pullRequestPromise}
-                fallback={
-                    <div className="mt-2">
-                        <FieldSkeleton />
-                    </div>
-                }
+            <SectionHeaderFrame
+                title="Milestone"
+                pullRequestPromise={pullRequestPromise}
+                permissionContextPromise={permissionContextPromise}
             >
-                {(pullRequest) => (
+                {({ pullRequest, permissionContext }) => (
+                    <MilestoneSectionSettings
+                        repoMilestones={milestonesData}
+                        milestone={pullRequest.milestone}
+                        operations={operations}
+                        onSetMilestone={handleSet}
+                        disabled={!canEdit(permissionContext)}
+                    />
+                )}
+            </SectionHeaderFrame>
+            <SectionContentFrame
+                pullRequestPromise={pullRequestPromise}
+                permissionContextPromise={permissionContextPromise}
+            >
+                {({ pullRequest }) => (
                     <MilestoneSectionContent
                         milestone={pullRequest.milestone}
                         operations={operations}
                     />
                 )}
-            </Async>
+            </SectionContentFrame>
         </>
     );
 }

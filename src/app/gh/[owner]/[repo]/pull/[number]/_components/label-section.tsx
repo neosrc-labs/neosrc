@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import { Async } from "~/components/async";
+import { labelDropdownProps } from "~/app/[owner]/[repo]/_components/search/label-dropdown-options";
 import { Label as LabelComponent } from "~/components/ui/label";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { applyArrayOperations, opId } from "~/lib/utils";
-import type { Label, PullsGetResponseData } from "~/server/github";
+import type { Label } from "~/server/github";
 import { api } from "~/trpc/react";
+import { canEdit } from "../permissions-utils";
 import {
-    canEdit,
-    type PullRequestPermissionContext,
-} from "../permissions-utils";
-import { FieldSkeleton } from "./metadata-section";
+    type MetadataSectionProps,
+    mutationRollback,
+    SectionContentFrame,
+    SectionHeaderFrame,
+} from "./metadata-section";
 
 type LabelOperation = { id: number; op: "add" | "remove"; label: Label };
 
@@ -19,13 +21,7 @@ export function LabelsSection({
     owner,
     repo,
     number,
-}: {
-    pullRequestPromise: Promise<PullsGetResponseData>;
-    permissionContextPromise: Promise<PullRequestPermissionContext>;
-    owner: string;
-    repo: string;
-    number: number;
-}) {
+}: MetadataSectionProps) {
     // We use a list of operations made by the user to track the UI state.
     // Instead of trying to sync the state with the server constantly, which is quite difficult,
     // we just take the initial pull request labels and apply the operation log to it.
@@ -47,6 +43,7 @@ export function LabelsSection({
     const removeMutation = api.pulls.removeLabel.useMutation();
 
     const labelsData = (repoLabels ?? []) as Label[];
+
     const handleAdd = (label: Label) => {
         const repoLabel = labelsData.find((l) => l.name === label.name);
         if (!repoLabel) return;
@@ -55,11 +52,7 @@ export function LabelsSection({
         setOperations((prev) => [...prev, { id, op: "add", label }]);
         addMutation.mutate(
             { owner, repo, number, label: label.name },
-            {
-                onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id === id));
-                },
-            },
+            mutationRollback(id, setOperations),
         );
     };
 
@@ -68,59 +61,41 @@ export function LabelsSection({
         setOperations((prev) => [...prev, { id, op: "remove", label }]);
         removeMutation.mutate(
             { owner, repo, number, label: label.name },
-            {
-                onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id === id));
-                },
-            },
+            mutationRollback(id, setOperations),
         );
     };
 
     return (
         <>
-            <div className="flex items-start justify-between">
-                <h3 className="text-text-primary">Labels</h3>
-                <Async promise={pullRequestPromise} fallback={null}>
-                    {(pullRequest) => (
-                        <Async
-                            promise={permissionContextPromise}
-                            fallback={null}
-                        >
-                            {(permissionContext) => (
-                                <LabelSectionSettings
-                                    repoLabels={labelsData}
-                                    labels={pullRequest.labels}
-                                    operations={operations}
-                                    onAddLabel={handleAdd}
-                                    onRemoveLabel={handleRemove}
-                                    disabled={!canEdit(permissionContext)}
-                                />
-                            )}
-                        </Async>
-                    )}
-                </Async>
-            </div>
-            <Async
-                promise={pullRequestPromise}
-                fallback={
-                    <div className="mt-2">
-                        <FieldSkeleton />
-                    </div>
-                }
+            <SectionHeaderFrame
+                title="Labels"
+                pullRequestPromise={pullRequestPromise}
+                permissionContextPromise={permissionContextPromise}
             >
-                {(pullRequest) => (
-                    <Async promise={permissionContextPromise} fallback={null}>
-                        {(permissionContext) => (
-                            <LabelSectionContent
-                                labels={pullRequest.labels}
-                                operations={operations}
-                                onRemoveLabel={handleRemove}
-                                canEdit={canEdit(permissionContext)}
-                            />
-                        )}
-                    </Async>
+                {({ pullRequest, permissionContext }) => (
+                    <LabelSectionSettings
+                        repoLabels={labelsData}
+                        labels={pullRequest.labels}
+                        operations={operations}
+                        onAddLabel={handleAdd}
+                        onRemoveLabel={handleRemove}
+                        disabled={!canEdit(permissionContext)}
+                    />
                 )}
-            </Async>
+            </SectionHeaderFrame>
+            <SectionContentFrame
+                pullRequestPromise={pullRequestPromise}
+                permissionContextPromise={permissionContextPromise}
+            >
+                {({ pullRequest, permissionContext }) => (
+                    <LabelSectionContent
+                        labels={pullRequest.labels}
+                        operations={operations}
+                        onRemoveLabel={handleRemove}
+                        canEdit={canEdit(permissionContext)}
+                    />
+                )}
+            </SectionContentFrame>
         </>
     );
 }
@@ -145,39 +120,14 @@ function LabelSectionSettings({
 
     return (
         <SearchableDropdown
-            items={repoLabels}
-            isSelected={(l) => currentNames.has(l.name)}
-            onSelect={(l) =>
-                currentNames.has(l.name) ? onRemoveLabel(l) : onAddLabel(l)
-            }
-            keyFn={(l) => l.name}
-            searchFn={(l, q) => l.name.toLowerCase().includes(q)}
-            renderItem={(l, selected) => (
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <div className="flex items-center gap-2">
-                        <LabelComponent
-                            color={l.color}
-                            description={l.description ?? undefined}
-                        >
-                            {l.name}
-                        </LabelComponent>
-                        {selected && (
-                            <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
-                                &#10003;
-                            </span>
-                        )}
-                    </div>
-                    {l.description && (
-                        <span className="truncate text-text-muted text-xs">
-                            {l.description}
-                        </span>
-                    )}
-                </div>
-            )}
-            placeholder="Filter labels"
-            emptyText="No labels found"
-            ariaLabel="Manage labels"
-            disabled={disabled}
+            {...labelDropdownProps({
+                items: repoLabels,
+                currentNames,
+                ariaLabel: "Manage labels",
+                onSelect: (l) =>
+                    currentNames.has(l.name) ? onRemoveLabel(l) : onAddLabel(l),
+                disabled,
+            })}
         />
     );
 }
