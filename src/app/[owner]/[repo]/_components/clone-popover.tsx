@@ -1,7 +1,8 @@
 "use client";
 
 import { CheckIcon, ChevronDownIcon, Code2Icon, CopyIcon } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
+import { CopyButton } from "~/components/ui/copy-button";
 import {
     Popover,
     PopoverContent,
@@ -101,40 +102,27 @@ export function ClonePopover({
                             className="min-w-0 flex-1 rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 font-mono text-text-primary text-xs outline-hidden"
                             onFocus={(e) => e.target.select()}
                         />
-                        <CopyButton text={url} />
+                        <CopyButton
+                            text={url}
+                            className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs transition-colors hover:bg-surface-secondary"
+                        >
+                            {(copied) =>
+                                copied ? (
+                                    <>
+                                        <CheckIcon className="h-3 w-3 text-green-600" />
+                                        <span>Copied</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CopyIcon className="h-3 w-3" />
+                                        <span>Copy</span>
+                                    </>
+                                )
+                            }
+                        </CopyButton>
                     </div>
                 </div>
             </PopoverContent>
         </Popover>
-    );
-}
-
-function CopyButton({ text }: { text: string }) {
-    const [copied, setCopied] = useState(false);
-
-    const handleCopy = useCallback(async () => {
-        await navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    }, [text]);
-
-    return (
-        <button
-            type="button"
-            onClick={handleCopy}
-            className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs transition-colors hover:bg-surface-secondary"
-        >
-            {copied ? (
-                <>
-                    <CheckIcon className="h-3 w-3 text-green-600" />
-                    <span>Copied</span>
-                </>
-            ) : (
-                <>
-                    <CopyIcon className="h-3 w-3" />
-                    <span>Copy</span>
-                </>
-            )}
-        </button>
     );
 }
