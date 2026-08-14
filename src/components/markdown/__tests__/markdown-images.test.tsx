@@ -4,7 +4,11 @@ import { MarkdownRenderer } from "../markdown-renderer";
 
 function renderMarkdown(
     content: string,
-    props: { imageBaseUrl?: string; imageDocDir?: string } = {},
+    props: {
+        imageBaseUrl?: string;
+        imageDocDir?: string;
+        proseSize?: "sm" | "base";
+    } = {},
 ) {
     return render(<MarkdownRenderer content={content} {...props} />).container;
 }
@@ -54,6 +58,43 @@ describe("markdown image rendering", () => {
         );
         const img = container.querySelector("img");
         expect(img?.className).not.toContain("max-h");
+    });
+
+    it("keeps the align attribute so aligned images float like GitHub", () => {
+        const container = renderMarkdown(
+            '<img src="https://example.com/sticker.png" align="right" width="200px" alt="sticker">',
+        );
+        const img = container.querySelector("img");
+        expect(img?.getAttribute("align")).toBe("right");
+        expect(img?.getAttribute("width")).toBe("200px");
+    });
+
+    it("defaults to sm prose but can render at base size", () => {
+        const sm = renderMarkdown("text");
+        expect(sm.querySelector(".prose")?.className).toContain("prose-sm");
+        const base = renderMarkdown("text", { proseSize: "base" });
+        expect(base.querySelector(".prose")?.className).not.toContain(
+            "prose-sm",
+        );
+    });
+
+    it("renders single newlines as hard breaks in paragraphs", () => {
+        const container = renderMarkdown("line one\nline two\nline three");
+        expect(container.querySelectorAll("br")).toHaveLength(2);
+    });
+
+    it("flows bullet continuations instead of hard-breaking them", () => {
+        const container = renderMarkdown(
+            [
+                "* out-of-bounds memory accesses",
+                "  and use-after-free",
+                "* invalid use of uninitialized data",
+            ].join("\n"),
+        );
+        expect(container.querySelector("ul br")).toBeNull();
+        // The same newlines in a paragraph still hard-break.
+        const paragraph = renderMarkdown("foo\nbar");
+        expect(paragraph.querySelector("br")).not.toBeNull();
     });
 });
 

@@ -169,6 +169,7 @@ export function RepoDocFiles({
                                 repo={repo}
                                 canToggleTasks={false}
                                 linkableHeadings
+                                proseSize="base"
                                 imageBaseUrl={imageBaseUrl}
                                 imageDocDir={docDir}
                             />
