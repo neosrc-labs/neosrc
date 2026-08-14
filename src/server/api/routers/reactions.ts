@@ -6,6 +6,7 @@ import {
     protectedProcedure,
 } from "~/server/api/trpc";
 import { getGitHubToken, isAnonymousToken } from "~/server/auth";
+import type { db } from "~/server/db";
 import {
     createIssueCommentReaction,
     createIssueReaction,
@@ -27,6 +28,69 @@ import {
     isOrgRestrictionError,
     removeReaction,
 } from "~/server/github-graphql";
+
+type ReactionToggleTarget = {
+    list: (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        id: number,
+    ) => Promise<
+        Array<{ id: number; user: { login: string } | null; content: string }>
+    >;
+    remove: (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        id: number,
+        reactionId: number,
+    ) => Promise<void>;
+    add: (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        id: number,
+        content: string,
+    ) => Promise<unknown>;
+};
+
+/**
+ * Shared add/remove toggle for the REST reaction endpoints. The issue,
+ * issue-comment and PR-review-comment toggles were three ~45-line copies of
+ * this algorithm; only the target API functions differ.
+ */
+async function toggleReaction(
+    ctx: {
+        db: typeof db;
+        session: { user?: { id: string } | null } | null;
+    },
+    owner: string,
+    repo: string,
+    id: number,
+    content: string,
+    target: ReactionToggleTarget,
+): Promise<{ action: "added" | "removed" }> {
+    const accessToken = await getGitHubToken(ctx.db, ctx.session?.user?.id);
+
+    const [currentUser, existingReactions] = await Promise.all([
+        isAnonymousToken(accessToken)
+            ? null
+            : getAuthenticatedUser(accessToken),
+        target.list(accessToken, owner, repo, id),
+    ]);
+
+    const existing = existingReactions.find(
+        (r) => r.user?.login === currentUser?.login && r.content === content,
+    );
+
+    if (existing) {
+        await target.remove(accessToken, owner, repo, id, existing.id);
+        return { action: "removed" };
+    }
+
+    await target.add(accessToken, owner, repo, id, content);
+    return { action: "added" };
+}
 
 export const reactionsRouter = createTRPCRouter({
     get: protectedProcedure
@@ -90,50 +154,20 @@ export const reactionsRouter = createTRPCRouter({
                 ]),
             }),
         )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            const [currentUser, existingReactions] = await Promise.all([
-                isAnonymousToken(accessToken)
-                    ? null
-                    : getAuthenticatedUser(accessToken),
-                getIssueCommentReactions(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.commentId,
-                ),
-            ]);
-
-            const existing = existingReactions.find(
-                (r) =>
-                    r.user?.login === currentUser?.login &&
-                    r.content === input.content,
-            );
-
-            if (existing) {
-                await deleteIssueCommentReaction(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.commentId,
-                    existing.id,
-                );
-                return { action: "removed" as const };
-            }
-
-            await createIssueCommentReaction(
-                accessToken,
+        .mutation(async ({ ctx, input }) =>
+            toggleReaction(
+                ctx,
                 input.owner,
                 input.repo,
                 input.commentId,
                 input.content,
-            );
-            return { action: "added" as const };
-        }),
+                {
+                    list: getIssueCommentReactions,
+                    remove: deleteIssueCommentReaction,
+                    add: createIssueCommentReaction,
+                },
+            ),
+        ),
 
     togglePullRequestReviewComment: protectedMutation
         .input(
@@ -153,50 +187,20 @@ export const reactionsRouter = createTRPCRouter({
                 ]),
             }),
         )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            const [currentUser, existingReactions] = await Promise.all([
-                isAnonymousToken(accessToken)
-                    ? null
-                    : getAuthenticatedUser(accessToken),
-                getPullRequestReviewCommentReactions(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.commentId,
-                ),
-            ]);
-
-            const existing = existingReactions.find(
-                (r) =>
-                    r.user?.login === currentUser?.login &&
-                    r.content === input.content,
-            );
-
-            if (existing) {
-                await deletePullRequestReviewCommentReaction(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.commentId,
-                    existing.id,
-                );
-                return { action: "removed" as const };
-            }
-
-            await createPullRequestReviewCommentReaction(
-                accessToken,
+        .mutation(async ({ ctx, input }) =>
+            toggleReaction(
+                ctx,
                 input.owner,
                 input.repo,
                 input.commentId,
                 input.content,
-            );
-            return { action: "added" as const };
-        }),
+                {
+                    list: getPullRequestReviewCommentReactions,
+                    remove: deletePullRequestReviewCommentReaction,
+                    add: createPullRequestReviewCommentReaction,
+                },
+            ),
+        ),
 
     togglePullRequestReview: protectedMutation
         .input(
@@ -305,48 +309,18 @@ export const reactionsRouter = createTRPCRouter({
                 ]),
             }),
         )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            const [currentUser, existingReactions] = await Promise.all([
-                isAnonymousToken(accessToken)
-                    ? null
-                    : getAuthenticatedUser(accessToken),
-                getPullRequestReactions(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.number,
-                ),
-            ]);
-
-            const existing = existingReactions.find(
-                (r) =>
-                    r.user?.login === currentUser?.login &&
-                    r.content === input.content,
-            );
-
-            if (existing) {
-                await deleteIssueReaction(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.number,
-                    existing.id,
-                );
-                return { action: "removed" as const };
-            }
-
-            await createIssueReaction(
-                accessToken,
+        .mutation(async ({ ctx, input }) =>
+            toggleReaction(
+                ctx,
                 input.owner,
                 input.repo,
                 input.number,
                 input.content,
-            );
-            return { action: "added" as const };
-        }),
+                {
+                    list: getPullRequestReactions,
+                    remove: deleteIssueReaction,
+                    add: createIssueReaction,
+                },
+            ),
+        ),
 });
