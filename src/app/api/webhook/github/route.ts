@@ -7,6 +7,7 @@ import type {
 } from "@octokit/webhooks-types";
 import { and, eq } from "drizzle-orm";
 import { after } from "next/server";
+import { readBody } from "~/app/api/_lib/request-body";
 import { env } from "~/env";
 import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import { deleteRepoIssuePullCountsCache } from "~/server/cache";
@@ -113,13 +114,6 @@ function isOpenStateChange(
     );
 }
 
-function tooLargeResponse(): Response {
-    return Response.json(
-        { error: `Request body too large (max ${MAX_BODY_BYTES} bytes)` },
-        { status: 413 },
-    );
-}
-
 /**
  * GitHub signs webhook payloads with an HMAC-SHA256 of the raw body keyed by
  * the webhook secret, sent as `sha256=<hex digest>` in the
@@ -131,45 +125,6 @@ function signatureMatches(signature: string, expected: string): boolean {
     const expectedBytes = Buffer.from(expected);
     if (signatureBytes.length !== expectedBytes.length) return false;
     return timingSafeEqual(signatureBytes, expectedBytes);
-}
-
-/**
- * Reads the request body with a hard byte budget. The signature covers the raw
- * body, so the whole payload must be buffered before it can be verified; the
- * budget stops an unauthenticated caller from exhausting memory. Content-Length
- * alone cannot be trusted: chunked/HTTP2 requests omit it.
- */
-async function readBody(
-    request: Request,
-): Promise<{ ok: true; text: string } | { ok: false; response: Response }> {
-    const contentLength = request.headers.get("content-length");
-    if (contentLength !== null) {
-        const bytes = Number(contentLength);
-        if (Number.isFinite(bytes) && bytes > MAX_BODY_BYTES) {
-            return { ok: false, response: tooLargeResponse() };
-        }
-    }
-
-    if (!request.body) return { ok: true, text: "" };
-
-    const reader = request.body.getReader();
-    const decoder = new TextDecoder();
-    let text = "";
-    let total = 0;
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) {
-            total += value.byteLength;
-            if (total > MAX_BODY_BYTES) {
-                await reader.cancel();
-                return { ok: false, response: tooLargeResponse() };
-            }
-            text += decoder.decode(value, { stream: true });
-        }
-    }
-    text += decoder.decode();
-    return { ok: true, text };
 }
 
 type Validation =
@@ -189,7 +144,7 @@ async function validateWebhookAuth(request: Request): Promise<Validation> {
         };
     }
 
-    const body = await readBody(request);
+    const body = await readBody(request, MAX_BODY_BYTES);
     if (!body.ok) {
         return {
             outcome: "ERROR",

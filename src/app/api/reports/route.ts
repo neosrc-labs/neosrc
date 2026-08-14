@@ -1,5 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
-import { flattenError, z } from "zod";
+import { z } from "zod";
+import { parseJsonBody } from "~/app/api/_lib/request-body";
 import { env } from "~/env";
 import {
     checkReportPermission,
@@ -27,7 +28,6 @@ const MAX_REVISION_RETRIES = 3;
 // in UTF-8 bytes, so multi-byte data below the char cap can be rejected by the
 // byte cap. That over-rejection is intentional: bytes are what get transferred
 // and stored.
-const utf8Decoder = new TextDecoder();
 
 const reportSchema = z.object({
     provider: z.enum(["github", "codeberg"]),
@@ -59,58 +59,6 @@ const stateSchema = z.object({
 
 type ReportRow = typeof pullRequestReport.$inferSelect;
 type ReportInsert = typeof pullRequestReport.$inferInsert;
-
-function tooLargeResponse(): Response {
-    return Response.json(
-        {
-            error: `Request body too large (max ${MAX_BODY_BYTES} bytes)`,
-        },
-        { status: 413 },
-    );
-}
-
-/**
- * Reads the request body with a hard byte budget. Content-Length alone cannot
- * be trusted: chunked/HTTP2 requests omit it, so the actual bytes are counted
- * while streaming (which also bounds memory for oversized bodies).
- */
-async function readBody(
-    request: Request,
-): Promise<{ ok: true; text: string } | { ok: false; response: Response }> {
-    const contentLength = request.headers.get("content-length");
-    if (contentLength !== null) {
-        const bytes = Number(contentLength);
-        if (Number.isFinite(bytes) && bytes > MAX_BODY_BYTES) {
-            return { ok: false, response: tooLargeResponse() };
-        }
-    }
-
-    if (!request.body) return { ok: true, text: "" };
-
-    const reader = request.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let total = 0;
-    for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) {
-            total += value.byteLength;
-            if (total > MAX_BODY_BYTES) {
-                await reader.cancel();
-                return { ok: false, response: tooLargeResponse() };
-            }
-            chunks.push(value);
-        }
-    }
-
-    const merged = new Uint8Array(total);
-    let offset = 0;
-    for (const chunk of chunks) {
-        merged.set(chunk, offset);
-        offset += chunk.byteLength;
-    }
-    return { ok: true, text: utf8Decoder.decode(merged) };
-}
 
 async function authenticateRequest(
     request: Request,
@@ -208,6 +156,51 @@ async function getLatestRow(
     return latest ?? null;
 }
 
+async function getLatestReportOr404(parsed: {
+    provider: string;
+    repository: string;
+    prNumber: number;
+    name: string;
+}): Promise<
+    { ok: true; latest: ReportRow } | { ok: false; response: Response }
+> {
+    const latest = await getLatestRow(
+        parsed.provider,
+        parsed.repository,
+        parsed.prNumber,
+        parsed.name,
+    );
+    if (!latest) {
+        return {
+            ok: false,
+            response: Response.json(
+                { error: "Report not found" },
+                { status: 404 },
+            ),
+        };
+    }
+    return { ok: true, latest };
+}
+
+async function parseAndAuthorize<
+    T extends { provider: "github" | "codeberg"; repository: string },
+>(
+    request: Request,
+    schema: z.ZodType<T>,
+): Promise<{ ok: true; parsed: T } | { ok: false; response: Response }> {
+    const json = await parseJsonBody(request, schema, MAX_BODY_BYTES);
+    if (!json.ok) return json;
+
+    const authError = await authenticateRequest(
+        request,
+        json.data.provider,
+        json.data.repository,
+    );
+    if (authError) return { ok: false, response: authError };
+
+    return { ok: true, parsed: json.data };
+}
+
 function isUniqueViolation(error: unknown): boolean {
     return (
         typeof error === "object" &&
@@ -246,35 +239,9 @@ async function insertReportRevision(
 }
 
 export async function PUT(request: Request) {
-    const body = await readBody(request);
-    if (!body.ok) return body.response;
-
-    let json: unknown;
-    try {
-        json = JSON.parse(body.text);
-    } catch {
-        return Response.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    const result = reportSchema.safeParse(json);
-    if (!result.success) {
-        return Response.json(
-            {
-                error: "Validation failed",
-                issues: flattenError(result.error).fieldErrors,
-            },
-            { status: 400 },
-        );
-    }
-
-    const parsed = result.data;
-
-    const authError = await authenticateRequest(
-        request,
-        parsed.provider,
-        parsed.repository,
-    );
-    if (authError) return authError;
+    const auth = await parseAndAuthorize(request, reportSchema);
+    if (!auth.ok) return auth.response;
+    const parsed = auth.parsed;
 
     const outcome = await insertReportRevision(
         parsed.provider,
@@ -310,45 +277,13 @@ export async function PUT(request: Request) {
 }
 
 export async function POST(request: Request) {
-    const body = await readBody(request);
-    if (!body.ok) return body.response;
+    const auth = await parseAndAuthorize(request, stateSchema);
+    if (!auth.ok) return auth.response;
+    const parsed = auth.parsed;
 
-    let json: unknown;
-    try {
-        json = JSON.parse(body.text);
-    } catch {
-        return Response.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    const result = stateSchema.safeParse(json);
-    if (!result.success) {
-        return Response.json(
-            {
-                error: "Validation failed",
-                issues: flattenError(result.error).fieldErrors,
-            },
-            { status: 400 },
-        );
-    }
-
-    const parsed = result.data;
-
-    const authError = await authenticateRequest(
-        request,
-        parsed.provider,
-        parsed.repository,
-    );
-    if (authError) return authError;
-
-    const latest = await getLatestRow(
-        parsed.provider,
-        parsed.repository,
-        parsed.prNumber,
-        parsed.name,
-    );
-    if (!latest) {
-        return Response.json({ error: "Report not found" }, { status: 404 });
-    }
+    const latestRes = await getLatestReportOr404(parsed);
+    if (!latestRes.ok) return latestRes.response;
+    const latest = latestRes.latest;
 
     await db
         .update(pullRequestReport)
@@ -369,45 +304,13 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-    const body = await readBody(request);
-    if (!body.ok) return body.response;
+    const auth = await parseAndAuthorize(request, identifySchema);
+    if (!auth.ok) return auth.response;
+    const parsed = auth.parsed;
 
-    let json: unknown;
-    try {
-        json = JSON.parse(body.text);
-    } catch {
-        return Response.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    const result = identifySchema.safeParse(json);
-    if (!result.success) {
-        return Response.json(
-            {
-                error: "Validation failed",
-                issues: flattenError(result.error).fieldErrors,
-            },
-            { status: 400 },
-        );
-    }
-
-    const parsed = result.data;
-
-    const authError = await authenticateRequest(
-        request,
-        parsed.provider,
-        parsed.repository,
-    );
-    if (authError) return authError;
-
-    const latest = await getLatestRow(
-        parsed.provider,
-        parsed.repository,
-        parsed.prNumber,
-        parsed.name,
-    );
-    if (!latest) {
-        return Response.json({ error: "Report not found" }, { status: 404 });
-    }
+    const latestRes = await getLatestReportOr404(parsed);
+    if (!latestRes.ok) return latestRes.response;
+    const latest = latestRes.latest;
 
     const outcome = await insertReportRevision(
         parsed.provider,
