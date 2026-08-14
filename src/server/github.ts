@@ -413,12 +413,18 @@ export const updatePullRequest = async (
     return response.data;
 };
 
-export const markPullRequestAsDraft = async (
+const PULL_REQUEST_DRAFT_MUTATIONS = [
+    "convertPullRequestToDraft",
+    "markPullRequestReadyForReview",
+] as const;
+
+async function setPullRequestDraftStatus(
     accessToken: string,
     owner: string,
     repo: string,
     pullNumber: number,
-) => {
+    mutation: (typeof PULL_REQUEST_DRAFT_MUTATIONS)[number],
+) {
     const octokit = createOctokit(accessToken);
     const { data: pr } = await octokit.pulls.get({
         owner,
@@ -434,7 +440,7 @@ export const markPullRequestAsDraft = async (
 
     const query = `
 mutation($pullRequestId: ID!) {
-  convertPullRequestToDraft(input: { pullRequestId: $pullRequestId }) {
+  ${mutation}(input: { pullRequestId: $pullRequestId }) {
     pullRequest {
       id
       isDraft
@@ -442,50 +448,43 @@ mutation($pullRequestId: ID!) {
   }
 }`;
 
-    await graphql<{
-        convertPullRequestToDraft: {
-            pullRequest: { id: string; isDraft: boolean };
-        };
-    }>(query, { pullRequestId: pr.node_id });
+    await graphql<
+        Record<
+            typeof mutation,
+            { pullRequest: { id: string; isDraft: boolean } }
+        >
+    >(query, { pullRequestId: pr.node_id });
 
     return pr;
-};
+}
+
+export const markPullRequestAsDraft = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+) =>
+    setPullRequestDraftStatus(
+        accessToken,
+        owner,
+        repo,
+        pullNumber,
+        "convertPullRequestToDraft",
+    );
 
 export const markPullRequestAsReady = async (
     accessToken: string,
     owner: string,
     repo: string,
     pullNumber: number,
-) => {
-    const octokit = createOctokit(accessToken);
-    const { data: pr } = await octokit.pulls.get({
+) =>
+    setPullRequestDraftStatus(
+        accessToken,
         owner,
         repo,
-        pull_number: pullNumber,
-    });
-
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
-
-    const query = `
-mutation($pullRequestId: ID!) {
-  markPullRequestReadyForReview(input: { pullRequestId: $pullRequestId }) {
-    pullRequest {
-      id
-      isDraft
-    }
-  }
-}`;
-
-    await graphql<{
-        markPullRequestReadyForReview: {
-            pullRequest: { id: string; isDraft: boolean };
-        };
-    }>(query, { pullRequestId: pr.node_id });
-
-    return pr;
-};
+        pullNumber,
+        "markPullRequestReadyForReview",
+    );
 
 export type RevertPullRequestResult = {
     number: number;
@@ -2674,17 +2673,23 @@ query($owner: String!, $repo: String!, $number: Int!, $first: Int!${afterVar}) {
     };
 }
 
-export const resolveReviewThread = async (
+const REVIEW_THREAD_MUTATIONS = [
+    "resolveReviewThread",
+    "unresolveReviewThread",
+] as const;
+
+async function setReviewThreadResolved(
     accessToken: string,
     threadId: string,
-): Promise<void> => {
+    mutation: (typeof REVIEW_THREAD_MUTATIONS)[number],
+): Promise<void> {
     const graphql = octokitGraphql.defaults({
         headers: { authorization: `bearer ${accessToken}` },
     });
 
     const query = `
 mutation($threadId: ID!) {
-  resolveReviewThread(input: { threadId: $threadId }) {
+  ${mutation}(input: { threadId: $threadId }) {
     thread {
       id
       isResolved
@@ -2692,37 +2697,22 @@ mutation($threadId: ID!) {
   }
 }`;
 
-    await graphql<{
-        resolveReviewThread: {
-            thread: { id: string; isResolved: boolean };
-        };
-    }>(query, { threadId });
-};
+    await graphql<
+        Record<typeof mutation, { thread: { id: string; isResolved: boolean } }>
+    >(query, { threadId });
+}
 
-export const unresolveReviewThread = async (
+export const resolveReviewThread = (
     accessToken: string,
     threadId: string,
-): Promise<void> => {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+): Promise<void> =>
+    setReviewThreadResolved(accessToken, threadId, "resolveReviewThread");
 
-    const query = `
-mutation($threadId: ID!) {
-  unresolveReviewThread(input: { threadId: $threadId }) {
-    thread {
-      id
-      isResolved
-    }
-  }
-}`;
-
-    await graphql<{
-        unresolveReviewThread: {
-            thread: { id: string; isResolved: boolean };
-        };
-    }>(query, { threadId });
-};
+export const unresolveReviewThread = (
+    accessToken: string,
+    threadId: string,
+): Promise<void> =>
+    setReviewThreadResolved(accessToken, threadId, "unresolveReviewThread");
 
 const getFileContentFromBranch = async (
     accessToken: string,
