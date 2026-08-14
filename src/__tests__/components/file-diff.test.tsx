@@ -2,6 +2,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockMarkdownEditor } from "~/__tests__/helpers/component-mocks";
 
 const mockTrpc = vi.hoisted(() => ({
     capturedOnMutate: { current: null as ((data: unknown) => unknown) | null },
@@ -138,42 +139,7 @@ vi.mock("~/components/inline-comment-thread", () => ({
     ),
 }));
 
-vi.mock("~/components/markdown/markdown-editor", () => ({
-    MarkdownEditor: (props: {
-        value?: string;
-        onChange?: (v: string) => void;
-        onCancel?: () => void;
-        footerActions?: Array<{
-            label: string;
-            onClick: () => void;
-        }>;
-    }) => (
-        <div data-testid="markdown-editor">
-            <textarea
-                data-testid="editor-textarea"
-                onChange={(e) => props.onChange?.(e.target.value)}
-                value={props.value ?? ""}
-            />
-            <button
-                data-testid="editor-cancel"
-                onClick={() => props.onCancel?.()}
-                type="button"
-            >
-                Cancel
-            </button>
-            {(props.footerActions ?? []).map((action) => (
-                <button
-                    key={action.label}
-                    data-testid={`action-${action.label}`}
-                    onClick={() => action.onClick()}
-                    type="button"
-                >
-                    {action.label}
-                </button>
-            ))}
-        </div>
-    ),
-}));
+vi.mock("~/components/markdown/markdown-editor", () => mockMarkdownEditor());
 
 vi.mock("lucide-react", () => ({
     UnfoldVertical: () => <div data-testid="unfold-icon" />,

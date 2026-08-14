@@ -2,6 +2,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mockMarkdownEditor } from "~/__tests__/helpers/component-mocks";
 import { filenameHash } from "~/utils/filename-hash";
 
 const { mockParse, mockHighlight, mockUseFileContent } = vi.hoisted(() => ({
@@ -49,39 +50,7 @@ vi.mock("~/components/inline-comment-thread", () => ({
     ),
 }));
 
-vi.mock("~/components/markdown/markdown-editor", () => ({
-    MarkdownEditor: (props: {
-        value?: string;
-        onChange?: (v: string) => void;
-        onCancel?: () => void;
-        footerActions?: { label: string; onClick: (text: string) => void }[];
-    }) => (
-        <div data-testid="markdown-editor">
-            <textarea
-                data-testid="editor-textarea"
-                onChange={(e) => props.onChange?.(e.target.value)}
-                value={props.value ?? ""}
-            />
-            <button
-                data-testid="editor-cancel"
-                onClick={() => props.onCancel?.()}
-                type="button"
-            >
-                Cancel
-            </button>
-            {(props.footerActions ?? []).map((action) => (
-                <button
-                    key={action.label}
-                    data-testid={`action-${action.label}`}
-                    onClick={() => action.onClick(props.value ?? "")}
-                    type="button"
-                >
-                    {action.label}
-                </button>
-            ))}
-        </div>
-    ),
-}));
+vi.mock("~/components/markdown/markdown-editor", () => mockMarkdownEditor());
 
 vi.mock("lucide-react", () => ({
     Plus: (props: Record<string, unknown>) => (
@@ -160,6 +129,24 @@ function makeMockComments(
     return comments as unknown as ReviewComment[];
 }
 
+function mockParsedFile(
+    blocks: MockBlock[],
+    options?: { addedLines?: number; deletedLines?: number },
+) {
+    mockParse.mockReturnValue([
+        {
+            addedLines: options?.addedLines ?? 0,
+            deletedLines: options?.deletedLines ?? 0,
+            isCombined: false,
+            isGitDiff: true,
+            language: "",
+            oldName: "a/test.ts",
+            newName: "b/test.ts",
+            blocks,
+        },
+    ]);
+}
+
 const FILE_HASH = filenameHash("test.ts");
 
 function renderDiffView(props?: {
@@ -204,6 +191,21 @@ function getTr(container: HTMLElement, suffix: string): HTMLElement | null {
     return container.querySelector(`tr[id$="${suffix}"]`);
 }
 
+function renderCommentButton(
+    onStartComment: (ac: ActiveComment | null) => void,
+) {
+    const lines = [mc(" line1", 1, 1), mc("+line2", 2)];
+    mockParsedFile([mb(1, lines)], { addedLines: 1 });
+    const { container } = renderDiffView({
+        showCommentButton: true,
+        onStartComment,
+    });
+    return {
+        container,
+        firstPlus: container.querySelector('[data-testid="square-plus"]'),
+    };
+}
+
 // --- Tests ---
 
 describe("DiffView rendering", () => {
@@ -218,18 +220,10 @@ describe("DiffView rendering", () => {
                 mc("+line2", 2),
                 mc("-line3", undefined, 3),
             ];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 1,
-                    deletedLines: 1,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
+            mockParsedFile([mb(1, lines)], {
+                addedLines: 1,
+                deletedLines: 1,
+            });
 
             const { container } = renderDiffView({ showCommentButton: true });
 
@@ -249,18 +243,7 @@ describe("DiffView rendering", () => {
         it("clicking a line number updates the URL with a single-line hash", async () => {
             const user = userEvent.setup();
             const lines = [mc(" line1", 1, 1), mc(" line2", 2, 2)];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 0,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
+            mockParsedFile([mb(1, lines)]);
 
             const { container } = renderDiffView();
             const lineNumCell = container.querySelector(
@@ -280,18 +263,7 @@ describe("DiffView rendering", () => {
         it("shift+clicking two line numbers updates URL to a range", async () => {
             const user = userEvent.setup();
             const lines = [mc(" line1", 1, 1), mc(" line2", 2, 2)];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 0,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
+            mockParsedFile([mb(1, lines)]);
 
             const { container } = renderDiffView();
             const cells = container.querySelectorAll("td.d2h-code-linenumber");
@@ -313,28 +285,7 @@ describe("DiffView rendering", () => {
     describe("comment button interactions", () => {
         it("clicking Plus calls onStartComment with single line", () => {
             const onStartComment = vi.fn();
-            const lines = [mc(" line1", 1, 1), mc("+line2", 2)];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 1,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
-
-            const { container } = renderDiffView({
-                showCommentButton: true,
-                onStartComment,
-            });
-
-            const firstPlus = container.querySelector(
-                '[data-testid="square-plus"]',
-            );
+            const { firstPlus } = renderCommentButton(onStartComment);
             expect(firstPlus).toBeTruthy();
 
             fireEvent.click(firstPlus!);
@@ -349,18 +300,7 @@ describe("DiffView rendering", () => {
         it("clicking Plus when activeComment is active toggles it off", () => {
             const onStartComment = vi.fn();
             const lines = [mc(" line1", 1, 1)];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 0,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
+            mockParsedFile([mb(1, lines)]);
 
             const { container } = renderDiffView({
                 showCommentButton: true,
@@ -383,18 +323,7 @@ describe("DiffView rendering", () => {
                 mc("+line2", 2),
                 mc("+line3", 3),
             ];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 2,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
+            mockParsedFile([mb(1, lines)], { addedLines: 2 });
 
             const { container } = renderDiffView({
                 showCommentButton: true,
@@ -421,18 +350,7 @@ describe("DiffView rendering", () => {
 
         it("MarkdownEditor renders when line is active", () => {
             const lines = [mc(" line1", 1, 1)];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 0,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
+            mockParsedFile([mb(1, lines)]);
 
             renderDiffView({
                 showCommentButton: true,
@@ -444,18 +362,7 @@ describe("DiffView rendering", () => {
 
         it("MarkdownEditor not rendered when line is not active", () => {
             const lines = [mc(" line1", 1, 1)];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 0,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
+            mockParsedFile([mb(1, lines)]);
 
             renderDiffView({ showCommentButton: true });
 
@@ -468,28 +375,8 @@ describe("DiffView rendering", () => {
     describe("drag-to-select multi-line comments", () => {
         it("mouseDown on Plus, mouseOver on different line, mouseUp calls onStartComment with range", () => {
             const onStartComment = vi.fn();
-            const lines = [mc(" line1", 1, 1), mc("+line2", 2)];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 1,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
-
-            const { container } = renderDiffView({
-                showCommentButton: true,
-                onStartComment,
-            });
-
-            const firstPlus = container.querySelector(
-                '[data-testid="square-plus"]',
-            );
+            const { container, firstPlus } =
+                renderCommentButton(onStartComment);
             expect(firstPlus).toBeTruthy();
 
             // mousedown on first line's button starts drag
@@ -516,18 +403,7 @@ describe("DiffView rendering", () => {
     describe("comment display", () => {
         it("renders InlineCommentThread when showComments is true and comments exist", () => {
             const lines = [mc(" line1", 1, 1)];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 0,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
+            mockParsedFile([mb(1, lines)]);
 
             const comments = makeMockComments([
                 { id: 1, line: 1, side: "RIGHT", path: "test.ts" },
@@ -542,18 +418,7 @@ describe("DiffView rendering", () => {
 
         it("does not render InlineCommentThread when showComments is false", () => {
             const lines = [mc(" line1", 1, 1)];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 0,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
+            mockParsedFile([mb(1, lines)]);
 
             const comments = makeMockComments([
                 { id: 1, line: 1, side: "RIGHT", path: "test.ts" },
@@ -568,18 +433,7 @@ describe("DiffView rendering", () => {
 
         it("anchors draft comments (position only, no line/side) to the correct diff line", () => {
             const lines = [mc(" ctx", 10, 10), mc("+added", 11)];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 1,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(10, lines, 10)],
-                },
-            ]);
+            mockParsedFile([mb(10, lines, 10)], { addedLines: 1 });
 
             const comments = makeMockComments([
                 { id: 99, position: 2, path: "test.ts" },
@@ -604,18 +458,7 @@ describe("DiffView rendering", () => {
     describe("multi-line range indicator", () => {
         it("shows blue left border on intermediate lines of a multi-line comment", () => {
             const lines = [mc(" line1", 1, 1), mc("+line2", 2)];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 1,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
+            mockParsedFile([mb(1, lines)], { addedLines: 1 });
 
             const comments = makeMockComments([
                 {
@@ -647,18 +490,7 @@ describe("DiffView rendering", () => {
 
         it("single-line comment has no blue left border", () => {
             const lines = [mc(" line1", 1, 1)];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 0,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
+            mockParsedFile([mb(1, lines)]);
 
             const comments = makeMockComments([
                 { id: 1, line: 1, side: "RIGHT", path: "test.ts" },
@@ -693,18 +525,7 @@ describe("DiffView rendering", () => {
         it("renders expandable gap row between hunks with unfold icon", () => {
             const block1 = mb(1, [mc(" line1", 1, 1), mc("+line2", 2)]);
             const block2 = mb(5, [mc(" line5", 5, 5)]);
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 1,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [block1, block2],
-                },
-            ]);
+            mockParsedFile([block1, block2], { addedLines: 1 });
 
             const { container } = renderDiffView({
                 expandAllContext: false,
@@ -740,18 +561,7 @@ describe("DiffView rendering", () => {
         it("expandAllContext true expands all gaps (no unfold icons)", () => {
             const block1 = mb(1, [mc(" line1", 1, 1), mc("+line2", 2)]);
             const block2 = mb(5, [mc(" line5", 5, 5)]);
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 1,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [block1, block2],
-                },
-            ]);
+            mockParsedFile([block1, block2], { addedLines: 1 });
 
             const { container } = renderDiffView({
                 expandAllContext: true,
@@ -785,18 +595,7 @@ describe("DiffView rendering", () => {
             // Block 1 ends at line 2, block 2 starts at line 3 -- no gap
             const block1 = mb(1, [mc(" line1", 1, 1), mc(" line2", 2, 2)]);
             const block2 = mb(3, [mc(" line3", 3, 3)]);
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 0,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [block1, block2],
-                },
-            ]);
+            mockParsedFile([block1, block2]);
 
             const { container } = renderDiffView({
                 headSha: "mock-sha",
@@ -816,18 +615,7 @@ describe("DiffView rendering", () => {
         it("renders loading state when gap is expanded and file content is loading", () => {
             mockUseFileContent.isLoading = true;
             const lines = [mc(" line1", 1, 1), mc("+line2", 2)];
-            mockParse.mockReturnValue([
-                {
-                    addedLines: 1,
-                    deletedLines: 0,
-                    isCombined: false,
-                    isGitDiff: true,
-                    language: "",
-                    oldName: "a/test.ts",
-                    newName: "b/test.ts",
-                    blocks: [mb(1, lines)],
-                },
-            ]);
+            mockParsedFile([mb(1, lines)], { addedLines: 1 });
 
             // Trailing gap with expandAllContext to force expand
             renderDiffView({

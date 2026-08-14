@@ -3,18 +3,28 @@ import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { MarkdownRenderer } from "./markdown-renderer";
 
+function renderCheckboxTasks(content: string) {
+    const toggled: string[] = [];
+    const { container } = render(
+        <MarkdownRenderer
+            content={content}
+            onToggleTask={(newContent) => toggled.push(newContent)}
+            canToggleTasks
+        />,
+    );
+    return {
+        container,
+        toggled,
+        getInputs: () => container.querySelectorAll('input[type="checkbox"]'),
+    };
+}
+
 describe("checkbox index mapping", () => {
     it("maps the first clicked checkbox to the first task item", () => {
-        const toggled: string[] = [];
-        const content = "- [ ] task one\n- [ ] task two";
-        const { container } = render(
-            <MarkdownRenderer
-                content={content}
-                onToggleTask={(newContent) => toggled.push(newContent)}
-                canToggleTasks
-            />,
+        const { toggled, getInputs } = renderCheckboxTasks(
+            "- [ ] task one\n- [ ] task two",
         );
-        const inputs = container.querySelectorAll('input[type="checkbox"]');
+        const inputs = getInputs();
         expect(inputs.length).toBe(2);
         // Click the FIRST checkbox
         fireEvent.click(inputs[0]!);
@@ -24,22 +34,16 @@ describe("checkbox index mapping", () => {
     });
 
     it("does not count task markers inside fenced code blocks", () => {
-        const toggled: string[] = [];
-        const content = [
-            "```",
-            "- [ ] not a real checkbox (it's in a code block)",
-            "```",
-            "- [ ] real task one",
-            "- [ ] real task two",
-        ].join("\n");
-        const { container } = render(
-            <MarkdownRenderer
-                content={content}
-                onToggleTask={(newContent) => toggled.push(newContent)}
-                canToggleTasks
-            />,
+        const { toggled, getInputs } = renderCheckboxTasks(
+            [
+                "```",
+                "- [ ] not a real checkbox (it's in a code block)",
+                "```",
+                "- [ ] real task one",
+                "- [ ] real task two",
+            ].join("\n"),
         );
-        const inputs = container.querySelectorAll('input[type="checkbox"]');
+        const inputs = getInputs();
         // Only the two real task items should render checkboxes
         expect(inputs.length).toBe(2);
         fireEvent.click(inputs[0]!);
@@ -55,17 +59,10 @@ describe("checkbox index mapping", () => {
     });
 
     it("counts task items inside blockquotes", () => {
-        const toggled: string[] = [];
-        const content =
-            "> - [ ] quoted task\n- [ ] real task one\n- [ ] real task two";
-        const { container } = render(
-            <MarkdownRenderer
-                content={content}
-                onToggleTask={(newContent) => toggled.push(newContent)}
-                canToggleTasks
-            />,
+        const { toggled, getInputs } = renderCheckboxTasks(
+            "> - [ ] quoted task\n- [ ] real task one\n- [ ] real task two",
         );
-        const inputs = container.querySelectorAll('input[type="checkbox"]');
+        const inputs = getInputs();
         expect(inputs.length).toBe(3);
         fireEvent.click(inputs[1]!);
         expect(toggled[0]).toBe(
@@ -74,16 +71,10 @@ describe("checkbox index mapping", () => {
     });
 
     it("counts ordered-list task items", () => {
-        const toggled: string[] = [];
-        const content = "1. [ ] ordered task\n- [ ] real task one";
-        const { container } = render(
-            <MarkdownRenderer
-                content={content}
-                onToggleTask={(newContent) => toggled.push(newContent)}
-                canToggleTasks
-            />,
+        const { toggled, getInputs } = renderCheckboxTasks(
+            "1. [ ] ordered task\n- [ ] real task one",
         );
-        const inputs = container.querySelectorAll('input[type="checkbox"]');
+        const inputs = getInputs();
         expect(inputs.length).toBe(2);
         fireEvent.click(inputs[1]!);
         expect(toggled[0]).toBe("1. [ ] ordered task\n- [x] real task one");
