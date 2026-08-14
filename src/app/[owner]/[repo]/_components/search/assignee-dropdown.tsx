@@ -1,10 +1,14 @@
 "use client";
 
 import { ChevronDown, User } from "lucide-react";
-import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { api } from "~/trpc/react";
+import {
+    buildUserOptions,
+    selectedUserNames,
+    userDropdownProps,
+} from "./user-dropdown-options";
 
 export function AssigneeDropdown({
     owner,
@@ -32,73 +36,23 @@ export function AssigneeDropdown({
         });
     const isLoading = assigneesLoading || currentUserLoading;
 
-    const allUsers = useMemo(() => {
-        const map = new Map<string, { login: string; avatar_url?: string }>();
-        for (const u of assignees ?? []) {
-            map.set(u.login, u);
-        }
-        if (currentUser?.login && !map.has(currentUser.login)) {
-            map.set(currentUser.login, {
-                login: currentUser.login,
-                avatar_url: currentUser.avatarUrl,
-            });
-        }
-        const result = Array.from(map.values());
-        result.sort((a, b) => {
-            if (a.login === currentUser?.login) return -1;
-            if (b.login === currentUser?.login) return 1;
-            return a.login.localeCompare(b.login);
-        });
-        return result;
-    }, [assignees, currentUser?.login, currentUser?.avatarUrl]);
+    const allUsers = buildUserOptions({ assignees, currentUser });
 
-    const selectedNames = new Set(
-        allUsers
-            .filter((u) => currentQuery.includes(`assignee:${u.login}`))
-            .map((u) => u.login),
-    );
+    const selectedNames = selectedUserNames(allUsers, currentQuery, "assignee");
 
     return (
         <SearchableDropdown
-            items={allUsers}
-            isLoading={isLoading}
-            isSelected={(u: { login: string }) => selectedNames.has(u.login)}
-            onSelect={(u: { login: string }) => onToggle("assignee", u.login)}
-            keyFn={(u: { login: string }) => u.login}
-            searchFn={(u: { login: string }, q: string) =>
-                u.login.toLowerCase().includes(q.toLowerCase())
-            }
-            renderItem={(
-                u: { login: string; avatar_url?: string },
-                selected: boolean,
-            ) => (
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                    {u.avatar_url ? (
-                        <Image
-                            src={u.avatar_url}
-                            alt=""
-                            className="size-5 shrink-0 rounded-full"
-                            width={20}
-                            height={20}
-                        />
-                    ) : (
-                        <div className="size-5 shrink-0 rounded-full bg-surface-selected" />
-                    )}
-                    <span className="truncate">{u.login}</span>
-                    {selected && (
-                        <span className="ml-auto shrink-0 text-blue-600 text-xs dark:text-blue-400">
-                            &#10003;
-                        </span>
-                    )}
-                </div>
-            )}
-            placeholder="Filter users..."
-            emptyText="No users found"
-            ariaLabel="Filter by assignee"
-            onOpenChange={(open) => {
-                if (open) setEnabled(true);
-            }}
-            closeOnSelect
+            {...userDropdownProps({
+                items: allUsers,
+                isLoading,
+                selectedNames,
+                qualifierKey: "assignee",
+                ariaLabel: "Filter by assignee",
+                onToggle,
+                onOpenChange: (open) => {
+                    if (open) setEnabled(true);
+                },
+            })}
             trigger={
                 <button
                     type="button"

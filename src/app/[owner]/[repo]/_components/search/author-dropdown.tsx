@@ -6,6 +6,11 @@ import { useMemo, useState } from "react";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { api } from "~/trpc/react";
 import { useDebounce } from "./use-debounce";
+import {
+    buildUserOptions,
+    selectedUserNames,
+    userDropdownProps,
+} from "./user-dropdown-options";
 
 export function AuthorDropdown({
     owner,
@@ -41,30 +46,12 @@ export function AuthorDropdown({
     const isLoading =
         assigneesLoading || recentAuthorsLoading || currentUserLoading;
 
-    const allUsers = useMemo(() => {
-        const seen = new Set<string>();
-        const users: { login: string; avatar_url?: string }[] = [];
-        const add = (
-            u: { login: string; avatar_url?: string | null } | null | undefined,
-        ) => {
-            if (!u || seen.has(u.login)) return;
-            seen.add(u.login);
-            users.push({
-                login: u.login,
-                avatar_url: u.avatar_url ?? undefined,
-            });
-        };
-        (assignees ?? []).forEach(add);
-        (recentAuthors ?? []).forEach(add);
-        if (currentUser?.login) {
-            const login = currentUser.login;
-            add({
-                login,
-                avatar_url: currentUser.avatarUrl ?? undefined,
-            });
-        }
-        return users;
-    }, [assignees, recentAuthors, currentUser?.login, currentUser?.avatarUrl]);
+    const allUsers = buildUserOptions({
+        assignees,
+        recentAuthors,
+        includeRecentAuthors: true,
+        currentUser,
+    });
 
     const [searchText, setSearchText] = useState("");
     const debouncedSearch = useDebounce(searchText, 300);
@@ -107,11 +94,7 @@ export function AuthorDropdown({
 
     const allItems = [...filtered, ...customAuthorItem];
 
-    const selectedNames = new Set(
-        allUsers
-            .filter((u) => currentQuery.includes(`author:${u.login}`))
-            .map((u) => u.login),
-    );
+    const selectedNames = selectedUserNames(allUsers, currentQuery, "author");
 
     const selectedUser = useMemo(
         () =>
@@ -123,46 +106,18 @@ export function AuthorDropdown({
 
     return (
         <SearchableDropdown
-            items={allItems}
-            isLoading={isLoading}
-            isSelected={(u: { login: string }) => selectedNames.has(u.login)}
-            onSelect={(u: { login: string }) => onToggle("author", u.login)}
-            keyFn={(u: { login: string }) => u.login}
-            searchFn={(u: { login: string }, q: string) =>
-                u.login.toLowerCase().includes(q.toLowerCase())
-            }
-            renderItem={(
-                u: { login: string; avatar_url?: string },
-                selected: boolean,
-            ) => (
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                    {u.avatar_url ? (
-                        <Image
-                            src={u.avatar_url}
-                            alt=""
-                            className="size-5 shrink-0 rounded-full"
-                            width={20}
-                            height={20}
-                        />
-                    ) : (
-                        <div className="size-5 shrink-0 rounded-full bg-surface-selected" />
-                    )}
-                    <span className="truncate">{u.login}</span>
-                    {selected && (
-                        <span className="ml-auto shrink-0 text-blue-600 text-xs dark:text-blue-400">
-                            &#10003;
-                        </span>
-                    )}
-                </div>
-            )}
-            placeholder="Filter users..."
-            emptyText="No users found"
-            ariaLabel="Filter by author"
-            onOpenChange={(open) => {
-                if (open) setEnabled(true);
-            }}
-            closeOnSelect
-            onSearchChange={setSearchText}
+            {...userDropdownProps({
+                items: allItems,
+                isLoading,
+                selectedNames,
+                qualifierKey: "author",
+                ariaLabel: "Filter by author",
+                onToggle,
+                onOpenChange: (open) => {
+                    if (open) setEnabled(true);
+                },
+                onSearchChange: setSearchText,
+            })}
             trigger={
                 <button
                     type="button"

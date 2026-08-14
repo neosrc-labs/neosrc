@@ -12,6 +12,7 @@ import {
 } from "react";
 import { Label } from "~/components/ui/label";
 import { api } from "~/trpc/react";
+import { buildUserOptions } from "./user-dropdown-options";
 
 interface AutocompleteMatch {
     key: string;
@@ -137,43 +138,13 @@ export const SearchAutocomplete = forwardRef<
 
     const allUsers = useMemo(() => {
         if (match.key !== "author" && match.key !== "assignee") return [];
-        const map = new Map<
-            string,
-            { login: string; name?: string | null; avatar_url?: string }
-        >();
-        for (const u of assignees ?? []) {
-            map.set(u.login, u);
-        }
-        if (match.key === "author") {
-            for (const u of recentAuthors ?? []) {
-                if (!map.has(u.login)) {
-                    map.set(u.login, {
-                        login: u.login,
-                        avatar_url: u.avatar_url ?? undefined,
-                    });
-                }
-            }
-        }
-        if (currentUser?.login && !map.has(currentUser.login)) {
-            map.set(currentUser.login, {
-                login: currentUser.login,
-                avatar_url: currentUser.avatarUrl,
-            });
-        }
-        const result = Array.from(map.values());
-        result.sort((a, b) => {
-            if (a.login === currentUser?.login) return -1;
-            if (b.login === currentUser?.login) return 1;
-            return a.login.localeCompare(b.login);
+        return buildUserOptions({
+            assignees,
+            recentAuthors,
+            includeRecentAuthors: match.key === "author",
+            currentUser,
         });
-        return result;
-    }, [
-        match.key,
-        assignees,
-        recentAuthors,
-        currentUser?.login,
-        currentUser?.avatarUrl,
-    ]);
+    }, [match.key, assignees, recentAuthors, currentUser]);
 
     const suggestions = useMemo((): Suggestion[] => {
         const q = query.toLowerCase();
