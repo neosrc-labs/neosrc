@@ -5,12 +5,15 @@ import { getSession, githubAccessToken } from "~/server/auth";
 import {
     getCachedPullRequest,
     getChecksForCommit,
-    getConflictedFiles,
     getStackSuggestion,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
 import { HeaderActionBar } from "./_components/action-section/header-action-bar";
 import { PullRequestDescriptionSection } from "./_components/description";
+import {
+    buildConflictedFilesPromise,
+    SignedOutNotice,
+} from "./_components/pull-page-data";
 import { PullRequestContent } from "./_components/pull-request-content";
 import {
     TimelineSection,
@@ -50,13 +53,7 @@ export default async function PullRequestPage({ params }: PageProps) {
     }
 
     if (!accessToken) {
-        return (
-            <div className="px-6 py-8">
-                <p className="text-text-secondary">
-                    Please sign in to view this pull request.
-                </p>
-            </div>
-        );
+        return <SignedOutNotice />;
     }
 
     const session = await getSession();
@@ -69,18 +66,12 @@ export default async function PullRequestPage({ params }: PageProps) {
         userId,
     );
 
-    const conflictedFilesPromise = pullRequestPromise.then(async (pr) => {
-        if (pr.mergeable_state === "dirty") {
-            return getConflictedFiles(
-                accessToken,
-                owner,
-                repo,
-                pr.base.sha,
-                pr.head.sha,
-            );
-        }
-        return [];
-    });
+    const conflictedFilesPromise = buildConflictedFilesPromise(
+        accessToken,
+        owner,
+        repo,
+        pullRequestPromise,
+    );
 
     const checksPromise = pullRequestPromise.then((pr) =>
         getChecksForCommit(accessToken, owner, repo, pr.head.sha),

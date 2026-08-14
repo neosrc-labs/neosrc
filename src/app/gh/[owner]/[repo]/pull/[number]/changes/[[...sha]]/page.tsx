@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import type { PullChangesPageParams } from "~/app/[owner]/[repo]/_components/repo-pages/changes-page-params";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
     type CommitData,
     getCachedCommit,
     getCachedPullRequest,
     getChecksForCommit,
-    getConflictedFiles,
 } from "~/server/github";
 import {
     type GQLCommitWithAuthors,
@@ -19,15 +19,14 @@ import {
     CommitHeaderSkeleton,
 } from "../../_components/commit-header";
 import { FilesSection } from "../../_components/files-client";
+import {
+    buildConflictedFilesPromise,
+    SignedOutNotice,
+} from "../../_components/pull-page-data";
 import { getPullRequestPermissionContext } from "../../permissions-server";
 
 interface ChangesPageProps {
-    params: Promise<{
-        owner: string;
-        repo: string;
-        number: string;
-        sha?: string[];
-    }>;
+    params: Promise<PullChangesPageParams>;
 }
 
 export async function generateMetadata({
@@ -55,13 +54,7 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
     const accessToken = await githubAccessToken();
 
     if (!accessToken) {
-        return (
-            <div className="px-6 py-8">
-                <p className="text-text-secondary">
-                    Please sign in to view this pull request.
-                </p>
-            </div>
-        );
+        return <SignedOutNotice />;
     }
 
     const session = await getSession();
@@ -83,18 +76,12 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
         userId,
     );
 
-    const conflictedFilesPromise = prPromise.then(async (pr) => {
-        if (pr.mergeable_state === "dirty") {
-            return getConflictedFiles(
-                accessToken,
-                owner,
-                repo,
-                pr.base.sha,
-                pr.head.sha,
-            );
-        }
-        return [];
-    });
+    const conflictedFilesPromise = buildConflictedFilesPromise(
+        accessToken,
+        owner,
+        repo,
+        prPromise,
+    );
 
     const checksPromise = prPromise.then((pr) =>
         getChecksForCommit(accessToken, owner, repo, pr.head.sha),
