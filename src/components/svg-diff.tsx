@@ -2,11 +2,8 @@
 
 import { Code, Eye } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
-import type { ReviewComment } from "~/server/github";
-import type { ActiveComment } from "./diff-view";
-import { DiffView } from "./diff-view";
-import type { FooterAction } from "./markdown/markdown-editor";
+import { DiffModeToggle } from "./diff-mode-toggle";
+import { type DiffCommentProps, DiffView } from "./diff-view";
 
 type ViewMode = "rendered" | "code";
 
@@ -22,27 +19,11 @@ ${svgContent}
 </html>`;
 }
 
-interface SvgDiffProps {
+interface SvgDiffProps extends DiffCommentProps {
     patch: string;
     filename: string;
     oldContentUrl: string | null;
     newContentUrl: string | null;
-    comments?: ReviewComment[];
-    showComments?: boolean;
-    showCommentButton?: boolean;
-    activeComment?: ActiveComment | null;
-    onStartComment?: (ac: ActiveComment | null) => void;
-    commentBody?: string;
-    onCommentBodyChange?: (body: string) => void;
-    footerActions?: FooterAction[];
-    commentPending?: boolean;
-    commentError?: boolean;
-    onCancelComment?: () => void;
-    owner?: string;
-    repo?: string;
-    pullNumber?: number | string;
-    pendingReviewId?: number | null;
-    permissionContext: PullRequestPermissionContext;
 }
 
 export default function SvgDiff({
@@ -239,23 +220,7 @@ export default function SvgDiff({
                     )}
                 </div>
             )}
-            <div className="flex items-center justify-center gap-1 border-border border-t bg-surface-secondary px-4 py-1.5">
-                {modes.map(({ icon: Icon, label, value }) => (
-                    <button
-                        className={`cursor-pointer rounded px-2 py-1 font-medium text-xs transition-colors ${
-                            mode === value
-                                ? "bg-surface-selected text-gray-800 dark:text-zinc-200"
-                                : "text-text-tertiary hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
-                        }`}
-                        key={value}
-                        onClick={() => setMode(value)}
-                        title={label}
-                        type="button"
-                    >
-                        <Icon className="h-3.5 w-3.5" />
-                    </button>
-                ))}
-            </div>
+            <DiffModeToggle mode={mode} modes={modes} onModeChange={setMode} />
         </div>
     );
 }

@@ -16,6 +16,33 @@ function isLineComment(c: ReviewComment): boolean {
     return !isFileLevelComment(c);
 }
 
+function buildRawContentUrls({
+    filename,
+    previousFilename,
+    status,
+    owner,
+    repo,
+    baseSha,
+    headSha,
+}: {
+    filename: string;
+    previousFilename?: string | null;
+    status: string;
+    owner: string;
+    repo: string;
+    baseSha?: string;
+    headSha?: string;
+}): { oldUrl: string | null; newUrl: string | null } {
+    const oldFilename = previousFilename ?? filename;
+    const params = (sha: string, path: string) =>
+        `/api/raw?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&sha=${encodeURIComponent(sha)}&path=${encodeURIComponent(path)}`;
+    const newUrl =
+        status !== "removed" && headSha ? params(headSha, filename) : null;
+    const oldUrl =
+        status !== "added" && baseSha ? params(baseSha, oldFilename) : null;
+    return { oldUrl, newUrl };
+}
+
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { api } from "~/trpc/react";
 import { isGeneratedFile } from "~/utils/generated-files";
@@ -96,18 +123,15 @@ export default function FileDiff({
 
     const svgContentUrls = useMemo(() => {
         if (!isSvg) return null;
-        const oldFilename = file.previous_filename ?? file.filename;
-        const params = (sha: string, path: string) =>
-            `/api/raw?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&sha=${encodeURIComponent(sha)}&path=${encodeURIComponent(path)}`;
-        const newUrl =
-            file.status !== "removed" && headSha
-                ? params(headSha, file.filename)
-                : null;
-        const oldUrl =
-            file.status !== "added" && baseSha
-                ? params(baseSha, oldFilename)
-                : null;
-        return { oldUrl, newUrl };
+        return buildRawContentUrls({
+            filename: file.filename,
+            previousFilename: file.previous_filename,
+            status: file.status,
+            owner,
+            repo,
+            baseSha,
+            headSha,
+        });
     }, [
         isSvg,
         file.status,
@@ -121,18 +145,15 @@ export default function FileDiff({
 
     const imageUrls = useMemo(() => {
         if (!isImage) return null;
-        const oldFilename = file.previous_filename ?? file.filename;
-        const params = (sha: string, path: string) =>
-            `/api/raw?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&sha=${encodeURIComponent(sha)}&path=${encodeURIComponent(path)}`;
-        const newUrl =
-            file.status !== "removed" && headSha
-                ? params(headSha, file.filename)
-                : null;
-        const oldUrl =
-            file.status !== "added" && baseSha
-                ? params(baseSha, oldFilename)
-                : null;
-        return { oldUrl, newUrl };
+        return buildRawContentUrls({
+            filename: file.filename,
+            previousFilename: file.previous_filename,
+            status: file.status,
+            owner,
+            repo,
+            baseSha,
+            headSha,
+        });
     }, [
         isImage,
         file.status,
@@ -304,14 +325,20 @@ function useFileDiffState({
     const [expandedAll, setExpandedAll] = useState(false);
     const headerRef = useRef<HTMLDivElement>(null);
 
-    const toggleCollapsed = () => {
-        const willCollapse = !isCollapsed;
+    // Toggle `nextValue`; when the new value is the collapsed state and the
+    // sticky header sits near the pinned offset, collapse first and scroll the
+    // header back into place on the next frame.
+    const toggleWithScrollAdjust = (
+        nextValue: boolean,
+        collapsedValue: boolean,
+        setValue: (next: boolean) => void,
+    ) => {
         const stickyOffset = 56;
 
-        if (willCollapse && headerRef.current) {
+        if (nextValue === collapsedValue && headerRef.current) {
             const headerTop = headerRef.current.getBoundingClientRect().top;
             if (Math.abs(headerTop - stickyOffset) < 20) {
-                setIsCollapsed(true);
+                setValue(nextValue);
                 setTimeout(() => {
                     if (headerRef.current) {
                         const newTop =
@@ -325,31 +352,14 @@ function useFileDiffState({
                 return;
             }
         }
-        setIsCollapsed(!isCollapsed);
+        setValue(nextValue);
     };
 
-    const toggleExpandAll = () => {
-        const willCollapse = expandedAll;
-        if (willCollapse && headerRef.current) {
-            const stickyOffset = 56;
-            const headerTop = headerRef.current.getBoundingClientRect().top;
-            if (Math.abs(headerTop - stickyOffset) < 20) {
-                setExpandedAll(false);
-                setTimeout(() => {
-                    if (headerRef.current) {
-                        const newTop =
-                            headerRef.current.getBoundingClientRect().top;
-                        const delta = newTop - stickyOffset;
-                        if (Math.abs(delta) > 1) {
-                            window.scrollBy(0, delta);
-                        }
-                    }
-                }, 0);
-                return;
-            }
-        }
-        setExpandedAll(!expandedAll);
-    };
+    const toggleCollapsed = () =>
+        toggleWithScrollAdjust(!isCollapsed, true, setIsCollapsed);
+
+    const toggleExpandAll = () =>
+        toggleWithScrollAdjust(!expandedAll, false, setExpandedAll);
 
     const toggleViewed = () => {
         const key = getViewedKey(owner, repo, number);
@@ -971,6 +981,25 @@ function DiffContent({
     headSha,
     expandAllContext,
 }: DiffContentProps) {
+    const diffCommentProps = {
+        comments: lineComments,
+        showComments,
+        showCommentButton: true,
+        activeComment,
+        onStartComment,
+        commentBody,
+        onCommentBodyChange,
+        commentPending,
+        commentError,
+        onCancelComment,
+        footerActions,
+        pendingReviewId,
+        permissionContext,
+        owner,
+        repo,
+        pullNumber,
+    };
+
     return performanceHidden && !showPerformanceDiff ? (
         <HiddenDiffNotice
             message={
@@ -988,43 +1017,13 @@ function DiffContent({
             filename={file.filename}
             oldContentUrl={svgContentUrls.oldUrl}
             newContentUrl={svgContentUrls.newUrl}
-            comments={lineComments}
-            showComments={showComments}
-            showCommentButton={true}
-            activeComment={activeComment}
-            onStartComment={onStartComment}
-            commentBody={commentBody}
-            onCommentBodyChange={onCommentBodyChange}
-            commentPending={commentPending}
-            commentError={commentError}
-            onCancelComment={onCancelComment}
-            footerActions={footerActions}
-            pendingReviewId={pendingReviewId}
-            permissionContext={permissionContext}
-            owner={owner}
-            repo={repo}
-            pullNumber={pullNumber}
+            {...diffCommentProps}
         />
     ) : file.patch ? (
         <DiffView
             patch={file.patch}
             filename={file.filename}
-            comments={lineComments}
-            showComments={showComments}
-            showCommentButton={true}
-            activeComment={activeComment}
-            onStartComment={onStartComment}
-            commentBody={commentBody}
-            onCommentBodyChange={onCommentBodyChange}
-            commentPending={commentPending}
-            commentError={commentError}
-            onCancelComment={onCancelComment}
-            footerActions={footerActions}
-            pendingReviewId={pendingReviewId}
-            permissionContext={permissionContext}
-            owner={owner}
-            repo={repo}
-            pullNumber={pullNumber}
+            {...diffCommentProps}
             headSha={headSha}
             expandAllContext={expandAllContext}
         />
