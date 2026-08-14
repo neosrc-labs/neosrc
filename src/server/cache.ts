@@ -225,3 +225,62 @@ export async function deleteRepoIssuePullCountsCache(
 function escapeLikePattern(value: string): string {
     return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
+
+/**
+ * Shared with-stale-while-revalidate wrapper for per-provider repo values
+ * (starred state, subscription, issue/PR counts). Both provider files used to
+ * duplicate these bodies verbatim, differing only in the cache-key prefix and
+ * the provider's fetcher.
+ */
+export async function cachedRepoStarred(
+    provider: "gh" | "cb",
+    accessToken: string,
+    owner: string,
+    repo: string,
+    userId: string,
+    checkStarred: (
+        accessToken: string,
+        owner: string,
+        repo: string,
+    ) => Promise<boolean>,
+): Promise<boolean> {
+    return withStaleWhileRevalidate(
+        repoStarredCacheKey(provider, userId, owner, repo),
+        () => checkStarred(accessToken, owner, repo),
+        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    );
+}
+
+export async function cachedRepoSubscription<T>(
+    provider: "gh" | "cb",
+    accessToken: string,
+    owner: string,
+    repo: string,
+    userId: string,
+    getSubscription: (
+        accessToken: string,
+        owner: string,
+        repo: string,
+    ) => Promise<T | null>,
+): Promise<T | null> {
+    return withStaleWhileRevalidate(
+        repoSubscriptionCacheKey(provider, userId, owner, repo),
+        () => getSubscription(accessToken, owner, repo),
+        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    );
+}
+
+export async function cachedRepoCounts<T>(
+    provider: "gh" | "cb",
+    accessToken: string,
+    userId: string,
+    owner: string,
+    repo: string,
+    getCounts: (accessToken: string, owner: string, repo: string) => Promise<T>,
+): Promise<T> {
+    return withStaleWhileRevalidate(
+        repoIssuePullCountsCacheKey(provider, userId, owner, repo),
+        () => getCounts(accessToken, owner, repo),
+        { staleAfter: 3_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    );
+}

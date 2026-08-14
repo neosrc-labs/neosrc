@@ -4,14 +4,14 @@ import { Octokit, type RestEndpointMethodTypes } from "@octokit/rest";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import {
+    cachedRepoCounts,
+    cachedRepoStarred,
+    cachedRepoSubscription,
     prCacheKey,
     readCache,
     repoContributorsCacheKey,
     repoDocFilesCacheKey,
-    repoIssuePullCountsCacheKey,
     repoLanguagesCacheKey,
-    repoStarredCacheKey,
-    repoSubscriptionCacheKey,
     withStaleWhileRevalidate,
 } from "~/server/cache";
 import {
@@ -2004,10 +2004,13 @@ export async function getCachedRepoIssuePullCounts(
     owner: string,
     repo: string,
 ): Promise<{ openIssuesCount: number; openPullRequestsCount: number } | null> {
-    return withStaleWhileRevalidate(
-        repoIssuePullCountsCacheKey("gh", userId, owner, repo),
-        () => getRepoIssuePullCounts(accessToken, owner, repo),
-        { staleAfter: 3_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    return cachedRepoCounts(
+        "gh",
+        accessToken,
+        userId,
+        owner,
+        repo,
+        getRepoIssuePullCounts,
     );
 }
 
@@ -2100,10 +2103,13 @@ export async function getCachedRepoStarred(
     repo: string,
     userId: string,
 ): Promise<boolean> {
-    return withStaleWhileRevalidate(
-        repoStarredCacheKey("gh", userId, owner, repo),
-        () => checkRepoStarred(accessToken, owner, repo),
-        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    return cachedRepoStarred(
+        "gh",
+        accessToken,
+        owner,
+        repo,
+        userId,
+        checkRepoStarred,
     );
 }
 
@@ -2113,10 +2119,13 @@ export async function getCachedRepoSubscription(
     repo: string,
     userId: string,
 ): Promise<RepoSubscription | null> {
-    return withStaleWhileRevalidate(
-        repoSubscriptionCacheKey("gh", userId, owner, repo),
-        () => getRepoSubscription(accessToken, owner, repo),
-        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    return cachedRepoSubscription(
+        "gh",
+        accessToken,
+        owner,
+        repo,
+        userId,
+        getRepoSubscription,
     );
 }
 

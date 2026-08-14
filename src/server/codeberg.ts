@@ -1,9 +1,8 @@
 import { cache } from "react";
 import {
-    repoIssuePullCountsCacheKey,
-    repoStarredCacheKey,
-    repoSubscriptionCacheKey,
-    withStaleWhileRevalidate,
+    cachedRepoCounts,
+    cachedRepoStarred,
+    cachedRepoSubscription,
 } from "~/server/cache";
 import {
     getCachedRepoData,
@@ -1116,10 +1115,13 @@ export async function getCachedRepoCounts(
     owner: string,
     repo: string,
 ): Promise<{ openIssuesCount: number; openPullRequestsCount: number }> {
-    return withStaleWhileRevalidate(
-        repoIssuePullCountsCacheKey("cb", userId, owner, repo),
-        () => getRepoCounts(accessToken, owner, repo),
-        { staleAfter: 3_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    return cachedRepoCounts(
+        "cb",
+        accessToken,
+        userId,
+        owner,
+        repo,
+        getRepoCounts,
     );
 }
 
@@ -1312,10 +1314,13 @@ export async function getCachedRepoStarred(
     repo: string,
     userId: string,
 ): Promise<boolean> {
-    return withStaleWhileRevalidate(
-        repoStarredCacheKey("cb", userId, owner, repo),
-        () => checkRepoStarred(accessToken, owner, repo),
-        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    return cachedRepoStarred(
+        "cb",
+        accessToken,
+        owner,
+        repo,
+        userId,
+        checkRepoStarred,
     );
 }
 
@@ -1325,9 +1330,12 @@ export async function getCachedRepoSubscription(
     repo: string,
     userId: string,
 ): Promise<RepoSubscription | null> {
-    return withStaleWhileRevalidate(
-        repoSubscriptionCacheKey("cb", userId, owner, repo),
-        () => getRepoSubscription(accessToken, owner, repo),
-        { staleAfter: 30_000, deleteAfter: 24 * 60 * 60 * 1000 },
+    return cachedRepoSubscription(
+        "cb",
+        accessToken,
+        owner,
+        repo,
+        userId,
+        getRepoSubscription,
     );
 }
