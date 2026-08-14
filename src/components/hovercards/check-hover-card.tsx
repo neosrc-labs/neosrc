@@ -2,6 +2,7 @@
 
 import { Check, Circle, CircleSlash, Clock, XCircle } from "lucide-react";
 import type { ReactNode } from "react";
+import { formatDurationMs } from "~/components/hovercards/hover-card-shared";
 import {
     HoverCard,
     HoverCardContent,
@@ -17,15 +18,7 @@ function formatDuration(
     const end = completedAt ? new Date(completedAt).getTime() : Date.now();
     const diffMs = end - start;
     if (diffMs < 0) return "";
-
-    const totalSec = Math.floor(diffMs / 1000);
-    const min = Math.floor(totalSec / 60);
-    const sec = totalSec % 60;
-
-    if (min > 0) {
-        return `${min}m ${sec}s`;
-    }
-    return `${sec}s`;
+    return formatDurationMs(diffMs);
 }
 
 function statusLabel(status: string, conclusion: string | null): string {
