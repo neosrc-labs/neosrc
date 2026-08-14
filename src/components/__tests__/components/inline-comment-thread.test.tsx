@@ -2,9 +2,24 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeComment } from "~/__tests__/helpers/comment-fixtures";
+import {
+    mockCommentCard,
+    mockMarkdownEditor,
+    mockMarkdownRenderer,
+    mockPopover,
+    mockReactionBar,
+    mockReactionPicker,
+    mockUseReactionToggle,
+    mockUseReviewThreadOperations,
+} from "~/__tests__/helpers/component-mocks";
+import {
+    reviewCommentReactionsUtils,
+    reviewCommentsListUtils,
+    reviewThreadsApi,
+} from "~/__tests__/helpers/trpc-mocks";
 
 import { InlineCommentThread } from "~/components/inline-comment-thread";
-import type { ReviewComment } from "~/server/github";
 
 const mockThreadsQuery = vi.hoisted(() =>
     vi.fn<() => { data: unknown; isPending?: boolean }>(() => ({
@@ -14,14 +29,7 @@ const mockThreadsQuery = vi.hoisted(() =>
 vi.mock("~/trpc/react", () => ({
     api: {
         useUtils: vi.fn(() => ({
-            reviewComments: {
-                list: {
-                    cancel: vi.fn(),
-                    invalidate: vi.fn(),
-                    getData: vi.fn(() => []),
-                    setData: vi.fn(),
-                },
-            },
+            reviewComments: { list: reviewCommentsListUtils() },
             reviews: {
                 getPending: {
                     cancel: vi.fn(),
@@ -31,94 +39,20 @@ vi.mock("~/trpc/react", () => ({
                 },
             },
             reactions: {
-                getForReviewComments: {
-                    cancel: vi.fn(),
-                    invalidate: vi.fn(),
-                    getData: vi.fn(() => ({})),
-                    setData: vi.fn(),
-                },
+                getForReviewComments: reviewCommentReactionsUtils(),
             },
         })),
-        users: {
-            currentUser: {
-                useQuery: vi.fn(() => ({
-                    data: {
-                        login: "testuser",
-                        avatarUrl: "https://example.com/avatar.png",
-                    },
-                })),
-            },
-        },
-        reactions: {
-            getForReviewComments: {
-                useQuery: vi.fn(() => ({ data: {} })),
-            },
-        },
-        reviewComments: {
-            reply: {
-                useMutation: vi.fn(() => ({
-                    mutate: vi.fn(),
-                    isPending: false,
-                    isError: false,
-                })),
-            },
-            update: {
-                useMutation: vi.fn(() => ({
-                    mutate: vi.fn(),
-                    isPending: false,
-                    isError: false,
-                })),
-            },
-            delete: {
-                useMutation: vi.fn(() => ({
-                    mutate: vi.fn(),
-                    isPending: false,
-                    isError: false,
-                })),
-            },
-            threads: { useQuery: mockThreadsQuery },
-        },
-        repos: {
-            getPermission: { useQuery: vi.fn(() => ({ data: null })) },
-        },
+        ...reviewThreadsApi(mockThreadsQuery),
     },
 }));
 
-vi.mock("~/hooks/use-reaction-toggle", () => ({
-    useTogglePullRequestReviewCommentReaction: vi.fn(() => ({
-        mutate: vi.fn(),
-        isPending: false,
-    })),
-}));
+vi.mock("~/hooks/use-reaction-toggle", () => mockUseReactionToggle());
 
-vi.mock("~/hooks/use-review-thread-operations", () => ({
-    useReviewThreadOperations: vi.fn(() => ({
-        operations: [],
-        isPending: () => false,
-        resolve: vi.fn(),
-    })),
-    applyReviewThreadOperations: vi.fn((threads: unknown) => threads),
-}));
+vi.mock("~/hooks/use-review-thread-operations", () =>
+    mockUseReviewThreadOperations(),
+);
 
-vi.mock("~/components/comment-card", () => ({
-    CommentCard: ({
-        children,
-        headerActions,
-        footer,
-        userHref,
-    }: {
-        children?: React.ReactNode;
-        headerActions?: React.ReactNode;
-        footer?: React.ReactNode;
-        userHref?: string;
-    }) => (
-        <div data-testid="comment-card" data-user-href={userHref}>
-            {headerActions}
-            <div data-testid="comment-body">{children}</div>
-            {footer}
-        </div>
-    ),
-}));
+vi.mock("~/components/comment-card", () => mockCommentCard());
 
 vi.mock("~/components/resolved-thread-banner", () => ({
     ResolvedThreadBanner: ({ onShow }: { onShow: () => void }) => (
@@ -153,58 +87,20 @@ vi.mock("~/components/resolved-thread-banner", () => ({
     ),
 }));
 
-vi.mock("~/components/reaction-bar", () => ({
-    ReactionBar: () => <div data-testid="reaction-bar" />,
-}));
+vi.mock("~/components/reaction-bar", () => mockReactionBar());
 
-vi.mock("~/components/reaction-picker", () => ({
-    ReactionPicker: () => <div data-testid="reaction-picker" />,
-}));
+vi.mock("~/components/reaction-picker", () => mockReactionPicker());
 
-vi.mock("~/components/markdown/markdown-renderer", () => ({
-    MarkdownRenderer: ({ content }: { content: string }) => (
-        <div data-testid="markdown-renderer">{content}</div>
-    ),
-}));
+vi.mock("~/components/markdown/markdown-renderer", () =>
+    mockMarkdownRenderer(),
+);
 
-vi.mock("~/components/markdown/markdown-editor", () => ({
-    MarkdownEditor: (props: {
-        value?: string;
-        onChange?: (v: string) => void;
-        onCancel?: () => void;
-        footerActions?: Array<{
-            label: string;
-            onClick: () => void;
-            disabled?: (text: string) => boolean;
-        }>;
-    }) => (
-        <div data-testid="markdown-editor">
-            <textarea
-                data-testid="reply-textarea"
-                onChange={(e) => props.onChange?.(e.target.value)}
-                value={props.value ?? ""}
-            />
-            <button
-                data-testid="cancel-reply"
-                onClick={() => props.onCancel?.()}
-                type="button"
-            >
-                Cancel
-            </button>
-            {(props.footerActions ?? []).map((action) => (
-                <button
-                    key={action.label}
-                    data-testid={`action-${action.label}`}
-                    onClick={() => action.onClick?.()}
-                    type="button"
-                    disabled={action.disabled?.(props.value ?? "") ?? false}
-                >
-                    {action.label}
-                </button>
-            ))}
-        </div>
-    ),
-}));
+vi.mock("~/components/markdown/markdown-editor", () =>
+    mockMarkdownEditor({
+        textareaTestId: "reply-textarea",
+        cancelTestId: "cancel-reply",
+    }),
+);
 
 vi.mock("lucide-react", () => ({
     MoreVertical: () => <div data-testid="more-vertical" />,
@@ -254,71 +150,9 @@ vi.mock("~/components/ui/dialog", () => ({
     ),
 }));
 
-vi.mock("~/components/ui/popover", () => ({
-    Popover: ({ children }: { children?: React.ReactNode }) => (
-        <div data-testid="popover">{children}</div>
-    ),
-    PopoverContent: ({ children }: { children?: React.ReactNode }) => (
-        <div data-testid="popover-content">{children}</div>
-    ),
-    PopoverTrigger: ({ children }: { children?: React.ReactNode }) => (
-        <div data-testid="popover-trigger">{children}</div>
-    ),
-}));
+vi.mock("~/components/ui/popover", () => mockPopover());
 
 // ---- Helpers ----
-function makeComment(overrides: Record<string, unknown> = {}): ReviewComment {
-    return {
-        id: 1,
-        body: "Test comment body",
-        user: {
-            login: "author-user",
-            avatar_url: "https://example.com/avatar.png",
-            id: 42,
-            node_id: "MDQ6VXNlcjQy",
-            gravatar_id: "",
-            url: "https://api.github.com/users/author",
-            received_events_url: "",
-            type: "User" as const,
-            site_admin: false,
-            html_url: "https://github.com/author",
-        },
-        created_at: "2024-06-15T10:30:00Z",
-        author_association: "MEMBER",
-        path: "src/file.ts",
-        line: 42,
-        start_line: null,
-        pull_request_review_id: null,
-        url: "",
-        node_id: "",
-        diff_hunk: "",
-        commit_id: "",
-        original_commit_id: "",
-        html_url: "",
-        pull_request_url: "",
-        _links: {
-            self: { href: "" },
-            html: { href: "" },
-            pull_request: { href: "" },
-        },
-        reactions: {
-            url: "",
-            total_count: 0,
-            "+1": 0,
-            "-1": 0,
-            laugh: 0,
-            hooray: 0,
-            confused: 0,
-            heart: 0,
-            rocket: 0,
-            eyes: 0,
-        },
-        body_html: "",
-        body_text: "",
-        ...overrides,
-    } as unknown as ReviewComment;
-}
-
 const defaultProps = {
     parentComment: makeComment(),
     replies: [],
@@ -334,6 +168,19 @@ const defaultProps = {
 };
 
 // ---- Tests ----
+function mockResolvedThread() {
+    mockThreadsQuery.mockReturnValue({
+        data: [
+            {
+                id: "thread-1",
+                isResolved: true,
+                isOutdated: false,
+                comments: [{ id: 1 }],
+            },
+        ],
+    });
+}
+
 describe("InlineCommentThread", () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -382,16 +229,7 @@ describe("InlineCommentThread", () => {
     });
 
     it("shows resolved thread banner when thread is resolved", () => {
-        mockThreadsQuery.mockReturnValue({
-            data: [
-                {
-                    id: "thread-1",
-                    isResolved: true,
-                    isOutdated: false,
-                    comments: [{ id: 1 }],
-                },
-            ],
-        });
+        mockResolvedThread();
 
         render(<InlineCommentThread {...defaultProps} />);
 
@@ -401,16 +239,7 @@ describe("InlineCommentThread", () => {
 
     it("shows full thread after clicking show on resolved banner", async () => {
         const user = userEvent.setup();
-        mockThreadsQuery.mockReturnValue({
-            data: [
-                {
-                    id: "thread-1",
-                    isResolved: true,
-                    isOutdated: false,
-                    comments: [{ id: 1 }],
-                },
-            ],
-        });
+        mockResolvedThread();
 
         render(<InlineCommentThread {...defaultProps} />);
         expect(screen.getByTestId("resolved-banner")).toBeInTheDocument();

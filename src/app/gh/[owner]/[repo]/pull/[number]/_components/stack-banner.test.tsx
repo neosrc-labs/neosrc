@@ -2,36 +2,16 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { STACK_SUGGESTION } from "~/__tests__/helpers/stack-suggestion";
 import { TooltipProvider } from "~/components/ui/tooltip";
-import type { StackSuggestion } from "~/server/github";
 import { StackBanner } from "./stack-banner";
 import { StackCreateBadge } from "./stack-create-badge";
-
-const suggestion: StackSuggestion = {
-    pullRequests: [
-        {
-            number: 10,
-            title: "feature-a",
-            state: "open",
-            draft: false,
-            headRef: "main",
-        },
-        {
-            number: 11,
-            title: "feature-b",
-            state: "open",
-            draft: false,
-            headRef: "feature-a",
-        },
-    ],
-    baseRef: "main",
-};
 
 function renderBanner(onDismiss: () => void, onCreateStack: () => void) {
     return render(
         <TooltipProvider>
             <StackBanner
-                suggestion={suggestion}
+                suggestion={STACK_SUGGESTION}
                 onDismiss={onDismiss}
                 onCreateStack={onCreateStack}
             />

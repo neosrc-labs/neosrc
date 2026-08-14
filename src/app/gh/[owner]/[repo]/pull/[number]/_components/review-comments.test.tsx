@@ -2,6 +2,22 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeComment } from "~/__tests__/helpers/comment-fixtures";
+import {
+    mockCommentCard,
+    mockDialog,
+    mockMarkdownRenderer,
+    mockPopover,
+    mockReactionBar,
+    mockReactionPicker,
+    mockUseReactionToggle,
+    mockUseReviewThreadOperations,
+} from "~/__tests__/helpers/component-mocks";
+import {
+    reviewCommentReactionsUtils,
+    reviewCommentsListUtils,
+    reviewThreadsApi,
+} from "~/__tests__/helpers/trpc-mocks";
 
 import type { ReviewComment } from "~/server/github";
 
@@ -15,26 +31,14 @@ const mockThreadsQuery = vi.hoisted(() =>
 vi.mock("~/trpc/react", () => ({
     api: {
         useUtils: vi.fn(() => ({
-            reviewComments: {
-                list: {
-                    cancel: vi.fn(),
-                    invalidate: vi.fn(),
-                    getData: vi.fn(() => []),
-                    setData: vi.fn(),
-                },
-            },
+            reviewComments: { list: reviewCommentsListUtils() },
             reviews: {
                 getPending: {
                     getData: vi.fn(() => ({ comments: [] })),
                 },
             },
             reactions: {
-                getForReviewComments: {
-                    cancel: vi.fn(),
-                    invalidate: vi.fn(),
-                    getData: vi.fn(() => ({})),
-                    setData: vi.fn(),
-                },
+                getForReviewComments: reviewCommentReactionsUtils(),
             },
             timeline: {
                 list: {
@@ -45,100 +49,25 @@ vi.mock("~/trpc/react", () => ({
                 },
             },
         })),
-        users: {
-            currentUser: {
-                useQuery: vi.fn(() => ({
-                    data: {
-                        login: "testuser",
-                        avatarUrl: "https://example.com/avatar.png",
-                    },
-                })),
-            },
-        },
-        reactions: {
-            getForReviewComments: {
-                useQuery: vi.fn(() => ({ data: {} })),
-            },
-        },
-        reviewComments: {
-            threads: { useQuery: mockThreadsQuery },
-            reply: {
-                useMutation: vi.fn(() => ({
-                    mutate: vi.fn(),
-                    isPending: false,
-                    isError: false,
-                })),
-            },
-            update: {
-                useMutation: vi.fn(() => ({
-                    mutate: vi.fn(),
-                    isPending: false,
-                    isError: false,
-                })),
-            },
-            delete: {
-                useMutation: vi.fn(() => ({
-                    mutate: vi.fn(),
-                    isPending: false,
-                    isError: false,
-                })),
-            },
-        },
-        repos: {
-            getPermission: { useQuery: vi.fn(() => ({ data: null })) },
-        },
+        ...reviewThreadsApi(mockThreadsQuery),
     },
 }));
 
-vi.mock("~/hooks/use-reaction-toggle", () => ({
-    useTogglePullRequestReviewCommentReaction: vi.fn(() => ({
-        mutate: vi.fn(),
-        isPending: false,
-    })),
-}));
+vi.mock("~/hooks/use-reaction-toggle", () => mockUseReactionToggle());
 
-vi.mock("~/hooks/use-review-thread-operations", () => ({
-    useReviewThreadOperations: vi.fn(() => ({
-        operations: [],
-        isPending: () => false,
-        resolve: vi.fn(),
-    })),
-    applyReviewThreadOperations: vi.fn((threads: unknown) => threads),
-}));
+vi.mock("~/hooks/use-review-thread-operations", () =>
+    mockUseReviewThreadOperations(),
+);
 
-vi.mock("~/components/comment-card", () => ({
-    CommentCard: ({
-        children,
-        headerActions,
-        footer,
-        userHref,
-    }: {
-        children?: React.ReactNode;
-        headerActions?: React.ReactNode;
-        footer?: React.ReactNode;
-        userHref?: string;
-    }) => (
-        <div data-testid="comment-card" data-user-href={userHref}>
-            {headerActions}
-            <div data-testid="comment-body">{children}</div>
-            {footer}
-        </div>
-    ),
-}));
+vi.mock("~/components/comment-card", () => mockCommentCard());
 
-vi.mock("~/components/markdown/markdown-renderer", () => ({
-    MarkdownRenderer: ({ content }: { content: string }) => (
-        <div data-testid="markdown-renderer">{content}</div>
-    ),
-}));
+vi.mock("~/components/markdown/markdown-renderer", () =>
+    mockMarkdownRenderer(),
+);
 
-vi.mock("~/components/reaction-bar", () => ({
-    ReactionBar: () => <div data-testid="reaction-bar" />,
-}));
+vi.mock("~/components/reaction-bar", () => mockReactionBar());
 
-vi.mock("~/components/reaction-picker", () => ({
-    ReactionPicker: () => <div data-testid="reaction-picker" />,
-}));
+vi.mock("~/components/reaction-picker", () => mockReactionPicker());
 
 vi.mock("~/components/diff-view", () => ({
     DiffView: () => <div data-testid="diff-view" />,
@@ -152,104 +81,34 @@ vi.mock("~/components/resolved-thread-banner", () => ({
     ResolveButton: () => <button type="button">Resolve</button>,
 }));
 
-vi.mock("~/components/ui/dialog", () => ({
-    Dialog: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-    DialogContent: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-    DialogDescription: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-    DialogFooter: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-    DialogHeader: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-    DialogTitle: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-}));
+vi.mock("~/components/ui/dialog", () => mockDialog());
 
-vi.mock("~/components/ui/popover", () => ({
-    Popover: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-    PopoverContent: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-    PopoverTrigger: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-}));
+vi.mock("~/components/ui/popover", () => mockPopover());
 
 // ---- Helpers ----
-function makeComment(overrides: Record<string, unknown> = {}): ReviewComment {
-    return {
-        id: 1,
-        body: "Test comment body",
-        user: {
-            login: "author-user",
-            avatar_url: "https://example.com/avatar.png",
-            id: 42,
-            node_id: "MDQ6VXNlcjQy",
-            gravatar_id: "",
-            url: "https://api.github.com/users/author",
-            received_events_url: "",
-            type: "User" as const,
-            site_admin: false,
-            html_url: "https://github.com/author",
-        },
+function reviewComment(overrides: Record<string, unknown> = {}): ReviewComment {
+    return makeComment({
         created_at: "2026-05-15T19:00:03Z",
         author_association: "NONE",
-        path: "text/3959-llm-policy.md",
+        path: PATH,
         line: null,
-        start_line: null,
-        pull_request_review_id: 4300660810,
-        url: "",
-        node_id: "",
-        diff_hunk: "",
-        commit_id: "",
-        original_commit_id: "",
-        html_url: "",
-        pull_request_url: "",
-        _links: {
-            self: { href: "" },
-            html: { href: "" },
-            pull_request: { href: "" },
-        },
-        reactions: {
-            url: "",
-            total_count: 0,
-            "+1": 0,
-            "-1": 0,
-            laugh: 0,
-            hooray: 0,
-            confused: 0,
-            heart: 0,
-            rocket: 0,
-            eyes: 0,
-        },
-        body_html: "",
-        body_text: "",
+        pull_request_review_id: REVIEW_ID,
         ...overrides,
-    } as unknown as ReviewComment;
+    });
 }
 
 const REVIEW_ID = 4300660810;
 const PATH = "text/3959-llm-policy.md";
 
-const unresolvedComment = makeComment({
+const unresolvedComment = reviewComment({
     id: 3250370013,
     body: "So I understand that my voice does not have very much weight here.",
 });
-const outdatedResolvedComment = makeComment({
+const outdatedResolvedComment = reviewComment({
     id: 3250493529,
     body: "A suggestion on the summary wording.",
 });
-const resolvedComment = makeComment({
+const resolvedComment = reviewComment({
     id: 3250765189,
     body: "A large fraction of the ethical issues with LLM use apply equally.",
 });

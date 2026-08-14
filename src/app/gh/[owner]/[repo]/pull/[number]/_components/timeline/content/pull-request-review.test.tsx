@@ -3,6 +3,14 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
+import {
+    mockCommentCard,
+    mockDialog,
+    mockMarkdownRenderer,
+    mockPopover,
+    mockReactionBar,
+    mockReactionPicker,
+} from "~/__tests__/helpers/component-mocks";
 
 import type { GQLPullRequestReview } from "~/server/github-graphql";
 import { PullRequestReviewContent } from "./pull-request-review";
@@ -79,70 +87,19 @@ vi.mock("next/link", () => ({
     ),
 }));
 
-vi.mock("~/components/comment-card", () => ({
-    CommentCard: ({
-        children,
-        headerActions,
-        footer,
-    }: {
-        children?: React.ReactNode;
-        headerActions?: React.ReactNode;
-        footer?: React.ReactNode;
-    }) => (
-        <div data-testid="comment-card">
-            {headerActions}
-            <div data-testid="comment-body">{children}</div>
-            {footer}
-        </div>
-    ),
-}));
+vi.mock("~/components/comment-card", () => mockCommentCard());
 
-vi.mock("~/components/markdown/markdown-renderer", () => ({
-    MarkdownRenderer: ({ content }: { content: string }) => (
-        <div data-testid="markdown">{content}</div>
-    ),
-}));
+vi.mock("~/components/markdown/markdown-renderer", () =>
+    mockMarkdownRenderer("markdown"),
+);
 
-vi.mock("~/components/reaction-bar", () => ({
-    ReactionBar: () => <div data-testid="reaction-bar" />,
-}));
+vi.mock("~/components/reaction-bar", () => mockReactionBar());
 
-vi.mock("~/components/reaction-picker", () => ({
-    ReactionPicker: () => <div data-testid="reaction-picker" />,
-}));
+vi.mock("~/components/reaction-picker", () => mockReactionPicker());
 
-vi.mock("~/components/ui/popover", () => ({
-    Popover: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-    PopoverContent: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-    PopoverTrigger: ({ children }: { children?: React.ReactNode }) => (
-        <>{children}</>
-    ),
-}));
+vi.mock("~/components/ui/popover", () => mockPopover());
 
-vi.mock("~/components/ui/dialog", () => ({
-    Dialog: ({ children }: { children?: React.ReactNode }) => (
-        <div data-testid="dialog">{children}</div>
-    ),
-    DialogContent: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-    DialogDescription: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-    DialogFooter: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-    DialogHeader: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-    DialogTitle: ({ children }: { children?: React.ReactNode }) => (
-        <div>{children}</div>
-    ),
-}));
+vi.mock("~/components/ui/dialog", () => mockDialog(["dialog"]));
 
 vi.mock("~/components/user-link", () => ({
     UserLink: ({ actor }: { actor: { login: string } | null }) => (

@@ -33,6 +33,15 @@ const DEFAULT_PROPS = {
     onReact: vi.fn(),
 };
 
+function expectAddReactionTriggerOnly() {
+    expect(
+        screen.getByRole("button", { name: "Add reaction" }),
+    ).toBeInTheDocument();
+    expect(
+        screen.queryByRole("button", { name: "+1" }),
+    ).not.toBeInTheDocument();
+}
+
 describe("ReactionPicker", () => {
     it("shows all reactions when user hasn't reacted", () => {
         render(<ReactionPicker {...DEFAULT_PROPS} />);
@@ -97,14 +106,9 @@ describe("ReactionPicker", () => {
     it("handles null currentUserLogin gracefully", () => {
         render(<ReactionPicker {...DEFAULT_PROPS} currentUserLogin={null} />);
 
-        expect(
-            screen.getByRole("button", { name: "Add reaction" }),
-        ).toBeInTheDocument();
+        expectAddReactionTriggerOnly();
 
         // No reaction buttons should appear inside the popover
-        expect(
-            screen.queryByRole("button", { name: "+1" }),
-        ).not.toBeInTheDocument();
         expect(screen.queryByTestId("popover-content")).not.toBeInTheDocument();
     });
 
@@ -117,23 +121,13 @@ describe("ReactionPicker", () => {
             />,
         );
 
-        expect(
-            screen.getByRole("button", { name: "Add reaction" }),
-        ).toBeInTheDocument();
-        expect(
-            screen.queryByRole("button", { name: "+1" }),
-        ).not.toBeInTheDocument();
+        expectAddReactionTriggerOnly();
     });
 
     it("handles disabled prop gracefully", () => {
         render(<ReactionPicker {...DEFAULT_PROPS} disabled />);
 
-        expect(
-            screen.getByRole("button", { name: "Add reaction" }),
-        ).toBeInTheDocument();
-        expect(
-            screen.queryByRole("button", { name: "+1" }),
-        ).not.toBeInTheDocument();
+        expectAddReactionTriggerOnly();
     });
 
     it("clicking a reaction button calls onReact with correct content", async () => {
