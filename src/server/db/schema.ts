@@ -12,6 +12,32 @@ import {
 
 export const createTable = pgTableCreator((name) => `${name}`);
 
+type TableBuilder = Parameters<Parameters<typeof createTable>[1]>[0];
+
+/** createdAt/updatedAt columns with server-side `defaultNow()`. */
+const createdAtAndUpdatedAt = (d: TableBuilder) => ({
+    createdAt: d
+        .timestamp({ withTimezone: true, mode: "date" })
+        .defaultNow()
+        .notNull(),
+    updatedAt: d
+        .timestamp({ withTimezone: true, mode: "date" })
+        .defaultNow()
+        .notNull(),
+});
+
+/** createdAt/updatedAt columns with snake_case names (tables that name every column). */
+const snakeCaseCreatedAtAndUpdatedAt = (d: TableBuilder) => ({
+    createdAt: d
+        .timestamp("created_at", { withTimezone: true, mode: "date" })
+        .notNull()
+        .defaultNow(),
+    updatedAt: d
+        .timestamp("updated_at", { withTimezone: true, mode: "date" })
+        .notNull()
+        .defaultNow(),
+});
+
 export const providerEnum = pgEnum("provider", ["github", "codeberg"]);
 
 export const repoVisibilityEnum = pgEnum("repo_visibility", [
@@ -107,14 +133,7 @@ export const cache = createTable(
         value: d.jsonb().$type<unknown>().notNull(),
         staleAt: d.timestamp({ withTimezone: true, mode: "date" }).notNull(),
         deleteAt: d.timestamp({ withTimezone: true, mode: "date" }),
-        createdAt: d
-            .timestamp({ withTimezone: true, mode: "date" })
-            .defaultNow()
-            .notNull(),
-        updatedAt: d
-            .timestamp({ withTimezone: true, mode: "date" })
-            .defaultNow()
-            .notNull(),
+        ...createdAtAndUpdatedAt(d),
     }),
     (t) => [
         // The hourly expired-row sweep filters on deleteAt.
@@ -133,14 +152,7 @@ export const apiKey = createTable(
             .notNull()
             .references(() => betterAuthUser.id),
         expirationTimestamp: d.timestamp({ withTimezone: true, mode: "date" }),
-        createdAt: d
-            .timestamp({ withTimezone: true, mode: "date" })
-            .defaultNow()
-            .notNull(),
-        updatedAt: d
-            .timestamp({ withTimezone: true, mode: "date" })
-            .defaultNow()
-            .notNull(),
+        ...createdAtAndUpdatedAt(d),
     }),
     (t) => [
         // API-key lookups are scoped by owner.
@@ -158,14 +170,7 @@ export const apiKeyPermission = createTable(
             .notNull()
             .references(() => apiKey.id, { onDelete: "cascade" }),
         target: d.text().notNull(),
-        createdAt: d
-            .timestamp({ withTimezone: true, mode: "date" })
-            .defaultNow()
-            .notNull(),
-        updatedAt: d
-            .timestamp({ withTimezone: true, mode: "date" })
-            .defaultNow()
-            .notNull(),
+        ...createdAtAndUpdatedAt(d),
     }),
     (t) => [
         // Cascade deletes from api_key and per-key permission queries hit this column.
@@ -188,14 +193,7 @@ export const pullRequestReport = createTable(
         state: d.varchar({ length: 16 }).notNull().default("VALID"),
         type: d.varchar({ length: 64 }).notNull(),
         data: d.text(),
-        createdAt: d
-            .timestamp({ withTimezone: true, mode: "date" })
-            .defaultNow()
-            .notNull(),
-        updatedAt: d
-            .timestamp({ withTimezone: true, mode: "date" })
-            .defaultNow()
-            .notNull(),
+        ...createdAtAndUpdatedAt(d),
     }),
     (t) => [
         primaryKey({
@@ -220,14 +218,7 @@ export const account = createTable(
         username: d.varchar({ length: 255 }).notNull(),
         type: accountTypeEnum("type").notNull(),
         avatarUrl: d.text("avatar_url"),
-        createdAt: d
-            .timestamp("created_at", { withTimezone: true, mode: "date" })
-            .notNull()
-            .defaultNow(),
-        updatedAt: d
-            .timestamp("updated_at", { withTimezone: true, mode: "date" })
-            .notNull()
-            .defaultNow(),
+        ...snakeCaseCreatedAtAndUpdatedAt(d),
     }),
     (t) => [
         unique("uk_user_provider_username").on(t.provider, t.username),
@@ -263,14 +254,7 @@ export const repo = createTable(
             mode: "date",
         }),
         rawData: d.jsonb("raw_data"),
-        createdAt: d
-            .timestamp("created_at", { withTimezone: true, mode: "date" })
-            .notNull()
-            .defaultNow(),
-        updatedAt: d
-            .timestamp("updated_at", { withTimezone: true, mode: "date" })
-            .notNull()
-            .defaultNow(),
+        ...snakeCaseCreatedAtAndUpdatedAt(d),
     }),
     (t) => [
         foreignKey({
