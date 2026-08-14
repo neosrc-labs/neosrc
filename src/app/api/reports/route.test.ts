@@ -88,6 +88,52 @@ function updateChain() {
     };
 }
 
+function selectLatest(revision = 3, overrides: Record<string, unknown> = {}) {
+    return selectChain([
+        {
+            provider: "github",
+            repositorySlug: "owner/repo",
+            prNumber: 42,
+            revision,
+            name: "lint",
+            ...overrides,
+        },
+    ]);
+}
+
+const AUTH_HEADER = { authorization: "Bearer oidc-token" };
+
+async function postState(state: string) {
+    return POST(
+        apiRequest(
+            "POST",
+            {
+                provider: "github",
+                repository: "owner/repo",
+                prNumber: 42,
+                name: "lint",
+                state,
+            },
+            AUTH_HEADER,
+        ),
+    );
+}
+
+async function deleteReport() {
+    return DELETE(
+        apiRequest(
+            "DELETE",
+            {
+                provider: "github",
+                repository: "owner/repo",
+                prNumber: 42,
+                name: "lint",
+            },
+            AUTH_HEADER,
+        ),
+    );
+}
+
 function uniqueViolation() {
     return Object.assign(
         new Error("duplicate key value violates unique constraint"),
@@ -469,31 +515,9 @@ describe("POST and DELETE", () => {
         mocks.verifyGitHubOIDCToken.mockResolvedValue({
             repository: "owner/repo",
         });
-        mocks.db.select.mockReturnValue(
-            selectChain([
-                {
-                    provider: "github",
-                    repositorySlug: "owner/repo",
-                    prNumber: 42,
-                    revision: 3,
-                    name: "lint",
-                },
-            ]),
-        );
+        mocks.db.select.mockReturnValue(selectLatest());
 
-        const res = await POST(
-            apiRequest(
-                "POST",
-                {
-                    provider: "github",
-                    repository: "owner/repo",
-                    prNumber: 42,
-                    name: "lint",
-                    state: "OUTDATED",
-                },
-                { authorization: "Bearer oidc-token" },
-            ),
-        );
+        const res = await postState("OUTDATED");
 
         expect(res.status).toBe(200);
         expect(mocks.db.update).toHaveBeenCalledTimes(1);
@@ -504,19 +528,7 @@ describe("POST and DELETE", () => {
             repository: "owner/repo",
         });
 
-        const res = await POST(
-            apiRequest(
-                "POST",
-                {
-                    provider: "github",
-                    repository: "owner/repo",
-                    prNumber: 42,
-                    name: "lint",
-                    state: "VALID",
-                },
-                { authorization: "Bearer oidc-token" },
-            ),
-        );
+        const res = await postState("VALID");
 
         expect(res.status).toBe(404);
     });
@@ -526,30 +538,10 @@ describe("POST and DELETE", () => {
             repository: "owner/repo",
         });
         mocks.db.select.mockReturnValue(
-            selectChain([
-                {
-                    provider: "github",
-                    repositorySlug: "owner/repo",
-                    prNumber: 42,
-                    revision: 3,
-                    name: "lint",
-                    title: "Lint report",
-                },
-            ]),
+            selectLatest(3, { title: "Lint report" }),
         );
 
-        const res = await DELETE(
-            apiRequest(
-                "DELETE",
-                {
-                    provider: "github",
-                    repository: "owner/repo",
-                    prNumber: 42,
-                    name: "lint",
-                },
-                { authorization: "Bearer oidc-token" },
-            ),
-        );
+        const res = await deleteReport();
 
         expect(res.status).toBe(200);
         const values = mocks.insertValues.mock.calls[0]?.[0];
@@ -563,59 +555,15 @@ describe("POST and DELETE", () => {
             repository: "owner/repo",
         });
         mocks.db.select
-            .mockReturnValueOnce(
-                selectChain([
-                    {
-                        provider: "github",
-                        repositorySlug: "owner/repo",
-                        prNumber: 42,
-                        revision: 3,
-                        name: "lint",
-                        title: "Lint report",
-                    },
-                ]),
-            )
-            .mockReturnValueOnce(
-                selectChain([
-                    {
-                        provider: "github",
-                        repositorySlug: "owner/repo",
-                        prNumber: 42,
-                        revision: 3,
-                        name: "lint",
-                        title: "Lint report",
-                    },
-                ]),
-            )
-            .mockReturnValueOnce(
-                selectChain([
-                    {
-                        provider: "github",
-                        repositorySlug: "owner/repo",
-                        prNumber: 42,
-                        revision: 4,
-                        name: "lint",
-                        title: "Lint report",
-                    },
-                ]),
-            )
+            .mockReturnValueOnce(selectLatest(3, { title: "Lint report" }))
+            .mockReturnValueOnce(selectLatest(3, { title: "Lint report" }))
+            .mockReturnValueOnce(selectLatest(4, { title: "Lint report" }))
             .mockReturnValue(selectChain([]));
         mocks.insertValues
             .mockRejectedValueOnce(uniqueViolation())
             .mockResolvedValueOnce({});
 
-        const res = await DELETE(
-            apiRequest(
-                "DELETE",
-                {
-                    provider: "github",
-                    repository: "owner/repo",
-                    prNumber: 42,
-                    name: "lint",
-                },
-                { authorization: "Bearer oidc-token" },
-            ),
-        );
+        const res = await deleteReport();
 
         expect(res.status).toBe(200);
         expect(mocks.insertValues).toHaveBeenCalledTimes(2);
@@ -631,18 +579,7 @@ describe("POST and DELETE", () => {
             repository: "owner/repo",
         });
 
-        const res = await DELETE(
-            apiRequest(
-                "DELETE",
-                {
-                    provider: "github",
-                    repository: "owner/repo",
-                    prNumber: 42,
-                    name: "lint",
-                },
-                { authorization: "Bearer oidc-token" },
-            ),
-        );
+        const res = await deleteReport();
 
         expect(res.status).toBe(404);
     });
