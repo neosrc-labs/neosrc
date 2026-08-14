@@ -8,7 +8,7 @@ import {
     LazyHoverCard,
     useLazyHoverCardState,
 } from "~/components/hovercards/hover-card-shared";
-import { CodeTitle } from "~/components/markdown/code-title";
+import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import {
     extractPullRequestState,
     StatusPill,

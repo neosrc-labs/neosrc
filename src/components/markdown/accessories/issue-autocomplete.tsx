@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { CodeTitle } from "~/components/markdown/code-title";
+import { CodeTitle } from "~/components/markdown/accessories/code-title";
 
 export interface IssueItem {
     number: number;

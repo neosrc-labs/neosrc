@@ -19,8 +19,10 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
-import { IssueAutocomplete, type IssueItem } from "./issue-autocomplete";
-import { MarkdownRenderer } from "./markdown-renderer";
+import {
+    IssueAutocomplete,
+    type IssueItem,
+} from "./accessories/issue-autocomplete";
 import {
     applyCodeBlockFormat,
     applyInlineFormat,
@@ -32,8 +34,9 @@ import {
     generateTable,
     generateTaskList,
     handleEnterKey,
-} from "./markdown-utils";
-import { SlashCommandMenu } from "./slash-command-menu";
+} from "./accessories/markdown-utils";
+import { SlashCommandMenu } from "./accessories/slash-command-menu";
+import { MarkdownRenderer } from "./markdown-renderer";
 
 export interface FooterAction {
     label: string;
