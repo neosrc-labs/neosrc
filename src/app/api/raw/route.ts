@@ -1,26 +1,15 @@
-import { githubAccessToken } from "~/server/auth";
+import { resolveRawFileRequest } from "../_lib/raw-file";
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const owner = searchParams.get("owner");
-    const repo = searchParams.get("repo");
-    const sha = searchParams.get("sha");
-    const path = searchParams.get("path");
-
-    if (!owner || !repo || !sha || !path) {
-        return new Response("Missing required parameters", { status: 400 });
-    }
-
-    const accessToken = await githubAccessToken();
-    if (!accessToken) {
-        return new Response(null, { status: 401 });
-    }
+    const resolved = await resolveRawFileRequest(request);
+    if (!resolved.ok) return resolved.response;
+    const { owner, repo, sha, path } = resolved.params;
 
     const response = await fetch(
         `https://raw.githubusercontent.com/${owner}/${repo}/${sha}/${path}`,
         {
             headers: {
-                Authorization: `Bearer ${accessToken}`,
+                Authorization: `Bearer ${resolved.accessToken}`,
             },
             signal: request.signal,
         },

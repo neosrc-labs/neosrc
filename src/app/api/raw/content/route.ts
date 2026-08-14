@@ -1,23 +1,12 @@
 import { Octokit } from "@octokit/rest";
-import { githubAccessToken } from "~/server/auth";
+import { resolveRawFileRequest } from "../../_lib/raw-file";
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const owner = searchParams.get("owner");
-    const repo = searchParams.get("repo");
-    const sha = searchParams.get("sha");
-    const path = searchParams.get("path");
+    const resolved = await resolveRawFileRequest(request);
+    if (!resolved.ok) return resolved.response;
+    const { owner, repo, sha, path } = resolved.params;
 
-    if (!owner || !repo || !sha || !path) {
-        return new Response("Missing required parameters", { status: 400 });
-    }
-
-    const accessToken = await githubAccessToken();
-    if (!accessToken) {
-        return new Response(null, { status: 401 });
-    }
-
-    const octokit = new Octokit({ auth: accessToken });
+    const octokit = new Octokit({ auth: resolved.accessToken });
 
     try {
         const response = await octokit.repos.getContent({
