@@ -126,6 +126,14 @@ export function RepoDocFiles({
         ? fileContents[activeFile.path]
         : undefined;
 
+    const docDir = activeFile?.path.includes("/")
+        ? activeFile.path.slice(0, activeFile.path.lastIndexOf("/"))
+        : "";
+    const imageBaseUrl =
+        (provider ?? "gh") === "cb"
+            ? `https://codeberg.org/${owner}/${repo}/raw/branch/${ref}`
+            : `https://raw.githubusercontent.com/${owner}/${repo}/${ref}`;
+
     return (
         <div
             id="doc-files"
@@ -161,6 +169,8 @@ export function RepoDocFiles({
                                 repo={repo}
                                 canToggleTasks={false}
                                 linkableHeadings
+                                imageBaseUrl={imageBaseUrl}
+                                imageDocDir={docDir}
                             />
                         ) : (
                             <pre className="whitespace-pre-wrap text-sm">
