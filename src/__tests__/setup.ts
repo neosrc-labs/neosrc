@@ -20,3 +20,19 @@ class ResizeObserverStub {
 if (typeof globalThis.ResizeObserver === "undefined") {
     globalThis.ResizeObserver = ResizeObserverStub;
 }
+
+// jsdom doesn't implement IntersectionObserver, which the changes page uses
+// to progressively mount file diffs as they scroll into view
+class IntersectionObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+        return [];
+    }
+}
+
+if (typeof globalThis.IntersectionObserver === "undefined") {
+    globalThis.IntersectionObserver =
+        IntersectionObserverStub as unknown as typeof IntersectionObserver;
+}
