@@ -294,20 +294,13 @@ async function findAccountByProvider(
 }
 
 /**
- * The decrypted refresh token when the account's access token has expired,
- * else null. Callers refresh via refreshAndStoreToken.
+ * Whether the account's access token needs to be refreshed. A null/absent
+ * expiry (accounts created before expiry tracking) is treated as never
+ * expiring so they keep working.
  */
-function getExpiredRefreshToken(account: {
-    accessTokenExpiresAt: Date | null;
-    refreshToken: string | null;
-}): string | null {
-    const now = Date.now();
-    const expiresAt = account.accessTokenExpiresAt?.getTime() ?? Infinity;
-    const refreshToken = account.refreshToken
-        ? decrypt(account.refreshToken)
-        : null;
-
-    return expiresAt < now ? refreshToken : null;
+function isAccessTokenDue(expiresAt: Date | null | undefined): boolean {
+    if (!expiresAt) return false;
+    return expiresAt.getTime() < Date.now();
 }
 
 /**
@@ -345,147 +338,139 @@ async function refreshAndStoreToken(
     return refreshed.access_token;
 }
 
+/**
+ * Returns a usable access token for a provider account, refreshing the stored
+ * token when it has expired.
+ *
+ * Refresh failures never fail the request. Providers rotate refresh tokens on
+ * use, so a concurrent request may have already refreshed with the same token
+ * while this one was in flight — the account row is re-read in that case and
+ * the freshly stored token is used. Otherwise the stored access token is
+ * returned as a best effort and the caller surfaces whatever the provider
+ * rejects. No in-flight state is shared between requests; the account row is
+ * the only coordination point.
+ */
+async function getProviderToken(
+    database: typeof db,
+    userId: string | null | undefined,
+    providerId: "github" | "codeberg",
+    refresh: (refreshToken: string) => Promise<RefreshedToken>,
+): Promise<string> {
+    const providerName = providerId === "github" ? "GitHub" : "Codeberg";
+    if (!userId) throw new Error(`${providerName} account not connected`);
+
+    const account = await findAccountByProvider(database, userId, providerId);
+    if (!account?.accessToken) {
+        throw new Error(`${providerName} account not connected`);
+    }
+
+    // A stored token that is still valid is used as-is.
+    if (!isAccessTokenDue(account.accessTokenExpiresAt)) {
+        try {
+            return decrypt(account.accessToken);
+        } catch {
+            // Corrupted token: fall through and let the refresh replace it.
+        }
+    }
+
+    let refreshToken: string | null = null;
+    try {
+        refreshToken = account.refreshToken
+            ? decrypt(account.refreshToken)
+            : null;
+    } catch {
+        // Corrupted refresh token: nothing to refresh with.
+    }
+
+    if (refreshToken) {
+        try {
+            return await refreshAndStoreToken(
+                database,
+                account.id,
+                refreshToken,
+                refresh,
+            );
+        } catch {
+            // The refresh failed. Another request may have used this same
+            // refresh token concurrently (providers invalidate refresh tokens
+            // after use) and already stored fresh tokens — re-read the row and
+            // use them instead of failing this request.
+            const latest = await findAccountByProvider(
+                database,
+                userId,
+                providerId,
+            );
+            if (
+                latest?.accessToken &&
+                !isAccessTokenDue(latest.accessTokenExpiresAt)
+            ) {
+                return decrypt(latest.accessToken);
+            }
+        }
+    }
+
+    // Best effort: return the stored token (even if expired) rather than
+    // failing the request; the provider rejects it and the caller surfaces
+    // that error.
+    return decrypt(account.accessToken);
+}
+
 export const getGitHubToken = cache(
     async (database: typeof db, userId: string | null | undefined) => {
         if (!userId) {
             if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
             throw new Error("GitHub account not connected");
         }
-        const account = await findAccountByProvider(database, userId, "github");
-
-        if (!account?.accessToken) {
-            if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
-            throw new Error("GitHub account not connected");
-        }
-
-        const refreshToken = getExpiredRefreshToken(account);
-
-        if (refreshToken) {
-            return refreshAndStoreToken(
+        try {
+            return await getProviderToken(
                 database,
-                account.id,
-                refreshToken,
+                userId,
+                "github",
                 refreshGitHubToken,
             );
-        }
-
-        try {
-            return decrypt(account.accessToken);
-        } catch (e) {
-            // If the token gets corrupted somehow, just try to refresh it
-            const retryToken = account.refreshToken
-                ? decrypt(account.refreshToken)
-                : null;
-            if (retryToken) {
-                return refreshAndStoreToken(
-                    database,
-                    account.id,
-                    retryToken,
-                    refreshGitHubToken,
-                );
-            }
-            throw e;
+        } catch (error) {
+            // No usable account (never connected, or removed after a dead
+            // refresh token): fall back to anonymous browsing when enabled.
+            if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
+            throw error;
         }
     },
 );
 
-export const getAccountByProvider = cache(async (providerId: string) => {
-    const uid = await getUserId();
-    if (!uid) return null;
-
-    const [account] = await db
-        .select()
-        .from(betterAuthAccount)
-        .where(
-            and(
-                eq(betterAuthAccount.userId, uid),
-                eq(betterAuthAccount.providerId, providerId),
-            ),
-        )
-        .limit(1);
-
-    if (!account) return null;
-
-    return {
-        ...account,
-        accessToken: account.accessToken
-            ? decrypt(account.accessToken)
-            : account.accessToken,
-        refreshToken: account.refreshToken
-            ? decrypt(account.refreshToken)
-            : account.refreshToken,
-        idToken: account.idToken ? decrypt(account.idToken) : account.idToken,
-    };
-});
-
 export const githubAccessToken = cache(async () => {
-    const account = await getAccountByProvider("github");
-
-    if (account) {
-        const now = Date.now();
-        const expiresAt = account.accessTokenExpiresAt?.getTime() ?? Infinity;
-
-        if (expiresAt < now && account.refreshToken) {
-            return refreshAndStoreToken(
-                db,
-                account.id,
-                account.refreshToken,
-                refreshGitHubToken,
-            );
+    const uid = await getUserId();
+    try {
+        return await getProviderToken(db, uid, "github", refreshGitHubToken);
+    } catch (error) {
+        if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
+        if (error instanceof Error && error.message.includes("not connected")) {
+            return null;
         }
-
-        return account.accessToken;
+        throw error;
     }
-    if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
-    return null;
 });
 
 export const getCodebergToken = cache(
-    async (database: typeof db, userId: string | null | undefined) => {
-        if (!userId) throw new Error("Codeberg account not connected");
-        const account = await findAccountByProvider(
-            database,
-            userId,
-            "codeberg",
-        );
-
-        if (!account?.accessToken) {
-            throw new Error("Codeberg account not connected");
-        }
-
-        const refreshToken = getExpiredRefreshToken(account);
-
-        if (refreshToken) {
-            return refreshAndStoreToken(
-                database,
-                account.id,
-                refreshToken,
-                refreshCodebergToken,
-            );
-        }
-
-        return decrypt(account.accessToken);
-    },
+    async (database: typeof db, userId: string | null | undefined) =>
+        getProviderToken(database, userId, "codeberg", refreshCodebergToken),
 );
 
 export const codebergAccessToken = cache(async () => {
-    const account = await getAccountByProvider("codeberg");
-
-    if (!account) return null;
-
-    const now = Date.now();
-    const expiresAt = account.accessTokenExpiresAt?.getTime() ?? Infinity;
-
-    if (expiresAt < now && account.refreshToken) {
-        return refreshAndStoreToken(
+    const uid = await getUserId();
+    if (!uid) return null;
+    try {
+        return await getProviderToken(
             db,
-            account.id,
-            account.refreshToken,
+            uid,
+            "codeberg",
             refreshCodebergToken,
         );
+    } catch (error) {
+        if (error instanceof Error && error.message.includes("not connected")) {
+            return null;
+        }
+        throw error;
     }
-
-    return account.accessToken;
 });
 
 async function refreshCodebergToken(refreshToken: string) {

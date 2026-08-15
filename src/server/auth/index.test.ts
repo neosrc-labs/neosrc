@@ -202,6 +202,56 @@ describe("getGitHubToken", () => {
             "GitHub account not connected",
         );
     });
+
+    it("falls back to the stored token when the refresh fails transiently", async () => {
+        const { fakeDb } = createFakeDb([expiredGitHubAccount()]);
+        mockFetch({ ok: false, status: 502, body: {} });
+
+        // A failed refresh must not fail the request: the stored (expired)
+        // token is returned and the caller surfaces the provider rejection.
+        await expect(getGitHubToken(fakeDb, "user-1")).resolves.toBe(
+            "stale-access",
+        );
+    });
+
+    it("uses the concurrently refreshed token when the refresh races and loses", async () => {
+        const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
+        // The refresh request fails because another request already used the
+        // same refresh token (providers rotate refresh tokens on use) — but by
+        // the time the loser re-reads the row it holds the winner's tokens.
+        const fetchMock = vi.fn(async (_input: string | URL | Request) => {
+            state.rows[0] = {
+                ...state.rows[0]!,
+                accessToken: encrypt("winner-access"),
+                accessTokenExpiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000),
+                refreshToken: encrypt("winner-refresh"),
+            };
+            return {
+                ok: false,
+                status: 400,
+                json: async () => ({ error: "bad_verification_code" }),
+            };
+        });
+        vi.stubGlobal("fetch", fetchMock);
+
+        const token = await getGitHubToken(fakeDb, "user-1");
+
+        expect(token).toBe("winner-access");
+        // The loser must not overwrite the winner's row.
+        expect(state.updates).toHaveLength(0);
+    });
+
+    it("refreshes a corrupted stored access token", async () => {
+        const { fakeDb, state } = createFakeDb([
+            expiredGitHubAccount({ accessToken: "not-valid-ciphertext" }),
+        ]);
+        mockFetch({ ok: true, status: 200, body: REFRESHED_BODY });
+
+        const token = await getGitHubToken(fakeDb, "user-1");
+
+        expect(token).toBe("fresh-access");
+        expect(state.updates).toHaveLength(1);
+    });
 });
 
 describe("getCodebergToken", () => {
