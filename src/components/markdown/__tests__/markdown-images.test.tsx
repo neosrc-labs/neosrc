@@ -69,13 +69,13 @@ describe("markdown image rendering", () => {
         expect(img?.getAttribute("width")).toBe("200px");
     });
 
-    it("defaults to sm prose but can render at base size", () => {
-        const sm = renderMarkdown("text");
-        expect(sm.querySelector(".prose")?.className).toContain("prose-sm");
-        const base = renderMarkdown("text", { proseSize: "base" });
+    it("defaults to base prose but can render at sm size", () => {
+        const base = renderMarkdown("text");
         expect(base.querySelector(".prose")?.className).not.toContain(
             "prose-sm",
         );
+        const sm = renderMarkdown("text", { proseSize: "sm" });
+        expect(sm.querySelector(".prose")?.className).toContain("prose-sm");
     });
 
     it("renders single newlines as hard breaks in paragraphs", () => {
