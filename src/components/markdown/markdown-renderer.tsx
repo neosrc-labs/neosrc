@@ -568,7 +568,7 @@ function CodeElement({
     if (className || inCodeBlock) {
         if (!mounted) {
             return (
-                <pre className="overflow-x-auto rounded-lg bg-zinc-100 p-2 text-sm dark:bg-zinc-800">
+                <pre className="overflow-x-auto rounded-lg bg-surface-tertiary p-2 text-sm">
                     <code className={className}>{children}</code>
                 </pre>
             );
@@ -576,7 +576,7 @@ function CodeElement({
 
         const style = resolvedTheme === "dark" ? darkTheme : lightTheme;
         const extraStyles: CSSProperties = {
-            ...(resolvedTheme === "dark" ? {} : { background: "#f0f0f0" }),
+            backgroundColor: "var(--color-surface-tertiary)",
             padding: "16px",
         };
 
