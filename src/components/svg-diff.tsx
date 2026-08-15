@@ -1,23 +1,13 @@
 "use client";
 
 import { Code, Eye } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { DiffModeToggle } from "./diff-mode-toggle";
 import { type DiffCommentProps, DiffView } from "./diff-view";
+import { SvgPreview } from "./media-diff/svg-preview";
+import { useSvgContents } from "./media-diff/use-svg-contents";
 
 type ViewMode = "rendered" | "code";
-
-function buildSvgSrcDoc(svgContent: string): string {
-    return `<!DOCTYPE html>
-<html style="margin:0;padding:0;width:100%;height:100%;">
-<body style="margin:0;padding:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
-<style>
-  svg { max-width: 100%; max-height: 100%; height: auto; }
-</style>
-${svgContent}
-</body>
-</html>`;
-}
 
 interface SvgDiffProps extends DiffCommentProps {
     patch: string;
@@ -49,56 +39,8 @@ export default function SvgDiff({
     permissionContext,
 }: SvgDiffProps) {
     const [mode, setMode] = useState<ViewMode>("rendered");
-    const [oldContent, setOldContent] = useState<string | null>(null);
-    const [newContent, setNewContent] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [oldError, setOldError] = useState(false);
-    const [newError, setNewError] = useState(false);
-
-    useEffect(() => {
-        const controller = new AbortController();
-        const { signal } = controller;
-
-        async function fetchContents() {
-            setLoading(true);
-
-            if (oldContentUrl) {
-                try {
-                    const res = await fetch(oldContentUrl, { signal });
-                    if (res.ok) {
-                        setOldContent(await res.text());
-                    } else {
-                        setOldError(true);
-                    }
-                } catch {
-                    if (!signal.aborted) setOldError(true);
-                }
-            } else {
-                setOldContent(null);
-            }
-
-            if (newContentUrl) {
-                try {
-                    const res = await fetch(newContentUrl, { signal });
-                    if (res.ok) {
-                        setNewContent(await res.text());
-                    } else {
-                        setNewError(true);
-                    }
-                } catch {
-                    if (!signal.aborted) setNewError(true);
-                }
-            } else {
-                setNewContent(null);
-            }
-
-            if (!signal.aborted) setLoading(false);
-        }
-        fetchContents();
-
-        return () => controller.abort();
-    }, [oldContentUrl, newContentUrl]);
-
+    const { oldContent, newContent, loading, oldError, newError } =
+        useSvgContents(oldContentUrl, newContentUrl);
     const hasBoth = oldContentUrl !== null && newContentUrl !== null;
 
     const modes: Array<{
@@ -111,19 +53,7 @@ export default function SvgDiff({
     ];
 
     function renderIframe(content: string, title: string) {
-        return (
-            <iframe
-                className="w-full overflow-hidden"
-                sandbox=""
-                srcDoc={buildSvgSrcDoc(content)}
-                style={{
-                    height: "60vh",
-                    maxHeight: "600px",
-                    minHeight: "200px",
-                }}
-                title={title}
-            />
-        );
+        return <SvgPreview content={content} title={title} />;
     }
 
     return (

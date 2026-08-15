@@ -14,6 +14,7 @@ export function DiffModeToggle<T extends string>({
         <div className="flex items-center justify-center gap-1 border-border border-t bg-surface-secondary px-4 py-1.5">
             {modes.map(({ icon: Icon, label, value }) => (
                 <button
+                    aria-label={label}
                     className={`cursor-pointer rounded px-2 py-1 font-medium text-xs transition-colors ${
                         mode === value
                             ? "bg-surface-selected text-gray-800 dark:text-zinc-200"

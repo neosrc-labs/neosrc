@@ -1,9 +1,7 @@
 "use client";
 
-import { defaultDiff2HtmlConfig, parse } from "diff2html";
-import type { ColorSchemeType, DiffBlock, DiffFile } from "diff2html/lib/types";
+import type { ColorSchemeType, DiffBlock } from "diff2html/lib/types";
 import "diff2html/bundles/css/diff2html.min.css";
-import hljs from "highlight.js";
 import { Plus, UnfoldVertical } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
@@ -18,9 +16,31 @@ import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/
 import { useFileContent } from "~/hooks/use-file-content";
 import type { ReviewComment } from "~/server/github";
 import { filenameHash } from "~/utils/filename-hash";
+import { getDiffGapSize } from "./diff/diff-block-rows";
+import { DiffContextRow } from "./diff/diff-context-row";
+import { DiffLineCommentEditor } from "./diff/diff-line-comment-editor";
+import { DiffLineRow } from "./diff/diff-line-row";
+import { DiffTable } from "./diff/diff-table";
+import {
+    buildDiffPositionMap,
+    createDiffRenderItems,
+    getDiffLanguage,
+    parseDiffPatch,
+    resolveDiffCommentAnchor,
+} from "./diff/model";
+import type {
+    DiffAnchor,
+    DiffCommentTarget,
+    DiffGap,
+    DiffRenderItem,
+} from "./diff/types";
+import { useDiffCommentSelection } from "./diff/use-diff-comment-selection";
+import { useDiffHashNavigation } from "./diff/use-diff-hash-navigation";
+import { useDiffLineSelection } from "./diff/use-diff-line-selection";
+import { useDiffSyntaxHighlighting } from "./diff/use-diff-syntax-highlighting";
 import { InlineCommentThread } from "./inline-comment-thread";
 import type { FooterAction } from "./markdown/markdown-editor";
-import { MarkdownEditor } from "./markdown/markdown-editor";
+import { groupReviewCommentThreads } from "./review-comment-threads";
 
 // Breathing room between the sticky bars and the line a permalink scrolls to.
 const SCROLL_TARGET_PADDING = 12;
@@ -47,15 +67,7 @@ function getStickyTopHeight(target: HTMLElement): number {
     return offset;
 }
 
-export type ActiveComment =
-    | {
-          type: "line";
-          line: number;
-          side: "LEFT" | "RIGHT";
-          startLine?: number;
-          startSide?: "LEFT" | "RIGHT";
-      }
-    | { type: "file" };
+export type { DiffCommentTarget } from "./diff/types";
 
 interface DiffViewProps {
     patch: string;
@@ -69,8 +81,8 @@ export interface DiffCommentProps {
     comments?: ReviewComment[];
     showComments?: boolean;
     showCommentButton?: boolean;
-    activeComment?: ActiveComment | null;
-    onStartComment?: (ac: ActiveComment | null) => void;
+    activeComment?: DiffCommentTarget | null;
+    onStartComment?: (ac: DiffCommentTarget | null) => void;
     commentBody?: string;
     onCommentBodyChange?: (body: string) => void;
     footerActions?: FooterAction[];
@@ -86,8 +98,8 @@ export interface DiffCommentProps {
 
 /** Comment-related props threaded through the diff table rows. */
 interface DiffRowCommentProps {
-    activeComment: ActiveComment | null;
-    onStartComment: ((ac: ActiveComment | null) => void) | undefined;
+    activeComment: DiffCommentTarget | null;
+    onStartComment: ((ac: DiffCommentTarget | null) => void) | undefined;
     pullNumber: number | string | undefined;
     commentBody: string;
     onCommentBodyChange: ((body: string) => void) | undefined;
@@ -148,211 +160,40 @@ export function DiffView({
 }: DiffViewProps & DiffCommentProps) {
     const { resolvedTheme } = useTheme();
 
-    const parsed = useMemo(() => {
-        if (!patch) return null;
-        const normalizedDiff = patch.startsWith("---")
-            ? patch
-            : `--- a/${filename}\n+++ b/${filename}\n${patch}`;
-        const files = parse(normalizedDiff, {
-            ...defaultDiff2HtmlConfig,
-            colorScheme: (resolvedTheme === "light" || resolvedTheme === "dark"
-                ? resolvedTheme
-                : defaultDiff2HtmlConfig.colorScheme) as ColorSchemeType,
-        });
-        return files[0] ?? null;
-    }, [patch, filename, resolvedTheme]);
+    const parsed = useMemo(
+        () =>
+            parseDiffPatch(
+                patch,
+                filename,
+                resolvedTheme === "dark"
+                    ? ("dark" as ColorSchemeType)
+                    : ("light" as ColorSchemeType),
+            ),
+        [patch, filename, resolvedTheme],
+    );
 
     const diffRef = useRef<HTMLDivElement>(null);
 
-    const language = useMemo(() => {
-        const ext = filename.split(".").pop()?.toLowerCase();
-        if (!ext) return null;
-        const langMap: Record<string, string> = {
-            tsx: "typescript",
-            jsx: "javascript",
-            mjs: "javascript",
-            cjs: "javascript",
-            mts: "typescript",
-            cts: "typescript",
-            vue: "html",
-            svelte: "html",
-        };
-        const lang = langMap[ext] ?? ext;
-        try {
-            return hljs.getLanguage(lang) ? lang : null;
-        } catch {
-            return null;
-        }
-    }, [filename]);
+    const language = useMemo(() => getDiffLanguage(filename), [filename]);
 
     const fileHash = useMemo(() => filenameHash(filename), [filename]);
 
-    const [selectedRange, setSelectedRange] = useState<{
-        startLine: number;
-        endLine: number;
-        side: string;
-    } | null>(null);
-    const mouseAnchorRef = useRef<{ line: number; side: string } | null>(null);
-    const isDragging = useRef(false);
-    const dragStartRef = useRef<{ line: number; side: string } | null>(null);
-
-    const [commentDragRange, setCommentDragRange] = useState<{
-        startLine: number;
-        endLine: number;
-        side: "LEFT" | "RIGHT";
-    } | null>(null);
-    const commentDragAnchor = useRef<{
-        line: number;
-        side: "LEFT" | "RIGHT";
-    } | null>(null);
-    const commentDragInProgress = useRef(false);
-
-    const updateSelection = useCallback(
-        (startLine: number, endLine: number, side: string) => {
-            const lo = Math.min(startLine, endLine);
-            const hi = Math.max(startLine, endLine);
-            setSelectedRange({ startLine: lo, endLine: hi, side });
-        },
-        [],
-    );
-
-    const commitRangeUrl = useCallback(
-        (startLine: number, endLine: number, side: string) => {
-            const lo = Math.min(startLine, endLine);
-            const hi = Math.max(startLine, endLine);
-            const url = `${window.location.pathname}#diff-${fileHash}${side === "RIGHT" ? "R" : "L"}${lo}-${side === "RIGHT" ? "R" : "L"}${hi}`;
-            history.replaceState(null, "", url);
-        },
-        [fileHash],
-    );
-
-    const commitSingleUrl = useCallback(
-        (lineNum: number, side: string) => {
-            const url = `${window.location.pathname}#diff-${fileHash}${side === "RIGHT" ? "R" : "L"}${lineNum}`;
-            history.replaceState(null, "", url);
-        },
-        [fileHash],
-    );
-
-    const handleLineSelect = useCallback(
-        (lineNum: number, side: string, shiftKey: boolean) => {
-            if (shiftKey && mouseAnchorRef.current) {
-                const start = Math.min(mouseAnchorRef.current.line, lineNum);
-                const end = Math.max(mouseAnchorRef.current.line, lineNum);
-                commitRangeUrl(start, end, side);
-                updateSelection(start, end, side);
-                mouseAnchorRef.current = null;
-            } else {
-                commitSingleUrl(lineNum, side);
-                updateSelection(lineNum, lineNum, side);
-                mouseAnchorRef.current = { line: lineNum, side };
-            }
-        },
-        [commitRangeUrl, commitSingleUrl, updateSelection],
-    );
-
-    const handleLineMouseDown = useCallback(
-        (lineNum: number, side: string) => {
-            if (activeComment?.type === "line" && activeComment.side === side) {
-                commentDragInProgress.current = true;
-                commentDragAnchor.current = {
-                    line: activeComment.line,
-                    side: activeComment.side,
-                };
-                const startLine = Math.min(activeComment.line, lineNum);
-                const endLine = Math.max(activeComment.line, lineNum);
-                setCommentDragRange({ startLine, endLine, side });
-                return;
-            }
-            isDragging.current = true;
-            dragStartRef.current = { line: lineNum, side };
-            updateSelection(lineNum, lineNum, side);
-        },
-        [activeComment, updateSelection],
-    );
-
-    const handleCommentDragStart = useCallback(
-        (line: number, side: "LEFT" | "RIGHT") => {
-            commentDragInProgress.current = true;
-            commentDragAnchor.current = { line, side };
-            setCommentDragRange({ startLine: line, endLine: line, side });
-            updateSelection(line, line, side);
-        },
-        [updateSelection],
-    );
-
-    const handleTableMouseOver = useCallback(
-        (e: React.MouseEvent) => {
-            if (commentDragInProgress.current && commentDragAnchor.current) {
-                const tr = (e.target as HTMLElement).closest(
-                    'tr[id^="diff-"]',
-                ) as HTMLElement | null;
-                if (!tr) return;
-                const lineMatch = tr.id.match(/(\d+)$/);
-                if (!lineMatch) return;
-                const lineNum = parseInt(lineMatch[1] ?? "0", 10);
-                const anchor = commentDragAnchor.current;
-                const startLine = Math.min(anchor.line, lineNum);
-                const endLine = Math.max(anchor.line, lineNum);
-                setCommentDragRange({ startLine, endLine, side: anchor.side });
-                updateSelection(anchor.line, lineNum, anchor.side);
-                return;
-            }
-            if (!isDragging.current || !dragStartRef.current) return;
-            const tr = (e.target as HTMLElement).closest(
-                'tr[id^="diff-"]',
-            ) as HTMLElement | null;
-            if (!tr) return;
-            const lineMatch = tr.id.match(/(\d+)$/);
-            if (!lineMatch) return;
-            const lineNum = parseInt(lineMatch[1] ?? "0", 10);
-            const anchor = dragStartRef.current;
-            if (!anchor) return;
-            updateSelection(anchor.line, lineNum, anchor.side);
-        },
-        [updateSelection],
-    );
-
-    useEffect(() => {
-        const handleMouseUp = () => {
-            if (commentDragInProgress.current) {
-                commentDragInProgress.current = false;
-                const range = commentDragRange;
-                if (range && range.startLine !== range.endLine) {
-                    onStartComment?.({
-                        type: "line",
-                        line: range.endLine,
-                        side: range.side,
-                        startLine: range.startLine,
-                        startSide: range.side,
-                    });
-                }
-                commentDragAnchor.current = null;
-                setCommentDragRange(null);
-                return;
-            }
-            if (!isDragging.current) return;
-            isDragging.current = false;
-            if (dragStartRef.current) {
-                const anchor = dragStartRef.current;
-                const range = selectedRange;
-                if (range && range.startLine !== range.endLine) {
-                    commitRangeUrl(range.startLine, range.endLine, range.side);
-                } else {
-                    commitSingleUrl(anchor.line, anchor.side);
-                }
-            }
-            dragStartRef.current = null;
-        };
-        document.addEventListener("mouseup", handleMouseUp);
-        return () => document.removeEventListener("mouseup", handleMouseUp);
-    }, [
-        selectedRange,
-        commitRangeUrl,
-        commitSingleUrl,
-        commentDragRange,
+    const lineSelection = useDiffLineSelection(fileHash);
+    const commentSelection = useDiffCommentSelection({
+        activeComment,
         onStartComment,
-    ]);
+        selectedRange: lineSelection.selectedRange,
+        onSelectionChange: lineSelection.setSelectedRange,
+        onOrdinaryLineMouseDown: lineSelection.onLineMouseDown,
+        onOrdinaryTableMouseOver: lineSelection.onTableMouseOver,
+    });
+    const { selectedRange } = lineSelection;
+    const {
+        commentDragRange,
+        onCommentDragStart,
+        onCommentLineMouseDown,
+        onCommentTableMouseOver,
+    } = commentSelection;
 
     const [expandedGapKeys, setExpandedGapKeys] = useState<Set<string>>(
         () => new Set(),
@@ -371,28 +212,19 @@ export function DiffView({
             setExpandedGapKeys(new Set());
         }
     }, [expandAllContext]);
-
-    useEffect(() => {
-        if (!diffRef.current || !language || !parsed) return;
-        const lines =
-            diffRef.current.querySelectorAll<HTMLElement>(".d2h-code-line-ctn");
-        lines.forEach((el) => {
-            const text = el.textContent;
-            if (!text) return;
-            const result = hljs.highlight(text, { language });
-            el.innerHTML = result.value;
-        });
-        // Re-run when gap expansions add new .d2h-code-line-ctn elements to the DOM
-        void expandedGapKeys;
-        void expandAllContext;
-    }, [language, parsed, expandedGapKeys, expandAllContext]);
+    useDiffSyntaxHighlighting({
+        diffRef,
+        language,
+        enabled: Boolean(parsed),
+        rerenderKey: `${expandedGapKeys.size}-${expandAllContext}`,
+    });
 
     const positionMap = useMemo(() => buildDiffPositionMap(parsed), [parsed]);
 
     const commentsByLine = useMemo(() => {
         const map = new Map<string, ReviewComment[]>();
         for (const comment of comments) {
-            const anchor = resolveCommentAnchor(comment, positionMap);
+            const anchor = resolveDiffCommentAnchor(comment, positionMap);
             if (!anchor) continue;
             const startLine = comment.start_line ?? anchor.line;
             for (let line = startLine; line <= anchor.line; line++) {
@@ -408,7 +240,7 @@ export function DiffView({
     const multiLineRanges = useMemo(() => {
         const ranges = new Map<string, string[]>();
         for (const comment of comments) {
-            const anchor = resolveCommentAnchor(comment, positionMap);
+            const anchor = resolveDiffCommentAnchor(comment, positionMap);
             if (!anchor) continue;
             const startLine = comment.start_line;
             if (startLine == null || startLine === anchor.line) continue;
@@ -425,45 +257,7 @@ export function DiffView({
         return ranges;
     }, [comments, positionMap]);
 
-    const renderItems = useMemo(() => {
-        if (!parsed?.blocks) return [];
-        const items: RenderItem[] = [];
-
-        for (let i = 0; i < parsed.blocks.length; i++) {
-            const block = parsed.blocks[i];
-            if (!block) continue;
-
-            if (i === 0 && block.newStartLine > 1) {
-                items.push({
-                    type: "gap",
-                    startLine: 1,
-                    endLine: block.newStartLine - 1,
-                });
-            }
-
-            if (i > 0) {
-                const prevBlock = parsed.blocks[i - 1];
-                if (!prevBlock) continue;
-                const g = computeBetweenGap(prevBlock, block);
-                if (g) {
-                    items.push({ type: "gap", ...g });
-                }
-            }
-
-            items.push({ type: "block", block });
-
-            if (i === parsed.blocks.length - 1) {
-                const leading = getLastNewLine(block) + 1;
-                items.push({
-                    type: "gap",
-                    startLine: leading,
-                    endLine: -1,
-                });
-            }
-        }
-
-        return items;
-    }, [parsed]);
+    const renderItems = useMemo(() => createDiffRenderItems(parsed), [parsed]);
 
     const renderItemsRef = useRef(renderItems);
     renderItemsRef.current = renderItems;
@@ -482,12 +276,12 @@ export function DiffView({
         );
     }, [parsed]);
 
-    useHashScrollToLine(
+    useDiffHashNavigation({
         fileHash,
         renderItemsRef,
         setExpandedGapKeys,
-        setSelectedRange,
-    );
+        setSelectedRange: lineSelection.setSelectedRange,
+    });
 
     if (!parsed) {
         return null;
@@ -506,161 +300,48 @@ export function DiffView({
         showComments,
         showCommentButton,
         commentDragRange,
-        onCommentDragStart: handleCommentDragStart,
+        onCommentDragStart,
         pendingReviewId,
         permissionContext,
     };
 
     return (
-        <div className="overflow-x-auto">
-            <style>{`
-                tr.line-highlighted td {
-                    background-color: rgba(251, 146, 60, 0.2) !important;
-                }
-                tr[id^="diff-"] {
-                    scroll-margin-top: var(--diff-scroll-offset, 0px);
-                }
-                .d2h-code-line {
-                    white-space: pre-wrap;
-                }
-                .d2h-code-line-ctn {
-                    white-space: pre-wrap;
-                }
-                .d2h-ins,
-                .d2h-del,
-                .d2h-cntx {
-                    word-break: break-word;
-                }
-            `}</style>
-            <div
-                className={`d2h-wrapper ${resolvedTheme === "light" ? "d2h-light-color-scheme" : "d2h-dark-color-scheme"}`}
-                ref={diffRef}
-            >
-                <table className="d2h-diff-table relative">
-                    <tbody
-                        className="d2h-diff-tbody"
-                        onMouseOver={handleTableMouseOver}
-                        onFocus={() => {}}
-                    >
-                        <DiffTableBody
-                            items={renderItems}
-                            expandAllContext={expandAllContext}
-                            expandedGapKeys={expandedGapKeys}
-                            onGapExpand={handleGapExpand}
-                            owner={owner}
-                            repo={repo}
-                            headSha={headSha}
-                            filename={filename}
-                            fileHash={fileHash}
-                            selectedRange={selectedRange}
-                            onLineSelect={handleLineSelect}
-                            onLineMouseDown={handleLineMouseDown}
-                            commentsByLine={commentsByLine}
-                            positionMap={positionMap}
-                            multiLineRanges={multiLineRanges}
-                            commentProps={commentProps}
-                        />
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <DiffTable
+            colorScheme={resolvedTheme === "light" ? "light" : "dark"}
+            diffRef={diffRef}
+            onMouseOver={onCommentTableMouseOver}
+        >
+            <DiffTableBody
+                items={renderItems}
+                expandAllContext={expandAllContext}
+                expandedGapKeys={expandedGapKeys}
+                onGapExpand={handleGapExpand}
+                owner={owner}
+                repo={repo}
+                headSha={headSha}
+                filename={filename}
+                fileHash={fileHash}
+                selectedRange={selectedRange}
+                onLineSelect={lineSelection.onLineSelect}
+                onLineMouseDown={onCommentLineMouseDown}
+                commentsByLine={commentsByLine}
+                positionMap={positionMap}
+                multiLineRanges={multiLineRanges}
+                commentProps={commentProps}
+            />
+        </DiffTable>
     );
 }
 
-type Gap = { startLine: number; endLine: number };
-
-type RenderItem = { type: "block"; block: DiffBlock } | ({ type: "gap" } & Gap);
-
-function getLastNewLine(block: DiffBlock): number {
-    let last = block.newStartLine;
-    for (const line of block.lines) {
-        if (line.newNumber !== undefined) {
-            last = line.newNumber;
-        }
-    }
-    return last;
-}
-
-function computeBetweenGap(
-    prevBlock: DiffBlock,
-    curBlock: DiffBlock,
-): Gap | null {
-    const prevLastNew = getLastNewLine(prevBlock);
-    const gapStart = prevLastNew + 1;
-    const gapEnd = curBlock.newStartLine - 1;
-    if (gapStart <= gapEnd) {
-        return { startLine: gapStart, endLine: gapEnd };
-    }
-    return null;
-}
-
-export function groupThreads(
-    comments: ReviewComment[],
-): Array<{ parent: ReviewComment; replies: ReviewComment[] }> {
-    const threads = new Map<number, ReviewComment[]>();
-    for (const comment of comments) {
-        const rootId = comment.in_reply_to_id ?? comment.id;
-        const existing = threads.get(rootId) ?? [];
-        existing.push(comment);
-        threads.set(rootId, existing);
-    }
-    return Array.from(threads.entries()).map(([, group]) => ({
-        parent: group[0] as ReviewComment,
-        replies: group.slice(1),
-    }));
-}
-
-type DiffCommentAnchor = {
-    side: "LEFT" | "RIGHT";
-    line: number;
-};
-
-/**
- * Maps GitHub's deprecated diff `position` (a 1-based index into the unified
- * diff, counting every line across hunks) to the (side, file line) the diff
- * view renders. Draft review comments only carry `position`; submitted
- * comments carry `line`/`side`.
- */
-function buildDiffPositionMap(
-    parsed: DiffFile | null,
-): Map<number, DiffCommentAnchor> {
-    const map = new Map<number, DiffCommentAnchor>();
-    if (!parsed) return map;
-    let position = 0;
-    for (const block of parsed.blocks) {
-        for (const line of block.lines) {
-            position += 1;
-            if (line.type === "delete") {
-                map.set(position, { side: "LEFT", line: line.oldNumber });
-            } else {
-                map.set(position, { side: "RIGHT", line: line.newNumber });
-            }
-        }
-    }
-    return map;
-}
-
-function resolveCommentAnchor(
-    comment: ReviewComment,
-    positionMap: Map<number, DiffCommentAnchor>,
-): DiffCommentAnchor | null {
-    if (comment.line != null) {
-        return { side: comment.side ?? "RIGHT", line: comment.line };
-    }
-    const position = comment.position ?? comment.original_position ?? null;
-    if (position == null) return null;
-    return positionMap.get(position) ?? null;
-}
-
 interface BlockRowsProps extends DiffRowNavigationProps {
-    block: NonNullable<ReturnType<typeof parse>>[number]["blocks"][number];
+    block: DiffBlock;
     commentsByLine: Map<string, ReviewComment[]>;
-    positionMap: Map<number, DiffCommentAnchor>;
+    positionMap: Map<number, DiffAnchor>;
     multiLineRanges: Map<string, string[]>;
     owner: string | undefined;
     repo: string | undefined;
     hideHeader?: boolean;
-    gap?: Gap;
+    gap?: DiffGap;
     commentProps: DiffRowCommentProps;
 }
 
@@ -712,9 +393,9 @@ function BlockRows({
         path: filename,
     });
 
+    const gapSize = getDiffGapSize(gap, fileLines?.length);
     const gapEnd =
         gap?.endLine === -1 ? (fileLines?.length ?? -1) : (gap?.endLine ?? -1);
-    const gapSize = gap ? gapEnd - gap.startLine + 1 : 0;
 
     const handleLineClick = useCallback(
         (lineNum: number, side: string, e: React.MouseEvent) => {
@@ -746,35 +427,16 @@ function BlockRows({
                     .map((lineContent, idx) => {
                         const lineNum = gap.startLine + idx;
                         return (
-                            <tr
+                            <DiffContextRow
                                 key={`gap-${lineNum}`}
+                                lineNum={lineNum}
+                                content={lineContent}
                                 id={
                                     fileHash
                                         ? `diff-${fileHash}R${lineNum}`
                                         : undefined
                                 }
-                            >
-                                <td className="d2h-code-linenumber d2h-cntx">
-                                    <div className="absolute">
-                                        <div className="line-num1">
-                                            {lineNum}
-                                        </div>
-                                        <div className="line-num2">
-                                            {lineNum}
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="d2h-cntx">
-                                    <div
-                                        className="d2h-code-line"
-                                        style={{ display: "flex" }}
-                                    >
-                                        <span className="d2h-code-line-ctn">
-                                            {lineContent || <br />}
-                                        </span>
-                                    </div>
-                                </td>
-                            </tr>
+                            />
                         );
                     })}
             {!hideHeader && headSha && (
@@ -854,7 +516,7 @@ function BlockRows({
                 const content = line.content.slice(1);
 
                 const isLastLineOfRange = (c: ReviewComment) =>
-                    (resolveCommentAnchor(c, positionMap)?.line ?? 0) ===
+                    (resolveDiffCommentAnchor(c, positionMap)?.line ?? 0) ===
                     commentLine;
 
                 const lineId = fileHash
@@ -870,7 +532,7 @@ function BlockRows({
 
                 return (
                     <Fragment key={`${oldNum}-${newNum}-${line.content}`}>
-                        <tr
+                        <DiffLineRow
                             className={`group ${isHighlighted ? "line-highlighted" : ""}`}
                             id={lineId}
                         >
@@ -960,10 +622,10 @@ function BlockRows({
                                     </span>
                                 </div>
                             </td>
-                        </tr>
+                        </DiffLineRow>
                         {showComments &&
                             hasComments &&
-                            groupThreads(lineComments)
+                            groupReviewCommentThreads(lineComments)
                                 .filter((thread) =>
                                     isLastLineOfRange(thread.parent),
                                 )
@@ -995,25 +657,18 @@ function BlockRows({
                                     colSpan={2}
                                     className="border-border border-t p-2"
                                 >
-                                    <MarkdownEditor
-                                        autoFocus
-                                        disabled={commentPending}
+                                    <DiffLineCommentEditor
+                                        value={commentBody}
                                         onChange={
                                             onCommentBodyChange ?? (() => {})
                                         }
                                         onCancel={onCancelComment ?? (() => {})}
-                                        placeholder="Add a comment..."
-                                        value={commentBody}
+                                        footerActions={footerActions}
+                                        isPending={commentPending}
+                                        isError={commentError}
                                         owner={owner as string}
                                         repo={repo as string}
-                                        footerActions={footerActions}
                                     />
-                                    {commentError && (
-                                        <p className="mt-1 text-red-600 text-xs">
-                                            Failed to post comment. Please try
-                                            again.
-                                        </p>
-                                    )}
                                 </td>
                             </tr>
                         )}
@@ -1114,218 +769,23 @@ function GapRow({
                     lineNum >= selectedRange.startLine &&
                     lineNum <= selectedRange.endLine;
                 return (
-                    <tr
+                    <DiffContextRow
                         key={`gap-${lineNum}`}
+                        lineNum={lineNum}
+                        content={lineContent}
                         id={`diff-${fileHash}R${lineNum}`}
-                        className={lineHighlighted ? "line-highlighted" : ""}
-                    >
-                        <td
-                            className="d2h-code-linenumber d2h-cntx"
-                            onMouseDown={() =>
-                                onLineMouseDown?.(lineNum, "RIGHT")
-                            }
-                            onClick={(e) =>
-                                onLineSelect?.(lineNum, "RIGHT", e.shiftKey)
-                            }
-                            title="Copy permalink"
-                        >
-                            <div className="absolute">
-                                <div className="line-num1">{lineNum}</div>
-                                <div className="line-num2">{lineNum}</div>
-                            </div>
-                        </td>
-                        <td className="d2h-cntx">
-                            <div
-                                className="d2h-code-line"
-                                style={{ display: "flex" }}
-                            >
-                                <span className="d2h-code-line-ctn">
-                                    {lineContent || <br />}
-                                </span>
-                            </div>
-                        </td>
-                    </tr>
+                        highlighted={lineHighlighted}
+                        onLineSelect={onLineSelect}
+                        onLineMouseDown={onLineMouseDown}
+                    />
                 );
             })}
         </>
     );
 }
 
-function useHashScrollToLine(
-    fileHash: string,
-    renderItemsRef: React.RefObject<RenderItem[]>,
-    setExpandedGapKeys: React.Dispatch<React.SetStateAction<Set<string>>>,
-    setSelectedRange: React.Dispatch<
-        React.SetStateAction<{
-            startLine: number;
-            endLine: number;
-            side: string;
-        } | null>
-    >,
-) {
-    // Scroll to line targeted by URL hash; expand only the gap containing the
-    // target. Files stream in and content-visibility defers rendering, so wait
-    // until the target's document position stops moving before scrolling, then
-    // re-check after the scroll settles in case the layout was refined. Also
-    // respond to hash changes (e.g. pressing Enter in the URL bar) while the
-    // page is already loaded.
-    // biome-ignore lint/correctness/useExhaustiveDependencies: ref and setters are stable; only re-run on hash change
-    useEffect(() => {
-        let rafId = 0;
-        let verifyTimeout: ReturnType<typeof setTimeout> | undefined;
-        let settleTimeout: ReturnType<typeof setTimeout> | undefined;
-
-        const stopPolling = () => {
-            cancelAnimationFrame(rafId);
-            clearTimeout(verifyTimeout);
-            clearTimeout(settleTimeout);
-        };
-
-        const scrollToHashTarget = () => {
-            stopPolling();
-
-            const hash = window.location.hash;
-            if (!hash?.startsWith(`#diff-${fileHash}`)) return;
-            const targetMatch = hash.match(/^#(diff-[0-9a-f]+[RL]\d+)/);
-            const targetId = targetMatch?.[1];
-            if (!targetId) return;
-
-            const lineMatch = hash.match(/[RL](\d+)/g);
-            const startLine = lineMatch
-                ? parseInt(lineMatch[0]?.slice(1) ?? "0", 10)
-                : 0;
-            const endLine = lineMatch?.[1]
-                ? parseInt(lineMatch[1].slice(1), 10)
-                : startLine;
-            const side = hash.includes("R") ? "RIGHT" : "LEFT";
-
-            // Expand only the gap containing the target line, not all gaps.
-            // Re-run on every poll attempt: the diff may still be parsing when
-            // the effect first fires, so the gap list can be empty initially.
-            const expandTargetGap = () => {
-                const items = renderItemsRef.current;
-                if (!items) return;
-                for (const item of items) {
-                    if (item.type !== "gap") continue;
-                    const gapStart = item.startLine;
-                    const gapEnd =
-                        item.endLine === -1 ? Infinity : item.endLine;
-                    if (startLine < gapStart || startLine > gapEnd) continue;
-                    const gapKey = `gap-${gapStart}`;
-                    setExpandedGapKeys((prev) => {
-                        if (prev.has(gapKey)) return prev;
-                        const next = new Set(prev);
-                        next.add(gapKey);
-                        return next;
-                    });
-                    break;
-                }
-            };
-
-            // The sticky stack is stable while the routine runs, so measure it
-            // once instead of scanning the whole document on every verify.
-            let cachedOffset = 0;
-            const getTargetOffset = (el: HTMLElement): number => {
-                if (cachedOffset === 0) {
-                    cachedOffset =
-                        getStickyTopHeight(el) + SCROLL_TARGET_PADDING;
-                }
-                return cachedOffset;
-            };
-
-            // Position the line just below the sticky bars instead of the
-            // viewport center, so it is never covered by them.
-            const scrollToLine = (behavior: ScrollBehavior): boolean => {
-                const el = document.getElementById(targetId);
-                if (!el) return false;
-                const offset = getTargetOffset(el);
-                const targetY =
-                    el.getBoundingClientRect().top + window.scrollY - offset;
-                window.scrollTo({ top: Math.max(0, targetY), behavior });
-                setSelectedRange({ startLine, endLine, side });
-                return true;
-            };
-
-            // The target may not be in the DOM yet: the diff can still be
-            // loading, the containing gap may be expanding, or
-            // content-visibility defers its rendering. Wait until its document
-            // position stops changing (files above keep arriving), then scroll.
-            let lastAbsTop = -1;
-            let stableFrames = 0;
-            let scrolled = false;
-            let scrollStart = 0;
-
-            // Re-check after the scroll settles: content-visibility sizes are
-            // estimates until the region is rendered and files above can keep
-            // arriving, so the line can end up off-target. Keep re-scrolling
-            // (instantly) until the line is just below the sticky bars, or the
-            // page is scrolled as far as it can go (the target is near the
-            // bottom of the document). Keep watching for a short window even
-            // when the position looks right to catch late refinements.
-            const verify = () => {
-                const el = document.getElementById(targetId);
-                if (!el) return;
-                const offset = getTargetOffset(el);
-                const rect = el.getBoundingClientRect();
-                const diff = rect.top - offset;
-                const atMaxScroll =
-                    window.innerHeight + window.scrollY >=
-                    document.body.scrollHeight - 2;
-                if (diff < -4 || (diff > 24 && !atMaxScroll)) {
-                    window.scrollTo({
-                        top: rect.top + window.scrollY - offset,
-                        behavior: "auto",
-                    });
-                    verifyTimeout = setTimeout(verify, 350);
-                } else if (Date.now() - scrollStart < 3000) {
-                    verifyTimeout = setTimeout(verify, 350);
-                }
-            };
-
-            const poll = () => {
-                const el = document.getElementById(targetId);
-                if (el) {
-                    const absTop =
-                        el.getBoundingClientRect().top + window.scrollY;
-                    if (absTop === lastAbsTop) {
-                        stableFrames++;
-                    } else {
-                        lastAbsTop = absTop;
-                        stableFrames = 0;
-                    }
-                    if (stableFrames >= 3 && !scrolled) {
-                        scrolled = true;
-                        scrollStart = Date.now();
-                        scrollToLine("smooth");
-                        verifyTimeout = setTimeout(verify, 600);
-                        return;
-                    }
-                } else {
-                    expandTargetGap();
-                }
-                rafId = requestAnimationFrame(poll);
-            };
-
-            settleTimeout = setTimeout(() => {
-                cancelAnimationFrame(rafId);
-                clearTimeout(verifyTimeout);
-            }, 15000);
-
-            rafId = requestAnimationFrame(poll);
-        };
-
-        scrollToHashTarget();
-        window.addEventListener("hashchange", scrollToHashTarget);
-
-        return () => {
-            window.removeEventListener("hashchange", scrollToHashTarget);
-            stopPolling();
-        };
-    }, [fileHash]);
-}
-
 interface DiffTableBodyProps {
-    items: RenderItem[];
+    items: DiffRenderItem[];
     expandAllContext: boolean;
     expandedGapKeys: Set<string>;
     onGapExpand: (key: string) => void;
@@ -1338,7 +798,7 @@ interface DiffTableBodyProps {
     onLineSelect: (lineNum: number, side: string, shiftKey: boolean) => void;
     onLineMouseDown: (lineNum: number, side: string) => void;
     commentsByLine: Map<string, ReviewComment[]>;
-    positionMap: Map<number, DiffCommentAnchor>;
+    positionMap: Map<number, DiffAnchor>;
     multiLineRanges: Map<string, string[]>;
     commentProps: DiffRowCommentProps;
 }
@@ -1365,11 +825,7 @@ function DiffTableBody({
         <>
             {items.map((item, idx) => {
                 if (item.type === "gap") {
-                    if (item.endLine !== -1) {
-                        // Leading/between gaps handled via next block
-                        return null;
-                    }
-                    // Trailing gap: render standalone expandable row
+                    if (item.endLine !== -1) return null;
                     const gapKey = `gap-${item.startLine}`;
                     const isExpanded =
                         expandAllContext || expandedGapKeys.has(gapKey);
@@ -1391,32 +847,26 @@ function DiffTableBody({
                         />
                     );
                 }
-
-                const prevItem = idx > 0 ? items[idx - 1] : null;
-                const prevGap = prevItem?.type === "gap" ? prevItem : null;
-                // Only pass gap info if it's not a trailing gap (handled separately)
-                const prevGapForBlock: Gap | undefined =
-                    prevGap && prevGap.endLine !== -1
+                const previous = idx > 0 ? items[idx - 1] : null;
+                const previousGap = previous?.type === "gap" ? previous : null;
+                const gap =
+                    previousGap && previousGap.endLine !== -1
                         ? {
-                              startLine: prevGap.startLine,
-                              endLine: prevGap.endLine,
+                              startLine: previousGap.startLine,
+                              endLine: previousGap.endLine,
                           }
                         : undefined;
-                const prevGapKey = prevGapForBlock
-                    ? `gap-${prevGapForBlock.startLine}`
-                    : undefined;
+                const gapKey = gap ? `gap-${gap.startLine}` : undefined;
                 const isGapExpanded =
-                    prevGapForBlock !== null &&
-                    prevGapKey !== undefined &&
-                    (expandAllContext || expandedGapKeys.has(prevGapKey));
-
+                    gapKey !== undefined &&
+                    (expandAllContext || expandedGapKeys.has(gapKey));
                 return (
                     <BlockRows
                         key={`block-${item.block.newStartLine}`}
                         block={item.block}
                         hideHeader={isGapExpanded}
-                        gap={prevGapForBlock}
-                        gapKey={prevGapKey}
+                        gap={gap}
+                        gapKey={gapKey}
                         isGapExpanded={isGapExpanded}
                         onGapExpand={onGapExpand}
                         headSha={headSha}
