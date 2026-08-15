@@ -42,34 +42,12 @@ import { InlineCommentThread } from "./inline-comment-thread";
 import type { FooterAction } from "./markdown/markdown-editor";
 import { groupReviewCommentThreads } from "./review-comment-threads";
 
+export type { DiffCommentTarget } from "./diff/types";
+
 // Breathing room between the sticky bars and the line a permalink scrolls to.
 const SCROLL_TARGET_PADDING = 12;
 
-// Total height of the sticky elements pinned to the top of the viewport that
-// horizontally overlap the target line. On the files changed page that is the
-// "Files Changed" bar (sticky top-0) plus the file's own sticky header
-// (sticky top-[64px]); elements in other columns (e.g. the left sidebar) never
-// overlap the diff lines and are excluded.
-function getStickyTopHeight(target: HTMLElement): number {
-    const targetRect = target.getBoundingClientRect();
-    const targetCenterX = targetRect.left + targetRect.width / 2;
-    let offset = 0;
-    for (const el of document.querySelectorAll<HTMLElement>("*")) {
-        const style = getComputedStyle(el);
-        if (style.position !== "sticky") continue;
-        const stickyTop = parseFloat(style.top);
-        if (!Number.isFinite(stickyTop) || stickyTop < 0) continue;
-        const rect = el.getBoundingClientRect();
-        if (rect.height <= 0 || rect.bottom <= 0) continue;
-        if (rect.left > targetCenterX || rect.right < targetCenterX) continue;
-        offset = Math.max(offset, stickyTop + rect.height);
-    }
-    return offset;
-}
-
-export type { DiffCommentTarget } from "./diff/types";
-
-interface DiffViewProps {
+interface DiffViewProps extends DiffCommentProps {
     patch: string;
     filename: string;
     headSha?: string;
@@ -96,46 +74,6 @@ export interface DiffCommentProps {
     permissionContext: PullRequestPermissionContext;
 }
 
-/** Comment-related props threaded through the diff table rows. */
-interface DiffRowCommentProps {
-    activeComment: DiffCommentTarget | null;
-    onStartComment: ((ac: DiffCommentTarget | null) => void) | undefined;
-    pullNumber: number | string | undefined;
-    commentBody: string;
-    onCommentBodyChange: ((body: string) => void) | undefined;
-    footerActions?: FooterAction[];
-    commentPending: boolean;
-    commentError: boolean;
-    onCancelComment: (() => void) | undefined;
-    showComments: boolean;
-    showCommentButton: boolean;
-    commentDragRange: {
-        startLine: number;
-        endLine: number;
-        side: "LEFT" | "RIGHT";
-    } | null;
-    onCommentDragStart?: (line: number, side: "LEFT" | "RIGHT") => void;
-    pendingReviewId?: number | null;
-    permissionContext: PullRequestPermissionContext;
-}
-
-/** Gap/navigation props shared by the diff table row components. */
-interface DiffRowNavigationProps {
-    gapKey?: string;
-    isGapExpanded?: boolean;
-    onGapExpand?: (key: string) => void;
-    headSha?: string;
-    filename?: string;
-    fileHash?: string;
-    selectedRange?: {
-        startLine: number;
-        endLine: number;
-        side: string;
-    } | null;
-    onLineSelect?: (lineNum: number, side: string, shiftKey: boolean) => void;
-    onLineMouseDown?: (lineNum: number, side: string) => void;
-}
-
 export function DiffView({
     patch,
     filename,
@@ -157,7 +95,7 @@ export function DiffView({
     permissionContext,
     headSha,
     expandAllContext = false,
-}: DiffViewProps & DiffCommentProps) {
+}: DiffViewProps) {
     const { resolvedTheme } = useTheme();
 
     const parsed = useMemo(
@@ -333,6 +271,45 @@ export function DiffView({
     );
 }
 
+/** Comment-related props threaded through the diff table rows. */
+interface DiffRowCommentProps {
+    activeComment: DiffCommentTarget | null;
+    onStartComment: ((ac: DiffCommentTarget | null) => void) | undefined;
+    pullNumber: number | string | undefined;
+    commentBody: string;
+    onCommentBodyChange: ((body: string) => void) | undefined;
+    footerActions?: FooterAction[];
+    commentPending: boolean;
+    commentError: boolean;
+    onCancelComment: (() => void) | undefined;
+    showComments: boolean;
+    showCommentButton: boolean;
+    commentDragRange: {
+        startLine: number;
+        endLine: number;
+        side: "LEFT" | "RIGHT";
+    } | null;
+    onCommentDragStart?: (line: number, side: "LEFT" | "RIGHT") => void;
+    pendingReviewId?: number | null;
+    permissionContext: PullRequestPermissionContext;
+}
+
+/** Gap/navigation props shared by the diff table row components. */
+interface DiffRowNavigationProps {
+    gapKey?: string;
+    isGapExpanded?: boolean;
+    onGapExpand?: (key: string) => void;
+    headSha?: string;
+    filename?: string;
+    fileHash?: string;
+    selectedRange?: {
+        startLine: number;
+        endLine: number;
+        side: string;
+    } | null;
+    onLineSelect?: (lineNum: number, side: string, shiftKey: boolean) => void;
+    onLineMouseDown?: (lineNum: number, side: string) => void;
+}
 interface BlockRowsProps extends DiffRowNavigationProps {
     block: DiffBlock;
     commentsByLine: Map<string, ReviewComment[]>;
@@ -886,4 +863,26 @@ function DiffTableBody({
             })}
         </>
     );
+}
+
+// Total height of the sticky elements pinned to the top of the viewport that
+// horizontally overlap the target line. On the files changed page that is the
+// "Files Changed" bar (sticky top-0) plus the file's own sticky header
+// (sticky top-[64px]); elements in other columns (e.g. the left sidebar) never
+// overlap the diff lines and are excluded.
+function getStickyTopHeight(target: HTMLElement): number {
+    const targetRect = target.getBoundingClientRect();
+    const targetCenterX = targetRect.left + targetRect.width / 2;
+    let offset = 0;
+    for (const el of document.querySelectorAll<HTMLElement>("*")) {
+        const style = getComputedStyle(el);
+        if (style.position !== "sticky") continue;
+        const stickyTop = parseFloat(style.top);
+        if (!Number.isFinite(stickyTop) || stickyTop < 0) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.height <= 0 || rect.bottom <= 0) continue;
+        if (rect.left > targetCenterX || rect.right < targetCenterX) continue;
+        offset = Math.max(offset, stickyTop + rect.height);
+    }
+    return offset;
 }
