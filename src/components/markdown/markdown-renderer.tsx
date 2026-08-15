@@ -344,6 +344,18 @@ export function MarkdownRenderer({
                             </ol>
                         );
                     },
+                    hr({ style, ...props }) {
+                        return (
+                            <hr
+                                style={{
+                                    ...style,
+                                    marginTop: 24,
+                                    marginBottom: 24,
+                                }}
+                                {...props}
+                            />
+                        );
+                    },
                     li({ children, className, node, ...props }) {
                         const childrenArray = Children.toArray(children);
                         const firstChild = childrenArray[0];
