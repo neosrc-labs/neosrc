@@ -3,13 +3,13 @@ import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { MarkdownRenderer } from "../markdown-renderer";
 
-function renderList(content: string) {
+function renderMarkdown(content: string) {
     return render(<MarkdownRenderer content={content} />).container;
 }
 
 describe("markdown list margins", () => {
     it("renders ul and ol without top/bottom margin", () => {
-        const container = renderList(
+        const container = renderMarkdown(
             ["- one", "- two", "", "1. first", "2. second", ""].join("\n"),
         );
 
@@ -23,7 +23,7 @@ describe("markdown list margins", () => {
     });
 
     it("keeps task list indentation reset and no vertical margin", () => {
-        const container = renderList(
+        const container = renderMarkdown(
             ["- [ ] todo", "- [x] done", ""].join("\n"),
         );
 
@@ -34,7 +34,7 @@ describe("markdown list margins", () => {
     });
 
     it("applies the same reset to nested lists", () => {
-        const container = renderList(
+        const container = renderMarkdown(
             ["- outer", "  - inner one", "  - inner two", ""].join("\n"),
         );
 
@@ -42,5 +42,18 @@ describe("markdown list margins", () => {
         expect(nested).not.toBeNull();
         expect((nested as HTMLElement).style.marginTop).toBe("0px");
         expect((nested as HTMLElement).style.marginBottom).toBe("0px");
+    });
+});
+
+describe("markdown section break margin", () => {
+    it("renders hr with 24px top/bottom margin instead of the prose default", () => {
+        const container = renderMarkdown(
+            ["before", "", "---", "", "after", ""].join("\n"),
+        );
+
+        const hr = container.querySelector("hr");
+        expect(hr).not.toBeNull();
+        expect((hr as HTMLElement).style.marginTop).toBe("24px");
+        expect((hr as HTMLElement).style.marginBottom).toBe("24px");
     });
 });
