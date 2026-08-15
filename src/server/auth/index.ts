@@ -21,14 +21,10 @@ const CODEBERG_TOKEN_URL = "https://codeberg.org/login/oauth/access_token";
 
 const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
 
-/**
- * Raised when a provider rejects the refresh token as expired, revoked,
- * malformed, or otherwise invalid. The account can no longer be refreshed and
- * the user must re-authenticate with the provider.
- */
+/** Raised when a provider rejects the refresh token as expired or invalid. */
 class RefreshTokenRejectedError extends Error {}
 
-/** Error codes providers return when the refresh token itself is dead. */
+/** Provider error codes meaning the refresh token itself is dead. */
 const REJECTED_REFRESH_ERROR_CODES = new Set([
     "bad_verification_code", // GitHub: expired/revoked/malformed refresh token
     "invalid_grant",
@@ -318,18 +314,14 @@ async function findAccountByProvider(
 }
 
 /**
- * Refresh the access token when it expires within this window instead of
- * waiting until after it has expired. Access tokens live on the order of
- * minutes to hours, so refreshing 30 minutes early is cheap and prevents a
- * token from dying mid-request (it also resets the refresh token's sliding
- * inactivity window).
+ * Refresh the access token when it expires within this window, before it
+ * actually dies mid-request.
  */
 const ACCESS_TOKEN_REFRESH_LEEWAY_MS = 30 * 60 * 1000; // 30 minutes
 
 /**
- * Whether the account's access token is expired or due for refresh within the
- * leeway window. A null/absent expiry (accounts created before expiry
- * tracking) is treated as never expiring so they keep working.
+ * True when the access token is expired or due for refresh. Null expiry
+ * (pre-expiry-tracking accounts) means never expires.
  */
 function isAccessTokenDue(expiresAt: Date | null | undefined): boolean {
     if (!expiresAt) return false;
@@ -346,13 +338,9 @@ async function refreshAndStoreToken(
     refreshToken: string,
     refresh: (refreshToken: string) => Promise<RefreshedToken>,
 ): Promise<string> {
-    // Providers (GitHub documents this explicitly) count expires_in from the
-    // moment the token is issued, i.e. when our refresh request is sent —
-    // not from when we receive the response. Basing the stored expiry on the
-    // request start keeps it aligned with the provider's clock; deriving it
-    // from response receipt would skew it later by the round-trip latency,
-    // leaving a window where we consider the token valid but the provider
-    // has already expired it.
+    // expires_in counts from token issuance, so base the expiry on the request
+    // start; deriving it from response receipt skews it later than the
+    // provider's true expiry.
     const issuedAt = Date.now();
     const refreshed = await refresh(refreshToken);
     await database
@@ -372,16 +360,12 @@ async function refreshAndStoreToken(
 }
 
 /**
- * Returns a usable access token for a provider account, refreshing the stored
- * token when it has expired.
+ * Returns a usable access token for a provider account, refreshing when due.
  *
- * Refresh failures never fail the request. Providers rotate refresh tokens on
- * use, so a concurrent request may have already refreshed with the same token
- * while this one was in flight — the account row is re-read in that case and
- * the freshly stored token is used. Otherwise the stored access token is
- * returned as a best effort and the caller surfaces whatever the provider
- * rejects. No in-flight state is shared between requests; the account row is
- * the only coordination point.
+ * Refresh failures never fail the request: if a concurrent request rotated the
+ * refresh token, the freshly stored token is used; otherwise the stored token
+ * is returned best-effort. The account row is the only coordination point —
+ * no shared in-flight state.
  */
 async function getProviderToken(
     database: typeof db,
@@ -424,10 +408,8 @@ async function getProviderToken(
                 refresh,
             );
         } catch (error) {
-            // The refresh failed. Another request may have used this same
-            // refresh token concurrently (providers invalidate refresh tokens
-            // after use) and already stored fresh tokens — re-read the row and
-            // use them instead of failing this request.
+            // Refresh failed — a concurrent request may have rotated the token;
+            // re-read the row and use what's stored now.
             const latest = await findAccountByProvider(
                 database,
                 userId,
@@ -445,11 +427,8 @@ async function getProviderToken(
             }
 
             if (error instanceof RefreshTokenRejectedError) {
-                // The provider rejected the refresh token as expired, revoked,
-                // or invalid and nobody rotated it concurrently: the account
-                // can no longer be refreshed. Remove it so the user
-                // re-authenticates with the provider instead of failing every
-                // request from here on.
+                // The refresh token is genuinely dead: unlink so the user
+                // re-authenticates instead of failing every request.
                 await unlinkProviderAccount(
                     database,
                     account.id,
@@ -463,17 +442,14 @@ async function getProviderToken(
         }
     }
 
-    // Best effort: return the stored token (even if expired) rather than
-    // failing the request; the provider rejects it and the caller surfaces
-    // that error.
+    // Best effort: return the stored token (even if expired); the caller
+    // surfaces provider rejection.
     return decrypt(account.accessToken);
 }
 
 /**
- * Removes a provider account after its refresh token was rejected. Clearing
- * the account row and the mirrored username drops the user back to the
- * existing "not connected" state, so the UI surfaces the re-link flow and the
- * next sign-in re-creates the account with fresh tokens.
+ * Removes a provider account whose refresh token was rejected, dropping the
+ * user back to the existing not-connected state and re-link flow.
  */
 async function unlinkProviderAccount(
     database: typeof db,
@@ -508,8 +484,7 @@ export const getGitHubToken = cache(
                 refreshGitHubToken,
             );
         } catch (error) {
-            // No usable account (never connected, or removed after a dead
-            // refresh token): fall back to anonymous browsing when enabled.
+            // No usable account: fall back to anonymous browsing when enabled.
             if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
             throw error;
         }
