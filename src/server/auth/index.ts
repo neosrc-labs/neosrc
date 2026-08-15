@@ -32,6 +32,23 @@ const REJECTED_REFRESH_ERROR_CODES = new Set([
     "refresh_token_expired",
 ]);
 
+/**
+ * A provider access token that can replace itself when the provider rejects
+ * it with a 401. The stored expiry timestamp can lie (revoked tokens,
+ * manually replaced tokens), so API layers swap in a fresh token via
+ * `refresh()` and retry the request instead of trusting the timestamp.
+ */
+export type RefreshableAuth = string & { refresh: () => Promise<string> };
+
+function withRefresh(
+    token: string,
+    refresh: () => Promise<string>,
+): RefreshableAuth {
+    return Object.assign(new String(token), {
+        refresh,
+    }) as unknown as RefreshableAuth;
+}
+
 async function refreshGitHubToken(refreshToken: string) {
     const res = await fetch(GITHUB_TOKEN_URL, {
         method: "POST",
@@ -366,13 +383,19 @@ async function refreshAndStoreToken(
  * refresh token, the freshly stored token is used; otherwise the stored token
  * is returned best-effort. The account row is the only coordination point —
  * no shared in-flight state.
+ *
+ * The returned token carries a `refresh()` that forces a rotation. API layers
+ * call it when the provider rejects the token with a 401 — the stored expiry
+ * can lie (revoked or manually replaced token), so a dead token must not be
+ * trusted just because the timestamp looks valid.
  */
 async function getProviderToken(
     database: typeof db,
     userId: string | null | undefined,
     providerId: "github" | "codeberg",
     refresh: (refreshToken: string) => Promise<RefreshedToken>,
-): Promise<string> {
+    options?: { force?: boolean },
+): Promise<RefreshableAuth> {
     const providerName = providerId === "github" ? "GitHub" : "Codeberg";
     if (!userId) throw new Error(`${providerName} account not connected`);
 
@@ -381,10 +404,17 @@ async function getProviderToken(
         throw new Error(`${providerName} account not connected`);
     }
 
+    const refreshable = (token: string) =>
+        withRefresh(token, () =>
+            getProviderToken(database, userId, providerId, refresh, {
+                force: true,
+            }),
+        );
+
     // A stored token that is still valid is used as-is.
-    if (!isAccessTokenDue(account.accessTokenExpiresAt)) {
+    if (!options?.force && !isAccessTokenDue(account.accessTokenExpiresAt)) {
         try {
-            return decrypt(account.accessToken);
+            return refreshable(decrypt(account.accessToken));
         } catch {
             // Corrupted token: fall through and let the refresh replace it.
         }
@@ -401,11 +431,13 @@ async function getProviderToken(
 
     if (refreshToken) {
         try {
-            return await refreshAndStoreToken(
-                database,
-                account.id,
-                refreshToken,
-                refresh,
+            return refreshable(
+                await refreshAndStoreToken(
+                    database,
+                    account.id,
+                    refreshToken,
+                    refresh,
+                ),
             );
         } catch (error) {
             // Refresh failed — a concurrent request may have rotated the token;
@@ -423,7 +455,7 @@ async function getProviderToken(
                 rotated &&
                 !isAccessTokenDue(latest.accessTokenExpiresAt)
             ) {
-                return decrypt(latest.accessToken);
+                return refreshable(decrypt(latest.accessToken));
             }
 
             if (error instanceof RefreshTokenRejectedError) {
@@ -444,7 +476,7 @@ async function getProviderToken(
 
     // Best effort: return the stored token (even if expired); the caller
     // surfaces provider rejection.
-    return decrypt(account.accessToken);
+    return refreshable(decrypt(account.accessToken));
 }
 
 /**
@@ -471,7 +503,10 @@ async function unlinkProviderAccount(
 }
 
 export const getGitHubToken = cache(
-    async (database: typeof db, userId: string | null | undefined) => {
+    async (
+        database: typeof db,
+        userId: string | null | undefined,
+    ): Promise<string> => {
         if (!userId) {
             if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
             throw new Error("GitHub account not connected");
@@ -491,7 +526,7 @@ export const getGitHubToken = cache(
     },
 );
 
-export const githubAccessToken = cache(async () => {
+export const githubAccessToken = cache(async (): Promise<string | null> => {
     const uid = await getUserId();
     try {
         return await getProviderToken(db, uid, "github", refreshGitHubToken);
@@ -505,11 +540,14 @@ export const githubAccessToken = cache(async () => {
 });
 
 export const getCodebergToken = cache(
-    async (database: typeof db, userId: string | null | undefined) =>
+    async (
+        database: typeof db,
+        userId: string | null | undefined,
+    ): Promise<string> =>
         getProviderToken(database, userId, "codeberg", refreshCodebergToken),
 );
 
-export const codebergAccessToken = cache(async () => {
+export const codebergAccessToken = cache(async (): Promise<string | null> => {
     const uid = await getUserId();
     if (!uid) return null;
     try {

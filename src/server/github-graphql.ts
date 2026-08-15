@@ -2,10 +2,51 @@ import {
     GraphqlResponseError,
     graphql as octokitGraphql,
 } from "@octokit/graphql";
+import type { RefreshableAuth } from "~/server/auth";
 
 // NOTE: The itemType filter is an explicit whitelist because of https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/about-oauth-app-access-restrictions
 // Some event types ADDED_TO_PROJECT_V2_EVENT and PROJECT_V2_ITEM_STATUS_CHANGED_EVENT (and maybe others) will
 // result in the entire API call failing.
+
+/**
+ * A 401 means the token itself was rejected (expired, revoked, or replaced),
+ * as opposed to a 403/404 which signal missing permissions or resources.
+ */
+export function isUnauthorizedError(error: unknown): boolean {
+    return (
+        typeof error === "object" &&
+        error !== null &&
+        "status" in error &&
+        (error as { status?: unknown }).status === 401
+    );
+}
+
+/**
+ * GraphQL client that swaps in a fresh token and retries once when the token
+ * is rejected (401), mirroring createOctokit's behavior for REST.
+ */
+function createGraphql(auth: string | RefreshableAuth) {
+    const refresh = (auth as RefreshableAuth).refresh;
+    const graphql = octokitGraphql.defaults({
+        headers: { authorization: `bearer ${String(auth)}` },
+    });
+    if (typeof refresh !== "function") return graphql;
+
+    let token = String(auth);
+    let didRefresh = false;
+    return (async (query: string, parameters?: Record<string, unknown>) => {
+        try {
+            return await graphql(query, parameters);
+        } catch (error) {
+            if (didRefresh || !isUnauthorizedError(error)) throw error;
+            didRefresh = true;
+            token = await refresh();
+            return octokitGraphql.defaults({
+                headers: { authorization: `bearer ${token}` },
+            })(query, parameters);
+        }
+    }) as typeof octokitGraphql;
+}
 
 /**
  * True when a graphql request failed because the target organization has
@@ -956,9 +997,7 @@ export async function getPullRequestTimelineGraphQL(
     currentUserLogin: string | undefined;
     mergeQueueEntry: GQLMergeQueueEntry;
 }> {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     const result = await graphql<{
         repository: {
@@ -1054,9 +1093,7 @@ export async function getSubjectReactions(
 ): Promise<
     { databaseId: number; content: string; user: { login: string } | null }[]
 > {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     const result = await graphql<{
         node: {
@@ -1136,9 +1173,7 @@ export async function getPullRequestReactionsGraphQL(
     repo: string,
     pullNumber: number,
 ): Promise<GQLPullRequestReactions> {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     const result = await graphql<{
         repository: {
@@ -1264,9 +1299,7 @@ export async function getCommitChecksGraphQL(
     repo: string,
     commitSha: string,
 ): Promise<GqlCommitChecks> {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     const result = await graphql<{
         repository: {
@@ -1413,9 +1446,7 @@ export async function addReaction(
     subjectId: string,
     content: string,
 ) {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     const gqlContent = GRAPHQL_CONTENT_MAP[content] ?? content;
 
@@ -1542,9 +1573,7 @@ export async function searchPullRequestsWithStatus(
     after: string | null = null,
     countQueries: { open: string; closed: string; merged: string },
 ) {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     const promises: [
         Promise<GqlPrSearchResult>,
@@ -1652,9 +1681,7 @@ export async function searchIssuesWithMetadata(
     after: string | null = null,
     countQueries: { open: string; closed: string },
 ) {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     type IssueSearchResult = {
         search: {
@@ -1707,9 +1734,7 @@ export async function removeReaction(
     subjectId: string,
     content: string,
 ) {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     const gqlContent = GRAPHQL_CONTENT_MAP[content] ?? content;
 
@@ -1778,9 +1803,7 @@ export async function getPullRequestCommitsGraphQL(
     hasNext: boolean;
     endCursor: string | undefined;
 }> {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     const result = await graphql<{
         repository: {
@@ -1855,9 +1878,7 @@ export async function getPullRequestHeadShaGraphQL(
     repo: string,
     pullNumber: number,
 ): Promise<string | null> {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     const result = await graphql<{
         repository: {
@@ -1878,9 +1899,7 @@ export async function getCommitGraphQL(
     repo: string,
     oid: string,
 ): Promise<GQLCommitWithAuthors> {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     const result = await graphql<{
         repository: {
@@ -1951,9 +1970,7 @@ export async function getBranchCommitsGraphQL(
         authorId?: string;
     },
 ): Promise<BranchCommitsResult> {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     const result = await graphql<{
         repository: {
@@ -2047,9 +2064,7 @@ export async function resolveUserNodeId(
     accessToken: string,
     login: string,
 ): Promise<string | null> {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
     const result = await graphql<{
         user: { id: string } | null;
     }>(`query($login: String!) { user(login: $login) { id } }`, { login });
@@ -2097,9 +2112,7 @@ interface GqlTopReposResult {
 export async function getTopRepositories(
     accessToken: string,
 ): Promise<GqlTopRepo[]> {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     const result = await graphql<GqlTopReposResult>(TOP_REPOS_QUERY, {
         first: 10,
@@ -2161,9 +2174,7 @@ export async function getPullRequestStackGraphQL(
     repo: string,
     prNumber: number,
 ): Promise<StackData | null> {
-    const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${accessToken}` },
-    });
+    const graphql = createGraphql(accessToken);
 
     const result = await graphql<{
         repository: {
