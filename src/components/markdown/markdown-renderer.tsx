@@ -92,7 +92,7 @@ export function MarkdownRenderer({
     linkableHeadings = false,
     imageBaseUrl,
     imageDocDir,
-    proseSize = "base",
+    proseSize = "sm",
 }: MarkdownRendererProps) {
     const headingSlugsRef = useRef(new Map<string, number>());
     useEffect(() => {
