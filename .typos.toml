@@ -20,4 +20,4 @@ esy = "esy"
 hel = "hel"
 
 [files]
-extend-exclude = ["drizzle/**/*", "api-specs/**/*"]
+extend-exclude = ["drizzle/**/*", "api-specs/**/*", "src/components/markdown/code-language-map.ts"]
