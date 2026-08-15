@@ -2,7 +2,14 @@
 
 import { MessageSquare, MessageSquareOff, RefreshCw } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+    type ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { Async } from "~/components/async";
 import FileDiff from "~/components/file-diff";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
@@ -58,6 +65,7 @@ interface FilesSectionProps {
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     conflictedFilesPromise?: Promise<string[]> | null;
     checkRunsPromise?: Promise<CheckRun[]> | null;
+    children?: ReactNode;
 }
 
 export function FilesSection({
@@ -69,6 +77,7 @@ export function FilesSection({
     permissionContextPromise,
     conflictedFilesPromise,
     checkRunsPromise,
+    children,
 }: FilesSectionProps) {
     const [showComments, setShowComments] = useState(true);
     const [expandedOverflowFiles, setExpandedOverflowFiles] = useState(
@@ -350,6 +359,7 @@ export function FilesSection({
                     </Async>
                 </div>
             </div>
+            {children}
             {isLoading && allFiles.length === 0 && (
                 <>
                     <FileDiffSkeleton />

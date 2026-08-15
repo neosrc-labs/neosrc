@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PullRequestFile, PullsGetResponseData } from "~/server/github";
@@ -64,7 +65,11 @@ function resolvedPromise<T>(value: T): Promise<T> {
     return promise;
 }
 
-function renderFiles(files: PullRequestFile[], hash?: string) {
+function renderFiles(
+    files: PullRequestFile[],
+    hash?: string,
+    children?: ReactNode,
+) {
     if (hash !== undefined) {
         window.history.replaceState(
             null,
@@ -88,7 +93,9 @@ function renderFiles(files: PullRequestFile[], hash?: string) {
                 repoPermission: "write" as const,
                 isPullRequestLocked: false,
             })}
-        />,
+        >
+            {children}
+        </FilesSection>,
     );
 }
 
@@ -96,6 +103,29 @@ describe("FilesSection", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         window.history.replaceState(null, "", window.location.pathname);
+    });
+
+    it("renders children below the PR info header and above the files", async () => {
+        const { container } = renderFiles(
+            [file("src/foo.ts")],
+            undefined,
+            <div data-testid="commit-card" />,
+        );
+        await screen.findAllByTestId("file-diff");
+
+        const header = container.querySelector(".sticky");
+        const commitCard = screen.getByTestId("commit-card");
+        const fileDiff = screen.getAllByTestId("file-diff")[0]!;
+
+        expect(header).not.toBeNull();
+        expect(
+            header!.compareDocumentPosition(commitCard) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).not.toBe(0);
+        expect(
+            commitCard.compareDocumentPosition(fileDiff) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).not.toBe(0);
     });
 
     it("renders each file wrapper with the id used by the file tree anchors", async () => {
