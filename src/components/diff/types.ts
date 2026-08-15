@@ -22,6 +22,14 @@ export interface DiffGap {
     endLine: number;
 }
 
+/** How many lines of a gap are revealed from each end. */
+export interface GapExpansion {
+    /** Lines revealed from the top of the gap (expand-down clicks). */
+    top: number;
+    /** Lines revealed from the bottom of the gap (expand-up clicks). */
+    bottom: number;
+}
+
 export type DiffRenderItem =
     | { type: "block"; block: DiffBlock }
     | ({ type: "gap" } & DiffGap);

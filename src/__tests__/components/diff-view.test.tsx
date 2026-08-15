@@ -63,6 +63,8 @@ vi.mock("lucide-react", () => ({
     ),
     UnfoldVertical: () => <div data-testid="unfold-icon" />,
     FoldVertical: () => <div data-testid="fold-icon" />,
+    ArrowDownFromLine: () => <div data-testid="arrow-down-from-line" />,
+    ArrowUpFromLine: () => <div data-testid="arrow-up-from-line" />,
     MessageSquare: () => <div data-testid="message-square" />,
     MessageSquareOff: () => <div data-testid="message-square-off" />,
 }));
@@ -522,7 +524,7 @@ describe("DiffView rendering", () => {
             mockUseFileContent.error = null;
         });
 
-        it("renders expandable gap row between hunks with unfold icon", () => {
+        it("renders directional expand buttons in the gap row between hunks", () => {
             const block1 = mb(1, [mc(" line1", 1, 1), mc("+line2", 2)]);
             const block2 = mb(5, [mc(" line5", 5, 5)]);
             mockParsedFile([block1, block2], { addedLines: 1 });
@@ -535,12 +537,15 @@ describe("DiffView rendering", () => {
                 pullNumber: 1,
             });
 
-            // Gap between blocks: line 3-4
-            const unfoldIcons = container.querySelectorAll(
-                '[data-testid="unfold-icon"]',
+            // The gap row between hunks (line 3-4) holds both directional
+            // buttons: expand-down on the left, expand-up on the right.
+            const rows = Array.from(container.querySelectorAll("tr"));
+            const hasBothInOneRow = rows.some(
+                (tr) =>
+                    tr.querySelector('[data-testid="arrow-down-from-line"]') &&
+                    tr.querySelector('[data-testid="arrow-up-from-line"]'),
             );
-            // There should be the unfold icon in the gap row between blocks
-            expect(unfoldIcons.length).toBeGreaterThanOrEqual(1);
+            expect(hasBothInOneRow).toBe(true);
         });
     });
 
@@ -558,7 +563,7 @@ describe("DiffView rendering", () => {
             mockUseFileContent.error = null;
         });
 
-        it("expandAllContext true expands all gaps (no unfold icons)", () => {
+        it("expandAllContext true expands all gaps (no expand buttons)", () => {
             const block1 = mb(1, [mc(" line1", 1, 1), mc("+line2", 2)]);
             const block2 = mb(5, [mc(" line5", 5, 5)]);
             mockParsedFile([block1, block2], { addedLines: 1 });
@@ -571,10 +576,19 @@ describe("DiffView rendering", () => {
                 pullNumber: 1,
             });
 
-            const unfoldIcons = container.querySelectorAll(
-                '[data-testid="unfold-icon"]',
-            );
-            expect(unfoldIcons.length).toBe(0);
+            expect(
+                container.querySelectorAll('[data-testid="unfold-icon"]')
+                    .length,
+            ).toBe(0);
+            expect(
+                container.querySelectorAll(
+                    '[data-testid="arrow-down-from-line"]',
+                ).length,
+            ).toBe(0);
+            expect(
+                container.querySelectorAll('[data-testid="arrow-up-from-line"]')
+                    .length,
+            ).toBe(0);
         });
     });
 
@@ -604,12 +618,16 @@ describe("DiffView rendering", () => {
                 pullNumber: 1,
             });
 
-            // Only trailing gap may render an unfold icon (no between-block gap)
-            const unfoldIcons = container.querySelectorAll(
-                '[data-testid="unfold-icon"]',
+            // Only the trailing gap renders an expand-down button; adjacent
+            // blocks mean no between-block gap at all.
+            const downButtons = container.querySelectorAll(
+                '[data-testid="arrow-down-from-line"]',
             );
-            // Adjacent blocks = no between-block gap = at most 1 trailing icon
-            expect(unfoldIcons.length).toBeLessThanOrEqual(1);
+            const upButtons = container.querySelectorAll(
+                '[data-testid="arrow-up-from-line"]',
+            );
+            expect(downButtons.length).toBeLessThanOrEqual(1);
+            expect(upButtons.length).toBe(0);
         });
 
         it("renders loading state when gap is expanded and file content is loading", () => {
@@ -666,61 +684,77 @@ describe("DiffView rendering", () => {
                 pullNumber: 1,
             });
 
-            // Icons: middle gap (11-90) + trailing gap (92-100)
-            let icons = container.querySelectorAll(
-                '[data-testid="unfold-icon"]',
-            );
-            expect(icons.length).toBe(2);
+            const clickDown = () => {
+                const btn = container.querySelector(
+                    '[data-testid="arrow-down-from-line"]',
+                );
+                fireEvent.click(btn!);
+            };
+
+            // Middle gap (11-90) shows both directional buttons; the trailing
+            // gap (92-100) shows a single expand-down button.
+            expect(
+                container.querySelectorAll(
+                    '[data-testid="arrow-down-from-line"]',
+                ).length,
+            ).toBe(2);
+            expect(
+                container.querySelectorAll('[data-testid="arrow-up-from-line"]')
+                    .length,
+            ).toBe(1);
             expect(gapRowNumbers(container)).toHaveLength(0);
 
-            // Click 1: lines 11-30, unfold row remains
-            fireEvent.click(icons[0]!.closest("tr")!);
+            // Click 1: the 20 lines at the bottom of the gap (71-90),
+            // revealed below the unfold row, toward the next hunk.
+            clickDown();
             let nums = gapRowNumbers(container);
             expect(nums).toHaveLength(20);
-            expect(nums[0]).toBe(11);
-            expect(nums[19]).toBe(30);
-            expect(
-                container.querySelectorAll('[data-testid="unfold-icon"]')
-                    .length,
-            ).toBe(2);
+            expect(nums[0]).toBe(71);
+            expect(nums[19]).toBe(90);
 
-            // Middle gap reveals forward: the unfold row sits below the
-            // revealed lines (just above the next hunk).
             const rows = Array.from(container.querySelectorAll("tr"));
-            const lastRevealedIdx = rows.findIndex((tr) =>
-                tr.id?.endsWith("R30"),
+            const unfoldRowIdx = rows.findIndex((tr) =>
+                tr.querySelector('[data-testid="arrow-down-from-line"]'),
             );
-            const unfoldIdx = rows.findIndex((tr) =>
-                tr.querySelector('[data-testid="unfold-icon"]'),
+            const firstBottomIdx = rows.findIndex((tr) =>
+                tr.id?.endsWith("R71"),
             );
-            expect(unfoldIdx).toBeGreaterThan(lastRevealedIdx);
+            const blockStartIdx = rows.findIndex((tr) =>
+                tr.id?.endsWith("R91"),
+            );
+            expect(unfoldRowIdx).toBeGreaterThanOrEqual(0);
+            expect(firstBottomIdx).toBeGreaterThan(unfoldRowIdx);
+            expect(blockStartIdx).toBeGreaterThan(firstBottomIdx);
 
-            // Click 2: lines 11-50
-            icons = container.querySelectorAll('[data-testid="unfold-icon"]');
-            fireEvent.click(icons[0]!.closest("tr")!);
+            // Click 2: 51-90
+            clickDown();
             nums = gapRowNumbers(container);
             expect(nums).toHaveLength(40);
-            expect(nums[39]).toBe(50);
+            expect(nums[0]).toBe(51);
+            expect(nums[39]).toBe(90);
 
-            // Click 3: lines 11-70
-            icons = container.querySelectorAll('[data-testid="unfold-icon"]');
-            fireEvent.click(icons[0]!.closest("tr")!);
+            // Click 3: 31-90
+            clickDown();
             nums = gapRowNumbers(container);
             expect(nums).toHaveLength(60);
-            expect(nums[59]).toBe(70);
+            expect(nums[0]).toBe(31);
+            expect(nums[59]).toBe(90);
 
-            // Click 4: gap exhausted, middle unfold row disappears
-            icons = container.querySelectorAll('[data-testid="unfold-icon"]');
-            fireEvent.click(icons[0]!.closest("tr")!);
+            // Click 4: gap exhausted, middle buttons disappear
+            clickDown();
             nums = gapRowNumbers(container);
             expect(nums).toHaveLength(80);
             expect(nums[0]).toBe(11);
             expect(nums[79]).toBe(90);
-            // Only the trailing gap still offers an unfold row
             expect(
-                container.querySelectorAll('[data-testid="unfold-icon"]')
-                    .length,
+                container.querySelectorAll(
+                    '[data-testid="arrow-down-from-line"]',
+                ).length,
             ).toBe(1);
+            expect(
+                container.querySelectorAll('[data-testid="arrow-up-from-line"]')
+                    .length,
+            ).toBe(0);
         });
 
         it("expands a gap smaller than the step fully in one click", () => {
@@ -736,13 +770,18 @@ describe("DiffView rendering", () => {
                 pullNumber: 1,
             });
 
-            const icons = container.querySelectorAll(
-                '[data-testid="unfold-icon"]',
-            );
             // Middle gap 3-4 + trailing gap 6-100
-            expect(icons.length).toBe(2);
+            expect(
+                container.querySelectorAll(
+                    '[data-testid="arrow-down-from-line"]',
+                ).length,
+            ).toBe(2);
 
-            fireEvent.click(icons[0]!.closest("tr")!);
+            fireEvent.click(
+                container.querySelector(
+                    '[data-testid="arrow-down-from-line"]',
+                )!,
+            );
 
             const rowIds = Array.from(
                 container.querySelectorAll('tr[id^="diff-"]'),
@@ -750,11 +789,79 @@ describe("DiffView rendering", () => {
             const nums = rowIds.map((id) => Number(id.split("R")[1]));
             expect(nums).toContain(3);
             expect(nums).toContain(4);
-            // Middle gap fully expanded -> only the trailing unfold row remains
+            // Middle gap fully expanded -> only the trailing expand-down
+            // button remains
             expect(
-                container.querySelectorAll('[data-testid="unfold-icon"]')
-                    .length,
+                container.querySelectorAll(
+                    '[data-testid="arrow-down-from-line"]',
+                ).length,
             ).toBe(1);
+            expect(
+                container.querySelectorAll('[data-testid="arrow-up-from-line"]')
+                    .length,
+            ).toBe(0);
+        });
+
+        it("expands up reveals the lines just below the previous hunk", () => {
+            // Block 1 covers lines 1-10, block 2 starts at 91 -> gap 11-90 (80 lines)
+            const block1 = mb(
+                1,
+                Array.from({ length: 10 }, (_, i) =>
+                    mc(` line${i + 1}`, i + 1, i + 1),
+                ),
+            );
+            const block2 = mb(91, [mc(" line91", 91, 91)]);
+            mockParsedFile([block1, block2]);
+
+            const { container } = renderDiffView({
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            // Click the up button: reveals the top of the gap (11-30) above
+            // the unfold row, toward the previous hunk.
+            fireEvent.click(
+                container.querySelector('[data-testid="arrow-up-from-line"]')!,
+            );
+
+            let nums = gapRowNumbers(container);
+            expect(nums).toHaveLength(20);
+            expect(nums[0]).toBe(11);
+            expect(nums[19]).toBe(30);
+            expect(nums).not.toContain(71);
+
+            const rows = Array.from(container.querySelectorAll("tr"));
+            const firstTopIdx = rows.findIndex((tr) => tr.id?.endsWith("R11"));
+            const unfoldRowIdx = rows.findIndex((tr) =>
+                tr.querySelector('[data-testid="arrow-up-from-line"]'),
+            );
+            expect(firstTopIdx).toBeLessThan(unfoldRowIdx);
+
+            // Then expand down: 71-90 appear below the unfold row.
+            fireEvent.click(
+                container.querySelector(
+                    '[data-testid="arrow-down-from-line"]',
+                )!,
+            );
+            nums = gapRowNumbers(container);
+            expect(nums).toHaveLength(40);
+            expect(nums[0]).toBe(11);
+            expect(nums[19]).toBe(30);
+            expect(nums[39]).toBe(90);
+
+            // Both revealed regions flank the unfold row.
+            const rows2 = Array.from(container.querySelectorAll("tr"));
+            const topEndIdx = rows2.findIndex((tr) => tr.id?.endsWith("R30"));
+            const unfoldIdx = rows2.findIndex((tr) =>
+                tr.querySelector('[data-testid="arrow-down-from-line"]'),
+            );
+            const bottomStartIdx = rows2.findIndex((tr) =>
+                tr.id?.endsWith("R71"),
+            );
+            expect(topEndIdx).toBeLessThan(unfoldIdx);
+            expect(unfoldIdx).toBeLessThan(bottomStartIdx);
         });
 
         it("loads the lines before the first hunk when expanding the leading gap", () => {
@@ -775,16 +882,21 @@ describe("DiffView rendering", () => {
                     .filter((n) => n >= 1 && n <= 39);
             }
 
-            // Icons: leading gap (1-39) + trailing gap (42-100)
-            let icons = container.querySelectorAll(
-                '[data-testid="unfold-icon"]',
+            // Buttons: leading gap (1-39) shows expand-up; trailing gap
+            // (42-100) shows expand-down.
+            let upButtons = container.querySelectorAll(
+                '[data-testid="arrow-up-from-line"]',
             );
-            expect(icons.length).toBe(2);
+            const downButtons = container.querySelectorAll(
+                '[data-testid="arrow-down-from-line"]',
+            );
+            expect(upButtons.length).toBe(1);
+            expect(downButtons.length).toBe(1);
             expect(leadingGapNums()).toHaveLength(0);
 
             // Click 1: the 20 lines immediately before the hunk (20-39),
             // not the first 20 lines of the file
-            fireEvent.click(icons[0]!.closest("tr")!);
+            fireEvent.click(upButtons[0]!);
             let nums = leadingGapNums();
             expect(nums).toHaveLength(20);
             expect(nums[0]).toBe(20);
@@ -795,7 +907,7 @@ describe("DiffView rendering", () => {
             // revealed line so the next click loads the lines above it.
             const rows = Array.from(container.querySelectorAll("tr"));
             const unfoldIdx = rows.findIndex((tr) =>
-                tr.querySelector('[data-testid="unfold-icon"]'),
+                tr.querySelector('[data-testid="arrow-up-from-line"]'),
             );
             const firstRevealedIdx = rows.findIndex((tr) =>
                 tr.id?.endsWith("R20"),
@@ -804,16 +916,23 @@ describe("DiffView rendering", () => {
             expect(firstRevealedIdx).toBeGreaterThan(unfoldIdx);
 
             // Click 2: remaining lines 1-19, unfold row disappears
-            icons = container.querySelectorAll('[data-testid="unfold-icon"]');
-            fireEvent.click(icons[0]!.closest("tr")!);
+            upButtons = container.querySelectorAll(
+                '[data-testid="arrow-up-from-line"]',
+            );
+            fireEvent.click(upButtons[0]!);
             nums = leadingGapNums();
             expect(nums).toHaveLength(39);
             expect(nums[0]).toBe(1);
             expect(nums[38]).toBe(39);
-            // Only the trailing unfold row remains
+            // Only the trailing expand-down button remains
             expect(
-                container.querySelectorAll('[data-testid="unfold-icon"]')
+                container.querySelectorAll('[data-testid="arrow-up-from-line"]')
                     .length,
+            ).toBe(0);
+            expect(
+                container.querySelectorAll(
+                    '[data-testid="arrow-down-from-line"]',
+                ).length,
             ).toBe(1);
         });
     });

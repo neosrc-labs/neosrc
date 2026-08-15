@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import type { DiffRenderItem } from "./types";
+import type { DiffRenderItem, GapExpansion } from "./types";
 
 const SCROLL_TARGET_PADDING = 12;
 
@@ -13,7 +13,9 @@ export function useDiffHashNavigation({
 }: {
     fileHash: string;
     renderItemsRef: React.RefObject<DiffRenderItem[]>;
-    setExpandedGaps: React.Dispatch<React.SetStateAction<Map<string, number>>>;
+    setExpandedGaps: React.Dispatch<
+        React.SetStateAction<Map<string, GapExpansion>>
+    >;
     setSelectedRange: React.Dispatch<
         React.SetStateAction<{
             startLine: number;
@@ -61,16 +63,29 @@ export function useDiffHashNavigation({
                     // line; the rest stays behind an unfold row. Leading gaps
                     // (above the first hunk) reveal backward from the hunk,
                     // so the count is measured from the gap end there.
-                    const needed =
+                    const neededTop =
                         item.startLine === 1
-                            ? gapEnd - startLine + 1
+                            ? 0
                             : startLine - item.startLine + 1;
+                    const neededBottom =
+                        item.startLine === 1 ? gapEnd - startLine + 1 : 0;
                     setExpandedGaps((previous) => {
-                        if ((previous.get(gapKey) ?? 0) >= needed)
+                        const current = previous.get(gapKey) ?? {
+                            top: 0,
+                            bottom: 0,
+                        };
+                        const next = {
+                            top: Math.max(current.top, neededTop),
+                            bottom: Math.max(current.bottom, neededBottom),
+                        };
+                        if (
+                            next.top === current.top &&
+                            next.bottom === current.bottom
+                        )
                             return previous;
-                        const next = new Map(previous);
-                        next.set(gapKey, needed);
-                        return next;
+                        const map = new Map(previous);
+                        map.set(gapKey, next);
+                        return map;
                     });
                     break;
                 }

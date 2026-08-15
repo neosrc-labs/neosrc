@@ -141,6 +141,8 @@ vi.mock("~/components/markdown/markdown-editor", () => mockMarkdownEditor());
 vi.mock("lucide-react", () => ({
     UnfoldVertical: () => <div data-testid="unfold-icon" />,
     FoldVertical: () => <div data-testid="fold-icon" />,
+    ArrowDownFromLine: () => <div data-testid="arrow-down-from-line" />,
+    ArrowUpFromLine: () => <div data-testid="arrow-up-from-line" />,
     MessageSquare: () => <div data-testid="message-square" />,
     MessageSquareOff: () => <div data-testid="message-square-off" />,
 }));

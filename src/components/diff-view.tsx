@@ -2,7 +2,7 @@
 
 import type { ColorSchemeType, DiffBlock } from "diff2html/lib/types";
 import "diff2html/bundles/css/diff2html.min.css";
-import { Plus, UnfoldVertical } from "lucide-react";
+import { ArrowDownFromLine, ArrowUpFromLine, Plus } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
     Fragment,
@@ -33,6 +33,7 @@ import type {
     DiffCommentTarget,
     DiffGap,
     DiffRenderItem,
+    GapExpansion,
 } from "./diff/types";
 import { useDiffCommentSelection } from "./diff/use-diff-comment-selection";
 import { useDiffHashNavigation } from "./diff/use-diff-hash-navigation";
@@ -137,21 +138,30 @@ export function DiffView({
         onCommentTableMouseOver,
     } = commentSelection;
 
-    const [expandedGaps, setExpandedGaps] = useState<Map<string, number>>(
+    const [expandedGaps, setExpandedGaps] = useState<Map<string, GapExpansion>>(
         () => new Map(),
     );
 
-    // Track how many lines of each gap are revealed (0 = collapsed). A click
-    // reveals GAP_EXPAND_STEP more lines until the gap is exhausted, so large
-    // gaps expand progressively instead of dumping the whole file at once.
-    const handleGapExpand = useCallback((key: string, nextCount: number) => {
-        setExpandedGaps((prev) => {
-            if ((prev.get(key) ?? 0) >= nextCount) return prev;
-            const next = new Map(prev);
-            next.set(key, nextCount);
-            return next;
-        });
-    }, []);
+    // Track how many lines of each gap are revealed from the top (down) and
+    // the bottom (up); a click reveals GAP_EXPAND_STEP more lines from one
+    // end until the gap is exhausted.
+    const handleGapExpand = useCallback(
+        (key: string, expansion: GapExpansion) => {
+            setExpandedGaps((prev) => {
+                const current = prev.get(key) ?? { top: 0, bottom: 0 };
+                const next = {
+                    top: Math.max(current.top, expansion.top),
+                    bottom: Math.max(current.bottom, expansion.bottom),
+                };
+                if (next.top === current.top && next.bottom === current.bottom)
+                    return prev;
+                const map = new Map(prev);
+                map.set(key, next);
+                return map;
+            });
+        },
+        [],
+    );
 
     useEffect(() => {
         if (!expandAllContext) {
@@ -162,7 +172,7 @@ export function DiffView({
     const expandedLineCount = useMemo(
         () =>
             Array.from(expandedGaps.values()).reduce(
-                (sum, count) => sum + count,
+                (sum, { top, bottom }) => sum + top + bottom,
                 0,
             ),
         [expandedGaps],
@@ -314,8 +324,7 @@ interface DiffRowCommentProps {
 /** Gap/navigation props shared by the diff table row components. */
 interface DiffRowNavigationProps {
     gapKey?: string;
-    expandedCount?: number;
-    onGapExpand?: (key: string, nextCount: number) => void;
+    onGapExpand?: (key: string, expansion: GapExpansion) => void;
     headSha?: string;
     filename?: string;
     fileHash?: string;
@@ -335,6 +344,7 @@ interface BlockRowsProps extends DiffRowNavigationProps {
     owner: string | undefined;
     repo: string | undefined;
     gap?: DiffGap;
+    gapExpansion: GapExpansion;
     commentProps: DiffRowCommentProps;
 }
 
@@ -347,7 +357,7 @@ function BlockRows({
     repo,
     gap,
     gapKey,
-    expandedCount = 0,
+    gapExpansion,
     onGapExpand,
     headSha,
     filename,
@@ -394,47 +404,114 @@ function BlockRows({
         [onLineSelect],
     );
 
+    // The leading gap (startLine 1) holds the lines *above* the first hunk;
+    // it only expands upward (revealing the lines right before the hunk).
+    // Middle gaps expand from both ends, toward each other.
+    const isLeadingGap = gap?.startLine === 1;
+    const revealedTop = isLeadingGap ? 0 : gapExpansion.top;
+    const revealedBottom = gapExpansion.bottom;
+    const revealedTopClamped = Math.min(revealedTop, gapSize);
+    const revealedBottomClamped = Math.min(revealedBottom, gapSize);
+    const expandedTotal = revealedTop + revealedBottom;
+    const isFullyExpanded = expandedTotal >= gapSize;
     const showUnfoldRow = Boolean(
         gap &&
             headSha &&
             gapSize > 0 &&
-            expandedCount < gapSize &&
-            (expandedCount === 0 || !isLoading),
+            !isFullyExpanded &&
+            (expandedTotal === 0 || !isLoading),
     );
-    const expandedLineCount = Math.min(expandedCount, gapSize);
-    // The leading gap (startLine 1) holds the lines *above* the first hunk;
-    // reveal it backward from the hunk so expanding loads the lines right
-    // before it, not the first lines of the file.
-    const isLeadingGap = gap?.startLine === 1;
     const showExpandedLines =
         Boolean(gap) &&
         gapSize > 0 &&
-        expandedLineCount > 0 &&
+        expandedTotal > 0 &&
         !isLoading &&
         !error &&
         fileLines != null;
 
-    const handleGapExpandClick = () => {
+    // expandBottom reveals lines from the bottom of the gap (adjacent to the
+    // next hunk, below the unfold row); expandTop reveals lines from the top
+    // of the gap (adjacent to the previous hunk, above the unfold row). The
+    // leading gap (which sits above the first hunk) only expands from its
+    // bottom, backward toward the hunk.
+    const expandBottom = () => {
         if (!gap || gapSize <= 0) return;
-        onGapExpand?.(
-            gapKey ?? "",
-            Math.min(expandedCount + GAP_EXPAND_STEP, gapSize),
-        );
+        onGapExpand?.(gapKey ?? "", {
+            top: revealedTop,
+            bottom: Math.min(
+                revealedBottom + GAP_EXPAND_STEP,
+                gapSize - revealedTop,
+            ),
+        });
+    };
+    const expandTop = () => {
+        if (!gap || gapSize <= 0) return;
+        onGapExpand?.(gapKey ?? "", {
+            top: Math.min(
+                revealedTop + GAP_EXPAND_STEP,
+                gapSize - revealedBottom,
+            ),
+            bottom: revealedBottom,
+        });
     };
 
-    const unfoldRow = (
-        <tr
-            className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30"
-            onClick={handleGapExpandClick}
-        >
+    const renderGapLine = (lineContent: string, lineNum: number) => (
+        <DiffContextRow
+            key={`gap-${lineNum}`}
+            lineNum={lineNum}
+            content={lineContent}
+            id={fileHash ? `diff-${fileHash}R${lineNum}` : undefined}
+        />
+    );
+
+    const leadingUnfoldRow = (
+        <tr>
             <td className="d2h-code-linenumber d2h-info">
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <UnfoldVertical size={14} className="text-text-tertiary" />
+                <button
+                    type="button"
+                    onClick={expandBottom}
+                    title="Expand lines above"
+                    aria-label="Expand lines above"
+                    className="absolute inset-0 flex w-full cursor-pointer items-center justify-center text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
+                >
+                    <ArrowUpFromLine size={14} />
+                </button>
+            </td>
+            <td className="d2h-info">
+                <div className="d2h-code-line" style={{ userSelect: "text" }}>
+                    {revealedBottom === 0 ? block.header : null}
+                </div>
+            </td>
+        </tr>
+    );
+
+    const middleUnfoldRow = (
+        <tr>
+            <td className="d2h-code-linenumber d2h-info">
+                <div className="absolute inset-0 flex items-stretch">
+                    <button
+                        type="button"
+                        onClick={expandBottom}
+                        title="Expand lines below"
+                        aria-label="Expand lines below"
+                        className="flex flex-1 cursor-pointer items-center justify-center text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
+                    >
+                        <ArrowDownFromLine size={14} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={expandTop}
+                        title="Expand lines above"
+                        aria-label="Expand lines above"
+                        className="flex flex-1 cursor-pointer items-center justify-center border-border border-l text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
+                    >
+                        <ArrowUpFromLine size={14} />
+                    </button>
                 </div>
             </td>
             <td className="d2h-info">
-                <div className="d2h-code-line">
-                    {expandedCount === 0 ? block.header : null}
+                <div className="d2h-code-line" style={{ userSelect: "text" }}>
+                    {block.header}
                 </div>
             </td>
         </tr>
@@ -442,7 +519,7 @@ function BlockRows({
 
     return (
         <>
-            {gap && isLoading && expandedLineCount > 0 && (
+            {gap && isLoading && expandedTotal > 0 && (
                 <tr>
                     <td className="d2h-code-linenumber d2h-info" />
                     <td className="d2h-info">
@@ -454,38 +531,58 @@ function BlockRows({
             )}
             {/* Leading gaps reveal backward from the hunk: the unfold row
                 stays at the top and revealed lines fill in below it. */}
-            {isLeadingGap && showUnfoldRow && unfoldRow}
+            {isLeadingGap && showUnfoldRow && leadingUnfoldRow}
             {showExpandedLines &&
                 gap &&
+                isLeadingGap &&
+                fileLines
+                    .slice(gap.endLine - revealedBottomClamped, gap.endLine)
+                    .map((lineContent, idx) =>
+                        renderGapLine(
+                            lineContent,
+                            gap.endLine - revealedBottomClamped + 1 + idx,
+                        ),
+                    )}
+            {/* Middle gaps: top-revealed lines... */}
+            {showExpandedLines &&
+                gap &&
+                !isLeadingGap &&
+                !isFullyExpanded &&
+                revealedTopClamped > 0 &&
                 fileLines
                     .slice(
-                        isLeadingGap
-                            ? gap.endLine - expandedLineCount
-                            : gap.startLine - 1,
-                        isLeadingGap
-                            ? gap.endLine
-                            : gap.startLine - 1 + expandedLineCount,
+                        gap.startLine - 1,
+                        gap.startLine - 1 + revealedTopClamped,
                     )
-                    .map((lineContent, idx) => {
-                        const lineNum = isLeadingGap
-                            ? gap.endLine - expandedLineCount + 1 + idx
-                            : gap.startLine + idx;
-                        return (
-                            <DiffContextRow
-                                key={`gap-${lineNum}`}
-                                lineNum={lineNum}
-                                content={lineContent}
-                                id={
-                                    fileHash
-                                        ? `diff-${fileHash}R${lineNum}`
-                                        : undefined
-                                }
-                            />
-                        );
-                    })}
-            {/* Middle gaps reveal forward: the unfold row sits below the
-                revealed lines, just above the next hunk. */}
-            {!isLeadingGap && showUnfoldRow && unfoldRow}
+                    .map((lineContent, idx) =>
+                        renderGapLine(lineContent, gap.startLine + idx),
+                    )}
+            {/* ...or the whole gap once both ends meet. */}
+            {showExpandedLines &&
+                gap &&
+                !isLeadingGap &&
+                isFullyExpanded &&
+                fileLines
+                    .slice(gap.startLine - 1, gap.endLine)
+                    .map((lineContent, idx) =>
+                        renderGapLine(lineContent, gap.startLine + idx),
+                    )}
+            {/* Two-button unfold row sits between the revealed regions. */}
+            {!isLeadingGap && showUnfoldRow && middleUnfoldRow}
+            {/* Middle gaps: bottom-revealed lines. */}
+            {showExpandedLines &&
+                gap &&
+                !isLeadingGap &&
+                !isFullyExpanded &&
+                revealedBottomClamped > 0 &&
+                fileLines
+                    .slice(gap.endLine - revealedBottomClamped, gap.endLine)
+                    .map((lineContent, idx) =>
+                        renderGapLine(
+                            lineContent,
+                            gap.endLine - revealedBottomClamped + 1 + idx,
+                        ),
+                    )}
             {block.lines.map((line) => {
                 const type = line.type;
                 const typeClass =
@@ -701,7 +798,7 @@ function BlockRows({
 interface GapRowProps extends DiffRowNavigationProps {
     startLine: number;
     expandedCount: number;
-    onExpand: (key: string, nextCount: number) => void;
+    onExpand: (key: string, expansion: GapExpansion) => void;
     gapKey: string;
     owner: string | undefined;
     repo: string | undefined;
@@ -740,19 +837,22 @@ function GapRow({
         if (gapSize <= 0) return null;
         if (!headSha) return null;
         return (
-            <tr
-                className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30"
-                onClick={() =>
-                    onExpand(gapKey, Math.min(GAP_EXPAND_STEP, gapSize))
-                }
-            >
+            <tr>
                 <td className="d2h-code-linenumber d2h-info">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <UnfoldVertical
-                            size={14}
-                            className="text-text-tertiary"
-                        />
-                    </div>
+                    <button
+                        type="button"
+                        title="Expand lines below"
+                        aria-label="Expand lines below"
+                        onClick={() =>
+                            onExpand(gapKey, {
+                                top: Math.min(GAP_EXPAND_STEP, gapSize),
+                                bottom: 0,
+                            })
+                        }
+                        className="absolute inset-0 flex w-full cursor-pointer items-center justify-center text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
+                    >
+                        <ArrowDownFromLine size={14} />
+                    </button>
                 </td>
                 <td className="d2h-info">
                     <div className="d2h-code-line" />
@@ -805,22 +905,25 @@ function GapRow({
                 );
             })}
             {expandedCount < gapSize && (
-                <tr
-                    className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30"
-                    onClick={() =>
-                        onExpand(
-                            gapKey,
-                            Math.min(expandedCount + GAP_EXPAND_STEP, gapSize),
-                        )
-                    }
-                >
+                <tr>
                     <td className="d2h-code-linenumber d2h-info">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <UnfoldVertical
-                                size={14}
-                                className="text-text-tertiary"
-                            />
-                        </div>
+                        <button
+                            type="button"
+                            title="Expand lines below"
+                            aria-label="Expand lines below"
+                            onClick={() =>
+                                onExpand(gapKey, {
+                                    top: Math.min(
+                                        expandedCount + GAP_EXPAND_STEP,
+                                        gapSize,
+                                    ),
+                                    bottom: 0,
+                                })
+                            }
+                            className="absolute inset-0 flex w-full cursor-pointer items-center justify-center text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
+                        >
+                            <ArrowDownFromLine size={14} />
+                        </button>
                     </td>
                     <td className="d2h-info">
                         <div className="d2h-code-line" />
@@ -834,8 +937,8 @@ function GapRow({
 interface DiffTableBodyProps {
     items: DiffRenderItem[];
     expandAllContext: boolean;
-    expandedGaps: Map<string, number>;
-    onGapExpand: (key: string, nextCount: number) => void;
+    expandedGaps: Map<string, GapExpansion>;
+    onGapExpand: (key: string, expansion: GapExpansion) => void;
     owner: string | undefined;
     repo: string | undefined;
     headSha: string | undefined;
@@ -876,7 +979,7 @@ function DiffTableBody({
                     const gapKey = `gap-${item.startLine}`;
                     const expandedCount = expandAllContext
                         ? Infinity
-                        : (expandedGaps.get(gapKey) ?? 0);
+                        : (expandedGaps.get(gapKey)?.top ?? 0);
                     return (
                         <GapRow
                             key={gapKey}
@@ -905,18 +1008,18 @@ function DiffTableBody({
                           }
                         : undefined;
                 const gapKey = gap ? `gap-${gap.startLine}` : undefined;
-                const expandedCount = gapKey
+                const gapExpansion = gapKey
                     ? expandAllContext
-                        ? Infinity
-                        : (expandedGaps.get(gapKey) ?? 0)
-                    : 0;
+                        ? { top: Infinity, bottom: Infinity }
+                        : (expandedGaps.get(gapKey) ?? { top: 0, bottom: 0 })
+                    : { top: 0, bottom: 0 };
                 return (
                     <BlockRows
                         key={`block-${item.block.newStartLine}`}
                         block={item.block}
                         gap={gap}
                         gapKey={gapKey}
-                        expandedCount={expandedCount}
+                        gapExpansion={gapExpansion}
                         onGapExpand={onGapExpand}
                         headSha={headSha}
                         filename={filename}
