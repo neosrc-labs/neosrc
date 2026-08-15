@@ -26,6 +26,7 @@
         "functional-test:setup": "dotenv -e .env.test -- npx drizzle-kit push",
         "generate:icon-map": "pnpx tsx scripts/generate-icon-map.ts",
         "knip": "SKIP_ENV_VALIDATION=1 knip",
+        "jscpd": "jscpd",
         "preview": "next build && next start",
         "start": "next start",
         "typecheck": "tsc --noEmit"
