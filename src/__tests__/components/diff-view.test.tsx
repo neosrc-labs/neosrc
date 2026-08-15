@@ -540,12 +540,14 @@ describe("DiffView rendering", () => {
             // The gap row between hunks (line 3-4) holds both directional
             // buttons: expand-down on the left, expand-up on the right.
             const rows = Array.from(container.querySelectorAll("tr"));
-            const hasBothInOneRow = rows.some(
+            const gapRow = rows.find(
                 (tr) =>
                     tr.querySelector('[data-testid="arrow-down-from-line"]') &&
                     tr.querySelector('[data-testid="arrow-up-from-line"]'),
             );
-            expect(hasBothInOneRow).toBe(true);
+            expect(gapRow).toBeDefined();
+            // The git hunk marker stays visible in the same row.
+            expect(gapRow?.textContent).toContain("@@ -5,1 +5,1 @@");
         });
     });
 
@@ -755,6 +757,48 @@ describe("DiffView rendering", () => {
                 container.querySelectorAll('[data-testid="arrow-up-from-line"]')
                     .length,
             ).toBe(0);
+        });
+
+        it("shows a loading row when a middle gap expands before content loads", () => {
+            // Gap 3-4 (2 lines) between block 1 (1-2) and block 2 (5)
+            const block1 = mb(1, [mc(" line1", 1, 1), mc("+line2", 2)]);
+            const block2 = mb(5, [mc(" line5", 5, 5)]);
+            mockParsedFile([block1, block2]);
+            mockUseFileContent.isLoading = true;
+
+            const { container } = renderDiffView({
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            fireEvent.click(
+                container.querySelector(
+                    '[data-testid="arrow-down-from-line"]',
+                )!,
+            );
+
+            // Loading row replaces the gap content: no revealed lines yet and
+            // the middle gap's expand buttons are hidden while the fetch is
+            // in flight (only the trailing gap keeps its button).
+            const loadingRows = Array.from(
+                container.querySelectorAll("tr"),
+            ).filter((tr) => tr.textContent.includes("Loading"));
+            expect(loadingRows.length).toBe(1);
+            const rowIds = Array.from(
+                container.querySelectorAll('tr[id^="diff-"]'),
+            ).map((tr) => tr.id);
+            expect(rowIds.some((id) => id.endsWith("R3"))).toBe(false);
+            expect(
+                container.querySelectorAll('[data-testid="arrow-up-from-line"]')
+                    .length,
+            ).toBe(0);
+            expect(
+                container.querySelectorAll(
+                    '[data-testid="arrow-down-from-line"]',
+                ).length,
+            ).toBe(1);
         });
 
         it("expands a gap smaller than the step fully in one click", () => {
