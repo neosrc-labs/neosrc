@@ -320,6 +320,14 @@ async function refreshAndStoreToken(
     refreshToken: string,
     refresh: (refreshToken: string) => Promise<RefreshedToken>,
 ): Promise<string> {
+    // Providers (GitHub documents this explicitly) count expires_in from the
+    // moment the token is issued, i.e. when our refresh request is sent —
+    // not from when we receive the response. Basing the stored expiry on the
+    // request start keeps it aligned with the provider's clock; deriving it
+    // from response receipt would skew it later by the round-trip latency,
+    // leaving a window where we consider the token valid but the provider
+    // has already expired it.
+    const issuedAt = Date.now();
     const refreshed = await refresh(refreshToken);
     await database
         .update(betterAuthAccount)
@@ -327,13 +335,11 @@ async function refreshAndStoreToken(
             accessToken: encrypt(refreshed.access_token),
             refreshToken: encrypt(refreshed.refresh_token),
             accessTokenExpiresAt: new Date(
-                Date.now() + refreshed.expires_in * 1000,
+                issuedAt + refreshed.expires_in * 1000,
             ),
             refreshTokenExpiresAt: refreshed.refresh_token_expires_in
-                ? new Date(
-                      Date.now() + refreshed.refresh_token_expires_in * 1000,
-                  )
-                : undefined,
+                ? new Date(issuedAt + refreshed.refresh_token_expires_in * 1000)
+                : null,
         })
         .where(eq(betterAuthAccount.id, accountId));
     return refreshed.access_token;
