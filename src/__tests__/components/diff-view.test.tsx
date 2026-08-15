@@ -688,7 +688,7 @@ describe("DiffView rendering", () => {
 
             const clickDown = () => {
                 const btn = container.querySelector(
-                    '[data-testid="arrow-down-from-line"]',
+                    '[data-testid="arrow-up-from-line"]',
                 );
                 fireEvent.click(btn!);
             };
@@ -864,10 +864,13 @@ describe("DiffView rendering", () => {
                 pullNumber: 1,
             });
 
-            // Click the up button: reveals the top of the gap (11-30) above
-            // the unfold row, toward the previous hunk.
+            // Click the down-arrow button (expands upward): reveals the top
+            // of the gap (11-30) above the unfold row, toward the previous
+            // hunk.
             fireEvent.click(
-                container.querySelector('[data-testid="arrow-up-from-line"]')!,
+                container.querySelector(
+                    '[data-testid="arrow-down-from-line"]',
+                )!,
             );
 
             let nums = gapRowNumbers(container);
@@ -883,11 +886,10 @@ describe("DiffView rendering", () => {
             );
             expect(firstTopIdx).toBeLessThan(unfoldRowIdx);
 
-            // Then expand down: 71-90 appear below the unfold row.
+            // Then expand down via the up-arrow button: 71-90 appear below
+            // the unfold row.
             fireEvent.click(
-                container.querySelector(
-                    '[data-testid="arrow-down-from-line"]',
-                )!,
+                container.querySelector('[data-testid="arrow-up-from-line"]')!,
             );
             nums = gapRowNumbers(container);
             expect(nums).toHaveLength(40);

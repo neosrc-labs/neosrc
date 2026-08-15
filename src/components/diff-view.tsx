@@ -496,7 +496,7 @@ function BlockRows({
                         aria-label="Expand lines below"
                         className="flex flex-1 cursor-pointer items-center justify-center text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
                     >
-                        <ArrowDownFromLine size={14} />
+                        <ArrowUpFromLine size={14} />
                     </button>
                     <button
                         type="button"
@@ -505,7 +505,7 @@ function BlockRows({
                         aria-label="Expand lines above"
                         className="flex flex-1 cursor-pointer items-center justify-center border-border border-l text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
                     >
-                        <ArrowUpFromLine size={14} />
+                        <ArrowDownFromLine size={14} />
                     </button>
                 </div>
             </td>
