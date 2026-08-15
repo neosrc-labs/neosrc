@@ -28,6 +28,7 @@ import { TeamHoverCard } from "~/components/hovercards/team-hover-card";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { cn } from "~/lib/utils";
 import { SuggestionBlock } from "./accessories/suggestion-block";
+import { CODE_LANGUAGE_TAGS } from "./code-language-map";
 import { remarkCommitPlugin } from "./plugins/remark-commit";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
@@ -580,18 +581,10 @@ function CodeElement({
             padding: "16px",
         };
 
-        let language = "";
-        switch (className) {
-            case "language-rust": {
-                language = "rust";
-                break;
-            }
-            case "language-js": {
-                language = "javascript";
-                break;
-            }
-            // TODO: Add other languages
-        }
+        const tag = className?.replace(/^language-/, "").toLowerCase();
+        const language = tag
+            ? (CODE_LANGUAGE_TAGS[tag] ?? "plaintext")
+            : "plaintext";
 
         const codeString = Array.isArray(children)
             ? children.join("")
