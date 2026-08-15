@@ -36,16 +36,6 @@ import { api } from "~/trpc/react";
 // on stable properties (path, line, side) instead of the volatile comment ID.
 const replyStateCache = new Map<string, { body: string; visible: boolean }>();
 
-function getThreadIdentity(comment: ReviewComment): string {
-    return [
-        comment.path,
-        comment.line ?? "F",
-        comment.side ?? "N",
-        comment.start_line ?? "0",
-        comment.start_side ?? "N",
-    ].join(":");
-}
-
 interface InlineCommentThreadProps {
     parentComment: ReviewComment;
     replies: ReviewComment[];
@@ -405,4 +395,14 @@ export function InlineCommentThread({
             ) : null}
         </div>
     );
+}
+
+function getThreadIdentity(comment: ReviewComment): string {
+    return [
+        comment.path,
+        comment.line ?? "F",
+        comment.side ?? "N",
+        comment.start_line ?? "0",
+        comment.start_side ?? "N",
+    ].join(":");
 }

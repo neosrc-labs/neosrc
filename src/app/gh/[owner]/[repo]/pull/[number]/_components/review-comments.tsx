@@ -384,80 +384,6 @@ export function ReviewComments({
     );
 }
 
-function truncateDiffToRange(
-    diffHunk: string,
-    startLine: number | null | undefined,
-    endLine: number | null | undefined,
-): string {
-    if (!startLine || !endLine || startLine >= endLine) return diffHunk;
-    const lines = diffHunk.split("\n");
-    const headerLine = lines[0];
-    if (!headerLine?.startsWith("@@")) return diffHunk;
-
-    const match = headerLine.match(
-        /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/,
-    );
-    if (!match) return diffHunk;
-
-    const newStart = parseInt(match[3] ?? "0", 10);
-    let newLine = newStart;
-    let oldLine = parseInt(match[1] ?? "0", 10);
-    const filtered: string[] = [];
-    let newOldLine = 0;
-    let newNewCount = 0;
-    let newOldCount = 0;
-    let started = false;
-
-    for (let i = 1; i < lines.length; i++) {
-        const ln = lines[i];
-        if (ln === undefined) continue;
-        const first = ln[0] ?? "";
-
-        if (first === " ") {
-            if (newLine >= startLine && newLine <= endLine) {
-                filtered.push(ln);
-                if (!started) {
-                    started = true;
-                    newOldLine = oldLine;
-                }
-                newOldCount++;
-                newNewCount++;
-            }
-            oldLine++;
-            newLine++;
-        } else if (first === "-") {
-            if (newLine >= startLine && newLine <= endLine) {
-                filtered.push(ln);
-                if (!started) {
-                    started = true;
-                    newOldLine = oldLine;
-                }
-                newOldCount++;
-            }
-            oldLine++;
-        } else if (first === "+") {
-            if (newLine >= startLine && newLine <= endLine) {
-                filtered.push(ln);
-                if (!started) {
-                    started = true;
-                    newOldLine = oldLine;
-                }
-                newNewCount++;
-            }
-            newLine++;
-        } else if (first === "\\") {
-            if (filtered.length > 0) filtered.push(ln);
-        }
-    }
-
-    if (filtered.length === 0) return diffHunk;
-    if (!started) return diffHunk;
-
-    newOldLine = Math.max(1, newOldLine);
-    const newHeader = `@@ -${newOldLine},${newOldCount} +${startLine},${newNewCount} @@`;
-    return [newHeader, ...filtered].join("\n");
-}
-
 function CommentBlock({
     comment,
     replies,
@@ -667,4 +593,78 @@ function CommentBlock({
             ) : null}
         </div>
     );
+}
+
+function truncateDiffToRange(
+    diffHunk: string,
+    startLine: number | null | undefined,
+    endLine: number | null | undefined,
+): string {
+    if (!startLine || !endLine || startLine >= endLine) return diffHunk;
+    const lines = diffHunk.split("\n");
+    const headerLine = lines[0];
+    if (!headerLine?.startsWith("@@")) return diffHunk;
+
+    const match = headerLine.match(
+        /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/,
+    );
+    if (!match) return diffHunk;
+
+    const newStart = parseInt(match[3] ?? "0", 10);
+    let newLine = newStart;
+    let oldLine = parseInt(match[1] ?? "0", 10);
+    const filtered: string[] = [];
+    let newOldLine = 0;
+    let newNewCount = 0;
+    let newOldCount = 0;
+    let started = false;
+
+    for (let i = 1; i < lines.length; i++) {
+        const ln = lines[i];
+        if (ln === undefined) continue;
+        const first = ln[0] ?? "";
+
+        if (first === " ") {
+            if (newLine >= startLine && newLine <= endLine) {
+                filtered.push(ln);
+                if (!started) {
+                    started = true;
+                    newOldLine = oldLine;
+                }
+                newOldCount++;
+                newNewCount++;
+            }
+            oldLine++;
+            newLine++;
+        } else if (first === "-") {
+            if (newLine >= startLine && newLine <= endLine) {
+                filtered.push(ln);
+                if (!started) {
+                    started = true;
+                    newOldLine = oldLine;
+                }
+                newOldCount++;
+            }
+            oldLine++;
+        } else if (first === "+") {
+            if (newLine >= startLine && newLine <= endLine) {
+                filtered.push(ln);
+                if (!started) {
+                    started = true;
+                    newOldLine = oldLine;
+                }
+                newNewCount++;
+            }
+            newLine++;
+        } else if (first === "\\") {
+            if (filtered.length > 0) filtered.push(ln);
+        }
+    }
+
+    if (filtered.length === 0) return diffHunk;
+    if (!started) return diffHunk;
+
+    newOldLine = Math.max(1, newOldLine);
+    const newHeader = `@@ -${newOldLine},${newOldCount} +${startLine},${newNewCount} @@`;
+    return [newHeader, ...filtered].join("\n");
 }
