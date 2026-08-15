@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { groupThreads } from "~/components/diff-view";
+import { groupReviewCommentThreads } from "~/components/review-comment-threads";
 import type { ReviewComment } from "~/server/github";
 
 type MockComment = {
@@ -13,16 +13,16 @@ function c(overrides: MockComment): ReviewComment {
     return overrides as unknown as ReviewComment;
 }
 
-describe("groupThreads", () => {
+describe("groupReviewCommentThreads", () => {
     it("returns one thread with empty replies for a standalone comment", () => {
-        const threads = groupThreads([c({ id: 1 })]);
+        const threads = groupReviewCommentThreads([c({ id: 1 })]);
         expect(threads).toHaveLength(1);
         expect(threads[0]?.parent.id).toBe(1);
         expect(threads[0]?.replies).toEqual([]);
     });
 
     it("groups parent with replies under the same root id", () => {
-        const threads = groupThreads([
+        const threads = groupReviewCommentThreads([
             c({ id: 1 }),
             c({ id: 2, in_reply_to_id: 1 }),
             c({ id: 3, in_reply_to_id: 1 }),
@@ -35,7 +35,7 @@ describe("groupThreads", () => {
     });
 
     it("handles multiple independent threads", () => {
-        const threads = groupThreads([
+        const threads = groupReviewCommentThreads([
             c({ id: 1 }),
             c({ id: 10, in_reply_to_id: 1 }),
             c({ id: 2 }),
@@ -53,7 +53,7 @@ describe("groupThreads", () => {
     });
 
     it("groups by in_reply_to_id (out-of-order input uses first element as parent)", () => {
-        const threads = groupThreads([
+        const threads = groupReviewCommentThreads([
             c({ id: 2, in_reply_to_id: 1 }),
             c({ id: 1 }),
         ]);
@@ -64,7 +64,7 @@ describe("groupThreads", () => {
     });
 
     it("nested reply (reply to a reply) becomes a separate thread root", () => {
-        const threads = groupThreads([
+        const threads = groupReviewCommentThreads([
             c({ id: 1 }),
             c({ id: 2, in_reply_to_id: 1 }),
             c({ id: 3, in_reply_to_id: 2 }),
@@ -80,6 +80,6 @@ describe("groupThreads", () => {
     });
 
     it("returns empty array for no comments", () => {
-        expect(groupThreads([])).toEqual([]);
+        expect(groupReviewCommentThreads([])).toEqual([]);
     });
 });

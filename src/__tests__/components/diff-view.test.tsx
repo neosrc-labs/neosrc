@@ -67,7 +67,7 @@ vi.mock("lucide-react", () => ({
     MessageSquareOff: () => <div data-testid="message-square-off" />,
 }));
 
-import { type ActiveComment, DiffView } from "~/components/diff-view";
+import { type DiffCommentTarget, DiffView } from "~/components/diff-view";
 import type { ReviewComment } from "~/server/github";
 
 // --- Helpers ---
@@ -154,8 +154,8 @@ function renderDiffView(props?: {
     filename?: string;
     showComments?: boolean;
     showCommentButton?: boolean;
-    activeComment?: ActiveComment | null;
-    onStartComment?: (ac: ActiveComment | null) => void;
+    activeComment?: DiffCommentTarget | null;
+    onStartComment?: (ac: DiffCommentTarget | null) => void;
     comments?: ReviewComment[];
     expandAllContext?: boolean;
     headSha?: string;
@@ -192,7 +192,7 @@ function getTr(container: HTMLElement, suffix: string): HTMLElement | null {
 }
 
 function renderCommentButton(
-    onStartComment: (ac: ActiveComment | null) => void,
+    onStartComment: (ac: DiffCommentTarget | null) => void,
 ) {
     const lines = [mc(" line1", 1, 1), mc("+line2", 2)];
     mockParsedFile([mb(1, lines)], { addedLines: 1 });

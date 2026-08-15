@@ -1,36 +1,19 @@
 "use client";
 
 import type { components } from "@octokit/openapi-types";
-import { ChevronDown, MoreVertical, SquarePen, Trash2 } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { CommentCard } from "~/components/comment-card";
 import { DiffView } from "~/components/diff-view";
-import { ReplyTextboxButton } from "~/components/inline-comment-thread";
-import { MarkdownEditor } from "~/components/markdown/markdown-editor";
-import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
-import { ReactionBar } from "~/components/reaction-bar";
-import { ReactionPicker } from "~/components/reaction-picker";
 import { ResolveButton } from "~/components/resolved-thread-banner";
+import { ReviewCommentItem } from "~/components/review-comment-item";
 import {
-    createReviewCommentStub,
-    findAuthorAssociation,
-} from "~/components/review-comment-utils";
-import { Button } from "~/components/ui/button";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "~/components/ui/dialog";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "~/components/ui/popover";
+    ReplyTextboxButton,
+    ReviewCommentReplyComposer,
+} from "~/components/review-comment-reply-composer";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
+import { useReviewCommentEdit } from "~/hooks/use-review-comment-edit";
+import { useReviewCommentReply } from "~/hooks/use-review-comment-reply";
 import {
     applyReviewThreadOperations,
     useReviewThreadOperations,
@@ -42,7 +25,6 @@ import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewCommentBase } from "~/server/github";
 import { api } from "~/trpc/react";
 import {
-    canEdit,
     canInteract,
     type PullRequestPermissionContext,
 } from "../permissions-utils";
@@ -70,11 +52,16 @@ export function ReviewComments({
     allComments,
     permissionContext,
 }: ReviewCommentsProps) {
-    const [editingCommentId, setEditingCommentId] = useState<number | null>(
-        null,
-    );
-    const [editBody, setEditBody] = useState("");
-    const [savedBodies, setSavedBodies] = useState<Record<number, string>>({});
+    const {
+        editingCommentId,
+        editBody,
+        savedBodies,
+        setEditBody,
+        taskToggleMutation,
+        startEdit,
+        cancelEdit,
+        saveEdit,
+    } = useReviewCommentEdit({ owner, repo, number });
     const [expandedResolvedIds, setExpandedResolvedIds] = useState<Set<number>>(
         new Set(),
     );
@@ -144,32 +131,9 @@ export function ReviewComments({
             { enabled: allCommentIds.length > 0, staleTime: 30_000 },
         );
 
-    const updateMutation = api.reviewComments.update.useMutation({
-        onMutate: ({ commentId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
-            setEditingCommentId(null);
-        },
-        onError: (_, { commentId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[commentId];
-                return next;
-            });
-            setEditingCommentId(commentId);
-        },
-    });
-    const taskToggleMutation = api.reviewComments.update.useMutation({
-        onMutate: ({ commentId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
-        },
-        onError: (_, { commentId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[commentId];
-                return next;
-            });
-        },
-    });
+    const handleSaveEdit = (commentId: number) => {
+        saveEdit(commentId);
+    };
 
     const deleteMutation = api.reviewComments.delete.useMutation({
         onMutate: async ({ commentId }) => {
@@ -293,17 +257,6 @@ export function ReviewComments({
         reactMutation.mutate({ owner, repo, commentId, content });
     };
 
-    const handleSaveEdit = (commentId: number) => {
-        if (!editBody.trim()) return;
-        updateMutation.mutate({
-            owner,
-            repo,
-            number,
-            commentId,
-            body: editBody,
-        });
-    };
-
     const handleDelete = (commentId: number) => {
         deleteMutation.mutate({ owner, repo, commentId });
     };
@@ -411,15 +364,9 @@ export function ReviewComments({
                                 isExpanded={isExpanded}
                                 threadId={thread?.id ?? ""}
                                 isResolvePending={resolveOps.isPending}
-                                onStartEdit={(id, body) => {
-                                    setEditBody(body);
-                                    setEditingCommentId(id);
-                                }}
+                                onStartEdit={startEdit}
                                 onEditBodyChange={setEditBody}
-                                onCancelEdit={() => {
-                                    setEditingCommentId(null);
-                                    setEditBody("");
-                                }}
+                                onCancelEdit={cancelEdit}
                                 onSaveEdit={handleSaveEdit}
                                 onDelete={handleDelete}
                                 onReact={handleReact}
@@ -511,7 +458,6 @@ function truncateDiffToRange(
     return [newHeader, ...filtered].join("\n");
 }
 
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: FIXME: split this up
 function CommentBlock({
     comment,
     replies,
@@ -572,489 +518,153 @@ function CommentBlock({
         () => readAutosave(replyKey) ?? "",
     );
     const { clear: clearReply } = useAutosave(replyKey, replyBody);
-    const [menuOpenCommentId, setMenuOpenCommentId] = useState<number | null>(
-        null,
-    );
-    const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
-    const utils = api.useUtils();
-    // TODO: I think we dont need to load this until a reply happens
     const { data: currentUserData } = api.users.currentUser.useQuery();
     const { onToggleTask: onToggleParentTask } = useTaskToggle({
         mutation: toggleMutation,
         staticInput: { owner, repo, commentId: comment.id },
     });
-
-    const replyMutation = api.reviewComments.reply.useMutation({
-        onMutate: async ({ body, inReplyTo }) => {
-            setReplyBody("");
-            setShowReplyForm(false);
-
-            await utils.reviewComments.list.cancel({
-                owner,
-                repo,
-                number,
-            });
-            const prevData = utils.reviewComments.list.getData({
-                owner,
-                repo,
-                number,
-            });
-
-            const userLogin = currentUserData?.login;
-            if (userLogin) {
-                const listData = utils.reviewComments.list.getData({
-                    owner,
-                    repo,
-                    number,
-                });
-                const pendingData = utils.reviews.getPending.getData({
-                    owner,
-                    repo,
-                    number,
-                });
-                const authorAssociation =
-                    findAuthorAssociation(listData ?? [], userLogin) ??
-                    findAuthorAssociation(
-                        pendingData?.comments ?? [],
-                        userLogin,
-                    );
-
-                const stub = createReviewCommentStub({
-                    body,
-                    filePath: comment.path,
-                    currentUser: {
-                        login: userLogin,
-                        avatarUrl: currentUserData.avatarUrl,
-                    },
-                    lineNumber: comment.line,
-                    side: comment.side,
-                    inReplyTo,
-                    authorAssociation,
-                });
-
-                utils.reviewComments.list.setData(
-                    { owner, repo, number },
-                    (old) => {
-                        if (!old) return old;
-                        return [...old, stub];
-                    },
-                );
-            }
-
-            return { prevData };
-        },
-        onError: (_err, _vars, ctx) => {
-            if (ctx?.prevData) {
-                utils.reviewComments.list.setData(
-                    { owner, repo, number },
-                    ctx.prevData,
-                );
-            }
-        },
-        onSuccess: () => {
-            clearReply();
-        },
-        onSettled: () => {
-            utils.reviewComments.list.invalidate({
-                owner,
-                repo,
-                number,
-            });
-        },
+    const replyMutation = useReviewCommentReply({
+        owner,
+        repo,
+        number,
+        parentComment: comment,
+        currentUser: currentUserData?.login
+            ? {
+                  login: currentUserData.login,
+                  avatarUrl: currentUserData.avatarUrl,
+              }
+            : undefined,
+        onSuccess: clearReply,
     });
-    if (!comment.user) {
-        return null;
-    }
+    const allowedToInteract = canInteract(permissionContext);
+
     if (isResolved && !isExpanded) {
         return <div id={`review-thread-${comment.id}`} />;
     }
 
-    const parentReactions = reactionMap[comment.id] ?? [];
-    const _canInteract = canInteract(permissionContext);
-    const _canEdit = canEdit(permissionContext);
+    const submitReply = () => {
+        if (!replyBody.trim()) return;
+        const body = replyBody;
+        setReplyBody("");
+        setShowReplyForm(false);
+        replyMutation.submit(body);
+    };
 
     return (
-        <>
-            <div
-                id={`review-thread-${comment.id}`}
-                className="bg-surface-secondary dark:bg-zinc-950"
-            >
-                {comment.diff_hunk && (
-                    <div>
-                        <DiffView
-                            patch={truncateDiffToRange(
-                                comment.diff_hunk,
-                                comment.start_line ??
-                                    (comment.line != null
-                                        ? Math.max(1, comment.line - 5)
-                                        : null),
-                                comment.line,
-                            )}
-                            filename={comment.path}
-                            permissionContext={permissionContext}
-                        />
-                    </div>
-                )}
-                <CommentCard
-                    user={comment.user}
-                    userHref={comment.user?.html_url}
-                    createdAt={comment.created_at}
-                    authorAssociation={comment.author_association}
-                    isPending={state === "pending"}
-                    owner={owner}
-                    repo={repo}
-                    isEditing={editingCommentId === comment.id}
-                    editBody={editingCommentId === comment.id ? editBody : ""}
-                    onEditBodyChange={onEditBodyChange}
-                    onCancelEdit={onCancelEdit}
-                    onSaveEdit={() => onSaveEdit(comment.id)}
-                    headerActions={
-                        _canInteract && (
-                            <Popover
-                                open={menuOpenCommentId === comment.id}
-                                onOpenChange={(open) =>
-                                    setMenuOpenCommentId(
-                                        open ? comment.id : null,
-                                    )
-                                }
-                            >
-                                <PopoverTrigger asChild>
-                                    <button
-                                        type="button"
-                                        aria-label="More options"
-                                        className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
-                                    >
-                                        <MoreVertical size={14} />
-                                    </button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                    className="w-44 bg-surface p-1"
-                                    align="end"
-                                >
-                                    {(comment.user?.login ===
-                                        permissionContext.currentUser ||
-                                        _canEdit) && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                onStartEdit(
-                                                    comment.id,
-                                                    savedBodies[comment.id] ??
-                                                        comment.body,
-                                                );
-                                                setMenuOpenCommentId(null);
-                                            }}
-                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                        >
-                                            <SquarePen size={14} />
-                                            Edit
-                                        </button>
-                                    )}
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setMenuOpenCommentId(null);
-                                            setDeleteConfirmId(comment.id);
-                                        }}
-                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
-                                    >
-                                        <Trash2 size={14} />
-                                        Delete comment
-                                    </button>
-                                </PopoverContent>
-                            </Popover>
-                        )
-                    }
-                    footer={
-                        <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                            {_canInteract && (
-                                <>
-                                    <ReactionPicker
-                                        reactions={parentReactions}
-                                        currentUserLogin={
-                                            permissionContext.currentUser
-                                        }
-                                        onReact={(content) =>
-                                            onReact(comment.id, content)
-                                        }
-                                    />
-                                    <ReactionBar
-                                        reactions={parentReactions}
-                                        currentUserLogin={
-                                            permissionContext.currentUser
-                                        }
-                                        onReact={(content) =>
-                                            onReact(comment.id, content)
-                                        }
-                                    />
-                                </>
-                            )}
-                        </div>
-                    }
+        <div
+            id={`review-thread-${comment.id}`}
+            className="bg-surface-secondary dark:bg-zinc-950"
+        >
+            {comment.diff_hunk && (
+                <div>
+                    <DiffView
+                        patch={truncateDiffToRange(
+                            comment.diff_hunk,
+                            comment.start_line ??
+                                (comment.line != null
+                                    ? Math.max(1, comment.line - 5)
+                                    : null),
+                            comment.line,
+                        )}
+                        filename={comment.path}
+                        permissionContext={permissionContext}
+                    />
+                </div>
+            )}
+            <ReviewCommentItem
+                comment={comment}
+                placement="parent"
+                threadId={threadId}
+                displayBody={savedBodies[comment.id] ?? comment.body}
+                reactions={reactionMap[comment.id] ?? []}
+                permissionContext={permissionContext}
+                owner={owner}
+                repo={repo}
+                number={number}
+                isPending={state === "pending"}
+                isOutdated={false}
+                isStub={comment.id < 0}
+                isEditing={editingCommentId === comment.id}
+                editBody={editingCommentId === comment.id ? editBody : ""}
+                onStartEdit={() => onStartEdit(comment.id, comment.body)}
+                onEditBodyChange={onEditBodyChange}
+                onCancelEdit={onCancelEdit}
+                onSaveEdit={() => onSaveEdit(comment.id)}
+                onReact={(content) => onReact(comment.id, content)}
+                onDelete={() => onDelete(comment.id)}
+                onToggleTask={onToggleParentTask}
+            />
+            {replies.map((reply) => (
+                <div
+                    key={reply.id}
+                    className="bg-surface-secondary dark:bg-zinc-950"
                 >
-                    <MarkdownRenderer
-                        content={savedBodies[comment.id] ?? comment.body}
+                    <ReviewCommentItem
+                        comment={reply}
+                        placement="reply"
+                        threadId={threadId}
+                        displayBody={savedBodies[reply.id] ?? reply.body}
+                        reactions={reactionMap[reply.id] ?? []}
+                        permissionContext={permissionContext}
                         owner={owner}
                         repo={repo}
-                        pullNumber={number}
-                        commentPath={comment.path}
-                        commentLine={comment.line}
-                        commentStartLine={comment.start_line}
-                        commentThreadId={threadId}
-                        onToggleTask={onToggleParentTask}
-                        canToggleTasks={
-                            (comment.user?.login ===
-                                permissionContext.currentUser ||
-                                _canEdit) &&
-                            _canInteract
-                        }
+                        number={number}
+                        isPending={false}
+                        isOutdated={false}
+                        isStub={reply.id < 0}
+                        isEditing={editingCommentId === reply.id}
+                        editBody={editingCommentId === reply.id ? editBody : ""}
+                        onStartEdit={() => onStartEdit(reply.id, reply.body)}
+                        onEditBodyChange={onEditBodyChange}
+                        onCancelEdit={onCancelEdit}
+                        onSaveEdit={() => onSaveEdit(reply.id)}
+                        onReact={(content) => onReact(reply.id, content)}
+                        onDelete={() => onDelete(reply.id)}
+                        onToggleTask={(body) => {
+                            if (toggleMutation.isPending) return;
+                            toggleMutation.mutate({
+                                owner,
+                                repo,
+                                commentId: reply.id,
+                                body,
+                            });
+                        }}
                     />
-                </CommentCard>
-                {replies.map((reply) => {
-                    if (!reply.user) return null;
-                    const replyReactions = reactionMap[reply.id] ?? [];
-                    return (
-                        <div key={reply.id} className="mt-2 pl-3">
-                            <CommentCard
-                                user={reply.user}
-                                userHref={reply.user?.html_url}
-                                createdAt={reply.created_at}
-                                authorAssociation={reply.author_association}
-                                owner={owner}
-                                repo={repo}
-                                variant="nested"
-                                isEditing={editingCommentId === reply.id}
-                                editBody={
-                                    editingCommentId === reply.id
-                                        ? editBody
-                                        : ""
-                                }
-                                onEditBodyChange={onEditBodyChange}
-                                onCancelEdit={onCancelEdit}
-                                onSaveEdit={() => onSaveEdit(reply.id)}
-                                headerActions={
-                                    _canInteract && (
-                                        <Popover
-                                            open={
-                                                menuOpenCommentId === reply.id
-                                            }
-                                            onOpenChange={(open) =>
-                                                setMenuOpenCommentId(
-                                                    open ? reply.id : null,
-                                                )
-                                            }
-                                        >
-                                            <PopoverTrigger asChild>
-                                                <button
-                                                    type="button"
-                                                    aria-label="More options"
-                                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
-                                                >
-                                                    <MoreVertical size={14} />
-                                                </button>
-                                            </PopoverTrigger>
-                                            <PopoverContent
-                                                className="w-44 bg-surface p-1"
-                                                align="end"
-                                            >
-                                                {(reply.user?.login ===
-                                                    permissionContext.currentUser ||
-                                                    _canEdit) && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            onStartEdit(
-                                                                reply.id,
-                                                                savedBodies[
-                                                                    reply.id
-                                                                ] ?? reply.body,
-                                                            );
-                                                            setMenuOpenCommentId(
-                                                                null,
-                                                            );
-                                                        }}
-                                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                                    >
-                                                        <SquarePen size={14} />
-                                                        Edit
-                                                    </button>
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setMenuOpenCommentId(
-                                                            null,
-                                                        );
-                                                        setDeleteConfirmId(
-                                                            reply.id,
-                                                        );
-                                                    }}
-                                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
-                                                >
-                                                    <Trash2 size={14} />
-                                                    Delete comment
-                                                </button>
-                                            </PopoverContent>
-                                        </Popover>
-                                    )
-                                }
-                                footer={
-                                    <div className="mx-6 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                                        {_canInteract && (
-                                            <>
-                                                <ReactionPicker
-                                                    reactions={replyReactions}
-                                                    currentUserLogin={
-                                                        permissionContext.currentUser
-                                                    }
-                                                    onReact={(content) =>
-                                                        onReact(
-                                                            reply.id,
-                                                            content,
-                                                        )
-                                                    }
-                                                />
-                                                <ReactionBar
-                                                    reactions={replyReactions}
-                                                    currentUserLogin={
-                                                        permissionContext.currentUser
-                                                    }
-                                                    onReact={(content) =>
-                                                        onReact(
-                                                            reply.id,
-                                                            content,
-                                                        )
-                                                    }
-                                                />
-                                            </>
-                                        )}
-                                    </div>
-                                }
-                            >
-                                <MarkdownRenderer
-                                    content={
-                                        savedBodies[reply.id] ?? reply.body
-                                    }
-                                    owner={owner}
-                                    repo={repo}
-                                    pullNumber={number}
-                                    commentPath={comment.path}
-                                    commentLine={comment.line}
-                                    commentStartLine={comment.start_line}
-                                    commentThreadId={threadId}
-                                    onToggleTask={(body) => {
-                                        if (toggleMutation.isPending) return;
-                                        toggleMutation.mutate({
-                                            owner,
-                                            repo,
-                                            commentId: reply.id,
-                                            body,
-                                        });
-                                    }}
-                                    canToggleTasks={
-                                        (reply.user?.login ===
-                                            permissionContext.currentUser ||
-                                            _canEdit) &&
-                                        _canInteract
-                                    }
-                                />
-                            </CommentCard>
-                        </div>
-                    );
-                })}
-                {_canInteract ? (
-                    showReplyForm ? (
-                        <div className="p-2">
-                            <MarkdownEditor
-                                autoFocus
-                                disabled={replyMutation.isPending}
-                                onChange={setReplyBody}
-                                onCancel={() => {
-                                    setShowReplyForm(false);
-                                    setReplyBody("");
-                                }}
-                                placeholder="Write a reply..."
-                                value={replyBody}
-                                owner={owner}
-                                repo={repo}
-                                footerActions={[
-                                    {
-                                        label: "Reply",
-                                        onClick: () => {
-                                            if (!replyBody.trim()) return;
-                                            replyMutation.mutate({
-                                                owner,
-                                                repo,
-                                                number,
-                                                body: replyBody,
-                                                inReplyTo: comment.id,
-                                            });
-                                        },
-                                        variant: "approve",
-                                        disabled: (text: string) =>
-                                            !text.trim(),
-                                    },
-                                ]}
-                            />
-                            {replyMutation.isError && (
-                                <p className="mt-1 text-red-600 text-xs">
-                                    Failed to post reply. Please try again.
-                                </p>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="flex w-full items-center gap-2 px-6 py-2">
-                            <div className="min-w-0 flex-1">
-                                <ReplyTextboxButton
-                                    onClick={() => setShowReplyForm(true)}
-                                />
-                            </div>
-                            <ResolveButton
-                                onClick={() =>
-                                    onResolve(comment.id, threadId, !isResolved)
-                                }
-                                isPending={isResolvePending(threadId)}
-                                isUnresolve={isResolved}
+                </div>
+            ))}
+            {allowedToInteract ? (
+                showReplyForm ? (
+                    <ReviewCommentReplyComposer
+                        value={replyBody}
+                        onChange={setReplyBody}
+                        onSubmit={submitReply}
+                        onCancel={() => {
+                            setShowReplyForm(false);
+                            setReplyBody("");
+                        }}
+                        isPending={replyMutation.isPending}
+                        isError={replyMutation.isError}
+                        owner={owner}
+                        repo={repo}
+                        placeholder="Write a reply..."
+                    />
+                ) : (
+                    <div className="flex w-full items-center gap-2 px-6 py-2">
+                        <div className="min-w-0 flex-1">
+                            <ReplyTextboxButton
+                                onClick={() => setShowReplyForm(true)}
                             />
                         </div>
-                    )
-                ) : null}
-            </div>
-            <Dialog
-                open={deleteConfirmId !== null}
-                onOpenChange={(open) => {
-                    if (!open) setDeleteConfirmId(null);
-                }}
-            >
-                <DialogContent showCloseButton={false}>
-                    <DialogHeader>
-                        <DialogTitle>Delete comment</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to delete this comment? This
-                            action cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setDeleteConfirmId(null)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={() => {
-                                if (deleteConfirmId !== null) {
-                                    onDelete(deleteConfirmId);
-                                    setDeleteConfirmId(null);
-                                }
-                            }}
-                        >
-                            Delete
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </>
+                        <ResolveButton
+                            onClick={() =>
+                                onResolve(comment.id, threadId, !isResolved)
+                            }
+                            isPending={isResolvePending(threadId)}
+                            isUnresolve={isResolved}
+                        />
+                    </div>
+                )
+            ) : null}
+        </div>
     );
 }

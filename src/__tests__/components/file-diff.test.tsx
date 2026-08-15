@@ -113,9 +113,6 @@ vi.mock("~/components/diff-view", () => ({
             ))}
         </div>
     ),
-    groupThreads: vi.fn((comments: Array<{ id: number }>) =>
-        comments.map((c) => ({ parent: c, replies: [] })),
-    ),
 }));
 
 vi.mock("~/components/image-diff", () => ({
