@@ -44,12 +44,6 @@ interface MarkdownRendererProps {
     commentStartLine?: number | null;
     commentThreadId?: string;
     onToggleTask?: (content: string) => void;
-    /**
-     * Whether task-list checkboxes should be interactive. When `false`
-     * (or when `onToggleTask` is absent) they render as disabled inputs.
-     * Defaults to `true` so existing callers (e.g. {@link MarkdownEditor}
-     * preview) keep interactive checkboxes.
-     */
     canToggleTasks?: boolean;
     className?: string;
     linkableHeadings?: boolean;
@@ -581,8 +575,10 @@ function CodeElement({
         }
 
         const style = resolvedTheme === "dark" ? darkTheme : lightTheme;
-        const extraStyles: CSSProperties =
-            resolvedTheme === "dark" ? {} : { background: "#f0f0f0" };
+        const extraStyles: CSSProperties = {
+            ...(resolvedTheme === "dark" ? {} : { background: "#f0f0f0" }),
+            padding: "16px",
+        };
 
         let language = "";
         switch (className) {
