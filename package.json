@@ -33,7 +33,6 @@
     "dependencies": {
         "@octokit/graphql": "^9.0.4",
         "@octokit/openapi-types": "^27.0.0",
-        "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
         "@octokit/rest": "^22.0.1",
         "@octokit/webhooks-types": "^7.6.1",
         "@t3-oss/env-nextjs": "^0.13.11",
@@ -88,6 +87,7 @@
         "concurrently": "^10.0.4",
         "dotenv-cli": "^11.0.0",
         "drizzle-kit": "^0.31.10",
+        "jscpd": "^5.0.15",
         "jsdom": "^30.0.1",
         "knip": "^6.32.0",
         "msw": "^2.15.0",
@@ -98,7 +98,6 @@
         "remark-stringify": "^11.0.0",
         "shadcn": "^4.16.2",
         "smee-client": "^5.0.0",
-        "strict-event-emitter": "^0.5.1",
         "tailwindcss": "^4.3.3",
         "typescript": "^7.0.2",
         "unified": "^11.0.5",
