@@ -8,12 +8,12 @@ const SCROLL_TARGET_PADDING = 12;
 export function useDiffHashNavigation({
     fileHash,
     renderItemsRef,
-    setExpandedGapKeys,
+    setExpandedGaps,
     setSelectedRange,
 }: {
     fileHash: string;
     renderItemsRef: React.RefObject<DiffRenderItem[]>;
-    setExpandedGapKeys: React.Dispatch<React.SetStateAction<Set<string>>>;
+    setExpandedGaps: React.Dispatch<React.SetStateAction<Map<string, number>>>;
     setSelectedRange: React.Dispatch<
         React.SetStateAction<{
             startLine: number;
@@ -57,10 +57,19 @@ export function useDiffHashNavigation({
                     if (startLine < item.startLine || startLine > gapEnd)
                         continue;
                     const gapKey = `gap-${item.startLine}`;
-                    setExpandedGapKeys((previous) => {
-                        if (previous.has(gapKey)) return previous;
-                        const next = new Set(previous);
-                        next.add(gapKey);
+                    // Reveal just enough of the gap to include the target
+                    // line; the rest stays behind an unfold row. Leading gaps
+                    // (above the first hunk) reveal backward from the hunk,
+                    // so the count is measured from the gap end there.
+                    const needed =
+                        item.startLine === 1
+                            ? gapEnd - startLine + 1
+                            : startLine - item.startLine + 1;
+                    setExpandedGaps((previous) => {
+                        if ((previous.get(gapKey) ?? 0) >= needed)
+                            return previous;
+                        const next = new Map(previous);
+                        next.set(gapKey, needed);
                         return next;
                     });
                     break;
@@ -148,7 +157,7 @@ export function useDiffHashNavigation({
             window.removeEventListener("hashchange", scrollToHashTarget);
             stopPolling();
         };
-    }, [fileHash, renderItemsRef, setExpandedGapKeys, setSelectedRange]);
+    }, [fileHash, renderItemsRef, setExpandedGaps, setSelectedRange]);
 }
 
 function getStickyTopHeight(target: HTMLElement): number {

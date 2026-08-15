@@ -47,6 +47,10 @@ export type { DiffCommentTarget } from "./diff/types";
 // Breathing room between the sticky bars and the line a permalink scrolls to.
 const SCROLL_TARGET_PADDING = 12;
 
+// Number of context lines revealed by a single expand click. Clicking again
+// reveals the next chunk until the gap is exhausted.
+const GAP_EXPAND_STEP = 20;
+
 interface DiffViewProps extends DiffCommentProps {
     patch: string;
     filename: string;
@@ -133,28 +137,41 @@ export function DiffView({
         onCommentTableMouseOver,
     } = commentSelection;
 
-    const [expandedGapKeys, setExpandedGapKeys] = useState<Set<string>>(
-        () => new Set(),
+    const [expandedGaps, setExpandedGaps] = useState<Map<string, number>>(
+        () => new Map(),
     );
 
-    const handleGapExpand = useCallback((key: string) => {
-        setExpandedGapKeys((prev) => {
-            const next = new Set(prev);
-            next.add(key);
+    // Track how many lines of each gap are revealed (0 = collapsed). A click
+    // reveals GAP_EXPAND_STEP more lines until the gap is exhausted, so large
+    // gaps expand progressively instead of dumping the whole file at once.
+    const handleGapExpand = useCallback((key: string, nextCount: number) => {
+        setExpandedGaps((prev) => {
+            if ((prev.get(key) ?? 0) >= nextCount) return prev;
+            const next = new Map(prev);
+            next.set(key, nextCount);
             return next;
         });
     }, []);
 
     useEffect(() => {
         if (!expandAllContext) {
-            setExpandedGapKeys(new Set());
+            setExpandedGaps(new Map());
         }
     }, [expandAllContext]);
+
+    const expandedLineCount = useMemo(
+        () =>
+            Array.from(expandedGaps.values()).reduce(
+                (sum, count) => sum + count,
+                0,
+            ),
+        [expandedGaps],
+    );
     useDiffSyntaxHighlighting({
         diffRef,
         language,
         enabled: Boolean(parsed),
-        rerenderKey: `${expandedGapKeys.size}-${expandAllContext}`,
+        rerenderKey: `${expandedLineCount}-${expandAllContext}`,
     });
 
     const positionMap = useMemo(() => buildDiffPositionMap(parsed), [parsed]);
@@ -217,7 +234,7 @@ export function DiffView({
     useDiffHashNavigation({
         fileHash,
         renderItemsRef,
-        setExpandedGapKeys,
+        setExpandedGaps,
         setSelectedRange: lineSelection.setSelectedRange,
     });
 
@@ -252,7 +269,7 @@ export function DiffView({
             <DiffTableBody
                 items={renderItems}
                 expandAllContext={expandAllContext}
-                expandedGapKeys={expandedGapKeys}
+                expandedGaps={expandedGaps}
                 onGapExpand={handleGapExpand}
                 owner={owner}
                 repo={repo}
@@ -297,8 +314,8 @@ interface DiffRowCommentProps {
 /** Gap/navigation props shared by the diff table row components. */
 interface DiffRowNavigationProps {
     gapKey?: string;
-    isGapExpanded?: boolean;
-    onGapExpand?: (key: string) => void;
+    expandedCount?: number;
+    onGapExpand?: (key: string, nextCount: number) => void;
     headSha?: string;
     filename?: string;
     fileHash?: string;
@@ -317,7 +334,6 @@ interface BlockRowsProps extends DiffRowNavigationProps {
     multiLineRanges: Map<string, string[]>;
     owner: string | undefined;
     repo: string | undefined;
-    hideHeader?: boolean;
     gap?: DiffGap;
     commentProps: DiffRowCommentProps;
 }
@@ -329,10 +345,9 @@ function BlockRows({
     multiLineRanges,
     owner,
     repo,
-    hideHeader,
     gap,
     gapKey,
-    isGapExpanded,
+    expandedCount = 0,
     onGapExpand,
     headSha,
     filename,
@@ -371,8 +386,6 @@ function BlockRows({
     });
 
     const gapSize = getDiffGapSize(gap, fileLines?.length);
-    const gapEnd =
-        gap?.endLine === -1 ? (fileLines?.length ?? -1) : (gap?.endLine ?? -1);
 
     const handleLineClick = useCallback(
         (lineNum: number, side: string, e: React.MouseEvent) => {
@@ -381,9 +394,55 @@ function BlockRows({
         [onLineSelect],
     );
 
+    const showUnfoldRow = Boolean(
+        gap &&
+            headSha &&
+            gapSize > 0 &&
+            expandedCount < gapSize &&
+            (expandedCount === 0 || !isLoading),
+    );
+    const expandedLineCount = Math.min(expandedCount, gapSize);
+    // The leading gap (startLine 1) holds the lines *above* the first hunk;
+    // reveal it backward from the hunk so expanding loads the lines right
+    // before it, not the first lines of the file.
+    const isLeadingGap = gap?.startLine === 1;
+    const showExpandedLines =
+        Boolean(gap) &&
+        gapSize > 0 &&
+        expandedLineCount > 0 &&
+        !isLoading &&
+        !error &&
+        fileLines != null;
+
+    const handleGapExpandClick = () => {
+        if (!gap || gapSize <= 0) return;
+        onGapExpand?.(
+            gapKey ?? "",
+            Math.min(expandedCount + GAP_EXPAND_STEP, gapSize),
+        );
+    };
+
+    const unfoldRow = (
+        <tr
+            className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30"
+            onClick={handleGapExpandClick}
+        >
+            <td className="d2h-code-linenumber d2h-info">
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <UnfoldVertical size={14} className="text-text-tertiary" />
+                </div>
+            </td>
+            <td className="d2h-info">
+                <div className="d2h-code-line">
+                    {expandedCount === 0 ? block.header : null}
+                </div>
+            </td>
+        </tr>
+    );
+
     return (
         <>
-            {isGapExpanded && gap && isLoading && (
+            {gap && isLoading && expandedLineCount > 0 && (
                 <tr>
                     <td className="d2h-code-linenumber d2h-info" />
                     <td className="d2h-info">
@@ -393,16 +452,24 @@ function BlockRows({
                     </td>
                 </tr>
             )}
-            {isGapExpanded &&
+            {/* Leading gaps reveal backward from the hunk: the unfold row
+                stays at the top and revealed lines fill in below it. */}
+            {isLeadingGap && showUnfoldRow && unfoldRow}
+            {showExpandedLines &&
                 gap &&
-                !isLoading &&
-                !error &&
-                fileLines &&
-                gapSize > 0 &&
                 fileLines
-                    .slice(gap.startLine - 1, gapEnd)
+                    .slice(
+                        isLeadingGap
+                            ? gap.endLine - expandedLineCount
+                            : gap.startLine - 1,
+                        isLeadingGap
+                            ? gap.endLine
+                            : gap.startLine - 1 + expandedLineCount,
+                    )
                     .map((lineContent, idx) => {
-                        const lineNum = gap.startLine + idx;
+                        const lineNum = isLeadingGap
+                            ? gap.endLine - expandedLineCount + 1 + idx
+                            : gap.startLine + idx;
                         return (
                             <DiffContextRow
                                 key={`gap-${lineNum}`}
@@ -416,34 +483,9 @@ function BlockRows({
                             />
                         );
                     })}
-            {!hideHeader && headSha && (
-                <tr
-                    className={
-                        gap && !isGapExpanded && gapSize > 0
-                            ? "cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30"
-                            : ""
-                    }
-                    onClick={() => {
-                        if (gap && !isGapExpanded && gapSize > 0) {
-                            onGapExpand?.(gapKey ?? "");
-                        }
-                    }}
-                >
-                    <td className="d2h-code-linenumber d2h-info">
-                        {gap && !isGapExpanded && gapSize > 0 && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <UnfoldVertical
-                                    size={14}
-                                    className="text-text-tertiary"
-                                />
-                            </div>
-                        )}
-                    </td>
-                    <td className="d2h-info">
-                        <div className="d2h-code-line">{block.header}</div>
-                    </td>
-                </tr>
-            )}
+            {/* Middle gaps reveal forward: the unfold row sits below the
+                revealed lines, just above the next hunk. */}
+            {!isLeadingGap && showUnfoldRow && unfoldRow}
             {block.lines.map((line) => {
                 const type = line.type;
                 const typeClass =
@@ -658,8 +700,8 @@ function BlockRows({
 
 interface GapRowProps extends DiffRowNavigationProps {
     startLine: number;
-    isExpanded: boolean;
-    onExpand: (key: string) => void;
+    expandedCount: number;
+    onExpand: (key: string, nextCount: number) => void;
     gapKey: string;
     owner: string | undefined;
     repo: string | undefined;
@@ -669,7 +711,7 @@ interface GapRowProps extends DiffRowNavigationProps {
 
 function GapRow({
     startLine,
-    isExpanded,
+    expandedCount,
     onExpand,
     gapKey,
     owner,
@@ -694,13 +736,15 @@ function GapRow({
     const isGapHighlighted =
         selectedRange != null && selectedRange.side === "RIGHT";
 
-    if (!isExpanded) {
+    if (expandedCount === 0) {
         if (gapSize <= 0) return null;
         if (!headSha) return null;
         return (
             <tr
                 className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30"
-                onClick={() => onExpand(gapKey)}
+                onClick={() =>
+                    onExpand(gapKey, Math.min(GAP_EXPAND_STEP, gapSize))
+                }
             >
                 <td className="d2h-code-linenumber d2h-info">
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -734,7 +778,10 @@ function GapRow({
         return null;
     }
 
-    const gapLines = lines.slice(startLine - 1, endLine);
+    const gapLines = lines.slice(
+        startLine - 1,
+        startLine - 1 + Math.min(expandedCount, gapSize),
+    );
 
     return (
         <>
@@ -757,6 +804,29 @@ function GapRow({
                     />
                 );
             })}
+            {expandedCount < gapSize && (
+                <tr
+                    className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                    onClick={() =>
+                        onExpand(
+                            gapKey,
+                            Math.min(expandedCount + GAP_EXPAND_STEP, gapSize),
+                        )
+                    }
+                >
+                    <td className="d2h-code-linenumber d2h-info">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <UnfoldVertical
+                                size={14}
+                                className="text-text-tertiary"
+                            />
+                        </div>
+                    </td>
+                    <td className="d2h-info">
+                        <div className="d2h-code-line" />
+                    </td>
+                </tr>
+            )}
         </>
     );
 }
@@ -764,8 +834,8 @@ function GapRow({
 interface DiffTableBodyProps {
     items: DiffRenderItem[];
     expandAllContext: boolean;
-    expandedGapKeys: Set<string>;
-    onGapExpand: (key: string) => void;
+    expandedGaps: Map<string, number>;
+    onGapExpand: (key: string, nextCount: number) => void;
     owner: string | undefined;
     repo: string | undefined;
     headSha: string | undefined;
@@ -783,7 +853,7 @@ interface DiffTableBodyProps {
 function DiffTableBody({
     items,
     expandAllContext,
-    expandedGapKeys,
+    expandedGaps,
     onGapExpand,
     owner,
     repo,
@@ -804,13 +874,14 @@ function DiffTableBody({
                 if (item.type === "gap") {
                     if (item.endLine !== -1) return null;
                     const gapKey = `gap-${item.startLine}`;
-                    const isExpanded =
-                        expandAllContext || expandedGapKeys.has(gapKey);
+                    const expandedCount = expandAllContext
+                        ? Infinity
+                        : (expandedGaps.get(gapKey) ?? 0);
                     return (
                         <GapRow
                             key={gapKey}
                             startLine={item.startLine}
-                            isExpanded={isExpanded}
+                            expandedCount={expandedCount}
                             onExpand={onGapExpand}
                             gapKey={gapKey}
                             owner={owner}
@@ -834,17 +905,18 @@ function DiffTableBody({
                           }
                         : undefined;
                 const gapKey = gap ? `gap-${gap.startLine}` : undefined;
-                const isGapExpanded =
-                    gapKey !== undefined &&
-                    (expandAllContext || expandedGapKeys.has(gapKey));
+                const expandedCount = gapKey
+                    ? expandAllContext
+                        ? Infinity
+                        : (expandedGaps.get(gapKey) ?? 0)
+                    : 0;
                 return (
                     <BlockRows
                         key={`block-${item.block.newStartLine}`}
                         block={item.block}
-                        hideHeader={isGapExpanded}
                         gap={gap}
                         gapKey={gapKey}
-                        isGapExpanded={isGapExpanded}
+                        expandedCount={expandedCount}
                         onGapExpand={onGapExpand}
                         headSha={headSha}
                         filename={filename}

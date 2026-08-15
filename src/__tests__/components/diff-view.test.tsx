@@ -631,4 +631,190 @@ describe("DiffView rendering", () => {
             expect(infoCells.length).toBeGreaterThan(0);
         });
     });
+
+    describe("progressive gap expansion", () => {
+        beforeEach(() => {
+            mockUseFileContent.lines = Array.from(
+                { length: 100 },
+                (_, i) => `line${i + 1}`,
+            );
+            mockUseFileContent.isLoading = false;
+            mockUseFileContent.error = null;
+        });
+
+        function gapRowNumbers(container: HTMLElement) {
+            return Array.from(container.querySelectorAll('tr[id^="diff-"]'))
+                .map((tr) => Number(tr.id.split("R")[1]))
+                .filter((n) => n >= 11 && n <= 90);
+        }
+
+        it("expands 20 lines per click until the gap is exhausted", () => {
+            // Block 1 covers lines 1-10, block 2 starts at 91 -> gap 11-90 (80 lines)
+            const block1 = mb(
+                1,
+                Array.from({ length: 10 }, (_, i) =>
+                    mc(` line${i + 1}`, i + 1, i + 1),
+                ),
+            );
+            const block2 = mb(91, [mc(" line91", 91, 91)]);
+            mockParsedFile([block1, block2]);
+
+            const { container } = renderDiffView({
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            // Icons: middle gap (11-90) + trailing gap (92-100)
+            let icons = container.querySelectorAll(
+                '[data-testid="unfold-icon"]',
+            );
+            expect(icons.length).toBe(2);
+            expect(gapRowNumbers(container)).toHaveLength(0);
+
+            // Click 1: lines 11-30, unfold row remains
+            fireEvent.click(icons[0]!.closest("tr")!);
+            let nums = gapRowNumbers(container);
+            expect(nums).toHaveLength(20);
+            expect(nums[0]).toBe(11);
+            expect(nums[19]).toBe(30);
+            expect(
+                container.querySelectorAll('[data-testid="unfold-icon"]')
+                    .length,
+            ).toBe(2);
+
+            // Middle gap reveals forward: the unfold row sits below the
+            // revealed lines (just above the next hunk).
+            const rows = Array.from(container.querySelectorAll("tr"));
+            const lastRevealedIdx = rows.findIndex((tr) =>
+                tr.id?.endsWith("R30"),
+            );
+            const unfoldIdx = rows.findIndex((tr) =>
+                tr.querySelector('[data-testid="unfold-icon"]'),
+            );
+            expect(unfoldIdx).toBeGreaterThan(lastRevealedIdx);
+
+            // Click 2: lines 11-50
+            icons = container.querySelectorAll('[data-testid="unfold-icon"]');
+            fireEvent.click(icons[0]!.closest("tr")!);
+            nums = gapRowNumbers(container);
+            expect(nums).toHaveLength(40);
+            expect(nums[39]).toBe(50);
+
+            // Click 3: lines 11-70
+            icons = container.querySelectorAll('[data-testid="unfold-icon"]');
+            fireEvent.click(icons[0]!.closest("tr")!);
+            nums = gapRowNumbers(container);
+            expect(nums).toHaveLength(60);
+            expect(nums[59]).toBe(70);
+
+            // Click 4: gap exhausted, middle unfold row disappears
+            icons = container.querySelectorAll('[data-testid="unfold-icon"]');
+            fireEvent.click(icons[0]!.closest("tr")!);
+            nums = gapRowNumbers(container);
+            expect(nums).toHaveLength(80);
+            expect(nums[0]).toBe(11);
+            expect(nums[79]).toBe(90);
+            // Only the trailing gap still offers an unfold row
+            expect(
+                container.querySelectorAll('[data-testid="unfold-icon"]')
+                    .length,
+            ).toBe(1);
+        });
+
+        it("expands a gap smaller than the step fully in one click", () => {
+            // Gap 3-4 (2 lines) between block 1 (1-2) and block 2 (5)
+            const block1 = mb(1, [mc(" line1", 1, 1), mc("+line2", 2)]);
+            const block2 = mb(5, [mc(" line5", 5, 5)]);
+            mockParsedFile([block1, block2]);
+
+            const { container } = renderDiffView({
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            const icons = container.querySelectorAll(
+                '[data-testid="unfold-icon"]',
+            );
+            // Middle gap 3-4 + trailing gap 6-100
+            expect(icons.length).toBe(2);
+
+            fireEvent.click(icons[0]!.closest("tr")!);
+
+            const rowIds = Array.from(
+                container.querySelectorAll('tr[id^="diff-"]'),
+            ).map((tr) => tr.id);
+            const nums = rowIds.map((id) => Number(id.split("R")[1]));
+            expect(nums).toContain(3);
+            expect(nums).toContain(4);
+            // Middle gap fully expanded -> only the trailing unfold row remains
+            expect(
+                container.querySelectorAll('[data-testid="unfold-icon"]')
+                    .length,
+            ).toBe(1);
+        });
+
+        it("loads the lines before the first hunk when expanding the leading gap", () => {
+            // First hunk starts at line 40 -> leading gap 1-39 (39 lines)
+            const block1 = mb(40, [mc(" line40", 40, 40), mc("+line41", 41)]);
+            mockParsedFile([block1]);
+
+            const { container } = renderDiffView({
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            function leadingGapNums() {
+                return Array.from(container.querySelectorAll('tr[id^="diff-"]'))
+                    .map((tr) => Number(tr.id.split("R")[1]))
+                    .filter((n) => n >= 1 && n <= 39);
+            }
+
+            // Icons: leading gap (1-39) + trailing gap (42-100)
+            let icons = container.querySelectorAll(
+                '[data-testid="unfold-icon"]',
+            );
+            expect(icons.length).toBe(2);
+            expect(leadingGapNums()).toHaveLength(0);
+
+            // Click 1: the 20 lines immediately before the hunk (20-39),
+            // not the first 20 lines of the file
+            fireEvent.click(icons[0]!.closest("tr")!);
+            let nums = leadingGapNums();
+            expect(nums).toHaveLength(20);
+            expect(nums[0]).toBe(20);
+            expect(nums[19]).toBe(39);
+            expect(nums).not.toContain(1);
+
+            // The unfold row moves to the top: it renders above the first
+            // revealed line so the next click loads the lines above it.
+            const rows = Array.from(container.querySelectorAll("tr"));
+            const unfoldIdx = rows.findIndex((tr) =>
+                tr.querySelector('[data-testid="unfold-icon"]'),
+            );
+            const firstRevealedIdx = rows.findIndex((tr) =>
+                tr.id?.endsWith("R20"),
+            );
+            expect(unfoldIdx).toBeGreaterThanOrEqual(0);
+            expect(firstRevealedIdx).toBeGreaterThan(unfoldIdx);
+
+            // Click 2: remaining lines 1-19, unfold row disappears
+            icons = container.querySelectorAll('[data-testid="unfold-icon"]');
+            fireEvent.click(icons[0]!.closest("tr")!);
+            nums = leadingGapNums();
+            expect(nums).toHaveLength(39);
+            expect(nums[0]).toBe(1);
+            expect(nums[38]).toBe(39);
+            // Only the trailing unfold row remains
+            expect(
+                container.querySelectorAll('[data-testid="unfold-icon"]')
+                    .length,
+            ).toBe(1);
+        });
+    });
 });
