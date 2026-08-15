@@ -16,8 +16,6 @@ import {
 } from "react";
 import ReactMarkdown from "react-markdown";
 import SyntaxHighlighter from "react-syntax-highlighter";
-import darkTheme from "react-syntax-highlighter/dist/esm/styles/hljs/atom-one-dark";
-import lightTheme from "react-syntax-highlighter/dist/esm/styles/hljs/docco";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
@@ -34,6 +32,7 @@ import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
 import { remarkLinebreaksPlugin } from "./plugins/remark-linebreaks";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
+import { darkTheme, lightTheme } from "./syntax-theme";
 
 interface MarkdownRendererProps {
     content: string;
