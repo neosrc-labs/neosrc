@@ -21,6 +21,21 @@ const CODEBERG_TOKEN_URL = "https://codeberg.org/login/oauth/access_token";
 
 const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
 
+/**
+ * Raised when a provider rejects the refresh token as expired, revoked,
+ * malformed, or otherwise invalid. The account can no longer be refreshed and
+ * the user must re-authenticate with the provider.
+ */
+class RefreshTokenRejectedError extends Error {}
+
+/** Error codes providers return when the refresh token itself is dead. */
+const REJECTED_REFRESH_ERROR_CODES = new Set([
+    "bad_verification_code", // GitHub: expired/revoked/malformed refresh token
+    "invalid_grant",
+    "invalid_token",
+    "refresh_token_expired",
+]);
+
 async function refreshGitHubToken(refreshToken: string) {
     const res = await fetch(GITHUB_TOKEN_URL, {
         method: "POST",
@@ -36,20 +51,28 @@ async function refreshGitHubToken(refreshToken: string) {
         }),
     });
 
-    const refreshed = await res.json();
+    const body = (await res.json().catch(() => null)) as Record<
+        string,
+        unknown
+    > | null;
 
-    if (!res.ok || refreshed.error) {
+    if (!res.ok || body?.error) {
+        const code = typeof body?.error === "string" ? body.error : "";
+        const description =
+            typeof body?.error_description === "string"
+                ? body.error_description
+                : "";
+        if (REJECTED_REFRESH_ERROR_CODES.has(code)) {
+            throw new RefreshTokenRejectedError(
+                description || "Refresh token expired",
+            );
+        }
         throw new Error(
-            refreshed.error_description ?? "Failed to refresh token",
+            description || `Failed to refresh token (${res.status})`,
         );
     }
 
-    return refreshed as {
-        access_token: string;
-        expires_in: number;
-        refresh_token: string;
-        refresh_token_expires_in: number;
-    };
+    return body as RefreshedToken;
 }
 
 export const auth = betterAuth({
@@ -277,6 +300,7 @@ async function findAccountByProvider(
     const [account] = await database
         .select({
             id: betterAuthAccount.id,
+            userId: betterAuthAccount.userId,
             accessToken: betterAuthAccount.accessToken,
             accessTokenExpiresAt: betterAuthAccount.accessTokenExpiresAt,
             refreshToken: betterAuthAccount.refreshToken,
@@ -399,7 +423,7 @@ async function getProviderToken(
                 refreshToken,
                 refresh,
             );
-        } catch {
+        } catch (error) {
             // The refresh failed. Another request may have used this same
             // refresh token concurrently (providers invalidate refresh tokens
             // after use) and already stored fresh tokens — re-read the row and
@@ -409,11 +433,32 @@ async function getProviderToken(
                 userId,
                 providerId,
             );
+            const rotated =
+                latest?.refreshToken !== undefined &&
+                latest.refreshToken !== account.refreshToken;
             if (
                 latest?.accessToken &&
+                rotated &&
                 !isAccessTokenDue(latest.accessTokenExpiresAt)
             ) {
                 return decrypt(latest.accessToken);
+            }
+
+            if (error instanceof RefreshTokenRejectedError) {
+                // The provider rejected the refresh token as expired, revoked,
+                // or invalid and nobody rotated it concurrently: the account
+                // can no longer be refreshed. Remove it so the user
+                // re-authenticates with the provider instead of failing every
+                // request from here on.
+                await unlinkProviderAccount(
+                    database,
+                    account.id,
+                    account.userId,
+                    providerId,
+                );
+                throw new Error(
+                    `${providerName} account not connected (session expired)`,
+                );
             }
         }
     }
@@ -422,6 +467,31 @@ async function getProviderToken(
     // failing the request; the provider rejects it and the caller surfaces
     // that error.
     return decrypt(account.accessToken);
+}
+
+/**
+ * Removes a provider account after its refresh token was rejected. Clearing
+ * the account row and the mirrored username drops the user back to the
+ * existing "not connected" state, so the UI surfaces the re-link flow and the
+ * next sign-in re-creates the account with fresh tokens.
+ */
+async function unlinkProviderAccount(
+    database: typeof db,
+    accountId: string,
+    userId: string,
+    providerId: "github" | "codeberg",
+): Promise<void> {
+    await database
+        .update(betterAuthUser)
+        .set(
+            providerId === "github"
+                ? { githubUsername: null }
+                : { codebergUsername: null },
+        )
+        .where(eq(betterAuthUser.id, userId));
+    await database
+        .delete(betterAuthAccount)
+        .where(eq(betterAuthAccount.id, accountId));
 }
 
 export const getGitHubToken = cache(
@@ -497,16 +567,28 @@ async function refreshCodebergToken(refreshToken: string) {
         }),
     });
 
-    if (!res.ok) {
-        throw new Error("Failed to refresh Codeberg token");
+    const body = (await res.json().catch(() => null)) as Record<
+        string,
+        unknown
+    > | null;
+
+    if (!res.ok || body?.error) {
+        const code = typeof body?.error === "string" ? body.error : "";
+        const description =
+            typeof body?.error_description === "string"
+                ? body.error_description
+                : "";
+        if (REJECTED_REFRESH_ERROR_CODES.has(code)) {
+            throw new RefreshTokenRejectedError(
+                description || "Refresh token expired",
+            );
+        }
+        throw new Error(
+            description || `Failed to refresh Codeberg token (${res.status})`,
+        );
     }
 
-    return res.json() as Promise<{
-        access_token: string;
-        refresh_token: string;
-        expires_in: number;
-        refresh_token_expires_in?: number;
-    }>;
+    return body as RefreshedToken;
 }
 
 export async function getUser(userId: string) {

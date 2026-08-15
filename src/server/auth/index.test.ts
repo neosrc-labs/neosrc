@@ -289,6 +289,53 @@ describe("getGitHubToken", () => {
         expect(fetchMock).not.toHaveBeenCalled();
         expect(state.updates).toHaveLength(0);
     });
+
+    it("unlinks the account when the refresh token is rejected and not rotated", async () => {
+        const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
+        mockFetch({
+            ok: false,
+            status: 400,
+            body: {
+                error: "bad_verification_code",
+                error_description: "The refresh_token provided is expired",
+            },
+        });
+
+        await expect(getGitHubToken(fakeDb, "user-1")).rejects.toThrow(
+            "GitHub account not connected (session expired)",
+        );
+        // Account row deleted and the mirrored username cleared, so the
+        // existing UI shows the re-link flow.
+        expect(state.deletedAccountIds).toEqual(["acct-1"]);
+        expect(state.updates).toContainEqual({ githubUsername: null });
+    });
+
+    it("keeps the account when a rejected refresh was actually a rotation race", async () => {
+        const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
+        const fetchMock = vi.fn(async (_input: string | URL | Request) => {
+            state.rows[0] = {
+                ...state.rows[0]!,
+                accessToken: encrypt("winner-access"),
+                accessTokenExpiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000),
+                refreshToken: encrypt("winner-refresh"),
+            };
+            return {
+                ok: false,
+                status: 400,
+                json: async () => ({
+                    error: "bad_verification_code",
+                    error_description: "The refresh_token provided is expired",
+                }),
+            };
+        });
+        vi.stubGlobal("fetch", fetchMock);
+
+        const token = await getGitHubToken(fakeDb, "user-1");
+
+        expect(token).toBe("winner-access");
+        expect(state.deletedAccountIds).toHaveLength(0);
+        expect(state.updates).toHaveLength(0);
+    });
 });
 
 describe("getCodebergToken", () => {
@@ -307,5 +354,20 @@ describe("getCodebergToken", () => {
             "codeberg.org/login/oauth/access_token",
         );
         expect(state.updates).toHaveLength(1);
+    });
+
+    it("unlinks a codeberg account whose refresh token is rejected", async () => {
+        const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
+        mockFetch({
+            ok: false,
+            status: 400,
+            body: { error: "invalid_grant" },
+        });
+
+        await expect(getCodebergToken(fakeDb, "user-1")).rejects.toThrow(
+            "Codeberg account not connected (session expired)",
+        );
+        expect(state.deletedAccountIds).toEqual(["acct-1"]);
+        expect(state.updates).toContainEqual({ codebergUsername: null });
     });
 });
