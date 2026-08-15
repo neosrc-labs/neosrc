@@ -1,0 +1,18 @@
+{
+    "minLines": 10,
+    "minTokens": 50,
+    "threshold": 5,
+    "reporters": ["html", "ai"],
+    "output": "report",
+    "ignore": [
+        "report/**",
+        "node_modules/**",
+        "dist/**",
+        "coverage/**",
+        "**/*.snap",
+        "**/*.test.*",
+        "**/*.spec.*",
+        "**/*.json"
+    ],
+    "gitignore": true
+}
