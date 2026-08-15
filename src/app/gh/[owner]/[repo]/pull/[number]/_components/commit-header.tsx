@@ -1,7 +1,15 @@
 import Image from "next/image";
+import Link from "next/link";
+import { CommitAuthors } from "~/components/commit-authors";
 import { CommitSubject } from "~/components/commit-subject";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "~/components/ui/popover";
 import type { CommitData } from "~/server/github";
 import type { GQLCommitWithAuthors } from "~/server/github-graphql";
+import { formatRelativeTime } from "~/utils";
 
 interface CommitHeaderProps {
     commitPromise: Promise<CommitData> | null;
@@ -46,9 +54,22 @@ export async function CommitHeader({
                         repo={repo}
                     />
                     {currentIndex >= 0 && (
-                        <span className="whitespace-nowrap font-medium text-sm text-text-secondary tabular-nums">
-                            {currentIndex + 1} / {commits.length}
-                        </span>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <span className="cursor-pointer whitespace-nowrap rounded-md px-1.5 py-0.5 font-medium text-sm text-text-secondary tabular-nums transition-colors hover:bg-surface-tertiary">
+                                    {currentIndex + 1} / {commits.length}
+                                </span>
+                            </PopoverTrigger>
+                            <PopoverContent align="start" className="w-80 p-0">
+                                <CommitCountList
+                                    commits={commits}
+                                    currentSha={commitSha}
+                                    number={number}
+                                    owner={owner}
+                                    repo={repo}
+                                />
+                            </PopoverContent>
+                        </Popover>
                     )}
                 </h2>
                 <div className="flex items-center gap-2">
@@ -142,6 +163,73 @@ export async function CommitHeader({
                     {commit.sha.slice(0, 7)}
                 </code>
             </div>
+        </div>
+    );
+}
+
+export function CommitCountList({
+    commits,
+    owner,
+    repo,
+    number,
+    currentSha,
+}: {
+    commits: GQLCommitWithAuthors[];
+    owner: string;
+    repo: string;
+    number: number;
+    currentSha: string | null;
+}) {
+    return (
+        <div className="max-h-96 overflow-y-auto">
+            <p className="border-border-subtle border-b px-3 py-2 font-medium text-text-tertiary text-xs">
+                Commits ({commits.length})
+            </p>
+            <ul className="p-1.5">
+                {commits.map((commit) => {
+                    const isCurrent = currentSha
+                        ? commit.oid.startsWith(currentSha)
+                        : false;
+                    const author = commit.authors[0];
+                    return (
+                        <li key={commit.oid}>
+                            <Link
+                                className={`flex items-start gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-surface-tertiary ${
+                                    isCurrent
+                                        ? "border-blue-500 border-l-2 bg-blue-50 dark:bg-blue-950"
+                                        : ""
+                                }`}
+                                href={`/gh/${owner}/${repo}/pull/${number}/changes/${commit.oid}`}
+                            >
+                                <CommitAuthors
+                                    authors={commit.authors}
+                                    size={20}
+                                />
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate font-medium text-text-primary">
+                                        <CommitSubject
+                                            className="truncate"
+                                            message={commit.message}
+                                            owner={owner}
+                                            provider="gh"
+                                            repo={repo}
+                                        />
+                                    </span>
+                                    {author && (
+                                        <span className="mt-0.5 block font-normal text-text-tertiary text-xs">
+                                            {author.user?.login ??
+                                                author.name ??
+                                                "Unknown"}
+                                            {commit.committedDate &&
+                                                ` committed ${formatRelativeTime(commit.committedDate)}`}
+                                        </span>
+                                    )}
+                                </span>
+                            </Link>
+                        </li>
+                    );
+                })}
+            </ul>
         </div>
     );
 }

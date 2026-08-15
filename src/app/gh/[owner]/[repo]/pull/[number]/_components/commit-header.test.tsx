@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { CommitData } from "~/server/github";
 import type { GQLCommitWithAuthors } from "~/server/github-graphql";
 
-import { CommitHeader } from "./commit-header";
+import { CommitCountList, CommitHeader } from "./commit-header";
 
 function makeCommit(oid: string, message: string): GQLCommitWithAuthors {
     return {
@@ -146,5 +146,82 @@ describe("CommitHeader", () => {
         expect(
             screen.queryByRole("link", { name: "← Previous" }),
         ).not.toBeInTheDocument();
+    });
+});
+
+describe("CommitCountList", () => {
+    it("renders a link to each commit's changes view", () => {
+        render(
+            <CommitCountList
+                commits={COMMITS}
+                currentSha={COMMITS[1]!.oid}
+                number={42}
+                owner="acme"
+                repo="widget"
+            />,
+        );
+
+        for (const commit of COMMITS) {
+            expect(
+                screen.getByRole("link", {
+                    name: new RegExp(commit.message),
+                }),
+            ).toHaveAttribute(
+                "href",
+                `/gh/acme/widget/pull/42/changes/${commit.oid}`,
+            );
+        }
+    });
+
+    it("highlights only the currently viewed commit", () => {
+        const current = COMMITS[1]!;
+        render(
+            <CommitCountList
+                commits={COMMITS}
+                currentSha={current.oid}
+                number={42}
+                owner="acme"
+                repo="widget"
+            />,
+        );
+
+        expect(
+            screen.getByRole("link", { name: new RegExp(current.message) }),
+        ).toHaveClass("border-l-2");
+        for (const commit of [COMMITS[0]!, COMMITS[2]!]) {
+            expect(
+                screen.getByRole("link", { name: new RegExp(commit.message) }),
+            ).not.toHaveClass("border-l-2");
+        }
+    });
+
+    it("shows the total commit count in the header", () => {
+        render(
+            <CommitCountList
+                commits={COMMITS}
+                currentSha={null}
+                number={42}
+                owner="acme"
+                repo="widget"
+            />,
+        );
+
+        expect(screen.getByText("Commits (3)")).toBeInTheDocument();
+    });
+
+    it("shows the author and relative time per commit", () => {
+        render(
+            <CommitCountList
+                commits={COMMITS}
+                currentSha={null}
+                number={42}
+                owner="acme"
+                repo="widget"
+            />,
+        );
+
+        expect(screen.getAllByText(/alice committed/)).toHaveLength(
+            COMMITS.length,
+        );
     });
 });
