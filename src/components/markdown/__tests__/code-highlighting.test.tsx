@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { MarkdownRenderer } from "../markdown-renderer";
 
 function renderCode(content: string) {
@@ -62,5 +62,50 @@ describe("syntax highlighting theme", () => {
         expect(pre?.getAttribute("style")).toContain(
             "--color-surface-tertiary",
         );
+    });
+});
+
+describe("code block copy button", () => {
+    it("renders a copy button over the top-right of a fenced code block", () => {
+        const container = renderCode(
+            ["```ts", "const x = 1;", "```"].join("\n"),
+        );
+
+        const button = screen.getByRole("button", { name: "Copy code" });
+        const pre = container.querySelector("pre");
+
+        expect(button).not.toBeNull();
+        expect(pre?.parentElement?.className).toContain("relative");
+        expect(button.className).toContain("absolute");
+        expect(button.className).toContain("top-1.5");
+        expect(button.className).toContain("right-1.5");
+        // The button is a sibling of the highlighted block, not part of it.
+        expect(pre?.contains(button)).toBe(false);
+    });
+
+    it("copies the code text on click and shows a copied state", async () => {
+        const writeText = vi
+            .fn<typeof navigator.clipboard.writeText>()
+            .mockResolvedValue(undefined);
+        // Note: fireEvent (not userEvent) — userEvent.setup() replaces
+        // navigator.clipboard with its own stub, which would swallow the call.
+        Object.assign(navigator, {
+            clipboard: { writeText },
+        });
+
+        renderCode(
+            ["```rust", "fn main() {", '    println!("hi");', "}", "```"].join(
+                "\n",
+            ),
+        );
+
+        fireEvent.click(screen.getByRole("button", { name: "Copy code" }));
+
+        expect(writeText).toHaveBeenCalledWith(
+            'fn main() {\n    println!("hi");\n}\n',
+        );
+        expect(
+            await screen.findByRole("button", { name: "Copied" }),
+        ).toBeDefined();
     });
 });

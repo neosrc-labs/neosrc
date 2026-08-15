@@ -1,6 +1,6 @@
 "use client";
 
-import { Link as LinkIcon } from "lucide-react";
+import { Check, Copy, Link as LinkIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
     Children,
@@ -24,6 +24,7 @@ import { MarkdownCommitHoverCard } from "~/components/hovercards/commit-hover-ca
 import { IssueHoverCard } from "~/components/hovercards/issue-hover-card";
 import { TeamHoverCard } from "~/components/hovercards/team-hover-card";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import { CopyButton } from "~/components/ui/copy-button";
 import { cn } from "~/lib/utils";
 import { SuggestionBlock } from "./accessories/suggestion-block";
 import { CODE_LANGUAGE_TAGS } from "./code-language-map";
@@ -566,11 +567,38 @@ function CodeElement({
     }, []);
 
     if (className || inCodeBlock) {
+        const codeString = Array.isArray(children)
+            ? children.join("")
+            : String(children ?? "");
+
+        const copyButton = (
+            <CopyButton
+                text={codeString}
+                className="absolute top-1.5 right-1.5 inline-flex cursor-pointer items-center rounded-md border border-border bg-surface-elevated p-1.5 text-text-tertiary transition-colors hover:bg-surface-secondary hover:text-text-label dark:hover:text-zinc-200"
+            >
+                {(copied) => (
+                    <>
+                        {copied ? (
+                            <Check className="size-3.5 text-green-600" />
+                        ) : (
+                            <Copy className="size-3.5" />
+                        )}
+                        <span className="sr-only">
+                            {copied ? "Copied" : "Copy code"}
+                        </span>
+                    </>
+                )}
+            </CopyButton>
+        );
+
         if (!mounted) {
             return (
-                <pre className="overflow-x-auto rounded-lg bg-surface-tertiary p-2 text-sm">
-                    <code className={className}>{children}</code>
-                </pre>
+                <div className="relative">
+                    <pre className="overflow-x-auto rounded-lg bg-surface-tertiary p-2 text-sm">
+                        <code className={className}>{children}</code>
+                    </pre>
+                    {copyButton}
+                </div>
             );
         }
 
@@ -585,19 +613,18 @@ function CodeElement({
             ? (CODE_LANGUAGE_TAGS[tag] ?? "plaintext")
             : "plaintext";
 
-        const codeString = Array.isArray(children)
-            ? children.join("")
-            : String(children ?? "");
-
         return (
-            <SyntaxHighlighter
-                language={language}
-                style={style}
-                customStyle={extraStyles}
-                {...props}
-            >
-                {codeString}
-            </SyntaxHighlighter>
+            <div className="relative">
+                <SyntaxHighlighter
+                    language={language}
+                    style={style}
+                    customStyle={extraStyles}
+                    {...props}
+                >
+                    {codeString}
+                </SyntaxHighlighter>
+                {copyButton}
+            </div>
         );
     }
     return <InlineCode {...props}>{children}</InlineCode>;
