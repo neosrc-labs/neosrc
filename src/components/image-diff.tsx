@@ -13,6 +13,61 @@ interface ImageDiffProps {
     newUrl: string | null;
 }
 
+export default function ImageDiff({ oldUrl, newUrl }: ImageDiffProps) {
+    const [mode, setMode] = useState<DiffMode>("2up");
+
+    const hasBoth = oldUrl !== null && newUrl !== null;
+
+    const modes: Array<{
+        icon: typeof Columns2;
+        label: string;
+        value: DiffMode;
+    }> = [
+        { icon: Columns2, label: "2-up", value: "2up" },
+        { icon: ArrowLeftRight, label: "Swipe", value: "swipe" },
+        { icon: Layers, label: "Onion skin", value: "onion" },
+    ];
+
+    return (
+        <div>
+            {!hasBoth && newUrl && (
+                <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
+                    <ImageWithFallback
+                        alt="Added version"
+                        className="max-h-[600px] max-w-full object-contain"
+                        src={newUrl}
+                    />
+                </div>
+            )}
+            {!hasBoth && oldUrl && (
+                <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
+                    <ImageWithFallback
+                        alt="Deleted version"
+                        className="max-h-[600px] max-w-full object-contain"
+                        src={oldUrl}
+                    />
+                </div>
+            )}
+            {hasBoth && mode === "2up" && (
+                <TwoUpView newUrl={newUrl} oldUrl={oldUrl} />
+            )}
+            {hasBoth && mode === "swipe" && (
+                <SwipeView newUrl={newUrl} oldUrl={oldUrl} />
+            )}
+            {hasBoth && mode === "onion" && (
+                <OnionSkinView newUrl={newUrl} oldUrl={oldUrl} />
+            )}
+            {hasBoth && (
+                <DiffModeToggle
+                    mode={mode}
+                    modes={modes}
+                    onModeChange={setMode}
+                />
+            )}
+        </div>
+    );
+}
+
 function MissingImageFallback({
     oldUrl,
     newUrl,
@@ -254,61 +309,6 @@ function OnionSkinView({
                     Added
                 </span>
             </div>
-        </div>
-    );
-}
-
-export default function ImageDiff({ oldUrl, newUrl }: ImageDiffProps) {
-    const [mode, setMode] = useState<DiffMode>("2up");
-
-    const hasBoth = oldUrl !== null && newUrl !== null;
-
-    const modes: Array<{
-        icon: typeof Columns2;
-        label: string;
-        value: DiffMode;
-    }> = [
-        { icon: Columns2, label: "2-up", value: "2up" },
-        { icon: ArrowLeftRight, label: "Swipe", value: "swipe" },
-        { icon: Layers, label: "Onion skin", value: "onion" },
-    ];
-
-    return (
-        <div>
-            {!hasBoth && newUrl && (
-                <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
-                    <ImageWithFallback
-                        alt="Added version"
-                        className="max-h-[600px] max-w-full object-contain"
-                        src={newUrl}
-                    />
-                </div>
-            )}
-            {!hasBoth && oldUrl && (
-                <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
-                    <ImageWithFallback
-                        alt="Deleted version"
-                        className="max-h-[600px] max-w-full object-contain"
-                        src={oldUrl}
-                    />
-                </div>
-            )}
-            {hasBoth && mode === "2up" && (
-                <TwoUpView newUrl={newUrl} oldUrl={oldUrl} />
-            )}
-            {hasBoth && mode === "swipe" && (
-                <SwipeView newUrl={newUrl} oldUrl={oldUrl} />
-            )}
-            {hasBoth && mode === "onion" && (
-                <OnionSkinView newUrl={newUrl} oldUrl={oldUrl} />
-            )}
-            {hasBoth && (
-                <DiffModeToggle
-                    mode={mode}
-                    modes={modes}
-                    onModeChange={setMode}
-                />
-            )}
         </div>
     );
 }

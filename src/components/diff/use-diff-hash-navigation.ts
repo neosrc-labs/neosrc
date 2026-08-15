@@ -5,23 +5,6 @@ import type { DiffRenderItem } from "./types";
 
 const SCROLL_TARGET_PADDING = 12;
 
-function getStickyTopHeight(target: HTMLElement): number {
-    const targetRect = target.getBoundingClientRect();
-    const targetCenterX = targetRect.left + targetRect.width / 2;
-    let offset = 0;
-    for (const element of document.querySelectorAll<HTMLElement>("*")) {
-        const style = getComputedStyle(element);
-        if (style.position !== "sticky") continue;
-        const stickyTop = Number.parseFloat(style.top);
-        if (!Number.isFinite(stickyTop) || stickyTop < 0) continue;
-        const rect = element.getBoundingClientRect();
-        if (rect.height <= 0 || rect.bottom <= 0) continue;
-        if (rect.left > targetCenterX || rect.right < targetCenterX) continue;
-        offset = Math.max(offset, stickyTop + rect.height);
-    }
-    return offset;
-}
-
 export function useDiffHashNavigation({
     fileHash,
     renderItemsRef,
@@ -166,4 +149,21 @@ export function useDiffHashNavigation({
             stopPolling();
         };
     }, [fileHash, renderItemsRef, setExpandedGapKeys, setSelectedRange]);
+}
+
+function getStickyTopHeight(target: HTMLElement): number {
+    const targetRect = target.getBoundingClientRect();
+    const targetCenterX = targetRect.left + targetRect.width / 2;
+    let offset = 0;
+    for (const element of document.querySelectorAll<HTMLElement>("*")) {
+        const style = getComputedStyle(element);
+        if (style.position !== "sticky") continue;
+        const stickyTop = Number.parseFloat(style.top);
+        if (!Number.isFinite(stickyTop) || stickyTop < 0) continue;
+        const rect = element.getBoundingClientRect();
+        if (rect.height <= 0 || rect.bottom <= 0) continue;
+        if (rect.left > targetCenterX || rect.right < targetCenterX) continue;
+        offset = Math.max(offset, stickyTop + rect.height);
+    }
+    return offset;
 }

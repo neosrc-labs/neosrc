@@ -14,18 +14,6 @@ export interface ReviewCommentReplyComposerProps {
     placeholder: string;
 }
 
-export function ReplyTextboxButton({ onClick }: { onClick: () => void }) {
-    return (
-        <button
-            type="button"
-            className="flex w-full cursor-text items-center rounded-md border border-gray-200 bg-surface-elevated px-3 py-1.5 text-text-muted text-xs transition-colors duration-200 hover:border-gray-400 dark:border-zinc-600 dark:hover:border-zinc-400"
-            onClick={onClick}
-        >
-            Reply...
-        </button>
-    );
-}
-
 export function ReviewCommentReplyComposer({
     value,
     onChange,
@@ -65,5 +53,17 @@ export function ReviewCommentReplyComposer({
                 </p>
             )}
         </div>
+    );
+}
+
+export function ReplyTextboxButton({ onClick }: { onClick: () => void }) {
+    return (
+        <button
+            type="button"
+            className="flex w-full cursor-text items-center rounded-md border border-gray-200 bg-surface-elevated px-3 py-1.5 text-text-muted text-xs transition-colors duration-200 hover:border-gray-400 dark:border-zinc-600 dark:hover:border-zinc-400"
+            onClick={onClick}
+        >
+            Reply...
+        </button>
     );
 }
