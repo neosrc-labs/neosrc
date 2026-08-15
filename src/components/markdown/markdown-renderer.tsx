@@ -569,9 +569,12 @@ function InlineCode({
     children: React.ReactNode;
     [key: string]: unknown;
 }) {
+    // `1em` (not `text-sm`) keeps inline code the same size as the surrounding
+    // text in every prose size
+    // the typography plugin otherwise shrinks code below the body size
     return (
         <code
-            className="rounded bg-gray-100 px-1.25 py-0.5 font-mono text-sm before:content-none after:content-none dark:bg-zinc-700"
+            className="rounded bg-gray-100 px-1.25 py-0.5 font-mono text-[length:1em] before:content-none after:content-none dark:bg-zinc-700"
             {...props}
         >
             {children}
@@ -624,7 +627,7 @@ function CodeElement({
         if (!mounted) {
             return (
                 <div className="relative">
-                    <pre className="overflow-x-auto rounded-lg bg-surface-tertiary p-2 text-sm">
+                    <pre className="overflow-x-auto rounded-lg bg-surface-tertiary p-2 text-[length:1em]">
                         <code className={className}>{children}</code>
                     </pre>
                     {copyButton}
@@ -636,6 +639,9 @@ function CodeElement({
         const extraStyles: CSSProperties = {
             backgroundColor: "var(--color-surface-tertiary)",
             padding: "16px",
+            // Match the surrounding body text size; the typography plugin
+            // would otherwise render code blocks with a smaller font
+            fontSize: "1em",
         };
 
         const tag = className?.replace(/^language-/, "").toLowerCase();
@@ -649,6 +655,10 @@ function CodeElement({
                     language={language}
                     style={style}
                     customStyle={extraStyles}
+                    codeTagProps={{
+                        className: `language-${language}`,
+                        style: { fontSize: "1em" },
+                    }}
                     {...props}
                 >
                     {codeString}
