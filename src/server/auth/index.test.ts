@@ -252,6 +252,43 @@ describe("getGitHubToken", () => {
         expect(token).toBe("fresh-access");
         expect(state.updates).toHaveLength(1);
     });
+
+    it("refreshes before expiry when the token is within the leeway window", async () => {
+        const { fakeDb, state } = createFakeDb([
+            expiredGitHubAccount({
+                accessToken: encrypt("soon-to-expire"),
+                // 20 minutes left: inside the 30 minute refresh leeway.
+                accessTokenExpiresAt: new Date(Date.now() + 20 * 60 * 1000),
+            }),
+        ]);
+        mockFetch({ ok: true, status: 200, body: REFRESHED_BODY });
+
+        const token = await getGitHubToken(fakeDb, "user-1");
+
+        expect(token).toBe("fresh-access");
+        expect(state.updates).toHaveLength(1);
+    });
+
+    it("does not refresh a token that expires beyond the leeway window", async () => {
+        const { fakeDb, state } = createFakeDb([
+            expiredGitHubAccount({
+                accessToken: encrypt("valid-access"),
+                // 45 minutes left: outside the 30 minute refresh leeway.
+                accessTokenExpiresAt: new Date(Date.now() + 45 * 60 * 1000),
+            }),
+        ]);
+        const fetchMock = mockFetch({
+            ok: true,
+            status: 200,
+            body: REFRESHED_BODY,
+        });
+
+        const token = await getGitHubToken(fakeDb, "user-1");
+
+        expect(token).toBe("valid-access");
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(state.updates).toHaveLength(0);
+    });
 });
 
 describe("getCodebergToken", () => {

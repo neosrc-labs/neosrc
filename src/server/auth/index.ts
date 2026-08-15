@@ -294,13 +294,22 @@ async function findAccountByProvider(
 }
 
 /**
- * Whether the account's access token needs to be refreshed. A null/absent
- * expiry (accounts created before expiry tracking) is treated as never
- * expiring so they keep working.
+ * Refresh the access token when it expires within this window instead of
+ * waiting until after it has expired. Access tokens live on the order of
+ * minutes to hours, so refreshing 30 minutes early is cheap and prevents a
+ * token from dying mid-request (it also resets the refresh token's sliding
+ * inactivity window).
+ */
+const ACCESS_TOKEN_REFRESH_LEEWAY_MS = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Whether the account's access token is expired or due for refresh within the
+ * leeway window. A null/absent expiry (accounts created before expiry
+ * tracking) is treated as never expiring so they keep working.
  */
 function isAccessTokenDue(expiresAt: Date | null | undefined): boolean {
     if (!expiresAt) return false;
-    return expiresAt.getTime() < Date.now();
+    return expiresAt.getTime() - Date.now() <= ACCESS_TOKEN_REFRESH_LEEWAY_MS;
 }
 
 /**
