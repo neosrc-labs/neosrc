@@ -128,7 +128,7 @@ describe("getGitHubToken", () => {
 
         const token = await getGitHubToken(fakeDb, "user-1");
 
-        expect(token).toBe("valid-access");
+        expect(String(token)).toBe("valid-access");
         expect(fetchMock).not.toHaveBeenCalled();
         expect(state.updates).toHaveLength(0);
     });
@@ -143,7 +143,7 @@ describe("getGitHubToken", () => {
 
         const token = await getGitHubToken(fakeDb, "user-1");
 
-        expect(token).toBe("fresh-access");
+        expect(String(token)).toBe("fresh-access");
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(state.updates).toHaveLength(1);
         expect(decrypt(state.updates[0]?.accessToken as string)).toBe(
@@ -206,9 +206,9 @@ describe("getGitHubToken", () => {
         mockFetch({ ok: false, status: 502, body: {} });
 
         // A failed refresh must not fail the request.
-        await expect(getGitHubToken(fakeDb, "user-1")).resolves.toBe(
-            "stale-access",
-        );
+        await expect(
+            getGitHubToken(fakeDb, "user-1").then((t) => String(t)),
+        ).resolves.toBe("stale-access");
     });
 
     it("uses the concurrently refreshed token when the refresh races and loses", async () => {
@@ -232,7 +232,7 @@ describe("getGitHubToken", () => {
 
         const token = await getGitHubToken(fakeDb, "user-1");
 
-        expect(token).toBe("winner-access");
+        expect(String(token)).toBe("winner-access");
         // The loser must not overwrite the winner's row.
         expect(state.updates).toHaveLength(0);
     });
@@ -245,7 +245,7 @@ describe("getGitHubToken", () => {
 
         const token = await getGitHubToken(fakeDb, "user-1");
 
-        expect(token).toBe("fresh-access");
+        expect(String(token)).toBe("fresh-access");
         expect(state.updates).toHaveLength(1);
     });
 
@@ -261,7 +261,7 @@ describe("getGitHubToken", () => {
 
         const token = await getGitHubToken(fakeDb, "user-1");
 
-        expect(token).toBe("fresh-access");
+        expect(String(token)).toBe("fresh-access");
         expect(state.updates).toHaveLength(1);
     });
 
@@ -281,9 +281,40 @@ describe("getGitHubToken", () => {
 
         const token = await getGitHubToken(fakeDb, "user-1");
 
-        expect(token).toBe("valid-access");
+        expect(String(token)).toBe("valid-access");
         expect(fetchMock).not.toHaveBeenCalled();
         expect(state.updates).toHaveLength(0);
+    });
+
+    it("refreshes via refresh() when the stored token is dead but the timestamp still looks valid", async () => {
+        // Reported scenario: the access token was replaced in the DB with a
+        // correctly-encrypted but expired one, while accessTokenExpiresAt
+        // still points hours into the future. The timestamp check says "valid",
+        // so the app hands out the dead token — until GitHub rejects it with a
+        // 401, at which point refresh() must force a rotation.
+        const { fakeDb, state } = createFakeDb([
+            expiredGitHubAccount({
+                accessToken: encrypt("dead-access"),
+                accessTokenExpiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
+            }),
+        ]);
+        const fetchMock = mockFetch({
+            ok: true,
+            status: 200,
+            body: REFRESHED_BODY,
+        });
+
+        const token = (await getGitHubToken(fakeDb, "user-1")) as string & {
+            refresh: () => Promise<string>;
+        };
+        expect(String(token)).toBe("dead-access");
+        expect(fetchMock).not.toHaveBeenCalled();
+
+        const fresh = await token.refresh();
+
+        expect(String(fresh)).toBe("fresh-access");
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(state.updates).toHaveLength(1);
     });
 
     it("unlinks the account when the refresh token is rejected and not rotated", async () => {
@@ -328,7 +359,7 @@ describe("getGitHubToken", () => {
 
         const token = await getGitHubToken(fakeDb, "user-1");
 
-        expect(token).toBe("winner-access");
+        expect(String(token)).toBe("winner-access");
         expect(state.deletedAccountIds).toHaveLength(0);
         expect(state.updates).toHaveLength(0);
     });
@@ -345,7 +376,7 @@ describe("getCodebergToken", () => {
 
         const token = await getCodebergToken(fakeDb, "user-1");
 
-        expect(token).toBe("fresh-access");
+        expect(String(token)).toBe("fresh-access");
         expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
             "codeberg.org/login/oauth/access_token",
         );
