@@ -314,16 +314,34 @@ export function MarkdownRenderer({
                         });
                         return (
                             <ul
-                                style={
-                                    isTaskList
-                                        ? { ...style, paddingLeft: 0 }
-                                        : style
-                                }
+                                style={{
+                                    ...style,
+                                    // List elements look better with no vertical margin
+                                    marginTop: 0,
+                                    marginBottom: 0,
+                                    ...(isTaskList ? { paddingLeft: 0 } : {}),
+                                }}
                                 className={className}
                                 {...props}
                             >
                                 {children}
                             </ul>
+                        );
+                    },
+                    ol({ children, className, style, ...props }) {
+                        return (
+                            <ol
+                                style={{
+                                    ...style,
+                                    // List elements look better with no vertical margin
+                                    marginTop: 0,
+                                    marginBottom: 0,
+                                }}
+                                className={className}
+                                {...props}
+                            >
+                                {children}
+                            </ol>
                         );
                     },
                     li({ children, className, node, ...props }) {
