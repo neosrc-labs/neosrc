@@ -164,10 +164,8 @@ describe("getGitHubToken", () => {
 
         await getGitHubToken(fakeDb, "user-1");
 
-        // issuedAt is captured before the refresh request is sent, so the
-        // stored expiries are offset from the request start — not from when
-        // the response arrives. This keeps them aligned with the provider's
-        // issuance-based expires_in semantics.
+        // Expiries are offset from the request start, not response receipt,
+        // matching the provider's issuance-based expires_in.
         const calledAt = (fetchMock as { calledAt?: number }).calledAt ?? 0;
         const accessTokenExpiresAt = state.updates[0]
             ?.accessTokenExpiresAt as Date;
@@ -207,8 +205,7 @@ describe("getGitHubToken", () => {
         const { fakeDb } = createFakeDb([expiredGitHubAccount()]);
         mockFetch({ ok: false, status: 502, body: {} });
 
-        // A failed refresh must not fail the request: the stored (expired)
-        // token is returned and the caller surfaces the provider rejection.
+        // A failed refresh must not fail the request.
         await expect(getGitHubToken(fakeDb, "user-1")).resolves.toBe(
             "stale-access",
         );
@@ -216,9 +213,8 @@ describe("getGitHubToken", () => {
 
     it("uses the concurrently refreshed token when the refresh races and loses", async () => {
         const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
-        // The refresh request fails because another request already used the
-        // same refresh token (providers rotate refresh tokens on use) — but by
-        // the time the loser re-reads the row it holds the winner's tokens.
+        // Refresh fails because a concurrent request already rotated the
+        // token; the loser re-reads the row and finds the winner's tokens.
         const fetchMock = vi.fn(async (_input: string | URL | Request) => {
             state.rows[0] = {
                 ...state.rows[0]!,
