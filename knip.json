@@ -1,8 +1,22 @@
 {
     "$schema": "https://unpkg.com/knip@6/schema.json",
-    "entry": ["scripts/generate-icon-map.ts", "src/env.js"],
-    "project": ["src/**/*.{ts,tsx,css}", "scripts/**/*.ts"],
-    "ignore": ["src/server/api/trpc.ts", "src/components/ui/**"],
+    "entry": [
+        "scripts/*",
+        "src/env.js"
+    ],
+    "project": [
+        "src/**/*.{ts,tsx,css}",
+        "scripts/**/*.ts"
+    ],
+    "ignore": [
+        "src/server/api/trpc.ts",
+        "src/components/ui/**"
+    ],
     "ignoreExportsUsedInFile": true,
-    "ignoreDependencies": ["pino-pretty"]
+    "ignoreDependencies": [
+        "pino-pretty",
+        "smee-client",
+        "jscpd",
+        "msw"
+    ]
 }
