@@ -96,11 +96,19 @@ test.describe
             });
 
             await test.step("Verify the description section and body text", async () => {
+                // The description card can transiently exist twice in dev while
+                // React StrictMode re-renders around the suspended permission
+                // promise; scope to the first card to keep the locator strict.
+                const descriptionCard = page
+                    .getByTestId("pr-description")
+                    .first();
                 await expect(
-                    page.locator("h3").filter({ hasText: "Description" }),
+                    descriptionCard.getByRole("heading", {
+                        name: "Description",
+                    }),
                 ).toBeVisible();
                 await expect(
-                    page.getByText("Created by e2e test."),
+                    descriptionCard.getByText("Created by e2e test."),
                 ).toBeVisible();
             });
 
