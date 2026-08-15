@@ -1,5 +1,5 @@
-import { Octokit } from "@octokit/rest";
 import { githubAccessToken } from "~/server/auth";
+import { createOctokit } from "~/server/github";
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
         return new Response(null, { status: 401 });
     }
 
-    const octokit = new Octokit({ auth: accessToken });
+    const octokit = createOctokit(accessToken);
 
     try {
         const response = await octokit.repos.getContent({
