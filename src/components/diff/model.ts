@@ -1,5 +1,10 @@
 import { defaultDiff2HtmlConfig, parse } from "diff2html";
-import type { ColorSchemeType, DiffBlock, DiffFile } from "diff2html/lib/types";
+import type {
+    ColorSchemeType,
+    DiffBlock,
+    DiffFile,
+    DiffLine,
+} from "diff2html/lib/types";
 import hljs from "highlight.js";
 import type { ReviewComment } from "~/server/github";
 import type { DiffAnchor, DiffGap, DiffRenderItem } from "./types";
@@ -93,6 +98,55 @@ export function createDiffRenderItems(
         }
     }
     return items;
+}
+
+/**
+ * A row of a split (side-by-side) diff. Context lines stand alone; changed
+ * lines are paired by index within each contiguous run of changes (deletion
+ * followed by addition), like GitHub. Lines left over after pairing get an
+ * empty side.
+ */
+export type SplitRow =
+    | { kind: "context"; line: DiffLine }
+    | { kind: "paired"; oldLine: DiffLine; newLine: DiffLine }
+    | { kind: "del"; line: DiffLine }
+    | { kind: "add"; line: DiffLine };
+
+export function buildSplitRows(block: DiffBlock): SplitRow[] {
+    const rows: SplitRow[] = [];
+    let changeGroup: DiffLine[] = [];
+
+    const flush = () => {
+        if (changeGroup.length === 0) return;
+        const dels = changeGroup.filter((l) => l.type === "delete");
+        const adds = changeGroup.filter((l) => l.type === "insert");
+        const paired = Math.min(dels.length, adds.length);
+        for (let i = 0; i < paired; i++) {
+            rows.push({
+                kind: "paired",
+                oldLine: dels[i] as DiffLine,
+                newLine: adds[i] as DiffLine,
+            });
+        }
+        for (let i = paired; i < adds.length; i++) {
+            rows.push({ kind: "add", line: adds[i] as DiffLine });
+        }
+        for (let i = paired; i < dels.length; i++) {
+            rows.push({ kind: "del", line: dels[i] as DiffLine });
+        }
+        changeGroup = [];
+    };
+
+    for (const line of block.lines) {
+        if (line.type === "context") {
+            flush();
+            rows.push({ kind: "context", line });
+        } else {
+            changeGroup.push(line);
+        }
+    }
+    flush();
+    return rows;
 }
 
 export function buildDiffPositionMap(

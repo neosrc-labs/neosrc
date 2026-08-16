@@ -3,6 +3,7 @@
 import { useMemo, useRef } from "react";
 import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
 import type { ReviewComment } from "~/server/github";
+import type { DiffViewMode } from "~/utils/diff-view";
 import { type DiffCommentTarget, DiffView } from "./diff-view";
 import { FileCommentEditor as FileCommentEditorView } from "./file-comment-editor";
 import { FileCommentThreads as FileCommentThreadsView } from "./file-comment-threads";
@@ -40,6 +41,7 @@ interface FileDiffProps {
     performanceHidden?: boolean;
     showPerformanceDiff?: boolean;
     onTogglePerformanceDiff?: () => void;
+    diffView?: DiffViewMode;
 }
 
 export default function FileDiff({
@@ -56,6 +58,7 @@ export default function FileDiff({
     performanceHidden = false,
     showPerformanceDiff = true,
     onTogglePerformanceDiff,
+    diffView = "unified",
 }: FileDiffProps) {
     const {
         isViewed,
@@ -226,6 +229,7 @@ export default function FileDiff({
                         svgContentUrls={svgContentUrls}
                         isImage={isImage}
                         imageUrls={imageUrls}
+                        diffView={diffView}
                         lineComments={lineComments}
                         showComments={effectiveShowComments}
                         activeComment={activeComment}
@@ -268,6 +272,7 @@ interface DiffContentProps {
     svgContentUrls: { oldUrl: string | null; newUrl: string | null } | null;
     isImage: boolean;
     imageUrls: { oldUrl: string | null; newUrl: string | null } | null;
+    diffView: DiffViewMode;
     lineComments: ReviewComment[];
     showComments: boolean;
     activeComment: DiffCommentTarget | null;
@@ -295,6 +300,7 @@ function DiffContent({
     svgContentUrls,
     isImage,
     imageUrls,
+    diffView,
     lineComments,
     showComments,
     activeComment,
@@ -358,6 +364,7 @@ function DiffContent({
             {...diffCommentProps}
             headSha={headSha}
             expandAllContext={expandAllContext}
+            view={diffView}
         />
     ) : isImage && imageUrls ? (
         <ImageDiff newUrl={imageUrls.newUrl} oldUrl={imageUrls.oldUrl} />

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { installLocalStorage } from "~/__tests__/helpers/local-storage";
 
 import type { PullRequestFile, PullsGetResponseData } from "~/server/github";
 import { FilesSection } from "./files-client";
@@ -29,8 +30,16 @@ vi.mock("~/trpc/react", () => ({
 }));
 
 vi.mock("~/components/file-diff", () => ({
-    default: ({ file }: { file: { filename: string } }) => (
-        <div data-testid="file-diff">{file.filename}</div>
+    default: ({
+        file,
+        diffView,
+    }: {
+        file: { filename: string };
+        diffView?: string;
+    }) => (
+        <div data-testid="file-diff" data-view={diffView ?? "unified"}>
+            {file.filename}
+        </div>
     ),
 }));
 
@@ -160,5 +169,74 @@ describe("FilesSection", () => {
         await screen.findByTestId("file-diff");
 
         expect(scrollIntoView).not.toHaveBeenCalled();
+    });
+
+    describe("diff view toggle", () => {
+        let storage: Storage;
+
+        beforeEach(() => {
+            storage = installLocalStorage();
+        });
+
+        it("renders Unified and Split controls with unified active by default", async () => {
+            renderFiles([file("src/foo.ts")]);
+            await screen.findByTestId("file-diff");
+
+            const unified = screen.getByRole("button", { name: "Unified" });
+            const split = screen.getByRole("button", { name: "Split" });
+            expect(unified).toHaveAttribute("aria-pressed", "true");
+            expect(split).toHaveAttribute("aria-pressed", "false");
+            expect(screen.getByTestId("file-diff")).toHaveAttribute(
+                "data-view",
+                "unified",
+            );
+        });
+
+        it("switches every file to split and persists the choice", async () => {
+            renderFiles([file("src/foo.ts"), file("src/bar.ts")]);
+            await screen.findAllByTestId("file-diff");
+
+            fireEvent.click(screen.getByRole("button", { name: "Split" }));
+
+            const diffs = screen.getAllByTestId("file-diff");
+            for (const diff of diffs) {
+                expect(diff).toHaveAttribute("data-view", "split");
+            }
+            expect(
+                screen.getByRole("button", { name: "Split" }),
+            ).toHaveAttribute("aria-pressed", "true");
+            expect(
+                screen.getByRole("button", { name: "Unified" }),
+            ).toHaveAttribute("aria-pressed", "false");
+            expect(storage.getItem("diff-view:owner:repo")).toBe("split");
+        });
+
+        it("restores a stored split preference on first render", async () => {
+            storage.setItem("diff-view:owner:repo", "split");
+            renderFiles([file("src/foo.ts")]);
+            await screen.findByTestId("file-diff");
+
+            expect(screen.getByTestId("file-diff")).toHaveAttribute(
+                "data-view",
+                "split",
+            );
+            expect(
+                screen.getByRole("button", { name: "Split" }),
+            ).toHaveAttribute("aria-pressed", "true");
+        });
+
+        it("switches back to unified on demand", async () => {
+            storage.setItem("diff-view:owner:repo", "split");
+            renderFiles([file("src/foo.ts")]);
+            await screen.findByTestId("file-diff");
+
+            fireEvent.click(screen.getByRole("button", { name: "Unified" }));
+
+            expect(screen.getByTestId("file-diff")).toHaveAttribute(
+                "data-view",
+                "unified",
+            );
+            expect(storage.getItem("diff-view:owner:repo")).toBe("unified");
+        });
     });
 });

@@ -19,6 +19,7 @@ import {
     StatusPill,
 } from "~/components/ui/status-pill";
 import { useFiles } from "~/hooks/files";
+import { useDiffViewPreference } from "~/hooks/use-diff-view-preference";
 import type {
     CheckRun,
     PullsGetResponseData,
@@ -80,6 +81,7 @@ export function FilesSection({
     children,
 }: FilesSectionProps) {
     const [showComments, setShowComments] = useState(true);
+    const [diffView, setDiffView] = useDiffViewPreference(owner, repo);
     const [expandedOverflowFiles, setExpandedOverflowFiles] = useState(
         () => new Set<string>(),
     );
@@ -323,6 +325,31 @@ export function FilesSection({
                             </div>
                         </div>
                     )}
+                    <fieldset
+                        aria-label="Diff view"
+                        className="m-0 flex items-center overflow-hidden rounded-md border border-border p-0"
+                    >
+                        {(["unified", "split"] as const).map((mode) => (
+                            <button
+                                key={mode}
+                                type="button"
+                                aria-pressed={diffView === mode}
+                                className={`cursor-pointer px-2.5 py-1 font-medium text-xs transition-colors ${
+                                    diffView === mode
+                                        ? "bg-surface-selected text-text-label"
+                                        : "text-text-tertiary hover:bg-surface-tertiary hover:text-text-label"
+                                }`}
+                                onClick={() => setDiffView(mode)}
+                                title={
+                                    mode === "unified"
+                                        ? "Unified view"
+                                        : "Split view"
+                                }
+                            >
+                                {mode === "unified" ? "Unified" : "Split"}
+                            </button>
+                        ))}
+                    </fieldset>
                     <button
                         className="flex cursor-pointer items-center gap-2 rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
                         onClick={() => setShowComments(!showComments)}
@@ -397,6 +424,7 @@ export function FilesSection({
                                         >
                                             <FileDiff
                                                 baseSha={pullRequest.base.sha}
+                                                diffView={diffView}
                                                 headSha={
                                                     pullRequest.head.sha ??
                                                     commitSha

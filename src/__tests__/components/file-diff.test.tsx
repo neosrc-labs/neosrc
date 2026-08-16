@@ -94,6 +94,7 @@ vi.mock("~/components/diff-view", () => ({
         activeComment?: unknown;
         comments?: Array<{ id: number; body?: string }>;
         pendingReviewId?: number | null;
+        view?: string;
     }) => (
         <div
             data-testid="diff-view"
@@ -101,6 +102,7 @@ vi.mock("~/components/diff-view", () => ({
             data-expand-all={String(props.expandAllContext)}
             data-show-comment-button={String(props.showCommentButton)}
             data-pending-review-id={String(props.pendingReviewId)}
+            data-view={String(props.view)}
         >
             {(props.comments ?? []).map((c) => (
                 <div
@@ -369,6 +371,20 @@ describe("FileDiff", () => {
 
             const diffView = screen.getByTestId("diff-view");
             expect(diffView.getAttribute("data-pending-review-id")).toBe("42");
+        });
+
+        it("defaults DiffView to unified view", () => {
+            renderFileDiff();
+
+            const diffView = screen.getByTestId("diff-view");
+            expect(diffView).toHaveAttribute("data-view", "unified");
+        });
+
+        it("passes the split view mode to DiffView", () => {
+            renderFileDiff({ diffView: "split" });
+
+            const diffView = screen.getByTestId("diff-view");
+            expect(diffView).toHaveAttribute("data-view", "split");
         });
     });
 
