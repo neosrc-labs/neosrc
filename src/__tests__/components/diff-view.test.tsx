@@ -1210,7 +1210,7 @@ describe("DiffView split view", () => {
             });
         });
 
-        it("shows a single button on the left for context lines anchored to the new side", () => {
+        it("offers context-line comments from both sides, anchored to the new side", () => {
             const onStartComment = vi.fn();
             const lines = [mc(" ctx", 1, 1)];
             mockParsedFile([mb(1, lines)]);
@@ -1221,13 +1221,28 @@ describe("DiffView split view", () => {
                 onStartComment,
             });
 
-            const plus = container.querySelector('[data-testid="square-plus"]');
-            expect(plus).toBeTruthy();
-            expect(plus!.closest("td")!.className).not.toContain(
+            const pluses = container.querySelectorAll(
+                '[data-testid="square-plus"]',
+            );
+            expect(pluses).toHaveLength(2);
+
+            // One button per side: the old (left) cell and the new (right) cell.
+            const leftPlus = Array.from(pluses).find(
+                (p) => !p.closest("td")!.className.includes("d2h-split-new"),
+            )!;
+            const rightPlus = Array.from(pluses).find((p) => p !== leftPlus)!;
+            expect(rightPlus.closest("td")!.className).toContain(
                 "d2h-split-new",
             );
 
-            fireEvent.click(plus!);
+            // Both buttons anchor the comment to the new side (like unified view).
+            fireEvent.click(leftPlus);
+            expect(onStartComment).toHaveBeenCalledWith({
+                type: "line",
+                line: 1,
+                side: "RIGHT",
+            });
+            fireEvent.click(rightPlus);
             expect(onStartComment).toHaveBeenCalledWith({
                 type: "line",
                 line: 1,
@@ -1281,7 +1296,7 @@ describe("DiffView split view", () => {
             expect(isHidden(rightPlus)).toBe(true);
         });
 
-        it("keeps the context button hidden when the right side is hovered", () => {
+        it("shows the context button for whichever side is hovered", () => {
             const lines = [mc(" ctx", 1, 1)];
             mockParsedFile([mb(1, lines)]);
 
@@ -1292,13 +1307,21 @@ describe("DiffView split view", () => {
 
             const row = container.querySelector('tr[id^="diff-"]')!;
             const cells = row.querySelectorAll("td");
-            const plus = row.querySelector('[data-testid="square-plus"]')!;
+            const pluses = row.querySelectorAll('[data-testid="square-plus"]');
+            const leftPlus = Array.from(pluses).find(
+                (p) => !p.closest("td")!.className.includes("d2h-split-new"),
+            )!;
+            const rightPlus = Array.from(pluses).find((p) => p !== leftPlus)!;
 
-            fireEvent.mouseEnter(cells[3]!); // new (right) content cell
-            expect(plus.className).toContain("hidden");
+            // Hover the left side: only the left button appears.
+            fireEvent.mouseEnter(cells[1]!);
+            expect(leftPlus.className).toContain("block");
+            expect(rightPlus.className).toContain("hidden");
 
-            fireEvent.mouseEnter(cells[1]!); // old (left) content cell
-            expect(plus.className).toContain("block");
+            // Hover the right side: only the right button appears.
+            fireEvent.mouseEnter(cells[3]!);
+            expect(leftPlus.className).toContain("hidden");
+            expect(rightPlus.className).toContain("block");
         });
 
         it("shows the button for unpaired additions only when the new side is hovered", () => {

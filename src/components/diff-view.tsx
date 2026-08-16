@@ -940,7 +940,8 @@ function SplitBlockRows({
                             <div className="absolute inset-0">
                                 {showCommentButton &&
                                     onStartComment &&
-                                    newLine?.type === "insert" &&
+                                    newLine != null &&
+                                    (isContext || newLine.type === "insert") &&
                                     renderPlusButton(
                                         hovered === "RIGHT",
                                         newNum,
