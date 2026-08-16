@@ -1900,4 +1900,191 @@ describe("DiffView split view", () => {
             );
         });
     });
+
+    describe("comment drag across regions", () => {
+        beforeEach(() => {
+            vi.clearAllMocks();
+            mockUseFileContent.lines = null;
+            mockUseFileContent.isLoading = false;
+            mockUseFileContent.error = null;
+        });
+
+        it("flips the range to the row's side when the anchor side is missing", () => {
+            const onStartComment = vi.fn();
+            const block1 = mb(1, [mc(" ctx1", 1, 1), mc(" ctx2", 2, 2)]);
+            // Region 2 holds unpaired deletions (old side only).
+            const block2 = mb(
+                8,
+                [mc("-del8", undefined, 8), mc("-del9", undefined, 9)],
+                8,
+            );
+            mockParsedFile([block1, block2], { deletedLines: 2 });
+
+            const { container } = renderDiffView({
+                view: "split",
+                showCommentButton: true,
+                onStartComment,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            // mousedown on the context plus of R2 (RIGHT anchor, line 2)...
+            const rowR2 = container.querySelector('tr[id$="R2"]')!;
+            const plus = Array.from(
+                rowR2.querySelectorAll('[data-testid="square-plus"]'),
+            ).find(
+                (p) => !p.closest("td")!.className.includes("d2h-split-new"),
+            )!;
+            fireEvent.mouseDown(plus);
+
+            // ...drag to the deletion row L8, which has no new-side line.
+            const rowL8 = container.querySelector('tr[id$="L8"]')!;
+            fireEvent.mouseOver(rowL8);
+            fireEvent.mouseUp(document);
+
+            // The comment flips to the old side and spans both regions.
+            expect(onStartComment).toHaveBeenCalledWith({
+                type: "line",
+                line: 8,
+                side: "LEFT",
+                startLine: 2,
+                startSide: "LEFT",
+            });
+        });
+
+        it("does not flip when the anchor row lacks the other side", () => {
+            const onStartComment = vi.fn();
+            const block1 = mb(1, [mc("-del1", undefined, 1)]);
+            const block2 = mb(8, [mc("+ins8", 8)]);
+            mockParsedFile([block1, block2], {
+                addedLines: 1,
+                deletedLines: 1,
+            });
+
+            const { container } = renderDiffView({
+                view: "split",
+                showCommentButton: true,
+                onStartComment,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            // mousedown on the deletion row's plus (LEFT anchor, old 1)...
+            const rowL1 = container.querySelector('tr[id$="L1"]')!;
+            const plus = rowL1.querySelector('[data-testid="square-plus"]')!;
+            fireEvent.mouseDown(plus);
+
+            // ...drag to the addition row R8, which has no old-side line and the
+            // anchor has no new-side line: no side spans both rows.
+            const rowR8 = container.querySelector('tr[id$="R8"]')!;
+            fireEvent.mouseOver(rowR8);
+            fireEvent.mouseUp(document);
+
+            expect(onStartComment).not.toHaveBeenCalled();
+        });
+
+        it("extends a comment range to a row in the next region", () => {
+            const onStartComment = vi.fn();
+            const block1 = mb(1, [
+                mc(" ctx1", 1, 1),
+                mc(" ctx2", 2, 2),
+                mc("+ins3", 3),
+            ]);
+            const block2 = mb(8, [mc(" ctx8", 8, 8), mc(" ctx9", 9, 9)]);
+            mockParsedFile([block1, block2], { addedLines: 1 });
+
+            const { container } = renderDiffView({
+                view: "split",
+                showCommentButton: true,
+                onStartComment,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            // mousedown on the left (context) plus of R2: anchors RIGHT, line 2.
+            const rowR2 = container.querySelector('tr[id$="R2"]')!;
+            const plus = Array.from(
+                rowR2.querySelectorAll('[data-testid="square-plus"]'),
+            ).find(
+                (p) => !p.closest("td")!.className.includes("d2h-split-new"),
+            )!;
+            fireEvent.mouseDown(plus);
+
+            // Drag to the context row R8 in the second region.
+            const rowR8 = container.querySelector('tr[id$="R8"]')!;
+            fireEvent.mouseOver(rowR8);
+            fireEvent.mouseUp(document);
+
+            expect(onStartComment).toHaveBeenCalledWith({
+                type: "line",
+                line: 8,
+                side: "RIGHT",
+                startLine: 2,
+                startSide: "RIGHT",
+            });
+        });
+    });
+
+    describe("cross-region comment range display", () => {
+        beforeEach(() => {
+            vi.clearAllMocks();
+            mockUseFileContent.lines = null;
+            mockUseFileContent.isLoading = false;
+            mockUseFileContent.error = null;
+        });
+
+        it("marks the range indicator on rows in both regions", () => {
+            const block1 = mb(1, [
+                mc(" ctx1", 1, 1),
+                mc(" ctx2", 2, 2),
+                mc("+ins3", 3),
+            ]);
+            const block2 = mb(8, [mc(" ctx8", 8, 8), mc(" ctx9", 9, 9)]);
+            mockParsedFile([block1, block2], { addedLines: 1 });
+
+            const comments = makeMockComments([
+                {
+                    id: 42,
+                    line: 8,
+                    start_line: 2,
+                    side: "RIGHT",
+                    path: "test.ts",
+                },
+            ]);
+
+            const { container } = renderDiffView({
+                view: "split",
+                showComments: true,
+                comments,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            const rows = Array.from(
+                container.querySelectorAll('tr[id^="diff-"]'),
+            );
+            const blueRows = rows
+                .filter((tr) =>
+                    Array.from(tr.children).some(
+                        (td) =>
+                            td.className.includes("border-l-4") &&
+                            td.className.includes("border-blue-400"),
+                    ),
+                )
+                .map((tr) => tr.id);
+            // Rows 2-3 (region 1) and row 8 (region 2) must all carry the
+            // multi-line range indicator.
+            expect(blueRows.some((id) => id.endsWith("R2"))).toBe(true);
+            expect(blueRows.some((id) => id.endsWith("R3"))).toBe(true);
+            expect(blueRows.some((id) => id.endsWith("R8"))).toBe(true);
+        });
+    });
 });
