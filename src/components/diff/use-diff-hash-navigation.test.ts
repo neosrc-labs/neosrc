@@ -112,6 +112,18 @@ describe("useDiffHashNavigation", () => {
         expect(getState().get("gap-11")).toEqual({ top: 20, bottom: 0 });
     });
 
+    it("expands every gap containing either end of a range", () => {
+        // Start line 5 lies in the leading gap (1-9), end line 45 in the
+        // middle gap (11-50): both must be revealed for the range to be
+        // reachable, not just the first matching gap.
+        const { getState, setExpandedGaps } = mountHash(
+            "#diff-abc123R5-R45",
+        );
+        expect(setExpandedGaps).toHaveBeenCalled();
+        expect(getState().get("gap-1")).toEqual({ top: 0, bottom: 5 });
+        expect(getState().get("gap-11")).toEqual({ top: 35, bottom: 0 });
+    });
+
     it("does not expand anything for an unrelated hash", () => {
         const { getState, setExpandedGaps } = mountHash("#other-section");
         expect(setExpandedGaps).not.toHaveBeenCalled();
