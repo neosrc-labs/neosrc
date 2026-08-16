@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, render, renderHook } from "@testing-library/react";
+import { useLayoutEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { installLocalStorage } from "~/__tests__/helpers/local-storage";
 import { useDiffViewPreference } from "~/hooks/use-diff-view-preference";
@@ -11,10 +12,16 @@ function setUpStorage(owner: string, repo: string, mode: string): Storage {
     return storage;
 }
 
-/** Renders the hook's current value; the callback fires on every render pass. */
+/**
+ * Records every committed view value. Layout effects run before the hook's
+ * passive hydration effect, so the committed initial "unified" is captured
+ * without calling a prop callback during render (render must stay pure).
+ */
 function Probe({ onRender }: { onRender: (view: string) => void }) {
     const [view] = useDiffViewPreference("ownerA", "repoA");
-    onRender(view);
+    useLayoutEffect(() => {
+        onRender(view);
+    }, [onRender, view]);
     return null;
 }
 
