@@ -13,7 +13,13 @@ export default defineConfig({
     use: {
         baseURL: BASE_URL,
         trace: "on-first-retry",
-        navigationTimeout: 10_000,
+        navigationTimeout: 30_000,
+    },
+    expect: {
+        // The dev server compiles routes on demand and the suite runs many
+        // workers in parallel; content-backed assertions need more room than
+        // the 5s default.
+        timeout: 15_000,
     },
     projects: [
         {

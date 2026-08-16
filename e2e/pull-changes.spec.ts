@@ -700,27 +700,14 @@ async function runDragRangeCommentScenario(
         await expect(plusRow).toBeVisible();
         const targetRow = fileDiff.locator('tbody tr[data-new-line="4"]');
         await expect(targetRow).toBeVisible();
-        await targetRow.scrollIntoViewIfNeeded();
 
         const plus = plusRow.locator("td.d2h-split-ln.d2h-split-new svg");
+        // Hover the new-side cell first so the plus is visible, then drag
+        // with locator.dragTo: it re-positions during the drag instead of
+        // relying on coordinates captured before the page settles.
         await plusRow.locator("td.d2h-split-ln.d2h-split-new").hover();
         await expect(plus).toBeVisible();
-        const plusBox = await plus.boundingBox();
-        if (!plusBox) throw new Error("Plus button not visible");
-        const targetBox = await targetRow.boundingBox();
-        if (!targetBox) throw new Error("Target row not visible");
-
-        await page.mouse.move(
-            plusBox.x + plusBox.width / 2,
-            plusBox.y + plusBox.height / 2,
-        );
-        await page.mouse.down();
-        await page.mouse.move(
-            targetBox.x + targetBox.width / 2,
-            targetBox.y + targetBox.height / 2,
-            { steps: 10 },
-        );
-        await page.mouse.up();
+        await plus.dragTo(targetRow);
     });
 
     await test.step("Submit the range comment", async () => {
@@ -769,26 +756,27 @@ async function runGapExpansionScenario(
     });
 
     await test.step("Verify the revealed gap rows use the old-file numbers", async () => {
-        // First revealed gap line: new 5, old 4 (the insertion at
-        // new line 3 shifts the old numbering by -1 inside the gap).
-        const firstGapRow = fileDiff.locator('tbody tr[data-new-line="5"]');
+        // Hunk 1 covers new lines 1-6, so the gap starts at new 7; the
+        // insertion at new line 3 shifts the old numbering by -1, making the
+        // first gap line old 6.
+        const firstGapRow = fileDiff.locator('tbody tr[data-new-line="7"]');
         await expect(firstGapRow).toBeVisible({ timeout: 15_000 });
-        await expect(firstGapRow).toHaveAttribute("data-old-line", "4");
+        await expect(firstGapRow).toHaveAttribute("data-old-line", "6");
         await expect(firstGapRow.locator("td")).toHaveCount(4);
         await expect(
             firstGapRow.locator(
                 "td.d2h-split-ln:not(.d2h-split-new) .d2h-split-ln-num",
             ),
-        ).toHaveText("4");
+        ).toHaveText("6");
         await expect(
             firstGapRow.locator(
                 "td.d2h-split-ln.d2h-split-new .d2h-split-ln-num",
             ),
-        ).toHaveText("5");
+        ).toHaveText("7");
         // The last revealed line of the 20-line expansion keeps the
         // same offset.
-        const lastGapRow = fileDiff.locator('tbody tr[data-new-line="24"]');
-        await expect(lastGapRow).toHaveAttribute("data-old-line", "23");
+        const lastGapRow = fileDiff.locator('tbody tr[data-new-line="26"]');
+        await expect(lastGapRow).toHaveAttribute("data-old-line", "25");
     });
 }
 
