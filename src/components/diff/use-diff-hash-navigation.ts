@@ -96,7 +96,6 @@ export function useDiffHashNavigation({
                         map.set(gapKey, next);
                         return map;
                     });
-                    break;
                 }
             };
 
