@@ -44,7 +44,11 @@ import type {
 } from "./diff/types";
 import { useDiffCommentSelection } from "./diff/use-diff-comment-selection";
 import { useDiffHashNavigation } from "./diff/use-diff-hash-navigation";
-import { useDiffLineSelection } from "./diff/use-diff-line-selection";
+import {
+    type DiffRowLines,
+    isRowSelected,
+    useDiffLineSelection,
+} from "./diff/use-diff-line-selection";
 import { useDiffSyntaxHighlighting } from "./diff/use-diff-syntax-highlighting";
 import { InlineCommentThread } from "./inline-comment-thread";
 import type { FooterAction } from "./markdown/markdown-editor";
@@ -322,8 +326,17 @@ interface DiffRowNavigationProps {
         endLine: number;
         side: string;
     } | null;
-    onLineSelect?: (lineNum: number, side: string, shiftKey: boolean) => void;
-    onLineMouseDown?: (lineNum: number, side: string) => void;
+    onLineSelect?: (
+        lineNum: number,
+        side: string,
+        shiftKey: boolean,
+        rowLines?: DiffRowLines,
+    ) => void;
+    onLineMouseDown?: (
+        lineNum: number,
+        side: string,
+        rowLines?: DiffRowLines,
+    ) => void;
 }
 interface BlockRowsProps extends DiffRowNavigationProps {
     block: DiffBlock;
@@ -350,8 +363,17 @@ interface SplitBlockRowsProps {
         endLine: number;
         side: string;
     } | null;
-    onLineSelect?: (lineNum: number, side: string, shiftKey: boolean) => void;
-    onLineMouseDown?: (lineNum: number, side: string) => void;
+    onLineSelect?: (
+        lineNum: number,
+        side: string,
+        shiftKey: boolean,
+        rowLines?: DiffRowLines,
+    ) => void;
+    onLineMouseDown?: (
+        lineNum: number,
+        side: string,
+        rowLines?: DiffRowLines,
+    ) => void;
     commentProps: DiffRowCommentProps;
 }
 
@@ -387,8 +409,13 @@ function UnifiedBlockRows({
     } = commentProps;
 
     const handleLineClick = useCallback(
-        (lineNum: number, side: string, e: React.MouseEvent) => {
-            onLineSelect?.(lineNum, side, e.shiftKey);
+        (
+            lineNum: number,
+            side: string,
+            e: React.MouseEvent,
+            rowLines?: DiffRowLines,
+        ) => {
+            onLineSelect?.(lineNum, side, e.shiftKey, rowLines);
         },
         [onLineSelect],
     );
@@ -448,22 +475,29 @@ function UnifiedBlockRows({
                     : undefined;
                 const lineNum = newNum ?? oldNum ?? 0;
                 const lineSide = type === "delete" ? "LEFT" : "RIGHT";
-                const isHighlighted =
-                    selectedRange != null &&
-                    selectedRange.side === lineSide &&
-                    commentLine >= selectedRange.startLine &&
-                    commentLine <= selectedRange.endLine;
+                // The unified row is one line: it is selected when the range
+                // covers it, regardless of which side the range lives on.
+                const rowSelected = isRowSelected(
+                    selectedRange,
+                    oldNum,
+                    newNum,
+                );
 
                 return (
                     <Fragment key={`${oldNum}-${newNum}-${line.content}`}>
                         <DiffLineRow
-                            className={`group ${isHighlighted ? "line-highlighted" : ""}`}
+                            className={`group ${rowSelected ? "line-highlighted" : ""}`}
+                            dataNewLine={newNum}
+                            dataOldLine={oldNum}
                             id={lineId}
                         >
                             <td
                                 className={`d2h-code-linenumber ${typeClass} ${showRangeIndicator ? "border-blue-400 border-l-4" : ""}`}
                                 onMouseDown={() =>
-                                    onLineMouseDown?.(lineNum, lineSide)
+                                    onLineMouseDown?.(lineNum, lineSide, {
+                                        oldLine: oldNum,
+                                        newLine: newNum,
+                                    })
                                 }
                                 onClick={(e) => {
                                     const num = newNum ?? oldNum ?? 0;
@@ -471,6 +505,10 @@ function UnifiedBlockRows({
                                         num,
                                         type === "delete" ? "LEFT" : "RIGHT",
                                         e,
+                                        {
+                                            oldLine: oldNum,
+                                            newLine: newNum,
+                                        },
                                     );
                                 }}
                                 title="Copy permalink"
@@ -485,6 +523,10 @@ function UnifiedBlockRows({
                                                 onCommentDragStart?.(
                                                     commentLine,
                                                     side as "LEFT" | "RIGHT",
+                                                    {
+                                                        oldLine: oldNum,
+                                                        newLine: newNum,
+                                                    },
                                                 );
                                             }}
                                             onClick={(e) => {
@@ -646,8 +688,13 @@ function SplitBlockRows({
     } = commentProps;
 
     const handleLineClick = useCallback(
-        (lineNum: number, side: string, e: React.MouseEvent) => {
-            onLineSelect?.(lineNum, side, e.shiftKey);
+        (
+            lineNum: number,
+            side: string,
+            e: React.MouseEvent,
+            rowLines?: DiffRowLines,
+        ) => {
+            onLineSelect?.(lineNum, side, e.shiftKey, rowLines);
         },
         [onLineSelect],
     );
@@ -673,16 +720,10 @@ function SplitBlockRows({
                 commentLine <= commentDragRange.endLine);
         const hasMultiLineRange =
             (multiLineRanges.get(`${commentLine}-${side}`)?.length ?? 0) > 0;
-        const isHighlighted =
-            selectedRange != null &&
-            selectedRange.side === side &&
-            commentLine >= selectedRange.startLine &&
-            commentLine <= selectedRange.endLine;
         return {
             lineComments,
             isActive,
             showRangeIndicator: isInActiveRange || hasMultiLineRange,
-            isHighlighted,
         };
     };
 
@@ -691,13 +732,14 @@ function SplitBlockRows({
         commentLine: number,
         side: DiffSide,
         isActive: boolean,
+        rowLines?: DiffRowLines,
     ) => (
         <Plus
             size={24}
             className={`absolute -right-5 z-10 ${visible ? "block" : "hidden"} rounded-md bg-blue-500 p-0.5 text-white`}
             onMouseDown={(e) => {
                 e.stopPropagation();
-                onCommentDragStart?.(commentLine, side);
+                onCommentDragStart?.(commentLine, side, rowLines);
             }}
             onClick={(e) => {
                 e.stopPropagation();
@@ -790,9 +832,16 @@ function SplitBlockRows({
 
         const isRowActive =
             (oldState?.isActive ?? false) || (newState?.isActive ?? false);
-        const isHighlighted =
-            (oldState?.isHighlighted ?? false) ||
-            (newState?.isHighlighted ?? false);
+        // Selection covers rows: a covered row highlights all of its existing
+        // sides (both halves of a two-sided row, the one side of an unpaired
+        // addition/deletion) and never the empty opposite side.
+        const rowSelected = isRowSelected(
+            selectedRange,
+            oldNum ?? undefined,
+            newNum ?? undefined,
+        );
+        const oldHighlighted = rowSelected && oldNum != null;
+        const newHighlighted = rowSelected && newNum != null;
 
         // The row carries the new-side id (like unified view); old-side
         // anchors of the same row get their own id on the old number cell so
@@ -848,11 +897,16 @@ function SplitBlockRows({
         const hovered = hover?.key === rowKey ? hover.side : null;
         const hoverLeft = () => setHover({ key: rowKey, side: "LEFT" });
         const hoverRight = () => setHover({ key: rowKey, side: "RIGHT" });
+        const rowLines = {
+            oldLine: oldNum ?? undefined,
+            newLine: newNum ?? undefined,
+        };
 
         return (
             <Fragment key={rowKey}>
                 <DiffLineRow
-                    className={isHighlighted ? "line-highlighted" : ""}
+                    dataNewLine={newNum}
+                    dataOldLine={oldNum}
                     id={primaryId}
                     onMouseLeave={() =>
                         setHover((h) => (h?.key === rowKey ? null : h))
@@ -860,13 +914,15 @@ function SplitBlockRows({
                 >
                     {oldNum != null ? (
                         <td
-                            className={`d2h-code-linenumber d2h-split-ln ${oldLnClass} ${oldState?.showRangeIndicator ? "border-blue-400 border-l-4" : ""}`}
+                            className={`d2h-code-linenumber d2h-split-ln ${oldLnClass} ${oldState?.showRangeIndicator ? "border-blue-400 border-l-4" : ""} ${oldHighlighted ? "d2h-split-selected" : ""}`}
                             id={oldSideId}
                             onMouseDown={() =>
-                                onLineMouseDown?.(oldNum, "LEFT")
+                                onLineMouseDown?.(oldNum, "LEFT", rowLines)
                             }
                             onMouseEnter={hoverLeft}
-                            onClick={(e) => handleLineClick(oldNum, "LEFT", e)}
+                            onClick={(e) =>
+                                handleLineClick(oldNum, "LEFT", e, rowLines)
+                            }
                             title="Copy permalink"
                         >
                             <div className="absolute inset-0">
@@ -881,6 +937,7 @@ function SplitBlockRows({
                                         isContext
                                             ? (newState?.isActive ?? false)
                                             : (oldState?.isActive ?? false),
+                                        rowLines,
                                     )}
                                 <span className="d2h-split-ln-num">
                                     {oldNum}
@@ -891,7 +948,7 @@ function SplitBlockRows({
                         <td className="d2h-code-linenumber d2h-split-ln d2h-empty-side" />
                     )}
                     <td
-                        className={`d2h-split-code ${oldCodeClass}`}
+                        className={`d2h-split-code ${oldCodeClass} ${oldHighlighted ? "d2h-split-selected" : ""}`}
                         onMouseEnter={hoverLeft}
                     >
                         <div className="d2h-split-code-line">
@@ -902,12 +959,14 @@ function SplitBlockRows({
                     </td>
                     {newNum != null ? (
                         <td
-                            className={`d2h-code-linenumber d2h-split-ln d2h-split-new ${newLnClass} ${newState?.showRangeIndicator ? "border-blue-400 border-l-4" : ""}`}
+                            className={`d2h-code-linenumber d2h-split-ln d2h-split-new ${newLnClass} ${newState?.showRangeIndicator ? "border-blue-400 border-l-4" : ""} ${newHighlighted ? "d2h-split-selected" : ""}`}
                             onMouseDown={() =>
-                                onLineMouseDown?.(newNum, "RIGHT")
+                                onLineMouseDown?.(newNum, "RIGHT", rowLines)
                             }
                             onMouseEnter={hoverRight}
-                            onClick={(e) => handleLineClick(newNum, "RIGHT", e)}
+                            onClick={(e) =>
+                                handleLineClick(newNum, "RIGHT", e, rowLines)
+                            }
                             title="Copy permalink"
                         >
                             <div className="absolute inset-0">
@@ -920,6 +979,7 @@ function SplitBlockRows({
                                         newNum,
                                         "RIGHT",
                                         newState?.isActive ?? false,
+                                        rowLines,
                                     )}
                                 <span className="d2h-split-ln-num">
                                     {newNum}
@@ -930,7 +990,7 @@ function SplitBlockRows({
                         <td className="d2h-code-linenumber d2h-split-ln d2h-empty-side" />
                     )}
                     <td
-                        className={`d2h-split-code ${newCodeClass}`}
+                        className={`d2h-split-code ${newCodeClass} ${newHighlighted ? "d2h-split-selected" : ""}`}
                         onMouseEnter={hoverRight}
                     >
                         <div className="d2h-split-code-line">
@@ -1058,6 +1118,7 @@ function BlockRows({
             fileHash={fileHash}
             owner={owner}
             repo={repo}
+            selectedRange={selectedRange}
             commentsByLine={commentsByLine}
             positionMap={positionMap}
             multiLineRanges={multiLineRanges}
@@ -1265,9 +1326,6 @@ function GapRow({
     const gapSize = endLine - startLine + 1;
     const contentColSpan = view === "split" ? 3 : 1;
 
-    const isGapHighlighted =
-        selectedRange != null && selectedRange.side === "RIGHT";
-
     if (expandedCount === 0) {
         if (gapSize <= 0) return null;
         if (!headSha) return null;
@@ -1322,18 +1380,13 @@ function GapRow({
         <>
             {gapLines.map((lineContent, idx) => {
                 const lineNum = startLine + idx;
-                const lineHighlighted =
-                    selectedRange != null &&
-                    isGapHighlighted &&
-                    lineNum >= selectedRange.startLine &&
-                    lineNum <= selectedRange.endLine;
                 return (
                     <DiffContextRow
                         key={`gap-${lineNum}`}
                         lineNum={lineNum}
                         content={lineContent}
                         id={`diff-${fileHash}R${lineNum}`}
-                        highlighted={lineHighlighted}
+                        selectedRange={selectedRange}
                         onLineSelect={onLineSelect}
                         onLineMouseDown={onLineMouseDown}
                         view={view}

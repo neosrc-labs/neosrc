@@ -52,23 +52,32 @@ export function useDiffHashNavigation({
             const side = hash.includes("R") ? "RIGHT" : "LEFT";
 
             const expandTargetGap = () => {
+                // A range may span several regions; reveal every gap that
+                // contains either end of the selection so the whole range is
+                // visible once collapsed rows are fetched.
+                const targets = [startLine, endLine];
                 for (const item of renderItemsRef.current) {
                     if (item.type !== "gap") continue;
                     const gapEnd =
                         item.endLine === -1 ? Infinity : item.endLine;
-                    if (startLine < item.startLine || startLine > gapEnd)
-                        continue;
+                    const inGap = targets.filter(
+                        (target) =>
+                            target >= item.startLine && target <= gapEnd,
+                    );
+                    if (inGap.length === 0) continue;
                     const gapKey = `gap-${item.startLine}`;
-                    // Reveal just enough of the gap to include the target
-                    // line; the rest stays behind an unfold row. Leading gaps
-                    // (above the first hunk) reveal backward from the hunk,
-                    // so the count is measured from the gap end there.
+                    // Reveal just enough of the gap to include both target
+                    // lines; the rest stays behind an unfold row. Leading
+                    // gaps (above the first hunk) reveal backward from the
+                    // hunk, so the count is measured from the gap end there.
                     const neededTop =
                         item.startLine === 1
                             ? 0
-                            : startLine - item.startLine + 1;
+                            : Math.max(...inGap) - item.startLine + 1;
                     const neededBottom =
-                        item.startLine === 1 ? gapEnd - startLine + 1 : 0;
+                        item.startLine === 1
+                            ? gapEnd - Math.min(...inGap) + 1
+                            : 0;
                     setExpandedGaps((previous) => {
                         const current = previous.get(gapKey) ?? {
                             top: 0,
