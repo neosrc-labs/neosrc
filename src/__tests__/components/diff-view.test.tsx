@@ -2019,6 +2019,58 @@ describe("DiffView split view", () => {
             expect(onStartComment).not.toHaveBeenCalled();
         });
 
+        it("extending an active comment never uses another row's line metadata", () => {
+            const onStartComment = vi.fn();
+            const block1 = mb(1, [
+                mc(" ctx1", 1, 1),
+                mc(" ctx2", 2, 2),
+                mc(" ctx3", 3, 3),
+                mc(" ctx4", 4, 4),
+            ]);
+            const block2 = mb(8, [mc("-del8", undefined, 8)], 8);
+            mockParsedFile([block1, block2], { deletedLines: 1 });
+
+            const { container } = renderDiffView({
+                view: "split",
+                showCommentButton: true,
+                onStartComment,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+                activeComment: {
+                    type: "line",
+                    line: 4,
+                    side: "RIGHT",
+                    startLine: 2,
+                },
+            });
+
+            // mousedown inside the active comment's range, on R3 — not on the
+            // comment's anchor row R4. The pointer row's lines (old 3/new 3)
+            // must not become the anchor's opposite-side numbers.
+            const rowR3 = container.querySelector('tr[id$="R3"]')!;
+            const newLn = Array.from(rowR3.querySelectorAll("td")).find(
+                (td) => td.className.includes("d2h-split-new"),
+            )!;
+            fireEvent.mouseDown(newLn);
+
+            // Drag to the deletion row L8 (no new-side line). The anchor has
+            // no row metadata, so the side-flip must refuse instead of using
+            // the pointer row's numbers.
+            const rowL8 = container.querySelector('tr[id$="L8"]')!;
+            fireEvent.mouseOver(rowL8);
+            fireEvent.mouseUp(document);
+
+            expect(onStartComment).toHaveBeenCalledWith({
+                type: "line",
+                line: 4,
+                side: "RIGHT",
+                startLine: 3,
+                startSide: "RIGHT",
+            });
+        });
+
         it("extends a comment range to a row in the next region", () => {
             const onStartComment = vi.fn();
             const block1 = mb(1, [
