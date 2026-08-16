@@ -20,6 +20,8 @@ interface CommentCardProps {
     onCancelEdit?: () => void;
     onSaveEdit?: () => void;
     headerActions?: ReactNode;
+    /** Rendered at the start of the header's right cluster, left of the role badge. */
+    headerLeading?: ReactNode;
     footer?: ReactNode;
     owner: string;
     repo: string;
@@ -43,6 +45,7 @@ export function CommentCard({
     onCancelEdit,
     onSaveEdit,
     headerActions,
+    headerLeading,
     footer,
     owner,
     repo,
@@ -159,6 +162,7 @@ export function CommentCard({
                     )}
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-0.5">
+                    {headerLeading}
                     <RoleBadge authorAssociation={authorAssociation} />
                     {!isEditing && headerActions}
                 </div>

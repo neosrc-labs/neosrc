@@ -2,7 +2,7 @@
 
 import type { components } from "@octokit/openapi-types";
 import { MoreVertical, SquarePen, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
     canEdit,
     canInteract,
@@ -42,6 +42,8 @@ export interface ReviewCommentItemProps {
     isStub: boolean;
     isEditing: boolean;
     editBody: string;
+    /** Rendered in the card header, left of the role badge (parent threads only). */
+    headerLeading?: ReactNode;
     onStartEdit: () => void;
     onEditBodyChange: (body: string) => void;
     onCancelEdit: () => void;
@@ -66,6 +68,7 @@ export function ReviewCommentItem({
     isStub,
     isEditing,
     editBody,
+    headerLeading,
     onStartEdit,
     onEditBodyChange,
     onCancelEdit,
@@ -99,6 +102,7 @@ export function ReviewCommentItem({
                 onCancelEdit={onCancelEdit}
                 onSaveEdit={onSaveEdit}
                 variant={placement === "parent" ? "default" : "nested"}
+                headerLeading={headerLeading}
                 headerActions={
                     <>
                         {(isAuthor || allowedToEdit) &&

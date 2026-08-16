@@ -91,6 +91,11 @@ vi.mock("~/components/resolved-thread-banner", () => ({
             {isUnresolve ? "Unresolve" : "Resolve"}
         </button>
     ),
+    CollapseButton: ({ onClick }: { onClick: () => void }) => (
+        <button data-testid="collapse-button" onClick={onClick} type="button">
+            Collapse
+        </button>
+    ),
 }));
 
 vi.mock("~/components/reaction-bar", () => mockReactionBar());
@@ -259,7 +264,32 @@ describe("InlineCommentThread", () => {
         await user.click(screen.getByTestId("show-thread-btn"));
 
         // After expanding, comment card appears
+        const card = screen.getByTestId("comment-card");
+        expect(card).toBeInTheDocument();
+        // Resolved threads offer a collapse control in the parent card header.
+        expect(card.querySelector('[data-testid="collapse-button"]')).not.toBe(
+            null,
+        );
+    });
+
+    it("collapses the expanded resolved thread back to the banner", async () => {
+        const user = userEvent.setup();
+        mockResolvedThread();
+
+        render(<InlineCommentThread {...defaultProps} />);
+        await user.click(screen.getByTestId("show-thread-btn"));
         expect(screen.getByTestId("comment-card")).toBeInTheDocument();
+
+        await user.click(screen.getByTestId("collapse-button"));
+
+        expect(screen.getByTestId("resolved-banner")).toBeInTheDocument();
+        expect(screen.queryByTestId("comment-card")).not.toBeInTheDocument();
+    });
+
+    it("does not offer collapse for unresolved threads", () => {
+        render(<InlineCommentThread {...defaultProps} />);
+
+        expect(screen.queryByTestId("collapse-button")).not.toBeInTheDocument();
     });
 
     it("opens and closes reply form", async () => {

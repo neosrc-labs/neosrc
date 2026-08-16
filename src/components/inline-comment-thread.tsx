@@ -6,6 +6,7 @@ import {
     type PullRequestPermissionContext,
 } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
 import {
+    CollapseButton,
     ResolveButton,
     ResolvedThreadBanner,
 } from "~/components/resolved-thread-banner";
@@ -313,6 +314,13 @@ export function InlineCommentThread({
                         body,
                     });
                 }}
+                headerLeading={
+                    threadInfo?.isResolved && expandedResolved ? (
+                        <CollapseButton
+                            onClick={() => setExpandedResolved(false)}
+                        />
+                    ) : undefined
+                }
             />
 
             {replies.map((comment) => (
