@@ -1108,10 +1108,15 @@ function BlockRows({
         });
     };
 
+    // Gap lines are context lines: within a gap, old and new numbering differ
+    // by a constant offset (see DiffGap.oldStartLine).
+    const gapOldDelta = gap != null ? gap.oldStartLine - gap.startLine : 0;
+
     const renderGapLine = (lineContent: string, lineNum: number) => (
         <DiffContextRow
             key={`gap-${lineNum}`}
             lineNum={lineNum}
+            oldLine={lineNum + gapOldDelta}
             content={lineContent}
             id={fileHash ? `diff-${fileHash}R${lineNum}` : undefined}
             view={view}
@@ -1284,6 +1289,7 @@ function BlockRows({
 
 interface GapRowProps extends DiffRowNavigationProps {
     startLine: number;
+    oldStartLine: number;
     expandedCount: number;
     onExpand: (key: string, expansion: GapExpansion) => void;
     gapKey: string;
@@ -1300,6 +1306,7 @@ interface GapRowProps extends DiffRowNavigationProps {
 
 function GapRow({
     startLine,
+    oldStartLine,
     expandedCount,
     onExpand,
     gapKey,
@@ -1386,6 +1393,7 @@ function GapRow({
                     <DiffContextRow
                         key={`gap-${lineNum}`}
                         lineNum={lineNum}
+                        oldLine={oldStartLine + idx}
                         content={lineContent}
                         id={`diff-${fileHash}R${lineNum}`}
                         selectedRange={selectedRange}
@@ -1484,6 +1492,7 @@ function DiffTableBody({
                         <GapRow
                             key={gapKey}
                             startLine={item.startLine}
+                            oldStartLine={item.oldStartLine}
                             expandedCount={expandedCount}
                             onExpand={onGapExpand}
                             gapKey={gapKey}
@@ -1510,6 +1519,7 @@ function DiffTableBody({
                         ? {
                               startLine: previousGap.startLine,
                               endLine: previousGap.endLine,
+                              oldStartLine: previousGap.oldStartLine,
                           }
                         : undefined;
                 const gapKey = gap ? `gap-${gap.startLine}` : undefined;

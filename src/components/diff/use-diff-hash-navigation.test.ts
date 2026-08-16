@@ -12,7 +12,7 @@ function blockStub(): DiffRenderItem {
 }
 
 function gap(startLine: number, endLine: number): DiffRenderItem {
-    return { type: "gap", startLine, endLine };
+    return { type: "gap", startLine, endLine, oldStartLine: startLine };
 }
 
 function renderItemsFor(): DiffRenderItem[] {
@@ -116,9 +116,7 @@ describe("useDiffHashNavigation", () => {
         // Start line 5 lies in the leading gap (1-9), end line 45 in the
         // middle gap (11-50): both must be revealed for the range to be
         // reachable, not just the first matching gap.
-        const { getState, setExpandedGaps } = mountHash(
-            "#diff-abc123R5-R45",
-        );
+        const { getState, setExpandedGaps } = mountHash("#diff-abc123R5-R45");
         expect(setExpandedGaps).toHaveBeenCalled();
         expect(getState().get("gap-1")).toEqual({ top: 0, bottom: 5 });
         expect(getState().get("gap-11")).toEqual({ top: 35, bottom: 0 });

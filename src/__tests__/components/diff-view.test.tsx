@@ -571,12 +571,8 @@ describe("DiffView rendering", () => {
 
             // Drag from the block row to a gap line so the range covers it.
             const rowR3 = container.querySelector('tr[id$="R3"]')!;
-            fireEvent.mouseDown(
-                rowR3.querySelector("td.d2h-code-linenumber")!,
-            );
-            fireEvent.mouseOver(
-                container.querySelector('tr[id$="R2"]')!,
-            );
+            fireEvent.mouseDown(rowR3.querySelector("td.d2h-code-linenumber")!);
+            fireEvent.mouseOver(container.querySelector('tr[id$="R2"]')!);
             fireEvent.mouseUp(document);
 
             const gapRow = container.querySelector('tr[id$="R2"]')!;
@@ -610,9 +606,7 @@ describe("DiffView rendering", () => {
             expect(window.history.replaceState).toHaveBeenCalledWith(
                 null,
                 "",
-                expect.stringMatching(
-                    new RegExp(`#diff-${FILE_HASH}R1$`),
-                ),
+                expect.stringMatching(new RegExp(`#diff-${FILE_HASH}R1$`)),
             );
         });
     });
@@ -1570,6 +1564,57 @@ describe("DiffView split view", () => {
                 );
             }
         });
+
+        it("uses the old-file number for the old side of gap lines", () => {
+            vi.spyOn(window.history, "replaceState").mockImplementation(
+                vi.fn(),
+            );
+            // Block 1: new 1-3 / old 1-2 (one insertion). Block 2 starts at
+            // new 6 / old 5, so the middle gap (new 4-5) maps to old 3-4.
+            // useFileContent returns the whole file, indexed by line number.
+            mockUseFileContent.lines = [
+                "l1",
+                "l2",
+                "l3",
+                "line4",
+                "line5",
+                "l6",
+            ];
+            const block1 = mb(1, [
+                mc(" l1", 1, 1),
+                mc(" l2", 2, 2),
+                mc("+l3", 3),
+            ]);
+            const block2 = mb(6, [mc(" l6", 6, 5)], 5);
+            mockParsedFile([block1, block2], { addedLines: 1 });
+
+            const { container } = renderDiffView({
+                view: "split",
+                expandAllContext: true,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            const gapRow = container.querySelector('tr[id$="R4"]')!;
+            expect(gapRow.getAttribute("data-new-line")).toBe("4");
+            expect(gapRow.getAttribute("data-old-line")).toBe("3");
+
+            // The old-side line-number cell shows the old number and links
+            // the old side when clicked.
+            const cells = gapRow.querySelectorAll("td");
+            const leftLn = cells[0]!;
+            expect(leftLn.querySelector(".d2h-split-ln-num")?.textContent).toBe(
+                "3",
+            );
+            fireEvent.click(leftLn);
+            expect(window.history.replaceState).toHaveBeenCalledWith(
+                null,
+                "",
+                expect.stringMatching(new RegExp(`#diff-${FILE_HASH}L3$`)),
+            );
+        });
     });
 
     describe("comments on expanded gap lines", () => {
@@ -2081,8 +2126,8 @@ describe("DiffView split view", () => {
             // comment's anchor row R4. The pointer row's lines (old 3/new 3)
             // must not become the anchor's opposite-side numbers.
             const rowR3 = container.querySelector('tr[id$="R3"]')!;
-            const newLn = Array.from(rowR3.querySelectorAll("td")).find(
-                (td) => td.className.includes("d2h-split-new"),
+            const newLn = Array.from(rowR3.querySelectorAll("td")).find((td) =>
+                td.className.includes("d2h-split-new"),
             )!;
             fireEvent.mouseDown(newLn);
 

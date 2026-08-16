@@ -14,6 +14,7 @@ import { isRowSelected } from "./use-diff-line-selection";
 
 export function DiffContextRow({
     lineNum,
+    oldLine,
     content,
     id,
     selectedRange,
@@ -29,6 +30,12 @@ export function DiffContextRow({
     commentProps,
 }: {
     lineNum: number;
+    /**
+     * Old-file number of the line. Gap lines are context lines, so they exist
+     * on both sides; the old number can differ from the new one when changes
+     * appear above the gap. Defaults to lineNum for plain context rows.
+     */
+    oldLine?: number;
     content: string;
     id?: string;
     selectedRange?: {
@@ -81,6 +88,7 @@ export function DiffContextRow({
     } = commentProps ?? {};
 
     const commentLine = lineNum;
+    const oldLineNum = oldLine ?? lineNum;
     const commentSide: "LEFT" | "RIGHT" = "RIGHT";
     const lineComments =
         commentsByLine.get(`${commentLine}-${commentSide}`) ?? [];
@@ -120,7 +128,7 @@ export function DiffContextRow({
                 onMouseDown={(e) => {
                     e.stopPropagation();
                     onCommentDragStart?.(commentLine, commentSide, {
-                        oldLine: lineNum,
+                        oldLine: oldLineNum,
                         newLine: lineNum,
                     });
                 }}
@@ -210,13 +218,13 @@ export function DiffContextRow({
 
     if (view === "split") {
         const oldSideId =
-            fileHash != null ? `diff-${fileHash}L${lineNum}` : undefined;
+            fileHash != null ? `diff-${fileHash}L${oldLineNum}` : undefined;
 
         return (
             <>
                 <tr
                     data-new-line={lineNum}
-                    data-old-line={lineNum}
+                    data-old-line={oldLineNum}
                     id={id}
                     onMouseLeave={() => setHovered(null)}
                 >
@@ -228,15 +236,15 @@ export function DiffContextRow({
                         } ${rowSelected ? "d2h-split-selected" : ""}`}
                         id={oldSideId}
                         onMouseDown={() =>
-                            onLineMouseDown?.(lineNum, "LEFT", {
-                                oldLine: lineNum,
+                            onLineMouseDown?.(oldLineNum, "LEFT", {
+                                oldLine: oldLineNum,
                                 newLine: lineNum,
                             })
                         }
                         onMouseEnter={() => setHovered("LEFT")}
                         onClick={(event) =>
-                            onLineSelect?.(lineNum, "LEFT", event.shiftKey, {
-                                oldLine: lineNum,
+                            onLineSelect?.(oldLineNum, "LEFT", event.shiftKey, {
+                                oldLine: oldLineNum,
                                 newLine: lineNum,
                             })
                         }
@@ -246,7 +254,9 @@ export function DiffContextRow({
                             {showCommentButton &&
                                 onStartComment &&
                                 renderPlusButton("LEFT")}
-                            <span className="d2h-split-ln-num">{lineNum}</span>
+                            <span className="d2h-split-ln-num">
+                                {oldLineNum}
+                            </span>
                         </div>
                     </td>
                     <td
@@ -311,7 +321,7 @@ export function DiffContextRow({
         <>
             <tr
                 data-new-line={lineNum}
-                data-old-line={lineNum}
+                data-old-line={oldLineNum}
                 id={id}
                 className={
                     [
@@ -328,13 +338,13 @@ export function DiffContextRow({
                     }`}
                     onMouseDown={() =>
                         onLineMouseDown?.(lineNum, "RIGHT", {
-                            oldLine: lineNum,
+                            oldLine: oldLineNum,
                             newLine: lineNum,
                         })
                     }
                     onClick={(event) =>
                         onLineSelect?.(lineNum, "RIGHT", event.shiftKey, {
-                            oldLine: lineNum,
+                            oldLine: oldLineNum,
                             newLine: lineNum,
                         })
                     }
@@ -344,7 +354,7 @@ export function DiffContextRow({
                         {showCommentButton &&
                             onStartComment &&
                             renderPlusButton("RIGHT")}
-                        <div className="line-num1">{lineNum}</div>
+                        <div className="line-num1">{oldLineNum}</div>
                         <div className="line-num2">{lineNum}</div>
                     </div>
                 </td>

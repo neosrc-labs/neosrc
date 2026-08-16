@@ -20,8 +20,16 @@ export interface DiffAnchor {
 }
 
 export interface DiffGap {
+    /** First line of the gap in new-file coordinates. */
     startLine: number;
+    /** Last line of the gap in new-file coordinates (-1 = open-ended). */
     endLine: number;
+    /**
+     * Old-file number of the gap's first line. Between hunks the files are
+     * identical, so old and new numbers differ by a constant offset within
+     * the gap; gap lines are context lines present on both sides.
+     */
+    oldStartLine: number;
 }
 
 /** How many lines of a gap are revealed from each end. */
