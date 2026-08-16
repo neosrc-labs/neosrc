@@ -1119,6 +1119,8 @@ function BlockRows({
             owner={owner}
             repo={repo}
             selectedRange={selectedRange}
+            onLineSelect={onLineSelect}
+            onLineMouseDown={onLineMouseDown}
             commentsByLine={commentsByLine}
             positionMap={positionMap}
             multiLineRanges={multiLineRanges}
