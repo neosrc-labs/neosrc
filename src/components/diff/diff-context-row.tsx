@@ -314,9 +314,12 @@ export function DiffContextRow({
                 data-old-line={lineNum}
                 id={id}
                 className={
-                    `${showCommentButton ? "group" : ""}${
-                        rowSelected ? "line-highlighted" : ""
-                    }`.trim() || undefined
+                    [
+                        showCommentButton ? "group" : "",
+                        rowSelected ? "line-highlighted" : "",
+                    ]
+                        .filter(Boolean)
+                        .join(" ") || undefined
                 }
             >
                 <td
