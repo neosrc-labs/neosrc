@@ -54,7 +54,11 @@ export interface DiffRowCommentProps {
         endLine: number;
         side: DiffSide;
     } | null;
-    onCommentDragStart?: (line: number, side: DiffSide) => void;
+    onCommentDragStart?: (
+        line: number,
+        side: DiffSide,
+        lines?: { oldLine?: number; newLine?: number },
+    ) => void;
     pendingReviewId?: number | null;
     permissionContext: PullRequestPermissionContext;
 }

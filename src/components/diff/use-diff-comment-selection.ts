@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DiffCommentTarget, DiffSide } from "./types";
-import type { DiffSelectedRange } from "./use-diff-line-selection";
+import {
+    type DiffRowLines,
+    type DiffSelectedRange,
+    readRowLine,
+} from "./use-diff-line-selection";
 
 export function useDiffCommentSelection({
     activeComment,
@@ -16,7 +20,11 @@ export function useDiffCommentSelection({
     onStartComment?: (target: DiffCommentTarget | null) => void;
     selectedRange: DiffSelectedRange | null;
     onSelectionChange: (range: DiffSelectedRange) => void;
-    onOrdinaryLineMouseDown: (line: number, side: string) => void;
+    onOrdinaryLineMouseDown: (
+        line: number,
+        side: string,
+        lines?: DiffRowLines,
+    ) => void;
     onOrdinaryTableMouseOver: (event: React.MouseEvent) => void;
 }) {
     const [commentDragRange, setCommentDragRange] = useState<{
@@ -24,29 +32,38 @@ export function useDiffCommentSelection({
         endLine: number;
         side: DiffSide;
     } | null>(null);
-    const commentDragAnchor = useRef<{ line: number; side: DiffSide } | null>(
-        null,
-    );
+    const commentDragAnchor = useRef<{
+        line: number;
+        side: DiffSide;
+        lines?: DiffRowLines;
+    } | null>(null);
     const commentDragInProgress = useRef(false);
 
     const onCommentDragStart = useCallback(
-        (line: number, side: DiffSide) => {
+        (line: number, side: DiffSide, lines?: DiffRowLines) => {
             commentDragInProgress.current = true;
-            commentDragAnchor.current = { line, side };
+            commentDragAnchor.current = { line, side, lines };
             setCommentDragRange({ startLine: line, endLine: line, side });
-            onSelectionChange({ startLine: line, endLine: line, side });
+            onSelectionChange({
+                startLine: line,
+                endLine: line,
+                side,
+                startLines: lines,
+                endLines: lines,
+            });
         },
         [onSelectionChange],
     );
 
     const onCommentLineMouseDown = useCallback(
-        (line: number, side: string) => {
+        (line: number, side: string, lines?: DiffRowLines) => {
             if (activeComment?.type === "line" && activeComment.side === side) {
                 const diffSide = side as DiffSide;
                 commentDragInProgress.current = true;
                 commentDragAnchor.current = {
                     line: activeComment.line,
                     side: diffSide,
+                    lines,
                 };
                 setCommentDragRange({
                     startLine: Math.min(activeComment.line, line),
@@ -55,7 +72,7 @@ export function useDiffCommentSelection({
                 });
                 return;
             }
-            onOrdinaryLineMouseDown(line, side);
+            onOrdinaryLineMouseDown(line, side, lines);
         },
         [activeComment, onOrdinaryLineMouseDown],
     );
@@ -66,17 +83,29 @@ export function useDiffCommentSelection({
                 onOrdinaryTableMouseOver(event);
                 return;
             }
+            const anchor = commentDragAnchor.current;
             const row = (event.target as HTMLElement).closest(
                 'tr[id^="diff-"]',
-            );
-            const lineMatch = row?.id.match(/(\d+)$/);
-            if (!lineMatch) return;
-            const line = Number.parseInt(lineMatch[1] ?? "0", 10);
-            const anchor = commentDragAnchor.current;
+            ) as HTMLElement | null;
+            // Extend along the anchor side's number space (see
+            // useDiffLineSelection): old and new line numbers can diverge
+            // across regions.
+            const line = readRowLine(row, anchor.side);
+            if (line == null) return;
+            const rowLines = {
+                oldLine: readRowLine(row, "LEFT") ?? undefined,
+                newLine: readRowLine(row, "RIGHT") ?? undefined,
+            };
             const startLine = Math.min(anchor.line, line);
             const endLine = Math.max(anchor.line, line);
             setCommentDragRange({ startLine, endLine, side: anchor.side });
-            onSelectionChange({ startLine, endLine, side: anchor.side });
+            onSelectionChange({
+                startLine,
+                endLine,
+                side: anchor.side,
+                startLines: anchor.lines,
+                endLines: rowLines,
+            });
         },
         [onOrdinaryTableMouseOver, onSelectionChange],
     );

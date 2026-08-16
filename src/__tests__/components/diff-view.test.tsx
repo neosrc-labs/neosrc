@@ -1637,4 +1637,267 @@ describe("DiffView split view", () => {
             );
         });
     });
+
+    describe("selection across regions", () => {
+        beforeEach(() => {
+            vi.clearAllMocks();
+            vi.spyOn(window.history, "replaceState").mockImplementation(
+                vi.fn(),
+            );
+            mockUseFileContent.lines = null;
+            mockUseFileContent.isLoading = false;
+            mockUseFileContent.error = null;
+        });
+
+        it("extends an old-side drag to the target row's old line number across a gap", () => {
+            // Block 1 spans old 1-5 / new 1-5 (two deletions + two insertions),
+            // block 2 spans old 8-10 / new 6-8 -> old/new numbers diverge.
+            const block1 = mb(1, [
+                mc(" l1", 1, 1),
+                mc(" l2", 2, 2),
+                mc(" l3", 3, 3),
+                mc("-d4", undefined, 4),
+                mc("-d5", undefined, 5),
+                mc("+a4", 4),
+                mc("+a5", 5),
+            ]);
+            const block2 = mb(
+                6,
+                [mc(" l6", 6, 8), mc(" l7", 7, 9), mc("+n8", 8)],
+                8,
+            );
+            mockParsedFile([block1, block2], {
+                addedLines: 3,
+                deletedLines: 2,
+            });
+
+            const { container } = renderDiffView({
+                view: "split",
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            // mousedown on block 1's old line 2, drag to block 2's context row
+            // (new 7 / old 9): old and new numbers diverge across the gap.
+            const rowR2 = container.querySelector('tr[id$="R2"]')!;
+            const oldLn = Array.from(rowR2.querySelectorAll("td")).find(
+                (td) =>
+                    td.className.includes("d2h-split-ln") &&
+                    !td.className.includes("d2h-split-new"),
+            )!;
+            fireEvent.mouseDown(oldLn);
+
+            const rowR7 = container.querySelector('tr[id$="R7"]')!;
+            fireEvent.mouseOver(rowR7);
+            fireEvent.mouseUp(document);
+
+            // The range must stay in the old number space: anchor old 2 to the
+            // target row's OLD line 9, not its new line 7.
+            expect(window.history.replaceState).toHaveBeenLastCalledWith(
+                null,
+                "",
+                expect.stringMatching(new RegExp(`#diff-${FILE_HASH}L2-L9$`)),
+            );
+        });
+    });
+
+    describe("selection highlight sides", () => {
+        beforeEach(() => {
+            vi.clearAllMocks();
+            vi.spyOn(window.history, "replaceState").mockImplementation(
+                vi.fn(),
+            );
+            mockUseFileContent.lines = null;
+            mockUseFileContent.isLoading = false;
+            mockUseFileContent.error = null;
+        });
+
+        it("selecting an unpaired addition highlights only the new side", () => {
+            const lines = [mc("+added", 1)];
+            mockParsedFile([mb(1, lines)], { addedLines: 1 });
+
+            const { container } = renderDiffView({ view: "split" });
+            const cells = container
+                .querySelector('tr[id^="diff-"]')!
+                .querySelectorAll("td");
+
+            fireEvent.click(cells[2]!); // new-side line number
+
+            expect(cells[0]!.className).not.toContain("d2h-split-selected");
+            expect(cells[1]!.className).not.toContain("d2h-split-selected");
+            expect(cells[2]!.className).toContain("d2h-split-selected");
+            expect(cells[3]!.className).toContain("d2h-split-selected");
+        });
+
+        it("selecting an unpaired deletion highlights only the old side", () => {
+            const lines = [mc("-removed", undefined, 5)];
+            mockParsedFile([mb(1, lines)], { deletedLines: 1 });
+
+            const { container } = renderDiffView({ view: "split" });
+            const cells = container
+                .querySelector('tr[id^="diff-"]')!
+                .querySelectorAll("td");
+
+            fireEvent.click(cells[0]!); // old-side line number
+
+            expect(cells[0]!.className).toContain("d2h-split-selected");
+            expect(cells[1]!.className).toContain("d2h-split-selected");
+            expect(cells[2]!.className).not.toContain("d2h-split-selected");
+            expect(cells[3]!.className).not.toContain("d2h-split-selected");
+        });
+
+        it("selecting either side of a paired row highlights both sides", () => {
+            const lines = [mc("-old", undefined, 1), mc("+new", 1)];
+            mockParsedFile([mb(1, lines)], { addedLines: 1, deletedLines: 1 });
+
+            const { container } = renderDiffView({ view: "split" });
+            const cells = container
+                .querySelector('tr[id^="diff-"]')!
+                .querySelectorAll("td");
+
+            // Select the old side: the row has lines on both sides, so both
+            // halves highlight.
+            fireEvent.click(cells[0]!); // old-side line number (LEFT)
+
+            expect(cells[0]!.className).toContain("d2h-split-selected");
+            expect(cells[1]!.className).toContain("d2h-split-selected");
+            expect(cells[2]!.className).toContain("d2h-split-selected");
+            expect(cells[3]!.className).toContain("d2h-split-selected");
+        });
+
+        it("a range over mixed rows highlights both sides of two-sided rows and only the existing side of one-sided rows", () => {
+            // Group 1: del2/ins2 paired, then leftover deletions old 3, old 4
+            // (unpaired). Context row 5/5, then group 2: del6/ins3 paired and
+            // an unpaired addition new 4. Rows:
+            //   R1 (1/1), R2 (2/2), L3 (old 3), L4 (old 4), R5 (5/5),
+            //   R6 (old 6/new 3), R7 (added new 4)
+            const lines = [
+                mc(" l1", 1, 1),
+                mc("-del2", undefined, 2),
+                mc("+ins2", 2),
+                mc("-del3", undefined, 3),
+                mc("-del4", undefined, 4),
+                mc(" l5", 5, 5),
+                mc("-del6", undefined, 6),
+                mc("+ins3", 3),
+                mc("+ins4", 4),
+            ];
+            mockParsedFile([mb(1, lines)], { addedLines: 3, deletedLines: 4 });
+
+            const { container } = renderDiffView({ view: "split" });
+            const rows = container.querySelectorAll('tr[id^="diff-"]');
+            expect(rows).toHaveLength(7);
+            const cells = (idx: number) => rows[idx]!.querySelectorAll("td");
+            const isSel = (td: Element) =>
+                td.className.includes("d2h-split-selected");
+
+            // Right-side drag from new 2 (R2) to new 3 (R6).
+            const newLnR2 = Array.from(cells(1)).find((td) =>
+                td.className.includes("d2h-split-new"),
+            )!;
+            fireEvent.mouseDown(newLnR2);
+            fireEvent.mouseOver(rows[5]!);
+            fireEvent.mouseUp(document);
+
+            // R2 (paired): both sides in the sweep -> both highlighted.
+            expect(isSel(cells(1)[0]!)).toBe(true);
+            expect(isSel(cells(1)[1]!)).toBe(true);
+            expect(isSel(cells(1)[2]!)).toBe(true);
+            expect(isSel(cells(1)[3]!)).toBe(true);
+            // L3 (deleted, one side, in the middle): only its old side.
+            expect(isSel(cells(2)[0]!)).toBe(true);
+            expect(isSel(cells(2)[1]!)).toBe(true);
+            expect(isSel(cells(2)[2]!)).toBe(false);
+            expect(isSel(cells(2)[3]!)).toBe(false);
+            // L4 (deleted, one side): only its old side.
+            expect(isSel(cells(3)[0]!)).toBe(true);
+            expect(isSel(cells(3)[1]!)).toBe(true);
+            expect(isSel(cells(3)[2]!)).toBe(false);
+            expect(isSel(cells(3)[3]!)).toBe(false);
+            // R5 (context, both sides): both highlighted.
+            expect(isSel(cells(4)[0]!)).toBe(true);
+            expect(isSel(cells(4)[1]!)).toBe(true);
+            expect(isSel(cells(4)[2]!)).toBe(true);
+            expect(isSel(cells(4)[3]!)).toBe(true);
+            // R6 (paired target): both sides.
+            expect(isSel(cells(5)[0]!)).toBe(true);
+            expect(isSel(cells(5)[1]!)).toBe(true);
+            expect(isSel(cells(5)[2]!)).toBe(true);
+            expect(isSel(cells(5)[3]!)).toBe(true);
+            // R7 (added, one side, below the range): not highlighted.
+            expect(isSel(cells(6)[0]!)).toBe(false);
+            expect(isSel(cells(6)[1]!)).toBe(false);
+            expect(isSel(cells(6)[2]!)).toBe(false);
+            expect(isSel(cells(6)[3]!)).toBe(false);
+            // R1 (above the range): not highlighted.
+            expect(isSel(cells(0)[0]!)).toBe(false);
+            expect(isSel(cells(0)[1]!)).toBe(false);
+            expect(isSel(cells(0)[2]!)).toBe(false);
+            expect(isSel(cells(0)[3]!)).toBe(false);
+        });
+
+        it("shift-clicking the other side extends the range along the anchor side", () => {
+            const lines = [
+                mc(" ctx1", 1, 1),
+                mc("-del", undefined, 2),
+                mc("+ins", 3),
+            ];
+            mockParsedFile([mb(1, lines)], { addedLines: 1, deletedLines: 1 });
+
+            const { container } = renderDiffView({ view: "split" });
+            const rows = container.querySelectorAll('tr[id^="diff-"]');
+            const ctxCells = rows[0]!.querySelectorAll("td");
+            const pairedCells = rows[1]!.querySelectorAll("td");
+
+            // Anchor on the old side of the context line (old 1 / new 1).
+            fireEvent.click(ctxCells[0]!);
+
+            // Shift-click the NEW side of the paired row (new 3 / old 2): the
+            // range must live in the anchor's old number space -> old 1 to old 2.
+            fireEvent.click(pairedCells[2]!, { shiftKey: true });
+
+            expect(window.history.replaceState).toHaveBeenLastCalledWith(
+                null,
+                "",
+                expect.stringMatching(new RegExp(`#diff-${FILE_HASH}L1-L2$`)),
+            );
+        });
+
+        it("a right-side drag across a gap uses the target row's new line number", () => {
+            const block1 = mb(1, [
+                mc(" l1", 1, 1),
+                mc(" l2", 2, 2),
+                mc(" l3", 3, 3),
+            ]);
+            const block2 = mb(6, [mc(" l6", 6, 8), mc("+n8", 8)], 8);
+            mockParsedFile([block1, block2], { addedLines: 1 });
+
+            const { container } = renderDiffView({
+                view: "split",
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            const rowR2 = container.querySelector('tr[id$="R2"]')!;
+            const newLn = Array.from(rowR2.querySelectorAll("td")).find((td) =>
+                td.className.includes("d2h-split-new"),
+            )!;
+            fireEvent.mouseDown(newLn);
+
+            const rowR8 = container.querySelector('tr[id$="R8"]')!;
+            fireEvent.mouseOver(rowR8);
+            fireEvent.mouseUp(document);
+
+            // Anchor new 2 to the target row's NEW line 8 (old numbering is 10).
+            expect(window.history.replaceState).toHaveBeenLastCalledWith(
+                null,
+                "",
+                expect.stringMatching(new RegExp(`#diff-${FILE_HASH}R2-R8$`)),
+            );
+        });
+    });
 });

@@ -10,12 +10,13 @@ import { groupReviewCommentThreads } from "../review-comment-threads";
 import { DiffLineCommentEditor } from "./diff-line-comment-editor";
 import { isLastLineOfRange } from "./model";
 import type { DiffAnchor, DiffRowCommentProps } from "./types";
+import { isRowSelected } from "./use-diff-line-selection";
 
 export function DiffContextRow({
     lineNum,
     content,
     id,
-    highlighted,
+    selectedRange,
     onLineSelect,
     onLineMouseDown,
     view = "unified",
@@ -30,13 +31,22 @@ export function DiffContextRow({
     lineNum: number;
     content: string;
     id?: string;
-    highlighted?: boolean;
+    selectedRange?: {
+        startLine: number;
+        endLine: number;
+        side: string;
+    } | null;
     onLineSelect?: (
         line: number,
         side: "LEFT" | "RIGHT",
         shiftKey: boolean,
+        rowLines?: { oldLine?: number; newLine?: number },
     ) => void;
-    onLineMouseDown?: (line: number, side: "LEFT" | "RIGHT") => void;
+    onLineMouseDown?: (
+        line: number,
+        side: "LEFT" | "RIGHT",
+        rowLines?: { oldLine?: number; newLine?: number },
+    ) => void;
     view?: DiffViewMode;
     fileHash?: string;
     owner?: string;
@@ -92,6 +102,10 @@ export function DiffContextRow({
         (multiLineRanges.get(`${commentLine}-${commentSide}`)?.length ?? 0) > 0;
     const showRangeIndicator = isInActiveRange || hasMultiLineRange;
 
+    // Gap lines are context lines present on both sides: a covered row
+    // highlights both halves in split view, the whole row in unified view.
+    const rowSelected = isRowSelected(selectedRange, lineNum, lineNum);
+
     const renderPlusButton = (side: "LEFT" | "RIGHT") => {
         const visibilityClass =
             view === "split"
@@ -105,7 +119,10 @@ export function DiffContextRow({
                 className={`absolute -right-5 z-10 ${visibilityClass} rounded-md bg-blue-500 p-0.5 text-white`}
                 onMouseDown={(e) => {
                     e.stopPropagation();
-                    onCommentDragStart?.(commentLine, commentSide);
+                    onCommentDragStart?.(commentLine, commentSide, {
+                        oldLine: lineNum,
+                        newLine: lineNum,
+                    });
                 }}
                 onClick={(e) => {
                     e.stopPropagation();
@@ -198,8 +215,9 @@ export function DiffContextRow({
         return (
             <>
                 <tr
+                    data-new-line={lineNum}
+                    data-old-line={lineNum}
                     id={id}
-                    className={highlighted ? "line-highlighted" : undefined}
                     onMouseLeave={() => setHovered(null)}
                 >
                     <td
@@ -207,12 +225,20 @@ export function DiffContextRow({
                             showRangeIndicator
                                 ? "border-blue-400 border-l-4"
                                 : ""
-                        }`}
+                        } ${rowSelected ? "d2h-split-selected" : ""}`}
                         id={oldSideId}
-                        onMouseDown={() => onLineMouseDown?.(lineNum, "LEFT")}
+                        onMouseDown={() =>
+                            onLineMouseDown?.(lineNum, "LEFT", {
+                                oldLine: lineNum,
+                                newLine: lineNum,
+                            })
+                        }
                         onMouseEnter={() => setHovered("LEFT")}
                         onClick={(event) =>
-                            onLineSelect?.(lineNum, "LEFT", event.shiftKey)
+                            onLineSelect?.(lineNum, "LEFT", event.shiftKey, {
+                                oldLine: lineNum,
+                                newLine: lineNum,
+                            })
                         }
                         title="Copy permalink"
                     >
@@ -224,7 +250,9 @@ export function DiffContextRow({
                         </div>
                     </td>
                     <td
-                        className="d2h-split-code d2h-cntx"
+                        className={`d2h-split-code d2h-cntx ${
+                            rowSelected ? "d2h-split-selected" : ""
+                        }`}
                         onMouseEnter={() => setHovered("LEFT")}
                     >
                         <div className="d2h-split-code-line">
@@ -238,11 +266,19 @@ export function DiffContextRow({
                             showRangeIndicator
                                 ? "border-blue-400 border-l-4"
                                 : ""
-                        }`}
-                        onMouseDown={() => onLineMouseDown?.(lineNum, "RIGHT")}
+                        } ${rowSelected ? "d2h-split-selected" : ""}`}
+                        onMouseDown={() =>
+                            onLineMouseDown?.(lineNum, "RIGHT", {
+                                oldLine: lineNum,
+                                newLine: lineNum,
+                            })
+                        }
                         onMouseEnter={() => setHovered("RIGHT")}
                         onClick={(event) =>
-                            onLineSelect?.(lineNum, "RIGHT", event.shiftKey)
+                            onLineSelect?.(lineNum, "RIGHT", event.shiftKey, {
+                                oldLine: lineNum,
+                                newLine: lineNum,
+                            })
                         }
                         title="Copy permalink"
                     >
@@ -254,7 +290,9 @@ export function DiffContextRow({
                         </div>
                     </td>
                     <td
-                        className="d2h-split-code d2h-cntx"
+                        className={`d2h-split-code d2h-cntx ${
+                            rowSelected ? "d2h-split-selected" : ""
+                        }`}
                         onMouseEnter={() => setHovered("RIGHT")}
                     >
                         <div className="d2h-split-code-line">
@@ -272,10 +310,12 @@ export function DiffContextRow({
     return (
         <>
             <tr
+                data-new-line={lineNum}
+                data-old-line={lineNum}
                 id={id}
                 className={
                     `${showCommentButton ? "group" : ""}${
-                        highlighted ? "line-highlighted" : ""
+                        rowSelected ? "line-highlighted" : ""
                     }`.trim() || undefined
                 }
             >
@@ -283,9 +323,17 @@ export function DiffContextRow({
                     className={`d2h-code-linenumber d2h-cntx ${
                         showRangeIndicator ? "border-blue-400 border-l-4" : ""
                     }`}
-                    onMouseDown={() => onLineMouseDown?.(lineNum, "RIGHT")}
+                    onMouseDown={() =>
+                        onLineMouseDown?.(lineNum, "RIGHT", {
+                            oldLine: lineNum,
+                            newLine: lineNum,
+                        })
+                    }
                     onClick={(event) =>
-                        onLineSelect?.(lineNum, "RIGHT", event.shiftKey)
+                        onLineSelect?.(lineNum, "RIGHT", event.shiftKey, {
+                            oldLine: lineNum,
+                            newLine: lineNum,
+                        })
                     }
                     title="Copy permalink"
                 >

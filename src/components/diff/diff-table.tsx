@@ -24,6 +24,11 @@ export function DiffTable({
                 tr.line-highlighted td {
                     background-color: rgba(251, 146, 60, 0.2) !important;
                 }
+                /* Split view: selection highlight applies to one side's cells
+                   only (the side whose line is in the selected range). */
+                .d2h-split-table td.d2h-split-selected {
+                    background-color: rgba(251, 146, 60, 0.2) !important;
+                }
                 tr[id^="diff-"] {
                     scroll-margin-top: var(--diff-scroll-offset, 0px);
                 }
