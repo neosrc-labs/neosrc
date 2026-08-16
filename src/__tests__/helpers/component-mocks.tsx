@@ -60,15 +60,18 @@ export function mockCommentCard() {
         CommentCard: ({
             children,
             headerActions,
+            headerLeading,
             footer,
             userHref,
         }: {
             children?: ReactNode;
             headerActions?: ReactNode;
+            headerLeading?: ReactNode;
             footer?: ReactNode;
             userHref?: string;
         }) => (
             <div data-testid="comment-card" data-user-href={userHref}>
+                {headerLeading}
                 {headerActions}
                 <div data-testid="comment-body">{children}</div>
                 {footer}

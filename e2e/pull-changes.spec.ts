@@ -69,6 +69,9 @@ async function runReplyPromotionScenario(
     const parentText = `Parent comment ${Date.now()}`;
     const replyText = `Reply comment ${Date.now()}`;
     const editedReplyText = `${replyText} edited`;
+    const { data: me } = await new Octokit({
+        auth: GITHUB_TOKEN,
+    }).rest.users.getAuthenticated();
 
     await test.step("Add a parent comment", async () => {
         const line = fileDiff.locator("tr:has(td.d2h-ins)").first();
@@ -155,8 +158,6 @@ async function runReplyPromotionScenario(
         const response = await resolveResponse;
         expect(response.status()).toBe(200);
 
-        const octokit = new Octokit({ auth: GITHUB_TOKEN });
-        const { data: me } = await octokit.rest.users.getAuthenticated();
         const resolvedThread = fileDiff
             .locator('[id^="review-thread-"]')
             .filter({ hasText: /marked this conversation as resolved/ });
@@ -187,6 +188,51 @@ async function runReplyPromotionScenario(
             "Show thread should sit right-aligned within the banner's padding",
         ).toBeGreaterThanOrEqual(2);
         expect(gapFromRightEdge).toBeLessThanOrEqual(16);
+    });
+
+    await test.step("Collapse and re-expand the resolved thread", async () => {
+        // Expand from the banner.
+        await fileDiff.getByRole("button", { name: "Show thread" }).click();
+        const expandedThread = fileDiff
+            .locator('[id^="review-thread-"]')
+            .filter({ hasText: editedReplyText });
+        await expect(expandedThread.getByText(editedReplyText)).toBeVisible();
+
+        // Collapse lives in the parent card header, left of the action
+        // cluster (the role badge sits between it and edit/more options).
+        const collapse = expandedThread.getByRole("button", {
+            name: "Collapse",
+        });
+        await expect(collapse).toBeVisible();
+        const collapseBox = await collapse.boundingBox();
+        const moreBox = await expandedThread
+            .getByRole("button", { name: "More options" })
+            .boundingBox();
+        expect(
+            Math.abs((collapseBox?.y ?? 0) - (moreBox?.y ?? 0)),
+            "Collapse should sit in the same header row as the comment actions",
+        ).toBeLessThanOrEqual(4);
+        expect(
+            (collapseBox?.x ?? 0) + (collapseBox?.width ?? 0),
+            "Collapse should sit left of the header action cluster",
+        ).toBeLessThanOrEqual(moreBox?.x ?? 0);
+
+        // Collapse back to the banner.
+        await collapse.click();
+        await expect(
+            fileDiff.getByText(
+                `${me.login} marked this conversation as resolved`,
+            ),
+        ).toBeVisible();
+
+        // Re-expand still works.
+        await fileDiff.getByRole("button", { name: "Show thread" }).click();
+        await expect(
+            fileDiff
+                .locator('[id^="review-thread-"]')
+                .filter({ hasText: editedReplyText })
+                .getByText(editedReplyText),
+        ).toBeVisible();
     });
 }
 test.describe

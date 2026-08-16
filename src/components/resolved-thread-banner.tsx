@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface ResolvedThreadBannerProps {
     onShow: () => void;
@@ -33,6 +33,20 @@ interface ResolveButtonProps {
     onClick: () => void;
     isPending: boolean;
     isUnresolve?: boolean;
+}
+
+/** Collapse an expanded resolved thread back to its resolution banner. */
+export function CollapseButton({ onClick }: { onClick: () => void }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className="flex shrink-0 cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+        >
+            <ChevronUp size={14} />
+            Collapse
+        </button>
+    );
 }
 
 export function ResolveButton({
