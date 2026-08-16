@@ -1,4 +1,6 @@
 import type { DiffBlock } from "diff2html/lib/types";
+import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
+import type { FooterAction } from "../markdown/markdown-editor";
 
 export type DiffSide = "LEFT" | "RIGHT";
 
@@ -33,3 +35,26 @@ export interface GapExpansion {
 export type DiffRenderItem =
     | { type: "block"; block: DiffBlock }
     | ({ type: "gap" } & DiffGap);
+
+/** Comment-related props threaded through the diff table rows. */
+export interface DiffRowCommentProps {
+    activeComment: DiffCommentTarget | null;
+    onStartComment: ((ac: DiffCommentTarget | null) => void) | undefined;
+    pullNumber: number | string | undefined;
+    commentBody: string;
+    onCommentBodyChange: ((body: string) => void) | undefined;
+    footerActions?: FooterAction[];
+    commentPending: boolean;
+    commentError: boolean;
+    onCancelComment: (() => void) | undefined;
+    showComments: boolean;
+    showCommentButton: boolean;
+    commentDragRange: {
+        startLine: number;
+        endLine: number;
+        side: DiffSide;
+    } | null;
+    onCommentDragStart?: (line: number, side: DiffSide) => void;
+    pendingReviewId?: number | null;
+    permissionContext: PullRequestPermissionContext;
+}

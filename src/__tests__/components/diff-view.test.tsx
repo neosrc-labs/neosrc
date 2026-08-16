@@ -1508,4 +1508,133 @@ describe("DiffView split view", () => {
             }
         });
     });
+
+    describe("comments on expanded gap lines", () => {
+        beforeEach(() => {
+            mockUseFileContent.lines = ["line1", "line2"];
+            mockUseFileContent.isLoading = false;
+            mockUseFileContent.error = null;
+        });
+
+        it("unified: expanded lines offer a comment button anchored to the new side", () => {
+            const onStartComment = vi.fn();
+            mockParsedFile([mb(3, [mc("+line3", 3)])], { addedLines: 1 });
+
+            const { container } = renderDiffView({
+                view: "unified",
+                showCommentButton: true,
+                onStartComment,
+                expandAllContext: true,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            const gapRow = container.querySelector('tr[id$="R1"]')!;
+            const plus = gapRow.querySelector('[data-testid="square-plus"]')!;
+            expect(plus).toBeTruthy();
+
+            fireEvent.click(plus);
+            expect(onStartComment).toHaveBeenCalledWith({
+                type: "line",
+                line: 1,
+                side: "RIGHT",
+            });
+        });
+
+        it("split: expanded lines offer per-side buttons, both anchored to the new side", () => {
+            const onStartComment = vi.fn();
+            mockParsedFile([mb(3, [mc("+line3", 3)])], { addedLines: 1 });
+
+            const { container } = renderDiffView({
+                view: "split",
+                showCommentButton: true,
+                onStartComment,
+                expandAllContext: true,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            const row = container.querySelector('tr[id$="R1"]')!;
+            const cells = row.querySelectorAll("td");
+            const pluses = row.querySelectorAll('[data-testid="square-plus"]');
+            expect(pluses).toHaveLength(2);
+            const leftPlus = Array.from(pluses).find(
+                (p) => !p.closest("td")!.className.includes("d2h-split-new"),
+            )!;
+            const rightPlus = Array.from(pluses).find((p) => p !== leftPlus)!;
+
+            // Hover the left side: only the left button appears.
+            fireEvent.mouseEnter(cells[1]!);
+            expect(leftPlus.className).toContain("block");
+            expect(rightPlus.className).toContain("hidden");
+            fireEvent.click(leftPlus);
+            expect(onStartComment).toHaveBeenCalledWith({
+                type: "line",
+                line: 1,
+                side: "RIGHT",
+            });
+
+            // Hover the right side: only the right button appears.
+            fireEvent.mouseEnter(cells[3]!);
+            expect(leftPlus.className).toContain("hidden");
+            expect(rightPlus.className).toContain("block");
+            fireEvent.click(rightPlus);
+            expect(onStartComment).toHaveBeenLastCalledWith({
+                type: "line",
+                line: 1,
+                side: "RIGHT",
+            });
+        });
+
+        it("anchors comment threads under the expanded line", () => {
+            mockParsedFile([mb(3, [mc("+line3", 3)])], { addedLines: 1 });
+            const comments = makeMockComments([
+                { id: 5, line: 1, side: "RIGHT", path: "test.ts" },
+            ]);
+
+            renderDiffView({
+                view: "split",
+                showComments: true,
+                comments,
+                expandAllContext: true,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            const thread = screen.getByTestId("inline-comment-thread");
+            const threadRow = thread.closest("tr")!;
+            expect(threadRow.querySelector("td")!.colSpan).toBe(4);
+            expect(threadRow.previousElementSibling?.id.endsWith("R1")).toBe(
+                true,
+            );
+        });
+
+        it("opens the comment editor on an expanded line when active", () => {
+            mockParsedFile([mb(3, [mc("+line3", 3)])], { addedLines: 1 });
+
+            renderDiffView({
+                view: "split",
+                activeComment: { type: "line", line: 1, side: "RIGHT" },
+                expandAllContext: true,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            const editorRow = screen
+                .getByTestId("markdown-editor")
+                .closest("tr")!;
+            expect(editorRow.querySelector("td")!.colSpan).toBe(4);
+            expect(editorRow.previousElementSibling?.id.endsWith("R1")).toBe(
+                true,
+            );
+        });
+    });
 });

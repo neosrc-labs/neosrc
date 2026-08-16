@@ -29,6 +29,7 @@ import {
     buildSplitRows,
     createDiffRenderItems,
     getDiffLanguage,
+    isLastLineOfRange,
     parseDiffPatch,
     resolveDiffCommentAnchor,
 } from "./diff/model";
@@ -37,6 +38,7 @@ import type {
     DiffCommentTarget,
     DiffGap,
     DiffRenderItem,
+    DiffRowCommentProps,
     DiffSide,
     GapExpansion,
 } from "./diff/types";
@@ -307,29 +309,6 @@ export function DiffView({
     );
 }
 
-/** Comment-related props threaded through the diff table rows. */
-interface DiffRowCommentProps {
-    activeComment: DiffCommentTarget | null;
-    onStartComment: ((ac: DiffCommentTarget | null) => void) | undefined;
-    pullNumber: number | string | undefined;
-    commentBody: string;
-    onCommentBodyChange: ((body: string) => void) | undefined;
-    footerActions?: FooterAction[];
-    commentPending: boolean;
-    commentError: boolean;
-    onCancelComment: (() => void) | undefined;
-    showComments: boolean;
-    showCommentButton: boolean;
-    commentDragRange: {
-        startLine: number;
-        endLine: number;
-        side: "LEFT" | "RIGHT";
-    } | null;
-    onCommentDragStart?: (line: number, side: "LEFT" | "RIGHT") => void;
-    pendingReviewId?: number | null;
-    permissionContext: PullRequestPermissionContext;
-}
-
 /** Gap/navigation props shared by the diff table row components. */
 interface DiffRowNavigationProps {
     gapKey?: string;
@@ -375,12 +354,6 @@ interface SplitBlockRowsProps {
     onLineMouseDown?: (lineNum: number, side: string) => void;
     commentProps: DiffRowCommentProps;
 }
-
-const isLastLineOfRange = (
-    comment: ReviewComment,
-    positionMap: Map<number, DiffAnchor>,
-    line: number,
-) => (resolveDiffCommentAnchor(comment, positionMap)?.line ?? 0) === line;
 
 function UnifiedBlockRows({
     block,
@@ -1082,6 +1055,13 @@ function BlockRows({
             content={lineContent}
             id={fileHash ? `diff-${fileHash}R${lineNum}` : undefined}
             view={view}
+            fileHash={fileHash}
+            owner={owner}
+            repo={repo}
+            commentsByLine={commentsByLine}
+            positionMap={positionMap}
+            multiLineRanges={multiLineRanges}
+            commentProps={commentProps}
         />
     );
 
@@ -1249,6 +1229,10 @@ interface GapRowProps extends DiffRowNavigationProps {
     headSha: string | undefined;
     filename: string;
     view: DiffViewMode;
+    commentsByLine: Map<string, ReviewComment[]>;
+    positionMap: Map<number, DiffAnchor>;
+    multiLineRanges: Map<string, string[]>;
+    commentProps: DiffRowCommentProps;
 }
 
 function GapRow({
@@ -1265,6 +1249,10 @@ function GapRow({
     selectedRange,
     onLineSelect,
     onLineMouseDown,
+    commentsByLine,
+    positionMap,
+    multiLineRanges,
+    commentProps,
 }: GapRowProps) {
     const { lines, isLoading, error } = useFileContent({
         owner,
@@ -1349,6 +1337,13 @@ function GapRow({
                         onLineSelect={onLineSelect}
                         onLineMouseDown={onLineMouseDown}
                         view={view}
+                        fileHash={fileHash}
+                        owner={owner}
+                        repo={repo}
+                        commentsByLine={commentsByLine}
+                        positionMap={positionMap}
+                        multiLineRanges={multiLineRanges}
+                        commentProps={commentProps}
                     />
                 );
             })}
@@ -1446,6 +1441,10 @@ function DiffTableBody({
                             selectedRange={selectedRange}
                             onLineSelect={onLineSelect}
                             onLineMouseDown={onLineMouseDown}
+                            commentsByLine={commentsByLine}
+                            positionMap={positionMap}
+                            multiLineRanges={multiLineRanges}
+                            commentProps={commentProps}
                         />
                     );
                 }
