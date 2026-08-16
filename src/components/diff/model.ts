@@ -57,13 +57,29 @@ export function getLastNewLine(block: DiffBlock): number {
     return last;
 }
 
+export function getLastOldLine(block: DiffBlock): number {
+    let last = block.oldStartLine;
+    for (const line of block.lines) {
+        if (line.oldNumber !== undefined) last = line.oldNumber;
+    }
+    return last;
+}
+
 export function computeBetweenGap(
     prevBlock: DiffBlock,
     curBlock: DiffBlock,
 ): DiffGap | null {
     const gapStart = getLastNewLine(prevBlock) + 1;
     const gapEnd = curBlock.newStartLine - 1;
-    return gapStart <= gapEnd ? { startLine: gapStart, endLine: gapEnd } : null;
+    if (gapStart > gapEnd) return null;
+    // Between hunks both files hold the same lines, so the old/new numbering
+    // diverges by the cumulative diff delta from the previous hunk.
+    const delta = getLastOldLine(prevBlock) - getLastNewLine(prevBlock);
+    return {
+        startLine: gapStart,
+        endLine: gapEnd,
+        oldStartLine: gapStart + delta,
+    };
 }
 
 export function createDiffRenderItems(
@@ -79,6 +95,8 @@ export function createDiffRenderItems(
                 type: "gap",
                 startLine: 1,
                 endLine: block.newStartLine - 1,
+                // Nothing above the first hunk differs between the files.
+                oldStartLine: 1,
             });
         }
         if (i > 0) {
@@ -90,10 +108,13 @@ export function createDiffRenderItems(
         }
         items.push({ type: "block", block });
         if (i === parsed.blocks.length - 1) {
+            const newStart = getLastNewLine(block) + 1;
             items.push({
                 type: "gap",
-                startLine: getLastNewLine(block) + 1,
+                startLine: newStart,
                 endLine: -1,
+                oldStartLine:
+                    newStart + (getLastOldLine(block) - getLastNewLine(block)),
             });
         }
     }

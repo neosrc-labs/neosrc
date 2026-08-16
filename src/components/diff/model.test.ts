@@ -1,6 +1,10 @@
-import type { DiffBlock, DiffLine } from "diff2html/lib/types";
+import type { DiffBlock, DiffFile, DiffLine } from "diff2html/lib/types";
 import { describe, expect, it } from "vitest";
-import { buildSplitRows } from "./model";
+import {
+    buildSplitRows,
+    computeBetweenGap,
+    createDiffRenderItems,
+} from "./model";
 
 function ctx(content: string, num: number): DiffLine {
     return {
@@ -117,5 +121,81 @@ describe("buildSplitRows", () => {
             "context",
             "paired",
         ]);
+    });
+});
+
+describe("gap old-line numbering", () => {
+    // Block 1: old 1-5 / new 1-6 (one insertion at the end).
+    const block1: DiffBlock = {
+        oldStartLine: 1,
+        newStartLine: 1,
+        header: "@@ -1,5 +1,6 @@",
+        lines: [
+            ctx("a", 1),
+            ctx("b", 2),
+            ctx("c", 3),
+            ctx("d", 4),
+            ctx("e", 5),
+            ins("x", 6),
+        ],
+    };
+    // Block 2: new 10-11 / old 9-10 (delta -1 carried from block 1).
+    const block2: DiffBlock = {
+        oldStartLine: 9,
+        newStartLine: 10,
+        header: "@@ -9,2 +10,2 @@",
+        lines: [ctx("f", 9), ctx("g", 10)],
+    };
+
+    it("maps a middle gap to the old side by the previous hunk's delta", () => {
+        const gap = computeBetweenGap(block1, block2);
+        // New gap 7-9 sits between the hunks; block 1 ends at old 5 / new 6,
+        // so the old numbering trails by one.
+        expect(gap).toEqual({ startLine: 7, endLine: 9, oldStartLine: 6 });
+    });
+
+    it("keeps the old line constant within the gap", () => {
+        const items = createDiffRenderItems({
+            blocks: [block1, block2],
+        } as unknown as DiffFile);
+        const gap = items.find(
+            (item): item is Extract<typeof item, { type: "gap" }> =>
+                item.type === "gap" &&
+                item.startLine === 7 &&
+                item.endLine === 9,
+        );
+        expect(gap?.oldStartLine).toBe(6);
+    });
+
+    it("numbers leading gaps identically on both sides", () => {
+        const items = createDiffRenderItems({
+            blocks: [
+                {
+                    oldStartLine: 40,
+                    newStartLine: 40,
+                    header: "@@ -40,1 +40,1 @@",
+                    lines: [ctx("h", 40)],
+                } as DiffBlock,
+            ],
+        } as unknown as DiffFile);
+        expect(items[0]).toEqual({
+            type: "gap",
+            startLine: 1,
+            endLine: 39,
+            oldStartLine: 1,
+        });
+    });
+
+    it("applies the last hunk's delta to the trailing gap", () => {
+        const items = createDiffRenderItems({
+            blocks: [block1],
+        } as unknown as DiffFile);
+        const trailing = items[items.length - 1];
+        expect(trailing).toEqual({
+            type: "gap",
+            startLine: 7,
+            endLine: -1,
+            oldStartLine: 6,
+        });
     });
 });
