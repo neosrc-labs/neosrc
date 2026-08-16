@@ -155,7 +155,16 @@ async function ensureGapFixtureContent(
         path: GAP_FIXTURE_PATH,
         ref: branch,
     });
-    if (Array.isArray(data) || data.type !== "file") {
+    // A 422 on the seed write can also be a stale-sha conflict rather than a
+    // concurrent seed; only accept the file when its content is canonical, so
+    // the branch diff is never built against unrelated base content.
+    if (
+        Array.isArray(data) ||
+        data.type !== "file" ||
+        !data.content ||
+        Buffer.from(data.content, "base64").toString("utf8").trimEnd() !==
+            canonical
+    ) {
         throw new Error("Could not read the gap fixture file");
     }
     return data.sha;
@@ -222,9 +231,7 @@ export async function createTestChangesPullRequest(): Promise<TestChangesPullReq
             (entry) =>
                 entry.name.toLowerCase() === "readme.md" &&
                 entry.path !== GAP_FIXTURE_PATH,
-        ) ??
-        rootFiles.find((entry) => entry.path !== GAP_FIXTURE_PATH) ??
-        rootFiles[0];
+        ) ?? rootFiles.find((entry) => entry.path !== GAP_FIXTURE_PATH);
 
     if (existingFile?.type !== "file") {
         throw new Error(
