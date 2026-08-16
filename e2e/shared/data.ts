@@ -270,7 +270,8 @@ export async function createTestChangesPullRequest(): Promise<TestChangesPullReq
     });
 
     // Two hunks in one file: an insertion at new line 3 and a replacement at
-    // new line 36, leaving a collapsed gap (new 5-34 / old 4-33) to expand.
+    // old line 35, leaving a collapsed gap (new 7-32 / old 6-31) to expand.
+    // The trailing newline keeps the final line untouched by the diff.
     const gapNewLines = gapFixtureOldLines();
     gapNewLines.splice(2, 0, "INSERTED line");
     gapNewLines[35] = "Line 35 MODIFIED";
@@ -279,7 +280,7 @@ export async function createTestChangesPullRequest(): Promise<TestChangesPullReq
         repo: REPO,
         path: GAP_FIXTURE_PATH,
         message: commitMessage,
-        content: Buffer.from(gapNewLines.join("\n")).toString("base64"),
+        content: Buffer.from(`${gapNewLines.join("\n")}\n`).toString("base64"),
         branch: branchName,
         sha: gapFixtureSha,
     });
