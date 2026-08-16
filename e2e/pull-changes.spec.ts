@@ -647,6 +647,19 @@ async function runNewSideCommentScenario(
             .filter({ hasText: commentText });
         await expect(thread).toBeVisible({ timeout: 15_000 });
     });
+
+    await test.step("Verify the comment card is capped at 800px", async () => {
+        const card = fileDiff
+            .locator('[class*="max-w-[800px]"]')
+            .filter({ hasText: commentText })
+            .first();
+        await expect(card).toBeVisible();
+        const box = await card.boundingBox();
+        expect(
+            box?.width ?? 0,
+            "comment card should not exceed the 800px reading width",
+        ).toBeLessThanOrEqual(800);
+    });
 }
 
 async function runOldSideCommentScenario(
