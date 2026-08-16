@@ -73,13 +73,13 @@ export function CommentCard({
     return (
         <div
             id={id}
-            className={
+            className={`max-w-[800px] ${
                 variant === "default"
                     ? "relative border-b-1 border-b-gray-200 border-solid bg-surface-elevated dark:border-b-zinc-700"
                     : variant === "standalone"
                       ? "relative rounded border-1 border-border border-solid bg-surface-elevated"
                       : "relative bg-surface-secondary dark:bg-zinc-950"
-            }
+            }`}
         >
             {hideAvatar && tailDirection === "left" && (
                 <svg

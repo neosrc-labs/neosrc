@@ -286,7 +286,7 @@ export function PullRequestDescriptionSection({
                 {(pullRequest) => {
                     const displayBody = savedBody ?? pullRequest.body;
                     return (
-                        <div className="rounded-lg border border-border bg-surface-elevated">
+                        <div className="max-w-[800px] rounded-lg border border-border bg-surface-elevated">
                             <div className="flex items-center justify-between rounded-t-lg border-border border-b bg-surface-secondary px-4 py-2">
                                 <h3 className="text-text-label">Description</h3>
                                 <div className="flex items-center gap-0.5">
