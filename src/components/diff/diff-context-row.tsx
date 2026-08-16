@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
 import type { ReviewComment } from "~/server/github";
 import type { DiffViewMode } from "~/utils/diff-view";
@@ -170,16 +170,42 @@ export function DiffContextRow({
           )
         : [];
 
-    const contentColSpan = view === "split" ? 4 : 2;
+    // Context-line comments anchor to the new side (like unified view), so
+    // in split view they align with the new code column (spacer cells occupy
+    // the leading columns); in unified view the line numbers are an absolute
+    // overlay, so the comment is inset by the code column's 8em padding.
+    const threadCells = (children: ReactNode) =>
+        view === "split" ? (
+            <>
+                <td className="d2h-empty-side" />
+                <td className="d2h-empty-side" />
+                <td className="d2h-empty-side" />
+                <td className="p-0 pl-[0.75em] dark:bg-zinc-950">{children}</td>
+            </>
+        ) : (
+            <td colSpan={2} className="p-0 pl-[8em] dark:bg-zinc-950">
+                {children}
+            </td>
+        );
+    const editorCells = (children: ReactNode) =>
+        view === "split" ? (
+            <>
+                <td className="d2h-empty-side" />
+                <td className="d2h-empty-side" />
+                <td className="d2h-empty-side" />
+                <td className="border-border border-t p-0">{children}</td>
+            </>
+        ) : (
+            <td colSpan={2} className="border-border border-t p-0 pl-[8em]">
+                {children}
+            </td>
+        );
 
     const attachments = (
         <>
             {threads.map((thread) => (
                 <tr key={`thread-${thread.parent.id}`}>
-                    <td
-                        colSpan={contentColSpan}
-                        className="p-0 dark:bg-zinc-950"
-                    >
+                    {threadCells(
                         <InlineCommentThread
                             parentComment={thread.parent}
                             replies={thread.replies}
@@ -190,16 +216,13 @@ export function DiffContextRow({
                             permissionContext={
                                 permissionContext as PullRequestPermissionContext
                             }
-                        />
-                    </td>
+                        />,
+                    )}
                 </tr>
             ))}
             {isActive && (
                 <tr>
-                    <td
-                        colSpan={contentColSpan}
-                        className="border-border border-t p-2"
-                    >
+                    {editorCells(
                         <DiffLineCommentEditor
                             value={commentBody ?? ""}
                             onChange={onCommentBodyChange ?? (() => {})}
@@ -209,8 +232,8 @@ export function DiffContextRow({
                             isError={commentError ?? false}
                             owner={owner as string}
                             repo={repo as string}
-                        />
-                    </td>
+                        />,
+                    )}
                 </tr>
             )}
         </>

@@ -23,7 +23,7 @@ export function DiffLineCommentEditor({
     repo: string;
 }) {
     return (
-        <>
+        <div className="max-w-[800px] p-2">
             <MarkdownEditor
                 autoFocus
                 disabled={isPending}
@@ -40,6 +40,6 @@ export function DiffLineCommentEditor({
                     Failed to post comment. Please try again.
                 </p>
             )}
-        </>
+        </div>
     );
 }

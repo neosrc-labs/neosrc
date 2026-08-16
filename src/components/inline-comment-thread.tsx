@@ -270,7 +270,10 @@ export function InlineCommentThread({
     }
 
     return (
-        <div className="font-sans" id={`review-thread-${parentComment.id}`}>
+        <div
+            className="max-w-[800px] font-sans bg-surface my-2 rounded-lg border border-border overflow-hidden"
+            id={`review-thread-${parentComment.id}`}
+        >
             <ReviewCommentItem
                 owner={owner}
                 repo={repo}
@@ -375,7 +378,7 @@ export function InlineCommentThread({
                         placeholder="Write a reply..."
                     />
                 ) : (
-                    <div className="flex w-full items-center gap-2 px-6 py-2">
+                    <div className="flex w-full items-center gap-2 p-2">
                         <div className="min-w-0 flex-1">
                             <ReplyTextboxButton
                                 onClick={() => setShowReplyForm(true)}

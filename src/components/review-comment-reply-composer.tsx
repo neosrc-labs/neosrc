@@ -26,7 +26,7 @@ export function ReviewCommentReplyComposer({
     placeholder,
 }: ReviewCommentReplyComposerProps) {
     return (
-        <div className="p-2">
+        <div className="max-w-[800px] p-2">
             <MarkdownEditor
                 autoFocus
                 disabled={isPending}

@@ -1402,14 +1402,14 @@ describe("DiffView split view", () => {
             expect(plus.className).toContain("block");
         });
 
-        it("opens the comment editor under the row when either side is active", () => {
+        it("opens the comment editor under the row aligned with the left side", () => {
             const lines = [mc("-old", undefined, 1), mc("+new", 1)];
             mockParsedFile([mb(1, lines)], {
                 addedLines: 1,
                 deletedLines: 1,
             });
 
-            const { container } = renderDiffView({
+            renderDiffView({
                 view: "split",
                 activeComment: { type: "line", line: 1, side: "LEFT" },
             });
@@ -1417,13 +1417,42 @@ describe("DiffView split view", () => {
             const editorRow = screen
                 .getByTestId("markdown-editor")
                 .closest("tr")!;
-            expect(editorRow.querySelector("td")!.colSpan).toBe(4);
-            void container;
+            const cells = editorRow.querySelectorAll("td");
+            // Spacer for the old line-number column, then the editor
+            // spanning from the old code column to the end of the table.
+            expect(cells).toHaveLength(2);
+            expect(cells[0]!.className).toContain("d2h-empty-side");
+            expect(cells[1]!.colSpan).toBe(3);
+        });
+
+        it("opens the comment editor under the row aligned with the right side", () => {
+            const lines = [mc("-old", undefined, 1), mc("+new", 1)];
+            mockParsedFile([mb(1, lines)], {
+                addedLines: 1,
+                deletedLines: 1,
+            });
+
+            renderDiffView({
+                view: "split",
+                activeComment: { type: "line", line: 1, side: "RIGHT" },
+            });
+
+            const editorRow = screen
+                .getByTestId("markdown-editor")
+                .closest("tr")!;
+            const cells = editorRow.querySelectorAll("td");
+            // Spacers for the three leading columns; the editor occupies
+            // the new code column only.
+            expect(cells).toHaveLength(4);
+            for (let i = 0; i < 3; i++) {
+                expect(cells[i]!.className).toContain("d2h-empty-side");
+            }
+            expect(cells[3]!.colSpan).toBe(1);
         });
     });
 
     describe("comments display", () => {
-        it("renders inline comment threads spanning all four columns", () => {
+        it("renders right-side comment threads aligned with the new code column", () => {
             const lines = [mc("+added", 1)];
             mockParsedFile([mb(1, lines)], { addedLines: 1 });
 
@@ -1435,7 +1464,15 @@ describe("DiffView split view", () => {
 
             const thread = screen.getByTestId("inline-comment-thread");
             const threadRow = thread.closest("tr")!;
-            expect(threadRow.querySelector("td")!.colSpan).toBe(4);
+            const cells = threadRow.querySelectorAll("td");
+            // Spacers for old-ln, old-code and new-ln; the thread sits in
+            // the new code column only.
+            expect(cells).toHaveLength(4);
+            for (let i = 0; i < 3; i++) {
+                expect(cells[i]!.className).toContain("d2h-empty-side");
+            }
+            // The comment cell carries the added line's tint.
+            expect(cells[3]!.className).toContain("d2h-ins");
             // Anchored below the added line row
             expect(threadRow.previousElementSibling?.id.endsWith("R1")).toBe(
                 true,
@@ -1717,7 +1754,13 @@ describe("DiffView split view", () => {
 
             const thread = screen.getByTestId("inline-comment-thread");
             const threadRow = thread.closest("tr")!;
-            expect(threadRow.querySelector("td")!.colSpan).toBe(4);
+            const cells = threadRow.querySelectorAll("td");
+            // Gap lines are context lines: the thread sits in the new code
+            // column behind three spacer cells.
+            expect(cells).toHaveLength(4);
+            for (let i = 0; i < 3; i++) {
+                expect(cells[i]!.className).toContain("d2h-empty-side");
+            }
             expect(threadRow.previousElementSibling?.id.endsWith("R1")).toBe(
                 true,
             );
@@ -1739,7 +1782,11 @@ describe("DiffView split view", () => {
             const editorRow = screen
                 .getByTestId("markdown-editor")
                 .closest("tr")!;
-            expect(editorRow.querySelector("td")!.colSpan).toBe(4);
+            const cells = editorRow.querySelectorAll("td");
+            expect(cells).toHaveLength(4);
+            for (let i = 0; i < 3; i++) {
+                expect(cells[i]!.className).toContain("d2h-empty-side");
+            }
             expect(editorRow.previousElementSibling?.id.endsWith("R1")).toBe(
                 true,
             );
