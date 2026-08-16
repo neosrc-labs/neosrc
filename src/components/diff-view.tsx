@@ -603,7 +603,7 @@ function UnifiedBlockRows({
                                     <tr key={`thread-${thread.parent.id}`}>
                                         <td
                                             colSpan={2}
-                                            className="p-0 dark:bg-zinc-950"
+                                            className={`p-0 pl-[8em] ${typeClass}`}
                                         >
                                             <InlineCommentThread
                                                 parentComment={thread.parent}
@@ -625,7 +625,7 @@ function UnifiedBlockRows({
                             <tr>
                                 <td
                                     colSpan={2}
-                                    className="border-border border-t p-2"
+                                    className="border-border border-t p-0 pl-[8em]"
                                 >
                                     <DiffLineCommentEditor
                                         value={commentBody}
@@ -646,6 +646,224 @@ function UnifiedBlockRows({
                 );
             })}
         </>
+    );
+}
+
+// Per-side comment/selection state for a (line, side) anchor. In split
+// view every row has up to two anchors (old + new), each with its own
+// comment button, range indicator and permalink.
+function buildSplitSideState(
+    commentLine: number,
+    side: DiffSide,
+    {
+        commentsByLine,
+        activeComment,
+        commentDragRange,
+        multiLineRanges,
+    }: {
+        commentsByLine: Map<string, ReviewComment[]>;
+        activeComment: DiffCommentTarget | null;
+        commentDragRange: {
+            startLine: number;
+            endLine: number;
+            side: DiffSide;
+        } | null;
+        multiLineRanges: Map<string, string[]>;
+    },
+) {
+    const lineComments = commentsByLine.get(`${commentLine}-${side}`) ?? [];
+    const isActive =
+        activeComment?.type === "line" &&
+        activeComment.line === commentLine &&
+        activeComment.side === side;
+    const isInActiveRange =
+        (activeComment?.type === "line" &&
+            activeComment.startLine != null &&
+            activeComment.side === side &&
+            commentLine >= activeComment.startLine &&
+            commentLine <= activeComment.line) ||
+        (commentDragRange != null &&
+            commentDragRange.side === side &&
+            commentLine >= commentDragRange.startLine &&
+            commentLine <= commentDragRange.endLine);
+    const hasMultiLineRange =
+        (multiLineRanges.get(`${commentLine}-${side}`)?.length ?? 0) > 0;
+    return {
+        lineComments,
+        isActive,
+        showRangeIndicator: isInActiveRange || hasMultiLineRange,
+    };
+}
+
+// Comment anchors: context lines comment on the new side (like unified
+// view); changed lines anchor to their own side. The tint class mirrors the
+// anchored line's code-cell background so the comment area reads as part of
+// that line.
+function buildSplitRowAnchors({
+    isContext,
+    oldNum,
+    newNum,
+    oldCodeClass,
+    newCodeClass,
+}: {
+    isContext: boolean;
+    oldNum?: number | null;
+    newNum?: number | null;
+    oldCodeClass: string;
+    newCodeClass: string;
+}): Array<{ line: number; side: DiffSide; typeClass: string }> {
+    const anchors: Array<{
+        line: number;
+        side: DiffSide;
+        typeClass: string;
+    }> = [];
+    if (isContext && newNum != null) {
+        anchors.push({ line: newNum, side: "RIGHT", typeClass: newCodeClass });
+    } else {
+        if (oldNum != null)
+            anchors.push({
+                line: oldNum,
+                side: "LEFT",
+                typeClass: oldCodeClass,
+            });
+        if (newNum != null)
+            anchors.push({
+                line: newNum,
+                side: "RIGHT",
+                typeClass: newCodeClass,
+            });
+    }
+    return anchors;
+}
+
+// Inline comment threads for every anchor of a split row (old + new side),
+// one row per thread. The comment spans from the anchored side's code column
+// to the end of the table (spacer cells occupy the leading columns).
+function renderSplitAttachmentRows({
+    anchors,
+    commentsByLine,
+    positionMap,
+    owner,
+    repo,
+    pullNumber,
+    pendingReviewId,
+    permissionContext,
+}: {
+    anchors: Array<{ line: number; side: DiffSide; typeClass: string }>;
+    commentsByLine: Map<string, ReviewComment[]>;
+    positionMap: Map<number, DiffAnchor>;
+    owner?: string;
+    repo?: string;
+    pullNumber?: number | string;
+    pendingReviewId?: number | null;
+    permissionContext: PullRequestPermissionContext;
+}) {
+    const rows: ReactNode[] = [];
+    const seenThreads = new Set<number>();
+    for (const { line, side, typeClass } of anchors) {
+        const lineComments = commentsByLine.get(`${line}-${side}`) ?? [];
+        for (const thread of groupReviewCommentThreads(lineComments)) {
+            if (!isLastLineOfRange(thread.parent, positionMap, line)) continue;
+            if (seenThreads.has(thread.parent.id)) continue;
+            seenThreads.add(thread.parent.id);
+            rows.push(
+                <tr key={`thread-${thread.parent.id}`}>
+                    {side === "LEFT" ? (
+                        <>
+                            <td className="d2h-empty-side" />
+                            <td
+                                colSpan={3}
+                                className={`p-0 pl-[0.75em] ${typeClass}`}
+                            >
+                                <InlineCommentThread
+                                    parentComment={thread.parent}
+                                    replies={thread.replies}
+                                    owner={owner as string}
+                                    repo={repo as string}
+                                    number={Number(pullNumber ?? 0)}
+                                    pendingReviewId={pendingReviewId}
+                                    permissionContext={permissionContext}
+                                />
+                            </td>
+                        </>
+                    ) : (
+                        <>
+                            <td className="d2h-empty-side" />
+                            <td className="d2h-empty-side" />
+                            <td className="d2h-empty-side" />
+                            <td className={`p-0 pl-[0.75em] ${typeClass}`}>
+                                <InlineCommentThread
+                                    parentComment={thread.parent}
+                                    replies={thread.replies}
+                                    owner={owner as string}
+                                    repo={repo as string}
+                                    number={Number(pullNumber ?? 0)}
+                                    pendingReviewId={pendingReviewId}
+                                    permissionContext={permissionContext}
+                                />
+                            </td>
+                        </>
+                    )}
+                </tr>,
+            );
+        }
+    }
+    return rows;
+}
+
+// The in-line comment editor row for a split row: spacer cells occupy the
+// leading columns so the editor aligns with the anchored side's code column.
+function renderSplitEditorRow({
+    side,
+    commentBody,
+    onCommentBodyChange,
+    onCancelComment,
+    footerActions,
+    commentPending,
+    commentError,
+    owner,
+    repo,
+}: {
+    side: DiffSide;
+    commentBody?: string;
+    onCommentBodyChange?: (value: string) => void;
+    onCancelComment?: () => void;
+    footerActions?: FooterAction[];
+    commentPending?: boolean;
+    commentError?: boolean;
+    owner?: string;
+    repo?: string;
+}) {
+    const editor = (
+        <DiffLineCommentEditor
+            value={commentBody ?? ""}
+            onChange={onCommentBodyChange ?? (() => {})}
+            onCancel={onCancelComment ?? (() => {})}
+            footerActions={footerActions}
+            isPending={commentPending ?? false}
+            isError={commentError ?? false}
+            owner={owner ?? ""}
+            repo={repo ?? ""}
+        />
+    );
+    return (
+        <tr>
+            {side === "LEFT" ? (
+                <>
+                    <td className="d2h-empty-side" />
+                    <td colSpan={3} className="border-border border-t p-0">
+                        {editor}
+                    </td>
+                </>
+            ) : (
+                <>
+                    <td className="d2h-empty-side" />
+                    <td className="d2h-empty-side" />
+                    <td className="d2h-empty-side" />
+                    <td className="border-border border-t p-0">{editor}</td>
+                </>
+            )}
+        </tr>
     );
 }
 
@@ -699,34 +917,6 @@ function SplitBlockRows({
         [onLineSelect],
     );
 
-    // Per-side comment/selection state for a (line, side) anchor. In split
-    // view every row has up to two anchors (old + new), each with its own
-    // comment button, range indicator and permalink.
-    const buildSideState = (commentLine: number, side: DiffSide) => {
-        const lineComments = commentsByLine.get(`${commentLine}-${side}`) ?? [];
-        const isActive =
-            activeComment?.type === "line" &&
-            activeComment.line === commentLine &&
-            activeComment.side === side;
-        const isInActiveRange =
-            (activeComment?.type === "line" &&
-                activeComment.startLine != null &&
-                activeComment.side === side &&
-                commentLine >= activeComment.startLine &&
-                commentLine <= activeComment.line) ||
-            (commentDragRange != null &&
-                commentDragRange.side === side &&
-                commentLine >= commentDragRange.startLine &&
-                commentLine <= commentDragRange.endLine);
-        const hasMultiLineRange =
-            (multiLineRanges.get(`${commentLine}-${side}`)?.length ?? 0) > 0;
-        return {
-            lineComments,
-            isActive,
-            showRangeIndicator: isInActiveRange || hasMultiLineRange,
-        };
-    };
-
     const renderPlusButton = (
         visible: boolean,
         commentLine: number,
@@ -768,40 +958,6 @@ function SplitBlockRows({
         />
     );
 
-    // Inline comment threads for every anchor of a split row (old + new
-    // side), one row per thread spanning the full table width.
-    const renderAttachmentRows = (
-        anchors: Array<{ line: number; side: DiffSide }>,
-    ) => {
-        const rows: ReactNode[] = [];
-        const seenThreads = new Set<number>();
-        for (const { line, side } of anchors) {
-            const lineComments = commentsByLine.get(`${line}-${side}`) ?? [];
-            for (const thread of groupReviewCommentThreads(lineComments)) {
-                if (!isLastLineOfRange(thread.parent, positionMap, line))
-                    continue;
-                if (seenThreads.has(thread.parent.id)) continue;
-                seenThreads.add(thread.parent.id);
-                rows.push(
-                    <tr key={`thread-${thread.parent.id}`}>
-                        <td colSpan={4} className="p-0 dark:bg-zinc-950">
-                            <InlineCommentThread
-                                parentComment={thread.parent}
-                                replies={thread.replies}
-                                owner={owner as string}
-                                repo={repo as string}
-                                number={Number(pullNumber ?? 0)}
-                                pendingReviewId={pendingReviewId}
-                                permissionContext={permissionContext}
-                            />
-                        </td>
-                    </tr>,
-                );
-            }
-        }
-        return rows;
-    };
-
     const renderSplitRow = (row: SplitRow) => {
         const oldLine =
             row.kind === "context"
@@ -826,9 +982,24 @@ function SplitBlockRows({
         const oldContent = oldLine ? oldLine.content.slice(1) : "";
         const newContent = newLine ? newLine.content.slice(1) : "";
 
-        const oldState = oldNum != null ? buildSideState(oldNum, "LEFT") : null;
+        const oldState =
+            oldNum != null
+                ? buildSplitSideState(oldNum, "LEFT", {
+                      commentsByLine,
+                      activeComment,
+                      commentDragRange,
+                      multiLineRanges,
+                  })
+                : null;
         const newState =
-            newNum != null ? buildSideState(newNum, "RIGHT") : null;
+            newNum != null
+                ? buildSplitSideState(newNum, "RIGHT", {
+                      commentsByLine,
+                      activeComment,
+                      commentDragRange,
+                      multiLineRanges,
+                  })
+                : null;
 
         const isRowActive =
             (oldState?.isActive ?? false) || (newState?.isActive ?? false);
@@ -875,15 +1046,13 @@ function SplitBlockRows({
               ? "d2h-ins"
               : "d2h-cntx";
 
-        // Comment anchors: context lines comment on the new side (like
-        // unified view); changed lines anchor to their own side.
-        const anchors: Array<{ line: number; side: DiffSide }> = [];
-        if (isContext && newNum != null) {
-            anchors.push({ line: newNum, side: "RIGHT" });
-        } else {
-            if (oldNum != null) anchors.push({ line: oldNum, side: "LEFT" });
-            if (newNum != null) anchors.push({ line: newNum, side: "RIGHT" });
-        }
+        const anchors = buildSplitRowAnchors({
+            isContext,
+            oldNum,
+            newNum,
+            oldCodeClass,
+            newCodeClass,
+        });
 
         const rowKey =
             row.kind === "context"
@@ -1000,23 +1169,32 @@ function SplitBlockRows({
                         </div>
                     </td>
                 </DiffLineRow>
-                {showComments && renderAttachmentRows(anchors)}
-                {isRowActive && (
-                    <tr>
-                        <td colSpan={4} className="border-border border-t p-2">
-                            <DiffLineCommentEditor
-                                value={commentBody}
-                                onChange={onCommentBodyChange ?? (() => {})}
-                                onCancel={onCancelComment ?? (() => {})}
-                                footerActions={footerActions}
-                                isPending={commentPending}
-                                isError={commentError}
-                                owner={owner as string}
-                                repo={repo as string}
-                            />
-                        </td>
-                    </tr>
-                )}
+                {showComments &&
+                    renderSplitAttachmentRows({
+                        anchors,
+                        commentsByLine,
+                        positionMap,
+                        owner,
+                        repo,
+                        pullNumber,
+                        pendingReviewId,
+                        permissionContext,
+                    })}
+                {isRowActive &&
+                    renderSplitEditorRow({
+                        side:
+                            activeComment?.type === "line"
+                                ? activeComment.side
+                                : "RIGHT",
+                        commentBody,
+                        onCommentBodyChange,
+                        onCancelComment,
+                        footerActions,
+                        commentPending,
+                        commentError,
+                        owner,
+                        repo,
+                    })}
             </Fragment>
         );
     };

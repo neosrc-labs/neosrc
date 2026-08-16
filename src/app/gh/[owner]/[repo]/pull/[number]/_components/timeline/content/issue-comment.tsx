@@ -109,7 +109,7 @@ export function IssueCommentContent({
 
     if (isMinimized) {
         return (
-            <div className="/50 rounded-lg border border-border bg-surface-secondary p-3">
+            <div className="max-w-[800px] rounded-lg border border-border bg-surface-secondary p-3">
                 <div className="flex items-center justify-between">
                     <p className="text-sm text-text-tertiary">
                         A comment by{" "}

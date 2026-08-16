@@ -659,6 +659,20 @@ async function runNewSideCommentScenario(
             box?.width ?? 0,
             "comment card should not exceed the 800px reading width",
         ).toBeLessThanOrEqual(800);
+
+        // The reply affordance must sit inside the comment card's column
+        // rather than stretching across the diff table.
+        const thread = fileDiff
+            .locator('[id^="review-thread-"]')
+            .filter({ hasText: commentText });
+        const reply = thread.getByRole("button", { name: "Reply..." });
+        await expect(reply).toBeVisible();
+        const replyBox = await reply.boundingBox();
+        expect(replyBox?.x ?? 0).toBeGreaterThanOrEqual(box?.x ?? 0);
+        expect(
+            (replyBox?.x ?? 0) + (replyBox?.width ?? 0),
+            "reply button should not extend past the comment card",
+        ).toBeLessThanOrEqual((box?.x ?? 0) + 800);
     });
 }
 
