@@ -3,9 +3,37 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import {
     createTestChangesPullRequest,
+    GAP_FIXTURE_PATH,
     type TestChangesPullRequest,
 } from "./shared/data";
 import { GITHUB_TOKEN, gotoChanges, OWNER, REPO } from "./shared/helpers";
+
+/** Switch every file diff to the split view and wait for the toggle to stick. */
+async function setSplitView(page: Page) {
+    const toggle = page.locator('fieldset[aria-label="Diff view"]');
+    await toggle.getByRole("button", { name: "Split", exact: true }).click();
+    await expect(
+        toggle.getByRole("button", { name: "Split", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+}
+
+/**
+ * A modified file with a single 1:1 replacement (it has a paired deletion
+ * and insertion row, so both sides exist for commenting). The multi-hunk gap
+ * fixture is avoided here because its first changed row is an unpaired
+ * insertion without an old side.
+ */
+function findCommentFile(
+    files: TestChangesPullRequest["files"],
+): TestChangesPullRequest["files"][number] | undefined {
+    return (
+        files.find(
+            (file) =>
+                file.status === "modified" &&
+                file.filename !== GAP_FIXTURE_PATH,
+        ) ?? files.find((file) => file.status === "modified")
+    );
+}
 
 async function runReplyPromotionScenario(
     page: Page,
@@ -415,4 +443,375 @@ test.describe
         }) => {
             await runReplyPromotionScenario(page, testPullRequest);
         });
+
+        test("should toggle between unified and split diff views", async ({
+            page,
+        }) => {
+            await runToggleViewScenario(page, testPullRequest);
+        });
+        test("should render added files with an empty old side in split view", async ({
+            page,
+        }) => {
+            await runAddedFileSplitScenario(page, testPullRequest);
+        });
+        test("should render modified lines paired across sides in split view", async ({
+            page,
+        }) => {
+            await runPairedRowSplitScenario(page, testPullRequest);
+        });
+        test("should add a comment in split view from the new side", async ({
+            page,
+        }) => {
+            await runNewSideCommentScenario(page, testPullRequest);
+        });
+        test("should add a comment in split view from the old side", async ({
+            page,
+        }) => {
+            await runOldSideCommentScenario(page, testPullRequest);
+        });
+        test("should drag a multi-line comment range in split view", async ({
+            page,
+        }) => {
+            await runDragRangeCommentScenario(page, testPullRequest);
+        });
+        test("should expand a collapsed gap in split view with matching old numbers", async ({
+            page,
+        }) => {
+            await runGapExpansionScenario(page, testPullRequest);
+        });
+        test("should persist the split view preference across reloads", async ({
+            page,
+        }) => {
+            await runPreferencePersistenceScenario(page, testPullRequest);
+        });
     });
+
+async function runToggleViewScenario(
+    page: Page,
+    testPullRequest: TestChangesPullRequest,
+) {
+    await gotoChanges(page, testPullRequest.number);
+
+    await test.step("Verify the unified view is the default", async () => {
+        await expect(
+            page.locator("table.d2h-diff-table:not(.d2h-split-table)").first(),
+        ).toBeVisible();
+    });
+
+    await test.step("Switch to split view", async () => {
+        await setSplitView(page);
+        await expect(
+            page.locator("table.d2h-split-table").first(),
+        ).toBeVisible();
+    });
+
+    await test.step("Switch back to unified view", async () => {
+        const toggle = page.locator('fieldset[aria-label="Diff view"]');
+        await toggle
+            .getByRole("button", { name: "Unified", exact: true })
+            .click();
+        await expect(
+            toggle.getByRole("button", {
+                name: "Unified",
+                exact: true,
+            }),
+        ).toHaveAttribute("aria-pressed", "true");
+        await expect(
+            page.locator("table.d2h-diff-table:not(.d2h-split-table)").first(),
+        ).toBeVisible();
+    });
+}
+
+async function runAddedFileSplitScenario(
+    page: Page,
+    testPullRequest: TestChangesPullRequest,
+) {
+    const addedFile = testPullRequest.files.find(
+        (file) => file.status === "added",
+    );
+    if (!addedFile) throw new Error("Test PR has no added file");
+
+    await gotoChanges(page, testPullRequest.number);
+    await setSplitView(page);
+
+    const fileDiff = page.locator(
+        `[id="${addedFile.filename.replace(/\//g, "-")}"]`,
+    );
+    await expect(fileDiff.locator("table.d2h-split-table")).toBeVisible();
+
+    await test.step("Verify the added line renders on the new side only", async () => {
+        const row = fileDiff.locator('tbody tr[id^="diff-"]').first();
+        await expect(row.locator("td")).toHaveCount(4);
+        await expect(row).toHaveAttribute("data-new-line", "1");
+        // The old side is neutral: empty line-number and code cells.
+        await expect(
+            row.locator("td.d2h-code-linenumber.d2h-split-ln.d2h-empty-side"),
+        ).toHaveCount(1);
+        await expect(
+            row.locator("td.d2h-split-code.d2h-empty-side"),
+        ).toHaveCount(1);
+        await expect(
+            row.locator("td.d2h-split-ln.d2h-split-new .d2h-split-ln-num"),
+        ).toHaveText("1");
+        await expect(row.locator("td.d2h-split-code").last()).toContainText(
+            "E2E Changes Test",
+        );
+    });
+}
+
+async function runPairedRowSplitScenario(
+    page: Page,
+    testPullRequest: TestChangesPullRequest,
+) {
+    const commentFile = findCommentFile(testPullRequest.files);
+    if (!commentFile) throw new Error("Test PR has no modified file");
+
+    await gotoChanges(page, testPullRequest.number);
+    await setSplitView(page);
+
+    const fileDiff = page.locator(
+        `[id="${commentFile.filename.replace(/\//g, "-")}"]`,
+    );
+    await expect(fileDiff.locator("table.d2h-split-table")).toBeVisible();
+
+    await test.step("Verify the changed line has both sides on one row", async () => {
+        const changedRow = fileDiff
+            .locator('tbody tr[id^="diff-"]:has(td.d2h-ins)')
+            .first();
+        await expect(changedRow.locator("td")).toHaveCount(4);
+        // A 1:1 replacement pairs the deleted and added lines: both
+        // code cells carry content and the old/new numbers match.
+        await expect(
+            changedRow.locator("td.d2h-split-code.d2h-del"),
+        ).toHaveCount(1);
+        await expect(
+            changedRow.locator("td.d2h-split-code.d2h-ins"),
+        ).toHaveCount(1);
+        const oldNum = await changedRow
+            .locator("td.d2h-split-ln:not(.d2h-split-new) .d2h-split-ln-num")
+            .textContent();
+        const newNum = await changedRow
+            .locator("td.d2h-split-ln.d2h-split-new .d2h-split-ln-num")
+            .textContent();
+        expect(oldNum?.trim()).toBe(newNum?.trim());
+        await expect(changedRow).toHaveAttribute(
+            "data-old-line",
+            oldNum?.trim() ?? "",
+        );
+        await expect(changedRow).toHaveAttribute(
+            "data-new-line",
+            newNum?.trim() ?? "",
+        );
+    });
+}
+
+async function runNewSideCommentScenario(
+    page: Page,
+    testPullRequest: TestChangesPullRequest,
+) {
+    const commentFile = findCommentFile(testPullRequest.files);
+    if (!commentFile) throw new Error("Test PR has no modified file");
+
+    await gotoChanges(page, testPullRequest.number);
+    await setSplitView(page);
+
+    const fileDiff = page.locator(
+        `[id="${commentFile.filename.replace(/\//g, "-")}"]`,
+    );
+    const commentText = `Split comment ${Date.now()}`;
+
+    await test.step("Add a comment on the new side of the changed line", async () => {
+        const line = fileDiff
+            .locator('tbody tr[id^="diff-"]:has(td.d2h-ins)')
+            .first();
+        // Only the hovered side shows its plus button.
+        await line.locator("td.d2h-split-ln.d2h-split-new").hover();
+        await line.locator("td.d2h-split-ln.d2h-split-new svg").click();
+        await fileDiff.getByPlaceholder("Add a comment...").fill(commentText);
+        await fileDiff
+            .getByRole("button", { name: "Add single comment" })
+            .click();
+    });
+
+    await test.step("Verify the comment thread appears", async () => {
+        const thread = fileDiff
+            .locator('[id^="review-thread-"]')
+            .filter({ hasText: commentText });
+        await expect(thread).toBeVisible({ timeout: 15_000 });
+    });
+}
+
+async function runOldSideCommentScenario(
+    page: Page,
+    testPullRequest: TestChangesPullRequest,
+) {
+    const commentFile = findCommentFile(testPullRequest.files);
+    if (!commentFile) throw new Error("Test PR has no modified file");
+
+    await gotoChanges(page, testPullRequest.number);
+    await setSplitView(page);
+
+    const fileDiff = page.locator(
+        `[id="${commentFile.filename.replace(/\//g, "-")}"]`,
+    );
+    const commentText = `Split old-side comment ${Date.now()}`;
+
+    await test.step("Add a comment on the old side of the changed line", async () => {
+        const line = fileDiff
+            .locator('tbody tr[id^="diff-"]:has(td.d2h-ins)')
+            .first();
+        await line.locator("td.d2h-split-ln:not(.d2h-split-new)").hover();
+        await line.locator("td.d2h-split-ln:not(.d2h-split-new) svg").click();
+        await fileDiff.getByPlaceholder("Add a comment...").fill(commentText);
+        await fileDiff
+            .getByRole("button", { name: "Add single comment" })
+            .click();
+    });
+
+    await test.step("Verify the comment thread appears", async () => {
+        const thread = fileDiff
+            .locator('[id^="review-thread-"]')
+            .filter({ hasText: commentText });
+        await expect(thread).toBeVisible({ timeout: 15_000 });
+    });
+}
+
+async function runDragRangeCommentScenario(
+    page: Page,
+    testPullRequest: TestChangesPullRequest,
+) {
+    const gapFile = testPullRequest.files.find(
+        (file) => file.filename === GAP_FIXTURE_PATH,
+    );
+    if (!gapFile) throw new Error("Test PR has no gap fixture file");
+
+    await gotoChanges(page, testPullRequest.number);
+    await setSplitView(page);
+
+    const fileDiff = page.locator(
+        `[id="${gapFile.filename.replace(/\//g, "-")}"]`,
+    );
+    const commentText = `Split range comment ${Date.now()}`;
+
+    await test.step("Drag from the inserted line down to the next context line", async () => {
+        // The insertion lands on new line 3; the following context
+        // line is new 4 / old 3.
+        const plusRow = fileDiff.locator('tbody tr[data-new-line="3"]');
+        await expect(plusRow).toBeVisible();
+        const targetRow = fileDiff.locator('tbody tr[data-new-line="4"]');
+        await expect(targetRow).toBeVisible();
+        await targetRow.scrollIntoViewIfNeeded();
+
+        const plus = plusRow.locator("td.d2h-split-ln.d2h-split-new svg");
+        await plusRow.locator("td.d2h-split-ln.d2h-split-new").hover();
+        await expect(plus).toBeVisible();
+        const plusBox = await plus.boundingBox();
+        if (!plusBox) throw new Error("Plus button not visible");
+        const targetBox = await targetRow.boundingBox();
+        if (!targetBox) throw new Error("Target row not visible");
+
+        await page.mouse.move(
+            plusBox.x + plusBox.width / 2,
+            plusBox.y + plusBox.height / 2,
+        );
+        await page.mouse.down();
+        await page.mouse.move(
+            targetBox.x + targetBox.width / 2,
+            targetBox.y + targetBox.height / 2,
+            { steps: 10 },
+        );
+        await page.mouse.up();
+    });
+
+    await test.step("Submit the range comment", async () => {
+        await fileDiff.getByPlaceholder("Add a comment...").fill(commentText);
+        await fileDiff
+            .getByRole("button", { name: "Add single comment" })
+            .click();
+    });
+
+    await test.step("Verify the range comment thread appears", async () => {
+        const thread = fileDiff
+            .locator('[id^="review-thread-"]')
+            .filter({ hasText: commentText });
+        await expect(thread).toBeVisible({ timeout: 15_000 });
+    });
+}
+
+async function runGapExpansionScenario(
+    page: Page,
+    testPullRequest: TestChangesPullRequest,
+) {
+    const gapFile = testPullRequest.files.find(
+        (file) => file.filename === GAP_FIXTURE_PATH,
+    );
+    if (!gapFile) throw new Error("Test PR has no gap fixture file");
+
+    await gotoChanges(page, testPullRequest.number);
+    await setSplitView(page);
+
+    const fileDiff = page.locator(
+        `[id="${gapFile.filename.replace(/\//g, "-")}"]`,
+    );
+
+    await test.step("Verify the unfold row between hunks spans the content columns", async () => {
+        const unfoldRow = fileDiff.locator(
+            "tbody tr:has(button[title='Expand lines above'])",
+        );
+        await expect(unfoldRow).toBeVisible();
+        await expect(unfoldRow.locator('td[colspan="3"]')).toBeVisible();
+    });
+
+    await test.step("Expand the lines above the next hunk", async () => {
+        await fileDiff
+            .locator('tbody button[title="Expand lines above"]')
+            .click();
+    });
+
+    await test.step("Verify the revealed gap rows use the old-file numbers", async () => {
+        // First revealed gap line: new 5, old 4 (the insertion at
+        // new line 3 shifts the old numbering by -1 inside the gap).
+        const firstGapRow = fileDiff.locator('tbody tr[data-new-line="5"]');
+        await expect(firstGapRow).toBeVisible({ timeout: 15_000 });
+        await expect(firstGapRow).toHaveAttribute("data-old-line", "4");
+        await expect(firstGapRow.locator("td")).toHaveCount(4);
+        await expect(
+            firstGapRow.locator(
+                "td.d2h-split-ln:not(.d2h-split-new) .d2h-split-ln-num",
+            ),
+        ).toHaveText("4");
+        await expect(
+            firstGapRow.locator(
+                "td.d2h-split-ln.d2h-split-new .d2h-split-ln-num",
+            ),
+        ).toHaveText("5");
+        // The last revealed line of the 20-line expansion keeps the
+        // same offset.
+        const lastGapRow = fileDiff.locator('tbody tr[data-new-line="24"]');
+        await expect(lastGapRow).toHaveAttribute("data-old-line", "23");
+    });
+}
+
+async function runPreferencePersistenceScenario(
+    page: Page,
+    testPullRequest: TestChangesPullRequest,
+) {
+    await gotoChanges(page, testPullRequest.number);
+    await setSplitView(page);
+    await expect(page.locator("table.d2h-split-table").first()).toBeVisible();
+
+    await page.reload();
+
+    await test.step("Verify the split view is restored", async () => {
+        await expect(page.locator("table.d2h-split-table").first()).toBeVisible(
+            { timeout: 15_000 },
+        );
+        const toggle = page.locator('fieldset[aria-label="Diff view"]');
+        await expect(
+            toggle.getByRole("button", {
+                name: "Split",
+                exact: true,
+            }),
+        ).toHaveAttribute("aria-pressed", "true");
+    });
+}
