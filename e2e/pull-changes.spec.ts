@@ -10,16 +10,20 @@ import { GITHUB_TOKEN, gotoChanges, OWNER, REPO } from "./shared/helpers";
 
 /**
  * Switch every file diff to the requested view and wait for the toggle to
- * stick. A click dispatched before React hydrates the page is silently lost
- * (no handler is attached yet), so the click is retried until the button
- * reports the requested mode.
+ * stick. The view switch lives behind the settings gear; a click dispatched
+ * before React hydrates the page is silently lost (no handler is attached
+ * yet), so the sequence is retried until the menu item reports the requested
+ * mode.
  */
 async function clickViewMode(page: Page, mode: "Unified" | "Split") {
-    const toggle = page.locator('fieldset[aria-label="Diff view"]');
-    const button = toggle.getByRole("button", { name: mode, exact: true });
     await expect(async () => {
-        await button.click();
-        await expect(button).toHaveAttribute("aria-pressed", "true", {
+        await page.getByRole("button", { name: "Diff settings" }).click();
+        const item = page.getByRole("menuitemradio", {
+            name: mode,
+            exact: true,
+        });
+        await item.click({ timeout: 2_000 });
+        await expect(item).toHaveAttribute("aria-checked", "true", {
             timeout: 2_000,
         });
     }).toPass({ timeout: 15_000 });
@@ -838,12 +842,14 @@ async function runPreferencePersistenceScenario(
         await expect(page.locator("table.d2h-split-table").first()).toBeVisible(
             { timeout: 15_000 },
         );
-        const toggle = page.locator('fieldset[aria-label="Diff view"]');
-        await expect(
-            toggle.getByRole("button", {
-                name: "Split",
-                exact: true,
-            }),
-        ).toHaveAttribute("aria-pressed", "true");
+        await expect(async () => {
+            await page.getByRole("button", { name: "Diff settings" }).click();
+            await expect(
+                page.getByRole("menuitemradio", {
+                    name: "Split",
+                    exact: true,
+                }),
+            ).toHaveAttribute("aria-checked", "true", { timeout: 2_000 });
+        }).toPass({ timeout: 15_000 });
     });
 }

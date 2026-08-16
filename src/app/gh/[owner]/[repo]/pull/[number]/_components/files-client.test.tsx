@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { installLocalStorage } from "~/__tests__/helpers/local-storage";
@@ -33,11 +34,17 @@ vi.mock("~/components/file-diff", () => ({
     default: ({
         file,
         diffView,
+        showComments,
     }: {
         file: { filename: string };
         diffView?: string;
+        showComments?: boolean;
     }) => (
-        <div data-testid="file-diff" data-view={diffView ?? "unified"}>
+        <div
+            data-testid="file-diff"
+            data-view={diffView ?? "unified"}
+            data-show-comments={String(showComments ?? true)}
+        >
             {file.filename}
         </div>
     ),
@@ -178,14 +185,26 @@ describe("FilesSection", () => {
             storage = installLocalStorage();
         });
 
-        it("renders Unified and Split controls with unified active by default", async () => {
+        async function openSettingsMenu() {
+            await userEvent.click(
+                screen.getByRole("button", { name: "Diff settings" }),
+            );
+        }
+
+        it("renders Unified and Split menu items with unified active by default", async () => {
             renderFiles([file("src/foo.ts")]);
             await screen.findByTestId("file-diff");
 
-            const unified = screen.getByRole("button", { name: "Unified" });
-            const split = screen.getByRole("button", { name: "Split" });
-            expect(unified).toHaveAttribute("aria-pressed", "true");
-            expect(split).toHaveAttribute("aria-pressed", "false");
+            await openSettingsMenu();
+
+            const unified = screen.getByRole("menuitemradio", {
+                name: "Unified",
+            });
+            const split = screen.getByRole("menuitemradio", {
+                name: "Split",
+            });
+            expect(unified).toHaveAttribute("aria-checked", "true");
+            expect(split).toHaveAttribute("aria-checked", "false");
             expect(screen.getByTestId("file-diff")).toHaveAttribute(
                 "data-view",
                 "unified",
@@ -196,18 +215,24 @@ describe("FilesSection", () => {
             renderFiles([file("src/foo.ts"), file("src/bar.ts")]);
             await screen.findAllByTestId("file-diff");
 
-            fireEvent.click(screen.getByRole("button", { name: "Split" }));
+            await openSettingsMenu();
+            await userEvent.click(
+                screen.getByRole("menuitemradio", { name: "Split" }),
+            );
 
             const diffs = screen.getAllByTestId("file-diff");
             for (const diff of diffs) {
                 expect(diff).toHaveAttribute("data-view", "split");
             }
+            // Selecting a menu item closes the menu, so reopen it to
+            // verify the radio state stuck.
+            await openSettingsMenu();
             expect(
-                screen.getByRole("button", { name: "Split" }),
-            ).toHaveAttribute("aria-pressed", "true");
+                screen.getByRole("menuitemradio", { name: "Split" }),
+            ).toHaveAttribute("aria-checked", "true");
             expect(
-                screen.getByRole("button", { name: "Unified" }),
-            ).toHaveAttribute("aria-pressed", "false");
+                screen.getByRole("menuitemradio", { name: "Unified" }),
+            ).toHaveAttribute("aria-checked", "false");
             expect(storage.getItem("diff-view:owner:repo")).toBe("split");
         });
 
@@ -220,9 +245,10 @@ describe("FilesSection", () => {
                 "data-view",
                 "split",
             );
+            await openSettingsMenu();
             expect(
-                screen.getByRole("button", { name: "Split" }),
-            ).toHaveAttribute("aria-pressed", "true");
+                screen.getByRole("menuitemradio", { name: "Split" }),
+            ).toHaveAttribute("aria-checked", "true");
         });
 
         it("switches back to unified on demand", async () => {
@@ -230,13 +256,44 @@ describe("FilesSection", () => {
             renderFiles([file("src/foo.ts")]);
             await screen.findByTestId("file-diff");
 
-            fireEvent.click(screen.getByRole("button", { name: "Unified" }));
+            await openSettingsMenu();
+            await userEvent.click(
+                screen.getByRole("menuitemradio", { name: "Unified" }),
+            );
 
             expect(screen.getByTestId("file-diff")).toHaveAttribute(
                 "data-view",
                 "unified",
             );
             expect(storage.getItem("diff-view:owner:repo")).toBe("unified");
+        });
+
+        it("hides and shows comments from the settings menu", async () => {
+            renderFiles([file("src/foo.ts")]);
+            await screen.findByTestId("file-diff");
+
+            expect(screen.getByTestId("file-diff")).toHaveAttribute(
+                "data-show-comments",
+                "true",
+            );
+
+            await openSettingsMenu();
+            await userEvent.click(
+                screen.getByRole("menuitem", { name: /Hide comments/ }),
+            );
+            expect(screen.getByTestId("file-diff")).toHaveAttribute(
+                "data-show-comments",
+                "false",
+            );
+
+            await openSettingsMenu();
+            await userEvent.click(
+                screen.getByRole("menuitem", { name: /Show comments/ }),
+            );
+            expect(screen.getByTestId("file-diff")).toHaveAttribute(
+                "data-show-comments",
+                "true",
+            );
         });
     });
 });
