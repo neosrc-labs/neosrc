@@ -90,19 +90,42 @@ export function useDiffCommentSelection({
             // Extend along the anchor side's number space (see
             // useDiffLineSelection): old and new line numbers can diverge
             // across regions.
-            const line = readRowLine(row, anchor.side);
-            if (line == null) return;
+            let side = anchor.side;
+            let anchorLine = anchor.line;
+            let line = readRowLine(row, side);
+            if (line == null) {
+                // The hovered row has no line on the anchor side (e.g. a
+                // deletion in a range anchored on the new side). When the
+                // anchor row also has a line on the row's side, flip the
+                // range to that side so the comment can still span both
+                // regions instead of stopping at the last matching row.
+                const otherSide = side === "LEFT" ? "RIGHT" : "LEFT";
+                const anchorOther =
+                    otherSide === "LEFT"
+                        ? anchor.lines?.oldLine
+                        : anchor.lines?.newLine;
+                const rowOther = readRowLine(row, otherSide);
+                if (anchorOther == null || rowOther == null) return;
+                side = otherSide;
+                anchorLine = anchorOther;
+                line = rowOther;
+                commentDragAnchor.current = {
+                    line: anchorLine,
+                    side,
+                    lines: anchor.lines,
+                };
+            }
             const rowLines = {
                 oldLine: readRowLine(row, "LEFT") ?? undefined,
                 newLine: readRowLine(row, "RIGHT") ?? undefined,
             };
-            const startLine = Math.min(anchor.line, line);
-            const endLine = Math.max(anchor.line, line);
-            setCommentDragRange({ startLine, endLine, side: anchor.side });
+            const startLine = Math.min(anchorLine, line);
+            const endLine = Math.max(anchorLine, line);
+            setCommentDragRange({ startLine, endLine, side });
             onSelectionChange({
                 startLine,
                 endLine,
-                side: anchor.side,
+                side,
                 startLines: anchor.lines,
                 endLines: rowLines,
             });
