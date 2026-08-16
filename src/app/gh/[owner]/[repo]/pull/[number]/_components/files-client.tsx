@@ -359,7 +359,7 @@ export function FilesSection({
                             />
                         )}
                     </Async>
-                    <DropdownMenu>
+                    <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
                             <button
                                 aria-label="Diff settings"
