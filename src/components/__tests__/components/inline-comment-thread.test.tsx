@@ -55,8 +55,14 @@ vi.mock("~/hooks/use-review-thread-operations", () =>
 vi.mock("~/components/comment-card", () => mockCommentCard());
 
 vi.mock("~/components/resolved-thread-banner", () => ({
-    ResolvedThreadBanner: ({ onShow }: { onShow: () => void }) => (
-        <div data-testid="resolved-banner">
+    ResolvedThreadBanner: ({
+        onShow,
+        resolver,
+    }: {
+        onShow: () => void;
+        resolver: string;
+    }) => (
+        <div data-testid="resolved-banner" data-resolver={resolver}>
             <button
                 onClick={onShow}
                 data-testid="show-thread-btn"
@@ -175,6 +181,7 @@ function mockResolvedThread() {
                 id: "thread-1",
                 isResolved: true,
                 isOutdated: false,
+                resolvedBy: "resolver-user",
                 comments: [{ id: 1 }],
             },
         ],
@@ -234,6 +241,10 @@ describe("InlineCommentThread", () => {
         render(<InlineCommentThread {...defaultProps} />);
 
         expect(screen.getByTestId("resolved-banner")).toBeInTheDocument();
+        expect(screen.getByTestId("resolved-banner")).toHaveAttribute(
+            "data-resolver",
+            "resolver-user",
+        );
         expect(screen.queryByTestId("comment-card")).not.toBeInTheDocument();
     });
 

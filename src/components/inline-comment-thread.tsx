@@ -264,6 +264,7 @@ export function InlineCommentThread({
             <div className="font-sans" id={`review-thread-${parentComment.id}`}>
                 <ResolvedThreadBanner
                     onShow={() => setExpandedResolved(true)}
+                    resolver={threadInfo.resolvedBy ?? currentUserLogin}
                 />
             </div>
         );
@@ -271,7 +272,7 @@ export function InlineCommentThread({
 
     return (
         <div
-            className="max-w-[800px] font-sans bg-surface my-2 rounded-lg border border-border overflow-hidden"
+            className="my-2 max-w-[800px] overflow-hidden rounded-lg border border-border bg-surface font-sans"
             id={`review-thread-${parentComment.id}`}
         >
             <ReviewCommentItem

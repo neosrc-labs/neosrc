@@ -154,9 +154,39 @@ async function runReplyPromotionScenario(
             .click();
         const response = await resolveResponse;
         expect(response.status()).toBe(200);
+
+        const octokit = new Octokit({ auth: GITHUB_TOKEN });
+        const { data: me } = await octokit.rest.users.getAuthenticated();
+        const resolvedThread = fileDiff
+            .locator('[id^="review-thread-"]')
+            .filter({ hasText: /marked this conversation as resolved/ });
+        await expect(resolvedThread).toBeVisible();
         await expect(
-            fileDiff.getByRole("button", { name: "Show thread" }),
+            resolvedThread.getByText(
+                `${me.login} marked this conversation as resolved`,
+            ),
         ).toBeVisible();
+
+        // Banner styled like a comment card: capped at the 800px column.
+        const banner = resolvedThread.locator("div.max-w-\\[800px\\]").first();
+        const bannerBox = await banner.boundingBox();
+        expect(bannerBox?.width ?? 0).toBeLessThanOrEqual(800);
+
+        // Show thread is right-aligned inside the banner.
+        const showThread = resolvedThread.getByRole("button", {
+            name: "Show thread",
+        });
+        await expect(showThread).toBeVisible();
+        const showBox = await showThread.boundingBox();
+        const gapFromRightEdge =
+            (bannerBox?.x ?? 0) +
+            (bannerBox?.width ?? 0) -
+            ((showBox?.x ?? 0) + (showBox?.width ?? 0));
+        expect(
+            gapFromRightEdge,
+            "Show thread should sit right-aligned within the banner's padding",
+        ).toBeGreaterThanOrEqual(2);
+        expect(gapFromRightEdge).toBeLessThanOrEqual(16);
     });
 }
 test.describe

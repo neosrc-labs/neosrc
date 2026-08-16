@@ -2471,6 +2471,7 @@ type RawReviewThreadNode = {
     isResolved: boolean;
     isOutdated: boolean;
     path: string | null;
+    resolvedBy: GQLActor | null;
     comments: { nodes: (RawReviewThreadComment | null)[] };
 };
 
@@ -2479,6 +2480,7 @@ export type ReviewThreadData = {
     isResolved: boolean;
     isOutdated: boolean;
     path: string | null;
+    resolvedBy: string | null;
     pullRequestId: string;
     comments: Array<{
         id: number;
@@ -2547,6 +2549,9 @@ query($owner: String!, $repo: String!, $number: Int!) {
           isResolved
           isOutdated
           path
+          resolvedBy {
+            login
+          }
           comments(first: 100) {
             nodes {
               databaseId
@@ -2602,6 +2607,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
                 isResolved: thread.isResolved,
                 isOutdated: thread.isOutdated,
                 path: thread.path,
+                resolvedBy: thread.resolvedBy?.login ?? null,
                 pullRequestId,
                 comments,
             };
