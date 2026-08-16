@@ -8,13 +8,26 @@ import {
 } from "./shared/data";
 import { GITHUB_TOKEN, gotoChanges, OWNER, REPO } from "./shared/helpers";
 
+/**
+ * Switch every file diff to the requested view and wait for the toggle to
+ * stick. A click dispatched before React hydrates the page is silently lost
+ * (no handler is attached yet), so the click is retried until the button
+ * reports the requested mode.
+ */
+async function clickViewMode(page: Page, mode: "Unified" | "Split") {
+    const toggle = page.locator('fieldset[aria-label="Diff view"]');
+    const button = toggle.getByRole("button", { name: mode, exact: true });
+    await expect(async () => {
+        await button.click();
+        await expect(button).toHaveAttribute("aria-pressed", "true", {
+            timeout: 2_000,
+        });
+    }).toPass({ timeout: 15_000 });
+}
+
 /** Switch every file diff to the split view and wait for the toggle to stick. */
 async function setSplitView(page: Page) {
-    const toggle = page.locator('fieldset[aria-label="Diff view"]');
-    await toggle.getByRole("button", { name: "Split", exact: true }).click();
-    await expect(
-        toggle.getByRole("button", { name: "Split", exact: true }),
-    ).toHaveAttribute("aria-pressed", "true");
+    await clickViewMode(page, "Split");
 }
 
 /**
@@ -506,16 +519,7 @@ async function runToggleViewScenario(
     });
 
     await test.step("Switch back to unified view", async () => {
-        const toggle = page.locator('fieldset[aria-label="Diff view"]');
-        await toggle
-            .getByRole("button", { name: "Unified", exact: true })
-            .click();
-        await expect(
-            toggle.getByRole("button", {
-                name: "Unified",
-                exact: true,
-            }),
-        ).toHaveAttribute("aria-pressed", "true");
+        await clickViewMode(page, "Unified");
         await expect(
             page.locator("table.d2h-diff-table:not(.d2h-split-table)").first(),
         ).toBeVisible();
