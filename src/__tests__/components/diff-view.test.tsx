@@ -552,6 +552,38 @@ describe("DiffView rendering", () => {
             // The git hunk marker stays visible in the same row.
             expect(gapRow?.textContent).toContain("@@ -5,1 +5,1 @@");
         });
+
+        it("keeps group and line-highlighted as separate classes on selected gap rows", () => {
+            // Leading gap 1-2, block starts at new line 3. With
+            // showCommentButton (review path) and a selection covering a gap
+            // line, the row must carry both classes — a missing separator
+            // would merge them into "groupline-highlighted".
+            mockParsedFile([mb(3, [mc("+line3", 3)])], { addedLines: 1 });
+
+            const { container } = renderDiffView({
+                showCommentButton: true,
+                expandAllContext: true,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            // Drag from the block row to a gap line so the range covers it.
+            const rowR3 = container.querySelector('tr[id$="R3"]')!;
+            fireEvent.mouseDown(
+                rowR3.querySelector("td.d2h-code-linenumber")!,
+            );
+            fireEvent.mouseOver(
+                container.querySelector('tr[id$="R2"]')!,
+            );
+            fireEvent.mouseUp(document);
+
+            const gapRow = container.querySelector('tr[id$="R2"]')!;
+            const classes = gapRow.className.split(" ").filter(Boolean);
+            expect(classes).toContain("group");
+            expect(classes).toContain("line-highlighted");
+        });
     });
 
     describe("expandAllContext", () => {
