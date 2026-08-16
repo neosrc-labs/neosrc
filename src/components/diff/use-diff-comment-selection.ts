@@ -56,14 +56,18 @@ export function useDiffCommentSelection({
     );
 
     const onCommentLineMouseDown = useCallback(
-        (line: number, side: string, lines?: DiffRowLines) => {
+        (line: number, side: string, _lines?: DiffRowLines) => {
             if (activeComment?.type === "line" && activeComment.side === side) {
                 const diffSide = side as DiffSide;
                 commentDragInProgress.current = true;
+                // The anchor is the active comment's row: `line` is
+                // activeComment.line, but the pointer row's `lines` can
+                // belong to a different row inside the comment range. Omit
+                // them — the side-flip path must not read another row's
+                // opposite-side number as the anchor's.
                 commentDragAnchor.current = {
                     line: activeComment.line,
                     side: diffSide,
-                    lines,
                 };
                 setCommentDragRange({
                     startLine: Math.min(activeComment.line, line),
@@ -72,7 +76,7 @@ export function useDiffCommentSelection({
                 });
                 return;
             }
-            onOrdinaryLineMouseDown(line, side, lines);
+            onOrdinaryLineMouseDown(line, side, _lines);
         },
         [activeComment, onOrdinaryLineMouseDown],
     );
