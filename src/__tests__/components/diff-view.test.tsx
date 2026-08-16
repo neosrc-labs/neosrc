@@ -57,6 +57,7 @@ vi.mock("lucide-react", () => ({
         <button
             type="button"
             data-testid="square-plus"
+            className={props.className as string}
             onMouseDown={props.onMouseDown as React.MouseEventHandler}
             onClick={props.onClick as React.MouseEventHandler}
         />
@@ -154,6 +155,7 @@ const FILE_HASH = filenameHash("test.ts");
 function renderDiffView(props?: {
     patch?: string;
     filename?: string;
+    view?: "unified" | "split";
     showComments?: boolean;
     showCommentButton?: boolean;
     activeComment?: DiffCommentTarget | null;
@@ -169,6 +171,7 @@ function renderDiffView(props?: {
         <DiffView
             patch={props?.patch ?? "non-empty-patch"}
             filename={props?.filename ?? "test.ts"}
+            view={props?.view ?? "unified"}
             showComments={props?.showComments ?? false}
             showCommentButton={props?.showCommentButton ?? false}
             activeComment={props?.activeComment ?? null}
@@ -980,6 +983,506 @@ describe("DiffView rendering", () => {
                     '[data-testid="arrow-down-from-line"]',
                 ).length,
             ).toBe(1);
+        });
+    });
+});
+
+describe("DiffView split view", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockUseFileContent.lines = null;
+        mockUseFileContent.isLoading = false;
+        mockUseFileContent.error = null;
+    });
+
+    describe("row structure", () => {
+        it("renders four columns with per-side line numbers for context lines", () => {
+            const lines = [mc(" ctx1", 1, 1), mc(" ctx2", 2, 2)];
+            mockParsedFile([mb(1, lines)]);
+
+            const { container } = renderDiffView({ view: "split" });
+
+            expect(container.querySelector(".d2h-split-table")).toBeTruthy();
+
+            const rows = Array.from(
+                container.querySelectorAll('tr[id^="diff-"]'),
+            );
+            expect(rows).toHaveLength(2);
+
+            const cells = rows[0]!.querySelectorAll("td");
+            expect(cells).toHaveLength(4);
+            // Old number, old content, new number (with divider), new content
+            expect(cells[0]!.className).toContain("d2h-split-ln");
+            expect(cells[0]!.textContent).toContain("1");
+            expect(cells[1]!.className).toContain("d2h-split-code");
+            expect(cells[1]!.textContent).toContain("ctx1");
+            expect(cells[2]!.className).toContain("d2h-split-new");
+            expect(cells[2]!.textContent).toContain("1");
+            expect(cells[3]!.textContent).toContain("ctx1");
+            // Context rows carry the new-side row id
+            expect(rows[0]!.id.endsWith("R1")).toBe(true);
+        });
+
+        it("defines line-number column widths via colgroup so unfold rows cannot widen the right column", () => {
+            // A leading gap makes the first row an unfold row whose content
+            // cell spans 3 columns; in fixed layout that would stretch the
+            // right line-number column to content width. The colgroup pins
+            // both line-number columns.
+            const lines = [mc("+added", 5)];
+            mockParsedFile([mb(5, lines)], { addedLines: 1 });
+
+            const { container } = renderDiffView({
+                view: "split",
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            const table = container.querySelector(".d2h-split-table")!;
+            const cols = Array.from(table.querySelectorAll("col"));
+            expect(cols).toHaveLength(4);
+            expect(cols[0]!.className).toContain("d2h-split-ln-col");
+            expect(cols[1]!.className).not.toContain("d2h-split-ln-col");
+            expect(cols[2]!.className).toContain("d2h-split-ln-col");
+            expect(cols[3]!.className).not.toContain("d2h-split-ln-col");
+            // The colgroup sits before the body so fixed layout honors it.
+            const colgroup = table.querySelector("colgroup")!;
+            expect(colgroup.nextElementSibling?.tagName).toBe("TBODY");
+        });
+
+        it("pairs a deleted line with the following added line on one row", () => {
+            const lines = [mc("-old2", undefined, 2), mc("+new2", 2)];
+            mockParsedFile([mb(1, lines)], {
+                addedLines: 1,
+                deletedLines: 1,
+            });
+
+            const { container } = renderDiffView({ view: "split" });
+
+            const row = container.querySelector('tr[id^="diff-"]')!;
+            const cells = row.querySelectorAll("td");
+            expect(cells).toHaveLength(4);
+
+            const oldCells = [cells[0]!, cells[1]!];
+            for (const cell of oldCells) {
+                expect(cell.className).toContain("d2h-del");
+            }
+            expect(cells[1]!.textContent).toContain("old2");
+
+            const newCells = [cells[2]!, cells[3]!];
+            for (const cell of newCells) {
+                expect(cell.className).toContain("d2h-ins");
+            }
+            expect(cells[3]!.textContent).toContain("new2");
+
+            // Row anchors on the new side; the old side gets its own L id
+            expect(row.id.endsWith("R2")).toBe(true);
+            expect(cells[0]!.id.endsWith("L2")).toBe(true);
+        });
+
+        it("renders an empty left side for unpaired additions", () => {
+            const lines = [mc("+added", 1)];
+            mockParsedFile([mb(1, lines)], { addedLines: 1 });
+
+            const { container } = renderDiffView({ view: "split" });
+
+            const row = container.querySelector('tr[id^="diff-"]')!;
+            const cells = row.querySelectorAll("td");
+            expect(cells).toHaveLength(4);
+
+            // Old side: empty neutral cells
+            expect(cells[0]!.className).toContain("d2h-empty-side");
+            expect(cells[1]!.className).toContain("d2h-empty-side");
+            expect(cells[1]!.textContent?.trim()).toBe("");
+            // New side: number + tinted content
+            expect(cells[2]!.className).toContain("d2h-ins");
+            expect(cells[2]!.textContent).toContain("1");
+            expect(cells[3]!.className).toContain("d2h-ins");
+            expect(cells[3]!.textContent).toContain("added");
+            expect(row.id.endsWith("R1")).toBe(true);
+        });
+
+        it("renders an empty right side for unpaired deletions", () => {
+            const lines = [mc("-removed", undefined, 5)];
+            mockParsedFile([mb(1, lines)], { deletedLines: 1 });
+
+            const { container } = renderDiffView({ view: "split" });
+
+            const row = container.querySelector('tr[id^="diff-"]')!;
+            const cells = row.querySelectorAll("td");
+            expect(cells).toHaveLength(4);
+
+            expect(cells[0]!.className).toContain("d2h-del");
+            expect(cells[1]!.className).toContain("d2h-del");
+            expect(cells[1]!.textContent).toContain("removed");
+            expect(cells[2]!.className).toContain("d2h-empty-side");
+            expect(cells[3]!.className).toContain("d2h-empty-side");
+            expect(cells[3]!.textContent?.trim()).toBe("");
+            // No new side: the row anchors on the old line number
+            expect(row.id.endsWith("L5")).toBe(true);
+        });
+
+        it("pairs deletions with additions by index, leftovers stand alone", () => {
+            const lines = [
+                mc("-a", undefined, 1),
+                mc("-b", undefined, 2),
+                mc("+x", 1),
+                mc("+y", 2),
+                mc("+z", 3),
+            ];
+            mockParsedFile([mb(1, lines)], {
+                addedLines: 3,
+                deletedLines: 2,
+            });
+
+            const { container } = renderDiffView({ view: "split" });
+
+            const rows = Array.from(
+                container.querySelectorAll('tr[id^="diff-"]'),
+            );
+            expect(rows).toHaveLength(3);
+
+            const cellsOf = (row: Element) => row.querySelectorAll("td");
+            expect(cellsOf(rows[0]!)[1]!.textContent).toContain("a");
+            expect(cellsOf(rows[0]!)[3]!.textContent).toContain("x");
+            expect(cellsOf(rows[1]!)[1]!.textContent).toContain("b");
+            expect(cellsOf(rows[1]!)[3]!.textContent).toContain("y");
+            // The third addition has no deletion to pair with
+            expect(cellsOf(rows[2]!)[1]!.className).toContain("d2h-empty-side");
+            expect(cellsOf(rows[2]!)[3]!.textContent).toContain("z");
+        });
+
+        it("does not show diff markers (+/-) in split content cells", () => {
+            const lines = [mc("+added", 1)];
+            mockParsedFile([mb(1, lines)], { addedLines: 1 });
+
+            const { container } = renderDiffView({ view: "split" });
+            // The row has two code cells (empty old side + new side); the
+            // content lives in the last one.
+            const codeLines = container.querySelectorAll(
+                ".d2h-split-code-line",
+            );
+            const code = codeLines[codeLines.length - 1]!;
+            expect(code.textContent?.trim()).toBe("added");
+            expect(code.textContent).not.toContain("+added");
+        });
+    });
+
+    describe("comment buttons", () => {
+        it("shows a button on each changed side, anchored to its own side", () => {
+            const onStartComment = vi.fn();
+            const lines = [mc("-old", undefined, 1), mc("+new", 1)];
+            mockParsedFile([mb(1, lines)], {
+                addedLines: 1,
+                deletedLines: 1,
+            });
+
+            const { container } = renderDiffView({
+                view: "split",
+                showCommentButton: true,
+                onStartComment,
+            });
+
+            const pluses = container.querySelectorAll(
+                '[data-testid="square-plus"]',
+            );
+            expect(pluses).toHaveLength(2);
+
+            // Left button (old side) anchors LEFT
+            const leftCell = pluses[0]!.closest("td")!;
+            expect(leftCell.className).not.toContain("d2h-split-new");
+            fireEvent.click(pluses[0]!);
+            expect(onStartComment).toHaveBeenLastCalledWith({
+                type: "line",
+                line: 1,
+                side: "LEFT",
+            });
+
+            // Right button (new side) anchors RIGHT
+            const rightCell = pluses[1]!.closest("td")!;
+            expect(rightCell.className).toContain("d2h-split-new");
+            fireEvent.click(pluses[1]!);
+            expect(onStartComment).toHaveBeenLastCalledWith({
+                type: "line",
+                line: 1,
+                side: "RIGHT",
+            });
+        });
+
+        it("shows a single button on the left for context lines anchored to the new side", () => {
+            const onStartComment = vi.fn();
+            const lines = [mc(" ctx", 1, 1)];
+            mockParsedFile([mb(1, lines)]);
+
+            const { container } = renderDiffView({
+                view: "split",
+                showCommentButton: true,
+                onStartComment,
+            });
+
+            const plus = container.querySelector('[data-testid="square-plus"]');
+            expect(plus).toBeTruthy();
+            expect(plus!.closest("td")!.className).not.toContain(
+                "d2h-split-new",
+            );
+
+            fireEvent.click(plus!);
+            expect(onStartComment).toHaveBeenCalledWith({
+                type: "line",
+                line: 1,
+                side: "RIGHT",
+            });
+        });
+
+        it("shows only the hovered side's button on paired rows", () => {
+            const lines = [mc("-old", undefined, 1), mc("+new", 1)];
+            mockParsedFile([mb(1, lines)], {
+                addedLines: 1,
+                deletedLines: 1,
+            });
+
+            const { container } = renderDiffView({
+                view: "split",
+                showCommentButton: true,
+            });
+
+            const row = container.querySelector('tr[id^="diff-"]')!;
+            const cells = row.querySelectorAll("td");
+            const pluses = row.querySelectorAll('[data-testid="square-plus"]');
+            const leftPlus = Array.from(pluses).find(
+                (p) => !p.closest("td")!.className.includes("d2h-split-new"),
+            )!;
+            const rightPlus = Array.from(pluses).find((p) => p !== leftPlus)!;
+            const leftCode = cells[1]!;
+            const rightCode = cells[3]!;
+
+            const isHidden = (el: Element) =>
+                el.className.includes("hidden") &&
+                !el.className.includes("block");
+
+            // Nothing hovered: both buttons hidden.
+            expect(isHidden(leftPlus)).toBe(true);
+            expect(isHidden(rightPlus)).toBe(true);
+
+            // Hover the left side: only the left button appears.
+            fireEvent.mouseEnter(leftCode);
+            expect(leftPlus.className).toContain("block");
+            expect(rightPlus.className).toContain("hidden");
+
+            // Hover the right side: only the right button appears.
+            fireEvent.mouseEnter(rightCode);
+            expect(leftPlus.className).toContain("hidden");
+            expect(rightPlus.className).toContain("block");
+
+            // Leaving the row hides the button again.
+            fireEvent.mouseLeave(row);
+            expect(isHidden(leftPlus)).toBe(true);
+            expect(isHidden(rightPlus)).toBe(true);
+        });
+
+        it("keeps the context button hidden when the right side is hovered", () => {
+            const lines = [mc(" ctx", 1, 1)];
+            mockParsedFile([mb(1, lines)]);
+
+            const { container } = renderDiffView({
+                view: "split",
+                showCommentButton: true,
+            });
+
+            const row = container.querySelector('tr[id^="diff-"]')!;
+            const cells = row.querySelectorAll("td");
+            const plus = row.querySelector('[data-testid="square-plus"]')!;
+
+            fireEvent.mouseEnter(cells[3]!); // new (right) content cell
+            expect(plus.className).toContain("hidden");
+
+            fireEvent.mouseEnter(cells[1]!); // old (left) content cell
+            expect(plus.className).toContain("block");
+        });
+
+        it("shows the button for unpaired additions only when the new side is hovered", () => {
+            const lines = [mc("+added", 1)];
+            mockParsedFile([mb(1, lines)], { addedLines: 1 });
+
+            const { container } = renderDiffView({
+                view: "split",
+                showCommentButton: true,
+            });
+
+            const row = container.querySelector('tr[id^="diff-"]')!;
+            const cells = row.querySelectorAll("td");
+            const plus = row.querySelector('[data-testid="square-plus"]')!;
+
+            // The empty old side carries no button and no hover action.
+            fireEvent.mouseEnter(cells[0]!);
+            expect(plus.className).toContain("hidden");
+
+            fireEvent.mouseEnter(cells[3]!);
+            expect(plus.className).toContain("block");
+        });
+
+        it("opens the comment editor under the row when either side is active", () => {
+            const lines = [mc("-old", undefined, 1), mc("+new", 1)];
+            mockParsedFile([mb(1, lines)], {
+                addedLines: 1,
+                deletedLines: 1,
+            });
+
+            const { container } = renderDiffView({
+                view: "split",
+                activeComment: { type: "line", line: 1, side: "LEFT" },
+            });
+
+            const editorRow = screen
+                .getByTestId("markdown-editor")
+                .closest("tr")!;
+            expect(editorRow.querySelector("td")!.colSpan).toBe(4);
+            void container;
+        });
+    });
+
+    describe("comments display", () => {
+        it("renders inline comment threads spanning all four columns", () => {
+            const lines = [mc("+added", 1)];
+            mockParsedFile([mb(1, lines)], { addedLines: 1 });
+
+            const comments = makeMockComments([
+                { id: 1, line: 1, side: "RIGHT", path: "test.ts" },
+            ]);
+
+            renderDiffView({ view: "split", showComments: true, comments });
+
+            const thread = screen.getByTestId("inline-comment-thread");
+            const threadRow = thread.closest("tr")!;
+            expect(threadRow.querySelector("td")!.colSpan).toBe(4);
+            // Anchored below the added line row
+            expect(threadRow.previousElementSibling?.id.endsWith("R1")).toBe(
+                true,
+            );
+        });
+
+        it("anchors old-side comments to the deleted side of a paired row", () => {
+            const lines = [mc("-old", undefined, 1), mc("+new", 1)];
+            mockParsedFile([mb(1, lines)], {
+                addedLines: 1,
+                deletedLines: 1,
+            });
+
+            const comments = makeMockComments([
+                { id: 7, line: 1, side: "LEFT", path: "test.ts" },
+            ]);
+
+            renderDiffView({ view: "split", showComments: true, comments });
+
+            const thread = screen.getByTestId("inline-comment-thread");
+            const threadRow = thread.closest("tr")!;
+            expect(threadRow.previousElementSibling?.id.endsWith("R1")).toBe(
+                true,
+            );
+        });
+    });
+
+    describe("permalinks", () => {
+        beforeEach(() => {
+            vi.spyOn(window.history, "replaceState").mockImplementation(
+                vi.fn(),
+            );
+        });
+
+        it("clicking the old line number links the old side", async () => {
+            const user = userEvent.setup();
+            const lines = [mc(" ctx", 1, 1)];
+            mockParsedFile([mb(1, lines)]);
+
+            const { container } = renderDiffView({ view: "split" });
+            const oldNumCell = container.querySelector("td.d2h-split-ln")!;
+            await user.click(oldNumCell);
+
+            expect(window.history.replaceState).toHaveBeenCalledWith(
+                null,
+                "",
+                expect.stringMatching(new RegExp(`#diff-${FILE_HASH}L1$`)),
+            );
+        });
+
+        it("clicking the new line number links the new side", async () => {
+            const user = userEvent.setup();
+            const lines = [mc(" ctx", 1, 1)];
+            mockParsedFile([mb(1, lines)]);
+
+            const { container } = renderDiffView({ view: "split" });
+            const newNumCell = container.querySelector(
+                "td.d2h-split-ln.d2h-split-new",
+            )!;
+            await user.click(newNumCell);
+
+            expect(window.history.replaceState).toHaveBeenCalledWith(
+                null,
+                "",
+                expect.stringMatching(new RegExp(`#diff-${FILE_HASH}R1$`)),
+            );
+        });
+    });
+
+    describe("gap rows", () => {
+        beforeEach(() => {
+            mockUseFileContent.lines = ["line1", "line2", "line3", "line4"];
+            mockUseFileContent.isLoading = false;
+            mockUseFileContent.error = null;
+        });
+
+        it("renders expand rows spanning the split columns", () => {
+            const lines = [mc("+line2", 2)];
+            mockParsedFile([mb(2, lines)], { addedLines: 1 });
+
+            const { container } = renderDiffView({
+                view: "split",
+                expandAllContext: false,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            const infoCells = Array.from(
+                container.querySelectorAll("td.d2h-info"),
+            );
+            expect(infoCells.length).toBeGreaterThan(0);
+            // The content cell of an info row spans the remaining columns
+            const infoRow = infoCells[0]!.closest("tr")!;
+            const spanned = Array.from(infoRow.querySelectorAll("td")).find(
+                (td) => td.colSpan === 3,
+            );
+            expect(spanned).toBeTruthy();
+        });
+
+        it("renders expanded gap context lines on both sides", () => {
+            const lines = [mc("+line2", 2)];
+            mockParsedFile([mb(2, lines)], { addedLines: 1 });
+
+            const { container } = renderDiffView({
+                view: "split",
+                expandAllContext: true,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            // Leading gap lines 1 and trailing gap lines 3-4 render as
+            // context rows with four cells each.
+            const gapRows = Array.from(
+                container.querySelectorAll('tr[id^="diff-"]'),
+            ).filter((tr) => tr.id.endsWith("R1") || tr.id.endsWith("R3"));
+            expect(gapRows).toHaveLength(2);
+            for (const row of gapRows) {
+                const cells = row.querySelectorAll("td");
+                expect(cells).toHaveLength(4);
+                expect(cells[1]!.textContent).toContain(
+                    cells[3]!.textContent!.trim(),
+                );
+            }
         });
     });
 });

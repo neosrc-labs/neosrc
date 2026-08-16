@@ -1,72 +1,121 @@
-import type { DiffFile } from "diff2html/lib/types";
+import type { DiffBlock, DiffLine } from "diff2html/lib/types";
 import { describe, expect, it } from "vitest";
-import type { ReviewComment } from "~/server/github";
-import {
-    buildDiffPositionMap,
-    computeBetweenGap,
-    createDiffRenderItems,
-    normalizeDiffPatch,
-    resolveDiffCommentAnchor,
-} from "./model";
+import { buildSplitRows } from "./model";
 
-const block = (newStartLine: number, lines: Array<Record<string, unknown>>) =>
-    ({ newStartLine, lines }) as never;
+function ctx(content: string, num: number): DiffLine {
+    return {
+        type: "context",
+        oldNumber: num,
+        newNumber: num,
+        content: ` ${content}`,
+    } as DiffLine;
+}
 
-const parsed = (blocks: unknown[]) => ({ blocks }) as DiffFile;
+function del(content: string, oldNum: number): DiffLine {
+    return {
+        type: "delete",
+        oldNumber: oldNum,
+        newNumber: undefined,
+        content: `-${content}`,
+    } as DiffLine;
+}
 
-const comment = (value: Record<string, unknown>) =>
-    value as unknown as ReviewComment;
+function ins(content: string, newNum: number): DiffLine {
+    return {
+        type: "insert",
+        oldNumber: undefined,
+        newNumber: newNum,
+        content: `+${content}`,
+    } as DiffLine;
+}
 
-describe("diff model", () => {
-    it("normalizes patches only when file headers are absent", () => {
-        expect(normalizeDiffPatch("@@ -1 +1 @@\n-a\n+b", "src/a.ts")).toBe(
-            "--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1 @@\n-a\n+b",
-        );
-        const patch = "--- a/old.ts\n+++ b/new.ts\n@@ -1 +1 @@";
-        expect(normalizeDiffPatch(patch, "new.ts")).toBe(patch);
+function block(lines: DiffLine[]): DiffBlock {
+    return {
+        oldStartLine: 1,
+        newStartLine: 1,
+        header: "@@ -1,1 +1,1 @@",
+        lines,
+    } as DiffBlock;
+}
+
+describe("buildSplitRows", () => {
+    it("passes context lines through unchanged", () => {
+        const rows = buildSplitRows(block([ctx("a", 1), ctx("b", 2)]));
+        expect(rows).toEqual([
+            {
+                kind: "context",
+                line: expect.objectContaining({ type: "context" }),
+            },
+            {
+                kind: "context",
+                line: expect.objectContaining({ type: "context" }),
+            },
+        ]);
     });
 
-    it("creates leading, between, and trailing render gaps", () => {
-        const first = block(4, [{ newNumber: 4 }]);
-        const second = block(9, [{ newNumber: 9 }]);
-        expect(createDiffRenderItems(parsed([first, second]))).toEqual([
-            { type: "gap", startLine: 1, endLine: 3 },
-            { type: "block", block: first },
-            { type: "gap", startLine: 5, endLine: 8 },
-            { type: "block", block: second },
-            { type: "gap", startLine: 10, endLine: -1 },
-        ]);
-        expect(computeBetweenGap(first, second)).toEqual({
-            startLine: 5,
-            endLine: 8,
+    it("pairs a deletion with the following insertion", () => {
+        const rows = buildSplitRows(block([del("old", 1), ins("new", 1)]));
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({
+            kind: "paired",
+            oldLine: { type: "delete", oldNumber: 1 },
+            newLine: { type: "insert", newNumber: 1 },
         });
     });
 
-    it("maps deprecated positions and prefers submitted line coordinates", () => {
-        const diff = parsed([
-            block(1, [
-                { type: "delete", oldNumber: 3 },
-                { type: "insert", newNumber: 4 },
+    it("leaves extra additions unpaired after pairing by index", () => {
+        // 2 deletions + 3 additions -> 2 paired rows + 1 unpaired add
+        const rows = buildSplitRows(
+            block([
+                del("a", 1),
+                del("b", 2),
+                ins("x", 1),
+                ins("y", 2),
+                ins("z", 3),
             ]),
+        );
+        expect(rows.map((r) => r.kind)).toEqual(["paired", "paired", "add"]);
+        expect(rows[0]).toMatchObject({
+            kind: "paired",
+            oldLine: { oldNumber: 1 },
+            newLine: { newNumber: 1 },
+        });
+        expect(rows[1]).toMatchObject({
+            kind: "paired",
+            oldLine: { oldNumber: 2 },
+            newLine: { newNumber: 2 },
+        });
+        expect(rows[2]).toMatchObject({
+            kind: "add",
+            line: { newNumber: 3 },
+        });
+    });
+
+    it("leaves extra deletions unpaired with an empty right side", () => {
+        const rows = buildSplitRows(
+            block([del("a", 1), del("b", 2), ins("x", 1)]),
+        );
+        expect(rows.map((r) => r.kind)).toEqual(["paired", "del"]);
+        expect(rows[1]).toMatchObject({
+            kind: "del",
+            line: { oldNumber: 2 },
+        });
+    });
+
+    it("keeps change groups separated by context lines", () => {
+        const rows = buildSplitRows(
+            block([
+                del("a", 1),
+                ins("x", 1),
+                ctx("mid", 2),
+                del("b", 3),
+                ins("y", 3),
+            ]),
+        );
+        expect(rows.map((r) => r.kind)).toEqual([
+            "paired",
+            "context",
+            "paired",
         ]);
-        const positions = buildDiffPositionMap(diff);
-        expect(
-            resolveDiffCommentAnchor(comment({ position: 1 }), positions),
-        ).toEqual({ side: "LEFT", line: 3 });
-        expect(
-            resolveDiffCommentAnchor(
-                comment({ line: 8, side: "RIGHT", position: 1 }),
-                positions,
-            ),
-        ).toEqual({ side: "RIGHT", line: 8 });
-        expect(
-            resolveDiffCommentAnchor(comment({ position: 99 }), positions),
-        ).toBeNull();
-        expect(
-            resolveDiffCommentAnchor(
-                comment({ original_position: 2 }),
-                positions,
-            ),
-        ).toEqual({ side: "RIGHT", line: 4 });
     });
 });

@@ -6,6 +6,7 @@ import { ArrowDownFromLine, ArrowUpFromLine, Plus } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
     Fragment,
+    type ReactNode,
     useCallback,
     useEffect,
     useMemo,
@@ -15,14 +16,17 @@ import {
 import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
 import { useFileContent } from "~/hooks/use-file-content";
 import type { ReviewComment } from "~/server/github";
+import type { DiffViewMode } from "~/utils/diff-view";
 import { filenameHash } from "~/utils/filename-hash";
 import { getDiffGapSize } from "./diff/diff-block-rows";
 import { DiffContextRow } from "./diff/diff-context-row";
 import { DiffLineCommentEditor } from "./diff/diff-line-comment-editor";
 import { DiffLineRow } from "./diff/diff-line-row";
 import { DiffTable } from "./diff/diff-table";
+import type { SplitRow } from "./diff/model";
 import {
     buildDiffPositionMap,
+    buildSplitRows,
     createDiffRenderItems,
     getDiffLanguage,
     parseDiffPatch,
@@ -33,6 +37,7 @@ import type {
     DiffCommentTarget,
     DiffGap,
     DiffRenderItem,
+    DiffSide,
     GapExpansion,
 } from "./diff/types";
 import { useDiffCommentSelection } from "./diff/use-diff-comment-selection";
@@ -57,6 +62,7 @@ interface DiffViewProps extends DiffCommentProps {
     filename: string;
     headSha?: string;
     expandAllContext?: boolean;
+    view?: DiffViewMode;
 }
 
 /** Comment-related props shared by the diff views (DiffView, SvgDiff). */
@@ -100,6 +106,7 @@ export function DiffView({
     permissionContext,
     headSha,
     expandAllContext = false,
+    view = "unified",
 }: DiffViewProps) {
     const { resolvedTheme } = useTheme();
 
@@ -275,6 +282,7 @@ export function DiffView({
             colorScheme={resolvedTheme === "light" ? "light" : "dark"}
             diffRef={diffRef}
             onMouseOver={onCommentTableMouseOver}
+            view={view}
         >
             <DiffTableBody
                 items={renderItems}
@@ -286,6 +294,7 @@ export function DiffView({
                 headSha={headSha}
                 filename={filename}
                 fileHash={fileHash}
+                view={view}
                 selectedRange={selectedRange}
                 onLineSelect={lineSelection.onLineSelect}
                 onLineMouseDown={onCommentLineMouseDown}
@@ -328,6 +337,7 @@ interface DiffRowNavigationProps {
     headSha?: string;
     filename?: string;
     fileHash?: string;
+    view?: DiffViewMode;
     selectedRange?: {
         startLine: number;
         endLine: number;
@@ -348,25 +358,43 @@ interface BlockRowsProps extends DiffRowNavigationProps {
     commentProps: DiffRowCommentProps;
 }
 
-function BlockRows({
+interface SplitBlockRowsProps {
+    block: DiffBlock;
+    commentsByLine: Map<string, ReviewComment[]>;
+    positionMap: Map<number, DiffAnchor>;
+    multiLineRanges: Map<string, string[]>;
+    owner: string | undefined;
+    repo: string | undefined;
+    fileHash: string | undefined;
+    selectedRange?: {
+        startLine: number;
+        endLine: number;
+        side: string;
+    } | null;
+    onLineSelect?: (lineNum: number, side: string, shiftKey: boolean) => void;
+    onLineMouseDown?: (lineNum: number, side: string) => void;
+    commentProps: DiffRowCommentProps;
+}
+
+const isLastLineOfRange = (
+    comment: ReviewComment,
+    positionMap: Map<number, DiffAnchor>,
+    line: number,
+) => (resolveDiffCommentAnchor(comment, positionMap)?.line ?? 0) === line;
+
+function UnifiedBlockRows({
     block,
     commentsByLine,
     positionMap,
     multiLineRanges,
     owner,
     repo,
-    gap,
-    gapKey,
-    gapExpansion,
-    onGapExpand,
-    headSha,
-    filename,
     fileHash,
     selectedRange,
     onLineSelect,
     onLineMouseDown,
     commentProps,
-}: BlockRowsProps) {
+}: SplitBlockRowsProps) {
     const {
         activeComment,
         onStartComment,
@@ -384,18 +412,6 @@ function BlockRows({
         pendingReviewId,
         permissionContext,
     } = commentProps;
-    const {
-        lines: fileLines,
-        isLoading,
-        error,
-    } = useFileContent({
-        owner,
-        repo,
-        sha: headSha,
-        path: filename,
-    });
-
-    const gapSize = getDiffGapSize(gap, fileLines?.length);
 
     const handleLineClick = useCallback(
         (lineNum: number, side: string, e: React.MouseEvent) => {
@@ -404,185 +420,8 @@ function BlockRows({
         [onLineSelect],
     );
 
-    // The leading gap (startLine 1) holds the lines *above* the first hunk;
-    // it only expands upward (revealing the lines right before the hunk).
-    // Middle gaps expand from both ends, toward each other.
-    const isLeadingGap = gap?.startLine === 1;
-    const revealedTop = isLeadingGap ? 0 : gapExpansion.top;
-    const revealedBottom = gapExpansion.bottom;
-    const revealedTopClamped = Math.min(revealedTop, gapSize);
-    const revealedBottomClamped = Math.min(revealedBottom, gapSize);
-    const expandedTotal = revealedTop + revealedBottom;
-    const isFullyExpanded = expandedTotal >= gapSize;
-    const showUnfoldRow = Boolean(
-        gap &&
-            headSha &&
-            gapSize > 0 &&
-            !isFullyExpanded &&
-            (expandedTotal === 0 || !isLoading),
-    );
-    const showExpandedLines =
-        Boolean(gap) &&
-        gapSize > 0 &&
-        expandedTotal > 0 &&
-        !isLoading &&
-        !error &&
-        fileLines != null;
-
-    // expandBottom reveals lines from the bottom of the gap (adjacent to the
-    // next hunk, below the unfold row); expandTop reveals lines from the top
-    // of the gap (adjacent to the previous hunk, above the unfold row). The
-    // leading gap (which sits above the first hunk) only expands from its
-    // bottom, backward toward the hunk.
-    const expandBottom = () => {
-        if (!gap || gapSize <= 0) return;
-        onGapExpand?.(gapKey ?? "", {
-            top: revealedTop,
-            bottom: Math.min(
-                revealedBottom + GAP_EXPAND_STEP,
-                gapSize - revealedTop,
-            ),
-        });
-    };
-    const expandTop = () => {
-        if (!gap || gapSize <= 0) return;
-        onGapExpand?.(gapKey ?? "", {
-            top: Math.min(
-                revealedTop + GAP_EXPAND_STEP,
-                gapSize - revealedBottom,
-            ),
-            bottom: revealedBottom,
-        });
-    };
-
-    const renderGapLine = (lineContent: string, lineNum: number) => (
-        <DiffContextRow
-            key={`gap-${lineNum}`}
-            lineNum={lineNum}
-            content={lineContent}
-            id={fileHash ? `diff-${fileHash}R${lineNum}` : undefined}
-        />
-    );
-
-    const leadingUnfoldRow = (
-        <tr>
-            <td className="d2h-code-linenumber d2h-info">
-                <button
-                    type="button"
-                    onClick={expandBottom}
-                    title="Expand lines above"
-                    aria-label="Expand lines above"
-                    className="absolute inset-0 flex w-full cursor-pointer items-center justify-center text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
-                >
-                    <ArrowUpFromLine size={14} />
-                </button>
-            </td>
-            <td className="d2h-info">
-                <div className="d2h-code-line" style={{ userSelect: "text" }}>
-                    {revealedBottom === 0 ? block.header : null}
-                </div>
-            </td>
-        </tr>
-    );
-
-    const middleUnfoldRow = (
-        <tr>
-            <td className="d2h-code-linenumber d2h-info">
-                <div className="absolute inset-0 flex items-stretch">
-                    <button
-                        type="button"
-                        onClick={expandBottom}
-                        title="Expand lines below"
-                        aria-label="Expand lines below"
-                        className="flex flex-1 cursor-pointer items-center justify-center text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
-                    >
-                        <ArrowUpFromLine size={14} />
-                    </button>
-                    <button
-                        type="button"
-                        onClick={expandTop}
-                        title="Expand lines above"
-                        aria-label="Expand lines above"
-                        className="flex flex-1 cursor-pointer items-center justify-center border-border border-l text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
-                    >
-                        <ArrowDownFromLine size={14} />
-                    </button>
-                </div>
-            </td>
-            <td className="d2h-info">
-                <div className="d2h-code-line" style={{ userSelect: "text" }}>
-                    {block.header}
-                </div>
-            </td>
-        </tr>
-    );
-
     return (
         <>
-            {gap && isLoading && expandedTotal > 0 && (
-                <tr>
-                    <td className="d2h-code-linenumber d2h-info" />
-                    <td className="d2h-info">
-                        <div className="d2h-code-line text-text-muted text-xs">
-                            Loading...
-                        </div>
-                    </td>
-                </tr>
-            )}
-            {/* Leading gaps reveal backward from the hunk: the unfold row
-                stays at the top and revealed lines fill in below it. */}
-            {isLeadingGap && showUnfoldRow && leadingUnfoldRow}
-            {showExpandedLines &&
-                gap &&
-                isLeadingGap &&
-                fileLines
-                    .slice(gap.endLine - revealedBottomClamped, gap.endLine)
-                    .map((lineContent, idx) =>
-                        renderGapLine(
-                            lineContent,
-                            gap.endLine - revealedBottomClamped + 1 + idx,
-                        ),
-                    )}
-            {/* Middle gaps: top-revealed lines... */}
-            {showExpandedLines &&
-                gap &&
-                !isLeadingGap &&
-                !isFullyExpanded &&
-                revealedTopClamped > 0 &&
-                fileLines
-                    .slice(
-                        gap.startLine - 1,
-                        gap.startLine - 1 + revealedTopClamped,
-                    )
-                    .map((lineContent, idx) =>
-                        renderGapLine(lineContent, gap.startLine + idx),
-                    )}
-            {/* ...or the whole gap once both ends meet. */}
-            {showExpandedLines &&
-                gap &&
-                !isLeadingGap &&
-                isFullyExpanded &&
-                fileLines
-                    .slice(gap.startLine - 1, gap.endLine)
-                    .map((lineContent, idx) =>
-                        renderGapLine(lineContent, gap.startLine + idx),
-                    )}
-            {/* Two-button unfold row sits between the revealed regions. */}
-            {!isLeadingGap && showUnfoldRow && middleUnfoldRow}
-            {/* Middle gaps: bottom-revealed lines. */}
-            {showExpandedLines &&
-                gap &&
-                !isLeadingGap &&
-                !isFullyExpanded &&
-                revealedBottomClamped > 0 &&
-                fileLines
-                    .slice(gap.endLine - revealedBottomClamped, gap.endLine)
-                    .map((lineContent, idx) =>
-                        renderGapLine(
-                            lineContent,
-                            gap.endLine - revealedBottomClamped + 1 + idx,
-                        ),
-                    )}
             {block.lines.map((line) => {
                 const type = line.type;
                 const typeClass =
@@ -630,10 +469,6 @@ function BlockRows({
                 const showRangeIndicator = isInActiveRange || hasMultiLineRange;
 
                 const content = line.content.slice(1);
-
-                const isLastLineOfRange = (c: ReviewComment) =>
-                    (resolveDiffCommentAnchor(c, positionMap)?.line ?? 0) ===
-                    commentLine;
 
                 const lineId = fileHash
                     ? `diff-${fileHash}${newNum != null ? `R${newNum}` : `L${oldNum}`}`
@@ -743,7 +578,11 @@ function BlockRows({
                             hasComments &&
                             groupReviewCommentThreads(lineComments)
                                 .filter((thread) =>
-                                    isLastLineOfRange(thread.parent),
+                                    isLastLineOfRange(
+                                        thread.parent,
+                                        positionMap,
+                                        commentLine,
+                                    ),
                                 )
                                 .map((thread) => (
                                     <tr key={`thread-${thread.parent.id}`}>
@@ -795,6 +634,610 @@ function BlockRows({
     );
 }
 
+function SplitBlockRows({
+    block,
+    commentsByLine,
+    positionMap,
+    multiLineRanges,
+    owner,
+    repo,
+    fileHash,
+    selectedRange,
+    onLineSelect,
+    onLineMouseDown,
+    commentProps,
+}: SplitBlockRowsProps) {
+    // Which side of which row the pointer is over. The comment buttons are
+    // per side, so they must only appear on the hovered side, not the whole
+    // row like in unified view.
+    const [hover, setHover] = useState<{
+        key: string;
+        side: DiffSide;
+    } | null>(null);
+    const {
+        activeComment,
+        onStartComment,
+        pullNumber,
+        commentBody,
+        onCommentBodyChange,
+        footerActions,
+        commentPending,
+        commentError,
+        onCancelComment,
+        showComments,
+        showCommentButton,
+        commentDragRange,
+        onCommentDragStart,
+        pendingReviewId,
+        permissionContext,
+    } = commentProps;
+
+    const handleLineClick = useCallback(
+        (lineNum: number, side: string, e: React.MouseEvent) => {
+            onLineSelect?.(lineNum, side, e.shiftKey);
+        },
+        [onLineSelect],
+    );
+
+    // Per-side comment/selection state for a (line, side) anchor. In split
+    // view every row has up to two anchors (old + new), each with its own
+    // comment button, range indicator and permalink.
+    const buildSideState = (commentLine: number, side: DiffSide) => {
+        const lineComments = commentsByLine.get(`${commentLine}-${side}`) ?? [];
+        const isActive =
+            activeComment?.type === "line" &&
+            activeComment.line === commentLine &&
+            activeComment.side === side;
+        const isInActiveRange =
+            (activeComment?.type === "line" &&
+                activeComment.startLine != null &&
+                activeComment.side === side &&
+                commentLine >= activeComment.startLine &&
+                commentLine <= activeComment.line) ||
+            (commentDragRange != null &&
+                commentDragRange.side === side &&
+                commentLine >= commentDragRange.startLine &&
+                commentLine <= commentDragRange.endLine);
+        const hasMultiLineRange =
+            (multiLineRanges.get(`${commentLine}-${side}`)?.length ?? 0) > 0;
+        const isHighlighted =
+            selectedRange != null &&
+            selectedRange.side === side &&
+            commentLine >= selectedRange.startLine &&
+            commentLine <= selectedRange.endLine;
+        return {
+            lineComments,
+            isActive,
+            showRangeIndicator: isInActiveRange || hasMultiLineRange,
+            isHighlighted,
+        };
+    };
+
+    const renderPlusButton = (
+        visible: boolean,
+        commentLine: number,
+        side: DiffSide,
+        isActive: boolean,
+    ) => (
+        <Plus
+            size={24}
+            className={`absolute -right-5 z-10 ${visible ? "block" : "hidden"} rounded-md bg-blue-500 p-0.5 text-white`}
+            onMouseDown={(e) => {
+                e.stopPropagation();
+                onCommentDragStart?.(commentLine, side);
+            }}
+            onClick={(e) => {
+                e.stopPropagation();
+                if (
+                    e.shiftKey &&
+                    activeComment?.type === "line" &&
+                    activeComment.side === side
+                ) {
+                    const start = Math.min(activeComment.line, commentLine);
+                    const end = Math.max(activeComment.line, commentLine);
+                    onStartComment?.({
+                        type: "line",
+                        line: end,
+                        side,
+                        startLine: start,
+                        startSide: side,
+                    });
+                } else {
+                    onStartComment?.(
+                        isActive
+                            ? null
+                            : { type: "line", line: commentLine, side },
+                    );
+                }
+            }}
+        />
+    );
+
+    // Inline comment threads for every anchor of a split row (old + new
+    // side), one row per thread spanning the full table width.
+    const renderAttachmentRows = (
+        anchors: Array<{ line: number; side: DiffSide }>,
+    ) => {
+        const rows: ReactNode[] = [];
+        const seenThreads = new Set<number>();
+        for (const { line, side } of anchors) {
+            const lineComments = commentsByLine.get(`${line}-${side}`) ?? [];
+            for (const thread of groupReviewCommentThreads(lineComments)) {
+                if (!isLastLineOfRange(thread.parent, positionMap, line))
+                    continue;
+                if (seenThreads.has(thread.parent.id)) continue;
+                seenThreads.add(thread.parent.id);
+                rows.push(
+                    <tr key={`thread-${thread.parent.id}`}>
+                        <td colSpan={4} className="p-0 dark:bg-zinc-950">
+                            <InlineCommentThread
+                                parentComment={thread.parent}
+                                replies={thread.replies}
+                                owner={owner as string}
+                                repo={repo as string}
+                                number={Number(pullNumber ?? 0)}
+                                pendingReviewId={pendingReviewId}
+                                permissionContext={permissionContext}
+                            />
+                        </td>
+                    </tr>,
+                );
+            }
+        }
+        return rows;
+    };
+
+    const renderSplitRow = (row: SplitRow) => {
+        const oldLine =
+            row.kind === "context"
+                ? row.line
+                : row.kind === "paired"
+                  ? row.oldLine
+                  : row.kind === "del"
+                    ? row.line
+                    : null;
+        const newLine =
+            row.kind === "context"
+                ? row.line
+                : row.kind === "paired"
+                  ? row.newLine
+                  : row.kind === "add"
+                    ? row.line
+                    : null;
+
+        const isContext = row.kind === "context";
+        const oldNum = oldLine?.oldNumber;
+        const newNum = newLine?.newNumber;
+        const oldContent = oldLine ? oldLine.content.slice(1) : "";
+        const newContent = newLine ? newLine.content.slice(1) : "";
+
+        const oldState = oldNum != null ? buildSideState(oldNum, "LEFT") : null;
+        const newState =
+            newNum != null ? buildSideState(newNum, "RIGHT") : null;
+
+        const isRowActive =
+            (oldState?.isActive ?? false) || (newState?.isActive ?? false);
+        const isHighlighted =
+            (oldState?.isHighlighted ?? false) ||
+            (newState?.isHighlighted ?? false);
+
+        // The row carries the new-side id (like unified view); old-side
+        // anchors of the same row get their own id on the old number cell so
+        // L-permalinks still scroll into view.
+        const primaryId = fileHash
+            ? `diff-${fileHash}${newNum != null ? `R${newNum}` : `L${oldNum}`}`
+            : undefined;
+        const oldSideId =
+            fileHash && oldNum != null && newNum != null
+                ? `diff-${fileHash}L${oldNum}`
+                : undefined;
+
+        const oldCodeClass = !oldLine
+            ? "d2h-empty-side"
+            : oldLine.type === "delete"
+              ? "d2h-del d2h-change"
+              : "d2h-cntx";
+        const newCodeClass = !newLine
+            ? "d2h-empty-side"
+            : newLine.type === "insert"
+              ? "d2h-ins d2h-change"
+              : "d2h-cntx";
+        const oldLnClass = !oldLine
+            ? "d2h-empty-side"
+            : oldLine.type === "delete"
+              ? "d2h-del"
+              : "d2h-cntx";
+        const newLnClass = !newLine
+            ? "d2h-empty-side"
+            : newLine.type === "insert"
+              ? "d2h-ins"
+              : "d2h-cntx";
+
+        // Comment anchors: context lines comment on the new side (like
+        // unified view); changed lines anchor to their own side.
+        const anchors: Array<{ line: number; side: DiffSide }> = [];
+        if (isContext && newNum != null) {
+            anchors.push({ line: newNum, side: "RIGHT" });
+        } else {
+            if (oldNum != null) anchors.push({ line: oldNum, side: "LEFT" });
+            if (newNum != null) anchors.push({ line: newNum, side: "RIGHT" });
+        }
+
+        const rowKey =
+            row.kind === "context"
+                ? `c-${oldNum}-${newNum}`
+                : row.kind === "paired"
+                  ? `p-${oldNum}-${newNum}`
+                  : row.kind === "del"
+                    ? `d-${oldNum}`
+                    : `a-${newNum}`;
+
+        const hovered = hover?.key === rowKey ? hover.side : null;
+        const hoverLeft = () => setHover({ key: rowKey, side: "LEFT" });
+        const hoverRight = () => setHover({ key: rowKey, side: "RIGHT" });
+
+        return (
+            <Fragment key={rowKey}>
+                <DiffLineRow
+                    className={isHighlighted ? "line-highlighted" : ""}
+                    id={primaryId}
+                    onMouseLeave={() =>
+                        setHover((h) => (h?.key === rowKey ? null : h))
+                    }
+                >
+                    {oldNum != null ? (
+                        <td
+                            className={`d2h-code-linenumber d2h-split-ln ${oldLnClass} ${oldState?.showRangeIndicator ? "border-blue-400 border-l-4" : ""}`}
+                            id={oldSideId}
+                            onMouseDown={() =>
+                                onLineMouseDown?.(oldNum, "LEFT")
+                            }
+                            onMouseEnter={hoverLeft}
+                            onClick={(e) => handleLineClick(oldNum, "LEFT", e)}
+                            title="Copy permalink"
+                        >
+                            <div className="absolute inset-0">
+                                {showCommentButton &&
+                                    onStartComment &&
+                                    oldLine != null &&
+                                    (isContext || oldLine.type === "delete") &&
+                                    renderPlusButton(
+                                        hovered === "LEFT",
+                                        isContext ? (newNum as number) : oldNum,
+                                        isContext ? "RIGHT" : "LEFT",
+                                        isContext
+                                            ? (newState?.isActive ?? false)
+                                            : (oldState?.isActive ?? false),
+                                    )}
+                                <span className="d2h-split-ln-num">
+                                    {oldNum}
+                                </span>
+                            </div>
+                        </td>
+                    ) : (
+                        <td className="d2h-code-linenumber d2h-split-ln d2h-empty-side" />
+                    )}
+                    <td
+                        className={`d2h-split-code ${oldCodeClass}`}
+                        onMouseEnter={hoverLeft}
+                    >
+                        <div className="d2h-split-code-line">
+                            <span className="d2h-code-line-ctn">
+                                {oldContent || <br />}
+                            </span>
+                        </div>
+                    </td>
+                    {newNum != null ? (
+                        <td
+                            className={`d2h-code-linenumber d2h-split-ln d2h-split-new ${newLnClass} ${newState?.showRangeIndicator ? "border-blue-400 border-l-4" : ""}`}
+                            onMouseDown={() =>
+                                onLineMouseDown?.(newNum, "RIGHT")
+                            }
+                            onMouseEnter={hoverRight}
+                            onClick={(e) => handleLineClick(newNum, "RIGHT", e)}
+                            title="Copy permalink"
+                        >
+                            <div className="absolute inset-0">
+                                {showCommentButton &&
+                                    onStartComment &&
+                                    newLine?.type === "insert" &&
+                                    renderPlusButton(
+                                        hovered === "RIGHT",
+                                        newNum,
+                                        "RIGHT",
+                                        newState?.isActive ?? false,
+                                    )}
+                                <span className="d2h-split-ln-num">
+                                    {newNum}
+                                </span>
+                            </div>
+                        </td>
+                    ) : (
+                        <td className="d2h-code-linenumber d2h-split-ln d2h-empty-side" />
+                    )}
+                    <td
+                        className={`d2h-split-code ${newCodeClass}`}
+                        onMouseEnter={hoverRight}
+                    >
+                        <div className="d2h-split-code-line">
+                            <span className="d2h-code-line-ctn">
+                                {newContent || <br />}
+                            </span>
+                        </div>
+                    </td>
+                </DiffLineRow>
+                {showComments && renderAttachmentRows(anchors)}
+                {isRowActive && (
+                    <tr>
+                        <td colSpan={4} className="border-border border-t p-2">
+                            <DiffLineCommentEditor
+                                value={commentBody}
+                                onChange={onCommentBodyChange ?? (() => {})}
+                                onCancel={onCancelComment ?? (() => {})}
+                                footerActions={footerActions}
+                                isPending={commentPending}
+                                isError={commentError}
+                                owner={owner as string}
+                                repo={repo as string}
+                            />
+                        </td>
+                    </tr>
+                )}
+            </Fragment>
+        );
+    };
+
+    return buildSplitRows(block).map((row) => renderSplitRow(row));
+}
+
+function BlockRows({
+    block,
+    commentsByLine,
+    positionMap,
+    multiLineRanges,
+    owner,
+    repo,
+    gap,
+    gapKey,
+    gapExpansion,
+    onGapExpand,
+    headSha,
+    filename,
+    fileHash,
+    view = "unified",
+    selectedRange,
+    onLineSelect,
+    onLineMouseDown,
+    commentProps,
+}: BlockRowsProps) {
+    const {
+        lines: fileLines,
+        isLoading,
+        error,
+    } = useFileContent({
+        owner,
+        repo,
+        sha: headSha,
+        path: filename,
+    });
+
+    const gapSize = getDiffGapSize(gap, fileLines?.length);
+
+    // The leading gap (startLine 1) holds the lines *above* the first hunk;
+    // it only expands upward (revealing the lines right before the hunk).
+    // Middle gaps expand from both ends, toward each other.
+    const isLeadingGap = gap?.startLine === 1;
+    const revealedTop = isLeadingGap ? 0 : gapExpansion.top;
+    const revealedBottom = gapExpansion.bottom;
+    const revealedTopClamped = Math.min(revealedTop, gapSize);
+    const revealedBottomClamped = Math.min(revealedBottom, gapSize);
+    const expandedTotal = revealedTop + revealedBottom;
+    const isFullyExpanded = expandedTotal >= gapSize;
+    const showUnfoldRow = Boolean(
+        gap &&
+            headSha &&
+            gapSize > 0 &&
+            !isFullyExpanded &&
+            (expandedTotal === 0 || !isLoading),
+    );
+    const showExpandedLines =
+        Boolean(gap) &&
+        gapSize > 0 &&
+        expandedTotal > 0 &&
+        !isLoading &&
+        !error &&
+        fileLines != null;
+
+    // expandBottom reveals lines from the bottom of the gap (adjacent to the
+    // next hunk, below the unfold row); expandTop reveals lines from the top
+    // of the gap (adjacent to the previous hunk, above the unfold row). The
+    // leading gap (which sits above the first hunk) only expands from its
+    // bottom, backward toward the hunk.
+    const expandBottom = () => {
+        if (!gap || gapSize <= 0) return;
+        onGapExpand?.(gapKey ?? "", {
+            top: revealedTop,
+            bottom: Math.min(
+                revealedBottom + GAP_EXPAND_STEP,
+                gapSize - revealedTop,
+            ),
+        });
+    };
+    const expandTop = () => {
+        if (!gap || gapSize <= 0) return;
+        onGapExpand?.(gapKey ?? "", {
+            top: Math.min(
+                revealedTop + GAP_EXPAND_STEP,
+                gapSize - revealedBottom,
+            ),
+            bottom: revealedBottom,
+        });
+    };
+
+    const renderGapLine = (lineContent: string, lineNum: number) => (
+        <DiffContextRow
+            key={`gap-${lineNum}`}
+            lineNum={lineNum}
+            content={lineContent}
+            id={fileHash ? `diff-${fileHash}R${lineNum}` : undefined}
+            view={view}
+        />
+    );
+
+    const infoColSpan = view === "split" ? 3 : 1;
+
+    const leadingUnfoldRow = (
+        <tr>
+            <td className="d2h-code-linenumber d2h-info">
+                <button
+                    type="button"
+                    onClick={expandBottom}
+                    title="Expand lines above"
+                    aria-label="Expand lines above"
+                    className="absolute inset-0 flex w-full cursor-pointer items-center justify-center text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
+                >
+                    <ArrowUpFromLine size={14} />
+                </button>
+            </td>
+            <td className="d2h-info" colSpan={infoColSpan}>
+                <div className="d2h-code-line" style={{ userSelect: "text" }}>
+                    {revealedBottom === 0 ? block.header : null}
+                </div>
+            </td>
+        </tr>
+    );
+
+    const middleUnfoldRow = (
+        <tr>
+            <td className="d2h-code-linenumber d2h-info">
+                <div className="absolute inset-0 flex items-stretch">
+                    <button
+                        type="button"
+                        onClick={expandBottom}
+                        title="Expand lines below"
+                        aria-label="Expand lines below"
+                        className="flex flex-1 cursor-pointer items-center justify-center text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
+                    >
+                        <ArrowUpFromLine size={14} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={expandTop}
+                        title="Expand lines above"
+                        aria-label="Expand lines above"
+                        className="flex flex-1 cursor-pointer items-center justify-center border-border border-l text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
+                    >
+                        <ArrowDownFromLine size={14} />
+                    </button>
+                </div>
+            </td>
+            <td className="d2h-info" colSpan={infoColSpan}>
+                <div className="d2h-code-line" style={{ userSelect: "text" }}>
+                    {block.header}
+                </div>
+            </td>
+        </tr>
+    );
+
+    return (
+        <>
+            {gap && isLoading && expandedTotal > 0 && (
+                <tr>
+                    <td className="d2h-code-linenumber d2h-info" />
+                    <td className="d2h-info" colSpan={infoColSpan}>
+                        <div className="d2h-code-line text-text-muted text-xs">
+                            Loading...
+                        </div>
+                    </td>
+                </tr>
+            )}
+            {/* Leading gaps reveal backward from the hunk: the unfold row
+                stays at the top and revealed lines fill in below it. */}
+            {isLeadingGap && showUnfoldRow && leadingUnfoldRow}
+            {showExpandedLines &&
+                gap &&
+                isLeadingGap &&
+                fileLines
+                    .slice(gap.endLine - revealedBottomClamped, gap.endLine)
+                    .map((lineContent, idx) =>
+                        renderGapLine(
+                            lineContent,
+                            gap.endLine - revealedBottomClamped + 1 + idx,
+                        ),
+                    )}
+            {/* Middle gaps: top-revealed lines... */}
+            {showExpandedLines &&
+                gap &&
+                !isLeadingGap &&
+                !isFullyExpanded &&
+                revealedTopClamped > 0 &&
+                fileLines
+                    .slice(
+                        gap.startLine - 1,
+                        gap.startLine - 1 + revealedTopClamped,
+                    )
+                    .map((lineContent, idx) =>
+                        renderGapLine(lineContent, gap.startLine + idx),
+                    )}
+            {/* ...or the whole gap once both ends meet. */}
+            {showExpandedLines &&
+                gap &&
+                !isLeadingGap &&
+                isFullyExpanded &&
+                fileLines
+                    .slice(gap.startLine - 1, gap.endLine)
+                    .map((lineContent, idx) =>
+                        renderGapLine(lineContent, gap.startLine + idx),
+                    )}
+            {/* Two-button unfold row sits between the revealed regions. */}
+            {!isLeadingGap && showUnfoldRow && middleUnfoldRow}
+            {/* Middle gaps: bottom-revealed lines. */}
+            {showExpandedLines &&
+                gap &&
+                !isLeadingGap &&
+                !isFullyExpanded &&
+                revealedBottomClamped > 0 &&
+                fileLines
+                    .slice(gap.endLine - revealedBottomClamped, gap.endLine)
+                    .map((lineContent, idx) =>
+                        renderGapLine(
+                            lineContent,
+                            gap.endLine - revealedBottomClamped + 1 + idx,
+                        ),
+                    )}
+            {view === "split" ? (
+                <SplitBlockRows
+                    block={block}
+                    commentsByLine={commentsByLine}
+                    positionMap={positionMap}
+                    multiLineRanges={multiLineRanges}
+                    owner={owner}
+                    repo={repo}
+                    fileHash={fileHash}
+                    selectedRange={selectedRange}
+                    onLineSelect={onLineSelect}
+                    onLineMouseDown={onLineMouseDown}
+                    commentProps={commentProps}
+                />
+            ) : (
+                <UnifiedBlockRows
+                    block={block}
+                    commentsByLine={commentsByLine}
+                    positionMap={positionMap}
+                    multiLineRanges={multiLineRanges}
+                    owner={owner}
+                    repo={repo}
+                    fileHash={fileHash}
+                    selectedRange={selectedRange}
+                    onLineSelect={onLineSelect}
+                    onLineMouseDown={onLineMouseDown}
+                    commentProps={commentProps}
+                />
+            )}
+        </>
+    );
+}
+
 interface GapRowProps extends DiffRowNavigationProps {
     startLine: number;
     expandedCount: number;
@@ -804,6 +1247,7 @@ interface GapRowProps extends DiffRowNavigationProps {
     repo: string | undefined;
     headSha: string | undefined;
     filename: string;
+    view: DiffViewMode;
 }
 
 function GapRow({
@@ -816,6 +1260,7 @@ function GapRow({
     headSha,
     filename,
     fileHash,
+    view,
     selectedRange,
     onLineSelect,
     onLineMouseDown,
@@ -829,6 +1274,7 @@ function GapRow({
 
     const endLine = lines?.length ?? -1;
     const gapSize = endLine - startLine + 1;
+    const contentColSpan = view === "split" ? 3 : 1;
 
     const isGapHighlighted =
         selectedRange != null && selectedRange.side === "RIGHT";
@@ -854,7 +1300,7 @@ function GapRow({
                         <ArrowDownFromLine size={14} />
                     </button>
                 </td>
-                <td className="d2h-info">
+                <td className="d2h-info" colSpan={contentColSpan}>
                     <div className="d2h-code-line" />
                 </td>
             </tr>
@@ -865,7 +1311,7 @@ function GapRow({
         return (
             <tr>
                 <td className="d2h-code-linenumber d2h-info" />
-                <td className="d2h-info">
+                <td className="d2h-info" colSpan={contentColSpan}>
                     <div className="d2h-code-line text-text-muted text-xs">
                         Loading...
                     </div>
@@ -901,6 +1347,7 @@ function GapRow({
                         highlighted={lineHighlighted}
                         onLineSelect={onLineSelect}
                         onLineMouseDown={onLineMouseDown}
+                        view={view}
                     />
                 );
             })}
@@ -925,7 +1372,7 @@ function GapRow({
                             <ArrowDownFromLine size={14} />
                         </button>
                     </td>
-                    <td className="d2h-info">
+                    <td className="d2h-info" colSpan={contentColSpan}>
                         <div className="d2h-code-line" />
                     </td>
                 </tr>
@@ -944,6 +1391,7 @@ interface DiffTableBodyProps {
     headSha: string | undefined;
     filename: string;
     fileHash: string | undefined;
+    view: DiffViewMode;
     selectedRange: { startLine: number; endLine: number; side: string } | null;
     onLineSelect: (lineNum: number, side: string, shiftKey: boolean) => void;
     onLineMouseDown: (lineNum: number, side: string) => void;
@@ -963,6 +1411,7 @@ function DiffTableBody({
     headSha,
     filename,
     fileHash,
+    view,
     selectedRange,
     onLineSelect,
     onLineMouseDown,
@@ -992,6 +1441,7 @@ function DiffTableBody({
                             headSha={headSha}
                             filename={filename}
                             fileHash={fileHash}
+                            view={view}
                             selectedRange={selectedRange}
                             onLineSelect={onLineSelect}
                             onLineMouseDown={onLineMouseDown}
@@ -1024,6 +1474,7 @@ function DiffTableBody({
                         headSha={headSha}
                         filename={filename}
                         fileHash={fileHash}
+                        view={view}
                         selectedRange={selectedRange}
                         onLineSelect={onLineSelect}
                         onLineMouseDown={onLineMouseDown}
