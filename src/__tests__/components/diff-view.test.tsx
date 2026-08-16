@@ -584,6 +584,37 @@ describe("DiffView rendering", () => {
             expect(classes).toContain("group");
             expect(classes).toContain("line-highlighted");
         });
+
+        it("gap-expanded lines respond to line clicks like block rows", () => {
+            vi.spyOn(window.history, "replaceState").mockImplementation(
+                vi.fn(),
+            );
+            mockParsedFile([mb(3, [mc("+line3", 3)])], { addedLines: 1 });
+
+            const { container } = renderDiffView({
+                expandAllContext: true,
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            // The leading-gap row shows the "Copy permalink" affordance;
+            // clicking it must select the line and update the URL, not be a
+            // dead click (the handlers were previously not wired up).
+            const gapCell = container.querySelector(
+                'tr[id$="R1"] td.d2h-code-linenumber',
+            )!;
+            fireEvent.click(gapCell);
+
+            expect(window.history.replaceState).toHaveBeenCalledWith(
+                null,
+                "",
+                expect.stringMatching(
+                    new RegExp(`#diff-${FILE_HASH}R1$`),
+                ),
+            );
+        });
     });
 
     describe("expandAllContext", () => {
