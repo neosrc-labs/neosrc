@@ -1,6 +1,11 @@
 "use client";
 
-import { MessageSquare, MessageSquareOff, RefreshCw } from "lucide-react";
+import {
+    MessageSquare,
+    MessageSquareOff,
+    RefreshCw,
+    Settings,
+} from "lucide-react";
 import Image from "next/image";
 import {
     type ReactNode,
@@ -14,6 +19,16 @@ import { Async } from "~/components/async";
 import FileDiff from "~/components/file-diff";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import {
     extractPullRequestState,
     StatusPill,
@@ -325,46 +340,6 @@ export function FilesSection({
                             </div>
                         </div>
                     )}
-                    <fieldset
-                        aria-label="Diff view"
-                        className="m-0 flex items-center overflow-hidden rounded-md border border-border p-0"
-                    >
-                        {(["unified", "split"] as const).map((mode) => (
-                            <button
-                                key={mode}
-                                type="button"
-                                aria-pressed={diffView === mode}
-                                className={`cursor-pointer px-2.5 py-1 font-medium text-xs transition-colors ${
-                                    diffView === mode
-                                        ? "bg-surface-selected text-text-label"
-                                        : "text-text-tertiary hover:bg-surface-tertiary hover:text-text-label"
-                                }`}
-                                onClick={() => setDiffView(mode)}
-                                title={
-                                    mode === "unified"
-                                        ? "Unified view"
-                                        : "Split view"
-                                }
-                            >
-                                {mode === "unified" ? "Unified" : "Split"}
-                            </button>
-                        ))}
-                    </fieldset>
-                    <button
-                        className="flex cursor-pointer items-center gap-2 rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
-                        onClick={() => setShowComments(!showComments)}
-                        title={showComments ? "Hide comments" : "Show comments"}
-                        type="button"
-                    >
-                        {showComments ? (
-                            <MessageSquare size={16} />
-                        ) : (
-                            <MessageSquareOff size={16} />
-                        )}
-                        <span className="font-mono text-xs leading-none">
-                            {allCommentsAll.length}
-                        </span>
-                    </button>
                     <Async
                         fallback={null}
                         promise={checkRunsPromise ?? EMPTY_ARRAY_PROMISE}
@@ -384,6 +359,57 @@ export function FilesSection({
                             />
                         )}
                     </Async>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button
+                                aria-label="Diff settings"
+                                className="flex cursor-pointer items-center justify-center rounded-md bg-surface-elevated p-2 text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
+                                title="Diff settings"
+                                type="button"
+                            >
+                                <Settings size={16} />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Diff view</DropdownMenuLabel>
+                            <DropdownMenuRadioGroup
+                                value={diffView}
+                                onValueChange={(value) => {
+                                    if (
+                                        value === "unified" ||
+                                        value === "split"
+                                    ) {
+                                        setDiffView(value);
+                                    }
+                                }}
+                            >
+                                <DropdownMenuRadioItem value="unified">
+                                    Unified
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="split">
+                                    Split
+                                </DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                onClick={() => setShowComments(!showComments)}
+                            >
+                                {showComments ? (
+                                    <MessageSquareOff size={16} />
+                                ) : (
+                                    <MessageSquare size={16} />
+                                )}
+                                <span className="flex-1">
+                                    {showComments
+                                        ? "Hide comments"
+                                        : "Show comments"}
+                                </span>
+                                <span className="font-mono text-text-tertiary text-xs">
+                                    {allCommentsAll.length}
+                                </span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
             {children}
