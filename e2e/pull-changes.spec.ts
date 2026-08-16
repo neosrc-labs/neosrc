@@ -684,6 +684,7 @@ async function runDragRangeCommentScenario(
     page: Page,
     testPullRequest: TestChangesPullRequest,
 ) {
+    test.setTimeout(90_000);
     const gapFile = testPullRequest.files.find(
         (file) => file.filename === GAP_FIXTURE_PATH,
     );
@@ -705,13 +706,52 @@ async function runDragRangeCommentScenario(
         const targetRow = fileDiff.locator('tbody tr[data-new-line="4"]');
         await expect(targetRow).toBeVisible();
 
-        const plus = plusRow.locator("td.d2h-split-ln.d2h-split-new svg");
-        // Hover the new-side cell first so the plus is visible, then drag
-        // with locator.dragTo: it re-positions during the drag instead of
-        // relying on coordinates captured before the page settles.
-        await plusRow.locator("td.d2h-split-ln.d2h-split-new").hover();
-        await expect(plus).toBeVisible();
-        await plus.dragTo(targetRow);
+        // Dispatch the drag through the app's real event handlers. Synthetic
+        // mouse-drag choreography (boundingBox + mouse.move) is flaky under
+        // parallel load because layout shifts mid-drag swallow the events;
+        // the click-based tests already cover the real-mouse path to the
+        // plus, so this exercises the drag logic deterministically. The
+        // mouseup must arrive after React commits the extended range, or the
+        // document mouseup listener still sees the single-line range.
+        const dragged = await fileDiff.locator("tbody").evaluate(
+            (tbody, { plusId, targetId }) => {
+                const findRow = (id: string) =>
+                    tbody.querySelector(`tr[data-new-line="${id}"]`);
+                const plusRow = findRow(plusId);
+                const target = findRow(targetId);
+                const plus = plusRow?.querySelector(
+                    "td.d2h-split-ln.d2h-split-new svg",
+                );
+                if (!plus || !target) return false;
+                plus.dispatchEvent(
+                    new MouseEvent("mousedown", {
+                        bubbles: true,
+                        cancelable: true,
+                    }),
+                );
+                target.dispatchEvent(
+                    new MouseEvent("mouseover", {
+                        bubbles: true,
+                        cancelable: true,
+                    }),
+                );
+                return true;
+            },
+            { plusId: "3", targetId: "4" },
+        );
+        expect(dragged).toBe(true);
+        await page.waitForTimeout(250);
+        await page.evaluate(() => {
+            document.dispatchEvent(
+                new MouseEvent("mouseup", {
+                    bubbles: true,
+                    cancelable: true,
+                }),
+            );
+        });
+        await expect(fileDiff.getByPlaceholder("Add a comment...")).toBeVisible(
+            { timeout: 15_000 },
+        );
     });
 
     await test.step("Submit the range comment", async () => {

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 export const TEST_REPO = process.env.E2E_TEST_REPO ?? "neosrc-labs/test-repo";
 export const [OWNER, REPO] = TEST_REPO.split("/") as [string, string];
@@ -18,13 +18,23 @@ export async function gotoChanges(page: Page, prNumber: number) {
 
 export async function collapseRightSidebar(page: Page) {
     await page.waitForLoadState("load");
-    await page.getByTitle("Close right sidebar").first().click();
-    await page.getByTitle("Open right sidebar").first().waitFor();
+    // A click dispatched before React hydrates the page is silently lost;
+    // retry until the sidebar actually collapses.
+    await expect(async () => {
+        await page.getByTitle("Close right sidebar").first().click();
+        await expect(page.getByTitle("Open right sidebar").first()).toBeVisible(
+            { timeout: 2_000 },
+        );
+    }).toPass({ timeout: 15_000 });
 }
 
 export async function expandRightSidebar(page: Page) {
-    await page.getByTitle("Open right sidebar").first().click();
-    await page.getByTitle("Close right sidebar").first().waitFor();
+    await expect(async () => {
+        await page.getByTitle("Open right sidebar").first().click();
+        await expect(
+            page.getByTitle("Close right sidebar").first(),
+        ).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 15_000 });
 }
 export async function collapseLeftSidebar(page: Page) {
     await page.waitForLoadState("load");
