@@ -178,3 +178,12 @@ export function resolveDiffCommentAnchor(
     const position = comment.position ?? comment.original_position ?? null;
     return position == null ? null : (positionMap.get(position) ?? null);
 }
+
+/** Whether `comment`'s anchor is the given line (last line of its range). */
+export function isLastLineOfRange(
+    comment: ReviewComment,
+    positionMap: Map<number, DiffAnchor>,
+    line: number,
+): boolean {
+    return (resolveDiffCommentAnchor(comment, positionMap)?.line ?? 0) === line;
+}
