@@ -171,34 +171,37 @@ export function DiffContextRow({
         : [];
 
     // Context-line comments anchor to the new side (like unified view), so
-    // in split view they align with the new code column (spacer cells occupy
-    // the leading columns); in unified view the line numbers are an absolute
-    // overlay, so the comment is inset by the code column's 8em padding.
+    // in split view they align with the new code column (the new line-number
+    // column carries the line's lighter shade); in unified view the line
+    // numbers are an absolute overlay, so the thread reserves an 8em
+    // line-number cell with the same lighter shade.
     const threadCells = (children: ReactNode) =>
         view === "split" ? (
             <>
                 <td className="d2h-empty-side" />
                 <td className="d2h-empty-side" />
-                <td className="d2h-empty-side" />
+                <td className="d2h-split-ln d2h-cntx" />
                 <td className="p-0 pl-[0.75em] dark:bg-zinc-950">{children}</td>
             </>
         ) : (
-            <td colSpan={2} className="p-0 pl-[8em] dark:bg-zinc-950">
-                {children}
-            </td>
+            <>
+                <td className="d2h-thread-ln d2h-cntx" />
+                <td className="p-0 dark:bg-zinc-950">{children}</td>
+            </>
         );
     const editorCells = (children: ReactNode) =>
         view === "split" ? (
             <>
                 <td className="d2h-empty-side" />
                 <td className="d2h-empty-side" />
-                <td className="d2h-empty-side" />
+                <td className="d2h-split-ln d2h-cntx" />
                 <td className="border-border border-t p-0">{children}</td>
             </>
         ) : (
-            <td colSpan={2} className="border-border border-t p-0 pl-[8em]">
-                {children}
-            </td>
+            <>
+                <td className="d2h-thread-ln d2h-cntx" />
+                <td className="border-border border-t p-0">{children}</td>
+            </>
         );
 
     const attachments = (
@@ -373,7 +376,7 @@ export function DiffContextRow({
                     }
                     title="Copy permalink"
                 >
-                    <div className="absolute">
+                    <div className="d2h-ln-overlay absolute">
                         {showCommentButton &&
                             onStartComment &&
                             renderPlusButton("RIGHT")}

@@ -513,7 +513,7 @@ function UnifiedBlockRows({
                                 }}
                                 title="Copy permalink"
                             >
-                                <div className="absolute">
+                                <div className="d2h-ln-overlay absolute">
                                     {showCommentButton && onStartComment && (
                                         <Plus
                                             size={24}
@@ -602,9 +602,9 @@ function UnifiedBlockRows({
                                 .map((thread) => (
                                     <tr key={`thread-${thread.parent.id}`}>
                                         <td
-                                            colSpan={2}
-                                            className={`p-0 pl-[8em] ${typeClass}`}
-                                        >
+                                            className={`d2h-thread-ln ${typeClass}`}
+                                        />
+                                        <td className={`p-0 ${typeClass}`}>
                                             <InlineCommentThread
                                                 parentComment={thread.parent}
                                                 replies={thread.replies}
@@ -623,10 +623,8 @@ function UnifiedBlockRows({
                                 ))}
                         {isActive && (
                             <tr>
-                                <td
-                                    colSpan={2}
-                                    className="border-border border-t p-0 pl-[8em]"
-                                >
+                                <td className={`d2h-thread-ln ${typeClass}`} />
+                                <td className="border-border border-t p-0">
                                     <DiffLineCommentEditor
                                         value={commentBody}
                                         onChange={
@@ -770,7 +768,7 @@ function renderSplitAttachmentRows({
                 <tr key={`thread-${thread.parent.id}`}>
                     {side === "LEFT" ? (
                         <>
-                            <td className="d2h-empty-side" />
+                            <td className={`d2h-split-ln ${typeClass}`} />
                             <td
                                 colSpan={3}
                                 className={`p-0 pl-[0.75em] ${typeClass}`}
@@ -790,7 +788,7 @@ function renderSplitAttachmentRows({
                         <>
                             <td className="d2h-empty-side" />
                             <td className="d2h-empty-side" />
-                            <td className="d2h-empty-side" />
+                            <td className={`d2h-split-ln ${typeClass}`} />
                             <td className={`p-0 pl-[0.75em] ${typeClass}`}>
                                 <InlineCommentThread
                                     parentComment={thread.parent}
@@ -811,10 +809,12 @@ function renderSplitAttachmentRows({
     return rows;
 }
 
-// The in-line comment editor row for a split row: spacer cells occupy the
-// leading columns so the editor aligns with the anchored side's code column.
+// The in-line comment editor row for a split row: the anchored side's
+// line-number column gets the line's lighter shade, and the editor aligns
+// with the anchored side's code column (empty cells occupy the rest).
 function renderSplitEditorRow({
     side,
+    typeClass,
     commentBody,
     onCommentBodyChange,
     onCancelComment,
@@ -825,6 +825,7 @@ function renderSplitEditorRow({
     repo,
 }: {
     side: DiffSide;
+    typeClass: string;
     commentBody?: string;
     onCommentBodyChange?: (value: string) => void;
     onCancelComment?: () => void;
@@ -850,7 +851,7 @@ function renderSplitEditorRow({
         <tr>
             {side === "LEFT" ? (
                 <>
-                    <td className="d2h-empty-side" />
+                    <td className={`d2h-split-ln ${typeClass}`} />
                     <td colSpan={3} className="border-border border-t p-0">
                         {editor}
                     </td>
@@ -859,7 +860,7 @@ function renderSplitEditorRow({
                 <>
                     <td className="d2h-empty-side" />
                     <td className="d2h-empty-side" />
-                    <td className="d2h-empty-side" />
+                    <td className={`d2h-split-ln ${typeClass}`} />
                     <td className="border-border border-t p-0">{editor}</td>
                 </>
             )}
@@ -1186,6 +1187,11 @@ function SplitBlockRows({
                             activeComment?.type === "line"
                                 ? activeComment.side
                                 : "RIGHT",
+                        typeClass:
+                            activeComment?.type === "line" &&
+                            activeComment.side === "LEFT"
+                                ? oldCodeClass
+                                : newCodeClass,
                         commentBody,
                         onCommentBodyChange,
                         onCancelComment,

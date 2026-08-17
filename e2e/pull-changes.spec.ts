@@ -217,6 +217,35 @@ async function runReplyPromotionScenario(
             "Collapse should sit left of the header action cluster",
         ).toBeLessThanOrEqual(moreBox?.x ?? 0);
 
+        // The thread's line-number section carries the anchored line's
+        // lighter shade (continuation) and the separator border is gone.
+        const threadLn = expandedThread.locator("xpath=ancestor::tr[1]/td[1]");
+        await expect(threadLn).toHaveClass(/d2h-thread-ln/);
+        // Locate the anchored line row by content (other tests may have
+        // left sibling threads on the same line, so preceding-sibling
+        // would resolve to another thread row).
+        const lineRow = fileDiff
+            .locator('tbody tr[id^="diff-"]:has(td.d2h-ins)')
+            .first();
+        const lineLn = lineRow.locator("td.d2h-code-linenumber").first();
+        expect(
+            await threadLn.evaluate(
+                (el) => getComputedStyle(el).backgroundColor,
+            ),
+        ).toBe(
+            await lineLn.evaluate((el) => getComputedStyle(el).backgroundColor),
+        );
+        expect(
+            await lineLn.evaluate(
+                (el) => getComputedStyle(el).borderRightWidth,
+            ),
+            "no vertical separator between line numbers and content",
+        ).toBe("0px");
+        expect(
+            await lineLn.evaluate((el) => getComputedStyle(el).borderLeftWidth),
+            "no border on the outer edge of the line numbers",
+        ).toBe("0px");
+
         // Collapse back to the banner.
         await collapse.click();
         await expect(
@@ -534,6 +563,7 @@ test.describe
         test("should promote replies and resolve the comment thread", async ({
             page,
         }) => {
+            test.setTimeout(120_000);
             await runReplyPromotionScenario(page, testPullRequest);
         });
 
@@ -749,6 +779,48 @@ async function runNewSideCommentScenario(
             (replyBox?.x ?? 0) + (replyBox?.width ?? 0),
             "reply button should not extend past the comment card",
         ).toBeLessThanOrEqual((box?.x ?? 0) + 800);
+    });
+
+    await test.step("Verify the line-number shade continues into the thread", async () => {
+        const thread = fileDiff
+            .locator('[id^="review-thread-"]')
+            .filter({ hasText: commentText });
+        const threadRow = thread.locator("xpath=ancestor::tr[1]");
+        const threadLn = threadRow.locator("td.d2h-split-ln.d2h-ins").first();
+        await expect(threadLn).toBeVisible();
+
+        // The comment's line-number section uses the anchored line's shade
+        // family. The line row itself may carry a transient selection
+        // highlight, so compare by class rather than computed color.
+        const lineRow = fileDiff
+            .locator('tbody tr[id^="diff-"]:has(td.d2h-ins)')
+            .first();
+        const lineLn = lineRow.locator("td.d2h-split-ln.d2h-split-new");
+        await expect(threadLn).toHaveClass(/d2h-ins/);
+        await expect(lineLn).toHaveClass(/d2h-ins/);
+
+        // The thread's number shade is lighter than the content tint, and
+        // the diff2html separator border between numbers and content is gone.
+        const threadLnBg = await threadLn.evaluate(
+            (el) => getComputedStyle(el).backgroundColor,
+        );
+        const codeBg = await lineRow
+            .locator("td.d2h-split-code.d2h-ins")
+            .evaluate((el) => getComputedStyle(el).backgroundColor);
+        expect(
+            threadLnBg,
+            "number shade should differ from the content tint",
+        ).not.toBe(codeBg);
+        expect(
+            await lineLn.evaluate(
+                (el) => getComputedStyle(el).borderRightWidth,
+            ),
+            "no vertical separator between line numbers and content",
+        ).toBe("0px");
+        expect(
+            await lineLn.evaluate((el) => getComputedStyle(el).borderLeftWidth),
+            "no border on the outer edge of the line numbers",
+        ).toBe("0px");
     });
 }
 

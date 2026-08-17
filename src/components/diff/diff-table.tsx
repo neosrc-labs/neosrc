@@ -46,8 +46,9 @@ export function DiffTable({
                 /* Split (side-by-side) view: four fixed columns like GitHub —
                    old line number, old content, new line number, new content.
                    The empty side of an unpaired change keeps the table
-                   background; changed line numbers use a stronger tint than
-                   the code cells. */
+                   background; changed line numbers use a lighter shade than
+                   the code cells (the separator border is gone, so the shade
+                   delineates numbers from content). */
                 .d2h-split-table {
                     table-layout: fixed;
                 }
@@ -59,6 +60,22 @@ export function DiffTable({
                    balanced regardless of which row comes first. */
                 .d2h-split-table col.d2h-split-ln-col {
                     width: 4em;
+                }
+                /* Unified view: a fixed two-column structure (8em line
+                   numbers + content) so the thread/editor rows never
+                   reflow the code column. The line-number cell is a normal
+                   in-flow cell (diff2html makes it absolute), which also
+                   stretches it to the row height on wrapped lines. */
+                .d2h-diff-table:not(.d2h-split-table) col.d2h-unified-ln-col {
+                    width: 8em;
+                }
+                .d2h-diff-table:not(.d2h-split-table) .d2h-code-linenumber {
+                    position: relative;
+                    display: table-cell;
+                    vertical-align: top;
+                }
+                .d2h-diff-table:not(.d2h-split-table) .d2h-code-line {
+                    padding-left: 0;
                 }
                 .d2h-split-table .d2h-code-linenumber {
                     position: relative;
@@ -81,29 +98,29 @@ export function DiffTable({
                     white-space: pre-wrap;
                     word-break: break-word;
                 }
-                .d2h-split-table td.d2h-split-ln.d2h-split-new {
-                    border-left: 1px solid #d8dee4;
-                }
                 .d2h-split-table td.d2h-split-ln.d2h-del {
-                    background-color: #ffd7d5;
+                    background-color: #fff0f0;
                 }
                 .d2h-split-table td.d2h-split-ln.d2h-ins {
-                    background-color: #ccffd8;
+                    background-color: #eaffea;
                 }
-                .d2h-dark-color-scheme
-                    .d2h-split-table
-                    td.d2h-split-ln.d2h-split-new {
-                    border-left-color: rgba(61, 68, 77, 0.7);
+                .d2h-split-table td.d2h-split-ln.d2h-cntx {
+                    background-color: #f6f8fa;
                 }
                 .d2h-dark-color-scheme
                     .d2h-split-table
                     td.d2h-split-ln.d2h-del {
-                    background-color: rgba(248, 81, 73, 0.3);
+                    background-color: rgba(248, 81, 73, 0.05);
                 }
                 .d2h-dark-color-scheme
                     .d2h-split-table
                     td.d2h-split-ln.d2h-ins {
-                    background-color: rgba(63, 185, 80, 0.3);
+                    background-color: rgba(46, 160, 67, 0.08);
+                }
+                .d2h-dark-color-scheme
+                    .d2h-split-table
+                    td.d2h-split-ln.d2h-cntx {
+                    background-color: rgba(110, 118, 129, 0.08);
                 }
             `}</style>
             <div
@@ -113,11 +130,16 @@ export function DiffTable({
                 <table
                     className={`d2h-diff-table ${view === "split" ? "d2h-split-table relative" : "relative"}`}
                 >
-                    {view === "split" && (
+                    {view === "split" ? (
                         <colgroup>
                             <col className="d2h-split-ln-col" />
                             <col />
                             <col className="d2h-split-ln-col" />
+                            <col />
+                        </colgroup>
+                    ) : (
+                        <colgroup>
+                            <col className="d2h-unified-ln-col" />
                             <col />
                         </colgroup>
                     )}
