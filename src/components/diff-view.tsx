@@ -194,7 +194,7 @@ export function DiffView({
         diffRef,
         language,
         enabled: Boolean(parsed),
-        rerenderKey: `${expandedLineCount}-${expandAllContext}`,
+        rerenderKey: `${expandedLineCount}-${expandAllContext}-${view}`,
     });
 
     const positionMap = useMemo(() => buildDiffPositionMap(parsed), [parsed]);
