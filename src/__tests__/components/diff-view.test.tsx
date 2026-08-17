@@ -1418,10 +1418,10 @@ describe("DiffView split view", () => {
                 .getByTestId("markdown-editor")
                 .closest("tr")!;
             const cells = editorRow.querySelectorAll("td");
-            // Spacer for the old line-number column, then the editor
-            // spanning from the old code column to the end of the table.
+            // The old line-number column carries the line's lighter shade,
+            // then the editor spans from the old code column to the end.
             expect(cells).toHaveLength(2);
-            expect(cells[0]!.className).toContain("d2h-empty-side");
+            expect(cells[0]!.className).toContain("d2h-split-ln");
             expect(cells[1]!.colSpan).toBe(3);
         });
 
@@ -1441,12 +1441,14 @@ describe("DiffView split view", () => {
                 .getByTestId("markdown-editor")
                 .closest("tr")!;
             const cells = editorRow.querySelectorAll("td");
-            // Spacers for the three leading columns; the editor occupies
-            // the new code column only.
+            // Empty cells for old-ln and old-code, the new line-number
+            // column with the line's lighter shade; the editor occupies the
+            // new code column only.
             expect(cells).toHaveLength(4);
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 2; i++) {
                 expect(cells[i]!.className).toContain("d2h-empty-side");
             }
+            expect(cells[2]!.className).toContain("d2h-split-ln");
             expect(cells[3]!.colSpan).toBe(1);
         });
     });
@@ -1465,12 +1467,15 @@ describe("DiffView split view", () => {
             const thread = screen.getByTestId("inline-comment-thread");
             const threadRow = thread.closest("tr")!;
             const cells = threadRow.querySelectorAll("td");
-            // Spacers for old-ln, old-code and new-ln; the thread sits in
-            // the new code column only.
+            // Empty cells for old-ln and old-code; the new line-number
+            // column carries the added line's lighter shade and the thread
+            // sits in the new code column only.
             expect(cells).toHaveLength(4);
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 2; i++) {
                 expect(cells[i]!.className).toContain("d2h-empty-side");
             }
+            expect(cells[2]!.className).toContain("d2h-split-ln");
+            expect(cells[2]!.className).toContain("d2h-ins");
             // The comment cell carries the added line's tint.
             expect(cells[3]!.className).toContain("d2h-ins");
             // Anchored below the added line row
@@ -1755,12 +1760,15 @@ describe("DiffView split view", () => {
             const thread = screen.getByTestId("inline-comment-thread");
             const threadRow = thread.closest("tr")!;
             const cells = threadRow.querySelectorAll("td");
-            // Gap lines are context lines: the thread sits in the new code
-            // column behind three spacer cells.
+            // Gap lines are context lines: the new line-number column
+            // carries the context shade and the thread sits in the new
+            // code column behind two empty cells.
             expect(cells).toHaveLength(4);
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 2; i++) {
                 expect(cells[i]!.className).toContain("d2h-empty-side");
             }
+            expect(cells[2]!.className).toContain("d2h-split-ln");
+            expect(cells[2]!.className).toContain("d2h-cntx");
             expect(threadRow.previousElementSibling?.id.endsWith("R1")).toBe(
                 true,
             );
@@ -1784,9 +1792,10 @@ describe("DiffView split view", () => {
                 .closest("tr")!;
             const cells = editorRow.querySelectorAll("td");
             expect(cells).toHaveLength(4);
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 2; i++) {
                 expect(cells[i]!.className).toContain("d2h-empty-side");
             }
+            expect(cells[2]!.className).toContain("d2h-split-ln");
             expect(editorRow.previousElementSibling?.id.endsWith("R1")).toBe(
                 true,
             );

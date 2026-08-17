@@ -123,19 +123,96 @@ html {
     background: var(--color-surface-secondary);
 }
 
-/* Override diff2html: line number cells use position:absolute and overlap content cells.
-   Both have rgba backgrounds with alpha, creating a double-alpha compositing artifact.
-   Let the content cell's background show through consistently by removing the extra layer. */
+/* Diff2html tints line-number cells (absolute overlays in unified view)
+   with the same color as the content. We remove the separator border and
+   use a lighter shade instead, so the numbers read as part of the line
+   without a hard vertical line. `.d2h-thread-ln` is the comment/editor
+   row's line-number section, tinted the same way for continuity. */
 .d2h-code-linenumber.d2h-ins,
+.d2h-thread-ln.d2h-ins {
+    background-color: #eaffea;
+}
+
 .d2h-code-linenumber.d2h-del,
-.d2h-code-linenumber.d2h-ins.d2h-change,
-.d2h-code-linenumber.d2h-del.d2h-change {
-    background: none;
+.d2h-thread-ln.d2h-del {
+    background-color: #fff0f0;
+}
+
+.d2h-code-linenumber.d2h-cntx,
+.d2h-thread-ln.d2h-cntx {
+    background-color: #f6f8fa;
 }
 
 .d2h-dark-color-scheme .d2h-code-linenumber.d2h-ins,
-.d2h-dark-color-scheme .d2h-code-linenumber.d2h-del {
-    background: none;
+.d2h-dark-color-scheme .d2h-thread-ln.d2h-ins {
+    background-color: rgba(46, 160, 67, 0.08);
+}
+
+.d2h-dark-color-scheme .d2h-code-linenumber.d2h-del,
+.d2h-dark-color-scheme .d2h-thread-ln.d2h-del {
+    background-color: rgba(248, 81, 73, 0.05);
+}
+
+.d2h-dark-color-scheme .d2h-code-linenumber.d2h-cntx,
+.d2h-dark-color-scheme .d2h-thread-ln.d2h-cntx {
+    background-color: rgba(110, 118, 129, 0.08);
+}
+
+/* Remove the diff2html vertical separator between numbers and content.
+   The lighter shade above provides the visual separation instead. */
+.d2h-code-linenumber.d2h-ins,
+.d2h-code-linenumber.d2h-del,
+.d2h-code-linenumber.d2h-cntx,
+.d2h-code-linenumber.d2h-info {
+    border-right-width: 0;
+}
+
+/* The border on the other side of the numbers (the line-number column's
+   outer edge) goes too. The multi-line selection indicator relies on
+   border-left, so cells carrying it keep their border. */
+.d2h-code-linenumber.d2h-ins:not(.border-blue-400),
+.d2h-code-linenumber.d2h-del:not(.border-blue-400),
+.d2h-code-linenumber.d2h-cntx:not(.border-blue-400),
+.d2h-code-linenumber.d2h-info:not(.border-blue-400) {
+    border-left-width: 0;
+}
+
+/* The comment/editor row's line-number section: in unified view the line
+   numbers are an absolute overlay, so the thread row reserves the same 8em
+   the code line is padded by and tints it like the line-number cells. */
+.d2h-thread-ln {
+    width: 8em;
+}
+
+/* Unified line-number cells are 7.5em (diff2html) but the code line is
+   padded 8em; widen the cell to 8em so the lighter shade covers the whole
+   number area (the cell is in-flow, so it stretches on wrapped lines too).
+   The number overlay fills the cell and anchors the numbers to their
+   columns like GitHub: the old number on the left, the new number on the
+   right (deleted lines show only the old number, added only the new).
+   (Split view has its own real 4em columns.) */
+.d2h-diff-table:not(.d2h-split-table) .d2h-code-linenumber {
+    width: 8em;
+}
+
+.d2h-diff-table:not(.d2h-split-table) .d2h-ln-overlay {
+    position: absolute;
+    inset: 0;
+    direction: ltr;
+}
+
+.d2h-diff-table:not(.d2h-split-table) .d2h-ln-overlay .line-num1 {
+    position: absolute;
+    top: 0;
+    left: 1em;
+    width: auto;
+    padding: 0;
+}
+
+.d2h-diff-table:not(.d2h-split-table) .d2h-ln-overlay .line-num2 {
+    position: absolute;
+    top: 0;
+    right: 0.5em;
 }
 
 /* Diff2html sets background-color on .d2h-dark-color-scheme (wrapper),
