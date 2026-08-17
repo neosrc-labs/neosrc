@@ -1,6 +1,5 @@
 import "~/styles/globals.css";
 import "~/styles/github-alert.css";
-import "highlight.js/styles/github.min.css";
 
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
