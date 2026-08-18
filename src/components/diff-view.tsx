@@ -1,6 +1,6 @@
 "use client";
 
-import type { SelectedLineRange } from "@pierre/diffs";
+import { SelectionSide, type SelectedLineRange } from "@pierre/diffs";
 import { type DiffLineAnnotation, PatchDiff } from "@pierre/diffs/react";
 import { useTheme } from "next-themes";
 import { useCallback, useMemo, useState } from "react";
@@ -68,9 +68,6 @@ export function DiffView({
     pendingReviewId,
     permissionContext,
 }: DiffViewProps) {
-    const { resolvedTheme } = useTheme();
-    const isDark = resolvedTheme === "dark";
-
     // GitHub's per-file patch field starts with @@ -x,y +x,y @@ but
     // @pierre/diffs expects the full "diff --git" format. Wrap bare hunks.
     const normalizedPatch = useMemo(() => {
@@ -144,15 +141,27 @@ export function DiffView({
             <PatchDiff
                 patch={normalizedPatch}
                 options={{
-                    theme: isDark
-                        ? { light: "github-light", dark: "github-dark" }
-                        : { light: "github-light", dark: "github-dark" },
+                    theme: { light: "github-light", dark: "github-dark" },
                     diffStyle: view,
                     expandUnchanged: expandAllContext,
-                    stickyHeader: true,
+                    disableFileHeader: true,
                     enableLineSelection: showCommentButton,
                     lineDiffType: "word",
                     onLineSelectionEnd: handleSelectedLinesChange,
+                    enableGutterUtility: true,
+                    onGutterUtilityClick: (range) => {
+                        onStartComment?.({
+                            type: "line",
+                            startLine: range.start,
+                            startSide:
+                                range.side === "additions" ? "RIGHT" : "LEFT",
+                            line: range.end,
+                            side:
+                                range.endSide === "additions"
+                                    ? "RIGHT"
+                                    : "LEFT",
+                        } satisfies DiffCommentTarget);
+                    },
                 }}
                 lineAnnotations={annotations}
                 selectedLines={selectedLines}
@@ -161,18 +170,13 @@ export function DiffView({
                     if (!meta) return null;
                     return (
                         <CommentThread
-                            comments={meta.comments}
-                            side={meta.side}
-                            line={meta.line}
                             owner={owner}
                             repo={repo}
                             pullNumber={pullNumber}
+                            comments={meta.comments}
                             pendingReviewId={pendingReviewId}
                             permissionContext={permissionContext}
-                            activeComment={activeComment}
-                            onStartComment={onStartComment}
                             showComments={showComments}
-                            showCommentButton={showCommentButton}
                         />
                     );
                 }}
@@ -241,40 +245,25 @@ function parseCommentAnchor(
 /** Render a comment thread for a diff line annotation. */
 function CommentThread({
     comments,
-    side,
-    line,
     owner,
     repo,
     pullNumber,
     pendingReviewId,
     permissionContext,
-    activeComment,
-    onStartComment,
     showComments,
-    showCommentButton,
 }: {
     comments: ReviewComment[];
-    side: DiffSide;
-    line: number;
     owner?: string;
     repo?: string;
     pullNumber?: number | string;
     pendingReviewId?: number | null;
     permissionContext: PullRequestPermissionContext;
-    activeComment?: DiffCommentTarget | null;
-    onStartComment?: (ac: DiffCommentTarget | null) => void;
     showComments: boolean;
-    showCommentButton: boolean;
 }) {
     const threads = useMemo(
         () => groupReviewCommentThreads(comments),
         [comments],
     );
-
-    const isActive =
-        activeComment?.type === "line" &&
-        activeComment.line === line &&
-        activeComment.side === side;
 
     return (
         <div className="border-border border-t bg-surface-secondary px-4 py-2">
@@ -291,19 +280,6 @@ function CommentThread({
                         permissionContext={permissionContext}
                     />
                 ))}
-            {showCommentButton && (
-                <button
-                    className="mt-1 cursor-pointer text-blue-600 text-xs hover:underline"
-                    onClick={() =>
-                        onStartComment?.(
-                            isActive ? null : { type: "line", line, side },
-                        )
-                    }
-                    type="button"
-                >
-                    {isActive ? "Cancel" : "Add comment"}
-                </button>
-            )}
         </div>
     );
 }
