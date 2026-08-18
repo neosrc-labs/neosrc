@@ -4,8 +4,8 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface ResolvedThreadBannerProps {
     onShow: () => void;
-    /** Login of the user who resolved the thread. */
-    resolver: string;
+    /** Login of the user who resolved the thread. Omit for neutral state. */
+    resolver?: string;
 }
 
 export function ResolvedThreadBanner({
@@ -15,7 +15,9 @@ export function ResolvedThreadBanner({
     return (
         <div className="my-2 flex max-w-[800px] items-center justify-between gap-2 rounded-lg border border-border bg-surface py-2 pr-2 pl-4">
             <span className="min-w-0 truncate text-text-tertiary text-xs">
-                {resolver} marked this conversation as resolved
+                {resolver
+                    ? `${resolver} marked this conversation as resolved`
+                    : "Resolved"}
             </span>
             <button
                 type="button"

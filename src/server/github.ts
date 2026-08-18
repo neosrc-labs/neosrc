@@ -2471,7 +2471,7 @@ type RawReviewThreadNode = {
     isResolved: boolean;
     isOutdated: boolean;
     path: string | null;
-    resolvedBy: GQLActor | null;
+    resolvedBy: Pick<GQLActor, "login"> | null;
     comments: { nodes: (RawReviewThreadComment | null)[] };
 };
 

@@ -116,7 +116,6 @@ export function useDiffCommentSelection({
                 commentDragAnchor.current = {
                     line: anchorLine,
                     side,
-                    lines: anchor.lines,
                 };
             }
             const rowLines = {

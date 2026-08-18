@@ -919,7 +919,10 @@ async function runDragRangeCommentScenario(
             { plusId: "3", targetId: "4" },
         );
         expect(dragged).toBe(true);
-        await page.waitForTimeout(250);
+        // Wait until React commits the extended range before releasing.
+        await expect(
+            fileDiff.locator('tbody tr[data-new-line="4"] td.border-l-4'),
+        ).toBeVisible({ timeout: 10_000 });
         await page.evaluate(() => {
             document.dispatchEvent(
                 new MouseEvent("mouseup", {

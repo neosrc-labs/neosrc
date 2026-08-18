@@ -350,7 +350,7 @@ interface BlockRowsProps extends DiffRowNavigationProps {
     commentProps: DiffRowCommentProps;
 }
 
-interface SplitBlockRowsProps {
+interface BlockRowsSharedProps {
     block: DiffBlock;
     commentsByLine: Map<string, ReviewComment[]>;
     positionMap: Map<number, DiffAnchor>;
@@ -389,7 +389,7 @@ function UnifiedBlockRows({
     onLineSelect,
     onLineMouseDown,
     commentProps,
-}: SplitBlockRowsProps) {
+}: BlockRowsSharedProps) {
     const {
         activeComment,
         onStartComment,
@@ -880,7 +880,7 @@ function SplitBlockRows({
     onLineSelect,
     onLineMouseDown,
     commentProps,
-}: SplitBlockRowsProps) {
+}: BlockRowsSharedProps) {
     // Which side of which row the pointer is over. The comment buttons are
     // per side, so they must only appear on the hovered side, not the whole
     // row like in unified view.
