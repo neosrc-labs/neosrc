@@ -53,19 +53,19 @@ function FileDiffSkeleton() {
     return (
         <div className="mb-6 overflow-hidden rounded border border-border">
             <div className="flex items-center gap-2 border-border border-b bg-surface-secondary px-4 py-3">
-                <div className="h-4 w-1/3 animate-pulse rounded bg-surface-selected" />
+                <div className="h-5 w-1/3 animate-pulse rounded bg-surface-selected" />
             </div>
             <div className="bg-surface p-5">
                 <div className="space-y-2">
-                    <div className="h-4 w-5/6 animate-pulse rounded bg-surface-tertiary" />
-                    <div className="h-4 w-2/3 animate-pulse rounded bg-surface-tertiary" />
-                    <div className="h-4 w-3/4 animate-pulse rounded bg-surface-tertiary" />
-                    <div className="h-4 w-1/2 animate-pulse rounded bg-surface-tertiary" />
-                    <div className="h-4 w-2/5 animate-pulse rounded bg-surface-tertiary" />
-                    <div className="h-4 w-4/5 animate-pulse rounded bg-surface-tertiary" />
-                    <div className="h-4 w-3/5 animate-pulse rounded bg-surface-tertiary" />
-                    <div className="h-4 w-1/3 animate-pulse rounded bg-surface-tertiary" />
-                    <div className="h-4 w-2/3 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-5 w-5/6 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-5 w-2/3 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-5 w-3/4 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-5 w-1/2 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-5 w-2/5 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-5 w-4/5 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-5 w-3/5 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-5 w-1/3 animate-pulse rounded bg-surface-tertiary" />
+                    <div className="h-5 w-2/3 animate-pulse rounded bg-surface-tertiary" />
                 </div>
             </div>
         </div>
@@ -414,11 +414,16 @@ export function FilesSection({
             </div>
             {children}
             {isLoading && allFiles.length === 0 && (
-                <>
-                    <FileDiffSkeleton />
-                    <FileDiffSkeleton />
-                    <FileDiffSkeleton />
-                </>
+                <Async
+                    promise={pullRequestPromise}
+                    fallback={<FileDiffSkeleton />}
+                >
+                    {(pullRequest) =>
+                        [...Array(pullRequest.changed_files).keys()].map(
+                            (i) => <FileDiffSkeleton key={i} />,
+                        )
+                    }
+                </Async>
             )}
             <Async promise={pullRequestPromise}>
                 {(pullRequest) => (
