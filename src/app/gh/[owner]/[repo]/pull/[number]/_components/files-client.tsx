@@ -210,7 +210,7 @@ export function FilesSection({
 
     return (
         <div>
-            <div className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-surface py-2 pr-2">
+            <div className="sticky top-0 z-10 flex min-h-17 items-center justify-between gap-3 bg-surface py-2 pr-2">
                 <div className="min-w-0">
                     <Async promise={pullRequestPromise} fallback={null}>
                         {(pullRequest) => {
