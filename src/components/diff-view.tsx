@@ -8,6 +8,7 @@ import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/
 import type { ReviewComment } from "~/server/github";
 import type { DiffViewMode } from "~/utils/diff-view";
 import type { DiffCommentTarget, DiffSide } from "./diff/types";
+import { DiffLineCommentEditor } from "./diff-line-comment-editor";
 import { InlineCommentThread } from "./inline-comment-thread";
 import type { FooterAction } from "./markdown/markdown-editor";
 import { groupReviewCommentThreads } from "./review-comment-threads";
@@ -50,6 +51,7 @@ interface CommentAnnotationMeta {
     comments: ReviewComment[];
     side: DiffSide;
     line: number;
+    isActiveComment?: boolean;
 }
 
 export function DiffView({
@@ -60,6 +62,11 @@ export function DiffView({
     showCommentButton = false,
     activeComment = null,
     onStartComment,
+    commentBody,
+    onCommentBodyChange,
+    footerActions,
+    commentPending,
+    commentError,
     expandAllContext = false,
     view = "unified",
     owner,
@@ -121,8 +128,23 @@ export function DiffView({
             });
         }
 
+        // Add annotation for the active (new) line comment
+        if (activeComment?.type === "line") {
+            annots.push({
+                side:
+                    activeComment.side === "RIGHT" ? "additions" : "deletions",
+                lineNumber: activeComment.line,
+                metadata: {
+                    comments: [],
+                    side: activeComment.side,
+                    line: activeComment.line,
+                    isActiveComment: true,
+                },
+            });
+        }
+
         return annots.length > 0 ? annots : undefined;
-    }, [comments, showComments]);
+    }, [comments, showComments, activeComment]);
 
     const handleSelectedLinesChange = useCallback(
         (range: SelectedLineRange | null) => {
@@ -162,12 +184,33 @@ export function DiffView({
                                     : "LEFT",
                         } satisfies DiffCommentTarget);
                     },
+                    hunkSeparators: "metadata",
                 }}
                 lineAnnotations={annotations}
                 selectedLines={selectedLines}
                 renderAnnotation={(annotation) => {
                     const meta = annotation.metadata;
                     if (!meta) return null;
+
+                    if (meta.isActiveComment) {
+                        return (
+                            <div className="border-border border-t bg-surface-secondary px-4 py-2">
+                                <DiffLineCommentEditor
+                                    value={commentBody ?? ""}
+                                    onChange={onCommentBodyChange ?? (() => {})}
+                                    onCancel={() => {
+                                        onStartComment?.(null);
+                                    }}
+                                    footerActions={footerActions}
+                                    isPending={commentPending ?? false}
+                                    isError={commentError ?? false}
+                                    owner={owner ?? ""}
+                                    repo={repo ?? ""}
+                                />
+                            </div>
+                        );
+                    }
+
                     return (
                         <CommentThread
                             owner={owner}
