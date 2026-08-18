@@ -6,11 +6,13 @@ import type { DiffRenderItem, GapExpansion } from "./types";
 const SCROLL_TARGET_PADDING = 12;
 
 export function useDiffHashNavigation({
+    parsed,
     fileHash,
     renderItemsRef,
     setExpandedGaps,
     setSelectedRange,
 }: {
+    parsed: boolean;
     fileHash: string;
     renderItemsRef: React.RefObject<DiffRenderItem[]>;
     setExpandedGaps: React.Dispatch<
@@ -25,6 +27,7 @@ export function useDiffHashNavigation({
     >;
 }) {
     useEffect(() => {
+        if (!parsed) return;
         let rafId = 0;
         let verifyTimeout: ReturnType<typeof setTimeout> | undefined;
         let settleTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -180,7 +183,7 @@ export function useDiffHashNavigation({
             window.removeEventListener("hashchange", scrollToHashTarget);
             stopPolling();
         };
-    }, [fileHash, renderItemsRef, setExpandedGaps, setSelectedRange]);
+    }, [parsed, fileHash, renderItemsRef, setExpandedGaps, setSelectedRange]);
 }
 
 function getStickyTopHeight(target: HTMLElement): number {

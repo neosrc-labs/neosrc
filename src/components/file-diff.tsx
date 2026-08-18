@@ -2,6 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
+import { useInView } from "~/hooks/use-in-view";
 import type { ReviewComment } from "~/server/github";
 import type { DiffViewMode } from "~/utils/diff-view";
 import { type DiffCommentTarget, DiffView } from "./diff-view";
@@ -91,6 +92,14 @@ export default function FileDiff({
     });
     const isImage = presentation === "image";
     const isSvg = presentation === "svg";
+
+    const [inViewRef, inView, inViewReady] = useInView({
+        rootMargin: "400px",
+    });
+    const estimatedHeight = useMemo(() => {
+        if (!file.patch) return 0;
+        return file.patch.split("\n").length * 20;
+    }, [file.patch]);
 
     const svgContentUrls = useMemo(() => {
         if (!isSvg) return null;
@@ -218,10 +227,13 @@ export default function FileDiff({
                 pendingReviewId={pendingReviewId}
                 permissionContext={permissionContext}
             />
-            <div className="overflow-hidden rounded-b">
+            <div ref={inViewRef} className="overflow-hidden rounded-b">
                 {!isCollapsed && (
                     <DiffContent
                         file={file}
+                        inView={inView}
+                        inViewReady={inViewReady}
+                        estimatedHeight={estimatedHeight}
                         performanceHidden={performanceHidden}
                         showPerformanceDiff={showPerformanceDiff}
                         onTogglePerformanceDiff={onTogglePerformanceDiff}
@@ -267,6 +279,9 @@ interface DiffContentProps {
     file: FileDiffProps["file"];
     performanceHidden: boolean;
     showPerformanceDiff: boolean;
+    inView: boolean;
+    inViewReady: boolean;
+    estimatedHeight: number;
     onTogglePerformanceDiff?: () => void;
     isSvg: boolean;
     svgContentUrls: { oldUrl: string | null; newUrl: string | null } | null;
@@ -293,6 +308,9 @@ interface DiffContentProps {
 }
 function DiffContent({
     file,
+    inView,
+    inViewReady,
+    estimatedHeight,
     performanceHidden,
     showPerformanceDiff,
     onTogglePerformanceDiff,
@@ -365,6 +383,9 @@ function DiffContent({
             headSha={headSha}
             expandAllContext={expandAllContext}
             view={diffView}
+            inView={inView}
+            inViewReady={inViewReady}
+            estimatedHeight={estimatedHeight}
         />
     ) : isImage && imageUrls ? (
         <ImageDiff newUrl={imageUrls.newUrl} oldUrl={imageUrls.oldUrl} />
