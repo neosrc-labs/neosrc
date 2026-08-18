@@ -47,6 +47,7 @@ function mountHash(
     const sink = createStateSink(initial);
     const result = renderHook(() =>
         useDiffHashNavigation({
+            parsed: true,
             fileHash: "abc123",
             renderItemsRef,
             setExpandedGaps: sink.setExpandedGaps,

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ColorSchemeType, DiffBlock } from "diff2html/lib/types";
+import type { ColorSchemeType, DiffBlock, DiffFile } from "diff2html/lib/types";
 import "diff2html/bundles/css/diff2html.min.css";
 import { ArrowDownFromLine, ArrowUpFromLine, Plus } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -18,6 +18,7 @@ import { useFileContent } from "~/hooks/use-file-content";
 import type { ReviewComment } from "~/server/github";
 import type { DiffViewMode } from "~/utils/diff-view";
 import { filenameHash } from "~/utils/filename-hash";
+import { scheduleIdle } from "~/utils/schedule-idle";
 import { getDiffGapSize } from "./diff/diff-block-rows";
 import { DiffContextRow } from "./diff/diff-context-row";
 import { DiffLineCommentEditor } from "./diff/diff-line-comment-editor";
@@ -69,8 +70,11 @@ interface DiffViewProps extends DiffCommentProps {
     headSha?: string;
     expandAllContext?: boolean;
     view?: DiffViewMode;
+    inView?: boolean;
+    inViewReady?: boolean;
+    estimatedHeight?: number;
+    idleParse?: boolean;
 }
-
 /** Comment-related props shared by the diff views (DiffView, SvgDiff). */
 export interface DiffCommentProps {
     comments?: ReviewComment[];
@@ -113,20 +117,70 @@ export function DiffView({
     headSha,
     expandAllContext = false,
     view = "unified",
+    inView = true,
+    inViewReady = true,
+    estimatedHeight = 0,
+    idleParse = true,
 }: DiffViewProps) {
+    const [idleParseDone, setIdleParseDone] = useState(0);
+    const idleParseDoneRef = useRef(0);
+    const idleParseControllerRef = useRef<(() => void) | null>(null);
+    const finishIdleParse = useCallback(() => {
+        idleParseDoneRef.current += 1;
+        setIdleParseDone((count) => count + 1);
+    }, []);
     const { resolvedTheme } = useTheme();
 
-    const parsed = useMemo(
-        () =>
-            parseDiffPatch(
-                patch,
-                filename,
-                resolvedTheme === "dark"
-                    ? ("dark" as ColorSchemeType)
-                    : ("light" as ColorSchemeType),
-            ),
-        [patch, filename, resolvedTheme],
+    const parsedRef = useRef<{ key: string; value: DiffFile | null } | null>(
+        null,
     );
+    const parseKey = `${patch}\u0000${filename}\u0000${resolvedTheme}`;
+    const parsed = useMemo(() => {
+        void idleParseDone;
+        if (!inView) return null;
+        if (parsedRef.current?.key === parseKey) {
+            return parsedRef.current.value;
+        }
+        const value = parseDiffPatch(
+            patch,
+            filename,
+            resolvedTheme === "dark"
+                ? ("dark" as ColorSchemeType)
+                : ("light" as ColorSchemeType),
+        );
+        parsedRef.current = { key: parseKey, value };
+        return value;
+    }, [inView, idleParseDone, parseKey, patch, filename, resolvedTheme]);
+    useEffect(() => {
+        idleParseDoneRef.current = 0;
+        if (!idleParse || !patch || parsedRef.current?.key === parseKey) {
+            return;
+        }
+
+        const cancel = scheduleIdle(() => {
+            if (parsedRef.current?.key !== parseKey) {
+                parsedRef.current = {
+                    key: parseKey,
+                    value: parseDiffPatch(
+                        patch,
+                        filename,
+                        resolvedTheme === "dark"
+                            ? ("dark" as ColorSchemeType)
+                            : ("light" as ColorSchemeType),
+                    ),
+                };
+            }
+            finishIdleParse();
+        });
+        idleParseControllerRef.current = cancel;
+
+        return () => {
+            cancel();
+            if (idleParseControllerRef.current === cancel) {
+                idleParseControllerRef.current = null;
+            }
+        };
+    }, [idleParse, parseKey, patch, filename, resolvedTheme, finishIdleParse]);
 
     const diffRef = useRef<HTMLDivElement>(null);
 
@@ -252,9 +306,13 @@ export function DiffView({
             "--diff-scroll-offset",
             `${offset}px`,
         );
-    }, [parsed]);
+        if (inView && parsedRef.current && idleParseDoneRef.current > 0) {
+            finishIdleParse();
+        }
+    }, [parsed, inView, finishIdleParse]);
 
     useDiffHashNavigation({
+        parsed: Boolean(parsed),
         fileHash,
         renderItemsRef,
         setExpandedGaps,
@@ -262,7 +320,17 @@ export function DiffView({
     });
 
     if (!parsed) {
-        return null;
+        return (
+            <pre
+                className="whitespace-pre bg-surface px-4 py-3 font-mono text-text-secondary text-xs leading-5"
+                style={{
+                    minHeight: estimatedHeight || undefined,
+                    visibility: inViewReady ? undefined : "hidden",
+                }}
+            >
+                {patch}
+            </pre>
+        );
     }
 
     const commentProps: DiffRowCommentProps = {

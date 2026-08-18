@@ -2,6 +2,7 @@
 
 import hljs from "highlight.js";
 import { useEffect } from "react";
+import { scheduleIdle } from "~/utils/schedule-idle";
 
 // Work budget per idle callback: highlight a few ms of lines, then yield so
 // the browser can paint between chunks instead of one long blocking pass.
@@ -11,16 +12,6 @@ const CHUNK_BUDGET_MS = 8;
 // gap expansion or a view switch) skip them and only highlight newly
 // rendered lines.
 const HIGHLIGHTED_ATTR = "data-diff-highlighted";
-
-function scheduleIdle(callback: () => void): () => void {
-    if (typeof requestIdleCallback === "function") {
-        const id = requestIdleCallback(callback, { timeout: 1_000 });
-        return () => cancelIdleCallback(id);
-    }
-    // jsdom and older environments: run on the next macrotask instead.
-    const id = setTimeout(callback, 0);
-    return () => clearTimeout(id);
-}
 
 export function useDiffSyntaxHighlighting({
     diffRef,

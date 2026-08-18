@@ -166,12 +166,20 @@ function renderDiffView(props?: {
     owner?: string;
     repo?: string;
     pullNumber?: number;
+    inView?: boolean;
+    inViewReady?: boolean;
+    estimatedHeight?: number;
+    idleParse?: boolean;
 }) {
     return render(
         <DiffView
             patch={props?.patch ?? "non-empty-patch"}
             filename={props?.filename ?? "test.ts"}
             view={props?.view ?? "unified"}
+            inView={props?.inView}
+            estimatedHeight={props?.estimatedHeight}
+            inViewReady={props?.inViewReady}
+            idleParse={props?.idleParse}
             showComments={props?.showComments ?? false}
             showCommentButton={props?.showCommentButton ?? false}
             activeComment={props?.activeComment ?? null}
@@ -235,6 +243,41 @@ describe("DiffView rendering", () => {
             expect(container.textContent).toContain("line1");
             expect(container.textContent).toContain("line2");
             expect(container.textContent).toContain("line3");
+        });
+
+        it("keeps raw patches hidden until visibility is measured", () => {
+            const patch = "@@ -1 +1 @@\n-old\n+needle";
+            const { container } = renderDiffView({
+                patch,
+                inView: false,
+                inViewReady: false,
+                estimatedHeight: 60,
+                idleParse: false,
+            });
+
+            const rawPatch = container.querySelector("pre");
+            expect(rawPatch).toHaveStyle({
+                minHeight: "60px",
+                visibility: "hidden",
+            });
+            expect(rawPatch?.textContent).toBe(patch);
+            expect(mockParse).not.toHaveBeenCalled();
+        });
+
+        it("renders searchable raw patches before entering the viewport", () => {
+            const patch = "@@ -1 +1 @@\n-old\n+needle";
+            const { container } = renderDiffView({
+                patch,
+                inView: false,
+                estimatedHeight: 60,
+                idleParse: false,
+            });
+
+            const rawPatch = container.querySelector("pre");
+            expect(rawPatch?.textContent).toBe(patch);
+            expect(rawPatch).toHaveStyle({ minHeight: "60px" });
+            expect(rawPatch).not.toHaveStyle({ visibility: "hidden" });
+            expect(mockParse).not.toHaveBeenCalled();
         });
     });
 
