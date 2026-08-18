@@ -1588,7 +1588,9 @@ function GapRow({
     const contentColSpan = view === "split" ? 3 : 1;
 
     if (expandedCount === 0) {
-        if (gapSize <= 0) return null;
+        // If we are loading, show the expand button since there is a good chance the edited line
+        // is not the last line in the file and we want to avoid layout shifts.
+        if (!isLoading && gapSize <= 0) return null;
         if (!headSha) return null;
         return (
             <tr>
