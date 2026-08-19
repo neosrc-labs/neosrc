@@ -24,6 +24,7 @@ const config = {
             },
         ],
     },
+    reactCompiler: true,
     experimental: {
         // FIXME: Re-enable after https://github.com/vercel/next.js/issues/96768
         // testProxy: process.env.NEXT_TEST_PROXY === "true",
