@@ -2,6 +2,7 @@
 
 import { GitMerge, GitPullRequestClosed } from "lucide-react";
 import { useState } from "react";
+import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import { api } from "~/trpc/react";
 
 const branchLinkClassName =
@@ -24,9 +25,18 @@ export function DeleteBranchSection({
     owner: string;
     repo: string;
 }) {
+    const utils = api.useUtils();
     const [deleted, setDeleted] = useState(false);
     const deleteBranch = api.pulls.deleteBranch.useMutation({
-        onSuccess: () => setDeleted(true),
+        onSuccess: () => {
+            utils.timeline.list.invalidate({
+                owner,
+                repo,
+                number,
+                limit: TIMELINE_PAGE_SIZE,
+            });
+            setDeleted(true);
+        },
     });
 
     if (deleted) return null;

@@ -3,18 +3,30 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import { DeleteBranchSection } from "./delete-branch-section";
 
 const mocks = vi.hoisted(() => ({
     deleteBranchMutate: vi.fn(),
+    invalidateTimeline: vi.fn(),
 }));
 
 vi.mock("~/trpc/react", () => ({
     api: {
+        useUtils: () => ({
+            timeline: {
+                list: {
+                    invalidate: mocks.invalidateTimeline,
+                },
+            },
+        }),
         pulls: {
             deleteBranch: {
-                useMutation: () => ({
-                    mutate: mocks.deleteBranchMutate,
+                useMutation: (opts?: { onSuccess?: () => void }) => ({
+                    mutate: (args: unknown) => {
+                        mocks.deleteBranchMutate(args);
+                        opts?.onSuccess?.();
+                    },
                     isPending: false,
                     isError: false,
                 }),
@@ -85,6 +97,21 @@ describe("DeleteBranchSection", () => {
             owner: "owner",
             repo: "repo",
             number: 1,
+        });
+    });
+
+    it("invalidates the timeline after deleting", async () => {
+        renderSection();
+
+        await userEvent.click(
+            screen.getByRole("button", { name: "Delete branch" }),
+        );
+
+        expect(mocks.invalidateTimeline).toHaveBeenCalledWith({
+            owner: "owner",
+            repo: "repo",
+            number: 1,
+            limit: TIMELINE_PAGE_SIZE,
         });
     });
 });
