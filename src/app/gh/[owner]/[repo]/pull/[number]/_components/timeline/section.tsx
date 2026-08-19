@@ -10,6 +10,7 @@ import type {
 } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import {
+    canEdit,
     canInteract,
     type PullRequestPermissionContext,
 } from "../../permissions-utils";
@@ -51,19 +52,19 @@ export function TimelineSkeleton() {
         </div>
     );
 }
-
 interface TimelineSectionProps {
     owner: string;
     repo: string;
     number: number;
     permissionContext: PullRequestPermissionContext;
+    pullRequestState: "open" | "closed";
 }
-
 export function TimelineSection({
     owner,
     repo,
     number,
     permissionContext,
+    pullRequestState,
 }: TimelineSectionProps) {
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
         api.timeline.list.useInfiniteQuery(
@@ -378,6 +379,10 @@ export function TimelineSection({
 
             <div ref={timelineEndRef}>
                 <CommentForm
+                    canClose={
+                        pullRequestState === "open" &&
+                        canEdit(permissionContext)
+                    }
                     disabled={!canInteract(permissionContext)}
                     number={number}
                     owner={owner}

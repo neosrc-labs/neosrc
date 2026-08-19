@@ -806,6 +806,7 @@ export const pullsRouter = createTRPCRouter({
                 owner: z.string(),
                 repo: z.string(),
                 number: z.number(),
+                body: z.string().trim().min(1).optional(),
             }),
         )
         .mutation(async ({ ctx, input }) => {
@@ -813,6 +814,16 @@ export const pullsRouter = createTRPCRouter({
                 ctx.db,
                 ctx.session?.user?.id,
             );
+
+            if (input.body) {
+                await createIssueComment(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                    input.body,
+                );
+            }
 
             await updatePullRequest(
                 accessToken,

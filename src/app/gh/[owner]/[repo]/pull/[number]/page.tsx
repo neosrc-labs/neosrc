@@ -7,6 +7,7 @@ import {
     getChecksForCommit,
     getConflictedFiles,
     getStackSuggestion,
+    type PullsGetResponseData,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
 import { HeaderActionBar } from "./_components/action-section/header-action-bar";
@@ -144,6 +145,7 @@ export default async function PullRequestPage({ params }: PageProps) {
                             owner={owner}
                             repo={repo}
                             permissionContextPromise={permissionContextPromise}
+                            pullRequestPromise={pullRequestPromise}
                         />
                     </Suspense>
                 }
@@ -151,24 +153,27 @@ export default async function PullRequestPage({ params }: PageProps) {
         </div>
     );
 }
-
 function TimelineSectionWithCanInteract({
     owner,
     repo,
     number,
     permissionContextPromise,
+    pullRequestPromise,
 }: {
     owner: string;
     repo: string;
     number: number;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
+    pullRequestPromise: Promise<PullsGetResponseData>;
 }) {
     const permissionContext = use(permissionContextPromise);
+    const pullRequest = use(pullRequestPromise);
     return (
         <TimelineSection
             permissionContext={permissionContext}
             number={number}
             owner={owner}
+            pullRequestState={pullRequest.state}
             repo={repo}
         />
     );
