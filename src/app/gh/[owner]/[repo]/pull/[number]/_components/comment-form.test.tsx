@@ -8,6 +8,7 @@ import { CommentForm } from "./comment-form";
 
 const mocks = vi.hoisted(() => ({
     closeMutate: vi.fn(),
+    reopenMutate: vi.fn(),
     addCommentMutate: vi.fn(),
 }));
 
@@ -54,6 +55,13 @@ vi.mock("~/trpc/react", () => ({
                     isError: false,
                 }),
             },
+            reopen: {
+                useMutation: () => ({
+                    mutate: mocks.reopenMutate,
+                    isPending: false,
+                    isError: false,
+                }),
+            },
         },
     },
 }));
@@ -65,13 +73,14 @@ vi.mock("~/hooks/use-autosave", () => ({
     useAutosave: () => ({ clear: vi.fn() }),
 }));
 
-function renderForm(canClose: boolean) {
+function renderForm(canClose = false, canReopen = false) {
     render(
         <CommentForm
             owner="owner"
             repo="repo"
             number={1}
             canClose={canClose}
+            canReopen={canReopen}
         />,
     );
 }
@@ -142,6 +151,77 @@ describe("CommentForm close button", () => {
         );
 
         expect(mocks.closeMutate).toHaveBeenCalledWith({
+            owner: "owner",
+            repo: "repo",
+            number: 1,
+            body: "hello",
+        });
+    });
+});
+
+describe("CommentForm reopen button", () => {
+    it("hides the reopen button when the PR is not closed", () => {
+        renderForm(false, false);
+
+        expect(
+            screen.queryByRole("button", { name: "Reopen pull request" }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole("button", { name: "Reopen and comment" }),
+        ).not.toBeInTheDocument();
+    });
+
+    it("renders Reopen pull request left of Comment when the box is empty", () => {
+        renderForm(false, true);
+
+        const reopen = screen.getByRole("button", {
+            name: "Reopen pull request",
+        });
+        const comment = screen.getByRole("button", { name: "Comment" });
+
+        expect(reopen).toBeInTheDocument();
+        expect(
+            reopen.compareDocumentPosition(comment) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+    });
+
+    it("switches to Reopen and comment once the user types", async () => {
+        renderForm(false, true);
+
+        await userEvent.type(screen.getByTestId("editor-textarea"), "hello");
+
+        expect(
+            screen.getByRole("button", { name: "Reopen and comment" }),
+        ).toBeInTheDocument();
+        expect(
+            screen.queryByRole("button", { name: "Reopen pull request" }),
+        ).not.toBeInTheDocument();
+    });
+
+    it("reopens without a comment body when empty", async () => {
+        renderForm(false, true);
+
+        await userEvent.click(
+            screen.getByRole("button", { name: "Reopen pull request" }),
+        );
+
+        expect(mocks.reopenMutate).toHaveBeenCalledWith({
+            owner: "owner",
+            repo: "repo",
+            number: 1,
+        });
+    });
+
+    it("reopens with the comment body when typed", async () => {
+        renderForm(false, true);
+
+        await userEvent.type(screen.getByTestId("editor-textarea"), "hello");
+        await userEvent.click(
+            screen.getByRole("button", { name: "Reopen and comment" }),
+        );
+
+        expect(mocks.reopenMutate).toHaveBeenCalledWith({
             owner: "owner",
             repo: "repo",
             number: 1,

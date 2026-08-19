@@ -58,6 +58,7 @@ interface TimelineSectionProps {
     number: number;
     permissionContext: PullRequestPermissionContext;
     pullRequestState: "open" | "closed";
+    pullRequestMerged: boolean;
 }
 export function TimelineSection({
     owner,
@@ -65,6 +66,7 @@ export function TimelineSection({
     number,
     permissionContext,
     pullRequestState,
+    pullRequestMerged,
 }: TimelineSectionProps) {
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
         api.timeline.list.useInfiniteQuery(
@@ -381,6 +383,11 @@ export function TimelineSection({
                 <CommentForm
                     canClose={
                         pullRequestState === "open" &&
+                        canEdit(permissionContext)
+                    }
+                    canReopen={
+                        pullRequestState === "closed" &&
+                        !pullRequestMerged &&
                         canEdit(permissionContext)
                     }
                     disabled={!canInteract(permissionContext)}

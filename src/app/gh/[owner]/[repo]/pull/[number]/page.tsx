@@ -173,6 +173,7 @@ function TimelineSectionWithCanInteract({
             permissionContext={permissionContext}
             number={number}
             owner={owner}
+            pullRequestMerged={pullRequest.merged}
             pullRequestState={pullRequest.state}
             repo={repo}
         />
