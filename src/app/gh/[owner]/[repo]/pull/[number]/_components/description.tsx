@@ -582,7 +582,7 @@ function TitleRow({
             </Async>
             <Async
                 fallback={
-                    <div className="h-8 w-96 animate-pulse rounded bg-surface-selected" />
+                    <div className="h-10 w-3/4 animate-pulse rounded bg-surface-selected" />
                 }
                 promise={pullRequestPromise}
             >
@@ -691,7 +691,7 @@ function SubtitleActionRow({
     return (
         <Async
             fallback={
-                <div className="h-8 w-104 animate-pulse rounded bg-surface-selected" />
+                <div className="mt-2 h-6 w-104 animate-pulse rounded bg-surface-selected" />
             }
             promise={pullRequestPromise}
         >
