@@ -299,14 +299,14 @@ describe("getRepoPermissionForUser", () => {
 describe("viewerRepoAccess", () => {
     const payload = { owner: { login: "owner" }, private: true };
 
-    it("grants the owner admin and access even without a view grant", () => {
+    it("grants the owner admin and write even without a view grant", () => {
         expect(
             viewerRepoAccess({
                 username: "owner",
                 payload,
                 permission: null,
             }),
-        ).toEqual({ canView: true, admin: true });
+        ).toEqual({ canView: true, admin: true, write: true });
     });
 
     it("denies a private repo when the viewer has no grant", () => {
@@ -316,27 +316,37 @@ describe("viewerRepoAccess", () => {
                 payload,
                 permission: null,
             }),
-        ).toEqual({ canView: false, admin: false });
+        ).toEqual({ canView: false, admin: false, write: false });
     });
 
-    it("admits a granted viewer of a private repo without admin", () => {
+    it("admits a read-only viewer of a private repo without admin or write", () => {
         expect(
             viewerRepoAccess({
                 username: "alice",
                 payload,
                 permission: "read",
             }),
-        ).toEqual({ canView: true, admin: false });
+        ).toEqual({ canView: true, admin: false, write: false });
     });
 
-    it("marks an admin grant as admin", () => {
+    it("grants write access for a write permission", () => {
+        expect(
+            viewerRepoAccess({
+                username: "alice",
+                payload,
+                permission: "write",
+            }),
+        ).toEqual({ canView: true, admin: false, write: true });
+    });
+
+    it("marks an admin grant as admin and write", () => {
         expect(
             viewerRepoAccess({
                 username: "alice",
                 payload,
                 permission: "admin",
             }),
-        ).toEqual({ canView: true, admin: true });
+        ).toEqual({ canView: true, admin: true, write: true });
     });
 
     it("never gates a public repo", () => {
@@ -346,6 +356,6 @@ describe("viewerRepoAccess", () => {
                 payload: { owner: { login: "owner" }, private: false },
                 permission: null,
             }),
-        ).toEqual({ canView: true, admin: false });
+        ).toEqual({ canView: true, admin: false, write: false });
     });
 });

@@ -25,7 +25,7 @@ export interface HeaderRepoData {
     hasProjects: boolean;
     hasDiscussions: boolean;
     isPrivate: boolean;
-    permissions: { admin: boolean };
+    permissions: { admin: boolean; write: boolean };
     ownerAvatarUrl: string | null;
     openIssuesCount: number | null;
     openPullRequestsCount: number | null;

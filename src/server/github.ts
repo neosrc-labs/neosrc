@@ -2066,7 +2066,7 @@ export interface RepoHeaderInfo {
     hasProjects: boolean;
     hasDiscussions: boolean;
     isPrivate: boolean;
-    permissions: { admin: boolean };
+    permissions: { admin: boolean; write: boolean };
     ownerAvatarUrl: string | null;
 }
 
@@ -2098,7 +2098,7 @@ export async function getCachedRepoHeaderData(
         hasProjects: repoInfo.has_projects,
         hasDiscussions: repoInfo.has_discussions,
         isPrivate: repoInfo.private,
-        permissions: { admin: access.admin },
+        permissions: { admin: access.admin, write: access.write },
         ownerAvatarUrl: repoInfo.owner.avatar_url,
     };
 }

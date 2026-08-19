@@ -1057,7 +1057,7 @@ export interface CodebergRepoHeaderInfo {
     hasProjects: boolean;
     hasDiscussions: boolean;
     isPrivate: boolean;
-    permissions: { admin: boolean };
+    permissions: { admin: boolean; write: boolean };
     ownerAvatarUrl: string | null;
     allowSquashMerge: boolean;
     allowRebaseMerge: boolean;
@@ -1097,7 +1097,7 @@ export async function getCachedRepoHeaderData(
         hasProjects: repoInfo.has_projects,
         hasDiscussions: false,
         isPrivate: repoInfo.private,
-        permissions: { admin: access.admin },
+        permissions: { admin: access.admin, write: access.write },
         ownerAvatarUrl: repoInfo.owner.avatar_url,
         allowSquashMerge: repoInfo.allow_squash_merge,
         allowRebaseMerge: repoInfo.allow_rebase,

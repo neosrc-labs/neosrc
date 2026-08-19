@@ -152,7 +152,7 @@ export function useTabs({
             {
                 label: "Settings",
                 path: `https://${domain(provider)}/${owner}/${repo}/settings`,
-                show: repoData.permissions.admin ?? false,
+                show: repoData.permissions.admin || repoData.permissions.write,
                 isActive: false,
                 icon: Settings,
             },

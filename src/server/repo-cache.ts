@@ -244,6 +244,8 @@ export type ViewerRepoAccess = {
     /** False when the repo is private and the viewer holds no grant. */
     canView: boolean;
     admin: boolean;
+    /** True when the viewer holds write (or admin) permission on the repo. */
+    write: boolean;
 };
 
 /**
@@ -259,8 +261,10 @@ export function viewerRepoAccess(params: {
 }): ViewerRepoAccess {
     const { username, payload, permission } = params;
     const isOwner = username !== null && payload.owner.login === username;
+    const admin = isOwner || permission === "admin";
     return {
         canView: !payload.private || isOwner || permission !== null,
-        admin: isOwner || permission === "admin",
+        admin,
+        write: admin || permission === "write",
     };
 }

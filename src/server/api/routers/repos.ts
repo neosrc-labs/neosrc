@@ -94,6 +94,7 @@ export type RepositoryInfo = {
     isPrivate: boolean;
     permissions: {
         admin: boolean;
+        write: boolean;
     };
     ownerAvatarUrl: string;
     allowSquashMerge: boolean | null;
@@ -165,6 +166,7 @@ export const reposRouter = createTRPCRouter({
                     isPrivate: data.private,
                     permissions: {
                         admin: access.admin,
+                        write: access.write,
                     },
                     ownerAvatarUrl: data.owner.avatar_url,
                     allowSquashMerge: data.allow_squash_merge,
@@ -224,6 +226,7 @@ export const reposRouter = createTRPCRouter({
                 isPrivate: data.private,
                 permissions: {
                     admin: access.admin,
+                    write: access.write,
                 },
                 ownerAvatarUrl: data.owner.avatar_url,
                 allowSquashMerge: data.allow_squash_merge ?? null,
