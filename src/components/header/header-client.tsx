@@ -271,7 +271,7 @@ function HeaderContent({
             </header>
 
             {resolvedRepoData?.archived && (
-                <div className="border-yellow-800/50 border-b bg-yellow-50 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-700/50 dark:bg-yellow-950 dark:text-yellow-200">
+                <div className="relative z-40 border-yellow-800/50 border-b bg-yellow-50 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-700/50 dark:bg-yellow-950 dark:text-yellow-200">
                     <div className="flex items-center gap-2 px-2 sm:px-4 lg:px-6">
                         <Archive className="size-4 shrink-0" />
                         <span>
