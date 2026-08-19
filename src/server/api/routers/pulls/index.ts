@@ -28,10 +28,12 @@ import {
     createIssueComment,
     createPullRequestReview,
     createPullRequestStack,
+    deleteBranchRef,
     deleteIssueComment,
     getCachedPullRequest,
     getMergeAsyncResult,
     getMergeRequirements,
+    getPullRequest,
     getPullRequestReviews,
     getPullRequestStack,
     listLabelsForRepo,
@@ -871,6 +873,44 @@ export const pullsRouter = createTRPCRouter({
                 input.repo,
                 input.number,
                 { state: "open" },
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
+            return { success: true as const };
+        }),
+
+    deleteBranch: protectedMutation
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session?.user?.id,
+            );
+
+            const pr = await getPullRequest(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+            );
+
+            const headOwner = pr.head.repo?.owner.login ?? input.owner;
+            const headRepo = pr.head.repo?.name ?? input.repo;
+
+            await deleteBranchRef(
+                accessToken,
+                headOwner,
+                headRepo,
+                pr.head.ref,
             );
 
             await deleteCache(

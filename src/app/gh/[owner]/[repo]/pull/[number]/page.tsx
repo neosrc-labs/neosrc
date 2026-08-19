@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense, use } from "react";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
+    doesBranchExist,
     getCachedPullRequest,
     getChecksForCommit,
     getConflictedFiles,
@@ -99,6 +100,12 @@ export default async function PullRequestPage({ params }: PageProps) {
         repo,
         number,
     );
+    const branchExistsPromise = pullRequestPromise.then(async (pr) => {
+        if (pr.state === "open") return true;
+        const headOwner = pr.head.repo?.owner.login ?? owner;
+        const headRepo = pr.head.repo?.name ?? repo;
+        return doesBranchExist(accessToken, headOwner, headRepo, pr.head.ref);
+    });
 
     return (
         <div className="px-6 py-8">
@@ -145,6 +152,7 @@ export default async function PullRequestPage({ params }: PageProps) {
                             owner={owner}
                             repo={repo}
                             permissionContextPromise={permissionContextPromise}
+                            branchExistsPromise={branchExistsPromise}
                             pullRequestPromise={pullRequestPromise}
                         />
                     </Suspense>
@@ -158,21 +166,34 @@ function TimelineSectionWithCanInteract({
     repo,
     number,
     permissionContextPromise,
+    branchExistsPromise,
     pullRequestPromise,
 }: {
     owner: string;
     repo: string;
     number: number;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
+    branchExistsPromise: Promise<boolean>;
     pullRequestPromise: Promise<PullsGetResponseData>;
 }) {
     const permissionContext = use(permissionContextPromise);
     const pullRequest = use(pullRequestPromise);
+    const branchExists = use(branchExistsPromise);
+
+    const baseRepo = pullRequest.base.repo?.full_name ?? `${owner}/${repo}`;
+    const headRepo = pullRequest.head.repo?.full_name ?? `${owner}/${repo}`;
+    const branchLabel =
+        headRepo === baseRepo ? pullRequest.head.ref : pullRequest.head.label;
+    const branchHref = `https://github.com/${headRepo}/tree/${pullRequest.head.ref}`;
+
     return (
         <TimelineSection
             permissionContext={permissionContext}
             number={number}
             owner={owner}
+            pullRequestBranchExists={branchExists}
+            pullRequestBranchHref={branchHref}
+            pullRequestBranchLabel={branchLabel}
             pullRequestMerged={pullRequest.merged}
             pullRequestState={pullRequest.state}
             repo={repo}

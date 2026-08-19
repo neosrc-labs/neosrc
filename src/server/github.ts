@@ -462,6 +462,47 @@ export const updatePullRequest = async (
     return response.data;
 };
 
+export const deleteBranchRef = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    branch: string,
+) => {
+    const octokit = createOctokit(accessToken);
+    await octokit.rest.git.deleteRef({
+        owner,
+        repo,
+        ref: `heads/${branch}`,
+    });
+};
+
+export const doesBranchExist = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    branch: string,
+): Promise<boolean> => {
+    const octokit = createOctokit(accessToken);
+    try {
+        await octokit.rest.git.getRef({
+            owner,
+            repo,
+            ref: `heads/${branch}`,
+        });
+        return true;
+    } catch (error: unknown) {
+        if (
+            typeof error === "object" &&
+            error !== null &&
+            "status" in error &&
+            error.status === 404
+        ) {
+            return false;
+        }
+        throw error;
+    }
+};
+
 export const markPullRequestAsDraft = async (
     accessToken: string,
     owner: string,

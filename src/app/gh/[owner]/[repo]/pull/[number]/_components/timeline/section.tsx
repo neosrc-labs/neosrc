@@ -15,6 +15,7 @@ import {
     type PullRequestPermissionContext,
 } from "../../permissions-utils";
 import { CommentForm } from "../comment-form";
+import { DeleteBranchSection } from "../delete-branch-section";
 import { TimelineEvent } from "./event";
 import { RevertedBanner, type RevertedByEntry } from "./reverted-banner";
 import { aggregateEvents, filterTimelineEvents } from "./utils";
@@ -59,6 +60,9 @@ interface TimelineSectionProps {
     permissionContext: PullRequestPermissionContext;
     pullRequestState: "open" | "closed";
     pullRequestMerged: boolean;
+    pullRequestBranchExists: boolean;
+    pullRequestBranchHref: string;
+    pullRequestBranchLabel: string;
 }
 export function TimelineSection({
     owner,
@@ -67,6 +71,9 @@ export function TimelineSection({
     permissionContext,
     pullRequestState,
     pullRequestMerged,
+    pullRequestBranchExists,
+    pullRequestBranchHref,
+    pullRequestBranchLabel,
 }: TimelineSectionProps) {
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
         api.timeline.list.useInfiniteQuery(
@@ -377,6 +384,18 @@ export function TimelineSection({
                         Loading more...
                     </p>
                 </div>
+            )}
+
+            {pullRequestState !== "open" && pullRequestBranchExists && (
+                <DeleteBranchSection
+                    branchHref={pullRequestBranchHref}
+                    branchLabel={pullRequestBranchLabel}
+                    canDelete={canEdit(permissionContext)}
+                    merged={pullRequestMerged}
+                    number={number}
+                    owner={owner}
+                    repo={repo}
+                />
             )}
 
             <div ref={timelineEndRef}>
