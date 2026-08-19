@@ -328,6 +328,33 @@ describe("DiffView rendering", () => {
                 expect.stringMatching(new RegExp(`#diff-${FILE_HASH}R1-R2$`)),
             );
         });
+
+        it("pressing Escape clears the line selection and URL hash", async () => {
+            const user = userEvent.setup();
+            const lines = [mc(" line1", 1, 1), mc(" line2", 2, 2)];
+            mockParsedFile([mb(1, lines)]);
+
+            const { container } = renderDiffView();
+            const cells = container.querySelectorAll("td.d2h-code-linenumber");
+            expect(cells.length).toBeGreaterThanOrEqual(1);
+
+            // Select a line first
+            await user.click(cells[0]!);
+            expect(window.history.replaceState).toHaveBeenLastCalledWith(
+                null,
+                "",
+                expect.stringMatching(new RegExp(`#diff-${FILE_HASH}R1$`)),
+            );
+
+            // Press Escape to clear selection
+            await user.keyboard("{Escape}");
+
+            expect(window.history.replaceState).toHaveBeenLastCalledWith(
+                null,
+                "",
+                window.location.pathname,
+            );
+        });
     });
 
     describe("comment button interactions", () => {

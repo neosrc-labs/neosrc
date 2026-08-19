@@ -212,6 +212,18 @@ export function useDiffLineSelection(fileHash: string) {
     );
 
     useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape" && selectedRange) {
+                e.preventDefault();
+                setSelectedRange(null);
+                history.replaceState(null, "", window.location.pathname);
+            }
+        };
+        document.addEventListener("keydown", onKeyDown);
+        return () => document.removeEventListener("keydown", onKeyDown);
+    }, [selectedRange]);
+
+    useEffect(() => {
         const onDocumentMouseUp = () => {
             if (!isDragging.current || !dragStartRef.current) return;
             const anchor = dragStartRef.current;
