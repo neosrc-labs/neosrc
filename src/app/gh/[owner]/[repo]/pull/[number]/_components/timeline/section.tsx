@@ -409,6 +409,7 @@ export function TimelineSection({
                         !pullRequestMerged &&
                         canEdit(permissionContext)
                     }
+                    branchExists={pullRequestBranchExists}
                     disabled={!canInteract(permissionContext)}
                     number={number}
                     owner={owner}

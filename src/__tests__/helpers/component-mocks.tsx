@@ -23,6 +23,7 @@ export function mockMarkdownEditor(options?: {
                 label: string;
                 onClick: (text: string) => void;
                 disabled?: (text: string) => boolean;
+                tooltip?: string;
             }>;
         }) => (
             <div data-testid="markdown-editor">
@@ -45,6 +46,7 @@ export function mockMarkdownEditor(options?: {
                         onClick={() => action.onClick(props.value ?? "")}
                         type="button"
                         disabled={action.disabled?.(props.value ?? "") ?? false}
+                        title={action.tooltip}
                     >
                         {action.label}
                     </button>

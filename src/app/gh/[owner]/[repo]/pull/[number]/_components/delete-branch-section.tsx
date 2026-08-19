@@ -72,7 +72,7 @@ export function DeleteBranchSection({
                 {canDelete && (
                     <button
                         type="button"
-                        className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md bg-surface-elevated px-4 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-zinc-700"
+                        className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md bg-surface-elevated px-4 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors enabled:hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:enabled:hover:bg-zinc-700"
                         disabled={deleteBranch.isPending}
                         onClick={() =>
                             deleteBranch.mutate({ owner, repo, number })

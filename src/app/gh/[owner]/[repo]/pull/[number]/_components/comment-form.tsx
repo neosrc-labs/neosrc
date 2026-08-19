@@ -19,6 +19,7 @@ interface CommentFormProps {
     disabled?: boolean;
     canClose?: boolean;
     canReopen?: boolean;
+    branchExists?: boolean;
 }
 
 export function CommentForm({
@@ -28,6 +29,7 @@ export function CommentForm({
     disabled,
     canClose = false,
     canReopen = false,
+    branchExists = true,
 }: CommentFormProps) {
     const commentKey = `pr-autosave:comment:${owner}:${repo}:${number}`;
     const [body, setBody] = useState(() => readAutosave(commentKey) ?? "");
@@ -204,7 +206,10 @@ export function CommentForm({
                     : "Reopen pull request",
                 onClick: handleReopen,
                 variant: "outline",
-                disabled: () => reopenMutation.isPending,
+                disabled: () => reopenMutation.isPending || !branchExists,
+                tooltip: branchExists
+                    ? undefined
+                    : "The head branch was deleted.",
             }
           : null;
 

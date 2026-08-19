@@ -18,12 +18,18 @@ import {
     ToggleLeft,
 } from "lucide-react";
 import {
+    Fragment,
     type ReactNode,
     useCallback,
     useEffect,
     useRef,
     useState,
 } from "react";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { api } from "~/trpc/react";
 import {
     IssueAutocomplete,
@@ -50,6 +56,7 @@ export interface FooterAction {
     variant?: "neutral" | "approve" | "danger" | "outline";
     disabled?: boolean | ((text: string) => boolean);
     icon?: ReactNode;
+    tooltip?: string;
 }
 
 interface MarkdownEditorProps {
@@ -1219,31 +1226,52 @@ function EditorFooter({
             )}
             {footerActions && (
                 <div className="flex items-center gap-2">
-                    {footerActions.map((action) => (
-                        <button
-                            className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-4 py-1.5 font-medium text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                                action.variant === "approve"
-                                    ? "bg-[#2da44e] text-white hover:bg-[#218838]"
-                                    : action.variant === "danger"
-                                      ? "bg-[#cf222e] text-white hover:bg-[#b91c23]"
-                                      : action.variant === "outline"
-                                        ? "bg-surface-elevated text-text-label ring-1 ring-ring hover:bg-gray-50 dark:hover:bg-zinc-700"
-                                        : "bg-neutral-200 text-black hover:bg-neutral-300"
-                            }`}
-                            disabled={
-                                disabled ||
-                                (typeof action.disabled === "function"
-                                    ? action.disabled(value)
-                                    : action.disabled)
-                            }
-                            key={action.label}
-                            onClick={action.onClick}
-                            type="button"
-                        >
-                            {action.icon}
-                            {action.label}
-                        </button>
-                    ))}
+                    {footerActions.map((action) => {
+                        const actionDisabled =
+                            disabled ||
+                            (typeof action.disabled === "function"
+                                ? action.disabled(value)
+                                : action.disabled);
+
+                        const button = (
+                            <button
+                                className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-4 py-1.5 font-medium text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                    action.variant === "approve"
+                                        ? "bg-[#2da44e] text-white enabled:hover:bg-[#218838]"
+                                        : action.variant === "danger"
+                                          ? "bg-[#cf222e] text-white enabled:hover:bg-[#b91c23]"
+                                          : action.variant === "outline"
+                                            ? "bg-surface-elevated text-text-label ring-1 ring-ring enabled:hover:bg-gray-50 dark:enabled:hover:bg-zinc-700"
+                                            : "bg-neutral-200 text-black enabled:hover:bg-neutral-300"
+                                }`}
+                                disabled={actionDisabled}
+                                onClick={action.onClick}
+                                type="button"
+                            >
+                                {action.icon}
+                                {action.label}
+                            </button>
+                        );
+
+                        if (!action.tooltip) {
+                            return (
+                                <Fragment key={action.label}>{button}</Fragment>
+                            );
+                        }
+
+                        return (
+                            <Tooltip key={action.label}>
+                                <TooltipTrigger asChild>
+                                    <span className="inline-flex">
+                                        {button}
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                    {action.tooltip}
+                                </TooltipContent>
+                            </Tooltip>
+                        );
+                    })}
                 </div>
             )}
         </div>

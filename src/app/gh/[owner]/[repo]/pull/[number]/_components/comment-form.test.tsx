@@ -73,7 +73,7 @@ vi.mock("~/hooks/use-autosave", () => ({
     useAutosave: () => ({ clear: vi.fn() }),
 }));
 
-function renderForm(canClose = false, canReopen = false) {
+function renderForm(canClose = false, canReopen = false, branchExists = true) {
     render(
         <CommentForm
             owner="owner"
@@ -81,6 +81,7 @@ function renderForm(canClose = false, canReopen = false) {
             number={1}
             canClose={canClose}
             canReopen={canReopen}
+            branchExists={branchExists}
         />,
     );
 }
@@ -227,5 +228,16 @@ describe("CommentForm reopen button", () => {
             number: 1,
             body: "hello",
         });
+    });
+
+    it("disables the reopen button when the head branch no longer exists", () => {
+        renderForm(false, true, false);
+
+        const reopen = screen.getByRole("button", {
+            name: "Reopen pull request",
+        });
+
+        expect(reopen).toBeDisabled();
+        expect(reopen).toHaveAttribute("title", "The head branch was deleted.");
     });
 });
