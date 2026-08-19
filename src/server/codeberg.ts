@@ -324,6 +324,7 @@ export type CodebergRepo = {
     created_at: string | null;
     updated_at: string | null;
     archived: boolean;
+    archived_at: string | null;
     has_issues: boolean;
     has_wiki: boolean;
     has_projects: boolean;
@@ -1057,6 +1058,8 @@ export interface CodebergRepoHeaderInfo {
     hasProjects: boolean;
     hasDiscussions: boolean;
     isPrivate: boolean;
+    archived: boolean;
+    archivedAt: string | null;
     permissions: { admin: boolean; write: boolean };
     ownerAvatarUrl: string | null;
     allowSquashMerge: boolean;
@@ -1097,6 +1100,8 @@ export async function getCachedRepoHeaderData(
         hasProjects: repoInfo.has_projects,
         hasDiscussions: false,
         isPrivate: repoInfo.private,
+        archived: repoInfo.archived,
+        archivedAt: repoInfo.archived_at,
         permissions: { admin: access.admin, write: access.write },
         ownerAvatarUrl: repoInfo.owner.avatar_url,
         allowSquashMerge: repoInfo.allow_squash_merge,

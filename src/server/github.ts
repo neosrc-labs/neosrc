@@ -20,6 +20,7 @@ import {
     type GQLCommitAuthor,
     type GQLPullRequestReactions,
     type GqlCommitChecks,
+    getArchivedAtGraphQL,
     getCommitChecksGraphQL,
     getPullRequestStackGraphQL,
     isOrgRestrictionError,
@@ -2066,6 +2067,8 @@ export interface RepoHeaderInfo {
     hasProjects: boolean;
     hasDiscussions: boolean;
     isPrivate: boolean;
+    archived: boolean;
+    archivedAt: string | null;
     permissions: { admin: boolean; write: boolean };
     ownerAvatarUrl: string | null;
 }
@@ -2092,12 +2095,18 @@ export async function getCachedRepoHeaderData(
     // server notFound() here could never produce a 404).
     if (!access.canView) return null;
 
+    const archivedAt = repoInfo.archived
+        ? await getArchivedAtGraphQL(accessToken, owner, repo).catch(() => null)
+        : null;
+
     return {
         hasIssues: repoInfo.has_issues,
         hasWiki: repoInfo.has_wiki,
         hasProjects: repoInfo.has_projects,
         hasDiscussions: repoInfo.has_discussions,
         isPrivate: repoInfo.private,
+        archived: repoInfo.archived,
+        archivedAt,
         permissions: { admin: access.admin, write: access.write },
         ownerAvatarUrl: repoInfo.owner.avatar_url,
     };

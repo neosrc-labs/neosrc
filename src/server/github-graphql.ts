@@ -2235,3 +2235,23 @@ export async function getPullRequestStackGraphQL(
         pullRequests,
     };
 }
+
+const ARCHIVED_AT_QUERY = `
+query RepoArchivedAt($owner: String!, $repo: String!) {
+	repository(owner: $owner, name: $repo) {
+		archivedAt
+	}
+}
+`;
+
+export async function getArchivedAtGraphQL(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<string | null> {
+    const graphql = createGraphql(accessToken);
+    const result = await graphql<{
+        repository: { archivedAt: string | null } | null;
+    }>(ARCHIVED_AT_QUERY, { owner, repo });
+    return result.repository?.archivedAt ?? null;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+    Archive,
     PanelLeftOpen,
     PanelRightClose,
     PanelRightOpen,
@@ -25,6 +26,8 @@ export interface HeaderRepoData {
     hasProjects: boolean;
     hasDiscussions: boolean;
     isPrivate: boolean;
+    archived: boolean;
+    archivedAt: string | null;
     permissions: { admin: boolean; write: boolean };
     ownerAvatarUrl: string | null;
     openIssuesCount: number | null;
@@ -266,6 +269,21 @@ function HeaderContent({
 
                 {showRepoNav && <RepoNavbar tabs={tabs} />}
             </header>
+
+            {resolvedRepoData?.archived && (
+                <div className="border-yellow-800/50 border-b bg-yellow-50 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-700/50 dark:bg-yellow-950 dark:text-yellow-200">
+                    <div className="flex items-center gap-2 px-2 sm:px-4 lg:px-6">
+                        <Archive className="size-4 shrink-0" />
+                        <span>
+                            This repository was archived by the owner
+                            {resolvedRepoData.archivedAt
+                                ? ` on ${new Date(resolvedRepoData.archivedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`
+                                : ""}
+                            . It is now read-only.
+                        </span>
+                    </div>
+                </div>
+            )}
 
             {pathType === "PULL_REQUEST" && (
                 <PullRequestSidebarToggles headerRef={headerRef} />

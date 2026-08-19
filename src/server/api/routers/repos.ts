@@ -92,6 +92,8 @@ export type RepositoryInfo = {
     hasProjects: boolean;
     hasDiscussions: boolean;
     isPrivate: boolean;
+    archived: boolean;
+    archivedAt: string | null;
     permissions: {
         admin: boolean;
         write: boolean;
@@ -164,6 +166,8 @@ export const reposRouter = createTRPCRouter({
                     hasProjects: data.has_projects,
                     hasDiscussions: false,
                     isPrivate: data.private,
+                    archived: data.archived,
+                    archivedAt: data.archived_at,
                     permissions: {
                         admin: access.admin,
                         write: access.write,
@@ -224,6 +228,8 @@ export const reposRouter = createTRPCRouter({
                 hasProjects: data.has_projects,
                 hasDiscussions: data.has_discussions,
                 isPrivate: data.private,
+                archived: data.archived,
+                archivedAt: null,
                 permissions: {
                     admin: access.admin,
                     write: access.write,
