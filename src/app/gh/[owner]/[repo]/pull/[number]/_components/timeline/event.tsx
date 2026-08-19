@@ -12,6 +12,8 @@ import {
     GitBranch,
     GitCommitHorizontal,
     GitMerge,
+    GitPullRequestArrow,
+    GitPullRequestClosed,
     Link,
     ListOrdered,
     Lock,
@@ -223,16 +225,10 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
     const iconMap: Record<string, React.ReactNode> = {
         PullRequestReview: <Eye size={ICON_SIZE} />,
         ClosedEvent: (
-            <Circle
-                className="fill-state-closed/20 text-state-closed"
-                size={ICON_SIZE}
-            />
+            <GitPullRequestClosed className="text-white" size={ICON_SIZE} />
         ),
         ReopenedEvent: (
-            <Circle
-                className="fill-state-open/20 text-state-open"
-                size={ICON_SIZE}
-            />
+            <GitPullRequestArrow className="text-white" size={ICON_SIZE} />
         ),
         MergedEvent: <GitMerge className="text-white" size={ICON_SIZE} />,
         LabeledEvent: <Tag size={ICON_SIZE} />,
@@ -281,6 +277,8 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
     const isChangesRequested =
         typename === "PullRequestReview" && event.state === "CHANGES_REQUESTED";
     const isMerged = typename === "MergedEvent";
+    const isClosed = typename === "ClosedEvent";
+    const isReopened = typename === "ReopenedEvent";
 
     const circleClass = isApproved
         ? approvalHasWriteAccess(event.authorPermission)
@@ -288,9 +286,13 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
             : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-surface ring-1 ring-border"
         : isChangesRequested
           ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-closed"
-          : isMerged
-            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-merged"
-            : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-surface ring-1 ring-border";
+          : isClosed
+            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-closed"
+            : isReopened
+              ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-open"
+              : isMerged
+                ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-merged"
+                : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-surface ring-1 ring-border";
 
     let icon = iconMap[typename] ?? <Circle size={ICON_SIZE} />;
 
