@@ -954,41 +954,44 @@ export type MergeRequirements = {
 };
 
 /**
- * Octokit's RequestError carries an HTTP status; 404 marks an endpoint as
- * "not applicable" (rulesets unavailable, branch protection unconfigured)
- * rather than a genuine failure.
+ * The merge-requirements lookup is best-effort: branch protection and
+ * rulesets may be unreadable for reasons that do not indicate a merge is
+ * blocked. Treat the following as "no requirements can be read here" instead
+ * of a genuine failure:
+ *  - 404: the endpoint is not applicable (no rulesets, no branch protection)
+ *  - 403 "make this repository public to enable this feature": the feature is
+ *    unavailable on the repo's plan (rulesets / branch protection on private
+ *    repos require GitHub Pro)
+ *  - 403 "Resource not accessible by integration": the GitHub App / OAuth
+ *    integration lacks permission to read branch protection (e.g. the
+ *    `administration` read permission was not granted). This is an access
+ *    limit on the informational lookup only; the real merge call remains the
+ *    source of truth and enforces any protection GitHub applies.
+ * Any other error (rate limiting, 5xx, network) is left to propagate so it is
+ * not silently swallowed.
  */
-function isNotFoundError(error: unknown): boolean {
-    return (
-        error !== null &&
-        typeof error === "object" &&
-        "status" in error &&
-        (error as { status: number }).status === 404
-    );
-}
-
-/**
- * GitHub returns 403 with this message on private repositories whose plan
- * does not include the feature (rulesets and branch protection both require
- * GitHub Pro on private repos). Like 404, it means "no requirements can
- * exist here" rather than a genuine failure.
- */
-function isFeatureUnavailableError(error: unknown): boolean {
-    if (
-        error === null ||
-        typeof error !== "object" ||
-        !("status" in error) ||
-        error.status !== 403 ||
-        !("message" in error)
-    ) {
+function isMergeRequirementsUnreadable(error: unknown): boolean {
+    if (error === null || typeof error !== "object" || !("status" in error)) {
         return false;
     }
-    return (
-        typeof error.message === "string" &&
-        error.message.includes(
-            "make this repository public to enable this feature",
-        )
-    );
+    const status = error.status;
+    if (typeof status === "number" && status === 404) {
+        return true;
+    }
+    if (typeof status === "number" && status === 403) {
+        if (!("message" in error)) {
+            return false;
+        }
+        const message = error.message;
+        if (typeof message === "string") {
+            return (
+                message.includes(
+                    "make this repository public to enable this feature",
+                ) || message.includes("Resource not accessible by integration")
+            );
+        }
+    }
+    return false;
 }
 
 export const getMergeRequirements = cache(
@@ -1043,11 +1046,13 @@ export const getMergeRequirements = cache(
         } catch (error) {
             // Rulesets are only available on repos that use them; fall back
             // to classic branch protection when the endpoint is not applicable
-            // (404) or the feature is unavailable on the repo's plan (403 on
-            // private repos without GitHub Pro). Any other failure means the
-            // requirements could not be determined and must surface rather
-            // than defaulting to none.
-            if (!isNotFoundError(error) && !isFeatureUnavailableError(error)) {
+            // (404), the feature is unavailable on the repo's plan (403 on
+            // private repos without GitHub Pro), or the integration lacks
+            // permission to read it (403 "Resource not accessible by
+            // integration"). Any other failure means the requirements could
+            // not be determined and must surface rather than defaulting to
+            // none.
+            if (!isMergeRequirementsUnreadable(error)) {
                 throw error;
             }
         }
@@ -1073,11 +1078,13 @@ export const getMergeRequirements = cache(
                 }
             }
         } catch (error) {
-            // Branch protection may simply not be configured (404), or may
-            // be unavailable on the repo's plan (403 on private repos without
-            // GitHub Pro) — both mean there are no requirements. Any other
-            // failure must surface.
-            if (!isNotFoundError(error) && !isFeatureUnavailableError(error)) {
+            // Branch protection may simply not be configured (404), be
+            // unavailable on the repo's plan (403 on private repos without
+            // GitHub Pro), or be unreadable because the integration lacks
+            // permission (403 "Resource not accessible by integration") — all
+            // mean there are no determinable requirements. Any other failure
+            // must surface.
+            if (!isMergeRequirementsUnreadable(error)) {
                 throw error;
             }
         }

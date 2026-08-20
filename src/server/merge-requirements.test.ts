@@ -118,16 +118,46 @@ describe("getMergeRequirements", () => {
         });
     });
 
-    it("propagates other 403 rulesets failures (e.g. permission denied)", async () => {
+    it("propagates other 403 rulesets failures (e.g. unrecognized permission denied)", async () => {
         mockGetBranchRules.mockRejectedValue({
             status: 403,
-            message: "Resource not accessible by integration",
+            message: "Forbidden",
         });
 
         await expect(
             getMergeRequirements("token", "owner", "repo", "forbidden"),
         ).rejects.toMatchObject({ status: 403 });
         expect(mockGetBranchProtection).not.toHaveBeenCalled();
+    });
+
+    it("treats an integration access 403 from rulesets as no requirements", async () => {
+        mockGetBranchRules.mockRejectedValue({
+            status: 403,
+            message: "Resource not accessible by integration",
+        });
+        mockGetBranchProtection.mockRejectedValue({ status: 404 });
+
+        await expect(
+            getMergeRequirements("token", "owner", "repo", "integration-rules"),
+        ).resolves.toEqual({
+            requiredApprovingReviewCount: 0,
+            requiredChecks: [],
+        });
+    });
+
+    it("treats an integration access 403 from branch protection as no requirements", async () => {
+        mockGetBranchRules.mockRejectedValue({ status: 404 });
+        mockGetBranchProtection.mockRejectedValue({
+            status: 403,
+            message: "Resource not accessible by integration",
+        });
+
+        await expect(
+            getMergeRequirements("token", "owner", "repo", "integration-prot"),
+        ).resolves.toEqual({
+            requiredApprovingReviewCount: 0,
+            requiredChecks: [],
+        });
     });
 
     it("returns no requirements when neither rulesets nor protection apply (404)", async () => {
