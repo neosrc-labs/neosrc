@@ -38,6 +38,21 @@ export function canEdit({
     );
 }
 
+export function canResolveReviewThread({
+    currentUser,
+    isPullRequestAuthor,
+    repoPermission,
+}: PullRequestPermissionContext): boolean {
+    if (!currentUser) {
+        return false;
+    }
+    return (
+        repoPermission === "admin" ||
+        repoPermission === "write" ||
+        isPullRequestAuthor
+    );
+}
+
 export function disabled(): PullRequestPermissionContext {
     return {
         currentUser: null,

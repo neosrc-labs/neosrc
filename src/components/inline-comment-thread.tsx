@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     canInteract,
+    canResolveReviewThread,
     type PullRequestPermissionContext,
 } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
 import {
@@ -82,6 +83,7 @@ export function InlineCommentThread({
         startEdit,
         saveEdit,
     } = useReviewCommentEdit({ owner, repo, number });
+    const allowedToResolve = canResolveReviewThread(permissionContext);
     const _canInteract = canInteract(permissionContext);
 
     // Persist reply state so it survives stub -> real remount cycles
@@ -396,15 +398,17 @@ export function InlineCommentThread({
                                 onClick={() => setShowReplyForm(true)}
                             />
                         </div>
-                        <ResolveButton
-                            onClick={handleResolve}
-                            isPending={
-                                threadInfo
-                                    ? resolveOps.isPending(threadInfo.id)
-                                    : false
-                            }
-                            isUnresolve={threadInfo?.isResolved ?? false}
-                        />
+                        {allowedToResolve && (
+                            <ResolveButton
+                                onClick={handleResolve}
+                                isPending={
+                                    threadInfo
+                                        ? resolveOps.isPending(threadInfo.id)
+                                        : false
+                                }
+                                isUnresolve={threadInfo?.isResolved ?? false}
+                            />
+                        )}
                     </div>
                 )
             ) : null}

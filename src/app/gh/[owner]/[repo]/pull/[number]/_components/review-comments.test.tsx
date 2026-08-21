@@ -261,4 +261,60 @@ describe("ReviewComments", () => {
             screen.queryByTestId("review-thread-block"),
         ).not.toBeInTheDocument();
     });
+
+    describe("resolve button visibility", () => {
+        it("hides the resolve button for a read-only user", () => {
+            render(
+                <ReviewComments
+                    {...defaultProps}
+                    permissionContext={{
+                        currentUser: "testuser",
+                        isPullRequestAuthor: false,
+                        repoPermission: "read",
+                        isPullRequestLocked: false,
+                    }}
+                />,
+            );
+
+            expect(
+                screen.queryByRole("button", { name: "Resolve" }),
+            ).not.toBeInTheDocument();
+        });
+
+        it("shows the resolve button for a user with write permission", () => {
+            render(
+                <ReviewComments
+                    {...defaultProps}
+                    permissionContext={{
+                        currentUser: "testuser",
+                        isPullRequestAuthor: false,
+                        repoPermission: "write",
+                        isPullRequestLocked: false,
+                    }}
+                />,
+            );
+
+            expect(
+                screen.getByRole("button", { name: "Resolve" }),
+            ).toBeInTheDocument();
+        });
+
+        it("shows the resolve button for the PR author", () => {
+            render(
+                <ReviewComments
+                    {...defaultProps}
+                    permissionContext={{
+                        currentUser: "testuser",
+                        isPullRequestAuthor: true,
+                        repoPermission: "none",
+                        isPullRequestLocked: false,
+                    }}
+                />,
+            );
+
+            expect(
+                screen.getByRole("button", { name: "Resolve" }),
+            ).toBeInTheDocument();
+        });
+    });
 });

@@ -26,6 +26,7 @@ import type { ReviewCommentBase } from "~/server/github";
 import { api } from "~/trpc/react";
 import {
     canInteract,
+    canResolveReviewThread,
     type PullRequestPermissionContext,
 } from "../permissions-utils";
 
@@ -462,6 +463,7 @@ function CommentBlock({
             : undefined,
         onSuccess: clearReply,
     });
+    const allowedToResolve = canResolveReviewThread(permissionContext);
     const allowedToInteract = canInteract(permissionContext);
 
     if (isResolved && !isExpanded) {
@@ -581,13 +583,15 @@ function CommentBlock({
                                 onClick={() => setShowReplyForm(true)}
                             />
                         </div>
-                        <ResolveButton
-                            onClick={() =>
-                                onResolve(comment.id, threadId, !isResolved)
-                            }
-                            isPending={isResolvePending(threadId)}
-                            isUnresolve={isResolved}
-                        />
+                        {allowedToResolve && (
+                            <ResolveButton
+                                onClick={() =>
+                                    onResolve(comment.id, threadId, !isResolved)
+                                }
+                                isPending={isResolvePending(threadId)}
+                                isUnresolve={isResolved}
+                            />
+                        )}
                     </div>
                 )
             ) : null}
