@@ -986,7 +986,7 @@ export async function getPullRequestTimelineGraphQL(
     hasMore: boolean;
     endCursor: string | undefined;
     commentReactions: Record<
-        number,
+        string,
         {
             databaseId: number;
             content: string;
@@ -1045,7 +1045,7 @@ export async function getPullRequestTimelineGraphQL(
     const pageInfo = result.repository.pullRequest.timelineItems.pageInfo;
 
     const commentReactions: Record<
-        number,
+        string,
         {
             databaseId: number;
             content: string;
@@ -1054,6 +1054,9 @@ export async function getPullRequestTimelineGraphQL(
         }[]
     > = {};
 
+    // IssueComment and PullRequestReview databaseIds come from independent
+    // sequences. Namespace the keys so an ID collision cannot make one
+    // object display another object's reactions.
     for (const node of events) {
         if (
             node.__typename === "IssueComment" ||
@@ -1061,7 +1064,11 @@ export async function getPullRequestTimelineGraphQL(
         ) {
             const { reactions, databaseId } = node;
             if (databaseId && reactions?.nodes) {
-                commentReactions[databaseId] = reactions.nodes
+                const key =
+                    node.__typename === "IssueComment"
+                        ? `comment:${databaseId}`
+                        : `review:${databaseId}`;
+                commentReactions[key] = reactions.nodes
                     .filter((r): r is GQLReactionNode => r !== null)
                     .map((r) => ({
                         databaseId: r.databaseId,

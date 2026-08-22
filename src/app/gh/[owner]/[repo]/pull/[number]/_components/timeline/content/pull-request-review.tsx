@@ -65,7 +65,7 @@ interface PullRequestReviewContentProps {
     number: number;
     permissionContext: PullRequestPermissionContext;
     allComments: ReviewComment[];
-    commentReactions: Record<number, GQLReactionNode[]>;
+    commentReactions: Record<string, GQLReactionNode[]>;
     editingCommentId: number | null;
     editBody: string;
     savedBodies: Record<number, string>;
@@ -128,7 +128,8 @@ export function PullRequestReviewContent({
     const isEditing = editingCommentId === event.databaseId;
     const isAuthor = event.author?.login === permissionContext.currentUser;
     const displayBody = savedBodies[event.databaseId] ?? event.body;
-    const reviewReactionsArr = commentReactions[event.databaseId] ?? [];
+    const reviewReactionsArr =
+        commentReactions[`review:${event.databaseId}`] ?? [];
     const _canInteract = canInteract(permissionContext);
     const _canEdit = canEdit(permissionContext);
 

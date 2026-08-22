@@ -100,16 +100,16 @@ export function TimelineSection({
     );
     const allCommentReactions = useMemo(
         () =>
-            data?.pages.reduce<Record<number, GQLReactionNode[]>>(
+            data?.pages.reduce<Record<string, GQLReactionNode[]>>(
                 (acc, page) => {
                     for (const [id, reactions] of Object.entries(
                         page.commentReactions,
                     )) {
-                        acc[Number(id)] = reactions;
+                        acc[id] = reactions;
                     }
                     return acc;
                 },
-                {} as Record<number, GQLReactionNode[]>,
+                {} as Record<string, GQLReactionNode[]>,
             ) ?? {},
         [data],
     );
