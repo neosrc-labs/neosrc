@@ -107,7 +107,7 @@ export async function getCachedRepoData<T>(
                 });
             });
         } catch {
-            // Not in a request scope -- skip the background revalidation.
+            // Not in a request scope, so skip the background revalidation.
         }
         return cached.rawData as T;
     }
@@ -191,7 +191,7 @@ export type RepoPermissionLevel =
  * or null when the viewer is not linked to the provider or has no grant.
  *
  * The repo-table cache is shared across users, so the cached payload's
- * `permissions` field is whoever-last-wrote it -- never trust it for the
+ * `permissions` field is whoever-last-wrote it: never trust it for the
  * current viewer; resolve access from the materialized view instead.
  */
 export async function getRepoPermissionForUser(
@@ -251,7 +251,7 @@ export type ViewerRepoAccess = {
 /**
  * Composes the viewer's access from the view lookup and the payload's
  * owner/private flags. The owner login is global truth (not viewer-dependent),
- * so the owner is always admin and always may view -- this also covers a
+ * so the owner is always admin and always may view. This also covers a
  * just-cached repo whose row is not yet in the refreshed view.
  */
 export function viewerRepoAccess(params: {
