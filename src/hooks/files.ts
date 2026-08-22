@@ -11,8 +11,10 @@ type CacheEntry = {
     files: PullRequestFile[];
     subscribers: Set<(files: PullRequestFile[]) => void>;
     loadingSubscribers: Set<(loading: boolean) => void>;
+    errorSubscribers: Set<(error: boolean) => void>;
     controller: AbortController;
     isLoading: boolean;
+    error: boolean;
 };
 
 const cache = new Map<string, CacheEntry>();
@@ -38,8 +40,10 @@ function fetchFiles(
         files: [],
         subscribers: new Set(),
         loadingSubscribers: new Set(),
+        errorSubscribers: new Set(),
         controller,
         isLoading: true,
+        error: false,
     };
     cache.set(key, entry);
 
@@ -51,7 +55,14 @@ function fetchFiles(
                 { signal: controller.signal },
             );
 
-            if (!res.ok) return;
+            if (!res.ok) {
+                console.error(
+                    `Failed to load pull request files (HTTP ${res.status})`,
+                );
+                entry.error = true;
+                for (const cb of entry.errorSubscribers) cb(true);
+                return;
+            }
 
             const reader = res.body?.getReader();
             if (!reader) return;
@@ -74,6 +85,8 @@ function fetchFiles(
             if (err instanceof DOMException && err.name === "AbortError")
                 return;
             console.error("Failed to parse file chunk:", err);
+            entry.error = true;
+            for (const cb of entry.errorSubscribers) cb(true);
         } finally {
             if (!controller.signal.aborted) {
                 entry.isLoading = false;
@@ -90,6 +103,7 @@ function fetchFiles(
 export function useFiles({ owner, repo, number, commitSha }: UseFilesParams) {
     const [files, setFiles] = useState<PullRequestFile[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(false);
 
     useEffect(() => {
         const key = getCacheKey(owner, repo, number, commitSha);
@@ -101,14 +115,17 @@ export function useFiles({ owner, repo, number, commitSha }: UseFilesParams) {
         // Sync immediately with whatever is already buffered
         setFiles(entry.files);
         setIsLoading(entry.isLoading);
+        setError(entry.error);
 
         // Subscribe to future updates
         entry.subscribers.add(setFiles);
         entry.loadingSubscribers.add(setIsLoading);
+        entry.errorSubscribers.add(setError);
 
         return () => {
             entry.subscribers.delete(setFiles);
             entry.loadingSubscribers.delete(setIsLoading);
+            entry.errorSubscribers.delete(setError);
 
             // Only abort when the last consumer unmounts
             if (entry.subscribers.size === 0) {
@@ -118,5 +135,5 @@ export function useFiles({ owner, repo, number, commitSha }: UseFilesParams) {
         };
     }, [owner, repo, number, commitSha]);
 
-    return { files, isLoading };
+    return { files, isLoading, error };
 }

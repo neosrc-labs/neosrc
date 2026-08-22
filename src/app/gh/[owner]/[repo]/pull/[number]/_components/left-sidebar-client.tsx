@@ -78,7 +78,12 @@ function SidebarFileTree({
     }, [pathname]);
 
     const pullRequest = use(pullRequestPromise ?? NULL_PROMISE);
-    const { files, isLoading } = useFiles({ owner, repo, number, commitSha });
+    const { files, isLoading, error } = useFiles({
+        owner,
+        repo,
+        number,
+        commitSha,
+    });
 
     const fileTree = useMemo(() => buildFileTree(files), [files]);
 
@@ -147,6 +152,10 @@ function SidebarFileTree({
                     />
                 ) : isLoading ? (
                     <FileTreeSkeleton />
+                ) : error ? (
+                    <p className="text-sm text-text-tertiary">
+                        Couldn&apos;t load files.
+                    </p>
                 ) : (
                     <p className="text-sm text-text-tertiary">
                         No files changed

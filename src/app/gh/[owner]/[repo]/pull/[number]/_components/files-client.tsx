@@ -101,7 +101,11 @@ export function FilesSection({
         () => new Set<string>(),
     );
     const heightMapRef = useRef(new Map<string, number>());
-    const { files: allFiles, isLoading } = useFiles({
+    const {
+        files: allFiles,
+        isLoading,
+        error,
+    } = useFiles({
         owner,
         repo,
         number,
@@ -413,7 +417,21 @@ export function FilesSection({
                 </div>
             </div>
             {children}
-            {isLoading && allFiles.length === 0 && (
+            {error && (
+                <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-secondary px-4 py-3">
+                    <span className="text-sm text-text-secondary">
+                        Couldn&apos;t load the changed files.
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => window.location.reload()}
+                        className="cursor-pointer rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
+            {isLoading && !error && allFiles.length === 0 && (
                 <Async
                     promise={pullRequestPromise}
                     fallback={<FileDiffSkeleton />}
