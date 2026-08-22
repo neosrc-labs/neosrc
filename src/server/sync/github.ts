@@ -315,7 +315,7 @@ export async function syncCurrentUserGitHub(
 /**
  * Order-insensitive signature of the permission snapshot: repo ids with their
  * owner and permission flags, org membership roles, and team identities. Team
- * repo grants are intentionally excluded - a change there also surfaces in the
+ * repo grants are intentionally excluded: a change there also surfaces in the
  * authenticated repo list, which is what trips the signature.
  */
 export function githubSnapshotHash(
@@ -488,7 +488,7 @@ query TeamRepos($org: String!, $teamSlug: String!, $first: Int!, $after: String)
     const results: GitHubSyncRepo[] = [];
     let cursor: string | null = null;
     for (;;) {
-        // Annotated on the variable (not just the generic) so the response
+        // Annotated on the variable, not just the generic, so the response
         // type does not feed back into the cursor-based pagination loop.
         const result: {
             viewer: {

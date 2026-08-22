@@ -17,7 +17,7 @@ export interface CacheOptions {
 // request path instead of with a global timer (no setInterval): the first
 // withStaleWhileRevalidate call in a window schedules the DELETE via Next's
 // `after()`, so it runs after the response without ever blocking a request.
-// Only rows past deleteAt are removed -- stale-but-not-deleted rows are kept.
+// Only rows past deleteAt are removed; stale-but-not-deleted rows are kept.
 const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
 let lastSweepAt = 0;
 
@@ -25,7 +25,7 @@ export async function deleteExpiredCacheRows(): Promise<void> {
     try {
         await db.delete(cacheTable).where(lt(cacheTable.deleteAt, new Date()));
     } catch {
-        // Swallow -- a failed sweep shouldn't break the request
+        // Swallow: a failed sweep shouldn't break the request
     }
 }
 
@@ -38,7 +38,7 @@ function maybeScheduleExpiredCacheSweep(): void {
             void deleteExpiredCacheRows();
         });
     } catch {
-        // Not in a request scope (e.g. build/test) -- skip the sweep this window.
+        // Not in a request scope (e.g. build/test), so skip the sweep this window.
     }
 }
 
@@ -72,14 +72,14 @@ export async function withStaleWhileRevalidate<T>(
             return cached.value as T;
         }
     } catch {
-        // DB error -- fall through to fetcher
+        // DB error: fall through to fetcher
     }
 
     const fresh = await fetcher();
     try {
         await persistCache(key, fresh, options);
     } catch {
-        // Swallow -- cache write failure shouldn't break the response
+        // Swallow: cache write failure shouldn't break the response
     }
     return fresh;
 }
@@ -116,7 +116,7 @@ export async function readCache<T>(key: string): Promise<T | null> {
             return cached.value as T;
         }
     } catch {
-        // DB error -- return null
+        // DB error: return null
     }
     return null;
 }
@@ -130,7 +130,7 @@ async function revalidate<T>(
         const fresh = await fetcher();
         await persistCache(key, fresh, options);
     } catch {
-        // Background revalidation failed -- stale data remains, try again next time
+        // Background revalidation failed; stale data remains, try again next time
     }
 }
 

@@ -178,7 +178,7 @@ describe("decrypt()", () => {
     it("does NOT silently return the ciphertext on failure", () => {
         const encrypted = encrypt("secret");
         const tampered = tamperByte(encrypted, IV_LENGTH);
-        // The old code returned `encrypted` on failure -- make sure we throw instead
+        // The old code returned `encrypted` on failure; make sure we throw instead
         expect(() => decrypt(tampered)).toThrow();
     });
 });

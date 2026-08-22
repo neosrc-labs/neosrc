@@ -480,7 +480,7 @@ type HastNode = {
  * `position.start.line` (preserved by remark-rehype from the original mdast
  * listItem position), which react-markdown passes to the `li` component
  * override via the `node` prop. Because each `<li>` directly knows its own
- * source line, no global index/positional-ref matching is needed -- every
+ * source line, no global index/positional-ref matching is needed: every
  * checkbox toggles itself regardless of document structure (blockquotes,
  * ordered lists, nested lists, headings before the list, etc).
  */

@@ -144,7 +144,7 @@ describe("remarkCommitPlugin", () => {
             // When owner and repo are undefined, the regex still matches but
             // the replacement branch is skipped. The cursor advances past the
             // SHA without emitting it. If the parts array contains other text,
-            // the original node is replaced with only those parts -- the SHA
+            // the original node is replaced with only those parts; the SHA
             // is silently consumed rather than left as plain text.
             const result = await process("commit abc1234");
             const output = String(result);

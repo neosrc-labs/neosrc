@@ -1298,7 +1298,7 @@ export interface GqlCommitChecks {
  * Returns a commit's check runs and legacy commit statuses from its
  * statusCheckRollup in one call. The rollup mixes CheckRun and StatusContext
  * nodes, mirroring what REST checks.listForRef + listCommitStatusesForRef
- * returned separately -- but without check run output text.
+ * returned separately, but without check run output text.
  */
 export async function getCommitChecksGraphQL(
     accessToken: string,
