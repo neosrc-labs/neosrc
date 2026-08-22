@@ -87,7 +87,7 @@ describe("code block copy button", () => {
         const writeText = vi
             .fn<typeof navigator.clipboard.writeText>()
             .mockResolvedValue(undefined);
-        // Note: fireEvent (not userEvent) — userEvent.setup() replaces
+        // fireEvent (not userEvent): userEvent.setup() replaces
         // navigator.clipboard with its own stub, which would swallow the call.
         Object.assign(navigator, {
             clipboard: { writeText },

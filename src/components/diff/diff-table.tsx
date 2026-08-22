@@ -43,7 +43,7 @@ export function DiffTable({
                 .d2h-cntx {
                     word-break: break-word;
                 }
-                /* Split (side-by-side) view: four fixed columns like GitHub —
+                /* Split (side-by-side) view: four fixed columns like GitHub:
                    old line number, old content, new line number, new content.
                    The empty side of an unpaired change keeps the table
                    background; changed line numbers use a lighter shade than

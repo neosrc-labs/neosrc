@@ -4,7 +4,7 @@ const { test, expect } = require("next/experimental/testmode/playwright");
 // Fixtures are kept for when testProxy is re-enabled (currently disabled due to
 // https://github.com/vercel/next.js/issues/96768).  With testProxy, the
 // setupGitHubMocks() helper wires server-side fetch interception.
-// Without it, the page renders with real GitHub API data — assertions are
+// Without it, the page renders with real GitHub API data; assertions are
 // written to pass either way.
 const API_BASE = "https://api.github.com";
 
@@ -183,7 +183,7 @@ test.describe("rust-lang/rust repo page", () => {
             waitUntil: "domcontentloaded",
         });
 
-        // Wait for hydration — the skeleton has a disabled search input,
+        // Wait for hydration: the skeleton has a disabled search input,
         // the real component enables it.
         await expect(page.getByPlaceholder("Search files...")).not.toBeDisabled(
             { timeout: 15000 },

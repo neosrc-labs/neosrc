@@ -45,8 +45,8 @@ function isBetween(
  * Whether a row is covered by the current selection. Interactive selections
  * carry the endpoint rows' lines on both sides, so coverage is a sweep over
  * rows: a row counts when it sits between the endpoints in either number
- * space (rows missing one side — unpaired additions/deletions — still count
- * through the side they have). Hash-loaded ranges fall back to the range
+ * space (unpaired additions/deletions missing one side still count through
+ * the side they have). Hash-loaded ranges fall back to the range
  * side's number space.
  */
 export function isRowSelected(

@@ -1081,7 +1081,7 @@ export const getMergeRequirements = cache(
             // Branch protection may simply not be configured (404), be
             // unavailable on the repo's plan (403 on private repos without
             // GitHub Pro), or be unreadable because the integration lacks
-            // permission (403 "Resource not accessible by integration") — all
+            // permission (403 "Resource not accessible by integration"); all
             // mean there are no determinable requirements. Any other failure
             // must surface.
             if (!isMergeRequirementsUnreadable(error)) {
@@ -2905,8 +2905,8 @@ const resolveSuggestionRange = (
  * Compute the file content that results from applying a GitHub code
  * suggestion without touching the remote. The targeted range follows the same
  * semantics as `getSuggestionPatch` (startLine through line). A single
- * trailing newline on the suggestion is stripped so suggestion blocks — which
- * end with a newline — don't inject an empty line, and unchanged lines keep
+ * trailing newline on the suggestion is stripped so suggestion blocks (which
+ * end with a newline) don't inject an empty line, and unchanged lines keep
  * the file's original line endings.
  */
 export const buildSuggestionNewContent = (
