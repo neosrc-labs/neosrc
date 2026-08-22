@@ -369,7 +369,7 @@ export function MarkdownRenderer({
                             // the gfm-injected <input> child with our own
                             // controlled checkbox whose onChange bakes in this
                             // line (no global index/ref positional matching, so
-                            // toggles are robust to any document structure:
+                            // toggles work in any document structure:
                             // blockquotes, ordered lists, nested lists,
                             // preceding headings, etc).
                             const line = (node as HastNode | undefined)
