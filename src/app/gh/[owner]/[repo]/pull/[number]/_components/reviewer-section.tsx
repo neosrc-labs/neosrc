@@ -183,7 +183,7 @@ export function ReviewerSection({
                                     reviewers={mergeReviewers(
                                         pullRequest.requested_reviewers ?? [],
                                         reviewsQuery.data ?? [],
-                                        pullRequest.user.login,
+                                        pullRequest.user?.login,
                                     )}
                                     operations={operations}
                                     onAddReviewer={handleAdd}
@@ -216,7 +216,7 @@ export function ReviewerSection({
                             reviewers={mergeReviewers(
                                 pullRequest.requested_reviewers ?? [],
                                 reviewsQuery.data ?? [],
-                                pullRequest.user.login,
+                                pullRequest.user?.login,
                             )}
                             reviewStateMap={reviewStateMap}
                             reviewSortMap={reviewSortMap}
