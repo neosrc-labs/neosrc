@@ -48,7 +48,7 @@ function isGeneratedLockfile(filename: string): boolean {
     return lockfilePatterns.some((p) => p.test(filename));
 }
 
-// Minified JS/CSS -- average line length > 110 is the real heuristic,
+// Minified JS/CSS: average line length > 110 is the real heuristic,
 // but we can detect common minified naming patterns
 function isGeneratedMinified(filename: string): boolean {
     return /\.min\.(js|css)$/i.test(filename);
