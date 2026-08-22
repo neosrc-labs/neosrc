@@ -494,13 +494,15 @@ function AuthorLabel({
     return (
         <UserHoverCard login={username}>
             <NextLink className="flex items-center gap-2" href={profileUrl}>
-                <Image
-                    alt={username}
-                    className="h-5 w-5 rounded-full"
-                    src={avatarUrl}
-                    width={20}
-                    height={20}
-                />
+                {avatarUrl ? (
+                    <Image
+                        alt={username}
+                        className="h-5 w-5 rounded-full"
+                        src={avatarUrl}
+                        width={20}
+                        height={20}
+                    />
+                ) : null}
                 {username}{" "}
             </NextLink>
         </UserHoverCard>
@@ -705,9 +707,9 @@ function SubtitleActionRow({
                     <div className="flex items-center gap-2 text-sm text-text-secondary">
                         <OpenedByLabel />
                         <AuthorLabel
-                            username={pullRequest.user.login}
-                            avatarUrl={pullRequest.user.avatar_url}
-                            profileUrl={pullRequest.user.html_url}
+                            username={pullRequest.user?.login ?? "ghost"}
+                            avatarUrl={pullRequest.user?.avatar_url ?? ""}
+                            profileUrl={pullRequest.user?.html_url ?? "#"}
                         />
                         <span title={formatDateTime(pullRequest.created_at)}>
                             {formatRelativeTime(pullRequest.created_at)}
