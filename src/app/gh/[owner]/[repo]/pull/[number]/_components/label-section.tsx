@@ -57,7 +57,7 @@ export function LabelsSection({
             { owner, repo, number, label: label.name },
             {
                 onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id === id));
+                    setOperations((prev) => prev.filter((op) => op.id !== id));
                 },
             },
         );
@@ -70,7 +70,7 @@ export function LabelsSection({
             { owner, repo, number, label: label.name },
             {
                 onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id === id));
+                    setOperations((prev) => prev.filter((op) => op.id !== id));
                 },
             },
         );
