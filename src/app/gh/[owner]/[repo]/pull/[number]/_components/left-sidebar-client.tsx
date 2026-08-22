@@ -144,6 +144,11 @@ function SidebarFileTree({
                 )}
             </div>
             <div className="min-h-0 flex-1">
+                {error && files.length > 0 && (
+                    <p className="mb-2 text-amber-600 text-xs dark:text-amber-400">
+                        Some files may be missing: the list failed to load.
+                    </p>
+                )}
                 {files.length > 0 ? (
                     <FileTree
                         basePath={basePath}
