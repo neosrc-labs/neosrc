@@ -457,8 +457,8 @@ export function FilesSection({
                                                 baseSha={pullRequest.base.sha}
                                                 diffView={diffView}
                                                 headSha={
-                                                    pullRequest.head.sha ??
-                                                    commitSha
+                                                    commitSha ??
+                                                    pullRequest.head.sha
                                                 }
                                                 comments={fileComments}
                                                 file={file}
