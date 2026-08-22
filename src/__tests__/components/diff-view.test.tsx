@@ -626,7 +626,7 @@ describe("DiffView rendering", () => {
         it("keeps group and line-highlighted as separate classes on selected gap rows", () => {
             // Leading gap 1-2, block starts at new line 3. With
             // showCommentButton (review path) and a selection covering a gap
-            // line, the row must carry both classes — a missing separator
+            // line, the row must carry both classes: a missing separator
             // would merge them into "groupline-highlighted".
             mockParsedFile([mb(3, [mc("+line3", 3)])], { addedLines: 1 });
 
@@ -2248,8 +2248,8 @@ describe("DiffView split view", () => {
                 },
             });
 
-            // mousedown inside the active comment's range, on R3 — not on the
-            // comment's anchor row R4. The pointer row's lines (old 3/new 3)
+            // mousedown inside the active comment's range, on R3 (not on
+            // the comment's anchor row R4). The pointer row's lines (old 3/new 3)
             // must not become the anchor's opposite-side numbers.
             const rowR3 = container.querySelector('tr[id$="R3"]')!;
             const newLn = Array.from(rowR3.querySelectorAll("td")).find((td) =>

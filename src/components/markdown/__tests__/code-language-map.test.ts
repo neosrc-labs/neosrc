@@ -60,7 +60,7 @@ describe("CODE_LANGUAGE_TAGS", () => {
 
     it("returns undefined for unknown tags", () => {
         expect(CODE_LANGUAGE_TAGS.definitelynotalanguage).toBeUndefined();
-        // Languages highlight.js v10.7.3 has no grammar for — the renderer
+        // Languages highlight.js v10.7.3 has no grammar for; the renderer
         // falls back to auto-detection for these.
         expect(CODE_LANGUAGE_TAGS.graphql).toBeUndefined();
         expect(CODE_LANGUAGE_TAGS.zig).toBeUndefined();

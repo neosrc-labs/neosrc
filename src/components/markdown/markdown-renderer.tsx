@@ -368,9 +368,9 @@ export function MarkdownRenderer({
                             // the mdast listItem by remark-rehype). We replace
                             // the gfm-injected <input> child with our own
                             // controlled checkbox whose onChange bakes in this
-                            // line -- no global index/ref positional matching, so
-                            // toggles are robust to any document structure
-                            // (blockquotes, ordered lists, nested lists,
+                            // line (no global index/ref positional matching, so
+                            // toggles are robust to any document structure:
+                            // blockquotes, ordered lists, nested lists,
                             // preceding headings, etc).
                             const line = (node as HastNode | undefined)
                                 ?.position?.start?.line;

@@ -290,7 +290,7 @@ describe("getGitHubToken", () => {
         // Reported scenario: the access token was replaced in the DB with a
         // correctly-encrypted but expired one, while accessTokenExpiresAt
         // still points hours into the future. The timestamp check says "valid",
-        // so the app hands out the dead token — until GitHub rejects it with a
+        // so the app hands out the dead token, until GitHub rejects it with a
         // 401, at which point refresh() must force a rotation.
         const { fakeDb, state } = createFakeDb([
             expiredGitHubAccount({

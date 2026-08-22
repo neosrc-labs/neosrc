@@ -16,7 +16,7 @@ import type { CSSProperties } from "react";
  * Light mode uses the app's exact accent hexes (600/700 shades for contrast
  * on the #f3f4f6 code surface); dark mode uses the 400 shades of the same
  * hue families on the #27272a code surface. Comments use the app's muted
- * tier — deliberately lower contrast, like the UI's secondary text.
+ * tier (deliberately lower contrast, like the UI's secondary text).
  *
  * The block background is intentionally absent here: the renderer owns it via
  * `customStyle` (--color-surface-tertiary).

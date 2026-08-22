@@ -75,7 +75,7 @@ describe("encrypt()", () => {
     });
 
     it("handles strings containing special/delimiter characters", () => {
-        // Ensures the binary format is robust against payloads that would
+        // The binary format survives payloads that would
         // break a delimiter-based scheme (e.g. colons, slashes).
         const tricky = "a:b:c / d=e+f?g&h";
         expect(() => encrypt(tricky)).not.toThrow();

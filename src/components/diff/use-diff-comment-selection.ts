@@ -63,7 +63,7 @@ export function useDiffCommentSelection({
                 // The anchor is the active comment's row: `line` is
                 // activeComment.line, but the pointer row's `lines` can
                 // belong to a different row inside the comment range. Omit
-                // them — the side-flip path must not read another row's
+                // them: the side-flip path must not read another row's
                 // opposite-side number as the anchor's.
                 commentDragAnchor.current = {
                     line: activeComment.line,

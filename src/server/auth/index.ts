@@ -381,11 +381,11 @@ async function refreshAndStoreToken(
  *
  * Refresh failures never fail the request: if a concurrent request rotated the
  * refresh token, the freshly stored token is used; otherwise the stored token
- * is returned best-effort. The account row is the only coordination point —
- * no shared in-flight state.
+ * is returned best-effort. The account row is the only coordination point;
+ * there is no shared in-flight state.
  *
  * The returned token carries a `refresh()` that forces a rotation. API layers
- * call it when the provider rejects the token with a 401 — the stored expiry
+ * call it when the provider rejects the token with a 401: the stored expiry
  * can lie (revoked or manually replaced token), so a dead token must not be
  * trusted just because the timestamp looks valid.
  */
@@ -440,7 +440,7 @@ async function getProviderToken(
                 ),
             );
         } catch (error) {
-            // Refresh failed — a concurrent request may have rotated the token;
+            // Refresh failed: a concurrent request may have rotated the token;
             // re-read the row and use what's stored now.
             const latest = await findAccountByProvider(
                 database,

@@ -157,7 +157,7 @@ export const requireSession = t.middleware(({ ctx, next }) => {
 });
 
 /**
- * Protected mutation procedure — requires a real logged-in session.
+ * Protected mutation procedure: requires a real logged-in session.
  *
  * Anonymous visitors can still read through `protectedProcedure`, but every
  * write path goes through this procedure so mutations always run as a real
