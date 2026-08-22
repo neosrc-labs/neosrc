@@ -16,7 +16,7 @@ export type TimelineResult = {
     events: GQLTimelineEvent[];
     nextCursor: string | undefined;
     commentReactions: Record<
-        number,
+        string,
         {
             databaseId: number;
             content: string;

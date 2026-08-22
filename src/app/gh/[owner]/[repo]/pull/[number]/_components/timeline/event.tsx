@@ -77,7 +77,7 @@ interface TimelineEventProps {
     owner: string;
     repo: string;
     number: number;
-    commentReactions: Record<number, GQLReactionNode[]>;
+    commentReactions: Record<string, GQLReactionNode[]>;
     allComments: ReviewComment[];
     permissionContext: PullRequestPermissionContext;
 }
@@ -329,7 +329,7 @@ function EventContent({
     owner: string;
     repo: string;
     number: number;
-    commentReactions: Record<number, GQLReactionNode[]>;
+    commentReactions: Record<string, GQLReactionNode[]>;
     allComments: ReviewComment[];
     permissionContext: PullRequestPermissionContext;
 }) {
@@ -479,16 +479,16 @@ function EventContent({
                         return {
                             ...old,
                             pages: old.pages.map((page) => {
-                                if (!(commentId in page.commentReactions)) {
+                                const key = `comment:${commentId}`;
+                                if (!(key in page.commentReactions)) {
                                     return page;
                                 }
                                 return {
                                     ...page,
                                     commentReactions: {
                                         ...page.commentReactions,
-                                        [commentId]: toggleReactionInList(
-                                            page.commentReactions[commentId] ??
-                                                [],
+                                        [key]: toggleReactionInList(
+                                            page.commentReactions[key] ?? [],
                                             user,
                                             content,
                                         ),
@@ -547,16 +547,16 @@ function EventContent({
                         return {
                             ...old,
                             pages: old.pages.map((page) => {
-                                if (!(databaseId in page.commentReactions)) {
+                                const key = `review:${databaseId}`;
+                                if (!(key in page.commentReactions)) {
                                     return page;
                                 }
                                 return {
                                     ...page,
                                     commentReactions: {
                                         ...page.commentReactions,
-                                        [databaseId]: toggleReactionInList(
-                                            page.commentReactions[databaseId] ??
-                                                [],
+                                        [key]: toggleReactionInList(
+                                            page.commentReactions[key] ?? [],
                                             user,
                                             content,
                                         ),

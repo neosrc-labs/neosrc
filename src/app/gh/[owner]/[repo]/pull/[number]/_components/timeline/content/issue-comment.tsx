@@ -42,7 +42,7 @@ interface IssueCommentContentProps {
     owner: string;
     repo: string;
     permissionContext: PullRequestPermissionContext;
-    commentReactions: Record<number, GQLReactionNode[]>;
+    commentReactions: Record<string, GQLReactionNode[]>;
     editingCommentId: number | null;
     editBody: string;
     savedBodies: Record<number, string>;
@@ -138,7 +138,8 @@ export function IssueCommentContent({
         );
     }
 
-    const commentReactionsArr = commentReactions[event.databaseId] ?? [];
+    const commentReactionsArr =
+        commentReactions[`comment:${event.databaseId}`] ?? [];
 
     return (
         <>
