@@ -189,7 +189,7 @@ export function RepoSidebar({
                     </a>
                     <p className="flex items-center gap-1.5 text-sm text-text-secondary">
                         <CakeIcon className="h-3.5 w-3.5 shrink-0" />
-                        {getAgeText(createdAt)}
+                        {formatRelativeTime(createdAt)}
                     </p>
                 </div>
             </div>
@@ -372,21 +372,6 @@ function hashColor(name: string): string {
         hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
     return `hsl(${hash % 360}, 55%, 55%)`;
-}
-
-function getAgeText(createdAt: string): string {
-    const created = new Date(createdAt);
-    const now = new Date();
-    const diffMs = now.getTime() - created.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 30) return `${diffDays} days old`;
-    if (diffDays < 365) {
-        const months = Math.floor(diffDays / 30);
-        return `${months} month${months > 1 ? "s" : ""} old`;
-    }
-    const years = Math.floor(diffDays / 365);
-    return `${years} year${years > 1 ? "s" : ""} old`;
 }
 
 const languageColors: Record<string, string> = {

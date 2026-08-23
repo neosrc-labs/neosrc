@@ -3,6 +3,7 @@ import { CommitTypeBadge } from "~/components/commit-type-badge";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { cn } from "~/lib/utils";
 import { parseCommitMessage } from "~/utils/commit-message";
+import type { Provider } from "~/utils/provider-url";
 
 export function CommitSubject({
     provider,
@@ -11,7 +12,7 @@ export function CommitSubject({
     message,
     className,
 }: {
-    provider?: string;
+    provider?: Provider;
     owner?: string;
     repo?: string;
     message: string;

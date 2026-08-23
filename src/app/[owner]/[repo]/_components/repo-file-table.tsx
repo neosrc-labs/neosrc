@@ -18,18 +18,11 @@ import type {
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 import { getFileIconName, getFolderIconName } from "~/utils/icons";
+import { type Provider, repoUrl } from "~/utils/provider-url";
 import { ClonePopover } from "./clone-popover";
 import { FileTypeIcon } from "./file-type-icon";
 import { ForkSyncRow } from "./fork-sync-row";
 import { RefSelector } from "./ref-selector";
-
-type Provider = "gh" | "cb";
-
-function repoUrl(provider: Provider, owner: string, repo: string): string {
-    return provider === "cb"
-        ? `https://codeberg.org/${owner}/${repo}`
-        : `https://github.com/${owner}/${repo}`;
-}
 
 interface RepoFileTableProps {
     owner: string;

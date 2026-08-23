@@ -5,6 +5,7 @@ import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { Label } from "~/components/ui/label";
 import { UserLink } from "~/components/user-link";
 import { formatRelativeTime } from "~/utils";
+import { repoUrl } from "~/utils/provider-url";
 
 export interface IssueRowData {
     number: number;
@@ -51,7 +52,7 @@ export function IssueRow({
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                     <a
-                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues/${issue.number}`}
+                        href={`${repoUrl(provider, owner, repo)}/issues/${issue.number}`}
                         className="font-medium text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                     >
                         <CodeTitle
@@ -135,7 +136,7 @@ export function IssueRow({
             <div className="flex w-16 shrink-0 items-center justify-end">
                 {issue.comments_count > 0 ? (
                     <a
-                        href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/issues/${issue.number}`}
+                        href={`${repoUrl(provider, owner, repo)}/issues/${issue.number}`}
                         className="flex items-center gap-1 text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
                     >
                         <MessageSquare className="size-4" />

@@ -127,3 +127,20 @@ export function addQualifier(
     parsed.qualifiers.push({ key, value });
     return formatQuery(parsed);
 }
+
+// Removes the qualifier when the exact key:value pair is present, otherwise
+// adds it. mode controls what happens when the key exists with a different
+// value: "replace" swaps it (single-value keys like author), "add" keeps it
+// (multi-value keys like label).
+export function toggleQualifier(
+    query: string,
+    key: string,
+    value: string,
+    mode: "add" | "replace" = "replace",
+): string {
+    return hasQualifier(query, key, value)
+        ? removeQualifier(query, key, value)
+        : mode === "add"
+          ? addQualifier(query, key, value)
+          : replaceQualifier(query, key, value);
+}

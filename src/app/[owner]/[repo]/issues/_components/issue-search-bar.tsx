@@ -7,6 +7,7 @@ import {
     type SearchAutocompleteHandle,
 } from "~/app/[owner]/[repo]/_components/search/search-autocomplete";
 import { splitQuery } from "~/app/[owner]/[repo]/_components/search/search-utils";
+import { domain } from "~/utils/provider-url";
 
 export function IssueSearchBar({
     searchInput,
@@ -47,7 +48,7 @@ export function IssueSearchBar({
         qualifiers,
     );
 
-    const host = provider === "cb" ? "codeberg.org" : "github.com";
+    const host = domain(provider);
 
     return (
         <div className="border-border-subtle border-b">

@@ -1,12 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-    addQualifier,
-    hasQualifier,
-    removeQualifier,
-    replaceQualifier,
-} from "~/app/[owner]/[repo]/_components/search/search-utils";
+import { toggleQualifier } from "~/app/[owner]/[repo]/_components/search/search-utils";
 import { useSearchList } from "~/app/[owner]/[repo]/_components/use-search-list";
 import { Pagination } from "~/components/ui/pagination";
 import type { IssueSearchItem } from "~/server/api/routers/issues/types";
@@ -149,21 +144,12 @@ export function IssueList({
                                 owner={owner}
                                 repo={repo}
                                 onLabelFilter={(name) => {
-                                    const newQuery = hasQualifier(
+                                    const newQuery = toggleQualifier(
                                         list.searchQuery,
                                         "label",
                                         name,
-                                    )
-                                        ? removeQualifier(
-                                              list.searchQuery,
-                                              "label",
-                                              name,
-                                          )
-                                        : addQualifier(
-                                              list.searchQuery,
-                                              "label",
-                                              name,
-                                          );
+                                        "add",
+                                    );
                                     list.setSearchInput(newQuery);
                                     list.navigate({
                                         q: newQuery || null,
@@ -171,21 +157,11 @@ export function IssueList({
                                     });
                                 }}
                                 onAuthorFilter={(login) => {
-                                    const newQuery = hasQualifier(
+                                    const newQuery = toggleQualifier(
                                         list.searchQuery,
                                         "author",
                                         login,
-                                    )
-                                        ? removeQualifier(
-                                              list.searchQuery,
-                                              "author",
-                                              login,
-                                          )
-                                        : replaceQualifier(
-                                              list.searchQuery,
-                                              "author",
-                                              login,
-                                          );
+                                    );
                                     list.setSearchInput(newQuery);
                                     list.navigate({
                                         q: newQuery || null,
@@ -193,21 +169,11 @@ export function IssueList({
                                     });
                                 }}
                                 onAssigneesFilter={(login) => {
-                                    const newQuery = hasQualifier(
+                                    const newQuery = toggleQualifier(
                                         list.searchQuery,
                                         "assignee",
                                         login,
-                                    )
-                                        ? removeQualifier(
-                                              list.searchQuery,
-                                              "assignee",
-                                              login,
-                                          )
-                                        : replaceQualifier(
-                                              list.searchQuery,
-                                              "assignee",
-                                              login,
-                                          );
+                                    );
                                     list.setSearchInput(newQuery);
                                     list.navigate({
                                         q: newQuery || null,
