@@ -33,10 +33,15 @@ export function useAutosave(
     const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
         undefined,
     );
+    // Key the pending timer belongs to, so a stale clear() closure for an
+    // older key cannot cancel a newer key's scheduled save.
+    const timerKeyRef = useRef<string | undefined>(undefined);
 
     useEffect(() => {
         if (key === null) return;
 
+        clearTimeout(timerRef.current);
+        timerKeyRef.current = key;
         timerRef.current = setTimeout(() => {
             try {
                 if (value) {
@@ -48,10 +53,18 @@ export function useAutosave(
                 // Ignore quota errors and private browsing restrictions.
             }
         }, opts?.debounceMs ?? DEFAULT_DEBOUNCE_MS);
+
+        return () => {
+            clearTimeout(timerRef.current);
+        };
     }, [key, value, opts?.debounceMs]);
 
     const clear = useCallback(() => {
         if (key === null) return;
+        if (timerKeyRef.current === key) {
+            clearTimeout(timerRef.current);
+            timerKeyRef.current = undefined;
+        }
         try {
             window.localStorage.removeItem(key);
         } catch {
