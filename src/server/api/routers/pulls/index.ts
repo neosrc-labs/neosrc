@@ -59,9 +59,9 @@ import {
     updatePullRequestReview,
 } from "~/server/github";
 import { getPullRequestHeadShaGraphQL } from "~/server/github-graphql";
+import type { Ctx } from "../provider";
 import { CodebergPullRequestProvider } from "./codeberg";
 import { GitHubPullRequestProvider } from "./github";
-import type { Ctx } from "./provider";
 import type { PrSearchResult } from "./types";
 
 export const pullsRouter = createTRPCRouter({

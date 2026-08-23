@@ -1,11 +1,4 @@
-import type { db } from "~/server/db";
-import type { PrSearchResult, SearchParams } from "./types";
+import type { SearchProvider } from "../provider";
+import type { PrSearchResult } from "./types";
 
-export interface PullRequestProvider {
-    search(params: SearchParams & { ctx: Ctx }): Promise<PrSearchResult>;
-}
-
-export type Ctx = {
-    db: typeof db;
-    session: { user: { id: string } } | null;
-};
+export type PullRequestProvider = SearchProvider<PrSearchResult>;

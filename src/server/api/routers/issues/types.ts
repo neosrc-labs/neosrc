@@ -1,17 +1,14 @@
+import type { Assignee, Author, Label } from "../mappers";
+
 export interface IssueSearchItem {
     number: number;
     title: string;
     state: "OPEN" | "CLOSED";
     createdAt: string;
     closedAt: string | null;
-    author: { login: string; avatarUrl: string; url: string } | null;
-    labels: Array<{
-        id: string;
-        name: string;
-        color: string;
-        description: string | null;
-    }>;
-    assignees: Array<{ login: string; avatarUrl: string }>;
+    author: Author | null;
+    labels: Label[];
+    assignees: Assignee[];
     comments: number;
 }
 
@@ -24,15 +21,4 @@ export interface IssueSearchResult {
         open: number;
         closed: number;
     };
-}
-
-export interface SearchParams {
-    owner: string;
-    repo: string;
-    query: string;
-    page?: number;
-    after?: string;
-    first?: number;
-    sort?: "created" | "updated" | "comments";
-    order?: "asc" | "desc";
 }
