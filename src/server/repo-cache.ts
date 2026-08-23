@@ -260,7 +260,9 @@ export function viewerRepoAccess(params: {
     permission: RepoPermissionLevel | null;
 }): ViewerRepoAccess {
     const { username, payload, permission } = params;
-    const isOwner = username !== null && payload.owner.login === username;
+    const isOwner =
+        username !== null &&
+        payload.owner.login.toLowerCase() === username.toLowerCase();
     const admin = isOwner || permission === "admin";
     return {
         canView: !payload.private || isOwner || permission !== null,
