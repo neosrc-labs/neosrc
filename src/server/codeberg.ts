@@ -638,7 +638,7 @@ export const getFileTree = cache(
             name: item.path.split("/").pop() ?? item.path,
             path: item.path,
             sha: item.sha,
-            htmlUrl: `https://codeberg.org/${owner}/${repo}/src/branch/${ref}/${item.path}`,
+            htmlUrl: `https://codeberg.org/${owner}/${repo}/src/branch/${encodeURIComponent(ref)}/${item.path.split("/").map(encodeURIComponent).join("/")}`,
             type: item.type,
         }));
     },

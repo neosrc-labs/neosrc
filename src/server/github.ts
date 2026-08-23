@@ -4155,8 +4155,8 @@ export async function getRepoFileTree(
             sha: item.sha,
             htmlUrl:
                 item.type === "tree"
-                    ? `https://github.com/${owner}/${repo}/tree/${ref}/${item.path}`
-                    : `https://github.com/${owner}/${repo}/blob/${ref}/${item.path}`,
+                    ? `https://github.com/${owner}/${repo}/tree/${encodeURIComponent(ref)}/${item.path.split("/").map(encodeURIComponent).join("/")}`
+                    : `https://github.com/${owner}/${repo}/blob/${encodeURIComponent(ref)}/${item.path.split("/").map(encodeURIComponent).join("/")}`,
             type: item.type as "blob" | "tree",
         }));
 }
