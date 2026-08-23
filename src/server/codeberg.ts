@@ -579,6 +579,9 @@ export const getFileLatestCommit = cache(
     },
 );
 
+const encodeContentsPath = (path: string) =>
+    path.split("/").map(encodeURIComponent).join("/");
+
 export const getRepoContents = cache(
     async (
         accessToken: string,
@@ -590,7 +593,7 @@ export const getRepoContents = cache(
         const params = new URLSearchParams();
         if (ref) params.set("ref", ref);
 
-        const urlPath = path ? `/${path}` : "";
+        const urlPath = path ? `/${encodeContentsPath(path)}` : "";
         const query = params.toString();
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/contents${urlPath}${query ? `?${query}` : ""}`;
 
@@ -638,7 +641,7 @@ export const getFileTree = cache(
             name: item.path.split("/").pop() ?? item.path,
             path: item.path,
             sha: item.sha,
-            htmlUrl: `https://codeberg.org/${owner}/${repo}/src/branch/${ref}/${item.path}`,
+            htmlUrl: `https://codeberg.org/${owner}/${repo}/src/branch/${encodeURIComponent(ref)}/${encodeContentsPath(item.path)}`,
             type: item.type,
         }));
     },
@@ -655,7 +658,7 @@ export const getFileContent = cache(
         const params = new URLSearchParams();
         if (ref) params.set("ref", ref);
 
-        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/contents/${path}?${params}`;
+        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/contents/${encodeContentsPath(path)}?${params}`;
 
         const res = await fetch(url, {
             headers: {
