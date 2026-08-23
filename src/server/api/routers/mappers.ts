@@ -1,3 +1,10 @@
+import type {
+    GqlIssueSearchItem,
+    GqlPrSearchItem,
+} from "~/server/github-graphql";
+import type { IssueSearchItem } from "./issues/types";
+import type { PrSearchItem } from "./pulls/types";
+
 type GqlAssignee = { login: string; avatarUrl: string };
 type GqlLabel = {
     id: string;
@@ -16,14 +23,14 @@ type CbLabel = {
 };
 type CbAuthor = { login: string; avatar_url: string };
 
-type Assignee = { login: string; avatarUrl: string };
-type Label = {
+export type Assignee = { login: string; avatarUrl: string };
+export type Label = {
     id: string;
     name: string;
     color: string;
     description: string | null;
 };
-type Author = { login: string; avatarUrl: string; url: string };
+export type Author = { login: string; avatarUrl: string; url: string };
 
 export function mapGqlAssignee(a: GqlAssignee): Assignee {
     return { login: a.login, avatarUrl: a.avatarUrl };
@@ -63,4 +70,45 @@ export function mapCbAuthor(a: CbAuthor | null): Author | null {
 
 export function nullSafe<T>(arr: T[] | null | undefined): T[] {
     return arr ?? [];
+}
+
+export function mapGqlPrSearchItem(item: GqlPrSearchItem): PrSearchItem {
+    return {
+        id: item.databaseId,
+        number: item.number,
+        title: item.title,
+        state: item.state as PrSearchItem["state"],
+        isDraft: item.isDraft,
+        createdAt: item.createdAt,
+        mergedAt: item.mergedAt,
+        author: mapGqlAuthor(item.author),
+        labels: item.labels.nodes.map(mapGqlLabel),
+        assignees: item.assignees.nodes.map(mapGqlAssignee),
+        comments: item.comments.totalCount,
+        reviewDecision: item.reviewDecision,
+        stack:
+            item.stack && item.stackEntry
+                ? {
+                      size: item.stack.size,
+                      position: item.stackEntry.position,
+                      number: item.stack.number,
+                  }
+                : null,
+    };
+}
+
+export function mapGqlIssueSearchItem(
+    item: GqlIssueSearchItem,
+): IssueSearchItem {
+    return {
+        number: item.number,
+        title: item.title,
+        state: item.state as IssueSearchItem["state"],
+        createdAt: item.createdAt,
+        closedAt: item.closedAt,
+        author: mapGqlAuthor(item.author),
+        labels: item.labels.nodes.map(mapGqlLabel),
+        assignees: item.assignees.nodes.map(mapGqlAssignee),
+        comments: item.comments.totalCount,
+    };
 }

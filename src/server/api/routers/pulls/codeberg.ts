@@ -1,18 +1,23 @@
 import {
+    forgejoStateCounts,
+    parseForgejoQuery,
+    resolveForgejoSort,
+} from "~/server/api/routers/forgejo-search";
+import {
     mapCbAssignee,
     mapCbAuthor,
     mapCbLabel,
     nullSafe,
 } from "~/server/api/routers/mappers";
+import type { Ctx, SearchParams } from "~/server/api/routers/provider";
 import { getCodebergToken } from "~/server/auth";
 import {
     type CodebergPrListParams,
     type CodebergPullRequest,
-    type CodebergPullRequestSort,
     listPullRequests,
 } from "~/server/codeberg";
-import type { Ctx, PullRequestProvider } from "./provider";
-import type { PrSearchItem, PrSearchResult, SearchParams } from "./types";
+import type { PullRequestProvider } from "./provider";
+import type { PrSearchItem, PrSearchResult } from "./types";
 
 export class CodebergPullRequestProvider implements PullRequestProvider {
     async search(params: SearchParams & { ctx: Ctx }): Promise<PrSearchResult> {
@@ -21,70 +26,36 @@ export class CodebergPullRequestProvider implements PullRequestProvider {
             params.ctx.session?.user?.id,
         );
 
-        const stateMatch = params.query.match(
-            /^(is:open|is:closed|is:merged)\s*/,
-        );
-        const stateQualifier = stateMatch?.[1] ?? "is:open";
-        const activeState = stateQualifier.replace("is:", "") as
-            | "open"
-            | "closed"
-            | "merged";
-
-        const authorMatch = params.query.match(/author:(\S+)/);
-        const authorQualifier = authorMatch?.[1];
-
-        const labelRegex = /label:\s*("[^"]*"|\S+)/g;
-        const labelQualifiers: string[] = [];
-        const allLabelMatches = params.query.matchAll(labelRegex);
-        for (const m of allLabelMatches) {
-            const name = (m[1] ?? "").replace(/^"|"$/g, "");
-            if (name) labelQualifiers.push(name);
-        }
-
-        const sortMap: Record<string, string | undefined> = {
-            "created-desc": "newest",
-            "created-asc": "oldest",
-            "updated-desc": "recentupdate",
-            "updated-asc": "leastupdate",
-            "comments-desc": "mostcomment",
-            "comments-asc": "leastcomment",
-        };
-        const sortKey =
-            params.sort && params.order
-                ? `${params.sort}-${params.order}`
-                : "created-desc";
-        const cbSort = sortMap[sortKey] ?? "newest";
-
+        const qualifiers = parseForgejoQuery(params.query, {
+            allowMerged: true,
+        });
+        const cbSort = resolveForgejoSort(params);
         const page = params.page ?? 1;
         const limit = params.first ?? 30;
 
         const prParams: CodebergPrListParams = {
-            state: codebergState(activeState),
-            sort: cbSort as CodebergPullRequestSort,
+            state: codebergState(qualifiers.activeState),
+            sort: cbSort,
             page,
             limit,
         };
-        if (authorQualifier) {
-            prParams.author = authorQualifier;
+        if (qualifiers.author) {
+            prParams.author = qualifiers.author;
         }
-        if (labelQualifiers.length > 0) {
-            prParams.labels = labelQualifiers;
+        if (qualifiers.labels.length > 0) {
+            prParams.labels = qualifiers.labels;
         }
 
-        const [result, openCount, closedCount] = await Promise.all([
+        const [result, counts] = await Promise.all([
             listPullRequests(accessToken, params.owner, params.repo, prParams),
-            listPullRequests(accessToken, params.owner, params.repo, {
-                state: "open",
-                sort: cbSort as CodebergPullRequestSort,
-                limit: 1,
-                page: 1,
-            }),
-            listPullRequests(accessToken, params.owner, params.repo, {
-                state: "closed",
-                sort: cbSort as CodebergPullRequestSort,
-                limit: 1,
-                page: 1,
-            }),
+            forgejoStateCounts(
+                listPullRequests,
+                accessToken,
+                params.owner,
+                params.repo,
+                cbSort,
+                { author: qualifiers.author, labels: qualifiers.labels },
+            ),
         ]);
 
         return {
@@ -92,11 +63,7 @@ export class CodebergPullRequestProvider implements PullRequestProvider {
             totalCount: result.totalCount,
             hasNextPage: result.hasNextPage ?? false,
             endCursor: result.hasNextPage ? String(page + 1) : null,
-            stateCounts: {
-                open: openCount.totalCount,
-                closed: closedCount.totalCount,
-                merged: 0,
-            },
+            stateCounts: { ...counts, merged: 0 },
         };
     }
 }
