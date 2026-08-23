@@ -49,10 +49,13 @@ export async function searchGqlItems<
     const stateAlternatives = options.countStates
         .map((state) => `is:${state}`)
         .join("|");
-    const restQuery = params.query.replace(
-        new RegExp(`^(${stateAlternatives})\\s*`),
-        "",
-    );
+    const restQuery = params.query
+        .replace(
+            new RegExp(`(?<=^|\\s)(${stateAlternatives})(?=\\s|$)`, "g"),
+            " ",
+        )
+        .replace(/\s+/g, " ")
+        .trim();
     const base = `repo:${params.owner}/${params.repo} ${kind}`;
     const countQueries = Object.fromEntries(
         options.countStates.map((state) => [

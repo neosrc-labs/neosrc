@@ -54,6 +54,7 @@ export class CodebergPullRequestProvider implements PullRequestProvider {
                 params.owner,
                 params.repo,
                 cbSort,
+                { author: qualifiers.author, labels: qualifiers.labels },
             ),
         ]);
 

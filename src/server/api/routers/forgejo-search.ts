@@ -34,9 +34,11 @@ export function parseForgejoQuery(
     query: string,
     options: { allowMerged: boolean },
 ): ForgejoQueryQualifiers {
+    // State tokens are valid at any position of a Forgejo query, so match at
+    // token boundaries anywhere rather than only at the start.
     const statePattern = options.allowMerged
-        ? /^(is:open|is:closed|is:merged)\s*/
-        : /^(is:open|is:closed)\s*/;
+        ? /(?<=^|\s)(is:open|is:closed|is:merged)(?=\s|$)/
+        : /(?<=^|\s)(is:open|is:closed)(?=\s|$)/;
     const activeState = (query.match(statePattern)?.[1]?.replace("is:", "") ??
         "open") as ForgejoQueryQualifiers["activeState"];
 
@@ -64,6 +66,8 @@ type ForgejoListFn = (
         sort: ForgejoSort;
         limit: number;
         page: number;
+        author?: string;
+        labels?: string[];
     },
 ) => Promise<{ totalCount: number }>;
 
@@ -73,8 +77,9 @@ export async function forgejoStateCounts(
     owner: string,
     repo: string,
     sort: ForgejoSort,
+    filters: { author?: string; labels?: string[] } = {},
 ): Promise<{ open: number; closed: number }> {
-    const countParams = { sort, limit: 1, page: 1 };
+    const countParams = { sort, limit: 1, page: 1, ...filters };
     const [open, closed] = await Promise.all([
         list(accessToken, owner, repo, { ...countParams, state: "open" }),
         list(accessToken, owner, repo, { ...countParams, state: "closed" }),

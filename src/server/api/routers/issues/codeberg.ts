@@ -56,6 +56,7 @@ export class CodebergIssueProvider implements IssueProvider {
                 params.owner,
                 params.repo,
                 cbSort,
+                { author: qualifiers.author, labels: qualifiers.labels },
             ),
         ]);
 
