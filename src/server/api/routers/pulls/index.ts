@@ -11,10 +11,14 @@ import {
 } from "~/server/api/routers/checks";
 import {
     createTRPCRouter,
+    githubMutation,
+    githubQuery,
     protectedMutation,
     protectedProcedure,
+    providerInput,
+    providerQuery,
 } from "~/server/api/trpc";
-import { getCodebergToken, getGitHubToken } from "~/server/auth";
+import { getGitHubToken } from "~/server/auth";
 import { deleteCache, prCacheKey, readCache } from "~/server/cache";
 import {
     listAssignees as listCodebergAssignees,
@@ -64,22 +68,26 @@ import { GitHubPullRequestProvider } from "./github";
 import type { Ctx } from "./provider";
 import type { PrSearchResult } from "./types";
 
-export const pullsRouter = createTRPCRouter({
-    updateBody: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                body: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+const evictPullRequests = async (
+    owner: string,
+    repo: string,
+    numbers: number[],
+) => {
+    await Promise.all(
+        numbers.map((number) => deleteCache(prCacheKey(owner, repo, number))),
+    );
+};
 
+export const pullsRouter = createTRPCRouter({
+    updateBody: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            body: z.string(),
+        }),
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             const result = await updatePullRequest(
                 accessToken,
                 input.owner,
@@ -87,29 +95,19 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 { body: input.body },
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const, body: result.body };
+        },
+    }),
+
+    updateTitle: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            title: z.string(),
         }),
-
-    updateTitle: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                title: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             const result = await updatePullRequest(
                 accessToken,
                 input.owner,
@@ -117,29 +115,19 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 { title: input.title },
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const, title: result.title };
+        },
+    }),
+
+    addComment: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            body: z.string().min(1),
         }),
-
-    addComment: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                body: z.string().min(1),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             const comment = await createIssueComment(
                 accessToken,
                 input.owner,
@@ -147,29 +135,19 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 input.body,
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const, id: comment.id };
+        },
+    }),
+
+    // Comment edits intentionally leave the cached PR payload untouched.
+    updateComment: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            commentId: z.number(),
+            body: z.string(),
         }),
-
-    updateComment: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                commentId: z.number(),
-                body: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        run: async ({ input, accessToken }) => {
             const comment = await updateIssueComment(
                 accessToken,
                 input.owner,
@@ -177,50 +155,37 @@ export const pullsRouter = createTRPCRouter({
                 input.commentId,
                 input.body,
             );
-
             return { success: true as const, body: comment.body };
+        },
+    }),
+
+    deleteComment: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            commentId: z.number(),
         }),
-
-    deleteComment: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                commentId: z.number(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        run: async ({ input, accessToken }) => {
             await deleteIssueComment(
                 accessToken,
                 input.owner,
                 input.repo,
                 input.commentId,
             );
-
             return { success: true as const };
+        },
+    }),
+
+    updateReview: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            reviewId: z.number(),
+            body: z.string(),
         }),
-
-    updateReview: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                reviewId: z.number(),
-                body: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             const review = await updatePullRequestReview(
                 accessToken,
                 input.owner,
@@ -229,54 +194,30 @@ export const pullsRouter = createTRPCRouter({
                 input.reviewId,
                 input.body,
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const, body: review.body };
+        },
+    }),
+
+    listLabels: providerQuery({
+        input: providerInput({
+            owner: z.string(),
+            repo: z.string(),
         }),
+        cb: ({ accessToken, input }) =>
+            listCodebergLabels(accessToken, input.owner, input.repo),
+        gh: ({ accessToken, input }) =>
+            listLabelsForRepo(accessToken, input.owner, input.repo),
+    }),
 
-    listLabels: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
-        .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return listCodebergLabels(accessToken, input.owner, input.repo);
-            }
-
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            return listLabelsForRepo(accessToken, input.owner, input.repo);
+    addLabel: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            label: z.string(),
         }),
-
-    addLabel: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                label: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             await addLabelsToIssue(
                 accessToken,
                 input.owner,
@@ -284,29 +225,19 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 [input.label],
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const };
+        },
+    }),
+
+    removeLabel: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            label: z.string(),
         }),
-
-    removeLabel: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                label: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             await removeLabelFromIssue(
                 accessToken,
                 input.owner,
@@ -314,87 +245,41 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 input.label,
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const };
+        },
+    }),
+
+    listAssignees: providerQuery({
+        input: providerInput({
+            owner: z.string(),
+            repo: z.string(),
         }),
+        cb: ({ accessToken, input }) =>
+            listCodebergAssignees(accessToken, input.owner, input.repo),
+        gh: ({ accessToken, input }) =>
+            listRepoAssignees(accessToken, input.owner, input.repo),
+    }),
 
-    listAssignees: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
-        .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return listCodebergAssignees(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                );
-            }
-
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            return listRepoAssignees(accessToken, input.owner, input.repo);
+    listRecentAuthors: providerQuery({
+        input: providerInput({
+            owner: z.string(),
+            repo: z.string(),
         }),
+        cb: ({ accessToken, input }) =>
+            listCodebergRecentAuthors(accessToken, input.owner, input.repo),
+        gh: ({ accessToken, input }) =>
+            listRecentIssueAuthors(accessToken, input.owner, input.repo),
+    }),
 
-    listRecentAuthors: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
-        .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return listCodebergRecentAuthors(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                );
-            }
-
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            return listRecentIssueAuthors(accessToken, input.owner, input.repo);
+    addAssignee: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            assignee: z.string(),
         }),
-
-    addAssignee: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                assignee: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             await addAssigneesToIssue(
                 accessToken,
                 input.owner,
@@ -402,29 +287,19 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 [input.assignee],
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const };
+        },
+    }),
+
+    removeAssignee: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            assignee: z.string(),
         }),
-
-    removeAssignee: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                assignee: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             await removeAssigneesFromIssue(
                 accessToken,
                 input.owner,
@@ -432,58 +307,30 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 [input.assignee],
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const };
+        },
+    }),
+
+    listMilestones: providerQuery({
+        input: providerInput({
+            owner: z.string(),
+            repo: z.string(),
         }),
+        cb: ({ accessToken, input }) =>
+            listCodebergMilestones(accessToken, input.owner, input.repo),
+        gh: ({ accessToken, input }) =>
+            listMilestonesForRepo(accessToken, input.owner, input.repo),
+    }),
 
-    listMilestones: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-            }),
-        )
-        .query(async ({ ctx, input }) => {
-            if (input.provider === "cb") {
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                return listCodebergMilestones(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                );
-            }
-
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            return listMilestonesForRepo(accessToken, input.owner, input.repo);
+    setMilestone: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            milestone: z.number().nullable(),
         }),
-
-    setMilestone: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                milestone: z.number().nullable(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             await updateIssueMilestone(
                 accessToken,
                 input.owner,
@@ -491,29 +338,19 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 input.milestone,
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const };
+        },
+    }),
+
+    addReviewer: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            reviewer: z.string(),
         }),
-
-    addReviewer: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                reviewer: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             await addReviewersToPullRequest(
                 accessToken,
                 input.owner,
@@ -521,29 +358,19 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 [input.reviewer],
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const };
+        },
+    }),
+
+    removeReviewer: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            reviewer: z.string(),
         }),
-
-    removeReviewer: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                reviewer: z.string(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             await removeReviewersFromPullRequest(
                 accessToken,
                 input.owner,
@@ -551,30 +378,20 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 [input.reviewer],
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const };
+        },
+    }),
+
+    approve: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            event: z.enum(["APPROVE", "COMMENT", "REQUEST_CHANGES"]),
+            body: z.string().optional(),
         }),
-
-    approve: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                event: z.enum(["APPROVE", "COMMENT", "REQUEST_CHANGES"]),
-                body: z.string().optional(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             const review = await createPullRequestReview(
                 accessToken,
                 input.owner,
@@ -583,87 +400,56 @@ export const pullsRouter = createTRPCRouter({
                 input.event,
                 input.body,
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const, id: review.id };
+        },
+    }),
+
+    markAsDraft: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
         }),
-
-    markAsDraft: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             await markPullRequestAsDraft(
                 accessToken,
                 input.owner,
                 input.repo,
                 input.number,
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const };
+        },
+    }),
+
+    markReadyForReview: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
         }),
-
-    markReadyForReview: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             await markPullRequestAsReady(
                 accessToken,
                 input.owner,
                 input.repo,
                 input.number,
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const };
+        },
+    }),
+
+    merge: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            mergeMethod: z.enum(["merge", "squash", "rebase"]),
+            commitTitle: z.string().optional(),
+            commitMessage: z.string().optional(),
         }),
-
-    merge: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                mergeMethod: z.enum(["merge", "squash", "rebase"]),
-                commitTitle: z.string().optional(),
-                commitMessage: z.string().optional(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        run: async ({ ctx, input, accessToken }) => {
             const pr = await getCachedPullRequest(
                 accessToken,
                 input.owner,
@@ -671,81 +457,7 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 ctx.session?.user?.id,
             );
-            if (pr.stack) {
-                const asyncResult = await mergePullRequestAsync(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.number,
-                    input.mergeMethod,
-                    input.commitTitle,
-                    input.commitMessage,
-                );
-                if (asyncResult.status === "failed") {
-                    throw new TRPCError({
-                        code: "INTERNAL_SERVER_ERROR",
-                        message: asyncResult.details.message,
-                    });
-                }
-
-                if (
-                    (asyncResult.status === "pending" ||
-                        asyncResult.status === "enqueued") &&
-                    asyncResult.details.uuid
-                ) {
-                    let pollResult = asyncResult;
-                    const startedAt = Date.now();
-                    while (
-                        pollResult.status === "pending" ||
-                        pollResult.status === "enqueued"
-                    ) {
-                        if (Date.now() - startedAt > 120_000) {
-                            throw new TRPCError({
-                                code: "INTERNAL_SERVER_ERROR",
-                                message:
-                                    "Merge is taking too long. The pull request may still merge in the background.",
-                            });
-                        }
-                        await new Promise<void>((resolve) =>
-                            setTimeout(resolve, 1500),
-                        );
-                        pollResult = await getMergeAsyncResult(
-                            accessToken,
-                            input.owner,
-                            input.repo,
-                            input.number,
-                            asyncResult.details.uuid,
-                        );
-                    }
-                    if (pollResult.status === "failed") {
-                        throw new TRPCError({
-                            code: "INTERNAL_SERVER_ERROR",
-                            message: pollResult.details.message,
-                        });
-                    }
-                }
-
-                // Evict caches for all PRs in the stack
-                const stack = await getPullRequestStack(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.number,
-                );
-                if (stack) {
-                    await Promise.all(
-                        stack.pullRequests.map((entry) =>
-                            deleteCache(
-                                prCacheKey(
-                                    input.owner,
-                                    input.repo,
-                                    entry.number,
-                                ),
-                            ),
-                        ),
-                    );
-                }
-            } else {
+            if (!pr.stack) {
                 await mergePullRequest(
                     accessToken,
                     input.owner,
@@ -755,31 +467,108 @@ export const pullsRouter = createTRPCRouter({
                     input.commitTitle,
                     input.commitMessage,
                 );
-
-                await deleteCache(
-                    prCacheKey(input.owner, input.repo, input.number),
-                );
+                return { stackMembers: [] as number[] };
             }
 
-            return { success: true as const };
-        }),
-    revert: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                title: z.string().optional(),
-                body: z.string().optional(),
-                draft: z.boolean().optional(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
+            // Capture the stack before merging: once the merge completes the
+            // provider can stop returning stack data for these pull requests.
+            const stack = await getPullRequestStack(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
             );
+            const stackMembers =
+                stack?.pullRequests.map((entry) => entry.number) ?? [];
 
+            const asyncResult = await mergePullRequestAsync(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+                input.mergeMethod,
+                input.commitTitle,
+                input.commitMessage,
+            );
+            if (asyncResult.status === "failed") {
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: asyncResult.details.message,
+                });
+            }
+
+            if (
+                (asyncResult.status === "pending" ||
+                    asyncResult.status === "enqueued") &&
+                asyncResult.details.uuid
+            ) {
+                let pollResult = asyncResult;
+                const startedAt = Date.now();
+                while (
+                    pollResult.status === "pending" ||
+                    pollResult.status === "enqueued"
+                ) {
+                    if (Date.now() - startedAt > 120_000) {
+                        // The merge may still complete in the background;
+                        // drop the cached pre-merge state either way.
+                        await evictPullRequests(
+                            input.owner,
+                            input.repo,
+                            stackMembers.length > 0
+                                ? stackMembers
+                                : [input.number],
+                        );
+                        throw new TRPCError({
+                            code: "INTERNAL_SERVER_ERROR",
+                            message:
+                                "Merge is taking too long. The pull request may still merge in the background.",
+                        });
+                    }
+                    await new Promise<void>((resolve) =>
+                        setTimeout(resolve, 1500),
+                    );
+                    pollResult = await getMergeAsyncResult(
+                        accessToken,
+                        input.owner,
+                        input.repo,
+                        input.number,
+                        asyncResult.details.uuid,
+                    );
+                }
+                if (pollResult.status === "failed") {
+                    throw new TRPCError({
+                        code: "INTERNAL_SERVER_ERROR",
+                        message: pollResult.details.message,
+                    });
+                }
+            }
+            return { stackMembers };
+        },
+        // Evict every PR the merge touched: the whole stack when the merge
+        // went through the stack path, just this PR otherwise.
+        onSuccess: async ({ input, result }) => {
+            // Evict every PR the merge touched: the whole stack when the
+            // merge went through the stack path, just this PR otherwise.
+            await evictPullRequests(
+                input.owner,
+                input.repo,
+                result.stackMembers.length > 0
+                    ? result.stackMembers
+                    : [input.number],
+            );
+        },
+    }),
+    revert: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            title: z.string().optional(),
+            body: z.string().optional(),
+            draft: z.boolean().optional(),
+        }),
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             const result = await revertPullRequest(
                 accessToken,
                 input.owner,
@@ -789,11 +578,6 @@ export const pullsRouter = createTRPCRouter({
                 input.body,
                 input.draft,
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return {
                 success: true as const,
                 revertPullRequest: {
@@ -801,23 +585,18 @@ export const pullsRouter = createTRPCRouter({
                     url: result.url,
                 },
             };
+        },
+    }),
+
+    close: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            body: z.string().trim().min(1).optional(),
         }),
-
-    close: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                body: z.string().trim().min(1).optional(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             if (input.body) {
                 await createIssueComment(
                     accessToken,
@@ -835,29 +614,19 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 { state: "closed" },
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const };
+        },
+    }),
+
+    reopen: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            body: z.string().trim().min(1).optional(),
         }),
-
-    reopen: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                body: z.string().trim().min(1).optional(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             if (input.body) {
                 await createIssueComment(
                     accessToken,
@@ -875,28 +644,18 @@ export const pullsRouter = createTRPCRouter({
                 input.number,
                 { state: "open" },
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const };
+        },
+    }),
+
+    deleteBranch: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
         }),
-
-    deleteBranch: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
             const pr = await getPullRequest(
                 accessToken,
                 input.owner,
@@ -913,37 +672,26 @@ export const pullsRouter = createTRPCRouter({
                 headRepo,
                 pr.head.ref,
             );
-
-            await deleteCache(
-                prCacheKey(input.owner, input.repo, input.number),
-            );
-
             return { success: true as const };
+        },
+    }),
+
+    list: githubQuery({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            state: z.enum(["open", "closed", "all"]).default("open"),
+            page: z.number().optional(),
         }),
-
-    list: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                state: z.enum(["open", "closed", "all"]).default("open"),
-                page: z.number().optional(),
-            }),
-        )
-        .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            return listPullRequests(
+        run: ({ input, accessToken }) =>
+            listPullRequests(
                 accessToken,
                 input.owner,
                 input.repo,
                 input.state,
                 input.page,
-            );
-        }),
+            ),
+    }),
 
     search: protectedProcedure
         .input(
@@ -1062,20 +810,13 @@ export const pullsRouter = createTRPCRouter({
             return { headSha };
         }),
 
-    getMergeRequirements: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
-        .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+    getMergeRequirements: githubQuery({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+        }),
+        run: async ({ ctx, input, accessToken }) => {
             const pr = await getCachedPullRequest(
                 accessToken,
                 input.owner,
@@ -1090,50 +831,38 @@ export const pullsRouter = createTRPCRouter({
                 input.repo,
                 pr.base.ref,
             );
-        }),
+        },
+    }),
 
-    listReviews: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-            }),
-        )
-        .query(async ({ ctx, input }): Promise<ReviewComment2[]> => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-            return getPullRequestReviews(
+    listReviews: githubQuery({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+        }),
+        run: async ({ input, accessToken }): Promise<ReviewComment2[]> =>
+            getPullRequestReviews(
                 accessToken,
                 input.owner,
                 input.repo,
                 input.number,
-            );
+            ),
+    }),
+
+    getStack: githubQuery({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            prNumber: z.number(),
         }),
-
-    getStack: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                prNumber: z.number(),
-            }),
-        )
-        .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
-            return getPullRequestStack(
+        run: ({ input, accessToken }) =>
+            getPullRequestStack(
                 accessToken,
                 input.owner,
                 input.repo,
                 input.prNumber,
-            );
-        }),
+            ),
+    }),
 
     createStack: protectedMutation
         .input(
