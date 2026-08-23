@@ -94,10 +94,15 @@ export type CodebergPrListParams = {
 
 function parseTotalCountFromLinkHeader(
     linkHeader: string | null,
+    totalFromHeader: string | null,
     limit: number,
     currentCount: number,
     page: number,
 ): number {
+    // Gitea reports the exact total in X-Total-Count on list endpoints.
+    const headerTotal = Number.parseInt(totalFromHeader ?? "", 10);
+    if (Number.isFinite(headerTotal) && headerTotal > 0) return headerTotal;
+
     if (!linkHeader) return currentCount;
 
     // Extract all page numbers from link relations
@@ -110,11 +115,12 @@ function parseTotalCountFromLinkHeader(
     }
 
     if (maxPage > page) {
-        // There are more pages beyond current; estimate total
-        return (maxPage - 1) * limit + currentCount;
+        // More pages beyond current; estimate assuming a full final page.
+        return Math.max((maxPage - 1) * limit + currentCount, currentCount);
     }
 
-    return currentCount;
+    // Current page is the last one; earlier pages are full by definition.
+    return (page - 1) * limit + currentCount;
 }
 
 export const listPullRequests = cache(
@@ -169,6 +175,7 @@ export const listPullRequests = cache(
         const page = params.page ?? 1;
         const totalCount = parseTotalCountFromLinkHeader(
             linkHeader,
+            res.headers.get("X-Total-Count"),
             limit,
             items.length,
             page,
@@ -754,6 +761,7 @@ const getRepoCounts = cache(
             const limit = 1;
             return parseTotalCountFromLinkHeader(
                 linkHeader,
+                res.headers.get("X-Total-Count"),
                 limit,
                 items.length,
                 1,
@@ -875,6 +883,7 @@ export const listBranchCommits = cache(
         const commits = (await res.json()) as CodebergCommitRaw[];
         const totalCount = parseTotalCountFromLinkHeader(
             res.headers.get("Link"),
+            res.headers.get("X-Total-Count"),
             opts.limit ?? 35,
             commits.length,
             opts.page ?? 1,
@@ -992,6 +1001,7 @@ export const listIssues = cache(
         const page = params.page ?? 1;
         const totalCount = parseTotalCountFromLinkHeader(
             linkHeader,
+            res.headers.get("X-Total-Count"),
             limit,
             items.length,
             page,
