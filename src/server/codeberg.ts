@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { cache } from "react";
 import {
     repoIssuePullCountsCacheKey,
@@ -1017,7 +1018,18 @@ export const getIssue = cache(
                 },
             },
         );
-        if (!res.ok) return null;
+        if (!res.ok) {
+            if (res.status === 404) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: `Issue ${issueNumber} not found in ${owner}/${repo}`,
+                });
+            }
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: `Failed to fetch issue ${issueNumber} in ${owner}/${repo}: ${res.status}`,
+            });
+        }
         return res.json() as Promise<CodebergIssue>;
     },
 );
