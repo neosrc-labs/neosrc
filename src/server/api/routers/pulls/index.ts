@@ -6,6 +6,7 @@ import {
     extractMergeStateStatus,
     extractStatusContexts,
     type GqlPrData,
+    PR_STATUS_BATCH_SIZE,
     type PrDetailsEntry,
 } from "~/server/api/routers/checks";
 import {
@@ -980,7 +981,7 @@ export const pullsRouter = createTRPCRouter({
             z.object({
                 owner: z.string(),
                 repo: z.string(),
-                prNumbers: z.array(z.number()),
+                prNumbers: z.array(z.number().int().positive()).max(500),
             }),
         )
         .query(async ({ ctx, input }) => {
@@ -992,26 +993,41 @@ export const pullsRouter = createTRPCRouter({
             const graphql = octokitGraphql.defaults({
                 headers: { authorization: `bearer ${accessToken}` },
             });
-            const query = buildPrStatusBatchQuery(input.prNumbers);
-            const raw = await graphql<Record<string, unknown>>(query, {
-                owner: input.owner,
-                repo: input.repo,
-            });
+            const chunks: number[][] = [];
+            for (
+                let i = 0;
+                i < input.prNumbers.length;
+                i += PR_STATUS_BATCH_SIZE
+            ) {
+                chunks.push(input.prNumbers.slice(i, i + PR_STATUS_BATCH_SIZE));
+            }
 
-            return input.prNumbers.reduce<Record<number, PrDetailsEntry>>(
-                (acc, num, i) => {
-                    const entry = raw[`pr${i}`] as
-                        | { pullRequest?: GqlPrData }
-                        | undefined;
-                    const pr = entry?.pullRequest;
-                    acc[num] = {
-                        mergeStateStatus: extractMergeStateStatus(pr),
-                        statusContexts: extractStatusContexts(pr),
-                    };
-                    return acc;
-                },
-                {},
+            const batches = await Promise.all(
+                chunks.map(async (chunk) => {
+                    const query = buildPrStatusBatchQuery(chunk);
+                    const raw = await graphql<Record<string, unknown>>(query, {
+                        owner: input.owner,
+                        repo: input.repo,
+                    });
+
+                    return chunk.reduce<Record<number, PrDetailsEntry>>(
+                        (acc, num, i) => {
+                            const entry = raw[`pr${i}`] as
+                                | { pullRequest?: GqlPrData }
+                                | undefined;
+                            const pr = entry?.pullRequest;
+                            acc[num] = {
+                                mergeStateStatus: extractMergeStateStatus(pr),
+                                statusContexts: extractStatusContexts(pr),
+                            };
+                            return acc;
+                        },
+                        {},
+                    );
+                }),
             );
+
+            return Object.assign({}, ...batches);
         }),
 
     headSha: protectedProcedure

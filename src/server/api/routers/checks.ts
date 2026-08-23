@@ -45,6 +45,10 @@ export interface GqlPrData {
     };
 }
 
+// GitHub rejects GraphQL documents with too many aliases, so callers send
+// prNumbers to listDetailsByPrNumbers in batches of this size per request.
+export const PR_STATUS_BATCH_SIZE = 50;
+
 export function buildPrStatusBatchQuery(numbers: number[]): string {
     const aliases = numbers.map(
         (num, i) => `
