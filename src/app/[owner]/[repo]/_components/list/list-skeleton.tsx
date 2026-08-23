@@ -1,4 +1,4 @@
-export function IssueSkeleton() {
+export function ListSkeleton() {
     return (
         <div className="space-y-0">
             {["sk1", "sk2", "sk3", "sk4", "sk5"].map((id) => (

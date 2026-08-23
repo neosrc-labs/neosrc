@@ -15,7 +15,7 @@ export interface PullRequestListConfig {
     ) => {
         labels: string;
         milestones: string;
-        newPr: string;
+        newItem: string;
     };
 }
 
@@ -92,7 +92,7 @@ export const ghConfig: PullRequestListConfig = {
     externalUrls: (owner: string, repo: string) => ({
         labels: `https://github.com/${owner}/${repo}/labels`,
         milestones: `https://github.com/${owner}/${repo}/milestones`,
-        newPr: `https://github.com/${owner}/${repo}/compare`,
+        newItem: `https://github.com/${owner}/${repo}/compare`,
     }),
 };
 
@@ -108,6 +108,6 @@ export const cbConfig: PullRequestListConfig = {
     externalUrls: (owner: string, repo: string) => ({
         labels: `https://codeberg.org/${owner}/${repo}/labels`,
         milestones: `https://codeberg.org/${owner}/${repo}/milestones`,
-        newPr: `https://codeberg.org/${owner}/${repo}/compare`,
+        newItem: `https://codeberg.org/${owner}/${repo}/compare`,
     }),
 };
