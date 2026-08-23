@@ -1140,7 +1140,11 @@ export async function getUserRepos(
         private: boolean;
     }[] = [];
     let page = 1;
-    const limit = 100;
+    // Codeberg caps the effective page size at MAX_RESPONSE_ITEMS (50), so
+    // requesting more would make `data.length < limit` break after page 1 and
+    // silently drop repos beyond the first 50. See also
+    // src/server/sync/codeberg.ts (getReposByOwner / getAuthenticatedUserRepos).
+    const limit = 50;
 
     for (;;) {
         const res = await fetch(
