@@ -9,10 +9,11 @@
 
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
-import { flattenError, ZodError } from "zod";
+import { flattenError, ZodError, z } from "zod";
 import { env } from "~/env";
 import { log } from "~/logging";
-import { getSession } from "~/server/auth";
+import { getCodebergToken, getGitHubToken, getSession } from "~/server/auth";
+import { deleteCache, prCacheKey } from "~/server/cache";
 import { db } from "~/server/db";
 
 /**
@@ -164,3 +165,236 @@ export const requireSession = t.middleware(({ ctx, next }) => {
  * user (never with the shared anonymous token).
  */
 export const protectedMutation = protectedProcedure.use(requireSession);
+
+/**
+ * Provider-aware procedure builders.
+ *
+ * Most repo/PR procedures repeat the same shape: read `input.provider`,
+ * fetch the matching access token, call the provider function, optionally
+ * evict a cache key. These builders centralize that plumbing so each
+ * procedure only states what differs: the handlers, how the user id is
+ * resolved, the Codeberg fallback, and whether caches are evicted.
+ */
+
+type BuilderUser = {
+    id: string;
+    githubUsername?: string | null;
+    codebergUsername?: string | null;
+};
+
+type HandlerCtx = {
+    db: typeof db;
+    session: { user?: BuilderUser } | null;
+};
+
+type ProviderId = "gh" | "cb";
+
+/** Adds the standard `provider` discriminator to a procedure's input. */
+export function providerInput<T extends z.ZodRawShape>(shape: T) {
+    return z.object({ provider: z.enum(["gh", "cb"]).default("gh"), ...shape });
+}
+
+/**
+ * How a builder resolves the user id passed to the token getters:
+ * as-is passes `ctx.session?.user?.id` through (possibly undefined, which
+ * the GitHub getter maps to the shared anonymous token); anonymous falls
+ * back to the string "anonymous", which keyed caches expect.
+ */
+type UserIdMode = "as-is" | "anonymous";
+type ResolvedUserId<Mode extends UserIdMode> = Mode extends "anonymous"
+    ? string
+    : string | undefined;
+
+type ProviderHandler<I, UserId, R> = (args: {
+    ctx: HandlerCtx;
+    input: I;
+    accessToken: string;
+    userId: UserId;
+}) => Promise<R>;
+
+/** Exactly one Codeberg side per procedure: either a handler or a fallback. */
+type CodebergSide<I, UserId, R> =
+    | { cb: ProviderHandler<I, UserId, R>; cbFallback?: never }
+    | { cb?: never; cbFallback: () => R };
+
+export function providerQuery<
+    S extends z.ZodType<{ provider: ProviderId }>,
+    R,
+    Mode extends UserIdMode = "as-is",
+>(
+    config: {
+        input: S;
+        userId?: Mode;
+        gh: ProviderHandler<z.output<S>, ResolvedUserId<Mode>, R>;
+    } & CodebergSide<z.output<S>, ResolvedUserId<Mode>, R>,
+) {
+    return protectedProcedure
+        .input(config.input)
+        .query(async ({ ctx, input }) => {
+            const userId = (
+                config.userId === "anonymous"
+                    ? (ctx.session?.user?.id ?? "anonymous")
+                    : ctx.session?.user?.id
+            ) as ResolvedUserId<Mode>;
+            if (input.provider === "cb") {
+                if (!config.cb) return config.cbFallback();
+                const accessToken = await getCodebergToken(ctx.db, userId);
+                return config.cb({
+                    ctx,
+                    // After .input() parsing the runtime value is exactly
+                    // z.output<S>; tRPC's conditional parser type cannot
+                    // prove it.
+                    input: input as z.output<S>,
+                    accessToken,
+                    userId,
+                });
+            }
+            const accessToken = await getGitHubToken(ctx.db, userId);
+            return config.gh({
+                ctx,
+                input: input as z.output<S>,
+                accessToken,
+                userId,
+            });
+        });
+}
+
+/**
+ * Mutation variant. Mutations always run as a real user (`protectedMutation`),
+ * so the user id is guaranteed; eviction is opt-in because some mutations
+ * deliberately skip it.
+ */
+export function providerMutation<
+    S extends z.ZodType<{ provider: ProviderId }>,
+    R,
+>(
+    config: {
+        input: S;
+        gh: ProviderHandler<z.output<S>, string, R>;
+        /** Cache key evicted after the mutation succeeds. */
+        evict?: (args: {
+            provider: ProviderId;
+            userId: string;
+            input: z.output<S>;
+        }) => string;
+    } & CodebergSide<z.output<S>, string, R>,
+) {
+    return protectedMutation
+        .input(config.input)
+        .mutation(async ({ ctx, input }) => {
+            const userId = ctx.session?.user?.id;
+            if (!userId) {
+                throw new TRPCError({ code: "UNAUTHORIZED" });
+            }
+            let result: R;
+            if (input.provider === "cb") {
+                if (!config.cb) return config.cbFallback();
+                const accessToken = await getCodebergToken(ctx.db, userId);
+                result = await config.cb({
+                    ctx,
+                    input: input as z.output<S>,
+                    accessToken,
+                    userId,
+                });
+            } else {
+                const accessToken = await getGitHubToken(ctx.db, userId);
+                result = await config.gh({
+                    ctx,
+                    input: input as z.output<S>,
+                    accessToken,
+                    userId,
+                });
+            }
+            if (config.evict) {
+                await deleteCache(
+                    config.evict({
+                        provider: input.provider,
+                        userId,
+                        input: input as z.output<S>,
+                    }),
+                );
+            }
+            return result;
+        });
+}
+
+type GitHubArgs<I> = {
+    ctx: HandlerCtx;
+    input: I;
+    accessToken: string;
+};
+
+export function githubQuery<S extends z.ZodType, R>(config: {
+    input: S;
+    run: (args: GitHubArgs<z.output<S>>) => Promise<R>;
+}) {
+    return protectedProcedure
+        .input(config.input)
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session?.user?.id,
+            );
+            return config.run({
+                ctx,
+                input: input as z.output<S>,
+                accessToken,
+            });
+        });
+}
+
+const prRefSchema = z.object({
+    owner: z.string(),
+    repo: z.string(),
+    number: z.number(),
+});
+type PrRefInput = z.infer<typeof prRefSchema>;
+
+/**
+ * GitHub-only PR mutation builder. `onSuccess` covers post-success work such
+ * as additional cache evictions; it is skipped when `run` throws. `evictPr`
+ * is only available for inputs carrying owner/repo/number, since that triple
+ * is what the standard PR cache key is built from.
+ */
+type EvictPrOption<S extends z.ZodType> =
+    z.output<S> extends PrRefInput
+        ? { evictPr?: boolean }
+        : { evictPr?: undefined };
+
+export function githubMutation<S extends z.ZodType, R>(
+    config: {
+        input: S;
+        run: (args: GitHubArgs<z.output<S>>) => Promise<R>;
+        onSuccess?: (
+            args: GitHubArgs<z.output<S>> & { result: R },
+        ) => Promise<void>;
+    } & EvictPrOption<S>,
+) {
+    return protectedMutation
+        .input(config.input)
+        .mutation(async ({ ctx, input }) => {
+            // After .input() parsing the runtime value is exactly
+            // z.output<S>; tRPC's conditional parser type cannot prove it.
+            const parsed = input as z.output<S>;
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session?.user?.id,
+            );
+            const result = await config.run({
+                ctx,
+                input: parsed,
+                accessToken,
+            });
+            if (config.evictPr) {
+                const ref = parsed as z.output<S> & PrRefInput;
+                await deleteCache(prCacheKey(ref.owner, ref.repo, ref.number));
+            }
+            await config.onSuccess?.({
+                ctx,
+                input: parsed,
+                accessToken,
+                result,
+            });
+            return result;
+        });
+}
