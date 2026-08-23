@@ -475,20 +475,23 @@ export async function getRefCounts(
         }),
     ]);
 
-    const parsePageCount = (res: Response): number => {
+    const parsePageCount = async (res: Response): Promise<number> => {
         if (!res.ok) return 0;
+        const items = (await res.json()) as unknown[];
         const linkHeader = res.headers.get("Link");
-        if (!linkHeader) return 0;
-        const lastMatch = /<[^>]*[?&]page=(\d+)[^>]*>;\s*rel="last"/.exec(
-            linkHeader,
-        );
-        if (lastMatch?.[1]) return Number.parseInt(lastMatch[1], 10);
-        return 0;
+        if (!linkHeader) return items.length;
+        const lastMatch =
+            /<[^>]*[?&]page=(\d+)[^>]*>;\s*rel="last"/.exec(linkHeader);
+        if (lastMatch?.[1]) {
+            const lastPage = Number.parseInt(lastMatch[1], 10);
+            if (lastPage > 1) return lastPage;
+        }
+        return items.length;
     };
 
     return {
-        branchCount: parsePageCount(branchesRes),
-        tagCount: parsePageCount(tagsRes),
+        branchCount: await parsePageCount(branchesRes),
+        tagCount: await parsePageCount(tagsRes),
     };
 }
 
