@@ -90,6 +90,7 @@ export type CodebergPrListParams = {
     limit?: number;
     author?: string;
     labels?: string[];
+    merged?: boolean;
 };
 
 function parseTotalCountFromLinkHeader(
@@ -159,6 +160,10 @@ export const listPullRequests = cache(
                     prLabelNames.includes(label.toLowerCase()),
                 );
             });
+        }
+
+        if (params.merged) {
+            items = items.filter((pr) => pr.merged_at != null);
         }
 
         const limit = params.limit ?? 30;

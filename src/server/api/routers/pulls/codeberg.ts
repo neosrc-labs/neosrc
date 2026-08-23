@@ -63,6 +63,7 @@ export class CodebergPullRequestProvider implements PullRequestProvider {
             sort: cbSort as CodebergPullRequestSort,
             page,
             limit,
+            ...(activeState === "merged" ? { merged: true } : {}),
         };
         if (authorQualifier) {
             prParams.author = authorQualifier;
@@ -71,21 +72,29 @@ export class CodebergPullRequestProvider implements PullRequestProvider {
             prParams.labels = labelQualifiers;
         }
 
-        const [result, openCount, closedCount] = await Promise.all([
-            listPullRequests(accessToken, params.owner, params.repo, prParams),
-            listPullRequests(accessToken, params.owner, params.repo, {
-                state: "open",
-                sort: cbSort as CodebergPullRequestSort,
-                limit: 1,
-                page: 1,
-            }),
-            listPullRequests(accessToken, params.owner, params.repo, {
-                state: "closed",
-                sort: cbSort as CodebergPullRequestSort,
-                limit: 1,
-                page: 1,
-            }),
-        ]);
+        const [result, openCount, closedCount, mergedCount] = await Promise.all(
+            [
+                listPullRequests(
+                    accessToken,
+                    params.owner,
+                    params.repo,
+                    prParams,
+                ),
+                listPullRequests(accessToken, params.owner, params.repo, {
+                    state: "open",
+                    sort: cbSort as CodebergPullRequestSort,
+                    limit: 1,
+                    page: 1,
+                }),
+                listPullRequests(accessToken, params.owner, params.repo, {
+                    state: "closed",
+                    sort: cbSort as CodebergPullRequestSort,
+                    limit: 1,
+                    page: 1,
+                }),
+                countMergedPullRequests(accessToken, params.owner, params.repo),
+            ],
+        );
 
         return {
             items: result.items.map(mapCodebergPr),
@@ -95,7 +104,7 @@ export class CodebergPullRequestProvider implements PullRequestProvider {
             stateCounts: {
                 open: openCount.totalCount,
                 closed: closedCount.totalCount,
-                merged: 0,
+                merged: mergedCount,
             },
         };
     }
@@ -105,6 +114,26 @@ function codebergState(state: string): "open" | "closed" | "all" {
     if (state === "merged") return "closed";
     if (state === "open") return "open";
     return "all";
+}
+
+async function countMergedPullRequests(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<number> {
+    let mergedCount = 0;
+    let page = 1;
+    for (;;) {
+        const res = await listPullRequests(accessToken, owner, repo, {
+            state: "closed",
+            limit: 50,
+            page,
+        });
+        mergedCount += res.items.filter((pr) => pr.merged_at).length;
+        if (!res.hasNextPage) break;
+        page += 1;
+    }
+    return mergedCount;
 }
 
 function mapCodebergPr(pr: CodebergPullRequest): PrSearchItem {
