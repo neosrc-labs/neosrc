@@ -309,6 +309,16 @@ describe("viewerRepoAccess", () => {
         ).toEqual({ canView: true, admin: true, write: true });
     });
 
+    it("matches an owner whose casing differs from the payload login", () => {
+        expect(
+            viewerRepoAccess({
+                username: "OWNER",
+                payload,
+                permission: null,
+            }),
+        ).toEqual({ canView: true, admin: true, write: true });
+    });
+
     it("denies a private repo when the viewer has no grant", () => {
         expect(
             viewerRepoAccess({
