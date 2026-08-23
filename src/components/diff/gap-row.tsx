@@ -73,7 +73,10 @@ export function GapRow({
                         aria-label="Expand lines below"
                         onClick={() =>
                             onExpand(gapKey, {
-                                top: Math.min(GAP_EXPAND_STEP, gapSize),
+                                top:
+                                    gapSize > 0
+                                        ? Math.min(GAP_EXPAND_STEP, gapSize)
+                                        : GAP_EXPAND_STEP,
                                 bottom: 0,
                             })
                         }
