@@ -106,6 +106,7 @@ export function RepoCodePage({
                         >
                             {(repoData) => (
                                 <RepoFileTable
+                                    key={`${owner}/${repo}`}
                                     owner={owner}
                                     repo={repo}
                                     provider={provider}
