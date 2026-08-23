@@ -107,7 +107,11 @@ export function MarkdownRenderer({
         );
     }
 
-    const stripped = content.replace(/<!--[\s\S]*?-->/g, "");
+    // The preview renders the content with HTML comments removed, but task
+    // toggles must edit the original body so comments survive. lineMap
+    // translates line numbers reported against the stripped preview back to
+    // the original content (a multi-line comment can shift them).
+    const { stripped, lineMap } = stripHtmlCommentsWithLineMap(content);
     const interactive = canToggleTasks && Boolean(onToggleTask);
     return (
         <div
@@ -390,10 +394,17 @@ export function MarkdownRenderer({
                                             ? () => {
                                                   if (typeof line !== "number")
                                                       return;
+                                                  const originalLine =
+                                                      lineMap[line - 1];
+                                                  if (
+                                                      typeof originalLine !==
+                                                      "number"
+                                                  )
+                                                      return;
                                                   const newContent =
                                                       toggleCheckboxAtLine(
-                                                          stripped,
-                                                          line,
+                                                          content,
+                                                          originalLine,
                                                       );
                                                   onToggleTask?.(newContent);
                                               }
@@ -473,6 +484,50 @@ type HastNode = {
         start?: { line?: number };
     } | null;
 };
+
+/**
+ * Remove HTML comments (same pattern the preview strips) and record, for
+ * each line of the stripped result, the 1-based line of the original content
+ * it starts on. Removing a multi-line comment can join or shift lines, so
+ * positions reported against the stripped text need this translation before
+ * they can be applied to the original content.
+ */
+function stripHtmlCommentsWithLineMap(content: string): {
+    stripped: string;
+    lineMap: number[];
+} {
+    const regex = /<!--[\s\S]*?-->/g;
+    let stripped = "";
+    const lineMap: number[] = [];
+    let origLine = 1;
+    // Original line where the stripped line currently being built started;
+    // null while sitting at the start of a not-yet-emitted line.
+    let lineStart: number | null = null;
+
+    const emit = (text: string) => {
+        for (const ch of text) {
+            stripped += ch;
+            if (lineStart === null) lineStart = origLine;
+            if (ch === "\n") {
+                lineMap.push(lineStart);
+                lineStart = null;
+                origLine++;
+            }
+        }
+    };
+
+    let last = 0;
+    for (let match = regex.exec(content); match; match = regex.exec(content)) {
+        emit(content.slice(last, match.index));
+        for (const ch of match[0]) {
+            if (ch === "\n") origLine++;
+        }
+        last = match.index + match[0].length;
+    }
+    emit(content.slice(last));
+    if (lineStart !== null) lineMap.push(lineStart);
+    return { stripped, lineMap };
+}
 
 /**
  * Toggle the `[ ]`/`[x]` marker on the 1-based `lineNumber` of the source
