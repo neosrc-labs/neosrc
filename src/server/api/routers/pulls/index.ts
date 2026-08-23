@@ -68,6 +68,16 @@ import { GitHubPullRequestProvider } from "./github";
 import type { Ctx } from "./provider";
 import type { PrSearchResult } from "./types";
 
+const evictPullRequests = async (
+    owner: string,
+    repo: string,
+    numbers: number[],
+) => {
+    await Promise.all(
+        numbers.map((number) => deleteCache(prCacheKey(owner, repo, number))),
+    );
+};
+
 export const pullsRouter = createTRPCRouter({
     updateBody: githubMutation({
         input: z.object({
@@ -501,8 +511,12 @@ export const pullsRouter = createTRPCRouter({
                     if (Date.now() - startedAt > 120_000) {
                         // The merge may still complete in the background;
                         // drop the cached pre-merge state either way.
-                        await deleteCache(
-                            prCacheKey(input.owner, input.repo, input.number),
+                        await evictPullRequests(
+                            input.owner,
+                            input.repo,
+                            stackMembers.length > 0
+                                ? stackMembers
+                                : [input.number],
                         );
                         throw new TRPCError({
                             code: "INTERNAL_SERVER_ERROR",
@@ -533,14 +547,14 @@ export const pullsRouter = createTRPCRouter({
         // Evict every PR the merge touched: the whole stack when the merge
         // went through the stack path, just this PR otherwise.
         onSuccess: async ({ input, result }) => {
-            const numbers =
+            // Evict every PR the merge touched: the whole stack when the
+            // merge went through the stack path, just this PR otherwise.
+            await evictPullRequests(
+                input.owner,
+                input.repo,
                 result.stackMembers.length > 0
                     ? result.stackMembers
-                    : [input.number];
-            await Promise.all(
-                numbers.map((number) =>
-                    deleteCache(prCacheKey(input.owner, input.repo, number)),
-                ),
+                    : [input.number],
             );
         },
     }),
