@@ -886,7 +886,7 @@ const CONTENT_MAP: Record<string, string> = {
 // Inverse of CONTENT_MAP: REST-style keys back to GraphQL ReactionContent
 // enum values. Derived so the two mappings cannot drift apart.
 const GRAPHQL_CONTENT_MAP: Record<string, string> = Object.fromEntries(
-    Object.entries(CONTENT_MAP).map(([rest, gql]) => [rest, gql]),
+    Object.entries(CONTENT_MAP).map(([graphql, rest]) => [rest, graphql]),
 );
 
 export async function getPullRequestTimelineGraphQL(
