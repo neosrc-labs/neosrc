@@ -1,3 +1,5 @@
+import type { Assignee, Author, Label } from "../mappers";
+
 export interface PrSearchItem {
     id: number;
     number: number;
@@ -6,14 +8,9 @@ export interface PrSearchItem {
     isDraft: boolean;
     createdAt: string;
     mergedAt: string | null;
-    author: { login: string; avatarUrl: string; url: string } | null;
-    labels: Array<{
-        id: string;
-        name: string;
-        color: string;
-        description: string | null;
-    }>;
-    assignees: Array<{ login: string; avatarUrl: string }>;
+    author: Author | null;
+    labels: Label[];
+    assignees: Assignee[];
     comments: number;
     reviewDecision: string | null;
     mergeable?: string;
@@ -30,15 +27,4 @@ export interface PrSearchResult {
         closed: number;
         merged: number;
     };
-}
-
-export interface SearchParams {
-    owner: string;
-    repo: string;
-    query: string;
-    page?: number;
-    after?: string;
-    first?: number;
-    sort?: "created" | "updated" | "comments";
-    order?: "asc" | "desc";
 }

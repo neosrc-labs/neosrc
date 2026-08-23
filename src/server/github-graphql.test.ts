@@ -15,6 +15,7 @@ vi.mock("@octokit/graphql", async (importOriginal) => {
 });
 
 import {
+    addReaction,
     getPullRequestReactionsGraphQL,
     isOrgRestrictionError,
     resolveCommitAuthor,
@@ -75,6 +76,54 @@ describe("getPullRequestReactionsGraphQL", () => {
             rocket: 0,
             eyes: 0,
         });
+    });
+});
+
+describe("addReaction", () => {
+    beforeEach(() => {
+        mockGraphql.mockReset();
+    });
+
+    it("translates REST-style content to GraphQL ReactionContent enums", async () => {
+        mockGraphql.mockResolvedValue({
+            addReaction: {
+                reaction: {
+                    id: "node-1",
+                    content: "THUMBS_UP",
+                    user: { login: "alice" },
+                },
+            },
+        });
+
+        await addReaction("token", "subject-1", "+1");
+
+        const variables = mockGraphql.mock.calls[0]?.[1];
+        expect(variables?.content).toBe("THUMBS_UP");
+    });
+
+    it("maps every REST-style reaction content the router accepts", async () => {
+        const restToGraphql: Record<string, string> = {
+            "+1": "THUMBS_UP",
+            "-1": "THUMBS_DOWN",
+            laugh: "LAUGH",
+            confused: "CONFUSED",
+            heart: "HEART",
+            hooray: "HOORAY",
+            rocket: "ROCKET",
+            eyes: "EYES",
+        };
+
+        for (const [rest, graphql] of Object.entries(restToGraphql)) {
+            mockGraphql.mockReset();
+            mockGraphql.mockResolvedValue({
+                addReaction: { reaction: null },
+            });
+
+            await addReaction("token", "subject-1", rest);
+
+            const variables = mockGraphql.mock.calls[0]?.[1];
+            expect(variables?.content).toBe(graphql);
+        }
     });
 });
 

@@ -1,12 +1,10 @@
-import {
-    mapGqlAssignee,
-    mapGqlAuthor,
-    mapGqlLabel,
-} from "~/server/api/routers/mappers";
+import { searchGqlItems } from "~/server/api/routers/github-search";
+import { mapGqlPrSearchItem } from "~/server/api/routers/mappers";
+import type { Ctx, SearchParams } from "~/server/api/routers/provider";
 import { getGitHubToken } from "~/server/auth";
 import { searchPullRequestsWithStatus } from "~/server/github-graphql";
-import type { Ctx, PullRequestProvider } from "./provider";
-import type { PrSearchItem, PrSearchResult, SearchParams } from "./types";
+import type { PullRequestProvider } from "./provider";
+import type { PrSearchResult } from "./types";
 
 export class GitHubPullRequestProvider implements PullRequestProvider {
     async search(params: SearchParams & { ctx: Ctx }): Promise<PrSearchResult> {
@@ -15,83 +13,13 @@ export class GitHubPullRequestProvider implements PullRequestProvider {
             params.ctx.session?.user?.id,
         );
 
-        const sortOrder =
-            params.sort && params.order
-                ? ` sort:${params.sort}-${params.order}`
-                : "";
-        const gqlQuery = `repo:${params.owner}/${params.repo} is:pr ${params.query}${sortOrder}`;
-
-        const restQuery = params.query.replace(
-            /^(is:open|is:closed|is:merged)\s*/,
-            "",
-        );
-        const base = `repo:${params.owner}/${params.repo} is:pr`;
-        const countQueries = {
-            open: `${base} is:open ${restQuery}`.trim(),
-            closed: `${base} is:closed ${restQuery}`.trim(),
-            merged: `${base} is:merged ${restQuery}`.trim(),
-        };
-
-        const result = await searchPullRequestsWithStatus(
+        return searchGqlItems({
             accessToken,
-            gqlQuery,
-            params.first ?? 30,
-            params.after ?? null,
-            countQueries,
-        );
-
-        return {
-            ...result,
-            items: result.items.map(mapGqlItem),
-        };
+            params,
+            kind: "pr",
+            countStates: ["open", "closed", "merged"],
+            search: searchPullRequestsWithStatus,
+            mapItem: mapGqlPrSearchItem,
+        });
     }
-}
-
-function mapGqlItem(item: {
-    databaseId: number;
-    number: number;
-    title: string;
-    state: string;
-    isDraft: boolean;
-    createdAt: string;
-    mergedAt: string | null;
-    author: { login: string; avatarUrl: string; url: string } | null;
-    labels: {
-        nodes: Array<{
-            id: string;
-            name: string;
-            color: string;
-            description: string | null;
-        }>;
-    };
-    assignees: {
-        nodes: Array<{ login: string; avatarUrl: string }>;
-    };
-    comments: { totalCount: number };
-    reviewDecision: string | null;
-    stack: { size: number; number: number } | null;
-    stackEntry: { position: number } | null;
-}): PrSearchItem {
-    return {
-        id: item.databaseId,
-        number: item.number,
-        title: item.title,
-        state: item.state as PrSearchItem["state"],
-        isDraft: item.isDraft,
-        createdAt: item.createdAt,
-        mergedAt: item.mergedAt,
-        author: mapGqlAuthor(item.author),
-        labels: item.labels.nodes.map(mapGqlLabel),
-        assignees: item.assignees.nodes.map(mapGqlAssignee),
-        comments: item.comments.totalCount,
-        reviewDecision: item.reviewDecision,
-        stack:
-            item.stack && item.stackEntry
-                ? {
-                      size: item.stack.size,
-                      position: item.stackEntry.position,
-                      number: item.stack.number,
-                  }
-                : null,
-    };
 }

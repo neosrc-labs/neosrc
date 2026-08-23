@@ -78,6 +78,17 @@ export type RelationRow = {
     subjectId: number;
 };
 
+/** Id-caching upsert helpers handed to provider relation builders. */
+export type SyncContext = {
+    ensureAccount: (account: {
+        providerId: number;
+        login: string;
+        avatarUrl: string | null;
+        type: "user" | "org";
+    }) => Promise<number>;
+    ensureRepo: (repo: SyncRepo) => Promise<number>;
+};
+
 /**
  * Sync-scoped upsert helpers. Caches account/repo ids by provider id so
  * repeated encounters of the same entity (e.g. a repo owner appearing in many
@@ -87,7 +98,7 @@ export function createSyncContext(
     executor: Executor,
     provider: SyncProvider,
     result: SyncResult,
-) {
+): SyncContext {
     const accountIds = new Map<number, number>();
     const repoIds = new Map<number, number>();
 
@@ -365,4 +376,153 @@ export async function storeSyncState(
                 updatedAt: new Date(),
             },
         });
+}
+
+export type PermissionSyncInput = {
+    accessToken: string;
+    userId: string;
+    forceRecent: boolean;
+    forceFull: boolean;
+};
+
+/** Provider-agnostic parts of the snapshot a permission sync applies. */
+export type PermissionSyncSnapshot = {
+    /** Authenticated user whose own rows are rebuilt. */
+    user: { providerId: number; login: string; avatarUrl: string | null };
+    snapshotHash: string;
+};
+
+/**
+ * Relations a provider builds under the advisory lock, plus the subject
+ * groups the rebuild replaces and whether the snapshot was fetched whole.
+ */
+export type RelationPlan = {
+    relations: RelationRow[];
+    /**
+     * Extra subject groups whose stale rows are deleted before `relations`
+     * is inserted. Only applied when `complete` is true.
+     */
+    subjectGroups?: { subjectType: string; subjectIds: number[] }[];
+    /** False when part of the snapshot failed to fetch. */
+    complete: boolean;
+};
+
+/**
+ * Provider steps of runPermissionSync. Fetch loops stay provider-side so each
+ * provider keeps its own API shape, pagination, and rate-limit strategy; the
+ * template owns everything from the recency gate to the view refresh.
+ */
+export type PermissionSyncHooks<Snapshot extends PermissionSyncSnapshot> = {
+    /** Fetches the snapshot inputs and computes the snapshot hash. */
+    loadSnapshot: (
+        accessToken: string,
+        result: SyncResult,
+    ) => Promise<Snapshot>;
+    /** Builds the relation rows applied under the advisory lock. */
+    buildRelations: (
+        ctx: SyncContext,
+        result: SyncResult,
+        snapshot: Snapshot,
+        userAccountId: number,
+    ) => Promise<RelationPlan>;
+};
+
+/**
+ * Template for the incremental current-user permission sync both providers
+ * share: recency gate, snapshot hash gate, advisory lock, stale-snapshot
+ * guard, delete-then-insert replace, and materialized-view refresh.
+ *
+ * An incomplete snapshot (`RelationPlan.complete === false`) keeps existing
+ * rows for the conditional subject groups and leaves the sync state unstored,
+ * so the next poll retries instead of matching the partial hash.
+ */
+export async function runPermissionSync<
+    Snapshot extends PermissionSyncSnapshot,
+>(
+    db: Db,
+    provider: SyncProvider,
+    input: PermissionSyncInput,
+    hooks: PermissionSyncHooks<Snapshot>,
+): Promise<SyncResult> {
+    const result = newResult();
+
+    // Recency gate: skip fetching the snapshot inputs entirely when the last
+    // applied sync is fresh, unless forced.
+    const stored = await getStoredSyncState(db, provider, input.userId);
+    if (
+        !input.forceRecent &&
+        !input.forceFull &&
+        stored !== null &&
+        isSyncStateFresh(stored.updatedAt)
+    ) {
+        return result;
+    }
+
+    // Snapshot ordering token: captured before the provider reads so the guard
+    // under the advisory lock can reject a snapshot older than the applied one.
+    const snapshotFetchedAt = new Date();
+
+    const snapshot = await hooks.loadSnapshot(input.accessToken, result);
+    if (!input.forceFull && stored?.snapshotHash === snapshot.snapshotHash) {
+        return result;
+    }
+
+    let didApply = false;
+    await db.transaction(async (tx) => {
+        // Serialize overlapping syncs for the same user/provider: the
+        // delete-then-insert replace below is not idempotent under overlap,
+        // and without the lock a stale snapshot could commit last and leave
+        // revoked grants visible past the hash gate.
+        await tx.execute(
+            sql`SELECT pg_advisory_xact_lock(hashtext(${provider}), hashtext(${input.userId}))`,
+        );
+        // Refuse to apply a snapshot older than the one already committed
+        // under this lock; otherwise an older concurrent sync could restore
+        // grants a newer sync just removed.
+        const applied = await getStoredSyncState(tx, provider, input.userId);
+        if (
+            applied?.snapshotFetchedAt &&
+            applied.snapshotFetchedAt.getTime() > snapshotFetchedAt.getTime()
+        ) {
+            return;
+        }
+        const ctx = createSyncContext(tx, provider, result);
+        const userAccountId = await ctx.ensureAccount({
+            ...snapshot.user,
+            type: "user",
+        });
+        const plan = await hooks.buildRelations(
+            ctx,
+            result,
+            snapshot,
+            userAccountId,
+        );
+
+        // Replace this user's rows with the freshly fetched state.
+        result.relationsRemoved += await deleteRelationsForSubject(tx, "user", [
+            userAccountId,
+        ]);
+        for (const group of plan.subjectGroups ?? []) {
+            if (!plan.complete || group.subjectIds.length === 0) continue;
+            result.relationsRemoved += await deleteRelationsForSubject(
+                tx,
+                group.subjectType,
+                group.subjectIds,
+            );
+        }
+        result.relationsWritten += await insertRelations(tx, plan.relations);
+        if (plan.complete) {
+            await storeSyncState(
+                tx,
+                provider,
+                input.userId,
+                snapshot.snapshotHash,
+                snapshotFetchedAt,
+            );
+        }
+        didApply = true;
+    });
+
+    if (didApply) await refreshPermissionsView(db);
+    return result;
 }

@@ -2,6 +2,8 @@
 extend-ignore-re = [
     # Esy package manager lock directory (e.g. "foo.esy.lock")
     "\\.esy\\.",
+    # Intentional invalid Forgejo qualifier in tests ("mis:closed")
+    "mis:",
 ]
 
 [default.extend-identifiers]

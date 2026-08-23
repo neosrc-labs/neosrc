@@ -33,7 +33,6 @@ import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { Label } from "~/components/ui/label";
 import { UserLink } from "~/components/user-link";
 import type { ReactionContent } from "~/lib/reactions";
-import { toggleReactionInList } from "~/lib/reactions";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewComment } from "~/server/github";
 import type {
@@ -64,6 +63,15 @@ import { ReviewDismissedContent } from "./content/review-dismissed";
 import { ReviewRequestEventContent } from "./content/review-request-event";
 import { StateEventContent } from "./content/state-event";
 import type { TimelineWrapper } from "./types";
+import {
+    useCommentTaskToggle,
+    useIssueCommentReactionToggle,
+    usePullRequestReviewReactionToggle,
+    useReviewTaskToggle,
+    useSavedBodies,
+    useUpdateCommentBody,
+    useUpdateReviewBody,
+} from "./use-timeline-comment-actions";
 import { approvalHasWriteAccess } from "./utils";
 
 export const formatReason = (reason: string) =>
@@ -315,7 +323,6 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
     );
 }
 
-// biome-ignore lint/complexity/noExcessiveLinesPerFunction: FIXME: cleanup the complex mutations
 function EventContent({
     event,
     owner,
@@ -337,70 +344,30 @@ function EventContent({
         null,
     );
     const [editBody, setEditBody] = useState("");
-    const [savedBodies, setSavedBodies] = useState<Record<number, string>>({});
     const [expandedMinimized, setExpandedMinimized] = useState<
         Record<number, boolean>
     >({});
 
     const utils = api.useUtils();
 
-    const updateCommentMutation = api.pulls.updateComment.useMutation({
-        onMutate: ({ commentId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
-            setEditingCommentId(null);
-        },
-        onError: (_, { commentId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[commentId];
-                return next;
-            });
-            setEditingCommentId(commentId);
-        },
-    });
+    const savedBodiesStore = useSavedBodies();
+    const editTransitions = {
+        onSaved: () => setEditingCommentId(null),
+        onResumeEdit: (id: number) => setEditingCommentId(id),
+    };
 
-    const updateReviewMutation = api.pulls.updateReview.useMutation({
-        onMutate: ({ reviewId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [reviewId]: body }));
-            setEditingCommentId(null);
-        },
-        onError: (_, { reviewId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[reviewId];
-                return next;
-            });
-            setEditingCommentId(reviewId);
-        },
-    });
-    // Task-list checkbox toggles. Separate mutations from the edit flow so
-    // their onMutate/onError contract mirrors the toggle flow (optimistic body
-    // overlay, no edit-mode transitions) while sharing `savedBodies`.
-    const commentTaskToggleMutation = api.pulls.updateComment.useMutation({
-        onMutate: ({ commentId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [commentId]: body }));
-        },
-        onError: (_, { commentId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[commentId];
-                return next;
-            });
-        },
-    });
-
-    const reviewTaskToggleMutation = api.pulls.updateReview.useMutation({
-        onMutate: ({ reviewId, body }) => {
-            setSavedBodies((prev) => ({ ...prev, [reviewId]: body }));
-        },
-        onError: (_, { reviewId }) => {
-            setSavedBodies((prev) => {
-                const next = { ...prev };
-                delete next[reviewId];
-                return next;
-            });
-        },
-    });
+    const updateCommentMutation = useUpdateCommentBody(
+        savedBodiesStore,
+        editTransitions,
+    );
+    const updateReviewMutation = useUpdateReviewBody(
+        savedBodiesStore,
+        editTransitions,
+    );
+    // Task-list checkbox toggles share the optimistic body overlay but
+    // never touch editor state.
+    const commentTaskToggleMutation = useCommentTaskToggle(savedBodiesStore);
+    const reviewTaskToggleMutation = useReviewTaskToggle(savedBodiesStore);
 
     const deleteCommentMutation = api.pulls.deleteComment.useMutation({
         onMutate: async ({ commentId }) => {
@@ -456,136 +423,15 @@ function EventContent({
         },
     });
 
-    const commentReactionMutation =
-        api.reactions.toggleIssueComment.useMutation({
-            onMutate: async ({ commentId, content }) => {
-                const user = permissionContext.currentUser;
-                if (!user) {
-                    return;
-                }
-                await utils.timeline.list.cancel();
+    const commentReactionMutation = useIssueCommentReactionToggle(
+        { owner, repo, number },
+        permissionContext.currentUser,
+    );
 
-                const prevData = utils.timeline.list.getInfiniteData({
-                    owner,
-                    repo,
-                    number,
-                    limit: TIMELINE_PAGE_SIZE,
-                });
-
-                utils.timeline.list.setInfiniteData(
-                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                    (old) => {
-                        if (!old) return old;
-                        return {
-                            ...old,
-                            pages: old.pages.map((page) => {
-                                const key = `comment:${commentId}`;
-                                if (!(key in page.commentReactions)) {
-                                    return page;
-                                }
-                                return {
-                                    ...page,
-                                    commentReactions: {
-                                        ...page.commentReactions,
-                                        [key]: toggleReactionInList(
-                                            page.commentReactions[key] ?? [],
-                                            user,
-                                            content,
-                                        ),
-                                    },
-                                };
-                            }),
-                        };
-                    },
-                );
-
-                return { prevData };
-            },
-            onError: (_err, _vars, ctx) => {
-                if (ctx?.prevData) {
-                    utils.timeline.list.setInfiniteData(
-                        { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                        ctx.prevData,
-                    );
-                }
-            },
-            onSettled: () => {
-                utils.timeline.list.invalidate({
-                    owner,
-                    repo,
-                    number,
-                    limit: TIMELINE_PAGE_SIZE,
-                });
-            },
-        });
-
-    const reviewReactionMutation =
-        api.reactions.togglePullRequestReview.useMutation({
-            onMutate: async ({ content, databaseId }) => {
-                const user = permissionContext.currentUser;
-                if (!user) {
-                    return;
-                }
-                await utils.timeline.list.cancel({
-                    owner,
-                    repo,
-                    number,
-                    limit: TIMELINE_PAGE_SIZE,
-                });
-
-                const prevData = utils.timeline.list.getInfiniteData({
-                    owner,
-                    repo,
-                    number,
-                    limit: TIMELINE_PAGE_SIZE,
-                });
-
-                utils.timeline.list.setInfiniteData(
-                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                    (old) => {
-                        if (!old || !databaseId) return old;
-                        return {
-                            ...old,
-                            pages: old.pages.map((page) => {
-                                const key = `review:${databaseId}`;
-                                if (!(key in page.commentReactions)) {
-                                    return page;
-                                }
-                                return {
-                                    ...page,
-                                    commentReactions: {
-                                        ...page.commentReactions,
-                                        [key]: toggleReactionInList(
-                                            page.commentReactions[key] ?? [],
-                                            user,
-                                            content,
-                                        ),
-                                    },
-                                };
-                            }),
-                        };
-                    },
-                );
-
-                return { prevData };
-            },
-            onError: (_err, _vars, ctx) => {
-                if (ctx?.prevData) {
-                    utils.timeline.list.setInfiniteData(
-                        { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                        ctx.prevData,
-                    );
-                }
-            },
-            onSettled: () => {
-                utils.timeline.list.invalidate({
-                    owner,
-                    repo,
-                    number,
-                    limit: TIMELINE_PAGE_SIZE,
-                });
-            },
-        });
+    const reviewReactionMutation = usePullRequestReviewReactionToggle(
+        { owner, repo, number },
+        permissionContext.currentUser,
+    );
 
     const handleSaveComment = (commentId: number, body: string) => {
         updateCommentMutation.mutate({ owner, repo, commentId, body });
@@ -632,7 +478,7 @@ function EventContent({
                     commentReactions={commentReactions}
                     editingCommentId={editingCommentId}
                     editBody={editBody}
-                    savedBodies={savedBodies}
+                    savedBodies={savedBodiesStore.savedBodies}
                     expandedMinimized={expandedMinimized}
                     onEditBodyChange={setEditBody}
                     onStartEdit={(id, body) => {
@@ -661,7 +507,7 @@ function EventContent({
                     commentReactions={commentReactions}
                     editingCommentId={editingCommentId}
                     editBody={editBody}
-                    savedBodies={savedBodies}
+                    savedBodies={savedBodiesStore.savedBodies}
                     onEditBodyChange={setEditBody}
                     onStartEdit={(id, body) => {
                         setEditBody(body);

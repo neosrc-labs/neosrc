@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, CircleCheck, Eye } from "lucide-react";
+import { StateTabs } from "~/app/[owner]/[repo]/_components/list/state-tabs";
 import { AssigneeDropdown } from "~/app/[owner]/[repo]/_components/search/assignee-dropdown";
 import { AuthorDropdown } from "~/app/[owner]/[repo]/_components/search/author-dropdown";
 import { LabelDropdown } from "~/app/[owner]/[repo]/_components/search/label-dropdown";
@@ -49,38 +50,12 @@ export function PullRequestToolbar({
     return (
         <div className="border-border-subtle border-b">
             <div className="flex items-center justify-between px-4">
-                <div className="flex items-center">
-                    {TABS.map((tab) => {
-                        const count = stateCounts?.[tab.key];
-                        return (
-                            <button
-                                key={tab.key}
-                                type="button"
-                                onClick={() => onTabChange(tab.key)}
-                                aria-label={
-                                    count !== undefined
-                                        ? `${tab.label} (${count.toLocaleString()})`
-                                        : tab.label
-                                }
-                                className={`relative -mb-px cursor-pointer px-4 py-3 font-medium text-sm transition-colors ${
-                                    activeTab === tab.key
-                                        ? "border-blue-500 border-b-2 text-text-primary"
-                                        : "text-text-secondary hover:text-text-primary dark:hover:text-zinc-100"
-                                }`}
-                            >
-                                {tab.label}
-                                {count !== undefined && (
-                                    <span
-                                        aria-hidden="true"
-                                        className="ml-1.5 rounded-full bg-surface-selected px-1.5 py-0.5 text-xs tabular-nums"
-                                    >
-                                        {count.toLocaleString()}
-                                    </span>
-                                )}
-                            </button>
-                        );
-                    })}
-                </div>
+                <StateTabs
+                    tabs={TABS}
+                    activeTab={activeTab}
+                    stateCounts={stateCounts}
+                    onTabChange={(tab) => onTabChange(tab as FilterState)}
+                />
                 <div className="flex items-center gap-2">
                     <AuthorDropdown
                         provider={config.provider}

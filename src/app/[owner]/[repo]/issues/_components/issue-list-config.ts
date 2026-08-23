@@ -21,11 +21,18 @@ export function buildIssueConfig(
     owner: string,
     repo: string,
 ) {
+    const host = provider === "cb" ? "codeberg.org" : "github.com";
+
     return {
         provider,
         baseRoute: `/${provider}/${owner}/${repo}/issues`,
         qualifiers: ISSUE_QUALIFIERS,
         autocompleteOptions: ISSUE_AUTOCOMPLETE_OPTIONS,
         stateQualifierFn: (tab: string) => `is:${tab}`,
+        externalUrls: {
+            labels: `https://${host}/${owner}/${repo}/labels`,
+            milestones: `https://${host}/${owner}/${repo}/milestones`,
+            newItem: `https://${host}/${owner}/${repo}/issues/new`,
+        },
     };
 }
