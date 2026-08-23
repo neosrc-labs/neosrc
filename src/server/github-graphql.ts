@@ -25,7 +25,7 @@ export function isUnauthorizedError(error: unknown): boolean {
  * GraphQL client that swaps in a fresh token and retries once when the token
  * is rejected (401), mirroring createOctokit's behavior for REST.
  */
-function createGraphql(auth: string | RefreshableAuth) {
+export function createGraphql(auth: string | RefreshableAuth) {
     const refresh = (auth as RefreshableAuth).refresh;
     const graphql = octokitGraphql.defaults({
         headers: { authorization: `bearer ${String(auth)}` },
