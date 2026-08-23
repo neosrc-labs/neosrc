@@ -95,9 +95,11 @@ export function MarkdownRenderer({
     proseSize = "sm",
 }: MarkdownRendererProps) {
     const headingSlugsRef = useRef(new Map<string, number>());
-    useEffect(() => {
-        headingSlugsRef.current.clear();
-    }, []);
+    // Heading ids are derived per render pass, so clear the counters here.
+    // Clearing only on mount let counts leak across renders: when `content`
+    // changed without a remount (e.g. repo-doc-files switching documents), a
+    // heading unique in the new document could still get a "-1" id.
+    headingSlugsRef.current.clear();
 
     if (!content) {
         return (
