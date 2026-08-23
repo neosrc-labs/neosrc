@@ -335,6 +335,12 @@ const getFileContentFromBranch = async (
         );
     }
 
+    if (fileData.encoding !== "base64") {
+        throw new Error(
+            `Cannot apply suggestion to ${path}: expected base64 content from the Contents API but got encoding "${fileData.encoding ?? "none"}"`,
+        );
+    }
+
     return {
         content: Buffer.from(fileData.content, "base64").toString("utf-8"),
         sha: fileData.sha,
@@ -385,8 +391,8 @@ const resolveSuggestionRange = (
  * suggestion without touching the remote. The targeted range follows the same
  * semantics as `getSuggestionPatch` (startLine through line). A single
  * trailing newline on the suggestion is stripped so suggestion blocks (which
- * end with a newline) don't inject an empty line, and unchanged lines keep
- * the file's original line endings.
+ * end with a newline) don't inject an empty line. The result is joined with
+ * the file's dominant EOL, so a mixed-EOL file is normalized.
  */
 export const buildSuggestionNewContent = (
     currentContent: string,
@@ -434,7 +440,7 @@ export const getSuggestionPatch = async (
         headRef,
     );
 
-    const allLines = currentContent.split("\n");
+    const allLines = currentContent.split(/\r?\n/);
     const { replaceStart, replaceEnd } = resolveSuggestionRange(
         line,
         startLine,

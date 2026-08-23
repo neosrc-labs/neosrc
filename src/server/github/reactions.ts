@@ -1,4 +1,5 @@
 import { cache } from "react";
+import type { ReactionContent } from "~/lib/reactions";
 import type { GQLPullRequestReactions } from "~/server/github-graphql";
 import { createOctokit } from "./client";
 
@@ -83,22 +84,14 @@ export const createIssueCommentReaction = async (
     owner: string,
     repo: string,
     commentId: number,
-    content: string,
+    content: ReactionContent,
 ) => {
     const octokit = createOctokit(accessToken);
     const response = await octokit.rest.reactions.createForIssueComment({
         owner,
         repo,
         comment_id: commentId,
-        content: content as
-            | "+1"
-            | "-1"
-            | "laugh"
-            | "confused"
-            | "heart"
-            | "hooray"
-            | "rocket"
-            | "eyes",
+        content,
     });
     return response.data;
 };
@@ -138,7 +131,7 @@ export const createPullRequestReviewCommentReaction = async (
     owner: string,
     repo: string,
     commentId: number,
-    content: string,
+    content: ReactionContent,
 ) => {
     const octokit = createOctokit(accessToken);
     const response =
@@ -146,15 +139,7 @@ export const createPullRequestReviewCommentReaction = async (
             owner,
             repo,
             comment_id: commentId,
-            content: content as
-                | "+1"
-                | "-1"
-                | "laugh"
-                | "confused"
-                | "heart"
-                | "hooray"
-                | "rocket"
-                | "eyes",
+            content,
         });
     return response.data;
 };
@@ -180,22 +165,14 @@ export const createIssueReaction = async (
     owner: string,
     repo: string,
     issueNumber: number,
-    content: string,
+    content: ReactionContent,
 ) => {
     const octokit = createOctokit(accessToken);
     const response = await octokit.rest.reactions.createForIssue({
         owner,
         repo,
         issue_number: issueNumber,
-        content: content as
-            | "+1"
-            | "-1"
-            | "laugh"
-            | "confused"
-            | "heart"
-            | "hooray"
-            | "rocket"
-            | "eyes",
+        content,
     });
     return response.data;
 };

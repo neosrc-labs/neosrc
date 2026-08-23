@@ -114,16 +114,22 @@ async function getCommitChecksRest(
     commitSha: string,
 ): Promise<GqlCommitChecks> {
     const octokit = createOctokit(accessToken);
-    const [checkRunsRes, statusesRes] = await Promise.all([
-        octokit.checks.listForRef({ owner, repo, ref: commitSha }),
-        octokit.repos.listCommitStatusesForRef({
+    const [checkRunsData, statusesData] = await Promise.all([
+        octokit.paginate(octokit.checks.listForRef, {
             owner,
             repo,
             ref: commitSha,
+            per_page: 100,
+        }),
+        octokit.paginate(octokit.repos.listCommitStatusesForRef, {
+            owner,
+            repo,
+            ref: commitSha,
+            per_page: 100,
         }),
     ]);
 
-    const checkRuns = checkRunsRes.data.check_runs.map((run) => ({
+    const checkRuns = checkRunsData.map((run) => ({
         name: run.name,
         status: run.status,
         conclusion: run.conclusion,
@@ -137,7 +143,7 @@ async function getCommitChecksRest(
         app: run.app ? { name: run.app.name, logoUrl: null } : null,
     }));
 
-    const statuses = statusesRes.data.map((s) => ({
+    const statuses = statusesData.map((s) => ({
         context: s.context,
         description: s.description ?? null,
         state: s.state.toLowerCase(),

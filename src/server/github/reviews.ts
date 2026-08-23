@@ -100,7 +100,7 @@ export const updateReviewComment = async (
                 comment.node_id,
                 body,
             );
-            return comment;
+            return { ...comment, body };
         }
 
         throw error;
@@ -537,12 +537,17 @@ mutation($pullRequestId: ID!, $pullRequestReviewId: ID, $body: String!, $path: S
     const result = await graphql<{
         addPullRequestReviewThread: {
             thread: {
-                comments: { nodes: [{ databaseId: number }] };
+                comments: { nodes: { databaseId: number }[] };
             };
         };
     }>(query, variables);
 
     const comment = result.addPullRequestReviewThread.thread.comments.nodes[0];
+    if (!comment) {
+        throw new Error(
+            "addPullRequestReviewThread returned no comment for the new thread",
+        );
+    }
     return { id: comment.databaseId };
 };
 

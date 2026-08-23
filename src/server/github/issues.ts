@@ -197,6 +197,7 @@ query RecentIssueAuthors($owner: String!, $repo: String!) {
   repository(owner: $owner, name: $repo) {
     issues(first: 100, orderBy: { field: CREATED_AT, direction: DESC }) {
       nodes {
+        createdAt
         author {
           login
           avatarUrl
@@ -205,6 +206,7 @@ query RecentIssueAuthors($owner: String!, $repo: String!) {
     }
     pullRequests(first: 100, orderBy: { field: CREATED_AT, direction: DESC }) {
       nodes {
+        createdAt
         author {
           login
           avatarUrl
@@ -220,25 +222,33 @@ query RecentIssueAuthors($owner: String!, $repo: String!) {
                 issues: {
                     nodes: Array<{
                         author: { login: string; avatarUrl: string } | null;
+                        createdAt: string;
                     } | null>;
                 };
                 pullRequests: {
                     nodes: Array<{
                         author: { login: string; avatarUrl: string } | null;
+                        createdAt: string;
                     } | null>;
                 };
             } | null;
         }>(query, { owner, repo });
+
+        // Merge both connections newest-first and cap at one page of 100,
+        // matching what the REST fallback returns.
+        const nodes = [
+            ...(result.repository?.issues?.nodes ?? []),
+            ...(result.repository?.pullRequests?.nodes ?? []),
+        ]
+            .filter((node): node is NonNullable<typeof node> => node != null)
+            .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+            .slice(0, 100);
 
         const seen = new Set<string>();
         const authors: Array<{
             login: string;
             avatar_url: string | null;
         }> = [];
-        const nodes = [
-            ...(result.repository?.issues?.nodes ?? []),
-            ...(result.repository?.pullRequests?.nodes ?? []),
-        ];
         for (const node of nodes) {
             if (!node?.author) continue;
             if (seen.has(node.author.login)) continue;
