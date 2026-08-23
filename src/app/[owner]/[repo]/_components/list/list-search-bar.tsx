@@ -1,6 +1,6 @@
 "use client";
 
-import { Milestone, Plus, Search, Tag, X } from "lucide-react";
+import { Milestone, Search, Tag, X } from "lucide-react";
 import {
     detectQualifier,
     SearchAutocomplete,
@@ -8,7 +8,13 @@ import {
 } from "~/app/[owner]/[repo]/_components/search/search-autocomplete";
 import { splitQuery } from "~/app/[owner]/[repo]/_components/search/search-utils";
 
-export function IssueSearchBar({
+export interface ListExternalUrls {
+    labels: string;
+    milestones: string;
+    newItem: string;
+}
+
+export function ListSearchBar({
     searchInput,
     setSearchInput,
     cursorPos,
@@ -16,11 +22,15 @@ export function IssueSearchBar({
     inputRef,
     searchBarRef,
     autocompleteRef,
+    provider,
     qualifiers,
     autocompleteOptions,
-    provider,
     owner,
     repo,
+    placeholder,
+    urls,
+    newItemIcon,
+    newItemLabel,
     onSearch,
     onClear,
     onAutocompleteSelect,
@@ -32,11 +42,15 @@ export function IssueSearchBar({
     inputRef: React.RefObject<HTMLInputElement | null>;
     searchBarRef: React.RefObject<HTMLDivElement | null>;
     autocompleteRef: React.RefObject<SearchAutocompleteHandle | null>;
+    provider: "gh" | "cb";
     qualifiers: string[];
     autocompleteOptions: Record<string, { label: string; subtitle?: string }[]>;
-    provider: "gh" | "cb";
     owner: string;
     repo: string;
+    placeholder: string;
+    urls: ListExternalUrls;
+    newItemIcon: React.ReactNode;
+    newItemLabel: string;
     onSearch: () => void;
     onClear: () => void;
     onAutocompleteSelect: (key: string, value: string) => void;
@@ -46,8 +60,6 @@ export function IssueSearchBar({
         cursorPos,
         qualifiers,
     );
-
-    const host = provider === "cb" ? "codeberg.org" : "github.com";
 
     return (
         <div className="border-border-subtle border-b">
@@ -109,7 +121,7 @@ export function IssueSearchBar({
                         onSelect={(e) => {
                             setCursorPos(e.currentTarget.selectionStart ?? 0);
                         }}
-                        placeholder="Search issues by title, body, or comments"
+                        placeholder={placeholder}
                         className="relative w-full rounded-md border border-gray-300 bg-transparent px-3 py-1.5 pr-12 text-sm text-transparent placeholder-gray-500 caret-gray-900 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:placeholder-zinc-500 dark:caret-zinc-100 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                     />
                     {autocompleteMatch && (
@@ -147,7 +159,7 @@ export function IssueSearchBar({
                 </div>
 
                 <a
-                    href={`https://${host}/${owner}/${repo}/labels`}
+                    href={urls.labels}
                     className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
                 >
                     <Tag className="size-4" />
@@ -155,7 +167,7 @@ export function IssueSearchBar({
                 </a>
 
                 <a
-                    href={`https://${host}/${owner}/${repo}/milestones`}
+                    href={urls.milestones}
                     className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
                 >
                     <Milestone className="size-4" />
@@ -163,11 +175,11 @@ export function IssueSearchBar({
                 </a>
 
                 <a
-                    href={`https://${host}/${owner}/${repo}/issues/new`}
+                    href={urls.newItem}
                     className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-green-600 bg-green-600 px-2.5 py-1.5 font-medium text-sm text-white transition-colors hover:bg-green-700 dark:border-green-500 dark:bg-green-600 dark:hover:bg-green-700"
                 >
-                    <Plus className="size-4" />
-                    New Issue
+                    {newItemIcon}
+                    {newItemLabel}
                 </a>
             </div>
         </div>
