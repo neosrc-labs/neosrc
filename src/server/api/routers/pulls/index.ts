@@ -457,8 +457,19 @@ export const pullsRouter = createTRPCRouter({
                     input.commitTitle,
                     input.commitMessage,
                 );
-                return;
+                return { stackMembers: [] as number[] };
             }
+
+            // Capture the stack before merging: once the merge completes the
+            // provider can stop returning stack data for these pull requests.
+            const stack = await getPullRequestStack(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+            );
+            const stackMembers =
+                stack?.pullRequests.map((entry) => entry.number) ?? [];
 
             const asyncResult = await mergePullRequestAsync(
                 accessToken,
@@ -488,6 +499,11 @@ export const pullsRouter = createTRPCRouter({
                     pollResult.status === "enqueued"
                 ) {
                     if (Date.now() - startedAt > 120_000) {
+                        // The merge may still complete in the background;
+                        // drop the cached pre-merge state either way.
+                        await deleteCache(
+                            prCacheKey(input.owner, input.repo, input.number),
+                        );
                         throw new TRPCError({
                             code: "INTERNAL_SERVER_ERROR",
                             message:
@@ -512,29 +528,20 @@ export const pullsRouter = createTRPCRouter({
                     });
                 }
             }
+            return { stackMembers };
         },
         // Evict every PR the merge touched: the whole stack when the merge
         // went through the stack path, just this PR otherwise.
-        onSuccess: async ({ input, accessToken }) => {
-            const stack = await getPullRequestStack(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.number,
+        onSuccess: async ({ input, result }) => {
+            const numbers =
+                result.stackMembers.length > 0
+                    ? result.stackMembers
+                    : [input.number];
+            await Promise.all(
+                numbers.map((number) =>
+                    deleteCache(prCacheKey(input.owner, input.repo, number)),
+                ),
             );
-            if (stack) {
-                await Promise.all(
-                    stack.pullRequests.map((entry) =>
-                        deleteCache(
-                            prCacheKey(input.owner, input.repo, entry.number),
-                        ),
-                    ),
-                );
-            } else {
-                await deleteCache(
-                    prCacheKey(input.owner, input.repo, input.number),
-                );
-            }
         },
     }),
     revert: githubMutation({

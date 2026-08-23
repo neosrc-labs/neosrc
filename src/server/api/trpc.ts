@@ -288,14 +288,17 @@ export function providerMutation<
             }
             let result: R;
             if (input.provider === "cb") {
-                if (!config.cb) return config.cbFallback();
-                const accessToken = await getCodebergToken(ctx.db, userId);
-                result = await config.cb({
-                    ctx,
-                    input: input as z.output<S>,
-                    accessToken,
-                    userId,
-                });
+                if (!config.cb) {
+                    result = config.cbFallback();
+                } else {
+                    const accessToken = await getCodebergToken(ctx.db, userId);
+                    result = await config.cb({
+                        ctx,
+                        input: input as z.output<S>,
+                        accessToken,
+                        userId,
+                    });
+                }
             } else {
                 const accessToken = await getGitHubToken(ctx.db, userId);
                 result = await config.gh({
