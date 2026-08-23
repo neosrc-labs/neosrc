@@ -1,5 +1,4 @@
 import { graphql as octokitGraphql } from "@octokit/graphql";
-import { sql } from "drizzle-orm";
 
 import {
     createOctokit,
@@ -9,23 +8,15 @@ import {
 import { githubRepoToSyncRepo } from "./mappers";
 import type {
     Db,
+    PermissionSyncInput,
+    PermissionSyncSnapshot,
     RelationRow,
     RepoPermission,
     RepoVisibility,
     SyncRepo,
     SyncResult,
 } from "./shared";
-import {
-    createSyncContext,
-    deleteRelationsForSubject,
-    getStoredSyncState,
-    hashSnapshot,
-    insertRelations,
-    isSyncStateFresh,
-    newResult,
-    refreshPermissionsView,
-    storeSyncState,
-} from "./shared";
+import { hashSnapshot, runPermissionSync } from "./shared";
 
 export type GitHubSyncRepo = {
     providerId: number;
@@ -106,176 +97,93 @@ export async function fetchOwnerRepos(
  * `forceRecent` bypasses only the recency gate, `forceFull` re-syncs
  * unconditionally.
  */
+type GitHubSnapshot = PermissionSyncSnapshot & {
+    repos: GitHubSyncRepo[];
+    memberships: GitHubOrgMembership[];
+    teams: GitHubTeam[];
+    teamRepos: Map<number, GitHubSyncRepo[]>;
+};
+
 export async function syncCurrentUserGitHub(
     db: Db,
-    input: {
-        accessToken: string;
-        userId: string;
-        forceRecent: boolean;
-        forceFull: boolean;
-    },
+    input: PermissionSyncInput,
 ): Promise<SyncResult> {
-    const result = newResult();
+    return runPermissionSync(db, "github", input, {
+        async loadSnapshot(accessToken, result): Promise<GitHubSnapshot> {
+            const profile = await getAuthenticatedUser(accessToken);
 
-    // Recency gate: skip fetching the snapshot inputs entirely when the last
-    // applied sync is fresh, unless forced.
-    const stored = await getStoredSyncState(db, "github", input.userId);
-    if (
-        !input.forceRecent &&
-        !input.forceFull &&
-        stored !== null &&
-        isSyncStateFresh(stored.updatedAt)
-    ) {
-        return result;
-    }
+            // Fetch the snapshot up front; the per-team GraphQL calls and
+            // all writes are skipped when the snapshot matches the last
+            // applied one.
+            const [repos, memberships, teams] = await Promise.all([
+                listAuthenticatedUserRepos(accessToken),
+                listAuthenticatedUserOrgMemberships(accessToken),
+                listAuthenticatedUserTeams(accessToken),
+            ]);
 
-    // Snapshot ordering token: captured before the provider reads so the guard
-    // under the advisory lock can reject a snapshot older than the applied one.
-    const snapshotFetchedAt = new Date();
+            // Team repo grants need one GraphQL call per team; a failing team
+            // only skips its shared edges (direct grants above still cover
+            // the user). Skipped teams must not trigger the team-scoped
+            // replace in buildRelations: deleting rows we cannot re-fetch
+            // would wipe that team's grants for every member until a later
+            // fully-successful sync. The fan-out is capped: each query costs
+            // ~100 rate-limit points, and firing every team at once could
+            // exhaust the GraphQL point budget for users in many teams.
+            const teamRepos = new Map<number, GitHubSyncRepo[]>();
+            const MAX_CONCURRENT_TEAM_FETCHES = 4;
+            let nextTeam = 0;
+            await Promise.all(
+                Array.from(
+                    {
+                        length: Math.min(
+                            MAX_CONCURRENT_TEAM_FETCHES,
+                            teams.length,
+                        ),
+                    },
+                    async () => {
+                        while (nextTeam < teams.length) {
+                            const team = teams[nextTeam];
+                            nextTeam++;
+                            if (!team) break; // unreachable while the guard holds
+                            try {
+                                teamRepos.set(
+                                    team.providerId,
+                                    await listTeamRepos(
+                                        accessToken,
+                                        team.org.login,
+                                        team.slug,
+                                    ),
+                                );
+                            } catch {
+                                result.teamsSkipped++;
+                            }
+                        }
+                    },
+                ),
+            );
 
-    const profile = await getAuthenticatedUser(input.accessToken);
+            return {
+                user: {
+                    providerId: profile.id,
+                    login: profile.login,
+                    avatarUrl: profile.avatar_url ?? null,
+                },
+                repos,
+                memberships,
+                teams,
+                teamRepos,
+                snapshotHash: githubSnapshotHash(repos, memberships, teams),
+            };
+        },
+        async buildRelations(ctx, result, snapshot, userAccountId) {
+            const relations: RelationRow[] = [];
+            const teamIds: number[] = [];
 
-    // Fetch the snapshot up front; the per-team GraphQL calls and all writes
-    // are skipped when the snapshot matches the last applied one.
-    const [repos, memberships, teams] = await Promise.all([
-        listAuthenticatedUserRepos(input.accessToken),
-        listAuthenticatedUserOrgMemberships(input.accessToken),
-        listAuthenticatedUserTeams(input.accessToken),
-    ]);
-    const snapshotHash = githubSnapshotHash(repos, memberships, teams);
-    if (!input.forceFull && stored?.snapshotHash === snapshotHash) {
-        return result;
-    }
-
-    // Team repo grants need one GraphQL call per team; a failing team only
-    // skips its shared edges (direct grants above still cover the user).
-    // Skipped teams must not trigger the team-scoped replace below: deleting
-    // rows we cannot re-fetch would wipe that team's grants for every member
-    // until a later fully-successful sync.
-    // The fan-out is capped: each query costs ~100 rate-limit points, and
-    // firing every team at once could exhaust the GraphQL point budget for
-    // users in many teams.
-    const teamRepos = new Map<number, GitHubSyncRepo[]>();
-    const MAX_CONCURRENT_TEAM_FETCHES = 4;
-    let nextTeam = 0;
-    await Promise.all(
-        Array.from(
-            { length: Math.min(MAX_CONCURRENT_TEAM_FETCHES, teams.length) },
-            async () => {
-                while (nextTeam < teams.length) {
-                    const team = teams[nextTeam];
-                    nextTeam++;
-                    if (!team) break; // unreachable while the guard holds
-                    try {
-                        teamRepos.set(
-                            team.providerId,
-                            await listTeamRepos(
-                                input.accessToken,
-                                team.org.login,
-                                team.slug,
-                            ),
-                        );
-                    } catch {
-                        result.teamsSkipped++;
-                    }
-                }
-            },
-        ),
-    );
-
-    const relations: RelationRow[] = [];
-    const teamIds: number[] = [];
-    let didApply = false;
-
-    await db.transaction(async (tx) => {
-        // Serialize overlapping syncs for the same user/provider: the
-        // delete-then-insert replace below is not idempotent under overlap,
-        // and without the lock a stale snapshot could commit last and leave
-        // revoked grants visible past the hash gate.
-        await tx.execute(
-            sql`SELECT pg_advisory_xact_lock(hashtext('github'), hashtext(${input.userId}))`,
-        );
-        // Refuse to apply a snapshot older than the one already committed under
-        // this lock; otherwise an older concurrent sync could restore grants a
-        // newer sync just removed.
-        const applied = await getStoredSyncState(tx, "github", input.userId);
-        if (
-            applied?.snapshotFetchedAt &&
-            applied.snapshotFetchedAt.getTime() > snapshotFetchedAt.getTime()
-        ) {
-            return;
-        }
-        const ctx = createSyncContext(tx, "github", result);
-        const userAccountId = await ctx.ensureAccount({
-            providerId: profile.id,
-            login: profile.login,
-            avatarUrl: profile.avatar_url ?? null,
-            type: "user",
-        });
-
-        for (const repo of repos) {
-            const repoId = await ctx.ensureRepo(repo);
-            // Personal repos already grant admin via mv_user_repo_permissions.
-            if (repo.owner.login === profile.login) continue;
-            if (!repo.permissions) continue;
-            const relation = githubRepoPermissionsToRelation(repo.permissions);
-            if (!relation) continue;
-            relations.push({
-                resourceType: "repo",
-                resourceId: repoId,
-                relation,
-                subjectType: "user",
-                subjectId: userAccountId,
-            });
-        }
-
-        for (const membership of memberships) {
-            const orgAccountId = await ctx.ensureAccount({
-                providerId: membership.providerId,
-                login: membership.login,
-                avatarUrl: membership.avatarUrl,
-                type: "org",
-            });
-            relations.push({
-                resourceType: "org",
-                resourceId: orgAccountId,
-                relation: membership.role,
-                subjectType: "user",
-                subjectId: userAccountId,
-            });
-        }
-
-        // A failed team fetch leaves the snapshot incomplete for team-scoped
-        // edges (org membership via team, team repo grants). Their existing
-        // rows stay untouched below; only the user-subject membership rows,
-        // which come from the fully-fetched team list, are still applied.
-        const teamsComplete = result.teamsSkipped === 0;
-
-        for (const team of teams) {
-            const orgAccountId = await ctx.ensureAccount({
-                providerId: team.org.providerId,
-                login: team.org.login,
-                avatarUrl: team.org.avatarUrl,
-                type: "org",
-            });
-            teamIds.push(team.providerId);
-            relations.push({
-                resourceType: "team",
-                resourceId: team.providerId,
-                relation: "member",
-                subjectType: "user",
-                subjectId: userAccountId,
-            });
-            if (!teamsComplete) continue;
-            relations.push({
-                resourceType: "org",
-                resourceId: orgAccountId,
-                relation: "member",
-                subjectType: "team",
-                subjectId: team.providerId,
-            });
-            for (const repo of teamRepos.get(team.providerId) ?? []) {
+            for (const repo of snapshot.repos) {
                 const repoId = await ctx.ensureRepo(repo);
+                // Personal repos already grant admin via
+                // mv_user_repo_permissions.
+                if (repo.owner.login === snapshot.user.login) continue;
                 if (!repo.permissions) continue;
                 const relation = githubRepoPermissionsToRelation(
                     repo.permissions,
@@ -285,43 +193,82 @@ export async function syncCurrentUserGitHub(
                     resourceType: "repo",
                     resourceId: repoId,
                     relation,
+                    subjectType: "user",
+                    subjectId: userAccountId,
+                });
+            }
+
+            for (const membership of snapshot.memberships) {
+                const orgAccountId = await ctx.ensureAccount({
+                    providerId: membership.providerId,
+                    login: membership.login,
+                    avatarUrl: membership.avatarUrl,
+                    type: "org",
+                });
+                relations.push({
+                    resourceType: "org",
+                    resourceId: orgAccountId,
+                    relation: membership.role,
+                    subjectType: "user",
+                    subjectId: userAccountId,
+                });
+            }
+
+            // A failed team fetch leaves the snapshot incomplete for
+            // team-scoped edges (org membership via team, team repo grants).
+            // Their existing rows stay untouched below; only the user-subject
+            // membership rows, which come from the fully-fetched team list,
+            // are still applied.
+            const teamsComplete = result.teamsSkipped === 0;
+
+            for (const team of snapshot.teams) {
+                const orgAccountId = await ctx.ensureAccount({
+                    providerId: team.org.providerId,
+                    login: team.org.login,
+                    avatarUrl: team.org.avatarUrl,
+                    type: "org",
+                });
+                teamIds.push(team.providerId);
+                relations.push({
+                    resourceType: "team",
+                    resourceId: team.providerId,
+                    relation: "member",
+                    subjectType: "user",
+                    subjectId: userAccountId,
+                });
+                if (!teamsComplete) continue;
+                relations.push({
+                    resourceType: "org",
+                    resourceId: orgAccountId,
+                    relation: "member",
                     subjectType: "team",
                     subjectId: team.providerId,
                 });
+                for (const repo of snapshot.teamRepos.get(team.providerId) ??
+                    []) {
+                    const repoId = await ctx.ensureRepo(repo);
+                    if (!repo.permissions) continue;
+                    const relation = githubRepoPermissionsToRelation(
+                        repo.permissions,
+                    );
+                    if (!relation) continue;
+                    relations.push({
+                        resourceType: "repo",
+                        resourceId: repoId,
+                        relation,
+                        subjectType: "team",
+                        subjectId: team.providerId,
+                    });
+                }
             }
-        }
 
-        // Replace this user's rows with the freshly fetched state.
-        result.relationsRemoved += await deleteRelationsForSubject(tx, "user", [
-            userAccountId,
-        ]);
-        // Team-subject rows are only replaced from a complete snapshot; see
-        // teamsComplete above.
-        if (teamsComplete && teamIds.length > 0) {
-            result.relationsRemoved += await deleteRelationsForSubject(
-                tx,
-                "team",
-                teamIds,
-            );
-        }
-        result.relationsWritten += await insertRelations(tx, relations);
-        // A skipped team means the snapshot is incomplete: leave the state
-        // unstored so the next poll re-attempts the team fetches instead of
-        // early-returning on the partial hash match.
-        if (result.teamsSkipped === 0) {
-            await storeSyncState(
-                tx,
-                "github",
-                input.userId,
-                snapshotHash,
-                snapshotFetchedAt,
-            );
-        }
-        didApply = true;
+            return {
+                relations,
+                subjectGroups: [{ subjectType: "team", subjectIds: teamIds }],
+                complete: teamsComplete,
+            };
+        },
     });
-
-    if (didApply) await refreshPermissionsView(db);
-    return result;
 }
 
 /**

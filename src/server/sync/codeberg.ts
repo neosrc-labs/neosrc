@@ -1,5 +1,3 @@
-import { sql } from "drizzle-orm";
-
 import {
     CODEBERG_API,
     getUser as getCodebergUser,
@@ -8,22 +6,14 @@ import {
 import { type CodebergRepoRaw, codebergRepoToSyncRepo } from "./mappers";
 import type {
     Db,
+    PermissionSyncInput,
+    PermissionSyncSnapshot,
     RelationRow,
     RepoPermission,
     SyncRepo,
     SyncResult,
 } from "./shared";
-import {
-    createSyncContext,
-    deleteRelationsForSubject,
-    getStoredSyncState,
-    hashSnapshot,
-    insertRelations,
-    isSyncStateFresh,
-    newResult,
-    refreshPermissionsView,
-    storeSyncState,
-} from "./shared";
+import { hashSnapshot, runPermissionSync } from "./shared";
 
 /**
  * Upserts the account row for `owner` plus every repository it owns.
@@ -70,134 +60,87 @@ export async function fetchOwnerRepos(
  * `forceRecent` bypasses only the recency gate, `forceFull` re-syncs
  * unconditionally.
  */
+type CodebergSnapshot = PermissionSyncSnapshot & {
+    repos: SyncRepo[];
+    orgs: { providerId: number; login: string; avatarUrl: string | null }[];
+};
+
 export async function syncCurrentUserCodeberg(
     db: Db,
-    input: {
-        accessToken: string;
-        userId: string;
-        forceRecent: boolean;
-        forceFull: boolean;
-    },
+    input: PermissionSyncInput,
 ): Promise<SyncResult> {
-    const result = newResult();
+    return runPermissionSync(db, "codeberg", input, {
+        async loadSnapshot(accessToken): Promise<CodebergSnapshot> {
+            const profile = await getCodebergUser(accessToken);
+            if (!profile) {
+                throw new Error("Failed to fetch Codeberg profile");
+            }
 
-    // Recency gate: skip fetching the snapshot inputs entirely when the last
-    // applied sync is fresh, unless forced.
-    const stored = await getStoredSyncState(db, "codeberg", input.userId);
-    if (
-        !input.forceRecent &&
-        !input.forceFull &&
-        stored !== null &&
-        isSyncStateFresh(stored.updatedAt)
-    ) {
-        return result;
-    }
-
-    // Snapshot ordering token: captured before the provider reads so the guard
-    // under the advisory lock can reject a snapshot older than the applied one.
-    const snapshotFetchedAt = new Date();
-
-    const profile = await getCodebergUser(input.accessToken);
-    if (!profile) {
-        throw new Error("Failed to fetch Codeberg profile");
-    }
-
-    const orgs = await getUserOrgs(input.accessToken);
-    const orgIds = new Set(orgs.map((org) => org.providerId));
-    const rawRepos = await getAuthenticatedUserRepos(input.accessToken);
-    const repos = rawRepos.map((repo) =>
-        codebergRepoToSyncRepo(
-            repo,
-            orgIds.has(repo.owner.id) ? "org" : "user",
-        ),
-    );
-
-    const snapshotHash = codebergSnapshotHash(repos, orgs);
-    if (!input.forceFull && stored?.snapshotHash === snapshotHash) {
-        return result;
-    }
-
-    const relations: RelationRow[] = [];
-    let didApply = false;
-
-    await db.transaction(async (tx) => {
-        // Serialize overlapping syncs for the same user/provider: the
-        // delete-then-insert replace below is not idempotent under overlap,
-        // and without the lock a stale snapshot could commit last and leave
-        // revoked grants visible past the hash gate.
-        await tx.execute(
-            sql`SELECT pg_advisory_xact_lock(hashtext('codeberg'), hashtext(${input.userId}))`,
-        );
-        // Refuse to apply a snapshot older than the one already committed under
-        // this lock; otherwise an older concurrent sync could restore grants a
-        // newer sync just removed.
-        const applied = await getStoredSyncState(tx, "codeberg", input.userId);
-        if (
-            applied?.snapshotFetchedAt &&
-            applied.snapshotFetchedAt.getTime() > snapshotFetchedAt.getTime()
-        ) {
-            return;
-        }
-        const ctx = createSyncContext(tx, "codeberg", result);
-        const userAccountId = await ctx.ensureAccount({
-            providerId: profile.id,
-            login: profile.login,
-            avatarUrl: profile.avatar_url ?? null,
-            type: "user",
-        });
-
-        for (const repo of repos) {
-            const repoId = await ctx.ensureRepo(repo);
-            // Personal repos already grant admin via mv_user_repo_permissions.
-            if (repo.owner.login === profile.login) continue;
-            if (!repo.permissions) continue;
-            const relation = codebergRepoPermissionsToRelation(
-                repo.permissions,
+            const orgs = await getUserOrgs(accessToken);
+            const orgIds = new Set(orgs.map((org) => org.providerId));
+            const rawRepos = await getAuthenticatedUserRepos(accessToken);
+            const repos = rawRepos.map((repo) =>
+                codebergRepoToSyncRepo(
+                    repo,
+                    orgIds.has(repo.owner.id) ? "org" : "user",
+                ),
             );
-            if (!relation) continue;
-            relations.push({
-                resourceType: "repo",
-                resourceId: repoId,
-                relation,
-                subjectType: "user",
-                subjectId: userAccountId,
-            });
-        }
 
-        // Forgejo does not expose org membership roles, so every membership is
-        // recorded as "member"; the permission view expands it regardless.
-        for (const org of orgs) {
-            const orgAccountId = await ctx.ensureAccount({
-                providerId: org.providerId,
-                login: org.login,
-                avatarUrl: org.avatarUrl,
-                type: "org",
-            });
-            relations.push({
-                resourceType: "org",
-                resourceId: orgAccountId,
-                relation: "member",
-                subjectType: "user",
-                subjectId: userAccountId,
-            });
-        }
+            return {
+                user: {
+                    providerId: profile.id,
+                    login: profile.login,
+                    avatarUrl: profile.avatar_url ?? null,
+                },
+                repos,
+                orgs,
+                snapshotHash: codebergSnapshotHash(repos, orgs),
+            };
+        },
+        async buildRelations(ctx, _result, snapshot, userAccountId) {
+            const relations: RelationRow[] = [];
 
-        result.relationsRemoved += await deleteRelationsForSubject(tx, "user", [
-            userAccountId,
-        ]);
-        result.relationsWritten += await insertRelations(tx, relations);
-        await storeSyncState(
-            tx,
-            "codeberg",
-            input.userId,
-            snapshotHash,
-            snapshotFetchedAt,
-        );
-        didApply = true;
+            for (const repo of snapshot.repos) {
+                const repoId = await ctx.ensureRepo(repo);
+                // Personal repos already grant admin via
+                // mv_user_repo_permissions.
+                if (repo.owner.login === snapshot.user.login) continue;
+                if (!repo.permissions) continue;
+                const relation = codebergRepoPermissionsToRelation(
+                    repo.permissions,
+                );
+                if (!relation) continue;
+                relations.push({
+                    resourceType: "repo",
+                    resourceId: repoId,
+                    relation,
+                    subjectType: "user",
+                    subjectId: userAccountId,
+                });
+            }
+
+            // Forgejo does not expose org membership roles, so every
+            // membership is recorded as "member"; the permission view expands
+            // it regardless.
+            for (const org of snapshot.orgs) {
+                const orgAccountId = await ctx.ensureAccount({
+                    providerId: org.providerId,
+                    login: org.login,
+                    avatarUrl: org.avatarUrl,
+                    type: "org",
+                });
+                relations.push({
+                    resourceType: "org",
+                    resourceId: orgAccountId,
+                    relation: "member",
+                    subjectType: "user",
+                    subjectId: userAccountId,
+                });
+            }
+
+            return { relations, complete: true };
+        },
     });
-
-    if (didApply) await refreshPermissionsView(db);
-    return result;
 }
 
 /**
