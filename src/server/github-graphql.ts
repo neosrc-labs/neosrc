@@ -48,6 +48,8 @@ function createGraphql(auth: string | RefreshableAuth) {
     }) as typeof octokitGraphql;
 }
 
+type GraphqlClient = ReturnType<typeof createGraphql>;
+
 /**
  * True when a graphql request failed because the target organization has
  * enabled OAuth App access restrictions and the request's OAuth app is not
@@ -556,35 +558,39 @@ export type GQLPullRequestReview = {
     authorPermission?: "admin" | "write" | "read" | "none";
 };
 
-export type GQLHeadRefForcePushedEvent = {
-    __typename: "HeadRefForcePushedEvent";
+/**
+ * Fields shared by every timeline event selected in TIMELINE_QUERY. Each
+ * concrete event intersects this base with a literal __typename and its own
+ * fields.
+ */
+type GQLEventBase = {
     id: string;
     actor: GQLActor | null;
     createdAt: string;
+};
+
+type GQLRequestedReviewer =
+    | { __typename: "User"; login: string; avatarUrl: string; url: string }
+    | { __typename: "Team"; name?: string; slug: string }
+    | null;
+
+export type GQLHeadRefForcePushedEvent = GQLEventBase & {
+    __typename: "HeadRefForcePushedEvent";
     ref?: { name: string } | null;
     beforeCommit?: { oid: string } | null;
     afterCommit?: { oid: string } | null;
 };
 
-export type GQLHeadRefDeletedEvent = {
+export type GQLHeadRefDeletedEvent = GQLEventBase & {
     __typename: "HeadRefDeletedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
 };
 
-export type GQLHeadRefRestoredEvent = {
+export type GQLHeadRefRestoredEvent = GQLEventBase & {
     __typename: "HeadRefRestoredEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
 };
 
-export type GQLCrossReferencedEvent = {
+export type GQLCrossReferencedEvent = GQLEventBase & {
     __typename: "CrossReferencedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     source: {
         __typename: "Issue" | "PullRequest";
         number: number;
@@ -596,151 +602,87 @@ export type GQLCrossReferencedEvent = {
     } | null;
 };
 
-export type GQLAssignedEvent = {
+export type GQLAssignedEvent = GQLEventBase & {
     __typename: "AssignedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     assignee: GQLActor | null;
 };
 
-export type GQLUnassignedEvent = {
+export type GQLUnassignedEvent = GQLEventBase & {
     __typename: "UnassignedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     assignee: GQLActor | null;
 };
 
-export type GQLClosedEvent = {
-    __typename: "ClosedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
-};
+export type GQLClosedEvent = GQLEventBase & { __typename: "ClosedEvent" };
 
-export type GQLReopenedEvent = {
-    __typename: "ReopenedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
-};
+export type GQLReopenedEvent = GQLEventBase & { __typename: "ReopenedEvent" };
 
-export type GQLMergedEvent = {
+export type GQLMergedEvent = GQLEventBase & {
     __typename: "MergedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     mergeRefName: string;
     commit: { abbreviatedOid: string; commitUrl: string } | null;
 };
 
-export type GQLLabeledEvent = {
+export type GQLLabeledEvent = GQLEventBase & {
     __typename: "LabeledEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     label: GQLLabel | null;
 };
 
-export type GQLUnlabeledEvent = {
+export type GQLUnlabeledEvent = GQLEventBase & {
     __typename: "UnlabeledEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     label: GQLLabel | null;
 };
 
-export type GQLRenamedTitleEvent = {
+export type GQLRenamedTitleEvent = GQLEventBase & {
     __typename: "RenamedTitleEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     previousTitle: string;
     currentTitle: string;
 };
 
-export type GQLBaseRefChangedEvent = {
+export type GQLBaseRefChangedEvent = GQLEventBase & {
     __typename: "BaseRefChangedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     currentRefName: string;
     previousRefName: string;
 };
 
-export type GQLLockedEvent = {
+export type GQLLockedEvent = GQLEventBase & {
     __typename: "LockedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     lockReason: string | null;
 };
 
-export type GQLUnlockedEvent = {
+export type GQLUnlockedEvent = GQLEventBase & {
     __typename: "UnlockedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
 };
 
-export type GQLMilestonedEvent = {
+export type GQLMilestonedEvent = GQLEventBase & {
     __typename: "MilestonedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     milestoneTitle: string | null;
 };
 
-export type GQLDemilestonedEvent = {
+export type GQLDemilestonedEvent = GQLEventBase & {
     __typename: "DemilestonedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     milestoneTitle: string | null;
 };
 
-export type GQLReviewRequestedEvent = {
+export type GQLReviewRequestedEvent = GQLEventBase & {
     __typename: "ReviewRequestedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
-    requestedReviewer:
-        | { __typename: "User"; login: string; avatarUrl: string; url: string }
-        | { __typename: "Team"; name?: string; slug: string }
-        | null;
+    requestedReviewer: GQLRequestedReviewer;
 };
 
-export type GQLReviewRequestRemovedEvent = {
+export type GQLReviewRequestRemovedEvent = GQLEventBase & {
     __typename: "ReviewRequestRemovedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
-    requestedReviewer:
-        | { __typename: "User"; login: string; avatarUrl: string; url: string }
-        | { __typename: "Team"; name?: string; slug: string }
-        | null;
+    requestedReviewer: GQLRequestedReviewer;
 };
 
-export type GQLConvertToDraftEvent = {
+export type GQLConvertToDraftEvent = GQLEventBase & {
     __typename: "ConvertToDraftEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
 };
 
-export type GQLReadyForReviewEvent = {
+export type GQLReadyForReviewEvent = GQLEventBase & {
     __typename: "ReadyForReviewEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
 };
 
-export type GQLReferencedEvent = {
+export type GQLReferencedEvent = GQLEventBase & {
     __typename: "ReferencedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     commit: {
         oid: string;
         committedDate?: string;
@@ -750,33 +692,21 @@ export type GQLReferencedEvent = {
     commitRepository?: { name: string; owner: { login: string } } | null;
 };
 
-export type GQLAddedToProjectV2Event = {
+export type GQLAddedToProjectV2Event = GQLEventBase & {
     __typename: "AddedToProjectV2Event";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
 };
 
-export type GQLProjectV2ItemStatusChangedEvent = {
+export type GQLProjectV2ItemStatusChangedEvent = GQLEventBase & {
     __typename: "ProjectV2ItemStatusChangedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
 };
 
-export type GQLCommentDeletedEvent = {
+export type GQLCommentDeletedEvent = GQLEventBase & {
     __typename: "CommentDeletedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     deletedCommentAuthor: GQLActor | null;
 };
 
-export type GQLDeployedEvent = {
+export type GQLDeployedEvent = GQLEventBase & {
     __typename: "DeployedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     deployment: {
         environment: string | null;
         task: string | null;
@@ -855,56 +785,35 @@ export type GQLPullRequestCommit = {
     commit: GQLCommitFields | null;
 };
 
-export type GQLReviewDismissedEvent = {
+export type GQLReviewDismissedEvent = GQLEventBase & {
     __typename: "ReviewDismissedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     dismissalMessage: string | null;
 };
 
-export type GQLMentionedEvent = {
+export type GQLMentionedEvent = GQLEventBase & {
     __typename: "MentionedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
 };
 
-export type GQLSubscribedEvent = {
+export type GQLSubscribedEvent = GQLEventBase & {
     __typename: "SubscribedEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
 };
 
-export type GQLAutoMergeEnabledEvent = {
+export type GQLAutoMergeEnabledEvent = GQLEventBase & {
     __typename: "AutoMergeEnabledEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
 };
 
-export type GQLAutoMergeDisabledEvent = {
+export type GQLAutoMergeDisabledEvent = GQLEventBase & {
     __typename: "AutoMergeDisabledEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     reason?: string | null;
 };
 
-export type GQLAddedToMergeQueueEvent = {
+export type GQLAddedToMergeQueueEvent = GQLEventBase & {
     __typename: "AddedToMergeQueueEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     enqueuer: GQLActor | null;
 };
 
-export type GQLRemovedFromMergeQueueEvent = {
+export type GQLRemovedFromMergeQueueEvent = GQLEventBase & {
     __typename: "RemovedFromMergeQueueEvent";
-    id: string;
-    actor: GQLActor | null;
-    createdAt: string;
     enqueuer: GQLActor | null;
     reason: string | null;
 };
@@ -973,6 +882,12 @@ const CONTENT_MAP: Record<string, string> = {
     ROCKET: "rocket",
     EYES: "eyes",
 };
+
+// Inverse of CONTENT_MAP: REST-style keys back to GraphQL ReactionContent
+// enum values. Derived so the two mappings cannot drift apart.
+const GRAPHQL_CONTENT_MAP: Record<string, string> = Object.fromEntries(
+    Object.entries(CONTENT_MAP).map(([graphql, rest]) => [rest, graphql]),
+);
 
 export async function getPullRequestTimelineGraphQL(
     accessToken: string,
@@ -1295,6 +1210,36 @@ export interface GqlCommitChecks {
 }
 
 /**
+ * statusCheckRollup context nodes keyed by their GraphQL type. Splitting
+ * CheckRun from StatusContext keeps each type's required fields non-optional,
+ * so mapping code never needs empty-string fallbacks for missing fields.
+ */
+type CheckRunNode = {
+    __typename: "CheckRun";
+    name: string;
+    status: string;
+    conclusion: string | null;
+    title: string | null;
+    summary: string | null;
+    detailsUrl: string | null;
+    url: string | null;
+    startedAt: string | null;
+    completedAt: string | null;
+    checkSuite: { app: { name: string; logoUrl: string | null } | null } | null;
+};
+
+type StatusContextNode = {
+    __typename: "StatusContext";
+    context: string;
+    description: string | null;
+    state: string;
+    targetUrl: string | null;
+    createdAt: string;
+    updatedAt: string;
+    creator: { login: string; avatarUrl: string; url: string } | null;
+};
+
+/**
  * Returns a commit's check runs and legacy commit statuses from its
  * statusCheckRollup in one call. The rollup mixes CheckRun and StatusContext
  * nodes, mirroring what REST checks.listForRef + listCommitStatusesForRef
@@ -1313,35 +1258,7 @@ export async function getCommitChecksGraphQL(
             object: {
                 statusCheckRollup: {
                     contexts: {
-                        nodes: ({
-                            __typename: string;
-                            name?: string;
-                            status?: string;
-                            conclusion?: string | null;
-                            title?: string | null;
-                            summary?: string | null;
-                            detailsUrl?: string | null;
-                            url?: string | null;
-                            startedAt?: string | null;
-                            completedAt?: string | null;
-                            checkSuite?: {
-                                app: {
-                                    name: string;
-                                    logoUrl: string | null;
-                                } | null;
-                            } | null;
-                            context?: string;
-                            description?: string | null;
-                            state?: string;
-                            targetUrl?: string | null;
-                            createdAt?: string;
-                            updatedAt?: string;
-                            creator?: {
-                                login: string;
-                                avatarUrl: string;
-                                url: string;
-                            } | null;
-                        } | null)[];
+                        nodes: (CheckRunNode | StatusContextNode | null)[];
                     } | null;
                 } | null;
             } | null;
@@ -1405,15 +1322,15 @@ export async function getCommitChecksGraphQL(
         if (!node) continue;
         if (node.__typename === "CheckRun") {
             checkRuns.push({
-                name: node.name ?? "",
-                status: (node.status ?? "").toLowerCase(),
+                name: node.name,
+                status: node.status.toLowerCase(),
                 conclusion: node.conclusion?.toLowerCase() ?? null,
-                title: node.title ?? null,
-                summary: node.summary ?? null,
-                detailsUrl: node.detailsUrl ?? null,
-                url: node.url ?? null,
-                startedAt: node.startedAt ?? null,
-                completedAt: node.completedAt ?? null,
+                title: node.title,
+                summary: node.summary,
+                detailsUrl: node.detailsUrl,
+                url: node.url,
+                startedAt: node.startedAt,
+                completedAt: node.completedAt,
                 app: node.checkSuite?.app
                     ? {
                           name: node.checkSuite.app.name,
@@ -1421,15 +1338,15 @@ export async function getCommitChecksGraphQL(
                       }
                     : null,
             });
-        } else if (node.__typename === "StatusContext") {
+        } else {
             statuses.push({
-                context: node.context ?? "",
-                description: node.description ?? null,
-                state: (node.state ?? "").toLowerCase(),
-                targetUrl: node.targetUrl ?? null,
-                createdAt: node.createdAt ?? "",
-                updatedAt: node.updatedAt ?? "",
-                creator: node.creator ?? null,
+                context: node.context,
+                description: node.description,
+                state: node.state.toLowerCase(),
+                targetUrl: node.targetUrl,
+                createdAt: node.createdAt,
+                updatedAt: node.updatedAt,
+                creator: node.creator,
             });
         }
     }
@@ -1437,27 +1354,33 @@ export async function getCommitChecksGraphQL(
     return { checkRuns, statuses };
 }
 
-const GRAPHQL_CONTENT_MAP: Record<string, string> = {
-    "+1": "THUMBS_UP",
-    "-1": "THUMBS_DOWN",
-    laugh: "LAUGH",
-    hooray: "HOORAY",
-    confused: "CONFUSED",
-    heart: "HEART",
-    rocket: "ROCKET",
-    eyes: "EYES",
-};
+async function mutateReaction<T>(
+    operation: "addReaction" | "removeReaction",
+    accessToken: string,
+    subjectId: string,
+    content: string,
+    payloadSelection: string,
+) {
+    const graphql = createGraphql(accessToken);
+
+    return graphql<T>(
+        `
+		mutation($subjectId: ID!, $content: ReactionContent!) {
+			${operation}(input: {subjectId: $subjectId, content: $content}) {
+				${payloadSelection}
+			}
+		}
+	`,
+        { subjectId, content: GRAPHQL_CONTENT_MAP[content] ?? content },
+    );
+}
 
 export async function addReaction(
     accessToken: string,
     subjectId: string,
     content: string,
 ) {
-    const graphql = createGraphql(accessToken);
-
-    const gqlContent = GRAPHQL_CONTENT_MAP[content] ?? content;
-
-    const result = await graphql<{
+    const result = await mutateReaction<{
         addReaction: {
             reaction: {
                 id: string;
@@ -1466,18 +1389,15 @@ export async function addReaction(
             } | null;
         };
     }>(
-        `
-		mutation($subjectId: ID!, $content: ReactionContent!) {
-			addReaction(input: {subjectId: $subjectId, content: $content}) {
-				reaction {
-					id
-					content
-					user { login }
-				}
-			}
-		}
-	`,
-        { subjectId, content: gqlContent },
+        "addReaction",
+        accessToken,
+        subjectId,
+        content,
+        `reaction {
+				id
+				content
+				user { login }
+			}`,
     );
 
     return result.addReaction.reaction;
@@ -1507,15 +1427,53 @@ export interface GqlPrSearchItem {
     stackEntry: { position: number } | null;
 }
 
-export interface GqlPrSearchResult {
+type SearchPage<TName extends string, TItem> = {
     search: {
         issueCount: number;
         pageInfo: { endCursor: string | null; hasNextPage: boolean };
         nodes: Array<
-            | ({ __typename: "PullRequest" } & GqlPrSearchItem)
-            | { __typename: string }
-            | null
+            ({ __typename: TName } & TItem) | { __typename: string } | null
         >;
+    };
+};
+
+type CountResults = Record<string, { issueCount: number } | undefined>;
+
+/**
+ * Runs a search page query and its count query together, then filters the
+ * mixed-type search nodes down to the wanted typename. Shared by the pull
+ * request and issue search entry points, whose result shapes match apart
+ * from their item and state-count fields.
+ */
+async function searchGqlItems<TName extends string, TItem>(
+    graphql: GraphqlClient,
+    searchQuery: string,
+    countQuery: string,
+    pageVars: { searchQuery: string; first: number; after: string | null },
+    countVars: Record<string, string>,
+    typename: TName,
+): Promise<{
+    items: ({ __typename: TName } & TItem)[];
+    totalCount: number;
+    hasNextPage: boolean;
+    endCursor: string | null;
+    counts: CountResults;
+}> {
+    const [result, countResult] = await Promise.all([
+        graphql<SearchPage<TName, TItem>>(searchQuery, pageVars),
+        graphql<CountResults>(countQuery, countVars),
+    ]);
+
+    const items = result.search.nodes.filter(
+        (n): n is { __typename: TName } & TItem => n?.__typename === typename,
+    );
+
+    return {
+        items,
+        totalCount: result.search.issueCount,
+        hasNextPage: result.search.pageInfo.hasNextPage,
+        endCursor: result.search.pageInfo.endCursor,
+        counts: countResult ?? {},
     };
 }
 
@@ -1567,12 +1525,6 @@ query CountPRs($openQuery: String!, $closedQuery: String!, $mergedQuery: String!
 }
 `;
 
-type CountPrQueryResult = {
-    open: { issueCount: number };
-    closed: { issueCount: number };
-    merged: { issueCount: number };
-};
-
 export async function searchPullRequestsWithStatus(
     accessToken: string,
     query: string,
@@ -1582,38 +1534,29 @@ export async function searchPullRequestsWithStatus(
 ) {
     const graphql = createGraphql(accessToken);
 
-    const promises: [
-        Promise<GqlPrSearchResult>,
-        ...Promise<CountPrQueryResult>[],
-    ] = [
-        graphql<GqlPrSearchResult>(PR_SEARCH_QUERY, {
-            searchQuery: query,
-            first,
-            after,
-        }),
-        graphql<CountPrQueryResult>(COUNT_PR_QUERY, {
-            openQuery: countQueries.open,
-            closedQuery: countQueries.closed,
-            mergedQuery: countQueries.merged,
-        }),
-    ];
-
-    const [result, countResult] = await Promise.all(promises);
-
-    const items = result.search.nodes.filter(
-        (n): n is { __typename: "PullRequest" } & GqlPrSearchItem =>
-            n?.__typename === "PullRequest",
-    );
+    const { items, totalCount, hasNextPage, endCursor, counts } =
+        await searchGqlItems<"PullRequest", GqlPrSearchItem>(
+            graphql,
+            PR_SEARCH_QUERY,
+            COUNT_PR_QUERY,
+            { searchQuery: query, first, after },
+            {
+                openQuery: countQueries.open,
+                closedQuery: countQueries.closed,
+                mergedQuery: countQueries.merged,
+            },
+            "PullRequest",
+        );
 
     return {
         items,
-        totalCount: result.search.issueCount,
-        hasNextPage: result.search.pageInfo.hasNextPage,
-        endCursor: result.search.pageInfo.endCursor,
+        totalCount,
+        hasNextPage,
+        endCursor,
         stateCounts: {
-            open: countResult?.open?.issueCount ?? 0,
-            closed: countResult?.closed?.issueCount ?? 0,
-            merged: countResult?.merged?.issueCount ?? 0,
+            open: counts.open?.issueCount ?? 0,
+            closed: counts.closed?.issueCount ?? 0,
+            merged: counts.merged?.issueCount ?? 0,
         },
     };
 }
@@ -1676,11 +1619,6 @@ query CountIssues($openQuery: String!, $closedQuery: String!) {
 }
 `;
 
-type CountIssueQueryResult = {
-    open: { issueCount: number };
-    closed: { issueCount: number };
-};
-
 export async function searchIssuesWithMetadata(
     accessToken: string,
     query: string,
@@ -1690,48 +1628,27 @@ export async function searchIssuesWithMetadata(
 ) {
     const graphql = createGraphql(accessToken);
 
-    type IssueSearchResult = {
-        search: {
-            issueCount: number;
-            pageInfo: { endCursor: string | null; hasNextPage: boolean };
-            nodes: Array<
-                | ({ __typename: "Issue" } & GqlIssueSearchItem)
-                | { __typename: string }
-                | null
-            >;
-        };
-    };
-
-    const promises: [
-        Promise<IssueSearchResult>,
-        ...Promise<CountIssueQueryResult>[],
-    ] = [
-        graphql<IssueSearchResult>(ISSUE_SEARCH_QUERY, {
-            searchQuery: query,
-            first,
-            after,
-        }),
-        graphql<CountIssueQueryResult>(COUNT_ISSUE_QUERY, {
-            openQuery: countQueries.open,
-            closedQuery: countQueries.closed,
-        }),
-    ];
-
-    const [result, countResult] = await Promise.all(promises);
-
-    const items = result.search.nodes.filter(
-        (n): n is { __typename: "Issue" } & GqlIssueSearchItem =>
-            n?.__typename === "Issue",
-    );
+    const { items, totalCount, hasNextPage, endCursor, counts } =
+        await searchGqlItems<"Issue", GqlIssueSearchItem>(
+            graphql,
+            ISSUE_SEARCH_QUERY,
+            COUNT_ISSUE_QUERY,
+            { searchQuery: query, first, after },
+            {
+                openQuery: countQueries.open,
+                closedQuery: countQueries.closed,
+            },
+            "Issue",
+        );
 
     return {
         items,
-        totalCount: result.search.issueCount,
-        hasNextPage: result.search.pageInfo.hasNextPage,
-        endCursor: result.search.pageInfo.endCursor,
+        totalCount,
+        hasNextPage,
+        endCursor,
         stateCounts: {
-            open: countResult?.open?.issueCount ?? 0,
-            closed: countResult?.closed?.issueCount ?? 0,
+            open: counts.open?.issueCount ?? 0,
+            closed: counts.closed?.issueCount ?? 0,
         },
     };
 }
@@ -1741,19 +1658,12 @@ export async function removeReaction(
     subjectId: string,
     content: string,
 ) {
-    const graphql = createGraphql(accessToken);
-
-    const gqlContent = GRAPHQL_CONTENT_MAP[content] ?? content;
-
-    await graphql(
-        `
-		mutation($subjectId: ID!, $content: ReactionContent!) {
-			removeReaction(input: {subjectId: $subjectId, content: $content}) {
-				subject { id }
-			}
-		}
-	`,
-        { subjectId, content: gqlContent },
+    await mutateReaction(
+        "removeReaction",
+        accessToken,
+        subjectId,
+        content,
+        `subject { id }`,
     );
 }
 
