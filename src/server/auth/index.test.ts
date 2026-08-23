@@ -337,6 +337,25 @@ describe("getGitHubToken", () => {
         expect(state.updates).toContainEqual({ githubUsername: null });
     });
 
+    it("unlinks the account when GitHub rejects with bad_refresh_token", async () => {
+        const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
+        mockFetch({
+            ok: false,
+            status: 400,
+            body: {
+                error: "bad_refresh_token",
+                error_description:
+                    "The refresh token passed is incorrect or expired.",
+            },
+        });
+
+        await expect(getGitHubToken(fakeDb, "user-1")).rejects.toThrow(
+            "GitHub account not connected (session expired)",
+        );
+        expect(state.deletedAccountIds).toEqual(["acct-1"]);
+        expect(state.updates).toContainEqual({ githubUsername: null });
+    });
+
     it("keeps the account when a rejected refresh was actually a rotation race", async () => {
         const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
         const fetchMock = vi.fn(async (_input: string | URL | Request) => {

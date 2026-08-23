@@ -25,12 +25,13 @@ const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
 class RefreshTokenRejectedError extends Error {}
 
 /** Provider error codes meaning the refresh token itself is dead. */
-const REJECTED_REFRESH_ERROR_CODES = new Set([
-    "bad_verification_code", // GitHub: expired/revoked/malformed refresh token
-    "invalid_grant",
-    "invalid_token",
-    "refresh_token_expired",
-]);
+const REJECTED_REFRESH_ERROR_CODES: Record<string, true> = {
+    bad_verification_code: true, // GitHub: expired/revoked/malformed refresh token
+    bad_refresh_token: true, // GitHub Apps: refresh token expired or already used
+    invalid_grant: true,
+    invalid_token: true,
+    refresh_token_expired: true,
+};
 
 /**
  * A provider access token that can replace itself when the provider rejects
@@ -75,7 +76,7 @@ async function refreshGitHubToken(refreshToken: string) {
             typeof body?.error_description === "string"
                 ? body.error_description
                 : "";
-        if (REJECTED_REFRESH_ERROR_CODES.has(code)) {
+        if (REJECTED_REFRESH_ERROR_CODES[code]) {
             throw new RefreshTokenRejectedError(
                 description || "Refresh token expired",
             );
@@ -591,7 +592,7 @@ async function refreshCodebergToken(refreshToken: string) {
             typeof body?.error_description === "string"
                 ? body.error_description
                 : "";
-        if (REJECTED_REFRESH_ERROR_CODES.has(code)) {
+        if (REJECTED_REFRESH_ERROR_CODES[code]) {
             throw new RefreshTokenRejectedError(
                 description || "Refresh token expired",
             );
