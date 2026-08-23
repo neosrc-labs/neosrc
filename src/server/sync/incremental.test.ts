@@ -569,6 +569,133 @@ describe("syncCurrentUserGitHub incremental gate", () => {
         expect(state.row).toBeNull();
     });
 
+    it("leaves team relations untouched when a team fetch was skipped", async () => {
+        octokit.teams.listForAuthenticatedUser.mockResolvedValue({
+            data: [
+                {
+                    id: 9,
+                    slug: "team",
+                    name: "team",
+                    organization: {
+                        id: 5,
+                        login: "org",
+                        avatar_url: null,
+                    },
+                },
+            ],
+        });
+        const graphqlCall = vi
+            .fn()
+            .mockResolvedValueOnce({
+                viewer: {
+                    organization: {
+                        team: {
+                            repositories: {
+                                pageInfo: {
+                                    hasNextPage: false,
+                                    endCursor: null,
+                                },
+                                edges: [
+                                    {
+                                        permission: "ADMIN",
+                                        node: {
+                                            databaseId: 77,
+                                            name: "team-repo",
+                                            description: null,
+                                            isPrivate: false,
+                                            isArchived: false,
+                                            stargazerCount: 0,
+                                            forkCount: 0,
+                                            watchers: { totalCount: 0 },
+                                            defaultBranchRef: null,
+                                            owner: {
+                                                __typename: "Organization",
+                                                login: "org",
+                                                avatarUrl: null,
+                                                databaseId: 5,
+                                            },
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                },
+            })
+            .mockRejectedValueOnce(new Error("rate limited"));
+        graphqlDefaultsMock.mockReturnValue(graphqlCall as never);
+        const { db, executor, state } = makeDb();
+
+        await syncCurrentUserGitHub(db as never, {
+            accessToken: "tok",
+            userId: "u1",
+            forceRecent: false,
+            forceFull: false,
+        });
+        expect(state.row).not.toBeNull();
+        const storedHash = state.row!.snapshotHash;
+        const deletesAfterFullSync = executor.delete.mock.calls.length;
+        const relationBatches = (): string[][] =>
+            executor.insert.mock.calls
+                .map((args, i) => ({
+                    table: args[0],
+                    chain: executor.insert.mock.results[i]!.value,
+                }))
+                .filter(({ table }) => table === schema.relation)
+                .map(
+                    ({ chain }) =>
+                        (
+                            chain.values.mock.calls[0]?.[0] as
+                                | Array<{ subjectType: string }>
+                                | undefined
+                        )?.map((row) => row.subjectType) ?? [],
+                );
+        // Sanity: the full sync wrote the team's grant edges.
+        expect(relationBatches()[0]).toContain("team");
+
+        // A changed snapshot forces a second sync whose per-team fetch fails.
+        octokit.repos.listForAuthenticatedUser.mockResolvedValue({
+            data: [
+                {
+                    id: 7,
+                    name: "granted",
+                    private: false,
+                    owner: {
+                        id: 2,
+                        login: "other",
+                        avatar_url: null,
+                        type: "User",
+                    },
+                    permissions: {
+                        admin: false,
+                        maintain: false,
+                        push: false,
+                        triage: false,
+                        pull: true,
+                    },
+                },
+            ],
+        });
+
+        const result = await syncCurrentUserGitHub(db as never, {
+            accessToken: "tok",
+            userId: "u1",
+            forceRecent: false,
+            forceFull: false,
+        });
+
+        expect(result.teamsSkipped).toBe(1);
+        // Only the user-subject replace ran; the team-subject rows written by
+        // the first sync were not deleted.
+        expect(executor.delete).toHaveBeenCalledTimes(deletesAfterFullSync + 1);
+        // And no partial team rows were re-inserted on top of them.
+        expect(relationBatches()[1]).not.toContain("team");
+        // Sync state stays unstored so the next poll retries the team.
+        expect(state.row?.snapshotHash).toBe(storedHash);
+        // The user-subject portion still applies, so the view refreshes.
+        expect(db.execute).toHaveBeenCalledTimes(2);
+    });
+
     it("propagates a profile fetch failure without writing", async () => {
         getAuthenticatedUserMock.mockRejectedValue(new Error("api down"));
         const { db } = makeDb();

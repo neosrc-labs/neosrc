@@ -149,6 +149,9 @@ export async function syncCurrentUserGitHub(
 
     // Team repo grants need one GraphQL call per team; a failing team only
     // skips its shared edges (direct grants above still cover the user).
+    // Skipped teams must not trigger the team-scoped replace below: deleting
+    // rows we cannot re-fetch would wipe that team's grants for every member
+    // until a later fully-successful sync.
     // The fan-out is capped: each query costs ~100 rate-limit points, and
     // firing every team at once could exhaust the GraphQL point budget for
     // users in many teams.
@@ -242,6 +245,12 @@ export async function syncCurrentUserGitHub(
             });
         }
 
+        // A failed team fetch leaves the snapshot incomplete for team-scoped
+        // edges (org membership via team, team repo grants). Their existing
+        // rows stay untouched below; only the user-subject membership rows,
+        // which come from the fully-fetched team list, are still applied.
+        const teamsComplete = result.teamsSkipped === 0;
+
         for (const team of teams) {
             const orgAccountId = await ctx.ensureAccount({
                 providerId: team.org.providerId,
@@ -257,6 +266,7 @@ export async function syncCurrentUserGitHub(
                 subjectType: "user",
                 subjectId: userAccountId,
             });
+            if (!teamsComplete) continue;
             relations.push({
                 resourceType: "org",
                 resourceId: orgAccountId,
@@ -285,7 +295,9 @@ export async function syncCurrentUserGitHub(
         result.relationsRemoved += await deleteRelationsForSubject(tx, "user", [
             userAccountId,
         ]);
-        if (teamIds.length > 0) {
+        // Team-subject rows are only replaced from a complete snapshot; see
+        // teamsComplete above.
+        if (teamsComplete && teamIds.length > 0) {
             result.relationsRemoved += await deleteRelationsForSubject(
                 tx,
                 "team",
