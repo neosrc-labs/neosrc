@@ -57,3 +57,45 @@ describe("markdown section break margin", () => {
         expect((hr as HTMLElement).style.marginBottom).toBe("24px");
     });
 });
+
+describe("markdown heading ids", () => {
+    it("suffixes duplicate headings within one document", () => {
+        const container = render(
+            <MarkdownRenderer
+                content={["## Setup", "## Setup", ""].join("\n")}
+                linkableHeadings
+            />,
+        ).container;
+
+        const ids = [...container.querySelectorAll("h2")].map((h) => h.id);
+        expect(ids).toEqual(["setup", "setup-1"]);
+    });
+
+    it("resets slug counters when content changes without a remount", () => {
+        const { container, rerender } = render(
+            <MarkdownRenderer
+                content={["## Setup", "## Setup", ""].join("\n")}
+                linkableHeadings
+            />,
+        );
+        expect([...container.querySelectorAll("h2")].map((h) => h.id)).toEqual([
+            "setup",
+            "setup-1",
+        ]);
+
+        rerender(<MarkdownRenderer content="## Setup" linkableHeadings />);
+        expect([...container.querySelectorAll("h2")].map((h) => h.id)).toEqual([
+            "setup",
+        ]);
+
+        // A later pass must not inherit counters from earlier documents.
+        rerender(
+            <MarkdownRenderer
+                content={["## Notes", "## Setup", ""].join("\n")}
+                linkableHeadings
+            />,
+        );
+        const ids = [...container.querySelectorAll("h2")].map((h) => h.id);
+        expect(ids).toEqual(["notes", "setup"]);
+    });
+});
