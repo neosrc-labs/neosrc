@@ -120,4 +120,45 @@ describe("checkbox index mapping", () => {
         fireEvent.click(getInputs()[1]!);
         expect(events[2]?.result).toBe("- [x] one\n- [x] two\n- [x] three");
     });
+    it("keeps HTML comments byte-for-byte when toggling a task item", () => {
+        const content = [
+            "<!-- reviewer note",
+            "spanning multiple lines -->",
+            "- [ ] task one",
+            "- [ ] task two",
+        ].join("\n");
+        const { toggled, getInputs } = renderCheckboxTasks(content);
+        expect(getInputs().length).toBe(2);
+        fireEvent.click(getInputs()[0]!);
+        expect(toggled[0]).toBe(
+            [
+                "<!-- reviewer note",
+                "spanning multiple lines -->",
+                "- [x] task one",
+                "- [ ] task two",
+            ].join("\n"),
+        );
+    });
+
+    it("maps shifted line numbers when a multi-line comment precedes the list", () => {
+        const content = [
+            "<!-- hidden",
+            "comment -->",
+            "- [ ] task one",
+            "- [ ] task two",
+        ].join("\n");
+        const { toggled, getInputs } = renderCheckboxTasks(content);
+        expect(getInputs().length).toBe(2);
+        // The preview strips the comment, so react-markdown reports lines
+        // 1 and 2; the toggle must land on the original lines 3 and 4.
+        fireEvent.click(getInputs()[1]!);
+        expect(toggled[0]).toBe(
+            [
+                "<!-- hidden",
+                "comment -->",
+                "- [ ] task one",
+                "- [x] task two",
+            ].join("\n"),
+        );
+    });
 });
