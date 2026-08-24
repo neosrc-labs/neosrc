@@ -8,8 +8,7 @@ import { LabelDropdown } from "~/app/[owner]/[repo]/_components/search/label-dro
 import { MilestoneDropdown } from "~/app/[owner]/[repo]/_components/search/milestone-dropdown";
 import {
     hasQualifier,
-    removeQualifier,
-    replaceQualifier,
+    toggleQualifier,
 } from "~/app/[owner]/[repo]/_components/search/search-utils";
 import { SortDropdown } from "~/app/[owner]/[repo]/_components/search/sort-dropdown";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
@@ -64,13 +63,11 @@ export function PullRequestToolbar({
                         repo={repo}
                         currentQuery={searchQuery}
                         onToggle={(key: string, value: string) => {
-                            const newQuery = hasQualifier(
+                            const newQuery = toggleQualifier(
                                 searchQuery,
                                 key,
                                 value,
-                            )
-                                ? removeQualifier(searchQuery, key, value)
-                                : replaceQualifier(searchQuery, key, value);
+                            );
                             setSearchInput(newQuery);
                             onNavigate({
                                 q: newQuery || null,
@@ -117,13 +114,11 @@ export function PullRequestToolbar({
                             repo={repo}
                             currentQuery={searchQuery}
                             onToggle={(key: string, value: string) => {
-                                const newQuery = hasQualifier(
+                                const newQuery = toggleQualifier(
                                     searchQuery,
                                     key,
                                     value,
-                                )
-                                    ? removeQualifier(searchQuery, key, value)
-                                    : replaceQualifier(searchQuery, key, value);
+                                );
                                 setSearchInput(newQuery);
                                 onNavigate({
                                     q: newQuery || null,
@@ -137,13 +132,11 @@ export function PullRequestToolbar({
                         <StatusFilterDropdown
                             currentQuery={searchQuery}
                             onToggle={(key: string, value: string) => {
-                                const newQuery = hasQualifier(
+                                const newQuery = toggleQualifier(
                                     searchQuery,
                                     key,
                                     value,
-                                )
-                                    ? removeQualifier(searchQuery, key, value)
-                                    : replaceQualifier(searchQuery, key, value);
+                                );
                                 setSearchInput(newQuery);
                                 onNavigate({
                                     q: newQuery || null,
@@ -157,13 +150,11 @@ export function PullRequestToolbar({
                         <ReviewFilterDropdown
                             currentQuery={searchQuery}
                             onToggle={(key: string, value: string) => {
-                                const newQuery = hasQualifier(
+                                const newQuery = toggleQualifier(
                                     searchQuery,
                                     key,
                                     value,
-                                )
-                                    ? removeQualifier(searchQuery, key, value)
-                                    : replaceQualifier(searchQuery, key, value);
+                                );
                                 setSearchInput(newQuery);
                                 onNavigate({
                                     q: newQuery || null,

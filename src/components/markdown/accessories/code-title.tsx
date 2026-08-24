@@ -1,12 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { domain, type Provider } from "~/utils/provider-url";
 
 const tokenRegex = /(`+)(.+?)\1|#(\d+)/g;
 
 interface CodeTitleProps {
     children: string;
-    provider?: string;
+    provider?: Provider;
     owner?: string;
     repo?: string;
 }
@@ -52,7 +53,7 @@ export function CodeTitle({ children, provider, owner, repo }: CodeTitleProps) {
             );
         } else if (match[3] !== undefined) {
             if (showIssueLinks) {
-                const host = provider === "cb" ? "codeberg.org" : "github.com";
+                const host = domain(provider);
                 elements.push(
                     <span
                         key={elements.length}

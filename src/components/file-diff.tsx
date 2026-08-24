@@ -101,49 +101,29 @@ export default function FileDiff({
         return file.patch.split("\n").length * 20;
     }, [file.patch]);
 
-    const svgContentUrls = useMemo(() => {
-        if (!isSvg) return null;
-        return buildRawContentUrls({
-            filename: file.filename,
-            previousFilename: file.previous_filename,
-            status: file.status,
+    const rawContentUrls = useMemo(
+        () =>
+            buildRawContentUrls({
+                filename: file.filename,
+                previousFilename: file.previous_filename,
+                status: file.status,
+                owner,
+                repo,
+                baseSha,
+                headSha,
+            }),
+        [
+            file.status,
+            file.filename,
+            file.previous_filename,
             owner,
             repo,
             baseSha,
             headSha,
-        });
-    }, [
-        isSvg,
-        file.status,
-        file.filename,
-        file.previous_filename,
-        owner,
-        repo,
-        baseSha,
-        headSha,
-    ]);
-
-    const imageUrls = useMemo(() => {
-        if (!isImage) return null;
-        return buildRawContentUrls({
-            filename: file.filename,
-            previousFilename: file.previous_filename,
-            status: file.status,
-            owner,
-            repo,
-            baseSha,
-            headSha,
-        });
-    }, [
-        isImage,
-        file.status,
-        file.filename,
-        file.previous_filename,
-        owner,
-        repo,
-        baseSha,
-        headSha,
-    ]);
+        ],
+    );
+    const svgContentUrls = isSvg ? rawContentUrls : null;
+    const imageUrls = isImage ? rawContentUrls : null;
 
     const allFileLevelComments = useMemo(() => {
         return comments.filter(

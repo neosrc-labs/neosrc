@@ -15,17 +15,13 @@ import {
 } from "~/server/github";
 import type { HeaderRepoData } from "./header-client";
 import { HeaderClient } from "./header-client";
+import { parseRepoPath } from "./path-params";
 
 export async function Header() {
     const h = await headers();
     const pathname = h.get("x-pathname") || "/";
 
-    const provider = pathname.startsWith("/cb/") ? "cb" : "gh";
-    const cleanPath = pathname.replace(/^\/(?:gh|cb)(?=\/)/, "");
-    const repoMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)/);
-    const owner = repoMatch?.[1] ?? null;
-    const repo = repoMatch?.[2] ?? null;
-
+    const { provider, owner, repo } = parseRepoPath(pathname);
     const currentUserPromise = getCurrentUser(provider).catch(() => null);
     const repoDataPromise = getRepoData(provider, owner, repo).catch(
         () => null,

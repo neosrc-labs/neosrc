@@ -15,9 +15,11 @@ import { useEffect, useMemo, useRef } from "react";
 import { Async } from "~/components/async";
 import { CodebergIcon, GitHubIcon } from "~/components/icons";
 import { api } from "~/trpc/react";
+import { domain, type Provider, repoUrl } from "~/utils/provider-url";
 import { useSidebar } from "../sidebar-context";
 import { ThemeToggle } from "../theme-toggle";
-import { domain, type Provider, RepoNavbar, useTabs } from "./navbar";
+import { RepoNavbar, useTabs } from "./navbar";
+import { parseRepoPath } from "./path-params";
 import type { PathType } from "./types";
 
 export interface HeaderRepoData {
@@ -58,7 +60,7 @@ export function HeaderClient({
     );
 
     const pathname = usePathname();
-    const { provider, owner, repo } = usePathParams();
+    const { provider, owner, repo } = parseRepoPath(pathname);
 
     const { data: clientRepoData } = api.repos.getByOwnerAndRepo.useQuery(
         { provider, owner: owner as string, repo: repo as string },
@@ -150,7 +152,7 @@ function HeaderContent({
     initialRepo: string | null;
 }) {
     const { provider, owner, repo, pullRequestNumber, pathType } =
-        usePathParams();
+        parseRepoPath(usePathname());
 
     const cacheKey = owner && repo ? `${provider}/${owner}/${repo}` : null;
 
@@ -298,7 +300,7 @@ function RepoName({
     repo,
     ownerAvatarUrl,
 }: {
-    provider: string;
+    provider: Provider;
     owner: string;
     repo: string;
     ownerAvatarUrl?: string | null;
@@ -307,7 +309,7 @@ function RepoName({
         <div className="flex items-center gap-1.5">
             <a
                 className="flex shrink-0 items-center"
-                href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}`}
+                href={`https://${domain(provider)}/${owner}`}
                 target="_blank"
                 rel="noopener noreferrer"
             >
@@ -325,7 +327,7 @@ function RepoName({
             </a>
             <a
                 className="font-medium text-sm text-text-secondary hover:text-text-primary dark:hover:text-zinc-100"
-                href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}`}
+                href={`https://${domain(provider)}/${owner}`}
                 target="_blank"
                 rel="noopener noreferrer"
             >
@@ -334,7 +336,7 @@ function RepoName({
             <span className="text-sm text-text-muted">/</span>
             <a
                 className="font-medium text-sm text-text-secondary hover:text-text-primary dark:hover:text-zinc-100"
-                href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}`}
+                href={repoUrl(provider, owner, repo)}
                 target="_blank"
                 rel="noopener noreferrer"
             >
@@ -379,46 +381,6 @@ function ProviderIcon({
             </span>
         </a>
     );
-}
-
-function usePathParams() {
-    const pathname = usePathname();
-    const provider: Provider = pathname.startsWith("/cb/") ? "cb" : "gh";
-    // Strip optional /gh or /cb prefix for owner/repo extraction
-    const cleanPath = pathname.replace(/^\/(?:gh|cb)(?=\/)/, "");
-
-    const repoMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)/);
-    const owner = repoMatch?.[1];
-    const repo = repoMatch?.[2];
-
-    let pathType: PathType | null = null;
-
-    let pullRequestNumber = null;
-    if (repoMatch) {
-        const prMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
-        const pullsMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pulls/);
-        const issuesMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/issues/);
-        if (pullsMatch) {
-            pathType = "PULLS_LIST";
-        } else if (issuesMatch) {
-            pathType = "ISSUES_LIST";
-        } else if (prMatch) {
-            pathType = "PULL_REQUEST";
-            if (prMatch[3]) {
-                pullRequestNumber = parseInt(prMatch[3], 10);
-            }
-        } else {
-            pathType = "REPO";
-        }
-    }
-
-    return {
-        provider,
-        owner,
-        repo,
-        pullRequestNumber,
-        pathType,
-    };
 }
 
 function UserIcon({

@@ -13,10 +13,9 @@ import Link from "next/link";
 import type { ElementType } from "react";
 import { useMemo } from "react";
 import { cn, formatCount } from "~/lib/utils";
+import { domain, type Provider } from "~/utils/provider-url";
 import type { HeaderRepoData } from "./header-client";
 import type { PathType } from "./types";
-
-export type Provider = "gh" | "cb";
 
 export interface Tab {
     label: string;
@@ -160,8 +159,4 @@ export function useTabs({
 
         return allTabs.filter((t) => t.show);
     }, [repoData, provider, owner, repo, pathType]);
-}
-
-export function domain(provider: Provider) {
-    return provider === "cb" ? "codeberg.org" : "github.com";
 }

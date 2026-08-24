@@ -9,8 +9,7 @@ import {
     PopoverTrigger,
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
-
-type Provider = "gh" | "cb";
+import { domain, type Provider } from "~/utils/provider-url";
 
 interface ClonePopoverProps {
     owner: string;
@@ -34,13 +33,13 @@ function getCloneUrl(
     tab: CloneTab,
     provider: Provider,
 ): string {
-    const host = provider === "cb" ? "codeberg.org" : "github.com";
+    const host = domain(provider);
     switch (tab) {
         case "ssh":
             return `git@${host}:${owner}/${repo}.git`;
         case "cli":
             return provider === "cb"
-                ? `git clone https://codeberg.org/${owner}/${repo}.git`
+                ? `git clone https://${host}/${owner}/${repo}.git`
                 : `gh repo clone ${owner}/${repo}`;
         default:
             return `https://${host}/${owner}/${repo}.git`;

@@ -18,6 +18,7 @@ import {
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
+import { domain } from "~/utils/provider-url";
 import type { RepoData } from "./repo-code-page";
 
 type Provider = "gh" | "cb";
@@ -485,7 +486,7 @@ function ForkButton({
 }) {
     return (
         <a
-            href={`https://${provider === "cb" ? "codeberg.org" : "github.com"}/${owner}/${repo}/fork`}
+            href={`https://${domain(provider)}/${owner}/${repo}/fork`}
             className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-text-secondary text-xs transition hover:bg-surface-secondary"
         >
             <GitForkIcon className="h-3.5 w-3.5" />

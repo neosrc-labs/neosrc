@@ -1,9 +1,4 @@
-import {
-    addQualifier,
-    hasQualifier,
-    removeQualifier,
-    replaceQualifier,
-} from "~/app/[owner]/[repo]/_components/search/search-utils";
+import { toggleQualifier } from "~/app/[owner]/[repo]/_components/search/search-utils";
 
 interface RowFilterList {
     searchQuery: string;
@@ -20,25 +15,13 @@ export function rowQualifierFilters(list: RowFilterList) {
 
     return {
         onLabelFilter: (name: string) => {
-            applyQuery(
-                hasQualifier(list.searchQuery, "label", name)
-                    ? removeQualifier(list.searchQuery, "label", name)
-                    : addQualifier(list.searchQuery, "label", name),
-            );
+            applyQuery(toggleQualifier(list.searchQuery, "label", name, "add"));
         },
         onAuthorFilter: (login: string) => {
-            applyQuery(
-                hasQualifier(list.searchQuery, "author", login)
-                    ? removeQualifier(list.searchQuery, "author", login)
-                    : replaceQualifier(list.searchQuery, "author", login),
-            );
+            applyQuery(toggleQualifier(list.searchQuery, "author", login));
         },
         onAssigneesFilter: (login: string) => {
-            applyQuery(
-                hasQualifier(list.searchQuery, "assignee", login)
-                    ? removeQualifier(list.searchQuery, "assignee", login)
-                    : replaceQualifier(list.searchQuery, "assignee", login),
-            );
+            applyQuery(toggleQualifier(list.searchQuery, "assignee", login));
         },
     };
 }
