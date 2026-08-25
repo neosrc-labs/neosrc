@@ -8,6 +8,8 @@ import {
 } from "~/server/cache";
 import {
     createGraphql,
+    disablePullRequestAutoMergeGraphQL,
+    enablePullRequestAutoMergeGraphQL,
     getPullRequestStackGraphQL,
     type StackData,
     type StackEntry,
@@ -594,7 +596,50 @@ export const getMergeAsyncResult = async (
         "GET /repos/{owner}/{repo}/pulls/{pull_number}/merge-async/{uuid}",
         { owner, repo, pull_number: pullNumber, uuid },
     );
+
     return response.data as MergeAsyncResult;
+};
+
+const MERGE_METHOD_TO_GQL: Record<MergeMethod, "MERGE" | "SQUASH" | "REBASE"> =
+    {
+        merge: "MERGE",
+        squash: "SQUASH",
+        rebase: "REBASE",
+    };
+
+export const enableAutoMerge = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    mergeMethod: MergeMethod,
+) => {
+    const octokit = createOctokit(accessToken);
+    const { data: pr } = await octokit.pulls.get({
+        owner,
+        repo,
+        pull_number: pullNumber,
+    });
+    return enablePullRequestAutoMergeGraphQL(
+        accessToken,
+        pr.node_id,
+        MERGE_METHOD_TO_GQL[mergeMethod],
+    );
+};
+
+export const disableAutoMerge = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+) => {
+    const octokit = createOctokit(accessToken);
+    const { data: pr } = await octokit.pulls.get({
+        owner,
+        repo,
+        pull_number: pullNumber,
+    });
+    return disablePullRequestAutoMergeGraphQL(accessToken, pr.node_id);
 };
 
 export const unstackPullRequests = async (

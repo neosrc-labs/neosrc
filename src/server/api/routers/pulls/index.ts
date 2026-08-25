@@ -35,6 +35,8 @@ import {
     createPullRequestStack,
     deleteBranchRef,
     deleteIssueComment,
+    disableAutoMerge,
+    enableAutoMerge,
     getCachedPullRequest,
     getMergeAsyncResult,
     getMergeRequirements,
@@ -556,6 +558,42 @@ export const pullsRouter = createTRPCRouter({
                     ? result.stackMembers
                     : [input.number],
             );
+        },
+    }),
+    enableAutoMerge: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            mergeMethod: z.enum(["merge", "squash", "rebase"]),
+        }),
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
+            await enableAutoMerge(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+                input.mergeMethod,
+            );
+            return { success: true as const };
+        },
+    }),
+    disableAutoMerge: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+        }),
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
+            await disableAutoMerge(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+            );
+            return { success: true as const };
         },
     }),
     revert: githubMutation({

@@ -24,6 +24,7 @@ import { api } from "~/trpc/react";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 import type { PullRequestPermissionContext } from "../../permissions-utils";
 import { ConflictedFiles } from "../conflicted-files";
+import { AutoMergeToggle } from "./auto-merge-toggle";
 import { resolveMergeOptions } from "./merge-options";
 import { MergeStatusBar } from "./merge-status-bar";
 import { ReadyForReviewButton } from "./ready-for-review-button";
@@ -279,6 +280,17 @@ function Buttons({
     )
         ? mergeMode
         : (availableMergeOptions[0]?.value ?? "merge");
+    const hasAutoMerge = (() => {
+        if (!("auto_merge" in pullRequest)) return false;
+        const val = (
+            pullRequest as PullsGetResponseData & { auto_merge: unknown }
+        ).auto_merge;
+        return (
+            !!val &&
+            typeof val === "object" &&
+            "merge_method" in (val as Record<string, unknown>)
+        );
+    })();
 
     const reviewStateMap = new Map<string, string>();
     const authorLogin = pullRequest.user?.login;
@@ -356,43 +368,61 @@ function Buttons({
                     isAuthor={isAuthor}
                 />
             )}
+            {!effectiveMerged &&
+                pullRequest.state === "open" &&
+                !isDraft &&
+                !hasAutoMerge && (
+                    <MergeStatusBar
+                        pullRequest={pullRequest}
+                        isDraft={isDraft}
+                        canMerge={canMerge}
+                        canWrite={canWrite}
+                        mergeMode={mergeMode}
+                        onMergeModeChange={setMergeMode}
+                        onMerge={() => {
+                            mergeMutation.mutate({
+                                owner,
+                                repo,
+                                number,
+                                mergeMethod: effectiveMergeMode,
+                            });
+                        }}
+                        isMerging={mergeMutation.isPending}
+                        availableMergeOptions={availableMergeOptions}
+                        isMergeBlocked={isMergeBlocked}
+                        isMergeStateUnknown={isMergeStateUnknown}
+                        noMergeMethodsAvailable={noMergeMethodsAvailable}
+                        mergeError={mergeMutation.isError}
+                        // React Query keeps the last `data` across failed
+                        // background refetches; only treat requirements as
+                        // unavailable when there is genuinely nothing to show.
+                        isMergeRequirementsUnavailable={
+                            mergeReqsError && !mergeReqs
+                        }
+                        approvalCount={approvalCount}
+                        changesRequestedCount={changesRequestedCount}
+                        pendingReviewerCount={pendingCount}
+                        requiredApprovalCount={requiredApprovalCount}
+                        requiredChecks={requiredChecks}
+                        checkRuns={checkRuns}
+                        isMergeStatusLoading={
+                            isMergeStatusLoading || stackLoading
+                        }
+                        isStackMerge={isStackMerge}
+                        isBlockedByStack={stackMergeBlocked}
+                    />
+                )}
             {!effectiveMerged && pullRequest.state === "open" && !isDraft && (
-                <MergeStatusBar
+                <AutoMergeToggle
+                    owner={owner}
+                    repo={repo}
+                    number={number}
                     pullRequest={pullRequest}
-                    isDraft={isDraft}
-                    canMerge={canMerge}
-                    canWrite={canWrite}
+                    repoData={repoData}
+                    availableMergeOptions={availableMergeOptions}
                     mergeMode={mergeMode}
                     onMergeModeChange={setMergeMode}
-                    onMerge={() => {
-                        mergeMutation.mutate({
-                            owner,
-                            repo,
-                            number,
-                            mergeMethod: effectiveMergeMode,
-                        });
-                    }}
-                    isMerging={mergeMutation.isPending}
-                    availableMergeOptions={availableMergeOptions}
-                    isMergeBlocked={isMergeBlocked}
-                    isMergeStateUnknown={isMergeStateUnknown}
-                    noMergeMethodsAvailable={noMergeMethodsAvailable}
-                    mergeError={mergeMutation.isError}
-                    // React Query keeps the last `data` across failed
-                    // background refetches; only treat requirements as
-                    // unavailable when there is genuinely nothing to show.
-                    isMergeRequirementsUnavailable={
-                        mergeReqsError && !mergeReqs
-                    }
-                    approvalCount={approvalCount}
-                    changesRequestedCount={changesRequestedCount}
-                    pendingReviewerCount={pendingCount}
-                    requiredApprovalCount={requiredApprovalCount}
-                    requiredChecks={requiredChecks}
-                    checkRuns={checkRuns}
-                    isMergeStatusLoading={isMergeStatusLoading || stackLoading}
-                    isStackMerge={isStackMerge}
-                    isBlockedByStack={stackMergeBlocked}
+                    canMerge={canMerge}
                 />
             )}
             {effectiveMerged && (

@@ -16,6 +16,8 @@ vi.mock("@octokit/graphql", async (importOriginal) => {
 
 import {
     addReaction,
+    disablePullRequestAutoMergeGraphQL,
+    enablePullRequestAutoMergeGraphQL,
     getPullRequestReactionsGraphQL,
     isOrgRestrictionError,
     resolveCommitAuthor,
@@ -248,5 +250,82 @@ describe("resolveCommitAuthor", () => {
         });
 
         expect(resolved.user).toBeNull();
+    });
+});
+
+describe("enablePullRequestAutoMergeGraphQL", () => {
+    beforeEach(() => {
+        mockGraphql.mockReset();
+    });
+
+    it("calls enablePullRequestAutoMerge with correct variables", async () => {
+        const mockResult = {
+            enablePullRequestAutoMerge: {
+                pullRequest: {
+                    id: "PR_id",
+                    autoMergeRequest: {
+                        enabledAt: "2026-01-01T00:00:00Z",
+                        enabledBy: {
+                            login: "alice",
+                            avatarUrl: "https://example.com/a.png",
+                            url: "https://github.com/alice",
+                        },
+                        mergeMethod: "SQUASH" as const,
+                    },
+                },
+            },
+        };
+        mockGraphql.mockResolvedValue(mockResult);
+
+        const result = await enablePullRequestAutoMergeGraphQL(
+            "token",
+            "PR_id",
+            "SQUASH",
+        );
+
+        expect(mockGraphql).toHaveBeenCalledWith(
+            expect.stringContaining("enablePullRequestAutoMerge"),
+            { pullRequestId: "PR_id", mergeMethod: "SQUASH" },
+        );
+        expect(result).toEqual(mockResult.enablePullRequestAutoMerge);
+    });
+
+    it("passes MERGE method correctly", async () => {
+        mockGraphql.mockResolvedValue({
+            enablePullRequestAutoMerge: {
+                pullRequest: { id: "PR_id2", autoMergeRequest: null },
+            },
+        });
+        await enablePullRequestAutoMergeGraphQL("token", "PR_id2", "MERGE");
+        expect(mockGraphql).toHaveBeenCalledWith(expect.any(String), {
+            pullRequestId: "PR_id2",
+            mergeMethod: "MERGE",
+        });
+    });
+});
+
+describe("disablePullRequestAutoMergeGraphQL", () => {
+    beforeEach(() => {
+        mockGraphql.mockReset();
+    });
+
+    it("calls disablePullRequestAutoMerge with correct variables", async () => {
+        const mockResult = {
+            disablePullRequestAutoMerge: {
+                pullRequest: { id: "PR_id", autoMergeRequest: null },
+            },
+        };
+        mockGraphql.mockResolvedValue(mockResult);
+
+        const result = await disablePullRequestAutoMergeGraphQL(
+            "token",
+            "PR_id",
+        );
+
+        expect(mockGraphql).toHaveBeenCalledWith(
+            expect.stringContaining("disablePullRequestAutoMerge"),
+            { pullRequestId: "PR_id" },
+        );
+        expect(result).toEqual(mockResult.disablePullRequestAutoMerge);
     });
 });

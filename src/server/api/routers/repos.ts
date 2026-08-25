@@ -101,6 +101,7 @@ export type RepositoryInfo = {
     allowSquashMerge: boolean | null;
     allowRebaseMerge: boolean | null;
     allowMergeCommit: boolean | null;
+    allowAutoMerge: boolean | null;
     description: string | null;
     defaultBranch: string | null;
     homepage: string | null;
@@ -166,6 +167,7 @@ export const reposRouter = createTRPCRouter({
                 allowSquashMerge: data.allow_squash_merge,
                 allowRebaseMerge: data.allow_rebase,
                 allowMergeCommit: data.allow_merge_commits,
+                allowAutoMerge: null,
                 description: data.description ?? null,
                 defaultBranch: data.default_branch ?? null,
                 homepage: data.website ?? null,
@@ -226,6 +228,7 @@ export const reposRouter = createTRPCRouter({
                 allowSquashMerge: data.allow_squash_merge ?? null,
                 allowRebaseMerge: data.allow_rebase_merge ?? null,
                 allowMergeCommit: data.allow_merge_commit ?? null,
+                allowAutoMerge: data.allow_auto_merge ?? null,
                 description: data.description ?? null,
                 defaultBranch: data.default_branch,
                 homepage: data.homepage ?? null,
