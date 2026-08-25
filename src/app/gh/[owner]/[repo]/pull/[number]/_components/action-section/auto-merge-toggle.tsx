@@ -1,11 +1,12 @@
 "use client";
 
-import { GitMerge } from "lucide-react";
+import { ChevronDown, GitMerge } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { RepositoryInfo } from "~/server/api/routers/repos";
 import type { MergeMethod, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
+import { MergeModeDropdown } from "./merge-status-bar";
 
 interface AutoMergeToggleProps {
     owner: string;
@@ -13,11 +14,12 @@ interface AutoMergeToggleProps {
     number: number;
     pullRequest: PullsGetResponseData;
     repoData?: RepositoryInfo;
-    availableMergeOptions: {
+    availableMergeOptions: Array<{
         value: MergeMethod;
         label: string;
+        description: string;
         allowed: boolean;
-    }[];
+    }>;
     mergeMode: MergeMethod;
     onMergeModeChange: (mode: MergeMethod) => void;
     canMerge: boolean;
@@ -102,7 +104,7 @@ export function AutoMergeToggle({
                 </span>
             )}
             <button
-                className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-l-md bg-[#2da44e] px-1.5 py-2 font-medium text-white text-xs transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
+                className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-l-md border-border border-y border-l bg-surface-elevated px-3 py-2 font-medium text-text-secondary text-xs ring-1 ring-ring transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-zinc-700"
                 disabled={enableMutation.isPending}
                 onClick={() =>
                     enableMutation.mutate({
@@ -115,38 +117,25 @@ export function AutoMergeToggle({
                 title={`Enable auto-merge (${effectiveMergeMode})`}
                 type="button"
             >
-                <GitMerge size={14} />
+                <GitMerge size={14} className="text-text-label" />
                 {enableMutation.isPending ? "Enabling..." : "Enable auto-merge"}
             </button>
-            <div className="relative flex">
-                <select
-                    value={effectiveMergeMode}
-                    onChange={(e) =>
-                        onMergeModeChange(e.target.value as MergeMethod)
-                    }
+            <MergeModeDropdown
+                effectiveMergeMode={effectiveMergeMode}
+                availableMergeOptions={availableMergeOptions}
+                onMergeModeChange={onMergeModeChange}
+            >
+                <button
+                    suppressHydrationWarning
+                    className="flex cursor-pointer items-center rounded-r-md border border-border bg-surface-elevated px-2.5 text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-zinc-700"
                     disabled={enableMutation.isPending}
-                    className="flex cursor-pointer appearance-none items-center rounded-r-md border-[#1a7f37] border-l bg-[#2da44e] px-2 pr-6 text-white text-xs transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
                     title="Auto-merge method"
                     aria-label="Auto-merge method"
                 >
-                    {availableMergeOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                        </option>
-                    ))}
-                </select>
-                <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-white">
-                    <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 16 16"
-                        fill="currentColor"
-                        aria-hidden="true"
-                    >
-                        <path d="M4.427 5.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 5H4.604a.25.25 0 00-.177.427z" />
-                    </svg>
-                </span>
-            </div>
+                    <ChevronDown className="h-4 w-4" />
+                </button>
+            </MergeModeDropdown>
         </div>
     );
 }
