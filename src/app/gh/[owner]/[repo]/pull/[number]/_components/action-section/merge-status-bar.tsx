@@ -335,14 +335,18 @@ function CheckStatusHoverCard({
     );
 }
 
-function MergeModeDropdown({
+export function MergeModeDropdown({
     effectiveMergeMode,
     availableMergeOptions,
     onMergeModeChange,
     children,
 }: {
     effectiveMergeMode: MergeMethod;
-    availableMergeOptions: MergeOptionDef[];
+    availableMergeOptions: Array<{
+        value: MergeMethod;
+        label: string;
+        description: string;
+    }>;
     onMergeModeChange: (mode: MergeMethod) => void;
     children: ReactNode;
 }) {

@@ -306,6 +306,7 @@ function Buttons({
         canRenderAutoMergeToggle && !hasAutoMerge && isNotYetMergeable;
     const showMergeStatusBar =
         !isAutoMergeEnabledVisible && !showAutoMergeEnable;
+
     const reviewStateMap = new Map<string, string>();
     const authorLogin = pullRequest.user?.login;
     if (reviews) {
