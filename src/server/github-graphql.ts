@@ -122,6 +122,8 @@ query PullRequestTimeline(
 				ASSIGNED_EVENT,
 				AUTO_MERGE_DISABLED_EVENT,
 				AUTO_MERGE_ENABLED_EVENT,
+				AUTO_SQUASH_ENABLED_EVENT,
+				AUTO_REBASE_ENABLED_EVENT,
 				ADDED_TO_MERGE_QUEUE_EVENT,
 				REMOVED_FROM_MERGE_QUEUE_EVENT,
 				UNASSIGNED_EVENT,
@@ -371,7 +373,7 @@ query PullRequestTimeline(
 						}
 						ref { name }
 					}
-... on PullRequestCommit {
+					... on PullRequestCommit {
 						id
 						commit { ...CommitFields }
 					}
@@ -382,6 +384,16 @@ query PullRequestTimeline(
 						dismissalMessage
 					}
 					... on AutoMergeEnabledEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+					}
+					... on AutoSquashEnabledEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+					}
+					... on AutoRebaseEnabledEvent {
 						id
 						actor { ...SimpleUser }
 						createdAt
@@ -802,6 +814,14 @@ export type GQLAutoMergeEnabledEvent = GQLEventBase & {
     __typename: "AutoMergeEnabledEvent";
 };
 
+export type GQLAutoSquashEnabledEvent = GQLEventBase & {
+    __typename: "AutoSquashEnabledEvent";
+};
+
+export type GQLAutoRebaseEnabledEvent = GQLEventBase & {
+    __typename: "AutoRebaseEnabledEvent";
+};
+
 export type GQLAutoMergeDisabledEvent = GQLEventBase & {
     __typename: "AutoMergeDisabledEvent";
     reason?: string | null;
@@ -868,6 +888,8 @@ export type GQLTimelineEvent =
     | GQLMentionedEvent
     | GQLSubscribedEvent
     | GQLAutoMergeEnabledEvent
+    | GQLAutoSquashEnabledEvent
+    | GQLAutoRebaseEnabledEvent
     | GQLAutoMergeDisabledEvent
     | GQLAddedToMergeQueueEvent
     | GQLRemovedFromMergeQueueEvent;

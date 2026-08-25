@@ -15,7 +15,6 @@ import {
     GitPullRequestArrow,
     GitPullRequestClosed,
     Link,
-    ListOrdered,
     Lock,
     LockOpen,
     Pencil,
@@ -262,12 +261,10 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
         AddedToProjectV2Event: <ClipboardList size={ICON_SIZE} />,
         ProjectV2ItemStatusChangedEvent: <RefreshCw size={ICON_SIZE} />,
         DeployedEvent: <Rocket className="text-blue-500" size={ICON_SIZE} />,
-        AutoMergeEnabledEvent: (
-            <ListOrdered className="text-blue-500" size={ICON_SIZE} />
-        ),
-        AutoMergeDisabledEvent: (
-            <X className="text-state-closed" size={ICON_SIZE} />
-        ),
+        AutoMergeEnabledEvent: <GitPullRequestArrow size={ICON_SIZE} />,
+        AutoSquashEnabledEvent: <GitPullRequestArrow size={ICON_SIZE} />,
+        AutoRebaseEnabledEvent: <GitPullRequestArrow size={ICON_SIZE} />,
+        AutoMergeDisabledEvent: <GitPullRequestArrow size={ICON_SIZE} />,
         AddedToMergeQueueEvent: (
             <Clock className="text-state-queued" size={ICON_SIZE} />
         ),
@@ -605,6 +602,8 @@ function EventContent({
             return <DeployedEventContent event={event} />;
 
         case "AutoMergeEnabledEvent":
+        case "AutoSquashEnabledEvent":
+        case "AutoRebaseEnabledEvent":
         case "AutoMergeDisabledEvent":
             return <AutoMergeEventContent event={event} />;
 
