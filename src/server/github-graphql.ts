@@ -2172,3 +2172,70 @@ export async function getArchivedAtGraphQL(
     }>(ARCHIVED_AT_QUERY, { owner, repo });
     return result.repository?.archivedAt ?? null;
 }
+
+export type AutoMergeRequest = {
+    enabledAt: string;
+    enabledBy: { login: string; avatarUrl: string; url: string } | null;
+    mergeMethod: "MERGE" | "SQUASH" | "REBASE";
+};
+
+export async function enablePullRequestAutoMergeGraphQL(
+    accessToken: string,
+    pullRequestId: string,
+    mergeMethod: "MERGE" | "SQUASH" | "REBASE",
+): Promise<{
+    pullRequest: { id: string; autoMergeRequest: AutoMergeRequest | null };
+}> {
+    const graphql = createGraphql(accessToken);
+    const mutation = `
+mutation EnableAutoMerge($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) {
+  enablePullRequestAutoMerge(input: { pullRequestId: $pullRequestId, mergeMethod: $mergeMethod }) {
+    pullRequest {
+      id
+      autoMergeRequest {
+        enabledAt
+        enabledBy { login avatarUrl url }
+        mergeMethod
+      }
+    }
+  }
+}
+`;
+    const result = await graphql<{
+        enablePullRequestAutoMerge: {
+            pullRequest: {
+                id: string;
+                autoMergeRequest: AutoMergeRequest | null;
+            };
+        };
+    }>(mutation, { pullRequestId, mergeMethod });
+    return result.enablePullRequestAutoMerge;
+}
+
+export async function disablePullRequestAutoMergeGraphQL(
+    accessToken: string,
+    pullRequestId: string,
+): Promise<{
+    pullRequest: { id: string; autoMergeRequest: AutoMergeRequest | null };
+}> {
+    const graphql = createGraphql(accessToken);
+    const mutation = `
+mutation DisableAutoMerge($pullRequestId: ID!) {
+  disablePullRequestAutoMerge(input: { pullRequestId: $pullRequestId }) {
+    pullRequest {
+      id
+      autoMergeRequest { enabledAt enabledBy { login avatarUrl url } mergeMethod }
+    }
+  }
+}
+`;
+    const result = await graphql<{
+        disablePullRequestAutoMerge: {
+            pullRequest: {
+                id: string;
+                autoMergeRequest: AutoMergeRequest | null;
+            };
+        };
+    }>(mutation, { pullRequestId });
+    return result.disablePullRequestAutoMerge;
+}
