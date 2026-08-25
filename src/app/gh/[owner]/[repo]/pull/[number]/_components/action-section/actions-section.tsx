@@ -25,6 +25,7 @@ import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 import type { PullRequestPermissionContext } from "../../permissions-utils";
 import { ConflictedFiles } from "../conflicted-files";
 import { AutoMergeToggle } from "./auto-merge-toggle";
+import { DisableAutoMergeButton } from "./disable-auto-merge-button";
 import { resolveMergeOptions } from "./merge-options";
 import { MergeStatusBar } from "./merge-status-bar";
 import { ReadyForReviewButton } from "./ready-for-review-button";
@@ -291,7 +292,20 @@ function Buttons({
             "merge_method" in (val as Record<string, unknown>)
         );
     })();
-
+    const canRenderAutoMergeToggle =
+        repoData?.allowAutoMerge !== false &&
+        canMerge &&
+        !pullRequest.draft &&
+        pullRequest.state === "open" &&
+        !pullRequest.merged &&
+        availableMergeOptions.length > 0;
+    const isAutoMergeEnabledVisible = hasAutoMerge && canRenderAutoMergeToggle;
+    const isNotYetMergeable =
+        isMergeBlocked || isMergeStateUnknown || (mergeReqsError && !mergeReqs);
+    const showAutoMergeEnable =
+        canRenderAutoMergeToggle && !hasAutoMerge && isNotYetMergeable;
+    const showMergeStatusBar =
+        !isAutoMergeEnabledVisible && !showAutoMergeEnable;
     const reviewStateMap = new Map<string, string>();
     const authorLogin = pullRequest.user?.login;
     if (reviews) {
@@ -368,10 +382,10 @@ function Buttons({
                     isAuthor={isAuthor}
                 />
             )}
-            {!effectiveMerged &&
+            {showMergeStatusBar &&
+                !effectiveMerged &&
                 pullRequest.state === "open" &&
-                !isDraft &&
-                !hasAutoMerge && (
+                !isDraft && (
                     <MergeStatusBar
                         pullRequest={pullRequest}
                         isDraft={isDraft}
@@ -412,19 +426,32 @@ function Buttons({
                         isBlockedByStack={stackMergeBlocked}
                     />
                 )}
-            {!effectiveMerged && pullRequest.state === "open" && !isDraft && (
-                <AutoMergeToggle
-                    owner={owner}
-                    repo={repo}
-                    number={number}
-                    pullRequest={pullRequest}
-                    repoData={repoData}
-                    availableMergeOptions={availableMergeOptions}
-                    mergeMode={mergeMode}
-                    onMergeModeChange={setMergeMode}
-                    canMerge={canMerge}
-                />
-            )}
+            {isAutoMergeEnabledVisible &&
+                !effectiveMerged &&
+                pullRequest.state === "open" &&
+                !isDraft && (
+                    <DisableAutoMergeButton
+                        owner={owner}
+                        repo={repo}
+                        number={number}
+                    />
+                )}
+            {showAutoMergeEnable &&
+                !effectiveMerged &&
+                pullRequest.state === "open" &&
+                !isDraft && (
+                    <AutoMergeToggle
+                        owner={owner}
+                        repo={repo}
+                        number={number}
+                        pullRequest={pullRequest}
+                        repoData={repoData}
+                        availableMergeOptions={availableMergeOptions}
+                        mergeMode={mergeMode}
+                        onMergeModeChange={setMergeMode}
+                        canMerge={canMerge}
+                    />
+                )}
             {effectiveMerged && (
                 <div className="flex items-center gap-2">
                     {canWrite && canInteract ? (

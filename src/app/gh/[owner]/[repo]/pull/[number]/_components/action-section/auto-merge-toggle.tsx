@@ -1,6 +1,6 @@
 "use client";
 
-import { GitMerge, X } from "lucide-react";
+import { GitMerge } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { RepositoryInfo } from "~/server/api/routers/repos";
@@ -23,17 +23,6 @@ interface AutoMergeToggleProps {
     canMerge: boolean;
 }
 
-function MergeMethodLabel(method: string) {
-    switch (method) {
-        case "squash":
-            return "squash";
-        case "rebase":
-            return "rebase";
-        default:
-            return "merge";
-    }
-}
-
 export function AutoMergeToggle({
     owner,
     repo,
@@ -47,6 +36,7 @@ export function AutoMergeToggle({
 }: AutoMergeToggleProps) {
     const router = useRouter();
     const [error, setError] = useState<string | null>(null);
+
     const enableMutation = api.pulls.enableAutoMerge.useMutation({
         onSuccess: () => {
             setError(null);
@@ -55,51 +45,25 @@ export function AutoMergeToggle({
         onError: (err) => setError(err.message),
     });
 
-    const disableMutation = api.pulls.disableAutoMerge.useMutation({
-        onSuccess: () => {
-            setError(null);
-            router.refresh();
-        },
-        onError: (err) => setError(err.message),
-    });
-
     type AutoMergeData = {
-        enabled_by: { login: string; avatar_url?: string } | null;
+        enabled_by: { login: string } | null;
         merge_method: string;
-        commit_title?: string;
-        commit_message?: string;
     } | null;
 
     const getAutoMerge = (pr: PullsGetResponseData): AutoMergeData => {
-        if ("auto_merge" in pr) {
-            const val = (pr as PullsGetResponseData & { auto_merge: unknown })
-                .auto_merge;
-            if (val && typeof val === "object" && "merge_method" in val) {
-                const candidate = val as Record<string, unknown>;
-                const mergeMethod = candidate["merge_method"];
-                const enabledBy = candidate["enabled_by"];
-                if (typeof mergeMethod === "string") {
-                    return {
-                        enabled_by:
-                            enabledBy &&
-                            typeof enabledBy === "object" &&
-                            "login" in enabledBy
-                                ? {
-                                      login: String(
-                                          (
-                                              enabledBy as Record<
-                                                  string,
-                                                  unknown
-                                              >
-                                          )["login"] ?? "",
-                                      ),
-                                  }
-                                : null,
-                        merge_method: mergeMethod,
-                    };
-                }
+        if (!("auto_merge" in pr)) return null;
+        const val = (pr as PullsGetResponseData & { auto_merge: unknown })
+            .auto_merge;
+        if (
+            val &&
+            typeof val === "object" &&
+            "merge_method" in (val as Record<string, unknown>)
+        ) {
+            const candidate = val as Record<string, unknown>;
+            const mergeMethod = candidate["merge_method"];
+            if (typeof mergeMethod === "string") {
+                return { enabled_by: null, merge_method: mergeMethod };
             }
-            return null;
         }
         return null;
     };
@@ -115,50 +79,14 @@ export function AutoMergeToggle({
     if (pullRequest.draft || pullRequest.state !== "open") return null;
     if (pullRequest.merged) return null;
     if (availableMergeOptions.length === 0) return null;
+    // When auto-merge is already enabled, the banner above the description handles the UI
+    if (rawAutoMerge) return null;
 
     const effectiveMergeMode = availableMergeOptions.some(
         (o) => o.value === mergeMode,
     )
         ? mergeMode
         : (availableMergeOptions[0]?.value ?? "merge");
-
-    // Enabled state
-    if (rawAutoMerge) {
-        const actor = rawAutoMerge.enabled_by?.login ?? "unknown";
-        const method = MergeMethodLabel(rawAutoMerge.merge_method);
-        return (
-            <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 rounded-md border border-green-300 bg-green-50 px-3 py-1.5 text-green-800 text-xs dark:border-green-700 dark:bg-green-950 dark:text-green-200">
-                    <GitMerge
-                        size={14}
-                        className="text-green-600 dark:text-green-400"
-                    />
-                    <span>
-                        Auto-merge enabled by{" "}
-                        <span className="font-semibold">@{actor}</span> (
-                        {method})
-                    </span>
-                    <button
-                        type="button"
-                        disabled={disableMutation.isPending}
-                        onClick={() =>
-                            disableMutation.mutate({ owner, repo, number })
-                        }
-                        className="ml-2 inline-flex items-center gap-1 rounded bg-white px-2 py-0.5 font-medium text-xs text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                    >
-                        <X size={12} />
-                        {disableMutation.isPending ? "Disabling..." : "Disable"}
-                    </button>
-                </div>
-                {error && <span className="text-red-600 text-xs">{error}</span>}
-                {disableMutation.isError && !error && (
-                    <span className="text-red-600 text-xs">
-                        Failed to disable. Please try again.
-                    </span>
-                )}
-            </div>
-        );
-    }
 
     // Not enabled — show enable affordance
     return (
