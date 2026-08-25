@@ -104,7 +104,7 @@ export function AutoMergeToggle({
                 </span>
             )}
             <button
-                className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-l-md border-border border-y border-l bg-surface-elevated px-3 py-2 font-medium text-text-secondary text-xs ring-1 ring-ring transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-zinc-700"
+                className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-l-md border-border border-y border-l bg-surface-tertiary px-3 py-2 font-medium text-text-primary text-xs ring-1 ring-ring transition-colors hover:bg-surface-secondary disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={enableMutation.isPending}
                 onClick={() =>
                     enableMutation.mutate({
@@ -127,7 +127,7 @@ export function AutoMergeToggle({
             >
                 <button
                     suppressHydrationWarning
-                    className="flex cursor-pointer items-center rounded-r-md border border-border bg-surface-elevated px-2.5 text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-zinc-700"
+                    className="flex cursor-pointer items-center rounded-r-md border border-border bg-surface-tertiary px-2.5 text-text-primary ring-1 ring-ring transition-colors hover:bg-surface-secondary disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={enableMutation.isPending}
                     type="button"
                     title="Auto-merge method"
