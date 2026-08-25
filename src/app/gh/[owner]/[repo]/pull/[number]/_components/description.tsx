@@ -25,6 +25,7 @@ import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import type { ReactionContent } from "~/lib/reactions";
 import type { PullsGetResponseData, StackSuggestion } from "~/server/github";
 import { AdditionsDeletionsBadge } from "./additions-deletions-badge";
+import { AutoMergeBannerSection } from "./auto-merge-banner-section";
 import { ConflictedFiles } from "./conflicted-files";
 import { CreateStackDialog } from "./create-stack-dialog";
 import { StackBanner } from "./stack-banner";
@@ -276,6 +277,7 @@ export function PullRequestDescriptionSection({
                     ) : null
                 }
             </Async>
+            <AutoMergeBannerSection pullRequestPromise={pullRequestPromise} />
 
             <Async
                 fallback={
