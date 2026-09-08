@@ -70,6 +70,7 @@ describe("useDiffHashNavigation", () => {
         unmountHook?.();
         unmountHook = null;
         window.location.hash = "";
+        document.body.innerHTML = "";
         vi.useRealTimers();
     });
 
@@ -121,5 +122,77 @@ describe("useDiffHashNavigation", () => {
         const { getState, setExpandedGaps } = mountHash("#other-section");
         expect(setExpandedGaps).not.toHaveBeenCalled();
         expect(getState().size).toBe(0);
+    });
+
+    describe("user scroll cancels re-centering", () => {
+        function mountWithTarget(): ReturnType<typeof vi.fn> {
+            const target = document.createElement("div");
+            target.id = "diff-abc123R6";
+            document.body.appendChild(target);
+            const scrollTo = vi.fn();
+            window.scrollTo = scrollTo as unknown as typeof window.scrollTo;
+            mountHash("#diff-abc123R6");
+            // The poll waits for the target's position to settle, then scrolls.
+            expect(scrollTo).toHaveBeenCalledTimes(1);
+            return scrollTo;
+        }
+
+        it("keeps correcting for layout shift while the user is idle", () => {
+            const scrollTo = mountWithTarget();
+
+            act(() => {
+                vi.advanceTimersByTime(2000);
+            });
+
+            expect(scrollTo.mock.calls.length).toBeGreaterThan(1);
+        });
+
+        it("stops correcting once the user scrolls", () => {
+            const scrollTo = mountWithTarget();
+
+            act(() => {
+                window.dispatchEvent(new WheelEvent("wheel"));
+            });
+            act(() => {
+                vi.advanceTimersByTime(2000);
+            });
+
+            expect(scrollTo).toHaveBeenCalledTimes(1);
+        });
+
+        it("ignores typing in an editor and keeps correcting", () => {
+            const textarea = document.createElement("textarea");
+            document.body.appendChild(textarea);
+            const scrollTo = mountWithTarget();
+
+            act(() => {
+                textarea.dispatchEvent(
+                    new KeyboardEvent("keydown", {
+                        key: " ",
+                        bubbles: true,
+                    }),
+                );
+            });
+            act(() => {
+                vi.advanceTimersByTime(2000);
+            });
+
+            expect(scrollTo.mock.calls.length).toBeGreaterThan(1);
+        });
+
+        it("stops correcting on a scroll key pressed outside an editor", () => {
+            const scrollTo = mountWithTarget();
+
+            act(() => {
+                window.dispatchEvent(
+                    new KeyboardEvent("keydown", { key: "PageDown" }),
+                );
+            });
+            act(() => {
+                vi.advanceTimersByTime(2000);
+            });
+
+            expect(scrollTo).toHaveBeenCalledTimes(1);
+        });
     });
 });

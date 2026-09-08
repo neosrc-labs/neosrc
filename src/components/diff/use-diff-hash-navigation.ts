@@ -6,6 +6,26 @@ import type { DiffRenderItem, GapRange } from "./types";
 
 const SCROLL_TARGET_PADDING = 12;
 
+// Keys that scroll the document: pressing one is the user taking over.
+const SCROLL_KEYS = new Set([
+    "ArrowUp",
+    "ArrowDown",
+    "PageUp",
+    "PageDown",
+    "Home",
+    "End",
+    " ",
+]);
+
+function isEditableTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) return false;
+    return (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+    );
+}
+
 export function useDiffHashNavigation({
     parsed,
     fileHash,
@@ -33,10 +53,55 @@ export function useDiffHashNavigation({
         let verifyTimeout: ReturnType<typeof setTimeout> | undefined;
         let settleTimeout: ReturnType<typeof setTimeout> | undefined;
 
+        // Watching for user scroll input while the re-centering loop runs.
+        let onScrollIntent: ((event: Event) => void) | null = null;
+
+        const stopScrollIntentWatch = () => {
+            if (!onScrollIntent) return;
+            window.removeEventListener("wheel", onScrollIntent);
+            window.removeEventListener("touchstart", onScrollIntent);
+            window.removeEventListener("keydown", onScrollIntent);
+            window.removeEventListener("mousedown", onScrollIntent);
+            onScrollIntent = null;
+        };
+
         const stopPolling = () => {
             cancelAnimationFrame(rafId);
             clearTimeout(verifyTimeout);
             clearTimeout(settleTimeout);
+            stopScrollIntentWatch();
+        };
+
+        // The poll/verify loop keeps pulling the target line back under the
+        // sticky bars while images, syntax highlighting and lazy diffs shift
+        // the page. Once the user scrolls themselves it fights them instead,
+        // so any scroll gesture ends this navigation's loop for good; the
+        // next hashchange arms a fresh one.
+        const watchScrollIntent = () => {
+            stopScrollIntentWatch();
+            onScrollIntent = (event: Event) => {
+                if (event.type === "keydown") {
+                    const key = (event as KeyboardEvent).key;
+                    if (!SCROLL_KEYS.has(key) || isEditableTarget(event.target))
+                        return;
+                } else if (
+                    event.type === "mousedown" &&
+                    event.target !== document.documentElement
+                ) {
+                    // Scrollbar presses land on the root element; clicks
+                    // inside the page are not scroll intent.
+                    return;
+                }
+                stopPolling();
+            };
+            window.addEventListener("wheel", onScrollIntent, {
+                passive: true,
+            });
+            window.addEventListener("touchstart", onScrollIntent, {
+                passive: true,
+            });
+            window.addEventListener("keydown", onScrollIntent);
+            window.addEventListener("mousedown", onScrollIntent);
         };
 
         const scrollToHashTarget = () => {
@@ -144,10 +209,8 @@ export function useDiffHashNavigation({
                 }
                 rafId = requestAnimationFrame(poll);
             };
-            settleTimeout = setTimeout(() => {
-                cancelAnimationFrame(rafId);
-                clearTimeout(verifyTimeout);
-            }, 15_000);
+            settleTimeout = setTimeout(stopPolling, 15_000);
+            watchScrollIntent();
             rafId = requestAnimationFrame(poll);
         };
 
