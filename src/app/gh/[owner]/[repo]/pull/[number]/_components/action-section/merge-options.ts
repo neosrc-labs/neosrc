@@ -40,14 +40,22 @@ export interface ResolvedMergeOption {
     allowed: boolean;
 }
 
-/** Applies repository settings to MERGE_OPTION_DEFS. */
+/**
+ * Applies repository settings to MERGE_OPTION_DEFS, then narrows to the
+ * methods a ruleset permits. `allowedMergeMethods` is null when no ruleset
+ * restricts them.
+ */
 export function resolveMergeOptions(
     repoData?: RepositoryInfo,
+    allowedMergeMethods?: MergeMethod[] | null,
 ): ResolvedMergeOption[] {
     return MERGE_OPTION_DEFS.map((def) => ({
         value: def.value,
         label: def.label,
         description: def.description,
-        allowed: repoData?.[def.setting] !== false,
+        allowed:
+            repoData?.[def.setting] !== false &&
+            (allowedMergeMethods == null ||
+                allowedMergeMethods.includes(def.value)),
     }));
 }

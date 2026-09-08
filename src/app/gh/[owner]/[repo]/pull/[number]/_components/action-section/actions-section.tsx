@@ -285,7 +285,10 @@ function Buttons({
                   return null;
               }, null)
         : null;
-    const allMergeOptions = resolveMergeOptions(repoData);
+    const allMergeOptions = resolveMergeOptions(
+        repoData,
+        mergeReqs?.allowedMergeMethods,
+    );
     const availableMergeOptions = allMergeOptions.filter((o) => o.allowed);
     const noMergeMethodsAvailable = availableMergeOptions.length === 0;
     const effectiveMergeMode = availableMergeOptions.some(
