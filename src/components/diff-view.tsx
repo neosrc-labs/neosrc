@@ -174,7 +174,6 @@ export function DiffView({
     });
     const { selectedRange } = lineSelection;
     const {
-        commentDragRange,
         onCommentDragStart,
         onCommentLineMouseDown,
         onCommentTableMouseOver,
@@ -219,26 +218,6 @@ export function DiffView({
             }
         }
         return map;
-    }, [comments, positionMap]);
-
-    const multiLineRanges = useMemo(() => {
-        const ranges = new Map<string, string[]>();
-        for (const comment of comments) {
-            const anchor = resolveDiffCommentAnchor(comment, positionMap);
-            if (!anchor) continue;
-            const startLine = comment.start_line;
-            if (startLine == null || startLine === anchor.line) continue;
-            for (let line = startLine; line <= anchor.line; line++) {
-                const key = `${line}-${anchor.side}`;
-                const existing = ranges.get(key) ?? [];
-                const rangeId = `${comment.id}`;
-                if (!existing.includes(rangeId)) {
-                    existing.push(rangeId);
-                    ranges.set(key, existing);
-                }
-            }
-        }
-        return ranges;
     }, [comments, positionMap]);
 
     const renderItems = useMemo(() => createDiffRenderItems(parsed), [parsed]);
@@ -346,7 +325,6 @@ export function DiffView({
         onCancelComment,
         showComments,
         showCommentButton,
-        commentDragRange,
         onCommentDragStart,
         pendingReviewId,
         permissionContext,
@@ -375,7 +353,6 @@ export function DiffView({
                 onLineMouseDown={onCommentLineMouseDown}
                 commentsByLine={commentsByLine}
                 positionMap={positionMap}
-                multiLineRanges={multiLineRanges}
                 commentProps={commentProps}
             />
         </DiffTable>

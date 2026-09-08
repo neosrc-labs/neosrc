@@ -14,7 +14,6 @@ export function UnifiedBlockRows({
     block,
     commentsByLine,
     positionMap,
-    multiLineRanges,
     owner,
     repo,
     fileHash,
@@ -35,7 +34,6 @@ export function UnifiedBlockRows({
         onCancelComment,
         showComments,
         showCommentButton,
-        commentDragRange,
         onCommentDragStart,
         pendingReviewId,
         permissionContext,
@@ -83,24 +81,6 @@ export function UnifiedBlockRows({
                     activeComment.line === commentLine &&
                     activeComment.side === side;
                 const hasComments = lineComments.length > 0;
-
-                const isInActiveRange =
-                    (activeComment?.type === "line" &&
-                        activeComment.startLine != null &&
-                        activeComment.side === side &&
-                        commentLine >= activeComment.startLine &&
-                        commentLine <= activeComment.line) ||
-                    (commentDragRange != null &&
-                        commentDragRange.side === side &&
-                        commentLine >= commentDragRange.startLine &&
-                        commentLine <= commentDragRange.endLine);
-
-                const hasMultiLineRange =
-                    (multiLineRanges.get(`${commentLine}-${side}`)?.length ??
-                        0) > 0;
-
-                const showRangeIndicator = isInActiveRange || hasMultiLineRange;
-
                 const content = line.content.slice(1);
 
                 const lineId = fileHash
@@ -125,7 +105,7 @@ export function UnifiedBlockRows({
                             id={lineId}
                         >
                             <td
-                                className={`d2h-code-linenumber ${typeClass} ${showRangeIndicator ? "border-blue-400 border-l-4" : ""}`}
+                                className={`d2h-code-linenumber ${typeClass}`}
                                 onMouseDown={() =>
                                     onLineMouseDown?.(lineNum, lineSide, {
                                         oldLine: oldNum,

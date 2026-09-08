@@ -17,24 +17,16 @@ import { type DiffRowLines, isRowSelected } from "./use-diff-line-selection";
 
 // Per-side comment/selection state for a (line, side) anchor. In split
 // view every row has up to two anchors (old + new), each with its own
-// comment button, range indicator and permalink.
+// comment button and permalink.
 function buildSplitSideState(
     commentLine: number,
     side: DiffSide,
     {
         commentsByLine,
         activeComment,
-        commentDragRange,
-        multiLineRanges,
     }: {
         commentsByLine: Map<string, ReviewComment[]>;
         activeComment: DiffCommentTarget | null;
-        commentDragRange: {
-            startLine: number;
-            endLine: number;
-            side: DiffSide;
-        } | null;
-        multiLineRanges: Map<string, string[]>;
     },
 ) {
     const lineComments = commentsByLine.get(`${commentLine}-${side}`) ?? [];
@@ -42,23 +34,7 @@ function buildSplitSideState(
         activeComment?.type === "line" &&
         activeComment.line === commentLine &&
         activeComment.side === side;
-    const isInActiveRange =
-        (activeComment?.type === "line" &&
-            activeComment.startLine != null &&
-            activeComment.side === side &&
-            commentLine >= activeComment.startLine &&
-            commentLine <= activeComment.line) ||
-        (commentDragRange != null &&
-            commentDragRange.side === side &&
-            commentLine >= commentDragRange.startLine &&
-            commentLine <= commentDragRange.endLine);
-    const hasMultiLineRange =
-        (multiLineRanges.get(`${commentLine}-${side}`)?.length ?? 0) > 0;
-    return {
-        lineComments,
-        isActive,
-        showRangeIndicator: isInActiveRange || hasMultiLineRange,
-    };
+    return { lineComments, isActive };
 }
 
 // Comment anchors: context lines comment on the new side (like unified
@@ -240,7 +216,6 @@ export function SplitBlockRows({
     block,
     commentsByLine,
     positionMap,
-    multiLineRanges,
     owner,
     repo,
     fileHash,
@@ -268,7 +243,6 @@ export function SplitBlockRows({
         onCancelComment,
         showComments,
         showCommentButton,
-        commentDragRange,
         onCommentDragStart,
         pendingReviewId,
         permissionContext,
@@ -356,8 +330,6 @@ export function SplitBlockRows({
                 ? buildSplitSideState(oldNum, "LEFT", {
                       commentsByLine,
                       activeComment,
-                      commentDragRange,
-                      multiLineRanges,
                   })
                 : null;
         const newState =
@@ -365,8 +337,6 @@ export function SplitBlockRows({
                 ? buildSplitSideState(newNum, "RIGHT", {
                       commentsByLine,
                       activeComment,
-                      commentDragRange,
-                      multiLineRanges,
                   })
                 : null;
 
@@ -452,7 +422,7 @@ export function SplitBlockRows({
                 >
                     {oldNum != null ? (
                         <td
-                            className={`d2h-code-linenumber d2h-split-ln ${oldLnClass} ${oldState?.showRangeIndicator ? "border-blue-400 border-l-4" : ""} ${oldHighlighted ? "d2h-split-selected" : ""}`}
+                            className={`d2h-code-linenumber d2h-split-ln ${oldLnClass} ${oldHighlighted ? "d2h-split-selected" : ""}`}
                             id={oldSideId}
                             onMouseDown={() =>
                                 onLineMouseDown?.(oldNum, "LEFT", rowLines)
@@ -497,7 +467,7 @@ export function SplitBlockRows({
                     </td>
                     {newNum != null ? (
                         <td
-                            className={`d2h-code-linenumber d2h-split-ln d2h-split-new ${newLnClass} ${newState?.showRangeIndicator ? "border-blue-400 border-l-4" : ""} ${newHighlighted ? "d2h-split-selected" : ""}`}
+                            className={`d2h-code-linenumber d2h-split-ln d2h-split-new ${newLnClass} ${newHighlighted ? "d2h-split-selected" : ""}`}
                             onMouseDown={() =>
                                 onLineMouseDown?.(newNum, "RIGHT", rowLines)
                             }

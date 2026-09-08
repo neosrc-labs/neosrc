@@ -26,7 +26,6 @@ export function DiffContextRow({
     repo,
     commentsByLine = new Map(),
     positionMap = new Map(),
-    multiLineRanges = new Map(),
     commentProps,
 }: {
     lineNum: number;
@@ -60,7 +59,6 @@ export function DiffContextRow({
     repo?: string;
     commentsByLine?: Map<string, ReviewComment[]>;
     positionMap?: Map<number, DiffAnchor>;
-    multiLineRanges?: Map<string, string[]>;
     commentProps?: DiffRowCommentProps;
 }) {
     // Lines revealed by gap expansion are context lines: they exist on both
@@ -81,7 +79,6 @@ export function DiffContextRow({
         onCancelComment,
         showComments,
         showCommentButton,
-        commentDragRange,
         onCommentDragStart,
         pendingReviewId,
         permissionContext,
@@ -100,21 +97,6 @@ export function DiffContextRow({
         activeComment?.type === "line" &&
         activeComment.line === commentLine &&
         activeComment.side === commentSide;
-    const isInActiveRange =
-        (activeComment?.type === "line" &&
-            activeComment.startLine != null &&
-            activeComment.side === commentSide &&
-            commentLine >= activeComment.startLine &&
-            commentLine <= activeComment.line) ||
-        (commentDragRange != null &&
-            commentDragRange.side === commentSide &&
-            commentLine >= commentDragRange.startLine &&
-            commentLine <= commentDragRange.endLine);
-    const hasMultiLineRange =
-        (multiLineRanges.get(`${commentLine}-RIGHT`)?.length ?? 0) +
-            (multiLineRanges.get(`${oldLineNum}-LEFT`)?.length ?? 0) >
-        0;
-    const showRangeIndicator = isInActiveRange || hasMultiLineRange;
 
     // Gap lines are context lines present on both sides: a covered row
     // highlights both halves in split view, the whole row in unified view.
@@ -271,10 +253,8 @@ export function DiffContextRow({
                 >
                     <td
                         className={`d2h-code-linenumber d2h-split-ln d2h-cntx ${
-                            showRangeIndicator
-                                ? "border-blue-400 border-l-4"
-                                : ""
-                        } ${rowSelected ? "d2h-split-selected" : ""}`}
+                            rowSelected ? "d2h-split-selected" : ""
+                        }`}
                         id={oldSideId}
                         onMouseDown={() =>
                             onLineMouseDown?.(oldLineNum, "LEFT", {
@@ -314,10 +294,8 @@ export function DiffContextRow({
                     </td>
                     <td
                         className={`d2h-code-linenumber d2h-split-ln d2h-split-new d2h-cntx ${
-                            showRangeIndicator
-                                ? "border-blue-400 border-l-4"
-                                : ""
-                        } ${rowSelected ? "d2h-split-selected" : ""}`}
+                            rowSelected ? "d2h-split-selected" : ""
+                        }`}
                         onMouseDown={() =>
                             onLineMouseDown?.(lineNum, "RIGHT", {
                                 oldLine: lineNum,
@@ -374,9 +352,7 @@ export function DiffContextRow({
                 }
             >
                 <td
-                    className={`d2h-code-linenumber d2h-cntx ${
-                        showRangeIndicator ? "border-blue-400 border-l-4" : ""
-                    }`}
+                    className="d2h-code-linenumber d2h-cntx"
                     onMouseDown={() =>
                         onLineMouseDown?.(lineNum, "RIGHT", {
                             oldLine: oldLineNum,

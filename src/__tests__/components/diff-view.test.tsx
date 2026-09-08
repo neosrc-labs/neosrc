@@ -556,8 +556,8 @@ describe("DiffView rendering", () => {
         });
     });
 
-    describe("multi-line range indicator", () => {
-        it("shows blue left border on intermediate lines of a multi-line comment", () => {
+    describe("multi-line comments", () => {
+        it("renders the thread once, on the last line of the range", () => {
             const lines = [mc(" line1", 1, 1), mc("+line2", 2)];
             mockParsedFile([mb(1, lines)], { addedLines: 1 });
 
@@ -571,41 +571,15 @@ describe("DiffView rendering", () => {
                 },
             ]);
 
-            const { container } = renderDiffView({
-                showComments: true,
-                comments,
-            });
+            renderDiffView({ showComments: true, comments });
 
-            // Line 1 (intermediate) should have blue left border
-            const lineNumCells = container.querySelectorAll(
-                "td.d2h-code-linenumber",
-            );
-            const firstCell = lineNumCells[0];
-            expect(firstCell?.className).toContain("border-l-4");
-            expect(firstCell?.className).toContain("border-blue-400");
-
-            // Thread (InlineCommentThread) only on line 2 (last line of range)
             const threads = screen.getAllByTestId("inline-comment-thread");
             expect(threads).toHaveLength(1);
-        });
-
-        it("single-line comment has no blue left border", () => {
-            const lines = [mc(" line1", 1, 1)];
-            mockParsedFile([mb(1, lines)]);
-
-            const comments = makeMockComments([
-                { id: 1, line: 1, side: "RIGHT", path: "test.ts" },
-            ]);
-
-            const { container } = renderDiffView({
-                showComments: true,
-                comments,
-            });
-
-            const lineNumCells = container.querySelectorAll(
-                "td.d2h-code-linenumber",
-            );
-            expect(lineNumCells[0]?.className).not.toContain("border-l-4");
+            expect(
+                threads[0]
+                    ?.closest("tr")
+                    ?.previousElementSibling?.id.endsWith("R2"),
+            ).toBe(true);
         });
     });
 
@@ -2454,63 +2428,6 @@ describe("DiffView split view", () => {
                 startLine: 2,
                 startSide: "RIGHT",
             });
-        });
-    });
-
-    describe("cross-region comment range display", () => {
-        beforeEach(() => {
-            vi.clearAllMocks();
-            mockUseFileContent.lines = null;
-            mockUseFileContent.isLoading = false;
-            mockUseFileContent.error = null;
-        });
-
-        it("marks the range indicator on rows in both regions", () => {
-            const block1 = mb(1, [
-                mc(" ctx1", 1, 1),
-                mc(" ctx2", 2, 2),
-                mc("+ins3", 3),
-            ]);
-            const block2 = mb(8, [mc(" ctx8", 8, 8), mc(" ctx9", 9, 9)]);
-            mockParsedFile([block1, block2], { addedLines: 1 });
-
-            const comments = makeMockComments([
-                {
-                    id: 42,
-                    line: 8,
-                    start_line: 2,
-                    side: "RIGHT",
-                    path: "test.ts",
-                },
-            ]);
-
-            const { container } = renderDiffView({
-                view: "split",
-                showComments: true,
-                comments,
-                headSha: "mock-sha",
-                owner: "owner",
-                repo: "repo",
-                pullNumber: 1,
-            });
-
-            const rows = Array.from(
-                container.querySelectorAll('tr[id^="diff-"]'),
-            );
-            const blueRows = rows
-                .filter((tr) =>
-                    Array.from(tr.children).some(
-                        (td) =>
-                            td.className.includes("border-l-4") &&
-                            td.className.includes("border-blue-400"),
-                    ),
-                )
-                .map((tr) => tr.id);
-            // Rows 2-3 (region 1) and row 8 (region 2) must all carry the
-            // multi-line range indicator.
-            expect(blueRows.some((id) => id.endsWith("R2"))).toBe(true);
-            expect(blueRows.some((id) => id.endsWith("R3"))).toBe(true);
-            expect(blueRows.some((id) => id.endsWith("R8"))).toBe(true);
         });
     });
 });

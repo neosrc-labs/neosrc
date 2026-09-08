@@ -51,7 +51,6 @@ interface GapRowsProps {
     ) => void;
     commentsByLine: Map<string, ReviewComment[]>;
     positionMap: Map<number, DiffAnchor>;
-    multiLineRanges: Map<string, string[]>;
     commentProps: DiffRowCommentProps;
 }
 
@@ -73,7 +72,6 @@ export function GapRows({
     onLineMouseDown,
     commentsByLine,
     positionMap,
-    multiLineRanges,
     commentProps,
 }: GapRowsProps) {
     const { lines, isLoading, error } = useFileContent({
@@ -121,7 +119,7 @@ export function GapRows({
                             onClick={() => onExpand(gapKey, above)}
                             title="Expand lines above"
                             aria-label="Expand lines above"
-                            className="flex flex-1 cursor-pointer items-center justify-center border-border border-l text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
+                            className="flex flex-1 cursor-pointer items-center justify-center text-text-tertiary transition-colors hover:bg-surface-selected hover:text-text-label"
                         >
                             <ArrowDownFromLine size={14} />
                         </button>
@@ -159,7 +157,6 @@ export function GapRows({
             onLineMouseDown={onLineMouseDown}
             commentsByLine={commentsByLine}
             positionMap={positionMap}
-            multiLineRanges={multiLineRanges}
             commentProps={commentProps}
         />
     );
