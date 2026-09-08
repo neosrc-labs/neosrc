@@ -111,8 +111,9 @@ html {
     display: inline;
 }
 
-.prose :where(td, th) img {
-    margin: 0;
+.prose img {
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 .prose table {

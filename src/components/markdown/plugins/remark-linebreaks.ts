@@ -2,9 +2,11 @@ import type { Parent, Root, RootContent } from "mdast";
 
 /**
  * Turn single newlines into hard breaks (`<br>`), except inside list items
- * where continuation lines flow like GitHub's README rendering. Paragraphs
- * like `foo\nbar\nbaz` still render on three lines, while bullet point
- * continuations wrap naturally instead of breaking at the source line.
+ * where continuation lines flow. Matches how GitHub renders comment bodies:
+ * `foo\nbar\nbaz` renders on three lines, while bullet point continuations
+ * wrap naturally instead of breaking at the source line. Markdown files
+ * (README and friends) use CommonMark soft breaks instead, so they render
+ * without this plugin.
  */
 export function remarkLinebreaksPlugin() {
     return function transformer(tree: Root) {

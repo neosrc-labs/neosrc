@@ -48,6 +48,11 @@ interface MarkdownRendererProps {
     canToggleTasks?: boolean;
     className?: string;
     linkableHeadings?: boolean;
+    /**
+     * Render single newlines as `<br>`. GitHub does this for comment bodies
+     * but not for markdown files, where a soft break collapses to a space.
+     */
+    hardLineBreaks?: boolean;
     proseSize?: "sm" | "base";
     imageBaseUrl?: string;
     /**
@@ -93,6 +98,7 @@ export function MarkdownRenderer({
     imageBaseUrl,
     imageDocDir,
     proseSize = "sm",
+    hardLineBreaks = true,
 }: MarkdownRendererProps) {
     const headingSlugsRef = useRef(new Map<string, number>());
     // Heading ids are derived per render pass, so clear the counters here.
@@ -125,7 +131,7 @@ export function MarkdownRenderer({
         >
             <ReactMarkdown
                 remarkPlugins={[
-                    remarkLinebreaksPlugin,
+                    ...(hardLineBreaks ? [remarkLinebreaksPlugin] : []),
                     remarkGfm,
                     remarkIssuePlugin(owner, repo),
                     remarkCommitPlugin(owner, repo),
@@ -293,7 +299,7 @@ export function MarkdownRenderer({
                         return (
                             // biome-ignore lint/performance/noImgElement: markdown images are user content with arbitrary hosts/dimensions that next/image cannot optimize
                             <img
-                                className="m-0 inline-block align-middle"
+                                className="inline-block align-middle"
                                 {...props}
                                 src={resolvedSrc}
                                 width={width}

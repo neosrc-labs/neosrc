@@ -168,6 +168,7 @@ export function RepoDocFiles({
                                 owner={owner}
                                 repo={repo}
                                 canToggleTasks={false}
+                                hardLineBreaks={false}
                                 linkableHeadings
                                 proseSize="base"
                                 imageBaseUrl={imageBaseUrl}
