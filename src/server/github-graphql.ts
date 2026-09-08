@@ -1376,6 +1376,243 @@ export async function getCommitChecksGraphQL(
     return { checkRuns, statuses };
 }
 
+export type RequiredCheckStatus = "success" | "failure" | "pending";
+
+export interface PullRequestMergeState {
+    /** BEHIND | BLOCKED | CLEAN | DIRTY | DRAFT | HAS_HOOKS | UNKNOWN | UNSTABLE */
+    mergeStateStatus: string;
+    /** APPROVED | CHANGES_REQUESTED | REVIEW_REQUIRED | null */
+    reviewDecision: string | null;
+    viewerCanUpdateBranch: boolean;
+    viewerCanMergeAsAdmin: boolean;
+    isInMergeQueue: boolean;
+    unresolvedThreadCount: number;
+    /** Logins of reviewers requested because they own changed files. */
+    codeOwnerReviewerLogins: string[];
+    headSha: string | null;
+    requiredChecks: Array<{
+        name: string;
+        status: RequiredCheckStatus;
+        url: string | null;
+    }>;
+}
+
+type RequiredCheckRunNode = {
+    __typename: "CheckRun";
+    name: string;
+    status: string;
+    conclusion: string | null;
+    detailsUrl: string | null;
+    isRequired: boolean;
+};
+
+type RequiredStatusContextNode = {
+    __typename: "StatusContext";
+    context: string;
+    state: string;
+    targetUrl: string | null;
+    isRequired: boolean;
+};
+
+function checkRunStatus(node: RequiredCheckRunNode): RequiredCheckStatus {
+    if (node.status !== "COMPLETED") return "pending";
+    switch (node.conclusion) {
+        case "SUCCESS":
+        case "NEUTRAL":
+        case "SKIPPED":
+            return "success";
+        default:
+            // FAILURE, TIMED_OUT, CANCELLED, ACTION_REQUIRED,
+            // STARTUP_FAILURE, STALE and a missing conclusion all leave the
+            // requirement unmet.
+            return "failure";
+    }
+}
+
+function statusContextStatus(
+    node: RequiredStatusContextNode,
+): RequiredCheckStatus {
+    switch (node.state) {
+        case "SUCCESS":
+            return "success";
+        case "PENDING":
+        case "EXPECTED":
+            return "pending";
+        default:
+            return "failure";
+    }
+}
+
+/**
+ * Reads the merge gates GitHub evaluates for a pull request: the computed
+ * merge state, the review decision, unresolved review threads, code owner
+ * review requests and which rollup contexts are actually required for this
+ * PR. Returns null when the PR is missing or the read is blocked by an org
+ * OAuth restriction, in which case callers fall back to the REST-derived
+ * requirements.
+ */
+export async function getPullRequestMergeStateGraphQL(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    number: number,
+): Promise<PullRequestMergeState | null> {
+    const graphql = createGraphql(accessToken);
+
+    let result: {
+        repository: {
+            pullRequest: {
+                mergeStateStatus: string;
+                reviewDecision: string | null;
+                viewerCanUpdateBranch: boolean;
+                viewerCanMergeAsAdmin: boolean;
+                isInMergeQueue: boolean;
+                reviewThreads: { nodes: ({ isResolved: boolean } | null)[] };
+                reviewRequests: {
+                    nodes: ({
+                        asCodeOwner: boolean;
+                        requestedReviewer: {
+                            __typename: string;
+                            login?: string;
+                        } | null;
+                    } | null)[];
+                };
+                commits: {
+                    nodes: ({
+                        commit: {
+                            oid: string;
+                            statusCheckRollup: {
+                                contexts: {
+                                    nodes: (
+                                        | RequiredCheckRunNode
+                                        | RequiredStatusContextNode
+                                        | null
+                                    )[];
+                                };
+                            } | null;
+                        };
+                    } | null)[];
+                };
+            } | null;
+        } | null;
+    };
+
+    try {
+        result = await graphql(
+            `
+		query PullRequestMergeState($owner: String!, $repo: String!, $number: Int!) {
+			repository(owner: $owner, name: $repo) {
+				pullRequest(number: $number) {
+					mergeStateStatus
+					reviewDecision
+					viewerCanUpdateBranch
+					viewerCanMergeAsAdmin
+					isInMergeQueue
+					reviewThreads(first: 100) {
+						nodes {
+							isResolved
+						}
+					}
+					reviewRequests(first: 100) {
+						nodes {
+							asCodeOwner
+							requestedReviewer {
+								__typename
+								... on User {
+									login
+								}
+							}
+						}
+					}
+					commits(last: 1) {
+						nodes {
+							commit {
+								oid
+								statusCheckRollup {
+									contexts(first: 100) {
+										nodes {
+											__typename
+											... on CheckRun {
+												name
+												status
+												conclusion
+												detailsUrl
+												isRequired(pullRequestNumber: $number)
+											}
+											... on StatusContext {
+												context
+												state
+												targetUrl
+												isRequired(pullRequestNumber: $number)
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	`,
+            { owner, repo, number },
+        );
+    } catch (error) {
+        if (!isOrgRestrictionError(error)) throw error;
+        return null;
+    }
+
+    const pullRequest = result.repository?.pullRequest;
+    if (!pullRequest) return null;
+
+    let unresolvedThreadCount = 0;
+    for (const thread of pullRequest.reviewThreads.nodes) {
+        // Outdated threads still block merging while unresolved.
+        if (thread && !thread.isResolved) unresolvedThreadCount++;
+    }
+
+    const codeOwnerReviewerLogins: string[] = [];
+    for (const request of pullRequest.reviewRequests.nodes) {
+        if (!request?.asCodeOwner) continue;
+        const reviewer = request.requestedReviewer;
+        // Team requests are dropped: the reviewer sidebar renders users only.
+        if (reviewer?.__typename === "User" && reviewer.login) {
+            codeOwnerReviewerLogins.push(reviewer.login);
+        }
+    }
+
+    const commit = pullRequest.commits.nodes[0]?.commit;
+    const requiredChecks: PullRequestMergeState["requiredChecks"] = [];
+    for (const node of commit?.statusCheckRollup?.contexts.nodes ?? []) {
+        if (!node?.isRequired) continue;
+        if (node.__typename === "CheckRun") {
+            requiredChecks.push({
+                name: node.name,
+                status: checkRunStatus(node),
+                url: node.detailsUrl,
+            });
+        } else {
+            requiredChecks.push({
+                name: node.context,
+                status: statusContextStatus(node),
+                url: node.targetUrl,
+            });
+        }
+    }
+
+    return {
+        mergeStateStatus: pullRequest.mergeStateStatus,
+        reviewDecision: pullRequest.reviewDecision,
+        viewerCanUpdateBranch: pullRequest.viewerCanUpdateBranch,
+        viewerCanMergeAsAdmin: pullRequest.viewerCanMergeAsAdmin,
+        isInMergeQueue: pullRequest.isInMergeQueue,
+        unresolvedThreadCount,
+        codeOwnerReviewerLogins,
+        headSha: commit?.oid ?? null,
+        requiredChecks,
+    };
+}
+
 async function mutateReaction<T>(
     operation: "addReaction" | "removeReaction",
     accessToken: string,
