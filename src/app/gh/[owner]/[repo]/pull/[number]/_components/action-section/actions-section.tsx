@@ -32,6 +32,7 @@ import { MergeStatusBar } from "./merge-status-bar";
 import { ReadyForReviewButton } from "./ready-for-review-button";
 import { RevertButton } from "./revert-button";
 import { SubmitReviewButton } from "./submit-review-button";
+import { UpdateBranchButton } from "./update-branch-button";
 import { usePullPermissions } from "./use-pull-permissions";
 
 interface ActionSectionProps {
@@ -392,6 +393,19 @@ function Buttons({
                     isAuthor={isAuthor}
                 />
             )}
+            {mergeState?.mergeStateStatus === "BEHIND" &&
+                mergeState.viewerCanUpdateBranch &&
+                mergeState.headSha &&
+                !effectiveMerged &&
+                pullRequest.state === "open" &&
+                !isDraft && (
+                    <UpdateBranchButton
+                        owner={owner}
+                        repo={repo}
+                        number={number}
+                        expectedHeadSha={mergeState.headSha}
+                    />
+                )}
             {showMergeStatusBar &&
                 !effectiveMerged &&
                 pullRequest.state === "open" &&
