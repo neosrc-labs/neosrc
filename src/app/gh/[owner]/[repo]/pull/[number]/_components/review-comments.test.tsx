@@ -81,6 +81,17 @@ vi.mock("~/components/ui/dialog", () => mockDialog());
 
 vi.mock("~/components/ui/popover", () => mockPopover());
 
+const mockFileContent = vi.hoisted(() => ({
+    lines: null as string[] | null,
+}));
+vi.mock("~/hooks/use-file-content", () => ({
+    useFileContent: ({ sha }: { sha?: string }) => ({
+        lines: sha ? mockFileContent.lines : null,
+        isLoading: false,
+        error: null,
+    }),
+}));
+
 // ---- Helpers ----
 function reviewComment(overrides: Record<string, unknown> = {}): ReviewComment {
     return makeComment({
@@ -150,6 +161,7 @@ function makeThread(
 describe("ReviewComments", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockFileContent.lines = null;
         // Threads query settled: each top-level comment belongs to its own
         // thread on the same file, mirroring the olivia-fl review on
         // rust-lang/rfcs#3959.
@@ -311,6 +323,97 @@ describe("ReviewComments", () => {
             expect(
                 screen.getByRole("button", { name: "Resolve" }),
             ).toBeInTheDocument();
+        });
+    });
+
+    describe("code snippet", () => {
+        it("shows the diff hunk ending at the commented line", () => {
+            const comment = reviewComment({
+                id: 1,
+                line: 11,
+                side: "RIGHT",
+                commit_id: "sha",
+                diff_hunk: [
+                    "@@ -8,4 +8,5 @@ fn thing()",
+                    " keep()",
+                    " more()",
+                    "-old()",
+                    "+added()",
+                    "+tail()",
+                ].join("\n"),
+            });
+            mockThreadsQuery.mockReturnValue({
+                data: [makeThread("thread", false, false, [comment.id])],
+            });
+
+            render(
+                <ReviewComments {...defaultProps} allComments={[comment]} />,
+            );
+
+            const rows = within(
+                screen.getByTestId("review-comment-snippet"),
+            ).getAllByRole("row");
+            expect(rows.map((row) => row.textContent)).toEqual([
+                "9 more()",
+                "10-old()",
+                "10+added()",
+                "11+tail()",
+            ]);
+        });
+
+        it("reads the file when the commented line is outside the diff", () => {
+            mockFileContent.lines = [
+                "line1",
+                "line2",
+                "line3",
+                "line4",
+                "line5",
+            ];
+            const comment = reviewComment({
+                id: 2,
+                line: 5,
+                side: "RIGHT",
+                commit_id: "sha",
+                diff_hunk: "",
+            });
+            mockThreadsQuery.mockReturnValue({
+                data: [makeThread("thread", false, false, [comment.id])],
+            });
+
+            render(
+                <ReviewComments {...defaultProps} allComments={[comment]} />,
+            );
+
+            const rows = within(
+                screen.getByTestId("review-comment-snippet"),
+            ).getAllByRole("row");
+            expect(rows.map((row) => row.textContent)).toEqual([
+                "2 line2",
+                "3 line3",
+                "4 line4",
+                "5 line5",
+            ]);
+        });
+
+        it("shows no snippet for a file-level comment", () => {
+            const comment = reviewComment({
+                id: 3,
+                line: null,
+                original_line: null,
+                subject_type: "file",
+                diff_hunk: "",
+            });
+            mockThreadsQuery.mockReturnValue({
+                data: [makeThread("thread", false, false, [comment.id])],
+            });
+
+            render(
+                <ReviewComments {...defaultProps} allComments={[comment]} />,
+            );
+
+            expect(
+                screen.queryByTestId("review-comment-snippet"),
+            ).not.toBeInTheDocument();
         });
     });
 });
