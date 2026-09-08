@@ -551,6 +551,28 @@ export const mergePullRequest = async (
     return response.data;
 };
 
+/**
+ * Merges the base branch into the PR head. `expectedHeadSha` makes GitHub
+ * reject the call with 422 if the head moved since it was read, so a stale
+ * page cannot clobber a newer push.
+ */
+export const updatePullRequestBranch = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    expectedHeadSha: string,
+): Promise<{ message: string | null }> => {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.rest.pulls.updateBranch({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        expected_head_sha: expectedHeadSha,
+    });
+    return { message: response.data.message ?? null };
+};
+
 export const mergePullRequestAsync = async (
     accessToken: string,
     owner: string,
