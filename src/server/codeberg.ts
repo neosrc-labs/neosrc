@@ -443,6 +443,85 @@ export const getBranches = cache(
     },
 );
 
+type CodebergActivityRaw = {
+    op_type: string;
+    ref_name: string | null;
+    created: string;
+    act_user: { login: string } | null;
+};
+
+export type CodebergActivity = {
+    opType: string;
+    refName: string | null;
+    created: string;
+    actorLogin: string | null;
+};
+
+/** Repository activity feed (pushes, branch changes), newest first. */
+export const listRepoActivity = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        limit = 50,
+    ): Promise<CodebergActivity[]> => {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/activities/feeds?limit=${limit}`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) return [];
+        const entries = (await res.json()) as CodebergActivityRaw[];
+        return entries.map((entry) => ({
+            opType: entry.op_type,
+            refName: entry.ref_name || null,
+            created: entry.created,
+            actorLogin: entry.act_user?.login || null,
+        }));
+    },
+);
+
+/**
+ * Pull request for a base/head pair, or null when Forgejo reports none.
+ * Network and permission failures also resolve to null: callers use this for
+ * best-effort UI hints, not for authorization.
+ */
+export async function findPullRequestForBranches(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    base: string,
+    head: string,
+): Promise<{ number: number; state: string; merged: boolean } | null> {
+    const res = await fetch(
+        `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/pulls/${encodeURIComponent(base)}/${head
+            .split("/")
+            .map(encodeURIComponent)
+            .join("/")}`,
+        {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        },
+    );
+    if (!res.ok) return null;
+    const pr = (await res.json()) as {
+        number: number;
+        state: string;
+        merged: boolean | null;
+    };
+    return {
+        number: pr.number,
+        state: pr.state,
+        merged: pr.merged === true,
+    };
+}
+
 export const getTags = cache(
     async (accessToken: string, owner: string, repo: string) => {
         const res = await fetch(

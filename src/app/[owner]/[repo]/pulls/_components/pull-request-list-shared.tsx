@@ -18,6 +18,7 @@ import type {
     PullRequestListConfig,
 } from "./pull-request-list-config";
 import { PullRequestToolbar } from "./pull-request-toolbar";
+import { RecentlyPushedBanner } from "./recently-pushed-banner";
 
 function normalizeSearchItem(item: PrSearchItem): PrRowData {
     return {
@@ -115,79 +116,90 @@ export function PullRequestListShared({
     const filters = rowQualifierFilters(list);
 
     return (
-        <SearchListLayout
-            searchBar={
-                <ListSearchBar
-                    searchInput={list.searchInput}
-                    setSearchInput={list.setSearchInput}
-                    cursorPos={list.cursorPos}
-                    setCursorPos={list.setCursorPos}
-                    inputRef={list.inputRef}
-                    searchBarRef={list.searchBarRef}
-                    autocompleteRef={list.autocompleteRef}
-                    provider={config.provider}
-                    qualifiers={config.qualifiers}
-                    autocompleteOptions={config.autocompleteOptions}
-                    owner={owner}
-                    repo={repo}
-                    placeholder="Search pull requests by title, body, or comments"
-                    urls={config.externalUrls(owner, repo)}
-                    newItemIcon={<GitPullRequest className="size-4" />}
-                    newItemLabel="New Pull Request"
-                    onSearch={list.handleSearch}
-                    onClear={list.handleClearSearch}
-                    onAutocompleteSelect={list.handleAutocompleteSelect}
-                />
-            }
-            toolbar={
-                <PullRequestToolbar
-                    activeTab={list.activeTab as FilterState}
-                    searchQuery={list.searchQuery}
-                    setSearchInput={list.setSearchInput}
-                    currentSort={list.currentSort}
-                    currentOrder={list.currentOrder}
-                    config={config}
-                    owner={owner}
-                    repo={repo}
-                    stateCounts={
-                        list.stateCounts as
-                            | { open: number; closed: number; merged: number }
-                            | undefined
-                    }
-                    onTabChange={list.setTab}
-                    onNavigate={list.navigate}
-                    onAddQualifier={list.handleAddQualifier}
-                    onRemoveQualifier={list.handleRemoveQualifier}
-                />
-            }
-            showLoading={list.showLoading}
-            isEmpty={items.length === 0}
-            skeleton={<ListSkeleton />}
-            emptyState={
-                <PullRequestEmptyState
-                    searchQuery={list.searchQuery}
-                    activeTab={list.activeTab}
-                />
-            }
-            rows={
-                <div>
-                    {items.map((pr) => (
-                        <PullRequestRow
-                            key={pr.id}
-                            provider={config.provider}
-                            pr={pr}
-                            owner={owner}
-                            repo={repo}
-                            onLabelFilter={filters.onLabelFilter}
-                            onAuthorFilter={filters.onAuthorFilter}
-                            onAssigneesFilter={filters.onAssigneesFilter}
-                        />
-                    ))}
-                </div>
-            }
-            currentPage={list.currentPage}
-            totalPages={list.totalPages}
-            onPageChange={(page) => list.navigate({ page: String(page) })}
-        />
+        <>
+            <RecentlyPushedBanner
+                owner={owner}
+                repo={repo}
+                provider={config.provider}
+            />
+            <SearchListLayout
+                searchBar={
+                    <ListSearchBar
+                        searchInput={list.searchInput}
+                        setSearchInput={list.setSearchInput}
+                        cursorPos={list.cursorPos}
+                        setCursorPos={list.setCursorPos}
+                        inputRef={list.inputRef}
+                        searchBarRef={list.searchBarRef}
+                        autocompleteRef={list.autocompleteRef}
+                        provider={config.provider}
+                        qualifiers={config.qualifiers}
+                        autocompleteOptions={config.autocompleteOptions}
+                        owner={owner}
+                        repo={repo}
+                        placeholder="Search pull requests by title, body, or comments"
+                        urls={config.externalUrls(owner, repo)}
+                        newItemIcon={<GitPullRequest className="size-4" />}
+                        newItemLabel="New Pull Request"
+                        onSearch={list.handleSearch}
+                        onClear={list.handleClearSearch}
+                        onAutocompleteSelect={list.handleAutocompleteSelect}
+                    />
+                }
+                toolbar={
+                    <PullRequestToolbar
+                        activeTab={list.activeTab as FilterState}
+                        searchQuery={list.searchQuery}
+                        setSearchInput={list.setSearchInput}
+                        currentSort={list.currentSort}
+                        currentOrder={list.currentOrder}
+                        config={config}
+                        owner={owner}
+                        repo={repo}
+                        stateCounts={
+                            list.stateCounts as
+                                | {
+                                      open: number;
+                                      closed: number;
+                                      merged: number;
+                                  }
+                                | undefined
+                        }
+                        onTabChange={list.setTab}
+                        onNavigate={list.navigate}
+                        onAddQualifier={list.handleAddQualifier}
+                        onRemoveQualifier={list.handleRemoveQualifier}
+                    />
+                }
+                showLoading={list.showLoading}
+                isEmpty={items.length === 0}
+                skeleton={<ListSkeleton />}
+                emptyState={
+                    <PullRequestEmptyState
+                        searchQuery={list.searchQuery}
+                        activeTab={list.activeTab}
+                    />
+                }
+                rows={
+                    <div>
+                        {items.map((pr) => (
+                            <PullRequestRow
+                                key={pr.id}
+                                provider={config.provider}
+                                pr={pr}
+                                owner={owner}
+                                repo={repo}
+                                onLabelFilter={filters.onLabelFilter}
+                                onAuthorFilter={filters.onAuthorFilter}
+                                onAssigneesFilter={filters.onAssigneesFilter}
+                            />
+                        ))}
+                    </div>
+                }
+                currentPage={list.currentPage}
+                totalPages={list.totalPages}
+                onPageChange={(page) => list.navigate({ page: String(page) })}
+            />
+        </>
     );
 }

@@ -18,7 +18,7 @@ import {
     providerInput,
     providerQuery,
 } from "~/server/api/trpc";
-import { getGitHubToken } from "~/server/auth";
+import { getGitHubToken, getGithubUsername } from "~/server/auth";
 import { deleteCache, prCacheKey, readCache } from "~/server/cache";
 import {
     listAssignees as listCodebergAssignees,
@@ -70,8 +70,14 @@ import {
     getPullRequestMergeStateGraphQL,
 } from "~/server/github-graphql";
 import type { Ctx } from "../provider";
-import { CodebergPullRequestProvider } from "./codeberg";
-import { GitHubPullRequestProvider } from "./github";
+import {
+    CodebergPullRequestProvider,
+    getCodebergRecentlyPushedBranch,
+} from "./codeberg";
+import {
+    GitHubPullRequestProvider,
+    getGitHubRecentlyPushedBranch,
+} from "./github";
 import type { PrSearchResult } from "./types";
 
 const evictPullRequests = async (
@@ -1016,4 +1022,37 @@ export const pullsRouter = createTRPCRouter({
                 ),
             );
         }),
+
+    /**
+     * Banner data for the pull request list: the branch the signed-in user
+     * pushed to most recently that still has no pull request. Anonymous
+     * visitors have no such branch, so they always get null.
+     */
+    recentlyPushedBranch: providerQuery({
+        input: providerInput({
+            owner: z.string(),
+            repo: z.string(),
+        }),
+        gh: async ({ ctx, input, accessToken }) => {
+            const userId = ctx.session?.user?.id;
+            if (!userId) return null;
+            const viewerLogin =
+                ctx.session?.user?.githubUsername ??
+                (await getGithubUsername(userId, accessToken)) ??
+                null;
+            return getGitHubRecentlyPushedBranch(
+                accessToken,
+                input.owner,
+                input.repo,
+                viewerLogin,
+            );
+        },
+        cb: ({ ctx, input, accessToken }) =>
+            getCodebergRecentlyPushedBranch(
+                accessToken,
+                input.owner,
+                input.repo,
+                ctx.session?.user?.codebergUsername ?? null,
+            ),
+    }),
 });

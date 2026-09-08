@@ -343,6 +343,32 @@ export const listPullRequests = cache(
     },
 );
 
+/**
+ * True when the branch already has an open or merged pull request. Closed
+ * unmerged pull requests do not count: the branch can still be proposed
+ * again, which is why GitHub keeps offering the compare link for it.
+ */
+export const branchHasPullRequest = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        branch: string,
+    ): Promise<boolean> => {
+        const octokit = createOctokit(accessToken);
+        const response = await octokit.pulls.list({
+            owner,
+            repo,
+            state: "all",
+            head: `${owner}:${branch}`,
+            per_page: 10,
+        });
+        return response.data.some(
+            (pr) => pr.state === "open" || pr.merged_at !== null,
+        );
+    },
+);
+
 export const updatePullRequest = async (
     accessToken: string,
     owner: string,
