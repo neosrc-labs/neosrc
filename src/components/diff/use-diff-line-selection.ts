@@ -28,6 +28,74 @@ export function readRowLine(
     return Number.isFinite(line) ? line : null;
 }
 
+/**
+ * Bounds, in both number spaces, of the rendered rows running from the row
+ * holding `anchorLine` on `side` through `row`.
+ *
+ * The two endpoint rows alone cannot bracket every row they span: an
+ * insertion carries no old line and a deletion no new line, so a range
+ * anchored on the old side leaves insertions inside it unbracketed. Both
+ * number spaces increase monotonically down the rows, so the bounding box of
+ * the rows actually walked is exactly the run and covers its unpaired rows.
+ * Returns null when the anchor row is not reachable from `row`, leaving the
+ * caller with its endpoint-only bounds.
+ */
+export function collectRunBounds(
+    row: HTMLElement | null | undefined,
+    side: string,
+    anchorLine: number,
+): { startLines: DiffRowLines; endLines: DiffRowLines } | null {
+    if (!row) return null;
+    const from = readRowLine(row, side);
+    if (from == null) return null;
+    // Walk toward the anchor row: down when it sits below the hovered row.
+    const down = from < anchorLine;
+    let oldMin: number | undefined;
+    let oldMax: number | undefined;
+    let newMin: number | undefined;
+    let newMax: number | undefined;
+    let current: Element | null = row;
+    while (current) {
+        const element = current as HTMLElement;
+        const oldLine = readRowLine(element, "LEFT");
+        if (oldLine != null) {
+            oldMin = oldMin == null ? oldLine : Math.min(oldMin, oldLine);
+            oldMax = oldMax == null ? oldLine : Math.max(oldMax, oldLine);
+        }
+        const newLine = readRowLine(element, "RIGHT");
+        if (newLine != null) {
+            newMin = newMin == null ? newLine : Math.min(newMin, newLine);
+            newMax = newMax == null ? newLine : Math.max(newMax, newLine);
+        }
+        if (readRowLine(element, side) === anchorLine) {
+            return {
+                startLines: { oldLine: oldMin, newLine: newMin },
+                endLines: { oldLine: oldMax, newLine: newMax },
+            };
+        }
+        current = down
+            ? current.nextElementSibling
+            : current.previousElementSibling;
+    }
+    return null;
+}
+
+/**
+ * The rendered row for a (line, side) anchor. Split view puts the old-side id
+ * on the line-number cell rather than the row, so resolve to the row.
+ */
+export function findRowElement(
+    fileHash: string,
+    line: number,
+    side: string,
+): HTMLElement | null {
+    const sideCode = side === "RIGHT" ? "R" : "L";
+    const element = document.getElementById(
+        `diff-${fileHash}${sideCode}${line}`,
+    );
+    return element?.closest("tr") ?? null;
+}
+
 function isBetween(
     value: number,
     a: number | undefined,
@@ -226,13 +294,18 @@ export function useDiffLineSelection(fileHash: string) {
                     mouseAnchorRef.current = { line, side, lines: rowLines };
                     return;
                 }
+                const bounds = collectRunBounds(
+                    findRowElement(fileHash, line, side),
+                    anchor.side,
+                    anchor.line,
+                );
                 commitRangeUrl(anchor.line, targetLine, anchor.side);
                 updateSelection(
                     anchor.line,
                     targetLine,
                     anchor.side,
-                    anchor.lines,
-                    rowLines,
+                    bounds?.startLines ?? anchor.lines,
+                    bounds?.endLines ?? rowLines,
                 );
                 mouseAnchorRef.current = null;
                 return;
@@ -241,7 +314,7 @@ export function useDiffLineSelection(fileHash: string) {
             updateSelection(line, line, side, rowLines, rowLines);
             mouseAnchorRef.current = { line, side, lines: rowLines };
         },
-        [commitRangeUrl, commitSingleUrl, updateSelection],
+        [commitRangeUrl, commitSingleUrl, fileHash, updateSelection],
     );
 
     const onLineMouseDown = useCallback(
@@ -265,16 +338,16 @@ export function useDiffLineSelection(fileHash: string) {
             // separated by gaps, additions vs deletions).
             const line = readRowLine(row, anchor.side);
             if (line == null) return;
-            const rowLines = {
-                oldLine: readRowLine(row, "LEFT") ?? undefined,
-                newLine: readRowLine(row, "RIGHT") ?? undefined,
-            };
+            const bounds = collectRunBounds(row, anchor.side, anchor.line);
             updateSelection(
                 anchor.line,
                 line,
                 anchor.side,
-                anchor.lines,
-                rowLines,
+                bounds?.startLines ?? anchor.lines,
+                bounds?.endLines ?? {
+                    oldLine: readRowLine(row, "LEFT") ?? undefined,
+                    newLine: readRowLine(row, "RIGHT") ?? undefined,
+                },
             );
         },
         [updateSelection],

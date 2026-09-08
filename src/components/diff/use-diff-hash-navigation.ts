@@ -3,6 +3,10 @@
 import { useEffect } from "react";
 import { diffGapKey, gapCommentRanges, mergeGapRanges } from "./model";
 import type { DiffRenderItem, GapRange } from "./types";
+import {
+    collectRunBounds,
+    type DiffSelectedRange,
+} from "./use-diff-line-selection";
 
 const SCROLL_TARGET_PADDING = 12;
 
@@ -40,11 +44,7 @@ export function useDiffHashNavigation({
         React.SetStateAction<Map<string, GapRange[]>>
     >;
     setSelectedRange: React.Dispatch<
-        React.SetStateAction<{
-            startLine: number;
-            endLine: number;
-            side: string;
-        } | null>
+        React.SetStateAction<DiffSelectedRange | null>
     >;
 }) {
     useEffect(() => {
@@ -162,7 +162,20 @@ export function useDiffHashNavigation({
                     ),
                     behavior,
                 });
-                setSelectedRange({ startLine, endLine, side });
+                // Endpoint numbers live in one side's space and so do not
+                // bracket unpaired rows inside the range; sweep the rows the
+                // permalink actually covers (see collectRunBounds).
+                const bounds = collectRunBounds(
+                    element.closest("tr"),
+                    side,
+                    endLine,
+                );
+                setSelectedRange({
+                    startLine,
+                    endLine,
+                    side,
+                    ...(bounds ?? {}),
+                });
                 return true;
             };
 

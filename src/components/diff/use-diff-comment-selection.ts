@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DiffCommentTarget, DiffSide } from "./types";
 import {
+    collectRunBounds,
     type DiffRowLines,
     type DiffSelectedRange,
     readRowLine,
@@ -115,10 +116,7 @@ export function useDiffCommentSelection({
                     side,
                 };
             }
-            const rowLines = {
-                oldLine: readRowLine(row, "LEFT") ?? undefined,
-                newLine: readRowLine(row, "RIGHT") ?? undefined,
-            };
+            const bounds = collectRunBounds(row, side, anchorLine);
             const startLine = Math.min(anchorLine, line);
             const endLine = Math.max(anchorLine, line);
             setCommentDragRange({ startLine, endLine, side });
@@ -130,8 +128,11 @@ export function useDiffCommentSelection({
                           startLine,
                           endLine,
                           side,
-                          startLines: anchor.lines,
-                          endLines: rowLines,
+                          startLines: bounds?.startLines ?? anchor.lines,
+                          endLines: bounds?.endLines ?? {
+                              oldLine: readRowLine(row, "LEFT") ?? undefined,
+                              newLine: readRowLine(row, "RIGHT") ?? undefined,
+                          },
                       },
             );
         },

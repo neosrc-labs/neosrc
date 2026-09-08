@@ -2156,6 +2156,115 @@ describe("DiffView split view", () => {
                 expect.stringMatching(new RegExp(`#diff-${FILE_HASH}L2-L9$`)),
             );
         });
+
+        it("unified: a drag from a deletion past an addition highlights the addition", () => {
+            // Rows: context 1, deletion old 2, addition new 2, context 3.
+            // The range is anchored on the old side, where the addition has no
+            // line number, so it must not fall out of the highlight.
+            mockParsedFile(
+                [
+                    mb(1, [
+                        mc(" l1", 1, 1),
+                        mc("-d2", undefined, 2),
+                        mc("+a2", 2),
+                        mc(" l3", 3, 3),
+                    ]),
+                ],
+                { addedLines: 1, deletedLines: 1 },
+            );
+
+            const { container } = renderDiffView({ view: "unified" });
+            const row = (suffix: string) =>
+                container.querySelector(`tr[id$="${suffix}"]`)!;
+
+            fireEvent.mouseDown(
+                row("L2").querySelector("td.d2h-code-linenumber")!,
+            );
+            fireEvent.mouseOver(row("R3"));
+            fireEvent.mouseUp(document);
+
+            expect(row("L2").className).toContain("line-highlighted");
+            expect(row("R2").className).toContain("line-highlighted");
+            expect(row("R3").className).toContain("line-highlighted");
+            // The context line above the anchor stays out of the range.
+            expect(row("R1").className).not.toContain("line-highlighted");
+        });
+
+        it("unified: a shift-click range over an addition highlights the addition", () => {
+            mockParsedFile(
+                [
+                    mb(1, [
+                        mc(" l1", 1, 1),
+                        mc("-d2", undefined, 2),
+                        mc("+a2", 2),
+                        mc(" l3", 3, 3),
+                    ]),
+                ],
+                { addedLines: 1, deletedLines: 1 },
+            );
+
+            const { container } = renderDiffView({ view: "unified" });
+            const row = (suffix: string) =>
+                container.querySelector(`tr[id$="${suffix}"]`)!;
+
+            fireEvent.click(row("L2").querySelector("td.d2h-code-linenumber")!);
+            fireEvent.click(
+                row("R3").querySelector("td.d2h-code-linenumber")!,
+                {
+                    shiftKey: true,
+                },
+            );
+
+            expect(row("R2").className).toContain("line-highlighted");
+            expect(row("R1").className).not.toContain("line-highlighted");
+        });
+
+        it("split: an old-side drag from an unpaired deletion covers a later unpaired addition", () => {
+            // Split rows: [old 4 | new 4], [old 5 | -], [old 6 | new 5],
+            // [- | new 6], [old 7 | new 7]. The drag is anchored on the
+            // deletion row that has no new line, so only sweeping the rows it
+            // covers yields a new-side bound for the lone addition row.
+            mockParsedFile(
+                [
+                    mb(
+                        4,
+                        [
+                            mc("-d4", undefined, 4),
+                            mc("-d5", undefined, 5),
+                            mc("+a4", 4),
+                            mc(" l6", 5, 6),
+                            mc("+a6", 6),
+                            mc(" l7", 7, 7),
+                        ],
+                        4,
+                    ),
+                ],
+                { addedLines: 2, deletedLines: 2 },
+            );
+
+            const { container } = renderDiffView({ view: "split" });
+            const rows = Array.from(
+                container.querySelectorAll('tr[id^="diff-"]'),
+            );
+            const oldLineNumberCell = (row: Element) =>
+                Array.from(row.querySelectorAll("td")).find(
+                    (td) =>
+                        td.className.includes("d2h-split-ln") &&
+                        !td.className.includes("d2h-split-new"),
+                )!;
+
+            fireEvent.mouseDown(oldLineNumberCell(rows[1]!));
+            fireEvent.mouseOver(rows[4]!);
+            fireEvent.mouseUp(document);
+
+            const additionCells = rows[3]!.querySelectorAll("td");
+            expect(additionCells[2]!.className).toContain("d2h-split-selected");
+            expect(additionCells[3]!.className).toContain("d2h-split-selected");
+            // Its empty old side stays unhighlighted.
+            expect(additionCells[0]!.className).not.toContain(
+                "d2h-split-selected",
+            );
+        });
     });
 
     describe("selection highlight sides", () => {
@@ -2224,10 +2333,10 @@ describe("DiffView split view", () => {
 
         it("a range over mixed rows highlights both sides of two-sided rows and only the existing side of one-sided rows", () => {
             // Group 1: del2/ins2 paired, then leftover deletions old 3, old 4
-            // (unpaired). Context row 5/5, then group 2: del6/ins3 paired and
-            // an unpaired addition new 4. Rows:
+            // (unpaired). Context row 5/5, then group 2: del6/ins6 paired and
+            // an unpaired addition new 7. Rows:
             //   R1 (1/1), R2 (2/2), L3 (old 3), L4 (old 4), R5 (5/5),
-            //   R6 (old 6/new 3), R7 (added new 4)
+            //   R6 (old 6/new 6), R7 (added new 7)
             const lines = [
                 mc(" l1", 1, 1),
                 mc("-del2", undefined, 2),
@@ -2236,8 +2345,8 @@ describe("DiffView split view", () => {
                 mc("-del4", undefined, 4),
                 mc(" l5", 5, 5),
                 mc("-del6", undefined, 6),
-                mc("+ins3", 3),
-                mc("+ins4", 4),
+                mc("+ins6", 6),
+                mc("+ins7", 7),
             ];
             mockParsedFile([mb(1, lines)], { addedLines: 3, deletedLines: 4 });
 
@@ -2248,7 +2357,7 @@ describe("DiffView split view", () => {
             const isSel = (td: Element) =>
                 td.className.includes("d2h-split-selected");
 
-            // Right-side drag from new 2 (R2) to new 3 (R6).
+            // Right-side drag from new 2 (R2) to new 6 (R6).
             const newLnR2 = Array.from(cells(1)).find((td) =>
                 td.className.includes("d2h-split-new"),
             )!;
@@ -2407,6 +2516,38 @@ describe("DiffView split view", () => {
                 startLine: 2,
                 startSide: "LEFT",
             });
+        });
+
+        it("unified: a comment drag from a deletion past an addition highlights it", () => {
+            mockParsedFile(
+                [
+                    mb(1, [
+                        mc(" l1", 1, 1),
+                        mc("-d2", undefined, 2),
+                        mc("+a2", 2),
+                        mc(" l3", 3, 3),
+                    ]),
+                ],
+                { addedLines: 1, deletedLines: 1 },
+            );
+
+            const { container } = renderDiffView({
+                view: "unified",
+                showCommentButton: true,
+                onStartComment: vi.fn(),
+            });
+            const row = (suffix: string) =>
+                container.querySelector(`tr[id$="${suffix}"]`)!;
+
+            fireEvent.mouseDown(
+                row("L2").querySelector('[data-testid="square-plus"]')!,
+            );
+            fireEvent.mouseOver(row("R3"));
+
+            expect(row("L2").className).toContain("line-highlighted");
+            expect(row("R2").className).toContain("line-highlighted");
+            expect(row("R3").className).toContain("line-highlighted");
+            expect(row("R1").className).not.toContain("line-highlighted");
         });
 
         it("does not flip when the anchor row lacks the other side", () => {

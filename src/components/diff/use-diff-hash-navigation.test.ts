@@ -124,6 +124,42 @@ describe("useDiffHashNavigation", () => {
         expect(getState().size).toBe(0);
     });
 
+    it("sweeps both number spaces for a permalinked range", () => {
+        // Rows: old 4 (deletion), new 4 (addition), old 5 / new 5 (context).
+        // The permalink runs on the old side, where the addition has no line,
+        // so the range must carry a new-side bound covering it too.
+        document.body.innerHTML = `
+            <table><tbody>
+                <tr id="diff-abc123L4" data-old-line="4"></tr>
+                <tr id="diff-abc123R4" data-new-line="4"></tr>
+                <tr id="diff-abc123R5" data-old-line="5" data-new-line="5"></tr>
+            </tbody></table>`;
+        const setSelectedRange = vi.fn();
+        const renderItemsRef = { current: renderItemsFor() };
+        window.location.hash = "#diff-abc123L4-L5";
+        const result = renderHook(() =>
+            useDiffHashNavigation({
+                parsed: true,
+                fileHash: "abc123",
+                renderItemsRef,
+                setExpandedGaps: vi.fn(),
+                setSelectedRange,
+            }),
+        );
+        unmountHook = result.unmount;
+        act(() => {
+            vi.advanceTimersByTime(100);
+        });
+
+        expect(setSelectedRange).toHaveBeenCalledWith({
+            startLine: 4,
+            endLine: 5,
+            side: "LEFT",
+            startLines: { oldLine: 4, newLine: 4 },
+            endLines: { oldLine: 5, newLine: 5 },
+        });
+    });
+
     describe("user scroll cancels re-centering", () => {
         function mountWithTarget(): ReturnType<typeof vi.fn> {
             const target = document.createElement("div");
