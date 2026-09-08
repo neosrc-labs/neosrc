@@ -7,7 +7,13 @@ import type {
 } from "diff2html/lib/types";
 import hljs from "highlight.js";
 import type { ReviewComment } from "~/server/github";
-import type { DiffAnchor, DiffGap, DiffRenderItem } from "./types";
+import type {
+    DiffAnchor,
+    DiffGap,
+    DiffRenderItem,
+    GapRange,
+    GapSegment,
+} from "./types";
 
 export function normalizeDiffPatch(patch: string, filename: string): string {
     return patch.startsWith("---")
@@ -189,6 +195,16 @@ export function buildDiffPositionMap(
     return map;
 }
 
+/**
+ * Where a comment attaches in the current diff, or null when it does not
+ * attach at all.
+ *
+ * GitHub keeps `line` in sync with the head commit and nulls it once the lines
+ * the comment was made on are no longer part of the diff. Such an outdated
+ * comment lives in the conversation only, so it must not be anchored here -
+ * its `position` may still hold a stale index that would land the thread on an
+ * unrelated line.
+ */
 export function resolveDiffCommentAnchor(
     comment: ReviewComment,
     positionMap: Map<number, DiffAnchor>,
@@ -196,8 +212,141 @@ export function resolveDiffCommentAnchor(
     if (comment.line != null) {
         return { side: comment.side ?? "RIGHT", line: comment.line };
     }
+    if (comment.original_line != null || comment.original_start_line != null) {
+        return null;
+    }
+    // Drafts predating line-based anchoring carry a diff position only.
     const position = comment.position ?? comment.original_position ?? null;
     return position == null ? null : (positionMap.get(position) ?? null);
+}
+
+/** Stable identity of a gap within a file's render items. */
+export function diffGapKey(gap: { startLine: number }): string {
+    return `gap-${gap.startLine}`;
+}
+
+/**
+ * New-file line an anchor points at inside `gap`. Gap lines are context lines
+ * present on both sides, so an old-side anchor maps onto the new numbering by
+ * the gap's constant offset.
+ */
+export function gapTargetLine(gap: DiffGap, anchor: DiffAnchor): number {
+    if (anchor.side === "RIGHT") return anchor.line;
+    return anchor.line - (gap.oldStartLine - gap.startLine);
+}
+
+/**
+ * Lines of unchanged context kept around a comment when its region is
+ * revealed, so the thread sits inside code instead of at the edge of the
+ * unfolded block.
+ */
+export const COMMENT_CONTEXT_LINES = 4;
+
+/** Sorts `ranges` and merges the overlapping or adjacent ones. */
+export function normalizeGapRanges(ranges: GapRange[]): GapRange[] {
+    const sorted = [...ranges]
+        .filter((range) => range.end >= range.start)
+        .sort((a, b) => a.start - b.start);
+    const merged: GapRange[] = [];
+    for (const range of sorted) {
+        const last = merged[merged.length - 1];
+        if (last && range.start <= last.end + 1) {
+            last.end = Math.max(last.end, range.end);
+            continue;
+        }
+        merged.push({ ...range });
+    }
+    return merged;
+}
+
+/** Adds `range`, returning `ranges` unchanged when it is already revealed. */
+export function addGapRange(ranges: GapRange[], range: GapRange): GapRange[] {
+    if (range.end < range.start) return ranges;
+    if (
+        ranges.some(
+            (existing) =>
+                existing.start <= range.start && existing.end >= range.end,
+        )
+    ) {
+        return ranges;
+    }
+    return normalizeGapRanges([...ranges, range]);
+}
+
+/**
+ * Merges per-gap `additions` into `current`, returning `current` itself when
+ * every addition is already revealed.
+ */
+export function mergeGapRanges(
+    current: Map<string, GapRange[]>,
+    additions: Map<string, GapRange[]>,
+): Map<string, GapRange[]> {
+    let next: Map<string, GapRange[]> | null = null;
+    for (const [key, ranges] of additions) {
+        const existing = next?.get(key) ?? current.get(key) ?? [];
+        let merged = existing;
+        for (const range of ranges) {
+            merged = addGapRange(merged, range);
+        }
+        if (merged === existing) continue;
+        next ??= new Map(current);
+        next.set(key, merged);
+    }
+    return next ?? current;
+}
+
+/**
+ * Ranges `gap` must reveal so every anchor inside it shows with context above
+ * and below. Anchors on hunk lines need nothing revealed; requests are clamped
+ * to the gap so they never spill into a hunk.
+ */
+export function gapCommentRanges(
+    gap: DiffGap,
+    anchors: DiffAnchor[],
+): GapRange[] {
+    const gapEnd = gap.endLine === -1 ? Number.POSITIVE_INFINITY : gap.endLine;
+    const ranges: GapRange[] = [];
+    for (const anchor of anchors) {
+        const line = gapTargetLine(gap, anchor);
+        if (line < gap.startLine || line > gapEnd) continue;
+        ranges.push({
+            start: Math.max(gap.startLine, line - COMMENT_CONTEXT_LINES),
+            end: Math.min(gapEnd, line + COMMENT_CONTEXT_LINES),
+        });
+    }
+    return normalizeGapRanges(ranges);
+}
+
+/**
+ * Splits the gap's line span into hidden and revealed runs in render order.
+ * Every hidden run gets an unfold row; revealed runs render as context lines.
+ */
+export function gapSegments(
+    startLine: number,
+    endLine: number,
+    revealed: GapRange[],
+): GapSegment[] {
+    if (endLine < startLine) return [];
+    const segments: GapSegment[] = [];
+    let cursor = startLine;
+    for (const range of normalizeGapRanges(revealed)) {
+        const start = Math.max(range.start, startLine);
+        const end = Math.min(range.end, endLine);
+        if (end < start || end < cursor) continue;
+        if (start > cursor) {
+            segments.push({ start: cursor, end: start - 1, hidden: true });
+        }
+        segments.push({
+            start: Math.max(start, cursor),
+            end,
+            hidden: false,
+        });
+        cursor = end + 1;
+    }
+    if (cursor <= endLine) {
+        segments.push({ start: cursor, end: endLine, hidden: true });
+    }
+    return segments;
 }
 
 /** Whether `comment`'s anchor is the given line (last line of its range). */

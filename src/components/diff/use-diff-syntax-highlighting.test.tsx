@@ -15,19 +15,12 @@ vi.mock("highlight.js", () => ({
     },
 }));
 
-function Harness({
-    rerenderKey,
-    lines,
-}: {
-    rerenderKey: string;
-    lines: string[];
-}) {
+function Harness({ lines }: { lines: string[] }) {
     const ref = useRef<HTMLDivElement>(null);
     useDiffSyntaxHighlighting({
         diffRef: ref,
         language: "typescript",
         enabled: true,
-        rerenderKey,
     });
     return (
         <div ref={ref}>
@@ -66,7 +59,7 @@ describe("useDiffSyntaxHighlighting", () => {
         });
         const lines = ["one", "two", "three", "four"];
 
-        render(<Harness rerenderKey="a" lines={lines} />);
+        render(<Harness lines={lines} />);
 
         // The pass is scheduled across frames, not run synchronously.
         expect(highlighted()).toHaveLength(0);
@@ -78,14 +71,14 @@ describe("useDiffSyntaxHighlighting", () => {
         expect(mockHighlight).toHaveBeenCalledTimes(lines.length);
     });
 
-    it("re-highlights only newly rendered lines when the key changes", async () => {
-        const { rerender } = render(
-            <Harness rerenderKey="a" lines={["one", "two"]} />,
-        );
+    it("highlights lines that appear after the first pass", async () => {
+        const { rerender } = render(<Harness lines={["one", "two"]} />);
         await vi.waitFor(() => expect(highlighted()).toHaveLength(2));
         mockHighlight.mockClear();
 
-        rerender(<Harness rerenderKey="b" lines={["one", "two", "three"]} />);
+        // Expanded context arrives without any prop change: the new row must
+        // still be highlighted.
+        rerender(<Harness lines={["one", "two", "three"]} />);
         await vi.waitFor(() => expect(highlighted()).toHaveLength(3));
 
         // Existing lines keep their highlight and are not re-processed; only
@@ -99,7 +92,7 @@ describe("useDiffSyntaxHighlighting", () => {
     });
 
     it("marks empty lines so later passes skip them", async () => {
-        render(<Harness rerenderKey="a" lines={["one", "", "two"]} />);
+        render(<Harness lines={["one", "", "two"]} />);
         await vi.waitFor(() => expect(highlighted()).toHaveLength(3));
 
         // Empty lines carry no highlight call but are still marked done.

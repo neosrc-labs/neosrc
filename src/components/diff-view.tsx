@@ -12,16 +12,21 @@ import { scheduleIdle } from "~/utils/schedule-idle";
 import { DiffTable } from "./diff/diff-table";
 import { DiffTableBody } from "./diff/diff-table-body";
 import {
+    addGapRange,
     buildDiffPositionMap,
     createDiffRenderItems,
+    diffGapKey,
+    gapCommentRanges,
     getDiffLanguage,
+    mergeGapRanges,
     parseDiffPatch,
     resolveDiffCommentAnchor,
 } from "./diff/model";
 import type {
+    DiffAnchor,
     DiffCommentTarget,
     DiffRowCommentProps,
-    GapExpansion,
+    GapRange,
 } from "./diff/types";
 import { useDiffCommentSelection } from "./diff/use-diff-comment-selection";
 import { useDiffHashNavigation } from "./diff/use-diff-hash-navigation";
@@ -175,50 +180,27 @@ export function DiffView({
         onCommentTableMouseOver,
     } = commentSelection;
 
-    const [expandedGaps, setExpandedGaps] = useState<Map<string, GapExpansion>>(
+    const [expandedGaps, setExpandedGaps] = useState<Map<string, GapRange[]>>(
         () => new Map(),
     );
 
-    // Track how many lines of each gap are revealed from the top (down) and
-    // the bottom (up); a click reveals GAP_EXPAND_STEP more lines from one
-    // end until the gap is exhausted.
-    const handleGapExpand = useCallback(
-        (key: string, expansion: GapExpansion) => {
-            setExpandedGaps((prev) => {
-                const current = prev.get(key) ?? { top: 0, bottom: 0 };
-                const next = {
-                    top: Math.max(current.top, expansion.top),
-                    bottom: Math.max(current.bottom, expansion.bottom),
-                };
-                if (next.top === current.top && next.bottom === current.bottom)
-                    return prev;
-                const map = new Map(prev);
-                map.set(key, next);
-                return map;
-            });
-        },
-        [],
-    );
+    // Each unfold click reveals GAP_EXPAND_STEP lines from one end of a
+    // hidden run; revealed runs accumulate per gap.
+    const handleGapExpand = useCallback((key: string, range: GapRange) => {
+        setExpandedGaps((previous) => {
+            const current = previous.get(key) ?? [];
+            const next = addGapRange(current, range);
+            if (next === current) return previous;
+            const map = new Map(previous);
+            map.set(key, next);
+            return map;
+        });
+    }, []);
 
-    useEffect(() => {
-        if (!expandAllContext) {
-            setExpandedGaps(new Map());
-        }
-    }, [expandAllContext]);
-
-    const expandedLineCount = useMemo(
-        () =>
-            Array.from(expandedGaps.values()).reduce(
-                (sum, { top, bottom }) => sum + top + bottom,
-                0,
-            ),
-        [expandedGaps],
-    );
     useDiffSyntaxHighlighting({
         diffRef,
         language,
         enabled: Boolean(parsed),
-        rerenderKey: `${expandedLineCount}-${expandAllContext}-${view}`,
     });
 
     const positionMap = useMemo(() => buildDiffPositionMap(parsed), [parsed]);
@@ -263,6 +245,55 @@ export function DiffView({
 
     const renderItemsRef = useRef(renderItems);
     renderItemsRef.current = renderItems;
+
+    const commentAnchors = useMemo(() => {
+        const anchors: DiffAnchor[] = [];
+        for (const comment of comments) {
+            const anchor = resolveDiffCommentAnchor(comment, positionMap);
+            if (!anchor) continue;
+            anchors.push(anchor);
+            if (
+                comment.start_line != null &&
+                comment.start_line !== anchor.line
+            ) {
+                anchors.push({ side: anchor.side, line: comment.start_line });
+            }
+        }
+        return anchors;
+    }, [comments, positionMap]);
+
+    // GitHub allows commenting on any line of a file, including lines the pull
+    // request leaves untouched. Those lines sit in a collapsed gap, so reveal
+    // a window around each comment instead of dropping the thread; the rest of
+    // the gap stays folded.
+    const commentGapRanges = useMemo(() => {
+        const map = new Map<string, GapRange[]>();
+        if (commentAnchors.length === 0) return map;
+        for (const item of renderItems) {
+            if (item.type !== "gap") continue;
+            const ranges = gapCommentRanges(item, commentAnchors);
+            if (ranges.length > 0) map.set(diffGapKey(item), ranges);
+        }
+        return map;
+    }, [commentAnchors, renderItems]);
+
+    // Read through a ref so leaving "expand all" does not depend on the
+    // comment query's array identity, which would collapse manual unfolds on
+    // every refetch.
+    const commentGapRangesRef = useRef(commentGapRanges);
+    commentGapRangesRef.current = commentGapRanges;
+
+    useEffect(() => {
+        if (!expandAllContext) {
+            setExpandedGaps(new Map(commentGapRangesRef.current));
+        }
+    }, [expandAllContext]);
+
+    useEffect(() => {
+        setExpandedGaps((previous) =>
+            mergeGapRanges(previous, commentGapRanges),
+        );
+    }, [commentGapRanges]);
 
     // Expose the sticky-header offset so native fragment scrolls (initial load,
     // pressing Enter in the URL bar) also land the line below the sticky bars.

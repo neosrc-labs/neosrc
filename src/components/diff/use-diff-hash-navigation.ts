@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import type { DiffRenderItem, GapExpansion } from "./types";
+import { diffGapKey, gapCommentRanges, mergeGapRanges } from "./model";
+import type { DiffRenderItem, GapRange } from "./types";
 
 const SCROLL_TARGET_PADDING = 12;
 
@@ -16,7 +17,7 @@ export function useDiffHashNavigation({
     fileHash: string;
     renderItemsRef: React.RefObject<DiffRenderItem[]>;
     setExpandedGaps: React.Dispatch<
-        React.SetStateAction<Map<string, GapExpansion>>
+        React.SetStateAction<Map<string, GapRange[]>>
     >;
     setSelectedRange: React.Dispatch<
         React.SetStateAction<{
@@ -58,48 +59,21 @@ export function useDiffHashNavigation({
                 // A range may span several regions; reveal every gap that
                 // contains either end of the selection so the whole range is
                 // visible once collapsed rows are fetched.
-                const targets = [startLine, endLine];
+                const additions = new Map<string, GapRange[]>();
                 for (const item of renderItemsRef.current) {
                     if (item.type !== "gap") continue;
-                    const gapEnd =
-                        item.endLine === -1 ? Infinity : item.endLine;
-                    const inGap = targets.filter(
-                        (target) =>
-                            target >= item.startLine && target <= gapEnd,
-                    );
-                    if (inGap.length === 0) continue;
-                    const gapKey = `gap-${item.startLine}`;
-                    // Reveal just enough of the gap to include both target
-                    // lines; the rest stays behind an unfold row. Leading
-                    // gaps (above the first hunk) reveal backward from the
-                    // hunk, so the count is measured from the gap end there.
-                    const neededTop =
-                        item.startLine === 1
-                            ? 0
-                            : Math.max(...inGap) - item.startLine + 1;
-                    const neededBottom =
-                        item.startLine === 1
-                            ? gapEnd - Math.min(...inGap) + 1
-                            : 0;
-                    setExpandedGaps((previous) => {
-                        const current = previous.get(gapKey) ?? {
-                            top: 0,
-                            bottom: 0,
-                        };
-                        const next = {
-                            top: Math.max(current.top, neededTop),
-                            bottom: Math.max(current.bottom, neededBottom),
-                        };
-                        if (
-                            next.top === current.top &&
-                            next.bottom === current.bottom
-                        )
-                            return previous;
-                        const map = new Map(previous);
-                        map.set(gapKey, next);
-                        return map;
-                    });
+                    const ranges = gapCommentRanges(item, [
+                        { side, line: startLine },
+                        { side, line: endLine },
+                    ]);
+                    if (ranges.length > 0) {
+                        additions.set(diffGapKey(item), ranges);
+                    }
                 }
+                if (additions.size === 0) return;
+                setExpandedGaps((previous) =>
+                    mergeGapRanges(previous, additions),
+                );
             };
 
             let cachedOffset = 0;

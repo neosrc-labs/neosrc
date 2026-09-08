@@ -27,6 +27,18 @@ describe("review comment domain", () => {
         expect(isFileComment(comment({ line: 4, position: null }))).toBe(false);
     });
 
+    it("keeps an outdated line comment out of the file-comment bucket", () => {
+        // GitHub nulls `line` once the commented lines leave the diff but
+        // keeps `original_line`; such a comment is not a file-level comment.
+        const outdated = comment({
+            line: null,
+            position: null,
+            original_line: 859,
+        });
+        expect(isFileComment(outdated)).toBe(false);
+        expect(isLineComment(outdated)).toBe(true);
+    });
+
     it("groups replies by their direct root without recursively collapsing replies", () => {
         const threads = groupReviewCommentThreads([
             comment({ id: 1 }),
