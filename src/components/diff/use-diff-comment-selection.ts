@@ -19,7 +19,7 @@ export function useDiffCommentSelection({
     activeComment: DiffCommentTarget | null;
     onStartComment?: (target: DiffCommentTarget | null) => void;
     selectedRange: DiffSelectedRange | null;
-    onSelectionChange: (range: DiffSelectedRange) => void;
+    onSelectionChange: (range: DiffSelectedRange | null) => void;
     onOrdinaryLineMouseDown: (
         line: number,
         side: string,
@@ -44,13 +44,10 @@ export function useDiffCommentSelection({
             commentDragInProgress.current = true;
             commentDragAnchor.current = { line, side, lines };
             setCommentDragRange({ startLine: line, endLine: line, side });
-            onSelectionChange({
-                startLine: line,
-                endLine: line,
-                side,
-                startLines: lines,
-                endLines: lines,
-            });
+            // A plain click on the button opens the editor for this line; it
+            // must not select it. Only a drag onto another row selects, so
+            // drop any stale selection here and let mouseover build the range.
+            onSelectionChange(null);
         },
         [onSelectionChange],
     );
@@ -125,13 +122,18 @@ export function useDiffCommentSelection({
             const startLine = Math.min(anchorLine, line);
             const endLine = Math.max(anchorLine, line);
             setCommentDragRange({ startLine, endLine, side });
-            onSelectionChange({
-                startLine,
-                endLine,
-                side,
-                startLines: anchor.lines,
-                endLines: rowLines,
-            });
+            // Single-row ranges are not a selection (see onCommentDragStart).
+            onSelectionChange(
+                startLine === endLine
+                    ? null
+                    : {
+                          startLine,
+                          endLine,
+                          side,
+                          startLines: anchor.lines,
+                          endLines: rowLines,
+                      },
+            );
         },
         [onOrdinaryTableMouseOver, onSelectionChange],
     );

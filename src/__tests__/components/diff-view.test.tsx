@@ -474,6 +474,40 @@ describe("DiffView rendering", () => {
                 startSide: "RIGHT",
             });
         });
+
+        it("a plain click on Plus does not highlight the clicked line", () => {
+            const onStartComment = vi.fn();
+            const { container, firstPlus } =
+                renderCommentButton(onStartComment);
+
+            fireEvent.mouseDown(firstPlus!);
+            fireEvent.mouseUp(document);
+            fireEvent.click(firstPlus!);
+
+            expect(onStartComment).toHaveBeenCalledWith({
+                type: "line",
+                line: 1,
+                side: "RIGHT",
+            });
+            expect(
+                container.querySelectorAll(".line-highlighted"),
+            ).toHaveLength(0);
+        });
+
+        it("drops the highlight when a drag collapses back to its anchor row", () => {
+            const { container, firstPlus } = renderCommentButton(vi.fn());
+
+            fireEvent.mouseDown(firstPlus!);
+            fireEvent.mouseOver(getTr(container, "R2")!);
+            expect(
+                container.querySelectorAll(".line-highlighted").length,
+            ).toBeGreaterThan(0);
+
+            fireEvent.mouseOver(getTr(container, "R1")!);
+            expect(
+                container.querySelectorAll(".line-highlighted"),
+            ).toHaveLength(0);
+        });
     });
 
     describe("comment display", () => {
