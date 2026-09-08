@@ -49,11 +49,90 @@ describe("getMergeRequirements", () => {
 
         await expect(
             getMergeRequirements("token", "owner", "repo", "rulesets"),
-        ).resolves.toEqual({
+        ).resolves.toMatchObject({
+            source: "ruleset",
             requiredApprovingReviewCount: 2,
             requiredChecks: ["ci/test", "ci/lint"],
         });
         expect(mockGetBranchProtection).not.toHaveBeenCalled();
+    });
+
+    it("maps the full ruleset payload", async () => {
+        mockGetBranchRules.mockResolvedValue({
+            data: [
+                {
+                    type: "pull_request",
+                    parameters: {
+                        required_approving_review_count: 1,
+                        dismiss_stale_reviews_on_push: true,
+                        require_code_owner_review: true,
+                        require_last_push_approval: true,
+                        required_review_thread_resolution: true,
+                        allowed_merge_methods: ["squash"],
+                    },
+                },
+                {
+                    type: "required_status_checks",
+                    parameters: {
+                        required_status_checks: [
+                            { context: "ci/test" },
+                            { context: "ci/test" },
+                        ],
+                        strict_required_status_checks_policy: true,
+                    },
+                },
+                { type: "required_signatures" },
+                { type: "required_linear_history" },
+                {
+                    type: "required_deployments",
+                    parameters: {
+                        required_deployment_environments: ["staging"],
+                    },
+                },
+            ],
+        });
+
+        await expect(
+            getMergeRequirements("token", "owner", "repo", "full-ruleset"),
+        ).resolves.toEqual({
+            source: "ruleset",
+            requiredApprovingReviewCount: 1,
+            requiredChecks: ["ci/test"],
+            requiresCodeOwnerReview: true,
+            requiresLastPushApproval: true,
+            dismissesStaleReviews: true,
+            requiresConversationResolution: true,
+            requiresUpToDateBranch: true,
+            requiresLinearHistory: true,
+            requiresSignedCommits: true,
+            allowedMergeMethods: ["squash"],
+            requiredDeploymentEnvironments: ["staging"],
+        });
+    });
+
+    it("intersects allowed merge methods across pull_request rules", async () => {
+        mockGetBranchRules.mockResolvedValue({
+            data: [
+                {
+                    type: "pull_request",
+                    parameters: {
+                        required_approving_review_count: 0,
+                        allowed_merge_methods: ["merge", "squash"],
+                    },
+                },
+                {
+                    type: "pull_request",
+                    parameters: {
+                        required_approving_review_count: 0,
+                        allowed_merge_methods: ["squash", "rebase"],
+                    },
+                },
+            ],
+        });
+
+        await expect(
+            getMergeRequirements("token", "owner", "repo", "two-rules"),
+        ).resolves.toMatchObject({ allowedMergeMethods: ["squash"] });
     });
 
     it("falls back to branch protection when rulesets are unavailable (404)", async () => {
@@ -71,9 +150,33 @@ describe("getMergeRequirements", () => {
 
         await expect(
             getMergeRequirements("token", "owner", "repo", "fallback"),
-        ).resolves.toEqual({
+        ).resolves.toMatchObject({
+            source: "branch-protection",
             requiredApprovingReviewCount: 1,
             requiredChecks: ["ci/test"],
+        });
+    });
+
+    it("maps conversation resolution and strict checks from branch protection", async () => {
+        mockGetBranchRules.mockResolvedValue({ data: [] });
+        mockGetBranchProtection.mockResolvedValue({
+            data: {
+                required_conversation_resolution: { enabled: true },
+                required_status_checks: {
+                    contexts: ["ci"],
+                    strict: true,
+                },
+            },
+        });
+
+        await expect(
+            getMergeRequirements("token", "owner", "repo", "classic"),
+        ).resolves.toMatchObject({
+            source: "branch-protection",
+            requiresConversationResolution: true,
+            requiresUpToDateBranch: true,
+            requiredChecks: ["ci"],
+            allowedMergeMethods: null,
         });
     });
 
@@ -96,7 +199,7 @@ describe("getMergeRequirements", () => {
 
         await expect(
             getMergeRequirements("token", "owner", "repo", "paid-plan"),
-        ).resolves.toEqual({
+        ).resolves.toMatchObject({
             requiredApprovingReviewCount: 1,
             requiredChecks: ["ci/test"],
         });
@@ -112,7 +215,8 @@ describe("getMergeRequirements", () => {
 
         await expect(
             getMergeRequirements("token", "owner", "repo", "paid-plan"),
-        ).resolves.toEqual({
+        ).resolves.toMatchObject({
+            source: "none",
             requiredApprovingReviewCount: 0,
             requiredChecks: [],
         });
@@ -139,7 +243,8 @@ describe("getMergeRequirements", () => {
 
         await expect(
             getMergeRequirements("token", "owner", "repo", "integration-rules"),
-        ).resolves.toEqual({
+        ).resolves.toMatchObject({
+            source: "none",
             requiredApprovingReviewCount: 0,
             requiredChecks: [],
         });
@@ -154,7 +259,8 @@ describe("getMergeRequirements", () => {
 
         await expect(
             getMergeRequirements("token", "owner", "repo", "integration-prot"),
-        ).resolves.toEqual({
+        ).resolves.toMatchObject({
+            source: "none",
             requiredApprovingReviewCount: 0,
             requiredChecks: [],
         });
@@ -166,7 +272,8 @@ describe("getMergeRequirements", () => {
 
         await expect(
             getMergeRequirements("token", "owner", "repo", "unprotected"),
-        ).resolves.toEqual({
+        ).resolves.toMatchObject({
+            source: "none",
             requiredApprovingReviewCount: 0,
             requiredChecks: [],
         });
