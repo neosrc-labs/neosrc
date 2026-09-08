@@ -1,7 +1,12 @@
 import { cache } from "react";
 import { createGraphql } from "~/server/github-graphql";
 import { createOctokit } from "./client";
-import type { CommentForReview, ReviewComment, ReviewComment2 } from "./pulls";
+import type {
+    CommentForReview,
+    MergeMethod,
+    ReviewComment,
+    ReviewComment2,
+} from "./pulls";
 
 export const createIssueComment = async (
     accessToken: string,
@@ -206,8 +211,20 @@ export const createPullRequestReview = async (
 };
 
 export type MergeRequirements = {
+    /** Where the requirements were read from; "none" when nothing applies. */
+    source: "ruleset" | "branch-protection" | "none";
     requiredApprovingReviewCount: number;
     requiredChecks: string[];
+    requiresCodeOwnerReview: boolean;
+    requiresLastPushApproval: boolean;
+    dismissesStaleReviews: boolean;
+    requiresConversationResolution: boolean;
+    requiresUpToDateBranch: boolean;
+    requiresLinearHistory: boolean;
+    requiresSignedCommits: boolean;
+    /** null = no ruleset restriction; otherwise the allowed subset. */
+    allowedMergeMethods: MergeMethod[] | null;
+    requiredDeploymentEnvironments: string[];
 };
 
 /**
@@ -260,8 +277,27 @@ export const getMergeRequirements = cache(
     ): Promise<MergeRequirements> => {
         const octokit = createOctokit(accessToken);
 
-        let requiredApprovingReviewCount = 0;
-        const requiredChecks: string[] = [];
+        const requirements: MergeRequirements = {
+            source: "none",
+            requiredApprovingReviewCount: 0,
+            requiredChecks: [],
+            requiresCodeOwnerReview: false,
+            requiresLastPushApproval: false,
+            dismissesStaleReviews: false,
+            requiresConversationResolution: false,
+            requiresUpToDateBranch: false,
+            requiresLinearHistory: false,
+            requiresSignedCommits: false,
+            allowedMergeMethods: null,
+            requiredDeploymentEnvironments: [],
+        };
+
+        // Required check contexts can be repeated across rules; callers treat
+        // the list as a set of names.
+        const finalize = (): MergeRequirements => ({
+            ...requirements,
+            requiredChecks: [...new Set(requirements.requiredChecks)],
+        });
 
         try {
             const { data: rulesData } = await octokit.rest.repos.getBranchRules(
@@ -273,32 +309,72 @@ export const getMergeRequirements = cache(
             );
 
             if (rulesData.length > 0) {
+                requirements.source = "ruleset";
                 for (const rule of rulesData) {
-                    if (
-                        rule.type === "pull_request" &&
-                        rule.parameters &&
-                        "required_approving_review_count" in rule.parameters
-                    ) {
-                        const count =
-                            rule.parameters.required_approving_review_count;
-                        if (count > requiredApprovingReviewCount) {
-                            requiredApprovingReviewCount = count;
+                    if (rule.type === "pull_request" && rule.parameters) {
+                        const params = rule.parameters;
+                        requirements.requiredApprovingReviewCount = Math.max(
+                            requirements.requiredApprovingReviewCount,
+                            params.required_approving_review_count,
+                        );
+                        if (params.dismiss_stale_reviews_on_push) {
+                            requirements.dismissesStaleReviews = true;
+                        }
+                        if (params.require_code_owner_review) {
+                            requirements.requiresCodeOwnerReview = true;
+                        }
+                        if (params.require_last_push_approval) {
+                            requirements.requiresLastPushApproval = true;
+                        }
+                        if (params.required_review_thread_resolution) {
+                            requirements.requiresConversationResolution = true;
+                        }
+                        // Every matching rule applies, so the merge methods a
+                        // PR may actually use are the intersection.
+                        const allowed = params.allowed_merge_methods;
+                        if (allowed) {
+                            requirements.allowedMergeMethods =
+                                requirements.allowedMergeMethods === null
+                                    ? [...allowed]
+                                    : requirements.allowedMergeMethods.filter(
+                                          (method) => allowed.includes(method),
+                                      );
                         }
                     }
                     if (
                         rule.type === "required_status_checks" &&
-                        rule.parameters &&
-                        "required_status_checks" in rule.parameters
+                        rule.parameters
                     ) {
                         for (const checkConfig of rule.parameters
                             .required_status_checks) {
                             if (checkConfig.context) {
-                                requiredChecks.push(checkConfig.context);
+                                requirements.requiredChecks.push(
+                                    checkConfig.context,
+                                );
                             }
                         }
+                        if (
+                            rule.parameters.strict_required_status_checks_policy
+                        ) {
+                            requirements.requiresUpToDateBranch = true;
+                        }
+                    }
+                    if (rule.type === "required_linear_history") {
+                        requirements.requiresLinearHistory = true;
+                    }
+                    if (rule.type === "required_signatures") {
+                        requirements.requiresSignedCommits = true;
+                    }
+                    if (
+                        rule.type === "required_deployments" &&
+                        rule.parameters
+                    ) {
+                        requirements.requiredDeploymentEnvironments.push(
+                            ...rule.parameters.required_deployment_environments,
+                        );
                     }
                 }
-                return { requiredApprovingReviewCount, requiredChecks };
+                return finalize();
             }
         } catch (error) {
             // Rulesets are only available on repos that use them; fall back
@@ -322,18 +398,44 @@ export const getMergeRequirements = cache(
                     branch,
                 });
 
-            if (protection.required_pull_request_reviews) {
-                requiredApprovingReviewCount =
-                    protection.required_pull_request_reviews
-                        .required_approving_review_count ?? 0;
+            const reviews = protection.required_pull_request_reviews;
+            const statusChecks = protection.required_status_checks;
+
+            if (
+                reviews ||
+                statusChecks ||
+                protection.required_conversation_resolution ||
+                protection.required_linear_history ||
+                protection.required_signatures
+            ) {
+                requirements.source = "branch-protection";
             }
 
-            if (protection.required_status_checks) {
-                for (const context of protection.required_status_checks
-                    .contexts) {
-                    requiredChecks.push(context);
-                }
+            if (reviews) {
+                requirements.requiredApprovingReviewCount =
+                    reviews.required_approving_review_count ?? 0;
+                requirements.dismissesStaleReviews =
+                    reviews.dismiss_stale_reviews ?? false;
+                requirements.requiresCodeOwnerReview =
+                    reviews.require_code_owner_reviews ?? false;
+                requirements.requiresLastPushApproval =
+                    reviews.require_last_push_approval ?? false;
             }
+
+            if (statusChecks) {
+                for (const context of statusChecks.contexts) {
+                    requirements.requiredChecks.push(context);
+                }
+                requirements.requiresUpToDateBranch =
+                    statusChecks.strict ?? false;
+            }
+
+            requirements.requiresConversationResolution =
+                protection.required_conversation_resolution?.enabled ?? false;
+            requirements.requiresLinearHistory =
+                protection.required_linear_history?.enabled ?? false;
+            requirements.requiresSignedCommits =
+                protection.required_signatures?.enabled ?? false;
         } catch (error) {
             // Branch protection may simply not be configured (404), be
             // unavailable on the repo's plan (403 on private repos without
@@ -346,7 +448,7 @@ export const getMergeRequirements = cache(
             }
         }
 
-        return { requiredApprovingReviewCount, requiredChecks };
+        return finalize();
     },
 );
 
