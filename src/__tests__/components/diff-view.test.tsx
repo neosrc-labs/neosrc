@@ -510,6 +510,79 @@ describe("DiffView rendering", () => {
         });
     });
 
+    describe("selection across files", () => {
+        const HASH_A = filenameHash("a.ts");
+        const HASH_B = filenameHash("b.ts");
+
+        function renderTwoFiles(options?: { showCommentButton?: boolean }) {
+            mockParsedFile([mb(1, [mc(" line1", 1, 1), mc(" line2", 2, 2)])]);
+            vi.spyOn(window.history, "replaceState").mockImplementation(
+                vi.fn(),
+            );
+            const shared = {
+                view: "unified" as const,
+                showCommentButton: options?.showCommentButton ?? false,
+                onStartComment: vi.fn(),
+                permissionContext: {
+                    currentUser: "testuser",
+                    isPullRequestAuthor: false,
+                    repoPermission: "write" as const,
+                    isPullRequestLocked: false,
+                },
+            };
+            const { container } = render(
+                <>
+                    <DiffView filename="a.ts" patch="patch-a" {...shared} />
+                    <DiffView filename="b.ts" patch="patch-b" {...shared} />
+                </>,
+            );
+            const rowOf = (fileHash: string, id: string) =>
+                container.querySelector(`tr[id="diff-${fileHash}${id}"]`)!;
+            const selectLine = (fileHash: string, id: string) => {
+                fireEvent.mouseDown(
+                    rowOf(fileHash, id).querySelector(
+                        "td.d2h-code-linenumber",
+                    )!,
+                );
+                fireEvent.mouseUp(document);
+            };
+            const highlighted = (fileHash: string) =>
+                container.querySelectorAll(
+                    `tr[id^="diff-${fileHash}"].line-highlighted`,
+                ).length;
+            return { rowOf, selectLine, highlighted };
+        }
+
+        it("clears the first file's selection when a line in another file is selected", () => {
+            const { selectLine, highlighted } = renderTwoFiles();
+
+            selectLine(HASH_A, "R1");
+            expect(highlighted(HASH_A)).toBe(1);
+
+            selectLine(HASH_B, "R2");
+            expect(highlighted(HASH_A)).toBe(0);
+            expect(highlighted(HASH_B)).toBe(1);
+        });
+
+        it("clears another file's selection when a drag selects in this file", () => {
+            const { rowOf, selectLine, highlighted } = renderTwoFiles({
+                showCommentButton: true,
+            });
+
+            selectLine(HASH_A, "R1");
+
+            const plusB = rowOf(HASH_B, "R1").querySelector(
+                '[data-testid="square-plus"]',
+            )!;
+            fireEvent.mouseDown(plusB);
+            fireEvent.mouseOver(rowOf(HASH_B, "R2"));
+            fireEvent.mouseUp(document);
+
+            expect(highlighted(HASH_A)).toBe(0);
+            expect(highlighted(HASH_B)).toBe(2);
+        });
+    });
+
     describe("comment display", () => {
         it("renders InlineCommentThread when showComments is true and comments exist", () => {
             const lines = [mc(" line1", 1, 1)];

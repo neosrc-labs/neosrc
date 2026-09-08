@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 
 export interface DiffSelectedRange {
     startLine: number;
@@ -71,9 +71,78 @@ export function isRowSelected(
         : newLine != null && newLine >= lo && newLine <= hi;
 }
 
+// Line selection is global: the page shows one selected range at a time, in
+// one file, matching the single #diff-<hash><side><line> permalink the URL
+// carries. Each file's DiffView owns its own state otherwise, so the range
+// lives in a module store keyed by file instead. Listeners are per file so a
+// selection change only re-renders the file losing it and the file gaining
+// it, not every mounted diff.
+let currentSelection: { fileHash: string; range: DiffSelectedRange } | null =
+    null;
+const selectionListeners = new Map<string, Set<() => void>>();
+
+function readSelection(fileHash: string): DiffSelectedRange | null {
+    return currentSelection?.fileHash === fileHash
+        ? currentSelection.range
+        : null;
+}
+
+function notifySelection(fileHash: string) {
+    const listeners = selectionListeners.get(fileHash);
+    if (!listeners) return;
+    for (const listener of listeners) listener();
+}
+
+function writeSelection(fileHash: string, range: DiffSelectedRange | null) {
+    const previous = currentSelection;
+    if (previous === null && range === null) return;
+    currentSelection = range === null ? null : { fileHash, range };
+    if (previous && previous.fileHash !== fileHash) {
+        notifySelection(previous.fileHash);
+    }
+    notifySelection(fileHash);
+}
+
+/** Drops the global selection; for tests, which share the module state. */
+export function resetDiffLineSelection() {
+    currentSelection = null;
+    selectionListeners.clear();
+}
+
 export function useDiffLineSelection(fileHash: string) {
-    const [selectedRange, setSelectedRange] =
-        useState<DiffSelectedRange | null>(null);
+    const subscribe = useCallback(
+        (listener: () => void) => {
+            const listeners =
+                selectionListeners.get(fileHash) ?? new Set<() => void>();
+            listeners.add(listener);
+            selectionListeners.set(fileHash, listeners);
+            return () => {
+                listeners.delete(listener);
+                if (
+                    listeners.size === 0 &&
+                    selectionListeners.get(fileHash) === listeners
+                ) {
+                    selectionListeners.delete(fileHash);
+                }
+            };
+        },
+        [fileHash],
+    );
+    const selectedRange = useSyncExternalStore(
+        subscribe,
+        () => readSelection(fileHash),
+        () => null,
+    );
+    const setSelectedRange = useCallback(
+        (action: React.SetStateAction<DiffSelectedRange | null>): void =>
+            writeSelection(
+                fileHash,
+                typeof action === "function"
+                    ? action(readSelection(fileHash))
+                    : action,
+            ),
+        [fileHash],
+    );
     const mouseAnchorRef = useRef<{
         line: number;
         side: string;
@@ -102,7 +171,7 @@ export function useDiffLineSelection(fileHash: string) {
                 endLines,
             });
         },
-        [],
+        [setSelectedRange],
     );
 
     const commitRangeUrl = useCallback(
@@ -221,7 +290,7 @@ export function useDiffLineSelection(fileHash: string) {
         };
         document.addEventListener("keydown", onKeyDown);
         return () => document.removeEventListener("keydown", onKeyDown);
-    }, [selectedRange]);
+    }, [selectedRange, setSelectedRange]);
 
     useEffect(() => {
         const onDocumentMouseUp = () => {
