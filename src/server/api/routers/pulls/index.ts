@@ -62,9 +62,13 @@ import {
     updateIssueComment,
     updateIssueMilestone,
     updatePullRequest,
+    updatePullRequestBranch,
     updatePullRequestReview,
 } from "~/server/github";
-import { getPullRequestHeadShaGraphQL } from "~/server/github-graphql";
+import {
+    getPullRequestHeadShaGraphQL,
+    getPullRequestMergeStateGraphQL,
+} from "~/server/github-graphql";
 import type { Ctx } from "../provider";
 import { CodebergPullRequestProvider } from "./codeberg";
 import { GitHubPullRequestProvider } from "./github";
@@ -869,6 +873,56 @@ export const pullsRouter = createTRPCRouter({
                 input.repo,
                 pr.base.ref,
             );
+        },
+    }),
+
+    getMergeState: githubQuery({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+        }),
+        run: ({ input, accessToken }) =>
+            getPullRequestMergeStateGraphQL(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+            ),
+    }),
+
+    updateBranch: githubMutation({
+        input: z.object({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            expectedHeadSha: z.string(),
+        }),
+        evictPr: true,
+        run: async ({ input, accessToken }) => {
+            try {
+                return await updatePullRequestBranch(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                    input.expectedHeadSha,
+                );
+            } catch (error) {
+                if (
+                    typeof error === "object" &&
+                    error !== null &&
+                    "status" in error &&
+                    error.status === 422
+                ) {
+                    throw new TRPCError({
+                        code: "CONFLICT",
+                        message:
+                            "The branch changed since this page loaded. Reload and try again.",
+                    });
+                }
+                throw error;
+            }
         },
     }),
 

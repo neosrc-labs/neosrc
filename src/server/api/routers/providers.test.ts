@@ -44,6 +44,7 @@ vi.mock("~/server/repo-cache", () => {
 vi.mock("~/server/github-graphql", () => ({
     getTopRepositories: vi.fn(),
     getPullRequestHeadShaGraphQL: vi.fn(),
+    getPullRequestMergeStateGraphQL: vi.fn(),
 }));
 
 function fns<T extends string[]>(...names: T) {
@@ -111,6 +112,7 @@ vi.mock("~/server/github", () => ({
         "updateIssueComment",
         "updateIssueMilestone",
         "updatePullRequest",
+        "updatePullRequestBranch",
         "updatePullRequestReview",
     ),
 }));
