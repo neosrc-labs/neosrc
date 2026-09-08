@@ -1,6 +1,7 @@
 "use client";
 
 import { Async } from "~/components/async";
+import { RecentlyPushedBanner } from "./recently-pushed-banner";
 import { RepoDocFiles, RepoDocFilesSkeleton } from "./repo-doc-files";
 import { RepoFileTable, RepoFileTableSkeleton } from "./repo-file-table";
 import { RepoHeader } from "./repo-header";
@@ -95,6 +96,12 @@ export function RepoCodePage({
 
                 <div className="flex gap-8">
                     <div className="min-w-0 flex-1">
+                        <RecentlyPushedBanner
+                            owner={owner}
+                            repo={repo}
+                            provider={provider}
+                        />
+
                         <Async
                             promise={repoDataPromise}
                             fallback={

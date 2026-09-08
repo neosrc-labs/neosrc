@@ -6,6 +6,7 @@ import { ListSearchBar } from "~/app/[owner]/[repo]/_components/list/list-search
 import { ListSkeleton } from "~/app/[owner]/[repo]/_components/list/list-skeleton";
 import { rowQualifierFilters } from "~/app/[owner]/[repo]/_components/list/row-qualifier-filters";
 import { SearchListLayout } from "~/app/[owner]/[repo]/_components/list/search-list-layout";
+import { RecentlyPushedBanner } from "~/app/[owner]/[repo]/_components/recently-pushed-banner";
 import { useSearchList } from "~/app/[owner]/[repo]/_components/use-search-list";
 import type { PrRowData } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
 import { PullRequestRow } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
@@ -18,7 +19,6 @@ import type {
     PullRequestListConfig,
 } from "./pull-request-list-config";
 import { PullRequestToolbar } from "./pull-request-toolbar";
-import { RecentlyPushedBanner } from "./recently-pushed-banner";
 
 function normalizeSearchItem(item: PrSearchItem): PrRowData {
     return {
