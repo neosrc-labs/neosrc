@@ -20,6 +20,7 @@ import type {
     PullsGetResponseData,
     ReviewComment2,
 } from "~/server/github";
+import type { PullRequestMergeState } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 import type { PullRequestPermissionContext } from "../../permissions-utils";
@@ -88,6 +89,12 @@ export function ActionSection({
         { staleTime: 60_000 },
     );
 
+    const { data: mergeState, isLoading: mergeStateLoading } =
+        api.pulls.getMergeState.useQuery(
+            { owner, repo, number },
+            { staleTime: 30_000 },
+        );
+
     const skeleton = <div className="h-9 w-full" />;
     return (
         <div>
@@ -119,13 +126,15 @@ export function ActionSection({
                                             reviews={reviews}
                                             mergeReqs={mergeReqs}
                                             mergeReqsError={mergeReqsError}
+                                            mergeState={mergeState}
                                             pendingReview={pendingReview}
                                             variant={variant}
                                             isSticky={isSticky}
                                             checkRuns={checkRuns}
                                             isMergeStatusLoading={
                                                 reviewsLoading ||
-                                                mergeReqsLoading
+                                                mergeReqsLoading ||
+                                                mergeStateLoading
                                             }
                                         />
                                     )}
@@ -153,6 +162,7 @@ function Buttons({
     pendingReview,
     mergeReqs,
     mergeReqsError,
+    mergeState,
     variant,
     isSticky,
     checkRuns,
@@ -167,6 +177,7 @@ function Buttons({
     pendingReview?: PendingReview | null;
     mergeReqs?: MergeRequirements | null;
     mergeReqsError: boolean;
+    mergeState?: PullRequestMergeState | null;
     conflictedFiles: string[];
     permissionContext: PullRequestPermissionContext;
     variant?: "header" | "inline";
@@ -344,8 +355,6 @@ function Buttons({
     const pendingCount = [...requestedReviewerLogins].filter(
         (login) => !reviewStateMap.has(login),
     ).length;
-    const requiredApprovalCount = mergeReqs?.requiredApprovingReviewCount ?? 0;
-    const requiredChecks = mergeReqs?.requiredChecks ?? [];
 
     const isHeader = variant === "header";
     const showTitle = isHeader && isSticky;
@@ -417,8 +426,8 @@ function Buttons({
                         approvalCount={approvalCount}
                         changesRequestedCount={changesRequestedCount}
                         pendingReviewerCount={pendingCount}
-                        requiredApprovalCount={requiredApprovalCount}
-                        requiredChecks={requiredChecks}
+                        requirements={mergeReqs}
+                        mergeState={mergeState}
                         checkRuns={checkRuns}
                         isMergeStatusLoading={
                             isMergeStatusLoading || stackLoading
