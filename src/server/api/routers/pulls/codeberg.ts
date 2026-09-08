@@ -14,9 +14,20 @@ import { getCodebergToken } from "~/server/auth";
 import {
     type CodebergPrListParams,
     type CodebergPullRequest,
+    findPullRequestForBranches,
+    getCachedRepo,
     listPullRequests,
+    listRepoActivity,
 } from "~/server/codeberg";
 import type { PullRequestProvider } from "./provider";
+import {
+    bestEffortBanner,
+    codebergCompareUrl,
+    fromCodebergActivity,
+    PR_LOOKUP_LIMIT,
+    type RecentlyPushedBranch,
+    rankRecentPushes,
+} from "./recent-push";
 import type { PrSearchItem, PrSearchResult } from "./types";
 
 export class CodebergPullRequestProvider implements PullRequestProvider {
@@ -92,4 +103,55 @@ function mapCodebergPr(pr: CodebergPullRequest): PrSearchItem {
         reviewDecision: null,
         stack: null,
     };
+}
+
+/**
+ * Newest branch the viewer pushed to that still has no pull request, or null
+ * when the repository has none. Drives the pull request list banner.
+ */
+export function getCodebergRecentlyPushedBranch(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    viewerLogin: string | null,
+): Promise<RecentlyPushedBranch | null> {
+    return bestEffortBanner(async () => {
+        if (!viewerLogin) return null;
+
+        const [repoData, activity] = await Promise.all([
+            getCachedRepo(accessToken, owner, repo),
+            listRepoActivity(accessToken, owner, repo),
+        ]);
+        const defaultBranch = repoData.default_branch;
+
+        const ranked = rankRecentPushes(fromCodebergActivity(activity), {
+            viewerLogin,
+            defaultBranch,
+        }).slice(0, PR_LOOKUP_LIMIT);
+
+        for (const match of ranked) {
+            if (defaultBranch) {
+                const existing = await findPullRequestForBranches(
+                    accessToken,
+                    owner,
+                    repo,
+                    defaultBranch,
+                    match.branch,
+                );
+                // Closed unmerged pull requests leave the branch proposable.
+                if (existing?.state === "open" || existing?.merged) continue;
+            }
+            return {
+                branch: match.branch,
+                pushedAt: match.pushedAt,
+                compareUrl: codebergCompareUrl(
+                    owner,
+                    repo,
+                    match.branch,
+                    defaultBranch,
+                ),
+            };
+        }
+        return null;
+    });
 }

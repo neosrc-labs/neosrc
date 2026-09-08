@@ -75,6 +75,9 @@ vi.mock("~/trpc/react", () => ({
             listDetailsByPrNumbers: {
                 useQuery: vi.fn(() => ({ data: {}, isLoading: false })),
             },
+            recentlyPushedBranch: {
+                useQuery: vi.fn(() => ({ data: null, isLoading: false })),
+            },
         },
         checks: {},
         users: {

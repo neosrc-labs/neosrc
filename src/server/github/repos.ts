@@ -137,6 +137,39 @@ export const getRepo = cache(
     },
 );
 
+export type RepoActivity =
+    RestEndpointMethodTypes["repos"]["listActivities"]["response"]["data"][number];
+
+/**
+ * Repository activity (pushes, force pushes, branch creations/deletions),
+ * newest first. `actor` restricts the feed to one login; `activityType`
+ * restricts it to a single kind.
+ */
+export const listRepoActivity = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        opts: {
+            actor?: string;
+            activityType?: "push" | "force_push" | "branch_deletion";
+            timePeriod?: "day" | "week" | "month";
+            perPage?: number;
+        } = {},
+    ): Promise<RepoActivity[]> => {
+        const octokit = createOctokit(accessToken);
+        const response = await octokit.rest.repos.listActivities({
+            owner,
+            repo,
+            actor: opts.actor,
+            activity_type: opts.activityType,
+            time_period: opts.timePeriod ?? "day",
+            per_page: opts.perPage ?? 30,
+        });
+        return response.data;
+    },
+);
+
 export async function getCachedRepo(
     accessToken: string,
     owner: string,
