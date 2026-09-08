@@ -18,6 +18,7 @@ import {
     addReaction,
     disablePullRequestAutoMergeGraphQL,
     enablePullRequestAutoMergeGraphQL,
+    getPullRequestMergeStateGraphQL,
     getPullRequestReactionsGraphQL,
     isOrgRestrictionError,
     resolveCommitAuthor,
@@ -327,5 +328,75 @@ describe("disablePullRequestAutoMergeGraphQL", () => {
             { pullRequestId: "PR_id" },
         );
         expect(result).toEqual(mockResult.disablePullRequestAutoMerge);
+    });
+});
+
+describe("getPullRequestMergeStateGraphQL", () => {
+    beforeEach(() => {
+        mockGraphql.mockReset();
+    });
+
+    function threadPage(
+        resolvedStates: boolean[],
+        pageInfo: { hasNextPage: boolean; endCursor: string | null },
+    ) {
+        return {
+            pageInfo,
+            nodes: resolvedStates.map((isResolved) => ({ isResolved })),
+        };
+    }
+
+    it("counts unresolved threads past the first page", async () => {
+        mockGraphql
+            .mockResolvedValueOnce({
+                repository: {
+                    pullRequest: {
+                        mergeStateStatus: "BLOCKED",
+                        reviewDecision: "APPROVED",
+                        viewerCanUpdateBranch: true,
+                        viewerCanMergeAsAdmin: false,
+                        isInMergeQueue: false,
+                        reviewThreads: threadPage([true, false], {
+                            hasNextPage: true,
+                            endCursor: "cursor-1",
+                        }),
+                        reviewRequests: { nodes: [] },
+                        commits: {
+                            nodes: [
+                                {
+                                    commit: {
+                                        oid: "sha1",
+                                        statusCheckRollup: null,
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                },
+            })
+            .mockResolvedValueOnce({
+                repository: {
+                    pullRequest: {
+                        reviewThreads: threadPage([false, false], {
+                            hasNextPage: false,
+                            endCursor: "cursor-2",
+                        }),
+                    },
+                },
+            });
+
+        const result = await getPullRequestMergeStateGraphQL(
+            "token",
+            "owner",
+            "repo",
+            7,
+        );
+
+        expect(result?.unresolvedThreadCount).toBe(3);
+        expect(mockGraphql).toHaveBeenCalledTimes(2);
+        expect(mockGraphql).toHaveBeenLastCalledWith(
+            expect.stringContaining("PullRequestReviewThreadsPage"),
+            { owner: "owner", repo: "repo", number: 7, cursor: "cursor-1" },
+        );
     });
 });

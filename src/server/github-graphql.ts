@@ -1443,6 +1443,45 @@ function statusContextStatus(
     }
 }
 
+type ReviewThreadPage = {
+    pageInfo: { hasNextPage: boolean; endCursor: string | null };
+    nodes: ({ isResolved: boolean } | null)[];
+};
+
+async function fetchReviewThreadPage(
+    graphql: GraphqlClient,
+    owner: string,
+    repo: string,
+    number: number,
+    cursor: string,
+): Promise<ReviewThreadPage | null> {
+    const result = await graphql<{
+        repository: {
+            pullRequest: { reviewThreads: ReviewThreadPage } | null;
+        } | null;
+    }>(
+        `
+		query PullRequestReviewThreadsPage($owner: String!, $repo: String!, $number: Int!, $cursor: String!) {
+			repository(owner: $owner, name: $repo) {
+				pullRequest(number: $number) {
+					reviewThreads(first: 100, after: $cursor) {
+						pageInfo {
+							hasNextPage
+							endCursor
+						}
+						nodes {
+							isResolved
+						}
+					}
+				}
+			}
+		}
+	`,
+        { owner, repo, number, cursor },
+    );
+    return result.repository?.pullRequest?.reviewThreads ?? null;
+}
+
 /**
  * Reads the merge gates GitHub evaluates for a pull request: the computed
  * merge state, the review decision, unresolved review threads, code owner
@@ -1467,7 +1506,7 @@ export async function getPullRequestMergeStateGraphQL(
                 viewerCanUpdateBranch: boolean;
                 viewerCanMergeAsAdmin: boolean;
                 isInMergeQueue: boolean;
-                reviewThreads: { nodes: ({ isResolved: boolean } | null)[] };
+                reviewThreads: ReviewThreadPage;
                 reviewRequests: {
                     nodes: ({
                         asCodeOwner: boolean;
@@ -1509,6 +1548,10 @@ export async function getPullRequestMergeStateGraphQL(
 					viewerCanMergeAsAdmin
 					isInMergeQueue
 					reviewThreads(first: 100) {
+						pageInfo {
+							hasNextPage
+							endCursor
+						}
 						nodes {
 							isResolved
 						}
@@ -1566,9 +1609,26 @@ export async function getPullRequestMergeStateGraphQL(
     if (!pullRequest) return null;
 
     let unresolvedThreadCount = 0;
-    for (const thread of pullRequest.reviewThreads.nodes) {
-        // Outdated threads still block merging while unresolved.
-        if (thread && !thread.isResolved) unresolvedThreadCount++;
+    let threadPage: ReviewThreadPage | null = pullRequest.reviewThreads;
+    while (threadPage) {
+        for (const thread of threadPage.nodes) {
+            // Outdated threads still block merging while unresolved.
+            if (thread && !thread.isResolved) unresolvedThreadCount++;
+        }
+        // The count gates the merge box, so an incomplete first page would
+        // show a false pass on heavily reviewed pull requests.
+        const cursor: string | null = threadPage.pageInfo.endCursor;
+        const nextPage: ReviewThreadPage | null =
+            threadPage.pageInfo.hasNextPage && cursor
+                ? await fetchReviewThreadPage(
+                      graphql,
+                      owner,
+                      repo,
+                      number,
+                      cursor,
+                  )
+                : null;
+        threadPage = nextPage;
     }
 
     const codeOwnerReviewerLogins: string[] = [];
