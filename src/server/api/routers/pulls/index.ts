@@ -915,10 +915,18 @@ export const pullsRouter = createTRPCRouter({
                     "status" in error &&
                     error.status === 422
                 ) {
+                    // 422 covers a stale expected_head_sha and a base merge
+                    // GitHub could not complete on its own; only the first is
+                    // fixed by reloading, so keep GitHub's wording otherwise.
+                    const detail =
+                        "message" in error && typeof error.message === "string"
+                            ? error.message
+                            : "";
                     throw new TRPCError({
                         code: "CONFLICT",
-                        message:
-                            "The branch changed since this page loaded. Reload and try again.",
+                        message: /expected head sha/i.test(detail)
+                            ? "The branch changed since this page loaded. Reload and try again."
+                            : `The branch could not be updated${detail ? `: ${detail}` : ""}`,
                     });
                 }
                 throw error;
