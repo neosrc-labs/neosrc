@@ -3,11 +3,6 @@
 import { Check, ChevronDown, GitMerge, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import {
-    HoverCard,
-    HoverCardContent,
-    HoverCardTrigger,
-} from "~/components/ui/hover-card";
-import {
     Popover,
     PopoverContent,
     PopoverTrigger,
@@ -15,8 +10,15 @@ import {
 import type {
     CheckRun,
     MergeMethod,
+    MergeRequirements,
     PullsGetResponseData,
 } from "~/server/github";
+import type { PullRequestMergeState } from "~/server/github-graphql";
+import {
+    buildMergeRequirementRows,
+    type MergeRequirementRow,
+    summarizeMergeRequirements,
+} from "./merge-requirement-rows";
 
 interface MergeOptionDef {
     value: MergeMethod;
@@ -43,8 +45,8 @@ interface MergeStatusBarProps {
     approvalCount?: number;
     changesRequestedCount?: number;
     pendingReviewerCount?: number;
-    requiredApprovalCount?: number;
-    requiredChecks?: string[];
+    requirements?: MergeRequirements | null;
+    mergeState?: PullRequestMergeState | null;
     checkRuns?: CheckRun[];
     isMergeStatusLoading: boolean;
     isStackMerge?: boolean;
@@ -69,8 +71,8 @@ export function MergeStatusBar({
     approvalCount = 0,
     changesRequestedCount = 0,
     pendingReviewerCount = 0,
-    requiredApprovalCount = 0,
-    requiredChecks = [],
+    requirements,
+    mergeState,
     checkRuns = [],
     isMergeStatusLoading,
     isStackMerge = false,
@@ -110,21 +112,21 @@ export function MergeStatusBar({
             </CannotMerge>
         );
     }
-    if (isMergeBlocked) {
-        if (isMergeStatusLoading) {
-            return (
-                <CannotMerge noWrapper>
-                    <div className="h-3 w-20 animate-pulse rounded bg-zinc-300 dark:bg-zinc-600" />
-                </CannotMerge>
-            );
-        }
+    // A strict-checks repo whose branch is behind must not render a green
+    // merge button: GitHub rejects the merge.
+    const isBehindAndStrict =
+        requirements?.requiresUpToDateBranch === true &&
+        mergeState?.mergeStateStatus === "BEHIND";
+    if (isMergeBlocked || isBehindAndStrict) {
         return (
             <BlockingReasons
-                requiredChecks={requiredChecks}
-                checkRuns={checkRuns}
-                approvalCount={approvalCount}
-                requiredApprovalCount={requiredApprovalCount}
-                changesRequestedCount={changesRequestedCount}
+                rows={buildMergeRequirementRows({
+                    requirements,
+                    mergeState,
+                    checkRuns,
+                    approvalCount,
+                    changesRequestedCount,
+                })}
                 pendingReviewerCount={pendingReviewerCount}
             />
         );
@@ -198,140 +200,95 @@ export function MergeStatusBar({
 }
 
 function BlockingReasons({
-    requiredChecks,
-    checkRuns,
-    approvalCount,
-    requiredApprovalCount,
-    changesRequestedCount,
+    rows,
     pendingReviewerCount,
 }: {
-    requiredChecks: string[];
-    checkRuns: CheckRun[];
-    approvalCount: number;
-    requiredApprovalCount: number;
-    changesRequestedCount: number;
+    rows: MergeRequirementRow[];
     pendingReviewerCount: number;
 }) {
-    const checkStatuses = requiredChecks.map((name) => {
-        const normalized = name.trim().toLowerCase();
-        const match = checkRuns.find(
-            (c) => c.name.trim().toLowerCase() === normalized,
-        );
-        const failed =
-            match?.conclusion === "failure" ||
-            match?.conclusion === "timed_out" ||
-            match?.conclusion === "cancelled";
-        return { name, failed, pending: !match } satisfies CheckStatus;
-    });
-
-    const failingChecks = checkStatuses.filter((c) => c.failed);
-    const pendingChecks = checkStatuses.filter((c) => c.pending);
-
-    const parts: React.ReactNode[] = [];
-    if (requiredApprovalCount > 0) {
-        parts.push(`${approvalCount}/${requiredApprovalCount} approvals`);
-    }
-    if (changesRequestedCount > 0) {
-        parts.push(
-            `${changesRequestedCount} change${changesRequestedCount !== 1 ? "s" : ""} requested`,
-        );
-    }
-    if (pendingReviewerCount > 0) {
-        parts.push(`${pendingReviewerCount} pending`);
-    }
-    if (failingChecks.length > 0) {
-        parts.push(
-            <CheckStatusHoverCard
-                checkStatuses={checkStatuses}
-                checkRuns={checkRuns}
-            >
-                <button type="button">
-                    {failingChecks.length} check
-                    {failingChecks.length !== 1 ? "s" : ""} failing
-                </button>
-            </CheckStatusHoverCard>,
-        );
-    }
-    if (pendingChecks.length > 0) {
-        parts.push(
-            `${pendingChecks.length} check${pendingChecks.length !== 1 ? "s" : ""} pending`,
-        );
-    }
+    const parts = summarizeMergeRequirements(rows, pendingReviewerCount);
 
     return (
-        <CannotMerge>
-            {parts.length === 0
-                ? "Merging blocked"
-                : parts.reduce<React.ReactNode[]>((acc, part, i) => {
-                      if (i > 0) {
-                          acc.push(" \u00b7 ");
-                      }
-                      acc.push(part);
-                      return acc;
-                  }, [])}
-        </CannotMerge>
+        <MergeRequirementsPopover rows={rows}>
+            <button type="button" className="cursor-pointer">
+                <CannotMerge>
+                    {parts.length === 0
+                        ? "Merging blocked"
+                        : parts.join(" \u00b7 ")}
+                </CannotMerge>
+            </button>
+        </MergeRequirementsPopover>
     );
 }
 
-type CheckStatus = {
-    name: string;
-    failed: boolean;
-    pending: boolean;
-};
-
-function CheckStatusHoverCard({
-    checkStatuses,
-    checkRuns,
+function MergeRequirementsPopover({
+    rows,
     children,
 }: {
-    checkStatuses: CheckStatus[];
-    checkRuns: CheckRun[];
+    rows: MergeRequirementRow[];
     children: ReactNode;
 }) {
+    const [isOpen, setIsOpen] = useState(false);
     return (
-        <HoverCard key="failing" openDelay={200}>
-            <HoverCardTrigger asChild>{children}</HoverCardTrigger>
-            <HoverCardContent
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>{children}</PopoverTrigger>
+            <PopoverContent
                 align="start"
                 side="bottom"
-                className="w-72 bg-surface p-0"
+                sideOffset={8}
+                className="w-80 bg-surface p-0"
             >
                 <div className="border-border-subtle border-b px-3 py-2">
                     <div className="font-medium text-xs">
-                        Some required checks were not successful
+                        Merge requirements
                     </div>
                 </div>
                 <div className="max-h-80 space-y-1.5 overflow-y-auto p-3">
-                    {checkStatuses.map((check) => {
-                        const match = checkRuns.find(
-                            (c) =>
-                                c.name.trim().toLowerCase() ===
-                                check.name.trim().toLowerCase(),
-                        );
-                        return (
-                            <a
-                                key={check.name}
-                                href={match?.html_url ?? "#"}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-surface-tertiary"
-                            >
-                                {check.failed ? (
-                                    <X className="size-3.5 shrink-0 text-red-600" />
-                                ) : check.pending ? (
-                                    <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
-                                ) : (
-                                    <Check className="size-3.5 shrink-0 text-green-600" />
-                                )}
-                                <span className="truncate font-medium text-text-primary">
-                                    {check.name}
-                                </span>
-                            </a>
-                        );
-                    })}
+                    {rows.length === 0 ? (
+                        <div className="px-2 py-1.5 text-text-tertiary text-xs">
+                            GitHub is blocking this merge but did not report a
+                            reason.
+                        </div>
+                    ) : (
+                        rows.map((row) => (
+                            <MergeRequirementRowItem key={row.key} row={row} />
+                        ))
+                    )}
                 </div>
-            </HoverCardContent>
-        </HoverCard>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
+function MergeRequirementRowItem({ row }: { row: MergeRequirementRow }) {
+    const content = (
+        <>
+            {row.status === "failing" ? (
+                <X className="size-3.5 shrink-0 text-red-600" />
+            ) : row.status === "pending" ? (
+                <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
+            ) : (
+                <Check className="size-3.5 shrink-0 text-green-600" />
+            )}
+            <span className="truncate font-medium text-text-primary">
+                {row.label}
+            </span>
+        </>
+    );
+    const className =
+        "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-surface-tertiary";
+
+    return row.url ? (
+        <a
+            href={row.url}
+            target="_blank"
+            rel="noreferrer"
+            className={className}
+        >
+            {content}
+        </a>
+    ) : (
+        <div className={className}>{content}</div>
     );
 }
 
