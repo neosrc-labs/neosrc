@@ -22,6 +22,10 @@ export function UpdateBranchButton({
     const updateMutation = api.pulls.updateBranch.useMutation({
         onSuccess: () => {
             utils.timeline.list.invalidate();
+            // router.refresh() leaves the client query cache intact, so the
+            // stale merge state would keep this button mounted with the old
+            // head sha and the next click would 422.
+            utils.pulls.getMergeState.invalidate({ owner, repo, number });
             router.refresh();
         },
     });
