@@ -1,7 +1,12 @@
 "use client";
 
-import { Check, ChevronDown, GitMerge, X } from "lucide-react";
+import { Check, ChevronDown, GitMerge, Info, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import {
+    HoverCard,
+    HoverCardContent,
+    HoverCardTrigger,
+} from "~/components/ui/hover-card";
 import {
     Popover,
     PopoverContent,
@@ -17,7 +22,7 @@ import type { PullRequestMergeState } from "~/server/github-graphql";
 import {
     buildMergeRequirementRows,
     type MergeRequirementRow,
-    summarizeMergeRequirements,
+    mergeRequirementSummaryLabel,
 } from "./merge-requirement-rows";
 
 interface MergeOptionDef {
@@ -206,33 +211,33 @@ function BlockingReasons({
     rows: MergeRequirementRow[];
     pendingReviewerCount: number;
 }) {
-    const parts = summarizeMergeRequirements(rows, pendingReviewerCount);
-
-    return (
-        <MergeRequirementsPopover rows={rows}>
-            <button type="button" className="cursor-pointer">
-                <CannotMerge>
-                    {parts.length === 0
-                        ? "Merging blocked"
-                        : parts.join(" \u00b7 ")}
-                </CannotMerge>
-            </button>
-        </MergeRequirementsPopover>
-    );
-}
-
-function MergeRequirementsPopover({
-    rows,
-    children,
-}: {
-    rows: MergeRequirementRow[];
-    children: ReactNode;
-}) {
+    // Controlled so a tap opens the card too: hover never fires on touch.
     const [isOpen, setIsOpen] = useState(false);
+    const label = mergeRequirementSummaryLabel(rows, pendingReviewerCount);
+
     return (
-        <Popover open={isOpen} onOpenChange={setIsOpen}>
-            <PopoverTrigger asChild>{children}</PopoverTrigger>
-            <PopoverContent
+        <HoverCard
+            open={isOpen}
+            onOpenChange={setIsOpen}
+            openDelay={150}
+            closeDelay={100}
+        >
+            <HoverCardTrigger asChild>
+                <button
+                    type="button"
+                    className="cursor-pointer"
+                    onClick={() => setIsOpen((open) => !open)}
+                    title="Show merge requirements"
+                >
+                    <CannotMerge noWrapper>
+                        <span className="font-medium text-text-secondary text-xs underline decoration-text-muted decoration-dotted underline-offset-2">
+                            {label}
+                        </span>
+                        <Info className="size-3 shrink-0 text-text-muted" />
+                    </CannotMerge>
+                </button>
+            </HoverCardTrigger>
+            <HoverCardContent
                 align="start"
                 side="bottom"
                 sideOffset={8}
@@ -255,8 +260,8 @@ function MergeRequirementsPopover({
                         ))
                     )}
                 </div>
-            </PopoverContent>
-        </Popover>
+            </HoverCardContent>
+        </HoverCard>
     );
 }
 

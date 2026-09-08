@@ -4,6 +4,7 @@ import type { PullRequestMergeState } from "~/server/github-graphql";
 import {
     buildMergeRequirementRows,
     type MergeRequirementRow,
+    mergeRequirementSummaryLabel,
     summarizeMergeRequirements,
 } from "./merge-requirement-rows";
 
@@ -240,5 +241,51 @@ describe("buildMergeRequirementRows", () => {
     it("returns no rows when requirements are unavailable", () => {
         expect(build({ requirements: null })).toEqual([]);
         expect(build({ requirements: undefined })).toEqual([]);
+    });
+});
+
+describe("mergeRequirementSummaryLabel", () => {
+    it("reads a lone unmet requirement in full", () => {
+        const rows = build({
+            requirements: makeRequirements({ requiredApprovingReviewCount: 1 }),
+            approvalCount: 0,
+        });
+
+        expect(mergeRequirementSummaryLabel(rows, 0)).toBe("0/1 approvals");
+    });
+
+    it("collapses several unmet requirements into a count", () => {
+        const rows = build({
+            requirements: makeRequirements({ requiredApprovingReviewCount: 2 }),
+            approvalCount: 1,
+            changesRequestedCount: 1,
+        });
+
+        expect(mergeRequirementSummaryLabel(rows, 3)).toBe(
+            "Missing 2 requirements",
+        );
+    });
+
+    it("counts only unmet rows, not passing ones", () => {
+        const rows = build({
+            requirements: makeRequirements({
+                requiredApprovingReviewCount: 1,
+                requiresConversationResolution: true,
+                requiresUpToDateBranch: true,
+            }),
+            mergeState: makeMergeState({
+                mergeStateStatus: "BEHIND",
+                unresolvedThreadCount: 0,
+            }),
+            approvalCount: 0,
+        });
+
+        expect(mergeRequirementSummaryLabel(rows, 0)).toBe(
+            "Missing 2 requirements",
+        );
+    });
+
+    it("falls back when GitHub reports no blocking gate", () => {
+        expect(mergeRequirementSummaryLabel([], 0)).toBe("Merging blocked");
     });
 });

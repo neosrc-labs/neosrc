@@ -227,3 +227,25 @@ export function summarizeMergeRequirements(
 
     return parts;
 }
+
+/**
+ * Pill text for a blocked merge. One unmet gate reads in full; several would
+ * eat the whole action bar, so they collapse to a count of the unmet rows the
+ * hover card lists.
+ */
+export function mergeRequirementSummaryLabel(
+    rows: MergeRequirementRow[],
+    pendingReviewerCount: number,
+): string {
+    const parts = summarizeMergeRequirements(rows, pendingReviewerCount);
+    const [first] = parts;
+    if (parts.length <= 1) return first ?? "Merging blocked";
+
+    // Counted from the rows so the pill matches the hover card list. Clamped
+    // to one: pending reviewers alone produce a part with no row.
+    const unmet = Math.max(
+        rows.filter((row) => row.status !== "passing").length,
+        1,
+    );
+    return `Missing ${unmet} requirement${unmet === 1 ? "" : "s"}`;
+}
