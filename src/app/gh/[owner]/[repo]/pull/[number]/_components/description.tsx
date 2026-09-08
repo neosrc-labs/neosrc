@@ -232,15 +232,27 @@ export function PullRequestDescriptionSection({
                             >
                                 {(files) =>
                                     files.length > 0 ? (
-                                        <div className="mt-3">
-                                            <ConflictedFiles
-                                                owner={owner}
-                                                repo={repo}
-                                                number={number}
-                                                pullRequest={pullRequest}
-                                                conflictedFiles={files}
-                                            />
-                                        </div>
+                                        <Async
+                                            fallback={null}
+                                            promise={permissionContextPromise}
+                                        >
+                                            {(permissionContext) => (
+                                                <div className="mt-3">
+                                                    <ConflictedFiles
+                                                        owner={owner}
+                                                        repo={repo}
+                                                        number={number}
+                                                        pullRequest={
+                                                            pullRequest
+                                                        }
+                                                        conflictedFiles={files}
+                                                        permissionContext={
+                                                            permissionContext
+                                                        }
+                                                    />
+                                                </div>
+                                            )}
+                                        </Async>
                                     ) : null
                                 }
                             </Async>

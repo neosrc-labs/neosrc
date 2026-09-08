@@ -1,5 +1,8 @@
 import type { PullsGetResponseData } from "~/server/github";
-import type { PullRequestPermissionContext } from "../../permissions-utils";
+import {
+    canPush,
+    type PullRequestPermissionContext,
+} from "../../permissions-utils";
 
 /**
  * Capability and merge-state flags for the action bar, derived once from
@@ -10,9 +13,7 @@ export function usePullPermissions(
     pullRequest: PullsGetResponseData,
 ) {
     const isAuthor = permissionContext.isPullRequestAuthor;
-    const canWrite =
-        permissionContext.repoPermission === "admin" ||
-        permissionContext.repoPermission === "write";
+    const canWrite = canPush(permissionContext);
     const canManagePR = isAuthor || canWrite;
     const canMerge = canWrite;
     const canInteract =

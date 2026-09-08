@@ -5,6 +5,10 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PullsGetResponseData } from "~/server/github";
 import { getFileIconName } from "~/utils/icons";
+import {
+    canPush,
+    type PullRequestPermissionContext,
+} from "../permissions-utils";
 
 interface ConflictedFilesProps {
     owner: string;
@@ -12,7 +16,35 @@ interface ConflictedFilesProps {
     number: number;
     pullRequest: PullsGetResponseData;
     conflictedFiles: string[];
+    permissionContext: PullRequestPermissionContext;
     compact?: boolean;
+}
+
+/**
+ * GitHub's web conflict editor commits to the head branch, so the viewer needs
+ * push access there, not on the base repository:
+ * - same-repo branch: base repository push access
+ * - fork branch: the viewer owns the fork, or the author opted into maintainer
+ *   edits and the viewer can push to the base repository
+ */
+function canResolveConflicts(
+    pullRequest: PullsGetResponseData,
+    permissionContext: PullRequestPermissionContext,
+): boolean {
+    const headRepo = pullRequest.head.repo;
+    if (!headRepo) {
+        return false;
+    }
+    if (headRepo.full_name === pullRequest.base.repo?.full_name) {
+        return canPush(permissionContext);
+    }
+    if (
+        permissionContext.currentUser &&
+        headRepo.owner.login === permissionContext.currentUser
+    ) {
+        return true;
+    }
+    return pullRequest.maintainer_can_modify && canPush(permissionContext);
 }
 
 function CompactConflictedFiles({
@@ -21,6 +53,7 @@ function CompactConflictedFiles({
     number,
     pullRequest,
     conflictedFiles,
+    permissionContext,
 }: ConflictedFilesProps) {
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -43,8 +76,7 @@ function CompactConflictedFiles({
         }
     }, [open, handleClickOutside]);
 
-    const hasResolve =
-        pullRequest.head.repo?.full_name === pullRequest.base.repo?.full_name;
+    const hasResolve = canResolveConflicts(pullRequest, permissionContext);
 
     return (
         <div ref={containerRef} className="relative">
@@ -137,6 +169,7 @@ export function ConflictedFiles({
     number,
     pullRequest,
     conflictedFiles,
+    permissionContext,
     compact,
 }: ConflictedFilesProps) {
     if (compact) {
@@ -147,12 +180,12 @@ export function ConflictedFiles({
                 number={number}
                 pullRequest={pullRequest}
                 conflictedFiles={conflictedFiles}
+                permissionContext={permissionContext}
             />
         );
     }
 
-    const hasResolve =
-        pullRequest.head.repo?.full_name === pullRequest.base.repo?.full_name;
+    const hasResolve = canResolveConflicts(pullRequest, permissionContext);
     return (
         <div className="space-y-2 rounded-lg border border-border bg-surface-secondary p-3">
             <div className="flex items-center justify-between">

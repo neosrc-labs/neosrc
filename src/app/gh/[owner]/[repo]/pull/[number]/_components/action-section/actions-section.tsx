@@ -380,6 +380,7 @@ function Buttons({
                     number={number}
                     pullRequest={pullRequest}
                     conflictedFiles={conflictedFiles}
+                    permissionContext={permissionContext}
                     compact
                 />
             ) : null}
