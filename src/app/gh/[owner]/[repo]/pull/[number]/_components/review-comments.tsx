@@ -9,6 +9,7 @@ import {
     ReplyTextboxButton,
     ReviewCommentReplyComposer,
 } from "~/components/review-comment-reply-composer";
+import { ReviewCommentSnippet } from "~/components/review-comment-snippet";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
 import { useReviewCommentEdit } from "~/hooks/use-review-comment-edit";
@@ -482,6 +483,7 @@ function CommentBlock({
             id={`review-thread-${comment.id}`}
             className="bg-surface-secondary dark:bg-zinc-950"
         >
+            <ReviewCommentSnippet comment={comment} owner={owner} repo={repo} />
             <ReviewCommentItem
                 comment={comment}
                 placement="parent"
