@@ -68,6 +68,15 @@ export function ReviewerSection({
         { owner, repo, number },
         { staleTime: 30_000 },
     );
+    // React Query dedupes these against the merge box's identical queries.
+    const mergeReqsQuery = api.pulls.getMergeRequirements.useQuery(
+        { owner, repo, number },
+        { staleTime: 60_000 },
+    );
+    const mergeStateQuery = api.pulls.getMergeState.useQuery(
+        { owner, repo, number },
+        { staleTime: 30_000 },
+    );
 
     const handleAdd = (reviewer: Reviewer) => {
         const repoUser = usersData.find((u) => u.login === reviewer.login);
@@ -197,7 +206,9 @@ export function ReviewerSection({
             </div>
             <Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
                 {(pullRequest) => {
-                    if (reviewsQuery.isPending) {
+                    // Wait for the requirement count too: revealing the
+                    // approvals line later would shift the list down.
+                    if (reviewsQuery.isPending || mergeReqsQuery.isPending) {
                         return <FieldSkeleton />;
                     }
                     const reviewStateMap = buildReviewStateMap(
@@ -211,19 +222,40 @@ export function ReviewerSection({
                     const reviewSortMap = buildReviewSortMap(
                         reviewsQuery.data ?? [],
                     );
+                    const requiredApprovals =
+                        mergeReqsQuery.data?.requiredApprovingReviewCount ?? 0;
+                    const approvedCount = [...reviewStateMap.values()].filter(
+                        (state) => state === "APPROVED",
+                    ).length;
                     return (
-                        <ReviewerSectionContent
-                            reviewers={mergeReviewers(
-                                pullRequest.requested_reviewers ?? [],
-                                reviewsQuery.data ?? [],
-                                pullRequest.user?.login,
+                        <>
+                            {requiredApprovals > 0 && (
+                                <p className="text-text-tertiary text-xs">
+                                    {approvedCount} of {requiredApprovals}{" "}
+                                    required approvals
+                                </p>
                             )}
-                            reviewStateMap={reviewStateMap}
-                            reviewSortMap={reviewSortMap}
-                            operations={operations}
-                            showAll={showAll}
-                            onToggleShowAll={() => setShowAll((prev) => !prev)}
-                        />
+                            <ReviewerSectionContent
+                                reviewers={mergeReviewers(
+                                    pullRequest.requested_reviewers ?? [],
+                                    reviewsQuery.data ?? [],
+                                    pullRequest.user?.login,
+                                )}
+                                reviewStateMap={reviewStateMap}
+                                reviewSortMap={reviewSortMap}
+                                codeOwnerLogins={
+                                    new Set(
+                                        mergeStateQuery.data
+                                            ?.codeOwnerReviewerLogins ?? [],
+                                    )
+                                }
+                                operations={operations}
+                                showAll={showAll}
+                                onToggleShowAll={() =>
+                                    setShowAll((prev) => !prev)
+                                }
+                            />
+                        </>
                     );
                 }}
             </Async>
@@ -291,6 +323,7 @@ function ReviewerSectionContent({
     reviewers,
     reviewStateMap,
     reviewSortMap,
+    codeOwnerLogins,
     operations,
     showAll,
     onToggleShowAll,
@@ -298,6 +331,7 @@ function ReviewerSectionContent({
     reviewers: Reviewer[];
     reviewStateMap: Map<string, string>;
     reviewSortMap: Map<string, number>;
+    codeOwnerLogins: Set<string>;
     operations: ReviewerOperation[];
     showAll: boolean;
     onToggleShowAll: () => void;
@@ -354,6 +388,11 @@ function ReviewerSectionContent({
                                     </span>
                                 </a>
                             </UserHoverCard>
+                            {codeOwnerLogins.has(reviewer.login) && (
+                                <span className="shrink-0 text-text-tertiary text-xs">
+                                    code owner
+                                </span>
+                            )}
                             {state === "APPROVED" && (
                                 <Tooltip>
                                     <TooltipTrigger asChild>
