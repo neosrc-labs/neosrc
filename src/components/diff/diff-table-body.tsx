@@ -3,19 +3,22 @@
 import type { ReviewComment } from "~/server/github";
 import type { DiffViewMode } from "~/utils/diff-view";
 import { BlockRows } from "./diff-block-rows";
-import { GapRow } from "./gap-row";
+import { GapRows } from "./gap-rows";
+import { diffGapKey } from "./model";
 import type {
     DiffAnchor,
     DiffRenderItem,
     DiffRowCommentProps,
-    GapExpansion,
+    GapRange,
 } from "./types";
+
+const NO_RANGES: GapRange[] = [];
 
 interface DiffTableBodyProps {
     items: DiffRenderItem[];
     expandAllContext: boolean;
-    expandedGaps: Map<string, GapExpansion>;
-    onGapExpand: (key: string, expansion: GapExpansion) => void;
+    expandedGaps: Map<string, GapRange[]>;
+    onGapExpand: (key: string, range: GapRange) => void;
     owner: string | undefined;
     repo: string | undefined;
     headSha: string | undefined;
@@ -54,19 +57,23 @@ export function DiffTableBody({
         <>
             {items.map((item, idx) => {
                 if (item.type === "gap") {
-                    if (item.endLine !== -1) return null;
-                    const gapKey = `gap-${item.startLine}`;
-                    const expandedCount = expandAllContext
-                        ? Infinity
-                        : (expandedGaps.get(gapKey)?.top ?? 0);
+                    const gapKey = diffGapKey(item);
+                    // A gap leads into the following hunk, whose header is
+                    // shown on the unfold row directly above it.
+                    const next = items[idx + 1];
                     return (
-                        <GapRow
+                        <GapRows
                             key={gapKey}
-                            startLine={item.startLine}
-                            oldStartLine={item.oldStartLine}
-                            expandedCount={expandedCount}
-                            onExpand={onGapExpand}
+                            gap={item}
                             gapKey={gapKey}
+                            revealed={expandedGaps.get(gapKey) ?? NO_RANGES}
+                            expandAll={expandAllContext}
+                            header={
+                                next?.type === "block"
+                                    ? next.block.header
+                                    : undefined
+                            }
+                            onExpand={onGapExpand}
                             owner={owner}
                             repo={repo}
                             headSha={headSha}
@@ -83,32 +90,10 @@ export function DiffTableBody({
                         />
                     );
                 }
-                const previous = idx > 0 ? items[idx - 1] : null;
-                const previousGap = previous?.type === "gap" ? previous : null;
-                const gap =
-                    previousGap && previousGap.endLine !== -1
-                        ? {
-                              startLine: previousGap.startLine,
-                              endLine: previousGap.endLine,
-                              oldStartLine: previousGap.oldStartLine,
-                          }
-                        : undefined;
-                const gapKey = gap ? `gap-${gap.startLine}` : undefined;
-                const gapExpansion = gapKey
-                    ? expandAllContext
-                        ? { top: Infinity, bottom: Infinity }
-                        : (expandedGaps.get(gapKey) ?? { top: 0, bottom: 0 })
-                    : { top: 0, bottom: 0 };
                 return (
                     <BlockRows
                         key={`block-${item.block.newStartLine}`}
                         block={item.block}
-                        gap={gap}
-                        gapKey={gapKey}
-                        gapExpansion={gapExpansion}
-                        onGapExpand={onGapExpand}
-                        headSha={headSha}
-                        filename={filename}
                         fileHash={fileHash}
                         view={view}
                         selectedRange={selectedRange}

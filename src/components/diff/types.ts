@@ -32,12 +32,15 @@ export interface DiffGap {
     oldStartLine: number;
 }
 
-/** How many lines of a gap are revealed from each end. */
-export interface GapExpansion {
-    /** Lines revealed from the top of the gap (expand-down clicks). */
-    top: number;
-    /** Lines revealed from the bottom of the gap (expand-up clicks). */
-    bottom: number;
+/** Inclusive run of revealed gap lines, in new-file coordinates. */
+export interface GapRange {
+    start: number;
+    end: number;
+}
+
+/** A run of gap lines in render order; hidden runs carry an unfold row. */
+export interface GapSegment extends GapRange {
+    hidden: boolean;
 }
 
 export type DiffRenderItem =

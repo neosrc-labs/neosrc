@@ -69,10 +69,6 @@ vi.mock("~/components/reaction-bar", () => mockReactionBar());
 
 vi.mock("~/components/reaction-picker", () => mockReactionPicker());
 
-vi.mock("~/components/diff-view", () => ({
-    DiffView: () => <div data-testid="diff-view" />,
-}));
-
 vi.mock("~/components/inline-comment-thread", () => ({
     ReplyTextboxButton: () => <button type="button">Reply...</button>,
 }));

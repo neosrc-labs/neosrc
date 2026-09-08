@@ -22,10 +22,16 @@ export function groupReviewCommentThreads(
 }
 
 export function isFileComment(comment: ReviewComment): boolean {
-    const maybe = comment as Record<string, unknown>;
+    const subjectType = (comment as Record<string, unknown>).subject_type;
+    if (subjectType === "file") return true;
+    if (subjectType === "line") return false;
+    // Payloads without subject_type: a line comment always carries a line
+    // number, current or original (an outdated comment keeps only the
+    // original), while a file-level comment carries none.
     return (
-        maybe.subject_type === "file" ||
-        (comment.line == null && comment.position == null)
+        comment.line == null &&
+        comment.original_line == null &&
+        comment.position == null
     );
 }
 

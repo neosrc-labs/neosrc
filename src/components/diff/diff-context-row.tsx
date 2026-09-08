@@ -8,7 +8,7 @@ import type { DiffViewMode } from "~/utils/diff-view";
 import { InlineCommentThread } from "../inline-comment-thread";
 import { groupReviewCommentThreads } from "../review-comment-threads";
 import { DiffLineCommentEditor } from "./diff-line-comment-editor";
-import { isLastLineOfRange } from "./model";
+import { resolveDiffCommentAnchor } from "./model";
 import type { DiffAnchor, DiffRowCommentProps } from "./types";
 import { isRowSelected } from "./use-diff-line-selection";
 
@@ -90,8 +90,12 @@ export function DiffContextRow({
     const commentLine = lineNum;
     const oldLineNum = oldLine ?? lineNum;
     const commentSide: "LEFT" | "RIGHT" = "RIGHT";
-    const lineComments =
-        commentsByLine.get(`${commentLine}-${commentSide}`) ?? [];
+    // A revealed line exists on both sides, so it carries comments anchored to
+    // the new number on the right and to the old number on the left.
+    const lineComments = [
+        ...(commentsByLine.get(`${commentLine}-RIGHT`) ?? []),
+        ...(commentsByLine.get(`${oldLineNum}-LEFT`) ?? []),
+    ];
     const isActive =
         activeComment?.type === "line" &&
         activeComment.line === commentLine &&
@@ -107,7 +111,9 @@ export function DiffContextRow({
             commentLine >= commentDragRange.startLine &&
             commentLine <= commentDragRange.endLine);
     const hasMultiLineRange =
-        (multiLineRanges.get(`${commentLine}-${commentSide}`)?.length ?? 0) > 0;
+        (multiLineRanges.get(`${commentLine}-RIGHT`)?.length ?? 0) +
+            (multiLineRanges.get(`${oldLineNum}-LEFT`)?.length ?? 0) >
+        0;
     const showRangeIndicator = isInActiveRange || hasMultiLineRange;
 
     // Gap lines are context lines present on both sides: a covered row
@@ -165,9 +171,18 @@ export function DiffContextRow({
     };
 
     const threads = showComments
-        ? groupReviewCommentThreads(lineComments).filter((thread) =>
-              isLastLineOfRange(thread.parent, positionMap, commentLine),
-          )
+        ? groupReviewCommentThreads(lineComments).filter((thread) => {
+              const anchor = resolveDiffCommentAnchor(
+                  thread.parent,
+                  positionMap,
+              );
+              if (!anchor) return false;
+              // Only the last line of a range renders the thread.
+              return (
+                  anchor.line ===
+                  (anchor.side === "LEFT" ? oldLineNum : commentLine)
+              );
+          })
         : [];
 
     // Context-line comments anchor to the new side (like unified view), so
@@ -181,12 +196,12 @@ export function DiffContextRow({
                 <td className="d2h-empty-side" />
                 <td className="d2h-empty-side" />
                 <td className="d2h-split-ln d2h-cntx" />
-                <td className="p-0 pl-[0.75em] dark:bg-zinc-950">{children}</td>
+                <td className="d2h-cntx p-0 pl-[0.75em]">{children}</td>
             </>
         ) : (
             <>
                 <td className="d2h-thread-ln d2h-cntx" />
-                <td className="p-0 dark:bg-zinc-950">{children}</td>
+                <td className="d2h-cntx p-0">{children}</td>
             </>
         );
     const editorCells = (children: ReactNode) =>
@@ -385,7 +400,14 @@ export function DiffContextRow({
                     </div>
                 </td>
                 <td className="d2h-cntx">
-                    <div className="d2h-code-line" style={{ display: "flex" }}>
+                    <div
+                        className="d2h-code-line"
+                        style={{
+                            display: "flex",
+                            width: "100%",
+                            paddingRight: "8px",
+                        }}
+                    >
                         <span className="d2h-code-line-ctn">
                             {content || <br />}
                         </span>

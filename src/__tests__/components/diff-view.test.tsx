@@ -126,6 +126,7 @@ function makeMockComments(
         body?: string;
         in_reply_to_id?: number;
         position?: number | null;
+        original_line?: number | null;
         original_position?: number | null;
     }>,
 ): ReviewComment[] {
@@ -528,6 +529,31 @@ describe("DiffView rendering", () => {
             const lineRow = threadRow?.previousElementSibling;
             expect(lineRow?.id.endsWith("R11")).toBe(true);
         });
+
+        it("does not render an outdated comment whose lines left the diff", () => {
+            const lines = [mc(" ctx", 10, 10), mc("+added", 11)];
+            mockParsedFile([mb(10, lines, 10)], { addedLines: 1 });
+
+            // GitHub nulls `line` when the commented lines are gone but can
+            // still report a stale `position`; following it would drop the
+            // thread on an unrelated line instead of hiding it.
+            const comments = makeMockComments([
+                {
+                    id: 77,
+                    line: null,
+                    original_line: 859,
+                    position: 2,
+                    original_position: 17,
+                    path: "test.ts",
+                },
+            ]);
+
+            renderDiffView({ showComments: true, comments });
+
+            expect(
+                screen.queryByTestId("inline-comment-thread"),
+            ).not.toBeInTheDocument();
+        });
     });
 
     describe("multi-line range indicator", () => {
@@ -750,35 +776,16 @@ describe("DiffView rendering", () => {
                 pullNumber: 1,
             });
 
-            // Only the trailing gap renders an expand-down button; adjacent
-            // blocks mean no between-block gap at all.
+            // Adjacent blocks mean no gap between them, so only the trailing
+            // gap renders an unfold row (both of its buttons).
             const downButtons = container.querySelectorAll(
                 '[data-testid="arrow-down-from-line"]',
             );
             const upButtons = container.querySelectorAll(
                 '[data-testid="arrow-up-from-line"]',
             );
-            expect(downButtons.length).toBeLessThanOrEqual(1);
-            expect(upButtons.length).toBe(0);
-        });
-
-        it("renders loading state when gap is expanded and file content is loading", () => {
-            mockUseFileContent.isLoading = true;
-            const lines = [mc(" line1", 1, 1), mc("+line2", 2)];
-            mockParsedFile([mb(1, lines)], { addedLines: 1 });
-
-            // Trailing gap with expandAllContext to force expand
-            renderDiffView({
-                expandAllContext: true,
-                headSha: "mock-sha",
-                owner: "owner",
-                repo: "repo",
-                pullNumber: 1,
-            });
-
-            // Should find loading indicators in the table
-            const infoCells = document.querySelectorAll(".d2h-info");
-            expect(infoCells.length).toBeGreaterThan(0);
+            expect(downButtons.length).toBe(1);
+            expect(upButtons.length).toBe(1);
         });
     });
 
@@ -823,8 +830,8 @@ describe("DiffView rendering", () => {
                 fireEvent.click(btn!);
             };
 
-            // Middle gap (11-90) shows both directional buttons; the trailing
-            // gap (92-100) shows a single expand-down button.
+            // Both gaps (11-90 and the trailing one) show an unfold row with
+            // an expand-above and an expand-below button.
             expect(
                 container.querySelectorAll(
                     '[data-testid="arrow-down-from-line"]',
@@ -833,7 +840,7 @@ describe("DiffView rendering", () => {
             expect(
                 container.querySelectorAll('[data-testid="arrow-up-from-line"]')
                     .length,
-            ).toBe(1);
+            ).toBe(2);
             expect(gapRowNumbers(container)).toHaveLength(0);
 
             // Click 1: the 20 lines at the bottom of the gap (71-90),
@@ -872,7 +879,8 @@ describe("DiffView rendering", () => {
             expect(nums[0]).toBe(31);
             expect(nums[59]).toBe(90);
 
-            // Click 4: gap exhausted, middle buttons disappear
+            // Click 4: gap exhausted, its unfold row disappears and only the
+            // trailing gap's buttons remain.
             clickDown();
             nums = gapRowNumbers(container);
             expect(nums).toHaveLength(80);
@@ -886,7 +894,7 @@ describe("DiffView rendering", () => {
             expect(
                 container.querySelectorAll('[data-testid="arrow-up-from-line"]')
                     .length,
-            ).toBe(0);
+            ).toBe(1);
         });
 
         it("shows a loading row when a middle gap expands before content loads", () => {
@@ -894,6 +902,7 @@ describe("DiffView rendering", () => {
             const block1 = mb(1, [mc(" line1", 1, 1), mc("+line2", 2)]);
             const block2 = mb(5, [mc(" line5", 5, 5)]);
             mockParsedFile([block1, block2]);
+            mockUseFileContent.lines = null;
             mockUseFileContent.isLoading = true;
 
             const { container } = renderDiffView({
@@ -910,8 +919,8 @@ describe("DiffView rendering", () => {
             );
 
             // Loading row replaces the gap content: no revealed lines yet and
-            // the middle gap's expand buttons are hidden while the fetch is
-            // in flight (only the trailing gap keeps its button).
+            // the middle gap's unfold buttons are hidden while the fetch is in
+            // flight (only the trailing gap keeps its own).
             const loadingRows = Array.from(
                 container.querySelectorAll("tr"),
             ).filter((tr) => tr.textContent.includes("Loading"));
@@ -923,7 +932,7 @@ describe("DiffView rendering", () => {
             expect(
                 container.querySelectorAll('[data-testid="arrow-up-from-line"]')
                     .length,
-            ).toBe(0);
+            ).toBe(1);
             expect(
                 container.querySelectorAll(
                     '[data-testid="arrow-down-from-line"]',
@@ -963,8 +972,8 @@ describe("DiffView rendering", () => {
             const nums = rowIds.map((id) => Number(id.split("R")[1]));
             expect(nums).toContain(3);
             expect(nums).toContain(4);
-            // Middle gap fully expanded -> only the trailing expand-down
-            // button remains
+            // Middle gap fully expanded -> only the trailing gap's unfold row
+            // remains
             expect(
                 container.querySelectorAll(
                     '[data-testid="arrow-down-from-line"]',
@@ -973,7 +982,7 @@ describe("DiffView rendering", () => {
             expect(
                 container.querySelectorAll('[data-testid="arrow-up-from-line"]')
                     .length,
-            ).toBe(0);
+            ).toBe(1);
         });
 
         it("expands up reveals the lines just below the previous hunk", () => {
@@ -1058,16 +1067,16 @@ describe("DiffView rendering", () => {
                     .filter((n) => n >= 1 && n <= 39);
             }
 
-            // Buttons: leading gap (1-39) shows expand-up; trailing gap
-            // (42-100) shows expand-down.
+            // Both gaps (leading 1-39 and trailing 42-100) show an unfold row
+            // with both buttons.
             let upButtons = container.querySelectorAll(
                 '[data-testid="arrow-up-from-line"]',
             );
             const downButtons = container.querySelectorAll(
                 '[data-testid="arrow-down-from-line"]',
             );
-            expect(upButtons.length).toBe(1);
-            expect(downButtons.length).toBe(1);
+            expect(upButtons.length).toBe(2);
+            expect(downButtons.length).toBe(2);
             expect(leadingGapNums()).toHaveLength(0);
 
             // Click 1: the 20 lines immediately before the hunk (20-39),
@@ -1100,16 +1109,147 @@ describe("DiffView rendering", () => {
             expect(nums).toHaveLength(39);
             expect(nums[0]).toBe(1);
             expect(nums[38]).toBe(39);
-            // Only the trailing expand-down button remains
+            // Only the trailing gap's unfold row remains
             expect(
                 container.querySelectorAll('[data-testid="arrow-up-from-line"]')
                     .length,
-            ).toBe(0);
+            ).toBe(1);
             expect(
                 container.querySelectorAll(
                     '[data-testid="arrow-down-from-line"]',
                 ).length,
             ).toBe(1);
+        });
+    });
+
+    describe("comments on lines the pull request does not touch", () => {
+        beforeEach(() => {
+            mockUseFileContent.lines = Array.from(
+                { length: 100 },
+                (_, i) => `line${i + 1}`,
+            );
+            mockUseFileContent.isLoading = false;
+            mockUseFileContent.error = null;
+        });
+
+        function tenLineBlock() {
+            return mb(
+                1,
+                Array.from({ length: 10 }, (_, i) =>
+                    mc(` line${i + 1}`, i + 1, i + 1),
+                ),
+            );
+        }
+
+        /** Rows rendered for the collapsed region between the two hunks. */
+        function revealedGapLines(container: HTMLElement) {
+            return Array.from(container.querySelectorAll('tr[id^="diff-"]'))
+                .map((tr) => Number(tr.id.split("R")[1]))
+                .filter((n) => n >= 11 && n <= 90);
+        }
+
+        it("reveals the collapsed region holding the comment", () => {
+            // Hunks cover 1-10 and 91-91, so line 85 is untouched context
+            // inside the collapsed gap and has no row of its own.
+            mockParsedFile([tenLineBlock(), mb(91, [mc("+line91", 91)])], {
+                addedLines: 1,
+            });
+
+            const { container } = renderDiffView({
+                showComments: true,
+                comments: makeMockComments([
+                    { id: 7, line: 85, side: "RIGHT", path: "test.ts" },
+                ]),
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            const thread = screen.getByTestId("inline-comment-thread");
+            expect(thread).toHaveAttribute("data-comment-id", "7");
+            expect(
+                thread
+                    .closest("tr")
+                    ?.previousElementSibling?.id.endsWith("R85"),
+            ).toBe(true);
+            // Four lines of context each side of the comment; the rest of the
+            // 11-90 region stays folded.
+            expect(revealedGapLines(container)).toEqual([
+                81, 82, 83, 84, 85, 86, 87, 88, 89,
+            ]);
+        });
+
+        it("reveals a comment below the last hunk", () => {
+            mockParsedFile([tenLineBlock()]);
+
+            renderDiffView({
+                showComments: true,
+                comments: makeMockComments([
+                    { id: 8, line: 14, side: "RIGHT", path: "test.ts" },
+                ]),
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            const thread = screen.getByTestId("inline-comment-thread");
+            expect(thread).toHaveAttribute("data-comment-id", "8");
+            expect(
+                thread
+                    .closest("tr")
+                    ?.previousElementSibling?.id.endsWith("R14"),
+            ).toBe(true);
+        });
+
+        it("reveals an old-side comment using the gap's old numbering", () => {
+            // Block 1 is new 1-3 / old 1-2 (one insertion), block 2 is new
+            // 10-10 / old 9-9, so the gap's old numbers trail the new ones by
+            // one: old line 5 is new line 6.
+            mockParsedFile(
+                [
+                    mb(1, [mc(" l1", 1, 1), mc(" l2", 2, 2), mc("+l3", 3)]),
+                    mb(10, [mc(" l9", 10, 9)], 9),
+                ],
+                { addedLines: 1 },
+            );
+
+            renderDiffView({
+                showComments: true,
+                comments: makeMockComments([
+                    { id: 9, line: 5, side: "LEFT", path: "test.ts" },
+                ]),
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            const thread = screen.getByTestId("inline-comment-thread");
+            expect(thread).toHaveAttribute("data-comment-id", "9");
+            expect(
+                thread.closest("tr")?.previousElementSibling?.id.endsWith("R6"),
+            ).toBe(true);
+        });
+
+        it("keeps untouched regions collapsed when no comment falls in them", () => {
+            mockParsedFile([tenLineBlock(), mb(91, [mc("+line91", 91)])], {
+                addedLines: 1,
+            });
+
+            const { container } = renderDiffView({
+                showComments: true,
+                comments: makeMockComments([
+                    { id: 10, line: 91, side: "RIGHT", path: "test.ts" },
+                ]),
+                headSha: "mock-sha",
+                owner: "owner",
+                repo: "repo",
+                pullNumber: 1,
+            });
+
+            expect(revealedGapLines(container)).toEqual([]);
         });
     });
 });
