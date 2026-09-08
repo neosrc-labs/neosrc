@@ -168,12 +168,11 @@ html {
 }
 
 /* The border on the other side of the numbers (the line-number column's
-   outer edge) goes too. The multi-line selection indicator relies on
-   border-left, so cells carrying it keep their border. */
-.d2h-code-linenumber.d2h-ins:not(.border-blue-400),
-.d2h-code-linenumber.d2h-del:not(.border-blue-400),
-.d2h-code-linenumber.d2h-cntx:not(.border-blue-400),
-.d2h-code-linenumber.d2h-info:not(.border-blue-400) {
+   outer edge) goes too: the diff draws no vertical rules at all. */
+.d2h-code-linenumber.d2h-ins,
+.d2h-code-linenumber.d2h-del,
+.d2h-code-linenumber.d2h-cntx,
+.d2h-code-linenumber.d2h-info {
     border-left-width: 0;
 }
 

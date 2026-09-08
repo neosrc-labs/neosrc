@@ -159,7 +159,6 @@ export function useDiffCommentSelection({
     }, [onDocumentMouseUp]);
 
     return {
-        commentDragRange,
         onCommentDragStart,
         onCommentLineMouseDown,
         onCommentTableMouseOver,

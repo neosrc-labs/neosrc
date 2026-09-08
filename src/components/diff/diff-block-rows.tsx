@@ -12,7 +12,6 @@ interface BlockRowsProps {
     block: DiffBlock;
     commentsByLine: Map<string, ReviewComment[]>;
     positionMap: Map<number, DiffAnchor>;
-    multiLineRanges: Map<string, string[]>;
     owner: string | undefined;
     repo: string | undefined;
     fileHash: string | undefined;
@@ -40,7 +39,6 @@ export interface BlockRowsSharedProps {
     block: DiffBlock;
     commentsByLine: Map<string, ReviewComment[]>;
     positionMap: Map<number, DiffAnchor>;
-    multiLineRanges: Map<string, string[]>;
     owner: string | undefined;
     repo: string | undefined;
     fileHash: string | undefined;
@@ -67,7 +65,6 @@ export function BlockRows({
     block,
     commentsByLine,
     positionMap,
-    multiLineRanges,
     owner,
     repo,
     fileHash,
@@ -82,7 +79,6 @@ export function BlockRows({
             block={block}
             commentsByLine={commentsByLine}
             positionMap={positionMap}
-            multiLineRanges={multiLineRanges}
             owner={owner}
             repo={repo}
             fileHash={fileHash}
@@ -96,7 +92,6 @@ export function BlockRows({
             block={block}
             commentsByLine={commentsByLine}
             positionMap={positionMap}
-            multiLineRanges={multiLineRanges}
             owner={owner}
             repo={repo}
             fileHash={fileHash}

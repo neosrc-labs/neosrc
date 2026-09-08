@@ -60,11 +60,6 @@ export interface DiffRowCommentProps {
     onCancelComment: (() => void) | undefined;
     showComments: boolean;
     showCommentButton: boolean;
-    commentDragRange: {
-        startLine: number;
-        endLine: number;
-        side: DiffSide;
-    } | null;
     onCommentDragStart?: (
         line: number,
         side: DiffSide,

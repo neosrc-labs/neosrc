@@ -30,7 +30,6 @@ interface DiffTableBodyProps {
     onLineMouseDown: (lineNum: number, side: string) => void;
     commentsByLine: Map<string, ReviewComment[]>;
     positionMap: Map<number, DiffAnchor>;
-    multiLineRanges: Map<string, string[]>;
     commentProps: DiffRowCommentProps;
 }
 
@@ -50,7 +49,6 @@ export function DiffTableBody({
     onLineMouseDown,
     commentsByLine,
     positionMap,
-    multiLineRanges,
     commentProps,
 }: DiffTableBodyProps) {
     return (
@@ -85,7 +83,6 @@ export function DiffTableBody({
                             onLineMouseDown={onLineMouseDown}
                             commentsByLine={commentsByLine}
                             positionMap={positionMap}
-                            multiLineRanges={multiLineRanges}
                             commentProps={commentProps}
                         />
                     );
@@ -101,7 +98,6 @@ export function DiffTableBody({
                         onLineMouseDown={onLineMouseDown}
                         commentsByLine={commentsByLine}
                         positionMap={positionMap}
-                        multiLineRanges={multiLineRanges}
                         owner={owner}
                         repo={repo}
                         commentProps={commentProps}
