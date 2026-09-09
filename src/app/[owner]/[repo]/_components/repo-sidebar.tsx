@@ -6,13 +6,13 @@ import {
     CakeIcon,
     Check,
     Circle,
+    CircleSlash,
     ExternalLinkIcon,
     HandshakeIcon,
-    Loader2,
     ScaleIcon,
     TagIcon,
     UsersIcon,
-    X,
+    XCircle,
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -354,14 +354,31 @@ function DeployStatusIcon({
     state: string;
     className?: string;
 }) {
-    if (state === "success") {
+    if (state === "success" || state === "active") {
         return <Check className={cn(className, "text-green-600")} />;
     }
     if (state === "failure" || state === "error") {
-        return <X className={cn(className, "text-red-600")} />;
+        return <XCircle className={cn(className, "text-red-600")} />;
     }
-    if (state === "in_progress" || state === "pending" || state === "queued") {
-        return <Loader2 className={cn(className, "text-amber-500")} />;
+    if (
+        state === "in_progress" ||
+        state === "pending" ||
+        state === "queued" ||
+        state === "waiting"
+    ) {
+        // Same pulsing dot the PR checks section uses for running work.
+        return (
+            <span className={cn(className, "flex items-center justify-center")}>
+                <span className="check-pending-dot size-2.5 rounded-full" />
+            </span>
+        );
+    }
+    if (
+        state === "inactive" ||
+        state === "abandoned" ||
+        state === "destroyed"
+    ) {
+        return <CircleSlash className={cn(className, "text-text-muted")} />;
     }
     return <Circle className={cn(className, "text-text-muted")} />;
 }
