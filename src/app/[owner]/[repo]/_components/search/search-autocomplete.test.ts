@@ -142,4 +142,40 @@ describe("replaceQualifierValue", () => {
             ),
         ).toBe("milestone:v1");
     });
+
+    it("replaces the whole value when the cursor sits inside it", () => {
+        expect(
+            replaceQualifierValue(
+                "label:A-build-dependencies",
+                7,
+                "label",
+                "bug",
+                QUALIFIERS,
+            ),
+        ).toBe("label:bug ");
+    });
+
+    it("keeps the rest of the query when the cursor sits inside a value", () => {
+        expect(
+            replaceQualifierValue(
+                "label:A-build-dependencies is:open",
+                7,
+                "label",
+                "bug",
+                QUALIFIERS,
+            ),
+        ).toBe("label:bug is:open");
+    });
+
+    it("consumes a value after the cursor when the cursor is right after the key", () => {
+        expect(
+            replaceQualifierValue("label:bug", 6, "label", "docs", QUALIFIERS),
+        ).toBe("label:docs ");
+    });
+
+    it("consumes value characters outside the detection charset", () => {
+        expect(
+            replaceQualifierValue("label:v1.0", 8, "label", "x", QUALIFIERS),
+        ).toBe("label:x ");
+    });
 });
