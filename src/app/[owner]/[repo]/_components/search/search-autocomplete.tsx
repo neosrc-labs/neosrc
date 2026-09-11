@@ -56,7 +56,19 @@ export function replaceQualifierValue(
     const unquoted = value.replace(/^"|"$/g, "");
     const replacement = `${key}:${unquoted.includes(" ") ? `"${unquoted}"` : unquoted}`;
     const start = detection?.start ?? cursorPos;
-    const end = detection?.end ?? cursorPos;
+    let end = detection?.end ?? cursorPos;
+    if (detection) {
+        // Detection stops at the cursor, so replacing while the caret sits
+        // inside an existing value would leave the tail of that value behind.
+        // Consume the rest of the token (or the quoted value) so the whole
+        // qualifier is replaced.
+        if (text[end] === '"') {
+            const closingQuote = text.indexOf('"', end + 1);
+            end = closingQuote === -1 ? text.length : closingQuote + 1;
+        } else {
+            while (end < text.length && !/\s/.test(text[end] ?? "")) end++;
+        }
+    }
     if (!detection) {
         // No supported qualifier under the cursor: insert `key:value` only on
         // plain text at a word boundary. Leave the query untouched when the
