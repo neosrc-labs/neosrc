@@ -376,6 +376,37 @@ describe("PullRequestList", () => {
         expect(input.value).toBe("");
     });
 
+    it("shows the completion as typeahead and inserts the qualifier and separator on Tab", async () => {
+        await mockLabelData([{ name: "bug", color: "d73a4a" }]);
+        const user = userEvent.setup();
+        renderList();
+
+        const input = getSearchInput();
+        await user.type(input, "lab");
+
+        expect(input.value).toBe("lab");
+        expect(screen.getByText("el:")).toBeInTheDocument();
+
+        await user.keyboard("{Tab}");
+
+        expect(input.value).toBe("label:");
+        expect(input.selectionStart).toBe("label:".length);
+        expect(screen.queryByText("el:")).not.toBeInTheDocument();
+        expect(screen.getByText("bug")).toBeInTheDocument();
+    });
+
+    it("offers no typeahead for a word in a qualifier value", async () => {
+        const user = userEvent.setup();
+        renderList();
+
+        const input = getSearchInput();
+        await user.type(input, "label:la");
+        expect(screen.queryByText("bel:")).not.toBeInTheDocument();
+
+        await user.keyboard("{Tab}");
+        expect(input.value).toBe("label:la");
+    });
+
     it("typing 'is:m' and pressing Enter selects 'is:merged' from autocomplete and switches to Merged tab", async () => {
         const user = userEvent.setup();
         renderList();

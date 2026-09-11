@@ -6,7 +6,10 @@ import {
     SearchAutocomplete,
     type SearchAutocompleteHandle,
 } from "~/app/[owner]/[repo]/_components/search/search-autocomplete";
-import { splitQuery } from "~/app/[owner]/[repo]/_components/search/search-utils";
+import {
+    matchQualifierPrefix,
+    splitQuery,
+} from "~/app/[owner]/[repo]/_components/search/search-utils";
 
 export interface ListExternalUrls {
     labels: string;
@@ -60,6 +63,20 @@ export function ListSearchBar({
         cursorPos,
         qualifiers,
     );
+    const qualifierMatch = matchQualifierPrefix(
+        searchInput,
+        cursorPos,
+        qualifiers,
+    );
+    // Tab inserts the qualifier plus its separator, leaving the caret where the
+    // value starts, and the ghost text previews exactly that.
+    const qualifierCompletion = qualifierMatch
+        ? `${qualifierMatch.value}:`
+        : null;
+    const qualifierGhost =
+        qualifierCompletion?.slice(
+            qualifierMatch ? qualifierMatch.end - qualifierMatch.start : 0,
+        ) ?? null;
 
     // Committed filters (`author:foo`) end without a separator, so a qualifier
     // typed after clicking at the end would merge into that value. Append the
@@ -109,6 +126,11 @@ export function ListSearchBar({
                                         </span>
                                     );
                                 })}
+                                {qualifierGhost && (
+                                    <span className="text-text-muted">
+                                        {qualifierGhost}
+                                    </span>
+                                )}
                             </span>
                         ) : null}
                     </div>
@@ -121,6 +143,23 @@ export function ListSearchBar({
                             setCursorPos(e.target.selectionStart ?? 0);
                         }}
                         onKeyDown={(e) => {
+                            if (
+                                e.key === "Tab" &&
+                                !e.shiftKey &&
+                                !e.altKey &&
+                                !e.ctrlKey &&
+                                !e.metaKey &&
+                                qualifierMatch
+                            ) {
+                                e.preventDefault();
+                                const { start, end, value } = qualifierMatch;
+                                const completion = `${value}:`;
+                                setSearchInput(
+                                    `${searchInput.slice(0, start)}${completion}${searchInput.slice(end)}`,
+                                );
+                                setCursorPos(start + completion.length);
+                                return;
+                            }
                             if (
                                 autocompleteMatch &&
                                 autocompleteRef.current?.handleKeyDown(e)

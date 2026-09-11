@@ -65,6 +65,45 @@ export function removeQualifier(
     return formatQuery(parsed);
 }
 
+export interface QualifierPrefixMatch {
+    start: number;
+    end: number;
+    value: string;
+}
+
+/**
+ * Finds the qualifier that extends the word under the cursor, so the search box
+ * can show the rest of the name as typeahead. Only the word typed at the end of
+ * the query counts; a word sitting in a value (`label:bu`) or inside a quoted
+ * value is not a qualifier being typed. Ambiguous prefixes (`s` for sort and
+ * status) and complete names return null, so Tab never guesses.
+ */
+export function matchQualifierPrefix(
+    text: string,
+    cursorPos: number,
+    qualifiers: string[],
+): QualifierPrefixMatch | null {
+    if (cursorPos !== text.length) return null;
+
+    let start = cursorPos;
+    while (start > 0 && /[\w-]/.test(text[start - 1] ?? "")) start--;
+    if (start === cursorPos) return null;
+
+    const preceding = text[start - 1];
+    if (preceding === ":" || preceding === '"') return null;
+
+    const word = text.slice(start, cursorPos);
+    const matches = qualifiers.filter(
+        (q) =>
+            q.length > word.length &&
+            q.toLowerCase().startsWith(word.toLowerCase()),
+    );
+    const [match] = matches;
+    if (!match || matches.length > 1) return null;
+
+    return { start, end: cursorPos, value: match };
+}
+
 const HIGHLIGHT_RE = /(\w+:"[^"]*"|\w+:\S+)/g;
 
 export interface QuerySegment {
