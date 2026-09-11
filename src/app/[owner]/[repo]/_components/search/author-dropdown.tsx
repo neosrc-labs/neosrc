@@ -54,15 +54,14 @@ export function AuthorDropdown({
                 avatar_url: u.avatar_url ?? undefined,
             });
         };
-        (assignees ?? []).forEach(add);
-        (recentAuthors ?? []).forEach(add);
         if (currentUser?.login) {
-            const login = currentUser.login;
             add({
-                login,
+                login: currentUser.login,
                 avatar_url: currentUser.avatarUrl ?? undefined,
             });
         }
+        (assignees ?? []).forEach(add);
+        (recentAuthors ?? []).forEach(add);
         return users;
     }, [assignees, recentAuthors, currentUser?.login, currentUser?.avatarUrl]);
 
