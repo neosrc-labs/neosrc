@@ -227,11 +227,11 @@ export const SearchAutocomplete = forwardRef<
         return [];
     }, [match.key, query, labels, allUsers, staticOptions]);
 
-    const prevCountRef = useRef(suggestions.length);
-    if (prevCountRef.current !== suggestions.length) {
-        prevCountRef.current = suggestions.length;
+    // Reset the highlighted row whenever the suggestion set changes size.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: the count is the trigger, the effect body does not read it
+    useEffect(() => {
         setSelectedIndex(0);
-    }
+    }, [suggestions.length]);
 
     useEffect(() => {
         const el = listRef.current?.children[selectedIndex] as
