@@ -62,7 +62,7 @@ export function AutoMergeToggle({
             "merge_method" in (val as Record<string, unknown>)
         ) {
             const candidate = val as Record<string, unknown>;
-            const mergeMethod = candidate["merge_method"];
+            const mergeMethod = candidate.merge_method;
             if (typeof mergeMethod === "string") {
                 return { enabled_by: null, merge_method: mergeMethod };
             }

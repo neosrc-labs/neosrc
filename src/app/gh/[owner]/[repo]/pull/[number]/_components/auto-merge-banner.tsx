@@ -29,8 +29,8 @@ function getAutoMerge(pr: PullsGetResponseData): AutoMergeData {
         "merge_method" in (val as Record<string, unknown>)
     ) {
         const candidate = val as Record<string, unknown>;
-        const mergeMethod = candidate["merge_method"];
-        const enabledBy = candidate["enabled_by"];
+        const mergeMethod = candidate.merge_method;
+        const enabledBy = candidate.enabled_by;
         if (typeof mergeMethod === "string") {
             return {
                 enabled_by:
@@ -39,9 +39,8 @@ function getAutoMerge(pr: PullsGetResponseData): AutoMergeData {
                     "login" in (enabledBy as Record<string, unknown>)
                         ? {
                               login: String(
-                                  (enabledBy as Record<string, unknown>)[
-                                      "login"
-                                  ] ?? "",
+                                  (enabledBy as Record<string, unknown>)
+                                      .login ?? "",
                               ),
                           }
                         : null,
