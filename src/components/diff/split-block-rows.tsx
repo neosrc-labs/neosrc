@@ -196,7 +196,7 @@ function renderSplitEditorRow({
             {side === "LEFT" ? (
                 <>
                     <td className={`d2h-split-ln ${typeClass}`} />
-                    <td colSpan={3} className="border-border border-t p-0">
+                    <td colSpan={3} className={`p-0 pl-[0.75em] ${typeClass}`}>
                         {editor}
                     </td>
                 </>
@@ -205,7 +205,7 @@ function renderSplitEditorRow({
                     <td className="d2h-empty-side" />
                     <td className="d2h-empty-side" />
                     <td className={`d2h-split-ln ${typeClass}`} />
-                    <td className="border-border border-t p-0">{editor}</td>
+                    <td className={`p-0 pl-[0.75em] ${typeClass}`}>{editor}</td>
                 </>
             )}
         </tr>

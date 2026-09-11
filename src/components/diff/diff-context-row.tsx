@@ -172,7 +172,7 @@ export function DiffContextRow({
     // column carries the line's lighter shade); in unified view the line
     // numbers are an absolute overlay, so the thread reserves an 8em
     // line-number cell with the same lighter shade.
-    const threadCells = (children: ReactNode) =>
+    const attachmentCells = (children: ReactNode) =>
         view === "split" ? (
             <>
                 <td className="d2h-empty-side" />
@@ -186,26 +186,11 @@ export function DiffContextRow({
                 <td className="d2h-cntx p-0">{children}</td>
             </>
         );
-    const editorCells = (children: ReactNode) =>
-        view === "split" ? (
-            <>
-                <td className="d2h-empty-side" />
-                <td className="d2h-empty-side" />
-                <td className="d2h-split-ln d2h-cntx" />
-                <td className="border-border border-t p-0">{children}</td>
-            </>
-        ) : (
-            <>
-                <td className="d2h-thread-ln d2h-cntx" />
-                <td className="border-border border-t p-0">{children}</td>
-            </>
-        );
-
     const attachments = (
         <>
             {threads.map((thread) => (
                 <tr key={`thread-${thread.parent.id}`}>
-                    {threadCells(
+                    {attachmentCells(
                         <InlineCommentThread
                             parentComment={thread.parent}
                             replies={thread.replies}
@@ -222,7 +207,7 @@ export function DiffContextRow({
             ))}
             {isActive && (
                 <tr>
-                    {editorCells(
+                    {attachmentCells(
                         <DiffLineCommentEditor
                             value={commentBody ?? ""}
                             onChange={onCommentBodyChange ?? (() => {})}

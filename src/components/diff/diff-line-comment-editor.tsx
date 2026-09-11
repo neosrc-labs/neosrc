@@ -26,6 +26,7 @@ export function DiffLineCommentEditor({
         <div className="max-w-[800px] p-2">
             <MarkdownEditor
                 autoFocus
+                className="bg-surface"
                 disabled={isPending}
                 onChange={onChange}
                 onCancel={onCancel}

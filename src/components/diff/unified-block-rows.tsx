@@ -237,7 +237,7 @@ export function UnifiedBlockRows({
                         {isActive && (
                             <tr>
                                 <td className={`d2h-thread-ln ${typeClass}`} />
-                                <td className="border-border border-t p-0">
+                                <td className={`p-0 ${typeClass}`}>
                                     <DiffLineCommentEditor
                                         value={commentBody}
                                         onChange={
