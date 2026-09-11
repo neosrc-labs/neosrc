@@ -101,7 +101,9 @@ export function useSearchList<TItem>(
     const orderParam = searchParams.get("order");
     const currentOrder = orderParam === "asc" ? "asc" : "desc";
 
-    const queryKey = `${activeTab}:${searchQuery}:${currentSort}:${currentOrder}`;
+    // Cursors are opaque tokens bound to the repository and provider as well as
+    // the query, so all of them key the cached cursor.
+    const queryKey = `${config.provider}:${config.owner}:${config.repo}:${activeTab}:${searchQuery}:${currentSort}:${currentOrder}`;
     const [cursorState, setCursorState] = useState<{
         key: string;
         cursors: Record<number, string>;
