@@ -130,7 +130,7 @@ export function UnifiedBlockRows({
                                     {showCommentButton && onStartComment && (
                                         <Plus
                                             size={24}
-                                            className="absolute -right-5 z-10 hidden rounded-md bg-blue-500 p-0.5 text-white group-hover:block"
+                                            className="absolute -right-3.5 z-10 hidden rounded-md bg-blue-500 p-0.5 text-white group-hover:block"
                                             onMouseDown={(e) => {
                                                 e.stopPropagation();
                                                 onCommentDragStart?.(

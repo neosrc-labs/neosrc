@@ -77,6 +77,12 @@ export function DiffTable({
                 .d2h-diff-table:not(.d2h-split-table) .d2h-code-line {
                     padding-left: 0;
                 }
+                /* The number column draws no separator, so the code text
+                   needs its own margin before it starts. Info rows (hunk
+                   headers, unfold rows) have no ctn span and stay put. */
+                .d2h-diff-table:not(.d2h-split-table) .d2h-code-line-ctn {
+                    margin-left: 16px;
+                }
                 .d2h-split-table .d2h-code-linenumber {
                     position: relative;
                     display: table-cell;

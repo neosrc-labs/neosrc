@@ -269,7 +269,7 @@ export function SplitBlockRows({
     ) => (
         <Plus
             size={24}
-            className={`absolute -right-5 z-10 ${visible ? "block" : "hidden"} rounded-md bg-blue-500 p-0.5 text-white`}
+            className={`absolute -right-3.5 z-10 ${visible ? "block" : "hidden"} rounded-md bg-blue-500 p-0.5 text-white`}
             onMouseDown={(e) => {
                 e.stopPropagation();
                 onCommentDragStart?.(commentLine, side, rowLines);
