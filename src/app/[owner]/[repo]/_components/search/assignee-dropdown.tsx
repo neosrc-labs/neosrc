@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { api } from "~/trpc/react";
+import { hasQualifier } from "./search-utils";
 
 export function AssigneeDropdown({
     owner,
@@ -54,7 +55,7 @@ export function AssigneeDropdown({
 
     const selectedNames = new Set(
         allUsers
-            .filter((u) => currentQuery.includes(`assignee:${u.login}`))
+            .filter((u) => hasQualifier(currentQuery, "assignee", u.login))
             .map((u) => u.login),
     );
 

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { api } from "~/trpc/react";
+import { hasQualifier } from "./search-utils";
 import { useDebounce } from "./use-debounce";
 
 export function AuthorDropdown({
@@ -73,7 +74,7 @@ export function AuthorDropdown({
             allUsers.filter(
                 (u) =>
                     u.login.toLowerCase().includes(searchText.toLowerCase()) &&
-                    !currentQuery.includes(`author:${u.login}`),
+                    !hasQualifier(currentQuery, "author", u.login),
             ),
         [allUsers, searchText, currentQuery],
     );
@@ -108,7 +109,7 @@ export function AuthorDropdown({
 
     const selectedNames = new Set(
         allUsers
-            .filter((u) => currentQuery.includes(`author:${u.login}`))
+            .filter((u) => hasQualifier(currentQuery, "author", u.login))
             .map((u) => u.login),
     );
 

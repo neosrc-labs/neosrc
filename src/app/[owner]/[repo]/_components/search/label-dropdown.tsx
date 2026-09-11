@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Label as LabelComponent } from "~/components/ui/label";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { api } from "~/trpc/react";
+import { hasQualifier } from "./search-utils";
 
 export function LabelDropdown({
     owner,
@@ -27,13 +28,6 @@ export function LabelDropdown({
     );
 
     const items = labels ?? [];
-    const currentNames = new Set(
-        items
-            .filter((l: { name: string }) =>
-                currentQuery.includes(`label:${l.name}`),
-            )
-            .map((l: { name: string }) => l.name),
-    );
 
     return (
         <SearchableDropdown
@@ -42,7 +36,9 @@ export function LabelDropdown({
             }}
             items={items}
             isLoading={isLoading}
-            isSelected={(l: { name: string }) => currentNames.has(l.name)}
+            isSelected={(l: { name: string }) =>
+                hasQualifier(currentQuery, "label", l.name)
+            }
             onSelect={(l: { name: string }) => onToggle(l.name)}
             keyFn={(l: { name: string }) => l.name}
             searchFn={(l: { name: string }, q: string) =>
