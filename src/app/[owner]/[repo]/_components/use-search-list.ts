@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     detectQualifier,
     replaceQualifierValue,
@@ -101,20 +101,34 @@ export function useSearchList<TItem>(
     const orderParam = searchParams.get("order");
     const currentOrder = orderParam === "asc" ? "asc" : "desc";
 
-    const [pageCursors, setPageCursors] = useState<Record<number, string>>({});
-    const pageCursorsRef = useRef(pageCursors);
-    pageCursorsRef.current = pageCursors;
-    const [isResolving, setIsResolving] = useState(false);
-    const prevQueryKey = useRef<string | undefined>(undefined);
-
     const queryKey = `${activeTab}:${searchQuery}:${currentSort}:${currentOrder}`;
-    if (
-        prevQueryKey.current !== undefined &&
-        prevQueryKey.current !== queryKey
-    ) {
-        setPageCursors({});
-    }
-    prevQueryKey.current = queryKey;
+    const [cursorState, setCursorState] = useState<{
+        key: string;
+        cursors: Record<number, string>;
+    }>(() => ({ key: queryKey, cursors: {} }));
+    // Page cursors are pagination tokens tied to one query. Deriving them from
+    // the stored key guarantees a token from a previous query is never sent
+    // with a new one, without resetting state during render.
+    const pageCursors = useMemo(
+        () => (cursorState.key === queryKey ? cursorState.cursors : {}),
+        [cursorState, queryKey],
+    );
+    const setPageCursors = useCallback(
+        (update: (prev: Record<number, string>) => Record<number, string>) => {
+            setCursorState((prev) => ({
+                key: queryKey,
+                cursors: update(prev.key === queryKey ? prev.cursors : {}),
+            }));
+        },
+        [queryKey],
+    );
+    const pageCursorsRef = useRef(pageCursors);
+    const [isResolving, setIsResolving] = useState(false);
+
+    // Effects below read the ref, so sync it before they run.
+    useEffect(() => {
+        pageCursorsRef.current = pageCursors;
+    }, [pageCursors]);
 
     const stateQualifier = config.stateQualifierFn(activeTab);
     let cleanedQuery = searchQuery;
@@ -159,7 +173,7 @@ export function useSearchList<TItem>(
                 [currentPage]: cursor,
             }));
         }
-    }, [data?.endCursor, currentPage]);
+    }, [data?.endCursor, currentPage, setPageCursors]);
 
     const searchFetch = procedures.searchFetch;
 
@@ -225,6 +239,7 @@ export function useSearchList<TItem>(
         currentSort,
         currentOrder,
         searchFetch,
+        setPageCursors,
     ]);
 
     const stateCounts = data?.stateCounts;
