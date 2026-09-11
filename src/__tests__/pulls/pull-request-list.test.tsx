@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -337,6 +337,43 @@ describe("PullRequestList", () => {
         renderList();
         const closedTab = screen.getByRole("button", { name: /closed/i });
         expect(closedTab.className).toContain("border-blue-500");
+    });
+
+    it("adds a trailing space when clicking at the end of an existing query", async () => {
+        paramsState.set("q", "author:foo");
+        const user = userEvent.setup();
+        renderList();
+
+        const input = getSearchInput();
+        expect(input.value).toBe("author:foo");
+
+        await user.click(input);
+        expect(input.value).toBe("author:foo ");
+        expect(input.selectionStart).toBe("author:foo ".length);
+
+        await user.click(input);
+        expect(input.value).toBe("author:foo ");
+    });
+
+    it("leaves the query alone when the click lands inside it", () => {
+        paramsState.set("q", "author:foo");
+        renderList();
+
+        const input = getSearchInput();
+        input.setSelectionRange(6, 6);
+        fireEvent.click(input);
+
+        expect(input.value).toBe("author:foo");
+    });
+
+    it("leaves an empty search box untouched when clicked", async () => {
+        const user = userEvent.setup();
+        renderList();
+
+        const input = getSearchInput();
+        await user.click(input);
+
+        expect(input.value).toBe("");
     });
 
     it("typing 'is:m' and pressing Enter selects 'is:merged' from autocomplete and switches to Merged tab", async () => {

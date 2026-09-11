@@ -61,6 +61,23 @@ export function ListSearchBar({
         qualifiers,
     );
 
+    // Committed filters (`author:foo`) end without a separator, so a qualifier
+    // typed after clicking at the end would merge into that value. Append the
+    // space, but only when the click put the caret at the end, so editing
+    // inside the query is left alone. A value ending in `:` stays open for the
+    // autocomplete instead.
+    const ensureTrailingSeparator = (input: HTMLInputElement): boolean => {
+        const value = input.value;
+        const caretAtEnd = (input.selectionStart ?? 0) === value.length;
+        const needsSeparator =
+            value.length > 0 && !value.endsWith(" ") && !value.endsWith(":");
+        if (!caretAtEnd || !needsSeparator) return false;
+        const next = `${value} `;
+        setSearchInput(next);
+        setCursorPos(next.length);
+        return true;
+    };
+
     return (
         <div className="border-border-subtle border-b">
             <div className="flex items-center gap-1 px-4 py-2">
@@ -116,6 +133,9 @@ export function ListSearchBar({
                             }
                         }}
                         onClick={(e) => {
+                            if (ensureTrailingSeparator(e.currentTarget)) {
+                                return;
+                            }
                             setCursorPos(e.currentTarget.selectionStart ?? 0);
                         }}
                         onSelect={(e) => {
