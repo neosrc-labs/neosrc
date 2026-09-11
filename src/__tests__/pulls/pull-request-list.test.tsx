@@ -407,6 +407,18 @@ describe("PullRequestList", () => {
         expect(input.value).toBe("label:la");
     });
 
+    it("suggests labels when the caret sits inside a quoted value", async () => {
+        await mockLabelData([{ name: "good first issue", color: "ffffff" }]);
+        const user = userEvent.setup();
+        renderList();
+
+        const input = getSearchInput();
+        await user.type(input, 'label:"good');
+
+        expect(input.value).toBe('label:"good');
+        expect(screen.getByText("good first issue")).toBeInTheDocument();
+    });
+
     it("typing 'is:m' and pressing Enter selects 'is:merged' from autocomplete and switches to Merged tab", async () => {
         const user = userEvent.setup();
         renderList();

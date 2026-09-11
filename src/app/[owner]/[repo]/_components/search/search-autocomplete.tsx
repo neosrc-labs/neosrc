@@ -22,21 +22,32 @@ export function detectQualifier(
     text: string,
     cursorPos: number,
     supportedQualifiers: string[],
-): (AutocompleteMatch & { start: number; end: number }) | null {
+):
+    | (AutocompleteMatch & {
+          start: number;
+          end: number;
+          quoted: boolean;
+      })
+    | null {
     // An empty list would produce a pattern matching an empty key at the
     // cursor, corrupting the query on replacement.
     if (supportedQualifiers.length === 0) return null;
     const textBeforeCursor = text.slice(0, cursorPos);
-    const pattern = `(${supportedQualifiers.join(":|")}:)([\\w-]*)$`;
+    // The quoted branch allows spaces, so the caret inside
+    // `label:"good first issue"` still autocompletes. Its value is the text
+    // after the opening quote; the closing quote is consumed on replacement.
+    const pattern = `(${supportedQualifiers.join(":|")}:)(?:"([^"]*)|([\\w-]*))$`;
     const QUALIFIER_RE = new RegExp(pattern);
     const match = textBeforeCursor.match(QUALIFIER_RE);
     if (!match) return null;
     const key = (match[1] ?? "").slice(0, -1);
-    const value = match[2] ?? "";
+    const quoted = match[2] !== undefined;
+    const value = (quoted ? match[2] : match[3]) ?? "";
     const idx = match.index ?? 0;
     return {
         key,
         value,
+        quoted,
         start: idx,
         end: idx + match[0].length,
     };
@@ -60,10 +71,11 @@ export function replaceQualifierValue(
     if (detection) {
         // Detection stops at the cursor, so replacing while the caret sits
         // inside an existing value would leave the tail of that value behind.
-        // Consume the rest of the token (or the quoted value) so the whole
-        // qualifier is replaced.
-        if (text[end] === '"') {
-            const closingQuote = text.indexOf('"', end + 1);
+        // Consume the rest of the token, or through the closing quote for a
+        // quoted value, so the whole qualifier is replaced.
+        if (detection.quoted || text[end] === '"') {
+            const from = detection.quoted ? end : end + 1;
+            const closingQuote = text.indexOf('"', from);
             end = closingQuote === -1 ? text.length : closingQuote + 1;
         } else {
             while (end < text.length && !/\s/.test(text[end] ?? "")) end++;

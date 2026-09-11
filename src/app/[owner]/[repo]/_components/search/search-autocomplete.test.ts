@@ -10,9 +10,35 @@ describe("detectQualifier", () => {
         expect(detectQualifier("is:open author:jo", 17, QUALIFIERS)).toEqual({
             key: "author",
             value: "jo",
+            quoted: false,
             start: 8,
             end: 17,
         });
+    });
+
+    it("finds a quoted value the cursor sits inside", () => {
+        // Spaces inside the quotes must not stop the match.
+        expect(detectQualifier('label:"good first', 17, QUALIFIERS)).toEqual({
+            key: "label",
+            value: "good first",
+            quoted: true,
+            start: 0,
+            end: 17,
+        });
+    });
+
+    it("finds an empty quoted value", () => {
+        expect(detectQualifier('label:"', 7, QUALIFIERS)).toEqual({
+            key: "label",
+            value: "",
+            quoted: true,
+            start: 0,
+            end: 7,
+        });
+    });
+
+    it("returns null once a quoted value is closed", () => {
+        expect(detectQualifier('label:"good"', 13, QUALIFIERS)).toBeNull();
     });
 
     it("returns null when the list of supported qualifiers is empty", () => {
@@ -177,5 +203,41 @@ describe("replaceQualifierValue", () => {
         expect(
             replaceQualifierValue("label:v1.0", 8, "label", "x", QUALIFIERS),
         ).toBe("label:x ");
+    });
+
+    it("replaces the whole quoted value when the cursor is inside it", () => {
+        expect(
+            replaceQualifierValue(
+                'label:"good first issue"',
+                17,
+                "label",
+                '"bug fix"',
+                QUALIFIERS,
+            ),
+        ).toBe('label:"bug fix" ');
+    });
+
+    it("keeps the rest of the query when replacing inside a quoted value", () => {
+        expect(
+            replaceQualifierValue(
+                'label:"good first issue" is:open',
+                17,
+                "label",
+                '"bug fix"',
+                QUALIFIERS,
+            ),
+        ).toBe('label:"bug fix" is:open');
+    });
+
+    it("consumes an existing quoted value when the cursor is right after the key", () => {
+        expect(
+            replaceQualifierValue(
+                'label:"good first issue"',
+                6,
+                "label",
+                "bug",
+                QUALIFIERS,
+            ),
+        ).toBe("label:bug ");
     });
 });
