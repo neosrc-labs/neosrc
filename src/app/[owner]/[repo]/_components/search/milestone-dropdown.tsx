@@ -4,6 +4,7 @@ import { ChevronDown, Flag } from "lucide-react";
 import { useState } from "react";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { api } from "~/trpc/react";
+import { hasQualifier } from "./search-utils";
 
 export function MilestoneDropdown({
     owner,
@@ -26,13 +27,6 @@ export function MilestoneDropdown({
     );
 
     const items = milestones ?? [];
-    const currentNames = new Set(
-        items
-            .filter((m: { title: string }) =>
-                currentQuery.includes(`milestone:"${m.title}"`),
-            )
-            .map((m: { title: string }) => m.title),
-    );
 
     return (
         <SearchableDropdown
@@ -41,7 +35,9 @@ export function MilestoneDropdown({
             }}
             items={items}
             isLoading={isLoading}
-            isSelected={(m: { title: string }) => currentNames.has(m.title)}
+            isSelected={(m: { title: string }) =>
+                hasQualifier(currentQuery, "milestone", m.title)
+            }
             onSelect={(m: { title: string }) => onToggle(m.title)}
             keyFn={(m: { title: string }) => m.title}
             searchFn={(m: { title: string }, q: string) =>

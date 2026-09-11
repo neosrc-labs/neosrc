@@ -96,13 +96,16 @@ export function PullRequestToolbar({
                         repo={repo}
                         currentQuery={searchQuery}
                         onToggle={(milestone: string) => {
-                            const quoted = `"${milestone}"`;
                             if (
-                                hasQualifier(searchQuery, "milestone", quoted)
+                                hasQualifier(
+                                    searchQuery,
+                                    "milestone",
+                                    milestone,
+                                )
                             ) {
-                                onRemoveQualifier("milestone", quoted);
+                                onRemoveQualifier("milestone", milestone);
                             } else {
-                                onAddQualifier("milestone", quoted);
+                                onAddQualifier("milestone", milestone);
                             }
                         }}
                     />

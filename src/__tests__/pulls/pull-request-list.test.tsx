@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // --- Mocks ---
@@ -92,6 +92,7 @@ vi.mock("~/trpc/react", () => ({
 }));
 
 import { PullRequestList } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-list";
+import { api } from "~/trpc/react";
 
 // --- Helpers ---
 
@@ -157,6 +158,35 @@ async function openDropdownAndSelectLabel(
 
     const option = screen.getByRole("option", {
         name: new RegExp(`^${labelName}$`, "i"),
+    });
+    await user.click(option);
+}
+
+async function mockMilestoneData(milestones?: { title: string }[]) {
+    vi.mocked(api.pulls.listMilestones.useQuery).mockReturnValue({
+        data: milestones ?? [{ title: "My Milestone" }],
+        isLoading: false,
+    } as never);
+}
+
+async function openDropdownAndSelectMilestone(user: UserEvent, title: string) {
+    // Milestones don't autoclose, so reuse the open dropdown on a second pick.
+    const existingInput = screen.queryByPlaceholderText("Filter milestones");
+    if (!existingInput) {
+        const milestoneBtn = screen
+            .getAllByRole("button")
+            .find((b) => b.textContent?.trim() === "Milestone");
+        if (!milestoneBtn) throw new Error("Milestone button not found");
+        await user.click(milestoneBtn);
+    }
+
+    const dropdownInput =
+        await screen.findByPlaceholderText("Filter milestones");
+    await user.clear(dropdownInput);
+    await user.type(dropdownInput, title);
+
+    const option = screen.getByRole("option", {
+        name: (name: string) => name.replace("\u2713", "").trim() === title,
     });
     await user.click(option);
 }
@@ -492,5 +522,31 @@ describe("PullRequestList", () => {
         expect(value).toContain(
             "label:bug label:enhancement author:testuser is:closed",
         );
+    });
+
+    it("adds a spaced milestone once and removes it on the second click", async () => {
+        await mockMilestoneData([{ title: "My Milestone" }]);
+
+        const user = userEvent.setup();
+        renderList();
+
+        await openDropdownAndSelectMilestone(user, "My Milestone");
+        expect(getSearchInput().value).toBe('milestone:"My Milestone"');
+
+        await openDropdownAndSelectMilestone(user, "My Milestone");
+        expect(getSearchInput().value).toBe("");
+    });
+
+    it("adds an unquoted single-word milestone and removes it on the second click", async () => {
+        await mockMilestoneData([{ title: "v1.0" }]);
+
+        const user = userEvent.setup();
+        renderList();
+
+        await openDropdownAndSelectMilestone(user, "v1.0");
+        expect(getSearchInput().value).toBe("milestone:v1.0");
+
+        await openDropdownAndSelectMilestone(user, "v1.0");
+        expect(getSearchInput().value).toBe("");
     });
 });
