@@ -7,19 +7,17 @@ import {
     useDiffSyntaxHighlighting,
 } from "./use-diff-syntax-highlighting";
 
-const { mockHighlight } = vi.hoisted(() => ({
-    // Wraps the whole input in one span (like a block comment), so the split
-    // path is exercised.
-    mockHighlight: vi.fn((text: string) => ({
-        value: `<span class="hljs-comment">${text}</span>`,
-    })),
+const { mockHighlightLines } = vi.hoisted(() => ({
+    mockHighlightLines: vi.fn(async (text: string) => {
+        if (text.includes("unsupported")) return null;
+        return text
+            .split("\n")
+            .map((line) => `<span class="shiki-token">${line}</span>`);
+    }),
 }));
 
-vi.mock("highlight.js", () => ({
-    default: {
-        highlight: mockHighlight,
-        getLanguage: () => true,
-    },
+vi.mock("~/utils/highlight", () => ({
+    highlightLines: mockHighlightLines,
 }));
 
 function Harness({ lines, numbers }: { lines: string[]; numbers?: number[] }) {
@@ -54,7 +52,7 @@ const highlighted = () =>
 
 describe("useDiffSyntaxHighlighting", () => {
     beforeEach(() => {
-        mockHighlight.mockClear();
+        mockHighlightLines.mockClear();
     });
 
     afterEach(() => {
@@ -68,21 +66,20 @@ describe("useDiffSyntaxHighlighting", () => {
 
         // The pass is scheduled across frames, not run synchronously.
         expect(highlighted()).toHaveLength(0);
-        expect(mockHighlight).not.toHaveBeenCalled();
+        expect(mockHighlightLines).not.toHaveBeenCalled();
 
         await vi.waitFor(() => expect(highlighted()).toHaveLength(4));
 
         // Consecutive lines are one run: a single call keeps multi-line
-        // constructs (block comments) intact.
-        expect(mockHighlight).toHaveBeenCalledTimes(1);
-        expect(mockHighlight).toHaveBeenCalledWith(
+        // constructs (block comments, template literals) intact.
+        expect(mockHighlightLines).toHaveBeenCalledTimes(1);
+        expect(mockHighlightLines).toHaveBeenCalledWith(
             "one\ntwo\nthree\nfour",
-            expect.anything(),
+            "typescript",
         );
-        // The span covering the run is closed and reopened per line.
         for (const [index, line] of lines.entries()) {
             expect(spans()[index]!.innerHTML).toBe(
-                `<span class="hljs-comment">${line}</span>`,
+                `<span class="shiki-token">${line}</span>`,
             );
         }
     });
@@ -90,17 +87,17 @@ describe("useDiffSyntaxHighlighting", () => {
     it("re-highlights a run when a line joins it", async () => {
         const { rerender } = render(<Harness lines={["one", "two"]} />);
         await vi.waitFor(() => expect(highlighted()).toHaveLength(2));
-        mockHighlight.mockClear();
+        mockHighlightLines.mockClear();
 
         // Expanded context arrives without any prop change: the run grows and
         // is recomputed as a whole.
         rerender(<Harness lines={["one", "two", "three"]} />);
         await vi.waitFor(() => expect(highlighted()).toHaveLength(3));
 
-        expect(mockHighlight).toHaveBeenCalledTimes(1);
-        expect(mockHighlight).toHaveBeenCalledWith(
+        expect(mockHighlightLines).toHaveBeenCalledTimes(1);
+        expect(mockHighlightLines).toHaveBeenCalledWith(
             "one\ntwo\nthree",
-            expect.anything(),
+            "typescript",
         );
     });
 
@@ -123,14 +120,14 @@ describe("useDiffSyntaxHighlighting", () => {
 
         await vi.waitFor(() => expect(highlighted()).toHaveLength(4));
 
-        expect(mockHighlight).toHaveBeenCalledTimes(2);
-        expect(mockHighlight).toHaveBeenCalledWith(
+        expect(mockHighlightLines).toHaveBeenCalledTimes(2);
+        expect(mockHighlightLines).toHaveBeenCalledWith(
             "one\ntwo",
-            expect.anything(),
+            "typescript",
         );
-        expect(mockHighlight).toHaveBeenCalledWith(
+        expect(mockHighlightLines).toHaveBeenCalledWith(
             "twenty\ntwentyOne",
-            expect.anything(),
+            "typescript",
         );
     });
 
@@ -145,19 +142,27 @@ describe("useDiffSyntaxHighlighting", () => {
             expect(highlighted()).toHaveLength(lines.length),
         );
 
-        expect(mockHighlight).toHaveBeenCalledTimes(2);
-        expect(mockHighlight.mock.calls[0]![0]).toBe(
+        expect(mockHighlightLines).toHaveBeenCalledTimes(2);
+        expect(mockHighlightLines.mock.calls[0]![0]).toBe(
             lines.slice(0, MAX_RUN_LINES).join("\n"),
         );
-        expect(mockHighlight.mock.calls[1]![0]).toBe(lines[MAX_RUN_LINES]);
+        expect(mockHighlightLines.mock.calls[1]![0]).toBe(lines[MAX_RUN_LINES]);
+    });
+
+    it("leaves an unsupported language as plain text", async () => {
+        render(<Harness lines={["unsupported"]} />);
+        await vi.waitFor(() => expect(highlighted()).toHaveLength(1));
+
+        // The line is marked done but its text is untouched.
+        expect(spans()[0]!.innerHTML).toBe("unsupported");
     });
 
     it("marks empty lines so later passes skip them", async () => {
         render(<Harness lines={[""]} />);
         await vi.waitFor(() => expect(highlighted()).toHaveLength(1));
 
-        // Nothing to highlight, but the line must not be revisited.
-        expect(mockHighlight).not.toHaveBeenCalled();
+        // Nothing to tokenize, but the line must not be revisited.
+        expect(mockHighlightLines).not.toHaveBeenCalled();
         expect(highlighted()).toHaveLength(1);
     });
 });

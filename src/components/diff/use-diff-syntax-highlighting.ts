@@ -1,17 +1,17 @@
 "use client";
 
-import hljs from "highlight.js";
 import { useEffect } from "react";
+import { highlightLines } from "~/utils/highlight";
 import { scheduleIdle } from "~/utils/schedule-idle";
 
 // Work budget per idle callback: highlight a few runs of lines, then yield so
 // the browser can paint between chunks instead of one long blocking pass.
 const CHUNK_BUDGET_MS = 8;
 
-// Highlighting a run is a single synchronous call, so a run is capped to keep
-// one idle slice bounded (a large added file would otherwise block for
-// hundreds of ms). A multi-line construct spanning the seam loses its state
-// for the lines after it; that is rare, and unbounded runs are rarer still.
+// Tokenizing a run is a single call, so a run is capped to keep one idle slice
+// bounded (a large added file would otherwise block for hundreds of ms). A
+// multi-line construct spanning the seam loses its state for the lines after
+// it; that is rare, and unbounded runs are rarer still.
 export const MAX_RUN_LINES = 200;
 
 // Lines already processed carry this attribute; later passes (e.g. after a
@@ -29,51 +29,6 @@ interface RunEntry {
     source: HTMLElement;
     /** File line number, NaN when the row carries no numbering. */
     number: number;
-}
-
-/**
- * Splits highlight.js output into one HTML string per source line, closing and
- * reopening spans that straddle a newline. Highlighting a line in isolation
- * loses that context - the inner lines of a block comment highlight as code -
- * so runs of lines are highlighted together and split back apart here.
- */
-export function splitHighlightedLines(html: string): string[] {
-    const lines: string[] = [];
-    const open: string[] = [];
-    let current = "";
-    let index = 0;
-
-    const appendText = (text: string) => {
-        let rest = text;
-        for (;;) {
-            const newline = rest.indexOf("\n");
-            if (newline === -1) {
-                current += rest;
-                return;
-            }
-            current += rest.slice(0, newline);
-            lines.push(current + "</span>".repeat(open.length));
-            current = open.join("");
-            rest = rest.slice(newline + 1);
-        }
-    };
-
-    // highlight.js only ever emits spans; anything else is source text.
-    for (const match of html.matchAll(/<span[^>]*>|<\/span>/g)) {
-        const at = match.index ?? 0;
-        appendText(html.slice(index, at));
-        const tag = match[0];
-        if (tag.startsWith("</")) {
-            open.pop();
-        } else {
-            open.push(tag);
-        }
-        current += tag;
-        index = at + tag.length;
-    }
-    appendText(html.slice(index));
-    lines.push(current);
-    return lines;
 }
 
 function groupRuns(entries: RunEntry[]): RunEntry[][] {
@@ -98,8 +53,8 @@ function groupRuns(entries: RunEntry[]): RunEntry[][] {
 
 /**
  * Groups rendered lines into runs of consecutive file lines, per side. A run
- * is highlighted in one call so multi-line constructs (block comments,
- * template literals) keep their state across lines.
+ * is tokenized in one call so multi-line constructs - block comments,
+ * template literals - keep their state across lines.
  */
 function collectRuns(root: HTMLElement): RunEntry[][] {
     const split = root.querySelector(".d2h-split-table") != null;
@@ -152,6 +107,7 @@ export function useDiffSyntaxHighlighting({
     enabled,
 }: {
     diffRef: React.RefObject<HTMLDivElement | null>;
+    /** Fence tag or file extension to highlight with. */
     language: string | null;
     enabled: boolean;
 }) {
@@ -160,14 +116,18 @@ export function useDiffSyntaxHighlighting({
         if (!root || !language || !enabled) return;
 
         let cancel: (() => void) | null = null;
+        let disposed = false;
 
         const schedule = () => {
-            if (cancel) return;
-            cancel = scheduleIdle(runChunk);
+            if (cancel || disposed) return;
+            cancel = scheduleIdle(() => {
+                cancel = null;
+                void runChunk();
+            });
         };
 
-        const runChunk = () => {
-            cancel = null;
+        const runChunk = async () => {
+            if (disposed) return;
             // Nothing new to do: skip walking the (possibly large) table.
             if (
                 !root.querySelector(
@@ -178,6 +138,7 @@ export function useDiffSyntaxHighlighting({
             }
             const start = performance.now();
             for (const run of collectRuns(root)) {
+                if (disposed) return;
                 const pending = run.some(
                     (entry) =>
                         entry.target !== null &&
@@ -189,13 +150,13 @@ export function useDiffSyntaxHighlighting({
                     .map((entry) => entry.source.textContent ?? "")
                     .join("\n");
                 const lines = text
-                    ? splitHighlightedLines(
-                          hljs.highlight(text, { language }).value,
-                      )
-                    : [];
+                    ? await highlightLines(text, language)
+                    : [""];
+                if (disposed) return;
                 run.forEach((entry, index) => {
                     if (!entry.target) return;
-                    entry.target.innerHTML = lines[index] ?? "";
+                    // An unsupported language leaves the plain text alone.
+                    if (lines) entry.target.innerHTML = lines[index] ?? "";
                     entry.target.setAttribute(HIGHLIGHTED_ATTR, "true");
                 });
 
@@ -214,6 +175,7 @@ export function useDiffSyntaxHighlighting({
         observer.observe(root, { childList: true, subtree: true });
 
         return () => {
+            disposed = true;
             observer.disconnect();
             cancel?.();
         };

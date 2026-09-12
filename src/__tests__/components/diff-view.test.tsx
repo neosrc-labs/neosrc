@@ -5,9 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockMarkdownEditor } from "~/__tests__/helpers/component-mocks";
 import { filenameHash } from "~/utils/filename-hash";
 
-const { mockParse, mockHighlight, mockUseFileContent } = vi.hoisted(() => ({
+const { mockParse, mockUseFileContent } = vi.hoisted(() => ({
     mockParse: vi.fn(),
-    mockHighlight: vi.fn((text: string, _opts: unknown) => ({ value: text })),
     mockUseFileContent: {
         lines: null as string[] | null,
         isLoading: false,
@@ -20,11 +19,8 @@ vi.mock("diff2html", () => ({
     defaultDiff2HtmlConfig: { colorScheme: "light", rawTemplates: {} },
 }));
 
-vi.mock("highlight.js", () => ({
-    default: {
-        highlight: mockHighlight,
-        getLanguage: vi.fn(() => true),
-    },
+vi.mock("~/utils/highlight", () => ({
+    highlightLines: vi.fn(async (text: string) => text.split("\n")),
 }));
 
 vi.mock("next-themes", () => ({

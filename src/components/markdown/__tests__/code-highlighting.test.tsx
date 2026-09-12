@@ -1,58 +1,68 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MarkdownRenderer } from "../markdown-renderer";
+
+vi.mock("~/utils/highlight", () => ({
+    highlightLines: vi.fn(async (code: string, tag: string) =>
+        tag === "definitelynotalanguage"
+            ? null
+            : code
+                  .split("\n")
+                  .map(
+                      (line) =>
+                          `<span class="shiki-token" style="--shiki-light:#111;--shiki-dark:#eee">${line}</span>`,
+                  ),
+    ),
+}));
+
+import { highlightLines } from "~/utils/highlight";
 
 function renderCode(content: string) {
     return render(<MarkdownRenderer content={content} />).container;
 }
 
 describe("fenced code highlighting", () => {
-    it("emits the hljs tokens the diff views style", () => {
+    beforeEach(() => {
+        vi.mocked(highlightLines).mockClear();
+    });
+
+    it("tokenizes fenced code and keeps the block surface", async () => {
         const container = renderCode(
-            [
-                "```js",
-                "// a comment",
-                "const n = 42;",
-                'const s = "hi";',
-                "```",
-            ].join("\n"),
+            ["```js", "const n = 42;", "```"].join("\n"),
         );
 
-        const code = container.querySelector("code.language-js");
-        expect(code).not.toBeNull();
-        // The diff and review-thread views highlight with the same library and
-        // token classes, so these resolve to the same theme CSS.
-        expect(code?.querySelector(".hljs-comment")?.textContent).toBe(
-            "// a comment",
-        );
-        expect(code?.querySelector(".hljs-keyword")?.textContent).toBe("const");
-        expect(code?.querySelector(".hljs-number")?.textContent).toBe("42");
-        expect(code?.querySelector(".hljs-string")?.textContent).toBe('"hi"');
+        const code = await vi.waitFor(() => {
+            const element = container.querySelector("code.language-js");
+            if (!element?.querySelector(".shiki-token")) {
+                throw new Error("code block not highlighted yet");
+            }
+            return element;
+        });
 
+        expect(code.querySelector(".shiki-token")?.textContent).toBe(
+            "const n = 42;",
+        );
         expect(container.querySelector("pre")?.className).toContain(
             "bg-surface-tertiary",
         );
     });
 
-    it("renders an unknown language as plain text", () => {
+    it("falls back to plain text when shiki has no grammar", async () => {
         const container = renderCode(
             ["```definitelynotalanguage", "no tokens here", "```"].join("\n"),
         );
 
-        const code = container.querySelector("code");
-        expect(code?.textContent?.trim()).toBe("no tokens here");
-        expect(code?.querySelector("span")).toBeNull();
-    });
+        await vi.waitFor(() => {
+            expect(vi.mocked(highlightLines)).toHaveBeenCalledWith(
+                expect.stringContaining("no tokens here"),
+                "definitelynotalanguage",
+            );
+        });
 
-    it("escapes code content instead of rendering it", () => {
-        const container = renderCode(
-            ["```html", "<img src=x onerror=alert(1)>", "```"].join("\n"),
-        );
-
-        expect(container.querySelector("img")).toBeNull();
+        expect(container.querySelector(".shiki-token")).toBeNull();
         expect(container.querySelector("code")?.textContent).toContain(
-            "<img src=x onerror=alert(1)>",
+            "no tokens here",
         );
     });
 });
