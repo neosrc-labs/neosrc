@@ -7,10 +7,12 @@ import { useCopyToClipboard } from "~/hooks/use-copy-to-clipboard";
 export function CopyButton({
     text,
     className,
+    title,
     children,
 }: {
     text: string;
     className?: string;
+    title?: string;
     children: (copied: boolean) => ReactNode;
 }) {
     const { copied, copy } = useCopyToClipboard(text);
@@ -18,6 +20,7 @@ export function CopyButton({
     return (
         <button
             type="button"
+            title={title}
             onClick={() => {
                 void copy();
             }}

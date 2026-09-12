@@ -147,6 +147,8 @@ vi.mock("lucide-react", () => ({
     ArrowUpFromLine: () => <div data-testid="arrow-up-from-line" />,
     MessageSquare: () => <div data-testid="message-square" />,
     MessageSquareOff: () => <div data-testid="message-square-off" />,
+    Copy: () => <div data-testid="copy-icon" />,
+    Check: () => <div data-testid="check-icon" />,
 }));
 
 vi.mock("~/utils/viewed-files", () => ({

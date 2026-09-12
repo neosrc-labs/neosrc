@@ -1,6 +1,13 @@
 "use client";
 
-import { FoldVertical, MessageSquare, UnfoldVertical } from "lucide-react";
+import {
+    Check,
+    Copy,
+    FoldVertical,
+    MessageSquare,
+    UnfoldVertical,
+} from "lucide-react";
+import { CopyButton } from "./ui/copy-button";
 
 export function FileDiffHeader({
     file,
@@ -86,6 +93,24 @@ export function FileDiffHeader({
                 >
                     {file.filename}
                 </button>
+                <CopyButton
+                    text={file.filename}
+                    title="Copy file path"
+                    className="flex shrink-0 cursor-pointer items-center text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                >
+                    {(copied) => (
+                        <>
+                            {copied ? (
+                                <Check className="text-green-600" size={14} />
+                            ) : (
+                                <Copy size={14} />
+                            )}
+                            <span className="sr-only">
+                                {copied ? "Copied" : "Copy file path"}
+                            </span>
+                        </>
+                    )}
+                </CopyButton>
                 {file.status === "modified" && (
                     <button
                         className="ml-1 flex shrink-0 cursor-pointer items-center text-text-tertiary"
