@@ -1,3 +1,4 @@
+import { planGithubQuery } from "~/lib/search-boolean";
 import type { SearchParams } from "~/server/api/routers/provider";
 
 interface GqlSearchResponse<
@@ -23,56 +24,98 @@ type GqlSearchFn<
     countQueries: TCountQueries,
 ) => Promise<GqlSearchResponse<TItem, TStateCounts>>;
 
-// GitHub's issue-page filters accept has:, but the search service this app
-// queries ignores it. Only assignee has a wildcard form, so the remaining has:
-// values cannot be expressed; the native no: qualifiers pass through untouched.
-const HAS_ASSIGNEE_RE = /(?<=^|\s)has:assignee(?=\s|$)/g;
+type GqlSortValues = { created: string; updated: string; comments: number };
 
-export function normalizeGithubSearchQuery(query: string): string {
-    return query.replace(HAS_ASSIGNEE_RE, "assignee:*");
-}
-
-// Shared shape of the GitHub PR/issue search procedures: build one GraphQL
-// query plus per-state count queries, then map each raw item.
-export async function searchGqlItems<
+export interface SearchGqlOptions<
     TItem,
     TStateCounts extends Record<string, number>,
     TMapped,
     TCountQueries,
->(options: {
+> {
     accessToken: string;
     params: SearchParams;
     kind: "pr" | "issue";
     countStates: ReadonlyArray<"open" | "closed" | "merged">;
     search: GqlSearchFn<TItem, TStateCounts, TCountQueries>;
+    itemKey: (item: TItem) => number;
+    sortValues: (item: TItem) => GqlSortValues;
     mapItem: (item: TItem) => TMapped;
-}): Promise<GqlSearchResponse<TMapped, TStateCounts>> {
+}
+
+// GitHub's search connection caps `first` at 100.
+const MAX_PAGE_SIZE = 100;
+
+// Bounds inclusion-exclusion for the union counts; each extra branch doubles
+// the intersection terms.
+const MAX_UNION_BRANCHES = 4;
+
+function compareValues(left: string | number, right: string | number): number {
+    if (typeof left === "number" && typeof right === "number") {
+        return left - right;
+    }
+    return String(left).localeCompare(String(right));
+}
+
+// Shared shape of the GitHub PR/issue search procedures: build one GraphQL
+// query plus per-state count queries, then map each raw item. A query with OR
+// has no single backend form, so it runs one search per disjunctive branch and
+// the results are merged.
+export async function searchGqlItems<
+    TItem,
+    TStateCounts extends Record<string, number>,
+    TMapped,
+    TCountQueries,
+>(
+    options: SearchGqlOptions<TItem, TStateCounts, TMapped, TCountQueries>,
+): Promise<GqlSearchResponse<TMapped, TStateCounts>> {
     const { accessToken, params } = options;
+    // The list injects one state qualifier for the whole query. Hoist it so it
+    // applies to every branch and so a label-only OR still folds into one query.
+    const { state, rest } = splitState(params.query, options.countStates);
+    const plan = planGithubQuery(rest);
+
+    if (plan.unsatisfiable) {
+        // Asking for and against the same metadata cannot match, and GitHub
+        // would answer with the `no:` set instead, so answer without a request.
+        return {
+            items: [],
+            totalCount: 0,
+            hasNextPage: false,
+            endCursor: null,
+            stateCounts: Object.fromEntries(
+                options.countStates.map((countState) => [countState, 0]),
+            ) as TStateCounts,
+        };
+    }
+
+    const branches = plan.branches.length > 0 ? plan.branches : [rest];
     const sortOrder =
         params.sort && params.order
             ? ` sort:${params.sort}-${params.order}`
             : "";
-    const kind = `is:${options.kind}`;
-    const query = normalizeGithubSearchQuery(params.query);
-    const gqlQuery = `repo:${params.owner}/${params.repo} ${kind} ${query}${sortOrder}`;
+    const prefix = `repo:${params.owner}/${params.repo} is:${options.kind}`;
+    const buildQuery = (branch: string) =>
+        [prefix, state ? `is:${state}` : "", branch]
+            .filter(Boolean)
+            .join(" ")
+            .concat(sortOrder);
 
-    const stateAlternatives = options.countStates
-        .map((state) => `is:${state}`)
-        .join("|");
-    const restQuery = query
-        .replace(
-            new RegExp(`(?<=^|\\s)(${stateAlternatives})(?=\\s|$)`, "g"),
-            " ",
-        )
-        .replace(/\s+/g, " ")
-        .trim();
-    const base = `repo:${params.owner}/${params.repo} ${kind}`;
-    const countQueries = Object.fromEntries(
-        options.countStates.map((state) => [
+    if (branches.length > 1) {
+        return searchBranchUnion(
+            options,
+            branches.slice(0, MAX_UNION_BRANCHES),
             state,
-            `${base} is:${state} ${restQuery}`.trim(),
-        ]),
-    ) as TCountQueries;
+            buildQuery,
+        );
+    }
+
+    const query = branches[0] ?? "";
+    const gqlQuery = buildQuery(query);
+
+    const countQueries = buildCountQueries(
+        options,
+        query,
+    ) as unknown as TCountQueries;
 
     const result = await options.search(
         accessToken,
@@ -83,4 +126,139 @@ export async function searchGqlItems<
     );
 
     return { ...result, items: result.items.map(options.mapItem) };
+}
+
+// Splits the single state qualifier the list injects from the rest of the
+// query. Returns the last one when several are present.
+function splitState(
+    query: string,
+    countStates: ReadonlyArray<"open" | "closed" | "merged">,
+): { state: "open" | "closed" | "merged" | null; rest: string } {
+    const alternatives = countStates.join("|");
+    const pattern = () =>
+        new RegExp(`(?<=^|\\s)is:(${alternatives})(?=\\s|$)`, "g");
+    const matches = [...query.matchAll(pattern())];
+    const last = matches[matches.length - 1]?.[1];
+    const state = (last as "open" | "closed" | "merged" | undefined) ?? null;
+    const rest = query.replace(pattern(), " ").replace(/\s+/g, " ").trim();
+    return { state, rest };
+}
+
+function buildCountQueries(
+    options: {
+        countStates: ReadonlyArray<string>;
+        params: SearchParams;
+        kind: string;
+    },
+    restQuery: string,
+): Record<string, string> {
+    const base = `repo:${options.params.owner}/${options.params.repo} is:${options.kind}`;
+    return Object.fromEntries(
+        options.countStates.map((state) => [
+            state,
+            `${base} is:${state} ${restQuery}`.trim(),
+        ]),
+    );
+}
+
+async function searchBranchUnion<
+    TItem,
+    TStateCounts extends Record<string, number>,
+    TMapped,
+    TCountQueries,
+>(
+    options: SearchGqlOptions<TItem, TStateCounts, TMapped, TCountQueries>,
+    branches: string[],
+    activeState: "open" | "closed" | "merged" | null,
+    buildQuery: (branch: string) => string,
+): Promise<GqlSearchResponse<TMapped, TStateCounts>> {
+    const { accessToken, params } = options;
+    const first = params.first ?? 30;
+    const page = params.page && params.page > 0 ? params.page : 1;
+    const window = page * first;
+
+    const results = await Promise.all(
+        branches.map(async (terms) => {
+            const countQueries = buildCountQueries(
+                options,
+                terms,
+            ) as unknown as TCountQueries;
+            const items: TItem[] = [];
+            let cursor: string | null = null;
+            let stateCounts: TStateCounts | null = null;
+            let hasMore = false;
+
+            while (items.length < window) {
+                const chunk = Math.min(MAX_PAGE_SIZE, window - items.length);
+                const result = await options.search(
+                    accessToken,
+                    buildQuery(terms),
+                    chunk,
+                    cursor,
+                    countQueries,
+                );
+                items.push(...result.items);
+                stateCounts = result.stateCounts;
+                hasMore = result.hasNextPage;
+                if (!result.hasNextPage || !result.endCursor) break;
+                cursor = result.endCursor;
+            }
+
+            return { terms, items, stateCounts, hasMore };
+        }),
+    );
+
+    // Union counts come from the per-branch totals. GitHub evaluates the
+    // intersection of branches unreliably (it drops `assignee:` next to
+    // `no:assignee`, for example), so inclusion-exclusion would undercount.
+    // Branches that OR combines are normally disjoint (different values of one
+    // field, or a presence filter against a value), where the sum is exact.
+    const unionCounts: Record<string, number> = {};
+    for (const state of options.countStates) {
+        unionCounts[state] = results.reduce(
+            (sum, result) => sum + (result.stateCounts?.[state] ?? 0),
+            0,
+        );
+    }
+
+    const seen = new Set<number>();
+    const merged: TItem[] = [];
+    for (const result of results) {
+        for (const item of result.items) {
+            const key = options.itemKey(item);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            merged.push(item);
+        }
+    }
+
+    const field = params.sort ?? "created";
+    const direction = params.order === "asc" ? 1 : -1;
+    merged.sort((left, right) => {
+        const primary = compareValues(
+            options.sortValues(left)[field],
+            options.sortValues(right)[field],
+        );
+        if (primary !== 0) return primary * direction;
+        // Stable, deterministic tie break for items sharing a sort value.
+        return options.itemKey(right) - options.itemKey(left);
+    });
+
+    const start = (page - 1) * first;
+    const pageItems = merged.slice(start, start + first).map(options.mapItem);
+    const hasNextPage =
+        merged.length > start + first ||
+        results.some((result) => result.hasMore);
+
+    const totalCount = activeState
+        ? (unionCounts[activeState] ?? 0)
+        : Object.values(unionCounts).reduce((sum, value) => sum + value, 0);
+
+    return {
+        items: pageItems,
+        totalCount,
+        hasNextPage,
+        endCursor: hasNextPage ? `or:${page + 1}` : null,
+        stateCounts: unionCounts as TStateCounts,
+    };
 }

@@ -7,6 +7,7 @@ import { ListSkeleton } from "~/app/[owner]/[repo]/_components/list/list-skeleto
 import { rowQualifierFilters } from "~/app/[owner]/[repo]/_components/list/row-qualifier-filters";
 import { SearchListLayout } from "~/app/[owner]/[repo]/_components/list/search-list-layout";
 import { useSearchList } from "~/app/[owner]/[repo]/_components/use-search-list";
+import { booleanSearchHint } from "~/lib/search-boolean";
 import type { IssueSearchItem } from "~/server/api/routers/issues/types";
 import { api } from "~/trpc/react";
 import { IssueEmptyState } from "./issue-empty-state";
@@ -77,6 +78,7 @@ export function IssueList({
     );
 
     const filters = rowQualifierFilters(list);
+    const booleanHint = booleanSearchHint(provider, list.searchQuery);
 
     return (
         <SearchListLayout
@@ -101,6 +103,7 @@ export function IssueList({
                     onSearch={list.handleSearch}
                     onClear={list.handleClearSearch}
                     onAutocompleteSelect={list.handleAutocompleteSelect}
+                    booleanHint={booleanHint}
                 />
             }
             toolbar={

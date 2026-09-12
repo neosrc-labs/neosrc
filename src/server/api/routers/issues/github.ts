@@ -21,6 +21,12 @@ export class GitHubIssueProvider implements IssueProvider {
             kind: "issue",
             countStates: ["open", "closed"],
             search: searchIssuesWithMetadata,
+            itemKey: (item) => item.databaseId,
+            sortValues: (item) => ({
+                created: item.createdAt,
+                updated: item.updatedAt,
+                comments: item.comments.totalCount,
+            }),
             mapItem: mapGqlIssueSearchItem,
         });
     }

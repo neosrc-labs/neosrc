@@ -8,9 +8,9 @@ import {
 } from "~/app/[owner]/[repo]/_components/search/search-autocomplete";
 import {
     addQualifier,
-    formatQuery,
-    parseQuery,
+    getQualifierValue,
     removeQualifier,
+    removeQualifiersByKey,
 } from "~/app/[owner]/[repo]/_components/search/search-utils";
 
 export interface SearchArgs {
@@ -133,14 +133,11 @@ export function useSearchList<TItem>(
     }, [pageCursors]);
 
     const stateQualifier = config.stateQualifierFn(activeTab);
-    let cleanedQuery = searchQuery;
-    if (cleanedQuery) {
-        const parsed = parseQuery(cleanedQuery);
-        parsed.qualifiers = parsed.qualifiers.filter(
-            (q) => q.key !== "sort" && q.key !== "is",
-        );
-        cleanedQuery = formatQuery(parsed);
-    }
+    // The backend state and sort come from the URL, so drop any the query
+    // carries while leaving the rest of the query order untouched.
+    const cleanedQuery = searchQuery
+        ? removeQualifiersByKey(searchQuery, ["sort", "is"])
+        : "";
     const apiQuery = cleanedQuery
         ? `${stateQualifier} ${cleanedQuery}`
         : stateQualifier;
@@ -268,12 +265,11 @@ export function useSearchList<TItem>(
 
     const setTab = useCallback(
         (tab: string) => {
-            const parsed = parseQuery(searchInput);
-            parsed.qualifiers = parsed.qualifiers.filter((q) => q.key !== "is");
-            if (tab !== "open") {
-                parsed.qualifiers.push({ key: "is", value: tab });
-            }
-            const newQuery = formatQuery(parsed);
+            const withoutState = removeQualifiersByKey(searchInput, ["is"]);
+            const newQuery =
+                tab === "open"
+                    ? withoutState
+                    : addQualifier(withoutState, "is", tab);
             const withSpace = newQuery ? `${newQuery} ` : newQuery;
             setSearchInput(withSpace);
             navigate({
@@ -286,22 +282,17 @@ export function useSearchList<TItem>(
     );
 
     const handleSearch = useCallback(() => {
-        const parsed = parseQuery(searchInput);
-        const isQualifier = parsed.qualifiers.find((q) => q.key === "is");
+        const stateValue = getQualifierValue(searchInput, "is");
         const params = new URLSearchParams(searchParams.toString());
-        if (isQualifier) {
-            const tab = isQualifier.value;
-            if (tab === "open") {
+        if (stateValue) {
+            if (stateValue === "open") {
                 params.delete("state");
-                parsed.qualifiers = parsed.qualifiers.filter(
-                    (q) => q.key !== "is",
-                );
-                const newQuery = formatQuery(parsed);
+                const newQuery = removeQualifiersByKey(searchInput, ["is"]);
                 if (newQuery) params.set("q", newQuery);
                 else params.delete("q");
                 setSearchInput(newQuery);
             } else {
-                params.set("state", tab);
+                params.set("state", stateValue);
                 if (searchInput) params.set("q", searchInput);
                 else params.delete("q");
             }
@@ -365,14 +356,11 @@ export function useSearchList<TItem>(
         (key: string, value: string) => {
             if (key === "is") {
                 const tab = value;
-                const parsed = parseQuery(searchInput);
-                parsed.qualifiers = parsed.qualifiers.filter(
-                    (q) => q.key !== "is",
-                );
-                if (tab !== "open") {
-                    parsed.qualifiers.push({ key: "is", value: tab });
-                }
-                const newQuery = formatQuery(parsed);
+                const withoutState = removeQualifiersByKey(searchInput, ["is"]);
+                const newQuery =
+                    tab === "open"
+                        ? withoutState
+                        : addQualifier(withoutState, "is", tab);
                 const withSpace = newQuery ? `${newQuery} ` : newQuery;
                 setSearchInput(withSpace);
                 setCursorPos(withSpace ? withSpace.length : 0);

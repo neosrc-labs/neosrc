@@ -1729,6 +1729,7 @@ export interface GqlPrSearchItem {
     state: string;
     isDraft: boolean;
     createdAt: string;
+    updatedAt: string;
     mergedAt: string | null;
     author: { login: string; avatarUrl: string; url: string } | null;
     labels: {
@@ -1813,6 +1814,7 @@ query SearchPRs($searchQuery: String!, $first: Int!, $after: String) {
         state
         isDraft
         createdAt
+        updatedAt
         mergedAt
         author { login avatarUrl url }
         labels(first: 10) {
@@ -1886,6 +1888,7 @@ export interface GqlIssueSearchItem {
     title: string;
     state: string;
     createdAt: string;
+    updatedAt: string;
     closedAt: string | null;
     author: { login: string; avatarUrl: string; url: string } | null;
     labels: {
@@ -1916,6 +1919,7 @@ query SearchIssues($searchQuery: String!, $first: Int!, $after: String) {
         title
         state
         createdAt
+        updatedAt
         closedAt
         author { login avatarUrl url }
         labels(first: 10) {
