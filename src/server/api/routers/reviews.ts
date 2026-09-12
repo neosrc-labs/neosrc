@@ -11,6 +11,7 @@ import {
     type CommentForReview,
     createPullRequestReview,
     deletePendingReview,
+    dismissPullRequestReview,
     getAuthenticatedUser,
     getPullRequestReviewCommentsForReview,
     getPullRequestReviews,
@@ -150,7 +151,9 @@ export const reviewsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    dismiss: protectedMutation
+    // Discards the viewer's own unsubmitted review draft. Distinct from
+    // dismissing a submitted review, which `dismiss` handles.
+    discardPending: protectedMutation
         .input(
             z.object({
                 owner: z.string(),
@@ -171,6 +174,38 @@ export const reviewsRouter = createTRPCRouter({
                 input.repo,
                 input.number,
                 input.reviewId,
+            );
+
+            await deleteCache(
+                prCacheKey(input.owner, input.repo, input.number),
+            );
+
+            return { success: true as const };
+        }),
+
+    dismiss: protectedMutation
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                number: z.number(),
+                reviewId: z.number(),
+                message: z.string().trim().min(1),
+            }),
+        )
+        .mutation(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session?.user?.id,
+            );
+
+            await dismissPullRequestReview(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+                input.reviewId,
+                input.message,
             );
 
             await deleteCache(

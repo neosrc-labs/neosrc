@@ -510,6 +510,30 @@ export const deletePendingReview = async (
     });
 };
 
+/**
+ * Dismiss a submitted review. GitHub turns the review state to DISMISSED and
+ * records the message as a ReviewDismissedEvent in the timeline.
+ */
+export const dismissPullRequestReview = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    reviewId: number,
+    message: string,
+) => {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.pulls.dismissReview({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        review_id: reviewId,
+        message,
+        event: "DISMISS",
+    });
+    return response.data;
+};
+
 export const getConflictedFiles = cache(
     async (
         accessToken: string,
