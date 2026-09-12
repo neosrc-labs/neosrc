@@ -323,8 +323,8 @@ export function planGithubQuery(query: string): GithubQueryPlan {
         }
         dnf = toDnf(expression, false);
     } catch {
-        // Unparseable (dangling NOT, unbalanced parens). Search the terms as
-        // plain text rather than failing the whole request.
+        // A query that cannot be parsed (dangling NOT, unbalanced parens):
+        // search the terms as plain text rather than failing the request.
         return {
             branches: [renderAndOnly(tokens)],
             unsupported: UNPARSED_HINT,
