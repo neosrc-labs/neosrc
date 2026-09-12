@@ -25,8 +25,8 @@ export default async function PullsPage({
     const { owner, repo } = await params;
     const { state } = await searchParams;
 
-    const defaultState: "open" | "closed" | "merged" =
-        state === "closed" || state === "merged" ? state : "open";
+    const defaultState: "open" | "closed" =
+        state === "closed" ? "closed" : "open";
 
     return (
         <main className="min-h-[calc(100svh-var(--header-height))] min-w-0 border-border-subtle border-r bg-surface">

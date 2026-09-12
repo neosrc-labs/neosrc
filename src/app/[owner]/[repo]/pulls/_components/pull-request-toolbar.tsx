@@ -16,7 +16,6 @@ import type {
     FilterState,
     PullRequestListConfig,
 } from "./pull-request-list-config";
-import { TABS } from "./pull-request-list-config";
 
 export function PullRequestToolbar({
     activeTab,
@@ -51,7 +50,7 @@ export function PullRequestToolbar({
         <div className="border-border-subtle border-b">
             <div className="flex items-center justify-between px-4">
                 <StateTabs
-                    tabs={TABS}
+                    tabs={config.tabs}
                     activeTab={activeTab}
                     stateCounts={stateCounts}
                     onTabChange={(tab) => onTabChange(tab as FilterState)}

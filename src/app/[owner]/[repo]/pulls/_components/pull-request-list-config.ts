@@ -3,6 +3,7 @@ export type FilterState = "open" | "closed" | "merged";
 export interface PullRequestListConfig {
     provider: "gh" | "cb";
     basePath: string;
+    tabs: readonly { key: FilterState; label: string }[];
     qualifiers: string[];
     autocompleteOptions: Record<string, { label: string; subtitle?: string }[]>;
     showAssigneeFilter: boolean;
@@ -19,10 +20,16 @@ export interface PullRequestListConfig {
     };
 }
 
-export const TABS: { key: FilterState; label: string }[] = [
+export const GH_TABS: { key: FilterState; label: string }[] = [
     { key: "open", label: "Open" },
     { key: "closed", label: "Closed" },
     { key: "merged", label: "Merged" },
+];
+
+// Codeberg search has no `is:merged` qualifier, so merged is not filterable.
+export const CB_TABS: { key: FilterState; label: string }[] = [
+    { key: "open", label: "Open" },
+    { key: "closed", label: "Closed" },
 ];
 
 const PR_QUALIFIERS = [
@@ -76,13 +83,13 @@ const CB_AUTOCOMPLETE_OPTIONS: Record<
     is: [
         { label: "open", subtitle: "Open pull requests" },
         { label: "closed", subtitle: "Closed pull requests" },
-        { label: "merged", subtitle: "Merged pull requests" },
     ],
 };
 
 export const ghConfig: PullRequestListConfig = {
     provider: "gh",
     basePath: "/gh",
+    tabs: GH_TABS,
     qualifiers: [...PR_QUALIFIERS],
     autocompleteOptions: GH_AUTOCOMPLETE_OPTIONS,
     showAssigneeFilter: true,
@@ -99,6 +106,7 @@ export const ghConfig: PullRequestListConfig = {
 export const cbConfig: PullRequestListConfig = {
     provider: "cb",
     basePath: "/cb",
+    tabs: CB_TABS,
     qualifiers: ["author", "label", "assignee", "sort", "is"],
     autocompleteOptions: CB_AUTOCOMPLETE_OPTIONS,
     showAssigneeFilter: false,

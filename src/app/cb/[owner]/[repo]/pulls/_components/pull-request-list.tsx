@@ -10,7 +10,7 @@ export function PullRequestList({
 }: {
     owner: string;
     repo: string;
-    defaultState: "open" | "closed" | "merged";
+    defaultState: "open" | "closed";
 }) {
     return (
         <PullRequestListShared
