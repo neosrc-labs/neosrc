@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, GitMerge, Info, X } from "lucide-react";
+import { Check, ChevronDown, GitPullRequestArrow, Info, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import {
     HoverCard,
@@ -182,7 +182,7 @@ export function MergeStatusBar({
                 title={buttonText}
                 type="button"
             >
-                <GitMerge size={14} />
+                <GitPullRequestArrow size={14} />
                 {buttonText}
             </button>
             <MergeModeDropdown
@@ -382,7 +382,7 @@ function CannotMerge({
 }) {
     return (
         <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-1.5 py-2 sm:px-3 dark:border-zinc-600">
-            <GitMerge
+            <GitPullRequestArrow
                 size={14}
                 className={
                     variant === "normal"

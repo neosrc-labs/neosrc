@@ -1,6 +1,6 @@
 "use client";
 
-import { GitMerge } from "lucide-react";
+import { GitPullRequestArrow } from "lucide-react";
 import type { PullsGetResponseData } from "~/server/github";
 
 function mergeMethodLabel(method: string) {
@@ -64,7 +64,7 @@ export function AutoMergeBanner({ pullRequest }: AutoMergeBannerProps) {
 
     return (
         <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-secondary px-4 py-2">
-            <GitMerge className="size-4 shrink-0 text-green-600 dark:text-green-400" />
+            <GitPullRequestArrow className="size-4 shrink-0 text-green-600 dark:text-green-400" />
             <p className="truncate font-medium text-sm text-text-label">
                 Auto-merge enabled by{" "}
                 <span className="font-semibold">@{actor}</span> ({method})

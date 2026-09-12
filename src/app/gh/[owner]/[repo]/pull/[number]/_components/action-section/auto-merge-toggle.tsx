@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, GitMerge } from "lucide-react";
+import { ChevronDown, GitPullRequestArrow } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { RepositoryInfo } from "~/server/api/routers/repos";
@@ -117,7 +117,7 @@ export function AutoMergeToggle({
                 title={`Enable auto-merge (${effectiveMergeMode})`}
                 type="button"
             >
-                <GitMerge size={14} className="text-text-label" />
+                <GitPullRequestArrow size={14} className="text-text-label" />
                 {enableMutation.isPending ? "Enabling..." : "Enable auto-merge"}
             </button>
             <MergeModeDropdown
