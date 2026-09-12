@@ -8,6 +8,34 @@ import {
     findAuthorAssociation,
 } from "./review-comment-utils";
 
+/**
+ * Matches an optimistic stub against the create input that produced it.
+ * Stubs carry negative ids; body+path alone could match the wrong stub when
+ * the same text is added to different lines.
+ */
+function matchesOptimisticStub(
+    comment: {
+        body: string;
+        path: string;
+        line?: number | null;
+        side?: string | null;
+    },
+    input: {
+        body: string;
+        filePath: string;
+        lineNumber?: number;
+        side?: "LEFT" | "RIGHT";
+    },
+): boolean {
+    if (comment.body !== input.body || comment.path !== input.filePath) {
+        return false;
+    }
+    if (input.lineNumber == null) {
+        return comment.line === null || comment.line === undefined;
+    }
+    return comment.line === input.lineNumber && comment.side === input.side;
+}
+
 export function useFileCommentActions({
     owner,
     repo,
@@ -82,12 +110,53 @@ export function useFileCommentActions({
                 );
             }
         },
-        onSuccess: (data) => {
+        onSuccess: (data, input) => {
             onCommentSuccess();
-            if (!showComments && data?.id)
-                recentlyAddedIds.current.add(data.id);
+            if (!data?.id) return;
+            if (!showComments) recentlyAddedIds.current.add(data.id);
+            const key = { owner, repo, number: Number(number) };
+            let reconciled = false;
+            // Reconcile the optimistic comment with the server id instead of
+            // invalidating: GitHub's read path lags the write, so a refetch
+            // right after creation can return the comment missing and drop it.
+            if (input.asReview) {
+                utils.reviews.getPending.setData(key, (old) => {
+                    if (!old) return old;
+                    return {
+                        ...old,
+                        comments: old.comments.map((comment) => {
+                            if (reconciled || comment.id >= 0) return comment;
+                            if (!matchesOptimisticStub(comment, input)) {
+                                return comment;
+                            }
+                            reconciled = true;
+                            return { ...comment, id: data.id };
+                        }),
+                    };
+                });
+                // Nothing optimistic to update (current user not loaded):
+                // refetch so the comment still shows up.
+                if (!reconciled) utils.reviews.getPending.invalidate(key);
+            } else {
+                utils.reviewComments.list.setData(key, (old) => {
+                    if (!old) return old;
+                    return old.map((comment) => {
+                        if (reconciled || comment.id >= 0) return comment;
+                        if (!matchesOptimisticStub(comment, input)) {
+                            return comment;
+                        }
+                        reconciled = true;
+                        return { ...comment, id: data.id };
+                    });
+                });
+                if (!reconciled) utils.reviewComments.list.invalidate(key);
+            }
         },
-        onSettled: (_data, _error, input) => {
+        onSettled: (_data, error, input) => {
+            // A failed write leaves the optimistic comment behind because it
+            // cannot be reconciled; refetch to clear it. Successful writes are
+            // reconciled in place above.
+            if (!error) return;
             if (input.asReview) {
                 utils.reviews.getPending.invalidate({
                     owner,
@@ -103,9 +172,7 @@ export function useFileCommentActions({
             }
         },
     });
-    const startReviewMutation = api.reviews.start.useMutation({
-        onSuccess: () => utils.reviews.getPending.invalidate(),
-    });
+    const startReviewMutation = api.reviews.start.useMutation();
 
     const handleAddComment = useCallback(
         (isReview: boolean) => {
@@ -205,7 +272,33 @@ export function useFileCommentActions({
             if (isReview && !pendingReviewId) {
                 startReviewMutation.mutate(
                     { owner, repo, number: Number(number) },
-                    { onSuccess: create, onError: rollback },
+                    {
+                        onSuccess: (data) => {
+                            // Preserve the optimistic comment while recording
+                            // the real review id. Invalidating here refetches
+                            // the review before the comment exists and drops it.
+                            if (data) {
+                                utils.reviews.getPending.setData(
+                                    { owner, repo, number: Number(number) },
+                                    (old) => ({
+                                        reviewId: data.reviewId,
+                                        comments: (old?.comments ?? []).map(
+                                            (comment) =>
+                                                comment.id < 0
+                                                    ? {
+                                                          ...comment,
+                                                          pull_request_review_id:
+                                                              data.reviewId,
+                                                      }
+                                                    : comment,
+                                        ),
+                                    }),
+                                );
+                            }
+                            create();
+                        },
+                        onError: rollback,
+                    },
                 );
             } else create();
         },
