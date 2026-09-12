@@ -1,11 +1,8 @@
 "use client";
 
 import { Check, Circle } from "lucide-react";
-import Image from "next/image";
 import { use, useRef, useState } from "react";
-import { CheckRunIcon, StatusCheckIcon } from "~/components/ci-status";
-import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
-import { GitHubIcon } from "~/components/icons";
+import { StatusCheckIcon } from "~/components/ci-status";
 import {
     Tooltip,
     TooltipContent,
@@ -15,6 +12,8 @@ import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { computeChecksPollingInterval } from "~/utils/checks-polling";
 import type { PullRequestPermissionContext } from "../permissions-utils";
+import { checkBreakdown } from "./check-groups";
+import { ChecksSection } from "./checks-section";
 import { CommitsSection } from "./commits-section";
 import { MetadataSection } from "./metadata-section";
 
@@ -25,92 +24,6 @@ interface RightSidebarProps {
     owner: string;
     repo: string;
     number: number;
-}
-
-// Ordered categories for the checks breakdown. Each check is assigned to the
-// first matching category; anything unmatched falls through to "other". The
-// colors mirror the Tailwind palette used elsewhere for check states and drive
-// both the progress-ring arcs and the tooltip legend dots.
-const CHECK_CATEGORIES: {
-    label: string;
-    color: string;
-    match: (check: CheckRun) => boolean;
-}[] = [
-    {
-        label: "in progress",
-        color: "#eab308",
-        match: (c) => c.status === "in_progress",
-    },
-    {
-        label: "queued",
-        color: "#a16207",
-        match: (c) => c.status === "queued",
-    },
-    {
-        label: "passed",
-        color: "#16a34a",
-        match: (c) => c.conclusion === "success",
-    },
-    {
-        label: "failed",
-        color: "#dc2626",
-        match: (c) =>
-            c.conclusion === "failure" ||
-            c.conclusion === "error" ||
-            c.conclusion === "timed_out",
-    },
-    {
-        label: "action required",
-        color: "#ca8a04",
-        match: (c) => c.conclusion === "action_required",
-    },
-    {
-        label: "skipped",
-        color: "#9ca3af",
-        match: (c) => c.conclusion === "skipped",
-    },
-    {
-        label: "cancelled",
-        color: "#9ca3af",
-        match: (c) => c.conclusion === "cancelled",
-    },
-    {
-        label: "neutral",
-        color: "#6b7280",
-        match: (c) => c.conclusion === "neutral",
-    },
-];
-
-const OTHER_CATEGORY_COLOR = "#6b7280";
-
-function checkBreakdown(
-    checks: CheckRun[],
-): { label: string; color: string; count: number }[] {
-    const counts = CHECK_CATEGORIES.map((cat) => ({ ...cat, count: 0 }));
-    let other = 0;
-    for (const check of checks) {
-        const bucket = counts.find((cat) => cat.match(check));
-        if (bucket) {
-            bucket.count++;
-        } else {
-            other++;
-        }
-    }
-    const result = counts
-        .filter((entry) => entry.count > 0)
-        .map((entry) => ({
-            label: entry.label,
-            color: entry.color,
-            count: entry.count,
-        }));
-    if (other > 0) {
-        result.push({
-            label: "other",
-            color: OTHER_CATEGORY_COLOR,
-            count: other,
-        });
-    }
-    return result;
 }
 
 function ChecksRing({
@@ -330,69 +243,5 @@ export default function RightSidebar({
                 ) : null}
             </div>
         </aside>
-    );
-}
-
-interface ChecksSectionProps {
-    checks: Array<CheckRun>;
-}
-
-function ChecksSection({ checks }: ChecksSectionProps) {
-    if (!checks || checks.length === 0) {
-        return <p className="text-sm text-text-tertiary">No checks</p>;
-    }
-
-    return (
-        <div className="space-y-2">
-            {checks.map((check: CheckRun) => (
-                <CheckHoverCard
-                    check={check}
-                    key={check.html_url ?? check.name}
-                >
-                    <a
-                        className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-surface-tertiary"
-                        href={check.html_url}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                    >
-                        <span className="flex shrink-0 items-center gap-2">
-                            <CheckRunIcon
-                                status={check.status}
-                                conclusion={check.conclusion}
-                                className="size-3.5 shrink-0"
-                            />
-                            {check.app?.name === "GitHub Actions" ? (
-                                <GitHubIcon className="size-5 text-text-primary" />
-                            ) : check.creator?.avatar_url ? (
-                                <Image
-                                    src={check.creator.avatar_url}
-                                    alt=""
-                                    className="h-5 w-5 rounded-full"
-                                    width={20}
-                                    height={20}
-                                />
-                            ) : check.app?.owner?.avatar_url ? (
-                                <Image
-                                    src={check.app.owner.avatar_url}
-                                    alt=""
-                                    className="h-5 w-5 rounded-full"
-                                    width={20}
-                                    height={20}
-                                />
-                            ) : null}
-                        </span>
-                        <span className="min-w-0 truncate text-sm text-text-label">
-                            {check.name}
-                            {check.description && (
-                                <span className="text-text-tertiary">
-                                    {" "}
-                                    - {check.description}
-                                </span>
-                            )}
-                        </span>
-                    </a>
-                </CheckHoverCard>
-            ))}
-        </div>
     );
 }
