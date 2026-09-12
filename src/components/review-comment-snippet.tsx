@@ -1,8 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useTheme } from "next-themes";
+import { useMemo, useRef } from "react";
 import { useFileContent } from "~/hooks/use-file-content";
 import type { ReviewCommentBase } from "~/server/github";
+import { DiffTable } from "./diff/diff-table";
+import { getDiffLanguage } from "./diff/model";
+import { useDiffSyntaxHighlighting } from "./diff/use-diff-syntax-highlighting";
 import {
     fileSnippetRows,
     hunkSnippetRows,
@@ -10,22 +14,22 @@ import {
     snippetAnchor,
 } from "./review-comment-snippet-utils";
 
+// The unified diff renders inserts and deletes with the change variants, so
+// the snippet carries the same tints as the file it was written against.
 const ROW_CLASS: Record<SnippetRow["kind"], string> = {
-    context: "",
-    insert: "bg-green-500/10",
-    delete: "bg-red-500/10",
+    context: "d2h-cntx",
+    insert: "d2h-ins d2h-change",
+    delete: "d2h-del d2h-change",
 };
 
-const PREFIX: Record<SnippetRow["kind"], string> = {
-    context: " ",
-    insert: "+",
-    delete: "-",
-};
+const NOOP = () => {};
 
 /**
  * The few lines of code a review comment was written against, shown above the
- * thread in the timeline. Comments on lines outside the diff carry no hunk
- * from GitHub, so those read the file at the comment's commit instead.
+ * thread in the timeline. Rendered through the same diff table as the
+ * file-changed page, so type, tints, line numbers, and syntax highlighting all
+ * line up. Comments on lines outside the diff carry no hunk from GitHub, so
+ * those read the file at the comment's commit instead.
  */
 export function ReviewCommentSnippet({
     comment,
@@ -66,6 +70,18 @@ export function ReviewCommentSnippet({
         return fileSnippetRows(lines, anchor);
     }, [hunkRows, needsFile, lines, anchor]);
 
+    const diffRef = useRef<HTMLDivElement>(null);
+    const { resolvedTheme } = useTheme();
+    const language = useMemo(
+        () => getDiffLanguage(comment.path),
+        [comment.path],
+    );
+    useDiffSyntaxHighlighting({
+        diffRef,
+        language,
+        enabled: rows.length > 0,
+    });
+
     if (rows.length === 0) {
         return null;
     }
@@ -73,30 +89,50 @@ export function ReviewCommentSnippet({
     return (
         <div
             data-testid="review-comment-snippet"
-            className="overflow-x-auto border-border border-b"
+            className="border-border border-b bg-surface"
         >
-            <table className="w-full border-collapse font-mono text-text-secondary text-xs leading-5">
-                <tbody>
-                    {rows.map((row) => (
-                        <tr
-                            key={`${row.kind}-${row.lineNumber}`}
-                            className={ROW_CLASS[row.kind]}
+            <DiffTable
+                colorScheme={resolvedTheme === "dark" ? "dark" : "light"}
+                diffRef={diffRef}
+                onMouseOver={NOOP}
+            >
+                {rows.map((row) => (
+                    <tr
+                        key={`${row.kind}-${row.oldNumber}-${row.newNumber}`}
+                        className={ROW_CLASS[row.kind]}
+                    >
+                        <td
+                            className={`d2h-code-linenumber ${ROW_CLASS[row.kind]}`}
+                            // The diff's number cell copies a permalink; the
+                            // snippet has nothing to click.
+                            style={{ cursor: "default" }}
                         >
-                            <td className="w-12 select-none py-0 pr-2 text-right align-top text-text-muted">
-                                {row.lineNumber}
-                            </td>
-                            <td className="py-0 pr-4 align-top">
-                                <span className="select-none pr-1 text-text-muted">
-                                    {PREFIX[row.kind]}
+                            <div className="d2h-ln-overlay absolute">
+                                <div className="line-num1">
+                                    {row.oldNumber ?? ""}
+                                </div>
+                                <div className="line-num2">
+                                    {row.newNumber ?? ""}
+                                </div>
+                            </div>
+                        </td>
+                        <td className={ROW_CLASS[row.kind]}>
+                            <div
+                                className="d2h-code-line"
+                                style={{
+                                    display: "flex",
+                                    width: "100%",
+                                    paddingRight: "8px",
+                                }}
+                            >
+                                <span className="d2h-code-line-ctn">
+                                    {row.content || <br />}
                                 </span>
-                                <span className="whitespace-pre-wrap break-all">
-                                    {row.content || " "}
-                                </span>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+                            </div>
+                        </td>
+                    </tr>
+                ))}
+            </DiffTable>
         </div>
     );
 }

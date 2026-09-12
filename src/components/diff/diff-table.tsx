@@ -1,5 +1,6 @@
 "use client";
 
+import "diff2html/bundles/css/diff2html.min.css";
 import type { ReactNode, RefObject } from "react";
 import type { DiffViewMode } from "~/utils/diff-view";
 

@@ -350,15 +350,12 @@ describe("ReviewComments", () => {
                 <ReviewComments {...defaultProps} allComments={[comment]} />,
             );
 
-            const rows = within(
-                screen.getByTestId("review-comment-snippet"),
-            ).getAllByRole("row");
-            expect(rows.map((row) => row.textContent)).toEqual([
-                "9 more()",
-                "10-old()",
-                "10+added()",
-                "11+tail()",
-            ]);
+            const snippet = screen.getByTestId("review-comment-snippet");
+            expect(
+                Array.from(snippet.querySelectorAll(".d2h-code-line-ctn")).map(
+                    (cell) => cell.textContent,
+                ),
+            ).toEqual(["more()", "old()", "added()", "tail()"]);
         });
 
         it("reads the file when the commented line is outside the diff", () => {
@@ -384,15 +381,12 @@ describe("ReviewComments", () => {
                 <ReviewComments {...defaultProps} allComments={[comment]} />,
             );
 
-            const rows = within(
-                screen.getByTestId("review-comment-snippet"),
-            ).getAllByRole("row");
-            expect(rows.map((row) => row.textContent)).toEqual([
-                "2 line2",
-                "3 line3",
-                "4 line4",
-                "5 line5",
-            ]);
+            const snippet = screen.getByTestId("review-comment-snippet");
+            expect(
+                Array.from(snippet.querySelectorAll(".d2h-code-line-ctn")).map(
+                    (cell) => cell.textContent,
+                ),
+            ).toEqual(["line2", "line3", "line4", "line5"]);
         });
 
         it("shows no snippet for a file-level comment", () => {

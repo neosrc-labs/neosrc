@@ -1,7 +1,6 @@
 "use client";
 
 import type { ColorSchemeType, DiffFile } from "diff2html/lib/types";
-import "diff2html/bundles/css/diff2html.min.css";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";

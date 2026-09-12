@@ -77,10 +77,20 @@ describe("snippetAnchor", () => {
 describe("hunkSnippetRows", () => {
     it("ends at the commented line and keeps leading context", () => {
         expect(hunkSnippetRows(HUNK, anchor({ line: 11 }))).toEqual([
-            { kind: "context", lineNumber: 9, content: "b()" },
-            { kind: "context", lineNumber: 10, content: "c()" },
-            { kind: "delete", lineNumber: 11, content: "old()" },
-            { kind: "insert", lineNumber: 11, content: "one()" },
+            { kind: "context", oldNumber: 9, newNumber: 9, content: "b()" },
+            { kind: "context", oldNumber: 10, newNumber: 10, content: "c()" },
+            {
+                kind: "delete",
+                oldNumber: 11,
+                newNumber: null,
+                content: "old()",
+            },
+            {
+                kind: "insert",
+                oldNumber: null,
+                newNumber: 11,
+                content: "one()",
+            },
         ]);
     });
 
@@ -88,10 +98,15 @@ describe("hunkSnippetRows", () => {
         expect(
             hunkSnippetRows(HUNK, anchor({ line: 11, side: "LEFT" })),
         ).toEqual([
-            { kind: "context", lineNumber: 8, content: "a()" },
-            { kind: "context", lineNumber: 9, content: "b()" },
-            { kind: "context", lineNumber: 10, content: "c()" },
-            { kind: "delete", lineNumber: 11, content: "old()" },
+            { kind: "context", oldNumber: 8, newNumber: 8, content: "a()" },
+            { kind: "context", oldNumber: 9, newNumber: 9, content: "b()" },
+            { kind: "context", oldNumber: 10, newNumber: 10, content: "c()" },
+            {
+                kind: "delete",
+                oldNumber: 11,
+                newNumber: null,
+                content: "old()",
+            },
         ]);
     });
 
@@ -117,7 +132,7 @@ describe("hunkSnippetRows", () => {
         const rows = hunkSnippetRows(wide, anchor({ startLine: 1, line: 40 }));
 
         expect(rows).toHaveLength(SNIPPET_MAX_ROWS);
-        expect(rows.at(-1)?.lineNumber).toBe(40);
+        expect(rows.at(-1)?.newNumber).toBe(40);
     });
 
     it("has no rows when the hunk does not cover the commented line", () => {
@@ -131,17 +146,37 @@ describe("fileSnippetRows", () => {
 
     it("ends at the commented line", () => {
         expect(fileSnippetRows(lines, anchor({ line: 5 }))).toEqual([
-            { kind: "context", lineNumber: 2, content: "line2" },
-            { kind: "context", lineNumber: 3, content: "line3" },
-            { kind: "context", lineNumber: 4, content: "line4" },
-            { kind: "context", lineNumber: 5, content: "line5" },
+            {
+                kind: "context",
+                oldNumber: null,
+                newNumber: 2,
+                content: "line2",
+            },
+            {
+                kind: "context",
+                oldNumber: null,
+                newNumber: 3,
+                content: "line3",
+            },
+            {
+                kind: "context",
+                oldNumber: null,
+                newNumber: 4,
+                content: "line4",
+            },
+            {
+                kind: "context",
+                oldNumber: null,
+                newNumber: 5,
+                content: "line5",
+            },
         ]);
     });
 
     it("clamps to the start of the file", () => {
         expect(
             fileSnippetRows(lines, anchor({ line: 2 })).map(
-                (row) => row.lineNumber,
+                (row) => row.newNumber,
             ),
         ).toEqual([1, 2]);
     });
@@ -150,7 +185,7 @@ describe("fileSnippetRows", () => {
         const rows = fileSnippetRows(lines, anchor({ startLine: 1, line: 30 }));
 
         expect(rows).toHaveLength(SNIPPET_MAX_ROWS);
-        expect(rows.at(-1)?.lineNumber).toBe(30);
+        expect(rows.at(-1)?.newNumber).toBe(30);
     });
 
     it("has no rows when the line is past the end of the file", () => {

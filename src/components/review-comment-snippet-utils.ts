@@ -2,8 +2,10 @@ import type { ReviewCommentBase } from "~/server/github";
 
 export interface SnippetRow {
     kind: "context" | "insert" | "delete";
-    /** Number of the side the row belongs to: new for context/insert, old for delete. */
-    lineNumber: number;
+    /** Old-side line number, null for lines that only exist in the new file. */
+    oldNumber: number | null;
+    /** New-side line number, null for lines that only exist in the old file. */
+    newNumber: number | null;
     content: string;
 }
 
@@ -46,12 +48,7 @@ export function snippetAnchor(
     };
 }
 
-interface HunkRow extends SnippetRow {
-    oldNumber: number | null;
-    newNumber: number | null;
-}
-
-function parseHunk(diffHunk: string): HunkRow[] {
+function parseHunk(diffHunk: string): SnippetRow[] {
     const lines = diffHunk.split("\n");
     const header = lines[0]?.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
     if (!header) {
@@ -59,14 +56,13 @@ function parseHunk(diffHunk: string): HunkRow[] {
     }
     let oldNumber = Number(header[1]);
     let newNumber = Number(header[2]);
-    const rows: HunkRow[] = [];
+    const rows: SnippetRow[] = [];
     for (const line of lines.slice(1)) {
         const prefix = line[0] ?? "";
         const content = line.slice(1);
         if (prefix === "+") {
             rows.push({
                 kind: "insert",
-                lineNumber: newNumber,
                 content,
                 oldNumber: null,
                 newNumber: newNumber++,
@@ -74,7 +70,6 @@ function parseHunk(diffHunk: string): HunkRow[] {
         } else if (prefix === "-") {
             rows.push({
                 kind: "delete",
-                lineNumber: oldNumber,
                 content,
                 oldNumber: oldNumber++,
                 newNumber: null,
@@ -82,7 +77,6 @@ function parseHunk(diffHunk: string): HunkRow[] {
         } else if (prefix === " ") {
             rows.push({
                 kind: "context",
-                lineNumber: newNumber,
                 content,
                 oldNumber: oldNumber++,
                 newNumber: newNumber++,
@@ -108,7 +102,7 @@ export function hunkSnippetRows(
     anchor: SnippetAnchor,
 ): SnippetRow[] {
     const rows = parseHunk(diffHunk);
-    const numberOn = (row: HunkRow) =>
+    const numberOn = (row: SnippetRow) =>
         anchor.side === "LEFT" ? row.oldNumber : row.newNumber;
     const end = rows.findIndex((row) => numberOn(row) === anchor.line);
     if (end === -1) {
@@ -119,18 +113,13 @@ export function hunkSnippetRows(
     );
     const first = rangeStart === -1 ? end : Math.min(rangeStart, end);
     const start = first - SNIPPET_CONTEXT_LINES;
-    return clampWindow(rows, start, end).map(
-        ({ kind, lineNumber, content }) => ({
-            kind,
-            lineNumber,
-            content,
-        }),
-    );
+    return clampWindow(rows, start, end);
 }
 
 /**
  * Snippet built straight from the file at the comment's commit, for comments
- * whose lines are not part of any hunk.
+ * whose lines are not part of any hunk. The file only describes the new side,
+ * so the rows carry no old-side number.
  */
 export function fileSnippetRows(
     lines: string[],
@@ -144,7 +133,8 @@ export function fileSnippetRows(
     for (let line = from; line <= anchor.line; line++) {
         rows.push({
             kind: "context",
-            lineNumber: line,
+            oldNumber: null,
+            newNumber: line,
             content: lines[line - 1] ?? "",
         });
     }
