@@ -85,6 +85,7 @@ type ForgejoListFn = (
         author?: string;
         labels?: string[];
         presence?: MetadataPresence;
+        query?: string;
     },
 ) => Promise<{ totalCount: number }>;
 
@@ -98,6 +99,7 @@ export async function forgejoStateCounts(
         author?: string;
         labels?: string[];
         presence?: MetadataPresence;
+        query?: string;
     } = {},
 ): Promise<{ open: number; closed: number }> {
     const countParams = { sort, limit: 1, page: 1, ...filters };

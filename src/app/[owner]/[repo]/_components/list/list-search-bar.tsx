@@ -37,6 +37,7 @@ export function ListSearchBar({
     onSearch,
     onClear,
     onAutocompleteSelect,
+    booleanHint,
 }: {
     searchInput: string;
     setSearchInput: (value: string) => void;
@@ -57,6 +58,7 @@ export function ListSearchBar({
     onSearch: () => void;
     onClear: () => void;
     onAutocompleteSelect: (key: string, value: string) => void;
+    booleanHint?: string | null;
 }) {
     const autocompleteMatch = detectQualifier(
         searchInput,
@@ -241,6 +243,15 @@ export function ListSearchBar({
                     {newItemLabel}
                 </a>
             </div>
+
+            {booleanHint && (
+                <p
+                    role="status"
+                    className="px-4 pb-2 text-amber-700 text-xs dark:text-amber-500"
+                >
+                    {booleanHint}
+                </p>
+            )}
         </div>
     );
 }

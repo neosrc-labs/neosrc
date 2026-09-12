@@ -32,6 +32,12 @@ export class GitHubPullRequestProvider implements PullRequestProvider {
             kind: "pr",
             countStates: ["open", "closed", "merged"],
             search: searchPullRequestsWithStatus,
+            itemKey: (item) => item.databaseId,
+            sortValues: (item) => ({
+                created: item.createdAt,
+                updated: item.updatedAt,
+                comments: item.comments.totalCount,
+            }),
             mapItem: mapGqlPrSearchItem,
         });
     }

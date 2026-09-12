@@ -454,3 +454,46 @@ describe("IssueList", () => {
         ).toBeInTheDocument();
     });
 });
+
+describe("IssueList boolean hints", () => {
+    beforeEach(() => {
+        paramsState = new URLSearchParams();
+    });
+
+    it("stays quiet for an OR that GitHub can union", () => {
+        paramsState.set("q", "assignee:octocat OR assignee:hubot");
+        renderList();
+        expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+
+    it("stays quiet for a label OR that GitHub can express", () => {
+        paramsState.set("q", "label:bug OR label:docs");
+        renderList();
+        expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+
+    it("warns when GitHub cannot parse the boolean groups", () => {
+        paramsState.set("q", "label:a AND (label:b OR");
+        renderList();
+        expect(screen.getByRole("status")).toBeInTheDocument();
+    });
+
+    it("warns about OR on Codeberg", () => {
+        paramsState.set("q", "foo OR bar");
+        render(
+            <IssueList
+                provider="cb"
+                owner="test-owner"
+                repo="test-repo"
+                defaultState="open"
+            />,
+        );
+        expect(screen.getByRole("status")).toBeInTheDocument();
+    });
+
+    it("stays quiet for plain queries", () => {
+        paramsState.set("q", "label:bug foo");
+        renderList();
+        expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
+});

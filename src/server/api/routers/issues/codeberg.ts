@@ -1,3 +1,4 @@
+import { translateForgejoKeywords } from "~/lib/search-boolean";
 import {
     forgejoStateCounts,
     parseForgejoQuery,
@@ -31,6 +32,7 @@ export class CodebergIssueProvider implements IssueProvider {
         const qualifiers = parseForgejoQuery(params.query, {
             allowMerged: false,
         });
+        const keywords = translateForgejoKeywords(params.query).query;
         const cbSort = resolveForgejoSort(params);
         const page = params.page ?? 1;
         const limit = params.first ?? 30;
@@ -50,6 +52,9 @@ export class CodebergIssueProvider implements IssueProvider {
         if (Object.keys(qualifiers.presence).length > 0) {
             issueParams.presence = qualifiers.presence;
         }
+        if (keywords) {
+            issueParams.query = keywords;
+        }
 
         const [result, counts] = await Promise.all([
             listIssues(accessToken, params.owner, params.repo, issueParams),
@@ -63,6 +68,7 @@ export class CodebergIssueProvider implements IssueProvider {
                     author: qualifiers.author,
                     labels: qualifiers.labels,
                     presence: qualifiers.presence,
+                    query: keywords || undefined,
                 },
             ),
         ]);

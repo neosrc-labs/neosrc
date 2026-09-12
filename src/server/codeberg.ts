@@ -1046,6 +1046,9 @@ export type CodebergIssueListParams = {
     author?: string;
     labels?: string[];
     presence?: MetadataPresence;
+    // Free-text terms for Forgejo's `q`, already translated to its +term/-term
+    // form. Qualifiers never travel here; they are applied by the provider.
+    query?: string;
 };
 
 export const listIssues = cache(
@@ -1057,6 +1060,7 @@ export const listIssues = cache(
     ) => {
         const searchParams = new URLSearchParams();
         searchParams.set("type", "issues");
+        if (params.query) searchParams.set("q", params.query);
         if (params.state) searchParams.set("state", params.state);
         if (params.sort) searchParams.set("sort", params.sort);
         if (params.page) searchParams.set("page", String(params.page));

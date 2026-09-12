@@ -3,16 +3,22 @@ interface Qualifier {
     value: string;
 }
 
+export interface QueryToken {
+    // Raw text of the token, kept verbatim so operators, quoting, and the
+    // order the user typed survive a parse/format round trip.
+    text: string;
+    // Set when the token is a key:value qualifier.
+    qualifier?: Qualifier;
+}
+
 export interface ParsedQuery {
-    qualifiers: Qualifier[];
-    freeText: string;
+    tokens: QueryToken[];
 }
 
 const QUALIFIER_RE = /(\w+):("[^"]*"|\S+)/g;
 
 export function parseQuery(query: string): ParsedQuery {
-    const qualifiers: Qualifier[] = [];
-    const freeTextParts: string[] = [];
+    const tokens: QueryToken[] = [];
 
     let lastIndex = 0;
 
@@ -22,26 +28,40 @@ export function parseQuery(query: string): ParsedQuery {
         const match = QUALIFIER_RE.exec(query);
         if (!match) break;
         const textBefore = query.slice(lastIndex, match.index).trim();
-        if (textBefore) freeTextParts.push(textBefore);
-        qualifiers.push({
-            key: match[1] ?? "",
-            value: (match[2] ?? "").replace(/^"|"$/g, ""),
+        if (textBefore) tokens.push({ text: textBefore });
+        tokens.push({
+            text: match[0],
+            qualifier: {
+                key: match[1] ?? "",
+                value: (match[2] ?? "").replace(/^"|"$/g, ""),
+            },
         });
         lastIndex = match.index + match[0].length;
     }
 
     const remaining = query.slice(lastIndex).trim();
-    if (remaining) freeTextParts.push(remaining);
+    if (remaining) tokens.push({ text: remaining });
 
-    return { qualifiers, freeText: freeTextParts.join(" ") };
+    return { tokens };
 }
 
 export function formatQuery(parsed: ParsedQuery): string {
-    const parts = parsed.qualifiers.map(
-        (q) => `${q.key}:${q.value.includes(" ") ? `"${q.value}"` : q.value}`,
-    );
-    if (parsed.freeText) parts.push(parsed.freeText);
-    return parts.join(" ");
+    return parsed.tokens
+        .map((token) => token.text)
+        .join(" ")
+        .trim();
+}
+
+function serializeQualifier(key: string, value: string): string {
+    return `${key}:${value.includes(" ") ? `"${value}"` : value}`;
+}
+
+function qualifiers(parsed: ParsedQuery): Qualifier[] {
+    const result: Qualifier[] = [];
+    for (const token of parsed.tokens) {
+        if (token.qualifier) result.push(token.qualifier);
+    }
+    return result;
 }
 
 export function hasQualifier(
@@ -49,8 +69,16 @@ export function hasQualifier(
     key: string,
     value: string,
 ): boolean {
-    const parsed = parseQuery(query);
-    return parsed.qualifiers.some((q) => q.key === key && q.value === value);
+    return qualifiers(parseQuery(query)).some(
+        (q) => q.key === key && q.value === value,
+    );
+}
+
+export function getQualifierValue(
+    query: string,
+    key: string,
+): string | undefined {
+    return qualifiers(parseQuery(query)).find((q) => q.key === key)?.value;
 }
 
 export function removeQualifier(
@@ -59,8 +87,20 @@ export function removeQualifier(
     value: string,
 ): string {
     const parsed = parseQuery(query);
-    parsed.qualifiers = parsed.qualifiers.filter(
-        (q) => !(q.key === key && q.value === value),
+    parsed.tokens = parsed.tokens.filter(
+        (token) =>
+            !(token.qualifier?.key === key && token.qualifier.value === value),
+    );
+    return formatQuery(parsed);
+}
+
+export function removeQualifiersByKey(
+    query: string,
+    keys: readonly string[],
+): string {
+    const parsed = parseQuery(query);
+    parsed.tokens = parsed.tokens.filter(
+        (token) => !token.qualifier || !keys.includes(token.qualifier.key),
     );
     return formatQuery(parsed);
 }
@@ -148,8 +188,13 @@ export function replaceQualifier(
     value: string,
 ): string {
     const parsed = parseQuery(query);
-    parsed.qualifiers = parsed.qualifiers.filter((q) => q.key !== key);
-    parsed.qualifiers.push({ key, value });
+    parsed.tokens = parsed.tokens.filter(
+        (token) => token.qualifier?.key !== key,
+    );
+    parsed.tokens.push({
+        text: serializeQualifier(key, value),
+        qualifier: { key, value },
+    });
     return formatQuery(parsed);
 }
 
@@ -159,11 +204,15 @@ export function addQualifier(
     value: string,
 ): string {
     const parsed = parseQuery(query);
-    const existing = parsed.qualifiers.find(
-        (q) => q.key === key && q.value === value,
+    const existing = parsed.tokens.some(
+        (token) =>
+            token.qualifier?.key === key && token.qualifier.value === value,
     );
     if (existing) return query;
-    parsed.qualifiers.push({ key, value });
+    parsed.tokens.push({
+        text: serializeQualifier(key, value),
+        qualifier: { key, value },
+    });
     return formatQuery(parsed);
 }
 

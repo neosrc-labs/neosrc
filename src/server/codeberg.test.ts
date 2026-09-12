@@ -21,14 +21,13 @@ function issue(overrides: Record<string, unknown> = {}) {
 }
 
 function stubFetch(items: unknown[]) {
-    vi.stubGlobal(
-        "fetch",
-        vi.fn(async () => ({
-            ok: true,
-            json: async () => items,
-            headers: { get: () => null },
-        })),
-    );
+    const mock = vi.fn(async (_url: string) => ({
+        ok: true,
+        json: async () => items,
+        headers: { get: () => null },
+    }));
+    vi.stubGlobal("fetch", mock);
+    return mock;
 }
 
 const BOB = { id: 9, login: "bob", avatar_url: "" };
@@ -125,5 +124,25 @@ describe("listIssues presence filter", () => {
         const result = await listIssues("tok", "own", "repo", {});
 
         expect(numbers(result.items)).toEqual([1, 2]);
+    });
+});
+
+describe("listIssues keyword query", () => {
+    it("sends the translated terms as q", async () => {
+        const mock = stubFetch([issue({ number: 1 })]);
+
+        await listIssues("tok", "own", "repo", { query: "+foo +bar" });
+
+        const url = new URL(String(mock.mock.calls[0]?.[0]));
+        expect(url.searchParams.get("q")).toBe("+foo +bar");
+    });
+
+    it("omits q when there are no terms", async () => {
+        const mock = stubFetch([issue({ number: 1 })]);
+
+        await listIssues("tok", "own", "repo", {});
+
+        const url = new URL(String(mock.mock.calls[0]?.[0]));
+        expect(url.searchParams.has("q")).toBe(false);
     });
 });
