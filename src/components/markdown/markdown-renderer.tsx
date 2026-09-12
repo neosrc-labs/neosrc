@@ -1,21 +1,18 @@
 "use client";
 
+import hljs from "highlight.js";
 import { Check, Copy, Link as LinkIcon } from "lucide-react";
-import { useTheme } from "next-themes";
 import {
     Children,
-    type CSSProperties,
     createContext,
     isValidElement,
     type ReactElement,
     type ReactNode,
     useContext,
-    useEffect,
+    useMemo,
     useRef,
-    useState,
 } from "react";
 import ReactMarkdown from "react-markdown";
-import SyntaxHighlighter from "react-syntax-highlighter";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
@@ -27,13 +24,11 @@ import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CopyButton } from "~/components/ui/copy-button";
 import { cn } from "~/lib/utils";
 import { SuggestionBlock } from "./accessories/suggestion-block";
-import { CODE_LANGUAGE_TAGS } from "./code-language-map";
 import { remarkCommitPlugin } from "./plugins/remark-commit";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
 import { remarkIssuePlugin } from "./plugins/remark-issue";
 import { remarkLinebreaksPlugin } from "./plugins/remark-linebreaks";
 import { remarkMentionPlugin } from "./plugins/remark-mention";
-import { darkTheme, lightTheme } from "./syntax-theme";
 
 interface MarkdownRendererProps {
     content: string;
@@ -260,7 +255,7 @@ export function MarkdownRenderer({
                             </CodeBlockContext.Provider>
                         );
                     },
-                    code({ children, className, ...props }) {
+                    code({ children, className }) {
                         if (className?.startsWith("language-suggestion")) {
                             const codeString = Array.isArray(children)
                                 ? children.join("")
@@ -279,7 +274,7 @@ export function MarkdownRenderer({
                             );
                         }
                         return (
-                            <CodeElement className={className} {...props}>
+                            <CodeElement className={className}>
                                 {children}
                             </CodeElement>
                         );
@@ -648,26 +643,49 @@ function InlineCode({
 function CodeElement({
     children,
     className,
-    ...props
 }: {
     children: React.ReactNode;
     className?: string;
-    [key: string]: unknown;
 }) {
-    const { resolvedTheme } = useTheme();
     const inCodeBlock = useContext(CodeBlockContext);
-    const [mounted, setMounted] = useState(false);
+    const isBlock = Boolean(className) || inCodeBlock;
+    const codeString = Array.isArray(children)
+        ? children.join("")
+        : String(children ?? "");
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    // Fence tags resolve through highlight.js directly, aliases included.
+    // Unknown tags fall back to plain text instead of auto-detection.
+    const tag = className?.replace(/^language-/, "").toLowerCase();
+    const language = useMemo(
+        () => (tag && hljs.getLanguage(tag) ? tag : null),
+        [tag],
+    );
+    // highlight.js escapes the source, so the marked-up result is safe to
+    // inject. The token classes are the ones the diff and review-thread views
+    // use, so both surfaces are colored by the same highlight.js theme CSS.
+    const highlighted = useMemo(
+        () =>
+            language ? hljs.highlight(codeString, { language }).value : null,
+        [codeString, language],
+    );
 
-    if (className || inCodeBlock) {
-        const codeString = Array.isArray(children)
-            ? children.join("")
-            : String(children ?? "");
+    if (!isBlock) {
+        return <InlineCode>{children}</InlineCode>;
+    }
 
-        const copyButton = (
+    return (
+        <div className="relative">
+            <pre className="overflow-x-auto rounded-lg bg-surface-tertiary p-4 text-[length:1em] text-text-primary">
+                {highlighted != null ? (
+                    <code
+                        className={`language-${language}`}
+                        // biome-ignore lint/security/noDangerouslySetInnerHtml: highlight.js escapes the source before emitting token markup
+                        dangerouslySetInnerHTML={{ __html: highlighted }}
+                    />
+                ) : (
+                    <code className={className}>{children}</code>
+                )}
+            </pre>
             <CopyButton
                 text={codeString}
                 className="absolute top-1.5 right-1.5 inline-flex cursor-pointer items-center rounded-md border border-border bg-surface-elevated p-1.5 text-text-tertiary transition-colors hover:bg-surface-secondary hover:text-text-label dark:hover:text-zinc-200"
@@ -685,52 +703,8 @@ function CodeElement({
                     </>
                 )}
             </CopyButton>
-        );
-
-        if (!mounted) {
-            return (
-                <div className="relative">
-                    <pre className="overflow-x-auto rounded-lg bg-surface-tertiary p-2 text-[length:1em]">
-                        <code className={className}>{children}</code>
-                    </pre>
-                    {copyButton}
-                </div>
-            );
-        }
-
-        const style = resolvedTheme === "dark" ? darkTheme : lightTheme;
-        const extraStyles: CSSProperties = {
-            backgroundColor: "var(--color-surface-tertiary)",
-            padding: "16px",
-            // Match the surrounding body text size; the typography plugin
-            // would otherwise render code blocks with a smaller font
-            fontSize: "1em",
-        };
-
-        const tag = className?.replace(/^language-/, "").toLowerCase();
-        const language = tag
-            ? (CODE_LANGUAGE_TAGS[tag] ?? "plaintext")
-            : "plaintext";
-
-        return (
-            <div className="relative">
-                <SyntaxHighlighter
-                    language={language}
-                    style={style}
-                    customStyle={extraStyles}
-                    codeTagProps={{
-                        className: `language-${language}`,
-                        style: { fontSize: "1em" },
-                    }}
-                    {...props}
-                >
-                    {codeString}
-                </SyntaxHighlighter>
-                {copyButton}
-            </div>
-        );
-    }
-    return <InlineCode {...props}>{children}</InlineCode>;
+        </div>
+    );
 }
 
 function isRelativeImageSrc(src: string): boolean {

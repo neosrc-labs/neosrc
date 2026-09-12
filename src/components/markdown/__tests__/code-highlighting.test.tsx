@@ -7,60 +7,52 @@ function renderCode(content: string) {
     return render(<MarkdownRenderer content={content} />).container;
 }
 
-// jsdom serializes inline colors as rgb().
-function tokenColors(container: Element) {
-    const colors = new Map<string, string>();
-    for (const span of container.querySelectorAll("code span[style]")) {
-        const style = span.getAttribute("style") ?? "";
-        const color = style.match(/color:\s*([^;]+)/)?.[1]?.trim();
-        if (color) {
-            colors.set(color, (colors.get(color) ?? "") + span.textContent);
-        }
-    }
-    return colors;
-}
-
-describe("syntax highlighting theme", () => {
-    it("applies the app-matched light theme to fenced code tokens", () => {
+describe("fenced code highlighting", () => {
+    it("emits the hljs tokens the diff views style", () => {
         const container = renderCode(
             [
                 "```js",
                 "// a comment",
                 "const n = 42;",
-                "function greet(name) {",
-                '  return "hello " + name;',
-                "}",
+                'const s = "hi";',
                 "```",
             ].join("\n"),
         );
 
-        const code = container.querySelector("code.language-javascript");
+        const code = container.querySelector("code.language-js");
         expect(code).not.toBeNull();
+        // The diff and review-thread views highlight with the same library and
+        // token classes, so these resolve to the same theme CSS.
+        expect(code?.querySelector(".hljs-comment")?.textContent).toBe(
+            "// a comment",
+        );
+        expect(code?.querySelector(".hljs-keyword")?.textContent).toBe("const");
+        expect(code?.querySelector(".hljs-number")?.textContent).toBe("42");
+        expect(code?.querySelector(".hljs-string")?.textContent).toBe('"hi"');
 
-        const colors = tokenColors(container);
-        // comments -> --color-text-tertiary
-        expect(colors.get("rgb(107, 114, 128)")).toContain("a comment");
-        // keywords (const, function, return) -> --color-state-merged
-        expect(colors.get("rgb(124, 58, 237)")).toContain("const");
-        expect(colors.get("rgb(124, 58, 237)")).toContain("function");
-        expect(colors.get("rgb(124, 58, 237)")).toContain("return");
-        // numbers -> --color-state-queued
-        expect(colors.get("rgb(161, 98, 7)")).toContain("42");
-        // strings -> green-700
-        expect(colors.get("rgb(21, 128, 61)")).toContain("hello ");
-        // base text -> --color-text-primary
-        expect(container.querySelector("pre")?.getAttribute("style")).toContain(
-            "rgb(17, 24, 39)",
+        expect(container.querySelector("pre")?.className).toContain(
+            "bg-surface-tertiary",
         );
     });
 
-    it("keeps the code block background on the app's tertiary surface", () => {
+    it("renders an unknown language as plain text", () => {
         const container = renderCode(
-            ["```rust", "fn main() {}", "```"].join("\n"),
+            ["```definitelynotalanguage", "no tokens here", "```"].join("\n"),
         );
-        const pre = container.querySelector("pre");
-        expect(pre?.getAttribute("style")).toContain(
-            "--color-surface-tertiary",
+
+        const code = container.querySelector("code");
+        expect(code?.textContent?.trim()).toBe("no tokens here");
+        expect(code?.querySelector("span")).toBeNull();
+    });
+
+    it("escapes code content instead of rendering it", () => {
+        const container = renderCode(
+            ["```html", "<img src=x onerror=alert(1)>", "```"].join("\n"),
+        );
+
+        expect(container.querySelector("img")).toBeNull();
+        expect(container.querySelector("code")?.textContent).toContain(
+            "<img src=x onerror=alert(1)>",
         );
     });
 });
