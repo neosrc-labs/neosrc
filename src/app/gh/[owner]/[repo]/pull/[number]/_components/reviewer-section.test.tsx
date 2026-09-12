@@ -8,6 +8,7 @@ import { ReviewerSection } from "./reviewer-section";
 
 const mocks = vi.hoisted(() => ({
     dismissMutate: vi.fn(),
+    addReviewerMutate: vi.fn(),
     reviews: [] as unknown[],
 }));
 
@@ -22,7 +23,9 @@ vi.mock("~/trpc/react", () => ({
         }),
         pulls: {
             listAssignees: { useQuery: () => ({ data: [] }) },
-            addReviewer: { useMutation: () => ({ mutate: vi.fn() }) },
+            addReviewer: {
+                useMutation: () => ({ mutate: mocks.addReviewerMutate }),
+            },
             removeReviewer: { useMutation: () => ({ mutate: vi.fn() }) },
             listReviews: {
                 useQuery: () => ({ data: mocks.reviews, isPending: false }),
@@ -111,9 +114,11 @@ function makeReview(overrides: Partial<ReviewComment2> = {}): ReviewComment2 {
 
 function renderSection({
     reviews,
+    requestedReviewers = [],
     repoPermission = "write",
 }: {
     reviews: ReviewComment2[];
+    requestedReviewers?: Array<{ login: string }>;
     repoPermission?: "admin" | "write" | "read" | "none";
 }) {
     mocks.reviews = reviews;
@@ -121,7 +126,11 @@ function renderSection({
         <ReviewerSection
             pullRequestPromise={resolvedPromise({
                 user: { login: "author" },
-                requested_reviewers: [],
+                requested_reviewers: requestedReviewers.map((reviewer) => ({
+                    ...reviewer,
+                    html_url: `https://github.com/${reviewer.login}`,
+                    avatar_url: "https://example.com/avatar.png",
+                })),
             } as unknown as PullsGetResponseData)}
             permissionContextPromise={resolvedPromise({
                 isPullRequestLocked: false,
@@ -136,7 +145,7 @@ function renderSection({
     );
 }
 
-describe("ReviewerSection review dismissal", () => {
+describe("ReviewerSection reviewer actions", () => {
     it("offers Dismiss review for a bodyless approval with push access", async () => {
         renderSection({ reviews: [makeReview()] });
 
@@ -201,7 +210,7 @@ describe("ReviewerSection review dismissal", () => {
 
         await screen.findByText("alice");
         expect(
-            screen.queryByLabelText("More options for alice"),
+            screen.queryByRole("button", { name: "Dismiss review" }),
         ).not.toBeInTheDocument();
     });
 
@@ -215,11 +224,61 @@ describe("ReviewerSection review dismissal", () => {
 
         await screen.findByText("alice");
         expect(
-            screen.queryByLabelText("More options for alice"),
+            screen.queryByRole("button", { name: "Dismiss review" }),
         ).not.toBeInTheDocument();
         // A dismissed review must not read as a pending request.
         expect(
             screen.queryByText(/Awaiting requested review/),
+        ).not.toBeInTheDocument();
+    });
+
+    it("re-requests a review from someone who already reviewed", async () => {
+        const user = userEvent.setup();
+        renderSection({
+            reviews: [makeReview({ state: "CHANGES_REQUESTED" })],
+        });
+
+        await screen.findByText("alice");
+        await user.click(
+            screen.getByRole("button", { name: "Re-request review" }),
+        );
+
+        expect(mocks.addReviewerMutate.mock.calls[0]?.[0]).toEqual({
+            owner: "owner",
+            repo: "repo",
+            number: 1,
+            reviewer: "alice",
+        });
+        // The row now reads as pending and the re-request entry is gone.
+        expect(
+            screen.getByText(/Awaiting requested review from/),
+        ).toBeInTheDocument();
+        expect(
+            screen.queryByRole("button", { name: "Re-request review" }),
+        ).not.toBeInTheDocument();
+    });
+
+    it("does not offer Re-request review while the review is pending", async () => {
+        renderSection({
+            reviews: [],
+            requestedReviewers: [{ login: "alice" }],
+        });
+
+        await screen.findByText("alice");
+        expect(
+            screen.queryByRole("button", { name: "Re-request review" }),
+        ).not.toBeInTheDocument();
+    });
+
+    it("does not offer Re-request review without manage permission", async () => {
+        renderSection({
+            reviews: [makeReview()],
+            repoPermission: "read",
+        });
+
+        await screen.findByText("alice");
+        expect(
+            screen.queryByRole("button", { name: "Re-request review" }),
         ).not.toBeInTheDocument();
     });
 });
