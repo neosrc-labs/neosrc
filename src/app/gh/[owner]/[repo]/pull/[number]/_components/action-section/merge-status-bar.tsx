@@ -2,6 +2,7 @@
 
 import { Check, ChevronDown, GitPullRequestArrow, Info, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { CheckQueuedIcon } from "~/components/ci-status";
 import {
     HoverCard,
     HoverCardContent,
@@ -271,7 +272,7 @@ function MergeRequirementRowItem({ row }: { row: MergeRequirementRow }) {
             {row.status === "failing" ? (
                 <X className="size-3.5 shrink-0 text-red-600" />
             ) : row.status === "pending" ? (
-                <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
+                <CheckQueuedIcon className="size-3.5 shrink-0" />
             ) : (
                 <Check className="size-3.5 shrink-0 text-green-600" />
             )}

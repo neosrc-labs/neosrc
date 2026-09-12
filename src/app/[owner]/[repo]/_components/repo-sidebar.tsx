@@ -17,6 +17,7 @@ import {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
+import { CheckQueuedIcon, StatusCheckIcon } from "~/components/ci-status";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { cn, getDocFileHashName } from "~/lib/utils";
 import { formatRelativeTime } from "~/utils";
@@ -360,18 +361,11 @@ function DeployStatusIcon({
     if (state === "failure" || state === "error") {
         return <XCircle className={cn(className, "text-red-600")} />;
     }
-    if (
-        state === "in_progress" ||
-        state === "pending" ||
-        state === "queued" ||
-        state === "waiting"
-    ) {
-        // Same pulsing dot the PR checks section uses for running work.
-        return (
-            <span className={cn(className, "flex items-center justify-center")}>
-                <span className="check-pending-dot size-2.5 rounded-full" />
-            </span>
-        );
+    if (state === "in_progress") {
+        return <StatusCheckIcon state="IN_PROGRESS" className={className} />;
+    }
+    if (state === "pending" || state === "queued" || state === "waiting") {
+        return <CheckQueuedIcon className={className} />;
     }
     if (
         state === "inactive" ||

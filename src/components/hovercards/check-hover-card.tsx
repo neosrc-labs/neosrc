@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, Circle, CircleSlash, Clock, XCircle } from "lucide-react";
+import { Clock } from "lucide-react";
 import type { ReactNode } from "react";
+import { CheckRunIcon } from "~/components/ci-status";
 import { formatDurationMs } from "~/components/hovercards/hover-card-shared";
 import {
     HoverCard,
@@ -48,21 +49,13 @@ function statusLabel(status: string, conclusion: string | null): string {
 }
 
 function StatusIcon({ check }: { check: CheckRun }) {
-    if (check.conclusion === "success") {
-        return <Check className="h-3.5 w-3.5 text-green-600" />;
-    }
-    if (check.conclusion === "failure") {
-        return <XCircle className="h-3.5 w-3.5 text-red-600" />;
-    }
-    if (check.conclusion === "skipped") {
-        return <CircleSlash className="h-3.5 w-3.5 text-text-muted" />;
-    }
-    if (check.status === "in_progress") {
-        return (
-            <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
-        );
-    }
-    return <Circle className="h-3.5 w-3.5 text-text-muted" />;
+    return (
+        <CheckRunIcon
+            status={check.status}
+            conclusion={check.conclusion}
+            className="size-3.5 shrink-0"
+        />
+    );
 }
 
 const statusColors: Record<string, string> = {

@@ -6,6 +6,7 @@ import {
     computeStatusState,
     StatusCheckIcon,
     StatusContextRow,
+    statusHeadline,
 } from "~/components/ci-status";
 import { CommitSubject } from "~/components/commit-subject";
 import {
@@ -137,10 +138,7 @@ export function CommitRow({
                                     >
                                         <div className="border-border-subtle border-b px-3 py-2">
                                             <div className="font-medium text-xs">
-                                                {commit.statusState ===
-                                                "SUCCESS"
-                                                    ? "All checks have passed"
-                                                    : "Some checks were not successful"}
+                                                {statusHeadline(rollup)}
                                             </div>
                                         </div>
                                         <div className="max-h-80 space-y-1.5 overflow-y-auto p-3">

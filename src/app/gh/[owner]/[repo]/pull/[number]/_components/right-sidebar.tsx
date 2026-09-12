@@ -1,8 +1,9 @@
 "use client";
 
-import { Check, Circle, CircleSlash, XCircle } from "lucide-react";
+import { Check, Circle } from "lucide-react";
 import Image from "next/image";
 import { use, useRef, useState } from "react";
+import { CheckRunIcon, StatusCheckIcon } from "~/components/ci-status";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
 import { GitHubIcon } from "~/components/icons";
 import {
@@ -36,9 +37,14 @@ const CHECK_CATEGORIES: {
     match: (check: CheckRun) => boolean;
 }[] = [
     {
-        label: "pending",
+        label: "in progress",
         color: "#eab308",
-        match: (c) => c.status !== "completed",
+        match: (c) => c.status === "in_progress",
+    },
+    {
+        label: "queued",
+        color: "#a16207",
+        match: (c) => c.status === "queued",
     },
     {
         label: "passed",
@@ -157,10 +163,10 @@ function ChecksTabIcon({ checks }: { checks: CheckRun[] }) {
     let icon: React.ReactNode;
     if (!checks.length) {
         icon = <Circle className="size-3.5 text-text-muted" />;
+    } else if (checks.some((c) => c.status === "in_progress")) {
+        icon = <StatusCheckIcon state="IN_PROGRESS" className="size-3.5" />;
     } else if (checks.some((c) => c.status !== "completed")) {
-        icon = (
-            <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
-        );
+        icon = <StatusCheckIcon state="QUEUED" className="size-3.5" />;
     } else if (checks.every((c) => c.conclusion === "success")) {
         icon = <Check className="size-3.5 text-green-600" />;
     } else {
@@ -350,17 +356,11 @@ function ChecksSection({ checks }: ChecksSectionProps) {
                         target="_blank"
                     >
                         <span className="flex shrink-0 items-center gap-2">
-                            {check.conclusion === "success" ? (
-                                <Check className="h-3.5 w-3.5 text-green-600" />
-                            ) : check.conclusion === "failure" ? (
-                                <XCircle className="h-3.5 w-3.5 text-red-600" />
-                            ) : check.conclusion === "skipped" ? (
-                                <CircleSlash className="h-3.5 w-3.5 text-text-muted" />
-                            ) : check.status === "in_progress" ? (
-                                <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
-                            ) : (
-                                <Circle className="h-3.5 w-3.5 text-text-muted" />
-                            )}
+                            <CheckRunIcon
+                                status={check.status}
+                                conclusion={check.conclusion}
+                                className="size-3.5 shrink-0"
+                            />
                             {check.app?.name === "GitHub Actions" ? (
                                 <GitHubIcon className="size-5 text-text-primary" />
                             ) : check.creator?.avatar_url ? (

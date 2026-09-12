@@ -18,6 +18,11 @@ export interface StatusContext {
     completedAt: string | null;
 }
 
+// States that mean work is actively executing, versus states that mean work is
+// only waiting for a runner. Kept separate so the UI can tell the two apart.
+const RUNNING_STATES = new Set(["IN_PROGRESS"]);
+const QUEUED_STATES = new Set(["QUEUED", "PENDING", "EXPECTED"]);
+
 export function computeStatusState(
     checks: Array<{ state: string }>,
 ): string | null {
@@ -32,18 +37,29 @@ export function computeStatusState(
     ) {
         return "FAILURE";
     }
-    if (
-        checks.some(
-            (c) =>
-                c.state === "IN_PROGRESS" ||
-                c.state === "QUEUED" ||
-                c.state === "PENDING" ||
-                c.state === "EXPECTED",
-        )
-    ) {
+    if (checks.some((c) => RUNNING_STATES.has(c.state))) {
         return "IN_PROGRESS";
     }
+    if (checks.some((c) => QUEUED_STATES.has(c.state))) {
+        return "QUEUED";
+    }
     return "SUCCESS";
+}
+
+/** Canonical check state for a check run's status/conclusion pair. */
+export function checkRunState(
+    status: string,
+    conclusion: string | null,
+): string {
+    return (conclusion ?? status).toUpperCase();
+}
+
+/** Headline for a checks hover card, keyed off the rolled-up state. */
+export function statusHeadline(state: string | null): string {
+    if (state === "SUCCESS") return "All checks have passed";
+    if (state === "IN_PROGRESS") return "Some checks are still running";
+    if (state === "QUEUED") return "Some checks are waiting to start";
+    return "Some checks were not successful";
 }
 
 function formatDuration(
@@ -67,8 +83,51 @@ function statusLabel(state: string): string | null {
     if (state === "CANCELLED") return "cancelled";
     if (state === "SKIPPED") return "skipped";
     if (state === "NEUTRAL") return "neutral";
-    if (state === "IN_PROGRESS" || state === "QUEUED") return null;
+    if (state === "IN_PROGRESS") return "running";
+    if (state === "QUEUED" || state === "PENDING" || state === "EXPECTED") {
+        return "queued";
+    }
     return null;
+}
+
+// Running work: a spinning amber arc around a solid centre dot. The dot keeps
+// the app's pending-dot language and stops a row of spinners reading as noise;
+// the arc adds the motion that a bare dot lacks.
+function RunningCheckIcon({ className }: { className?: string }) {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            className={cn(
+                className,
+                "animate-spin text-yellow-500 motion-reduce:animate-none",
+            )}
+        >
+            <circle cx="12" cy="12" r="3.5" fill="currentColor" />
+            <circle
+                cx="12"
+                cy="12"
+                r="9"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray="42 15"
+            />
+        </svg>
+    );
+}
+
+/**
+ * Queued work: a muted static dot. Same footprint as the running icon so a
+ * check flipping between the two states never shifts the row.
+ */
+export function CheckQueuedIcon({ className }: { className?: string }) {
+    return (
+        <span className={cn(className, "flex items-center justify-center")}>
+            <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
+        </span>
+    );
 }
 
 export function StatusCheckIcon({
@@ -90,17 +149,34 @@ export function StatusCheckIcon({
     if (state === "SKIPPED") {
         return <CircleSlash className={cn(className, "text-text-muted")} />;
     }
-    if (
-        state === "IN_PROGRESS" ||
-        state === "PENDING" ||
-        state === "EXPECTED" ||
-        state === "QUEUED"
-    ) {
-        return (
-            <span className="check-pending-dot size-2.5 shrink-0 rounded-full" />
-        );
+    if (state === "IN_PROGRESS") {
+        return <RunningCheckIcon className={className} />;
+    }
+    if (state === "QUEUED" || state === "PENDING" || state === "EXPECTED") {
+        return <CheckQueuedIcon className={className} />;
     }
     return <Circle className={cn(className, "text-text-muted")} />;
+}
+
+/**
+ * Icon for a check run's status/conclusion pair, the shape servers send for
+ * GitHub check runs and Codeberg/status API contexts.
+ */
+export function CheckRunIcon({
+    status,
+    conclusion,
+    className,
+}: {
+    status: string;
+    conclusion: string | null;
+    className?: string;
+}) {
+    return (
+        <StatusCheckIcon
+            state={checkRunState(status, conclusion)}
+            className={className}
+        />
+    );
 }
 
 export function StatusContextRow({ context }: { context: StatusContext }) {
@@ -131,11 +207,20 @@ export function StatusContextRow({ context }: { context: StatusContext }) {
                     {duration && (
                         <>
                             {label && <span>&middot;</span>}
-                            <span>in {duration}</span>
+                            <span>
+                                {context.completedAt
+                                    ? `in ${duration}`
+                                    : `for ${duration}`}
+                            </span>
                         </>
                     )}
-                    {!label && !duration && context.description && (
-                        <span className="truncate">{context.description}</span>
+                    {!duration && context.description && (
+                        <>
+                            {label && <span>&middot;</span>}
+                            <span className="truncate">
+                                {context.description}
+                            </span>
+                        </>
                     )}
                 </div>
             </div>
@@ -178,7 +263,8 @@ export function StatusChecksHoverCard({
                         failing: 0,
                         cancelled: 0,
                         skipped: 0,
-                        pending: 0,
+                        running: 0,
+                        queued: 0,
                     };
                     for (const ctx of contexts) {
                         switch (ctx.state) {
@@ -196,17 +282,14 @@ export function StatusChecksHoverCard({
                             case "SKIPPED":
                                 counts.skipped++;
                                 break;
+                            case "IN_PROGRESS":
+                                counts.running++;
+                                break;
                             default:
-                                counts.pending++;
+                                counts.queued++;
                                 break;
                         }
                     }
-                    const nonOk =
-                        counts.failing +
-                        counts.cancelled +
-                        counts.skipped +
-                        counts.pending;
-                    const allPassed = nonOk === 0;
                     const parts: string[] = [];
                     if (counts.successful > 0)
                         parts.push(`${counts.successful} successful`);
@@ -216,8 +299,10 @@ export function StatusChecksHoverCard({
                         parts.push(`${counts.cancelled} cancelled`);
                     if (counts.skipped > 0)
                         parts.push(`${counts.skipped} skipped`);
-                    if (counts.pending > 0)
-                        parts.push(`${counts.pending} pending`);
+                    if (counts.running > 0)
+                        parts.push(`${counts.running} in progress`);
+                    if (counts.queued > 0)
+                        parts.push(`${counts.queued} queued`);
                     const summary =
                         parts.length > 1
                             ? parts.slice(0, -1).join(", ") +
@@ -228,9 +313,7 @@ export function StatusChecksHoverCard({
                         <>
                             <div className="border-border-subtle border-b px-3 py-2">
                                 <div className="font-medium text-xs">
-                                    {allPassed
-                                        ? "All checks have passed"
-                                        : "Some checks were not successful"}
+                                    {statusHeadline(rollup)}
                                 </div>
                                 {summary && (
                                     <div className="mt-0.5 text-[11px] text-text-tertiary">
@@ -268,7 +351,7 @@ export function mapChecksListToStatusContexts(
 ): StatusContext[] {
     return items.map((item) => ({
         name: item.name,
-        state: ((item.conclusion ?? item.status) as string).toUpperCase(),
+        state: checkRunState(item.status, item.conclusion),
         description: item.description ?? null,
         url: item.html_url ?? item.details_url ?? null,
         startedAt: item.started_at ?? null,
