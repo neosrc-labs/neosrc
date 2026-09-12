@@ -135,6 +135,16 @@ html {
     background: var(--color-surface-secondary);
 }
 
+/* Shiki emits every token with both themes' colours as CSS variables, so the
+   active theme picks one and switching themes never re-highlights. */
+.shiki-token {
+    color: var(--shiki-light);
+}
+
+.dark .shiki-token {
+    color: var(--shiki-dark);
+}
+
 /* Diff2html tints line-number cells (absolute overlays in unified view)
    with the same color as the content. We remove the separator border and
    use a lighter shade instead, so the numbers read as part of the line

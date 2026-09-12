@@ -1,6 +1,5 @@
 import "~/styles/globals.css";
 import "~/styles/github-alert.css";
-import "highlight.js/styles/github.min.css";
 
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
@@ -9,7 +8,6 @@ import { Footer } from "~/components/footer";
 import { Header } from "~/components/header/header";
 import { SidebarProvider } from "~/components/sidebar-context";
 import { ThemeProvider } from "~/components/theme-provider";
-import { ThemeStylesheets } from "~/components/theme-stylesheets";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { TRPCReactProvider } from "~/trpc/react";
 
@@ -37,7 +35,6 @@ export default function RootLayout({
                         enableSystem
                     >
                         <SidebarProvider>
-                            <ThemeStylesheets />
                             <TRPCReactProvider>
                                 <Header />
                                 <div className="flex min-w-0 flex-1 flex-col">

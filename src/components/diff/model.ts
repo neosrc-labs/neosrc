@@ -5,7 +5,6 @@ import type {
     DiffFile,
     DiffLine,
 } from "diff2html/lib/types";
-import hljs from "highlight.js";
 import type { ReviewComment } from "~/server/github";
 import type {
     DiffAnchor,
@@ -34,25 +33,16 @@ export function parseDiffPatch(
     return files[0] ?? null;
 }
 
+/**
+ * Language tag to highlight a file with, taken from its extension. Shiki
+ * resolves language ids and their aliases (`ts`, `tsx`, `py`, `rs`, `yml`,
+ * ...); a tag it has no grammar for renders as plain text.
+ */
 export function getDiffLanguage(filename: string): string | null {
-    const ext = filename.split(".").pop()?.toLowerCase();
-    if (!ext) return null;
-    const langMap: Record<string, string> = {
-        tsx: "typescript",
-        jsx: "javascript",
-        mjs: "javascript",
-        cjs: "javascript",
-        mts: "typescript",
-        cts: "typescript",
-        vue: "html",
-        svelte: "html",
-    };
-    const lang = langMap[ext] ?? ext;
-    try {
-        return hljs.getLanguage(lang) ? lang : null;
-    } catch {
-        return null;
-    }
+    const name = filename.split("/").pop() ?? filename;
+    const dot = name.lastIndexOf(".");
+    const tag = dot === -1 ? name : name.slice(dot + 1);
+    return tag ? tag.toLowerCase() : null;
 }
 
 export function getLastNewLine(block: DiffBlock): number {

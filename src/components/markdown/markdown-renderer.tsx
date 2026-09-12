@@ -1,6 +1,5 @@
 "use client";
 
-import hljs from "highlight.js";
 import { Check, Copy, Link as LinkIcon } from "lucide-react";
 import {
     Children,
@@ -9,8 +8,9 @@ import {
     type ReactElement,
     type ReactNode,
     useContext,
-    useMemo,
+    useEffect,
     useRef,
+    useState,
 } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
@@ -23,6 +23,7 @@ import { TeamHoverCard } from "~/components/hovercards/team-hover-card";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CopyButton } from "~/components/ui/copy-button";
 import { cn } from "~/lib/utils";
+import { highlightLines } from "~/utils/highlight";
 import { SuggestionBlock } from "./accessories/suggestion-block";
 import { remarkCommitPlugin } from "./plugins/remark-commit";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
@@ -652,22 +653,22 @@ function CodeElement({
     const codeString = Array.isArray(children)
         ? children.join("")
         : String(children ?? "");
-
-    // Fence tags resolve through highlight.js directly, aliases included.
-    // Unknown tags fall back to plain text instead of auto-detection.
     const tag = className?.replace(/^language-/, "").toLowerCase();
-    const language = useMemo(
-        () => (tag && hljs.getLanguage(tag) ? tag : null),
-        [tag],
-    );
-    // highlight.js escapes the source, so the marked-up result is safe to
-    // inject. The token classes are the ones the diff and review-thread views
-    // use, so both surfaces are colored by the same highlight.js theme CSS.
-    const highlighted = useMemo(
-        () =>
-            language ? hljs.highlight(codeString, { language }).value : null,
-        [codeString, language],
-    );
+    const [highlighted, setHighlighted] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!isBlock || !tag) {
+            setHighlighted(null);
+            return;
+        }
+        let cancelled = false;
+        highlightLines(codeString, tag).then((lines) => {
+            if (!cancelled) setHighlighted(lines?.join("\n") ?? null);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [isBlock, tag, codeString]);
 
     if (!isBlock) {
         return <InlineCode>{children}</InlineCode>;
@@ -678,8 +679,8 @@ function CodeElement({
             <pre className="overflow-x-auto rounded-lg bg-surface-tertiary p-4 text-[length:1em] text-text-primary">
                 {highlighted != null ? (
                     <code
-                        className={`language-${language}`}
-                        // biome-ignore lint/security/noDangerouslySetInnerHtml: highlight.js escapes the source before emitting token markup
+                        className={`language-${tag}`}
+                        // biome-ignore lint/security/noDangerouslySetInnerHtml: shiki escapes the source before emitting token markup
                         dangerouslySetInnerHTML={{ __html: highlighted }}
                     />
                 ) : (
