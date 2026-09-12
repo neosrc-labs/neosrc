@@ -161,9 +161,12 @@ test.describe
                 });
 
                 await test.step("Submit the comment", async () => {
+                    // "Close with comment" appears next to this button once
+                    // the box has text, and Playwright matches names by
+                    // substring unless exact is set.
                     const commentButton = page
                         .getByTestId("timeline")
-                        .getByRole("button", { name: "Comment" });
+                        .getByRole("button", { name: "Comment", exact: true });
                     await expect(commentButton).toBeEnabled();
                     await commentButton.click();
                 });
