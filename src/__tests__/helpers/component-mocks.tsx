@@ -126,7 +126,8 @@ export function mockPopover() {
 /**
  * Factory for the ui/dialog module mock. Slots named in `taggedSlots` render
  * a `data-testid` equal to their slot name (e.g. "dialog-content"); other
- * slots render a plain wrapper div.
+ * slots render a plain wrapper div. `Dialog` honors `open`, so closed dialogs
+ * stay out of the DOM like the real Radix root.
  */
 export function mockDialog(taggedSlots: string[] = []) {
     const slot =
@@ -137,7 +138,13 @@ export function mockDialog(taggedSlots: string[] = []) {
             </div>
         );
     return {
-        Dialog: slot("dialog"),
+        Dialog: ({
+            children,
+            open,
+        }: {
+            children?: ReactNode;
+            open?: boolean;
+        }) => (open === false ? null : slot("dialog")({ children })),
         DialogContent: slot("dialog-content"),
         DialogDescription: slot("dialog-description"),
         DialogFooter: slot("dialog-footer"),

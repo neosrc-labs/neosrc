@@ -204,12 +204,14 @@ function Buttons({
         router.push(`/gh/${owner}/${repo}/pull/${number}?scrollTo=bottom`);
     }, [router, owner, repo, number]);
 
-    const dismissReviewMutation = api.reviews.dismiss.useMutation({
-        onSuccess: () => {
-            utils.reviews.getPending.invalidate();
-            utils.reviewComments.list.invalidate();
+    const discardPendingReviewMutation = api.reviews.discardPending.useMutation(
+        {
+            onSuccess: () => {
+                utils.reviews.getPending.invalidate();
+                utils.reviewComments.list.invalidate();
+            },
         },
-    });
+    );
 
     const markAsDraftMutation = api.pulls.markAsDraft.useMutation({
         onSuccess: () => {
@@ -247,13 +249,13 @@ function Buttons({
 
     const handleCancelReview = useCallback(() => {
         if (!pendingReview) return;
-        dismissReviewMutation.mutate({
+        discardPendingReviewMutation.mutate({
             owner,
             repo,
             number,
             reviewId: pendingReview.reviewId,
         });
-    }, [owner, repo, number, pendingReview, dismissReviewMutation]);
+    }, [owner, repo, number, pendingReview, discardPendingReviewMutation]);
 
     const pendingCommentsCount = pendingReview?.comments.length ?? 0;
     const isDraft = !!pullRequest.draft && !markedReady;
@@ -384,14 +386,14 @@ function Buttons({
                     compact
                 />
             ) : null}
-            {canInteract && !dismissReviewMutation.isPending && (
+            {canInteract && !discardPendingReviewMutation.isPending && (
                 <SubmitReviewButton
                     owner={owner}
                     repo={repo}
                     number={number}
                     pendingReview={pendingReview}
                     pendingCommentsCount={pendingCommentsCount}
-                    isDiscarding={dismissReviewMutation.isPending}
+                    isDiscarding={discardPendingReviewMutation.isPending}
                     navigateAndScroll={navigateAndScroll}
                     onDiscardReview={handleCancelReview}
                     isAuthor={isAuthor}

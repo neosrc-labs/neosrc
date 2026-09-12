@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -25,9 +25,10 @@ const mockMutation = vi.hoisted(() =>
         isError: false,
     })),
 );
-const { minimizeMutate, unminimizeMutate } = vi.hoisted(() => ({
+const { minimizeMutate, unminimizeMutate, dismissMutate } = vi.hoisted(() => ({
     minimizeMutate: vi.fn(),
     unminimizeMutate: vi.fn(),
+    dismissMutate: vi.fn(),
 }));
 const mockMinimize = vi.hoisted(() =>
     vi.fn(() => ({
@@ -43,6 +44,13 @@ const mockUnminimize = vi.hoisted(() =>
         isError: false,
     })),
 );
+const mockDismiss = vi.hoisted(() =>
+    vi.fn(() => ({
+        mutate: dismissMutate,
+        isPending: false,
+        isError: false,
+    })),
+);
 
 vi.mock("~/trpc/react", () => ({
     api: {
@@ -54,6 +62,10 @@ vi.mock("~/trpc/react", () => ({
                     setInfiniteData: vi.fn(),
                     invalidate: vi.fn(),
                 },
+            },
+            pulls: {
+                listReviews: { invalidate: vi.fn() },
+                getMergeState: { invalidate: vi.fn() },
             },
         })),
         pulls: {
@@ -71,6 +83,7 @@ vi.mock("~/trpc/react", () => ({
         reviews: {
             minimize: { useMutation: mockMinimize },
             unminimize: { useMutation: mockUnminimize },
+            dismiss: { useMutation: mockDismiss },
         },
         repos: {
             getPermission: { useQuery: vi.fn(() => ({ data: null })) },
@@ -99,7 +112,9 @@ vi.mock("~/components/reaction-picker", () => mockReactionPicker());
 
 vi.mock("~/components/ui/popover", () => mockPopover());
 
-vi.mock("~/components/ui/dialog", () => mockDialog(["dialog"]));
+vi.mock("~/components/ui/dialog", () =>
+    mockDialog(["dialog", "dialog-content"]),
+);
 
 vi.mock("~/components/user-link", () => ({
     UserLink: ({ actor }: { actor: { login: string } | null }) => (
@@ -311,5 +326,102 @@ describe("PullRequestReviewContent minimized reviews", () => {
         expect(
             screen.queryByRole("button", { name: "Unhide" }),
         ).not.toBeInTheDocument();
+    });
+
+    it("offers Dismiss review for a dismissable review with push access", () => {
+        render(
+            <PullRequestReviewContent
+                {...baseProps}
+                permissionContext={{
+                    ...baseProps.permissionContext,
+                    repoPermission: "write",
+                }}
+                event={makeReview({ isMinimized: false, state: "APPROVED" })}
+            />,
+        );
+
+        expect(
+            screen.getByRole("button", { name: "Dismiss review" }),
+        ).toBeInTheDocument();
+    });
+
+    it("does not offer Dismiss review without push access", () => {
+        render(
+            <PullRequestReviewContent
+                {...baseProps}
+                permissionContext={{
+                    ...baseProps.permissionContext,
+                    repoPermission: "read",
+                }}
+                event={makeReview({ isMinimized: false, state: "APPROVED" })}
+            />,
+        );
+
+        expect(
+            screen.queryByRole("button", { name: "Dismiss review" }),
+        ).not.toBeInTheDocument();
+    });
+
+    it("does not offer Dismiss review for a commented review", () => {
+        render(
+            <PullRequestReviewContent
+                {...baseProps}
+                permissionContext={{
+                    ...baseProps.permissionContext,
+                    repoPermission: "write",
+                }}
+                event={makeReview({
+                    isMinimized: false,
+                    state: "COMMENTED",
+                })}
+            />,
+        );
+
+        expect(
+            screen.queryByRole("button", { name: "Dismiss review" }),
+        ).not.toBeInTheDocument();
+    });
+
+    it("dismisses a review with the entered message", async () => {
+        const user = userEvent.setup();
+        render(
+            <PullRequestReviewContent
+                {...baseProps}
+                permissionContext={{
+                    ...baseProps.permissionContext,
+                    repoPermission: "write",
+                }}
+                event={makeReview({
+                    isMinimized: false,
+                    state: "CHANGES_REQUESTED",
+                })}
+            />,
+        );
+
+        await user.click(
+            screen.getByRole("button", { name: "Dismiss review" }),
+        );
+
+        const dialog = screen.getByTestId("dialog-content");
+        const submit = within(dialog).getByRole("button", {
+            name: "Dismiss review",
+        });
+        expect(submit).toBeDisabled();
+
+        await user.type(
+            within(dialog).getByLabelText("Reason for dismissing this review"),
+            "Superseded by the new commit",
+        );
+        expect(submit).toBeEnabled();
+
+        await user.click(submit);
+
+        expect(dismissMutate).toHaveBeenCalledWith({
+            owner: "ranger-ross",
+            repo: "jj-fun-times",
+            number: 29,
+            reviewId: 4837673782,
+            message: "Superseded by the new commit",
+        });
     });
 });
