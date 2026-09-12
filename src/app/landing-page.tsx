@@ -1,7 +1,7 @@
 import { GitPullRequest, LogIn } from "lucide-react";
 import { redirect } from "next/navigation";
 
-import { auth } from "~/server/auth";
+import { auth, isCodebergConfigured } from "~/server/auth";
 
 function Step({
     number,
@@ -94,30 +94,34 @@ export function LandingPage() {
                             Sign in with GitHub
                         </button>
                     </form>
-                    <form>
-                        <button
-                            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-teal-700 px-6 py-3 font-semibold text-white transition hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-700"
-                            type="submit"
-                            formAction={async () => {
-                                "use server";
-                                const res = await auth.api.signInWithOAuth2({
-                                    body: {
-                                        providerId: "codeberg",
-                                        callbackURL: "/onboarding",
-                                    },
-                                });
-                                if (!res.url) {
-                                    throw new Error(
-                                        "No URL returned from signInWithOAuth2",
+                    {isCodebergConfigured() && (
+                        <form>
+                            <button
+                                className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-teal-700 px-6 py-3 font-semibold text-white transition hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-700"
+                                type="submit"
+                                formAction={async () => {
+                                    "use server";
+                                    const res = await auth.api.signInWithOAuth2(
+                                        {
+                                            body: {
+                                                providerId: "codeberg",
+                                                callbackURL: "/onboarding",
+                                            },
+                                        },
                                     );
-                                }
-                                redirect(res.url);
-                            }}
-                        >
-                            <LogIn className="h-4 w-4" />
-                            Sign in with Codeberg
-                        </button>
-                    </form>
+                                    if (!res.url) {
+                                        throw new Error(
+                                            "No URL returned from signInWithOAuth2",
+                                        );
+                                    }
+                                    redirect(res.url);
+                                }}
+                            >
+                                <LogIn className="h-4 w-4" />
+                                Sign in with Codeberg
+                            </button>
+                        </form>
+                    )}
                 </div>
             </div>
         </main>

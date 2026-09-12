@@ -109,6 +109,58 @@ describe("syncRouter.currentUser", () => {
         });
         expect(syncCurrentUserMock).not.toHaveBeenCalled();
     });
+
+    it("syncs a real provider while the shared anonymous token is skipped", async () => {
+        getGitHubTokenMock.mockResolvedValue("anon-token");
+        getCodebergTokenMock.mockResolvedValue("cb-token");
+        isAnonymousTokenMock.mockReturnValue(true);
+
+        const caller = await createCaller();
+        await expect(caller.currentUser()).resolves.toEqual({
+            codeberg: sampleResult,
+        });
+        expect(syncCurrentUserMock).toHaveBeenCalledTimes(1);
+        expect(syncCurrentUserMock).toHaveBeenCalledWith(expect.anything(), {
+            provider: "codeberg",
+            accessToken: "cb-token",
+            userId: "user-1",
+            forceFull: true,
+        });
+    });
+
+    it("keeps the other provider's result when one provider's API fails", async () => {
+        getGitHubTokenMock.mockResolvedValue("gh-token");
+        getCodebergTokenMock.mockResolvedValue("cb-token");
+        isAnonymousTokenMock.mockReturnValue(false);
+        syncCurrentUserMock.mockImplementation(async (_db, input) => {
+            if (input.provider === "codeberg") {
+                throw new Error(
+                    "Codeberg API /api/v1/user/orgs failed with status 403",
+                );
+            }
+            return sampleResult;
+        });
+
+        const caller = await createCaller();
+        await expect(caller.currentUser()).resolves.toEqual({
+            github: sampleResult,
+        });
+    });
+
+    it("rejects when every connected provider fails", async () => {
+        getGitHubTokenMock.mockResolvedValue("gh-token");
+        getCodebergTokenMock.mockRejectedValue(
+            new Error("Codeberg account not connected"),
+        );
+        isAnonymousTokenMock.mockReturnValue(false);
+        syncCurrentUserMock.mockRejectedValue(new Error("GitHub API down"));
+
+        const caller = await createCaller();
+        await expect(caller.currentUser()).rejects.toMatchObject({
+            code: "INTERNAL_SERVER_ERROR",
+            message: expect.stringContaining("GitHub API down"),
+        });
+    });
 });
 
 describe("syncRouter.poll", () => {
@@ -157,6 +209,25 @@ describe("syncRouter.poll", () => {
         const caller = await createCaller();
         await expect(caller.poll()).resolves.toEqual({
             github: { changed: false, result: null },
+        });
+    });
+
+    it("keeps polling the working provider when another fails", async () => {
+        getGitHubTokenMock.mockResolvedValue("gh-token");
+        getCodebergTokenMock.mockResolvedValue("cb-token");
+        isAnonymousTokenMock.mockReturnValue(false);
+        syncCurrentUserMock.mockImplementation(async (_db, input) => {
+            if (input.provider === "codeberg") {
+                throw new Error(
+                    "Codeberg API /api/v1/user/orgs failed with status 403",
+                );
+            }
+            return sampleResult;
+        });
+
+        const caller = await createCaller();
+        await expect(caller.poll()).resolves.toEqual({
+            github: { changed: true, result: sampleResult },
         });
     });
 

@@ -168,12 +168,14 @@ export function ProfileView({
     githubUsername,
     codebergUsername,
     githubAppInstallationUrl,
+    codebergEnabled,
 }: {
     name: string;
     image: string | null;
     githubUsername: string | null;
     codebergUsername: string | null;
     githubAppInstallationUrl: string | null;
+    codebergEnabled: boolean;
 }) {
     const [loggingOut, setLoggingOut] = useState(false);
     const router = useRouter();
@@ -237,6 +239,7 @@ export function ProfileView({
                 <AccountManager
                     githubUsername={githubUsername}
                     codebergUsername={codebergUsername}
+                    codebergEnabled={codebergEnabled}
                 />
             </section>
 

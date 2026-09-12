@@ -6,21 +6,29 @@ import { authClient } from "~/lib/auth-client";
 export function AccountManager({
     githubUsername,
     codebergUsername,
+    codebergEnabled,
 }: {
     githubUsername: string | null;
     codebergUsername: string | null;
+    codebergEnabled: boolean;
 }) {
-    const [providers, setProviders] = useState([
+    const [providers, setProviders] = useState(() => [
         {
             providerId: "github",
             label: "GitHub",
             username: githubUsername,
         },
-        {
-            providerId: "codeberg",
-            label: "Codeberg",
-            username: codebergUsername,
-        },
+        // A linked Codeberg account is kept visible without the provider
+        // configured so it can still be unlinked; there is nothing to link to.
+        ...(codebergEnabled || codebergUsername
+            ? [
+                  {
+                      providerId: "codeberg",
+                      label: "Codeberg",
+                      username: codebergUsername,
+                  },
+              ]
+            : []),
     ]);
     const [loading, setLoading] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
