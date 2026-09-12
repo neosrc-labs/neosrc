@@ -198,7 +198,11 @@ function SwipeView({
 
     return (
         <div
-            className="relative select-none overflow-hidden bg-[#f0f0f0] dark:bg-zinc-900"
+            className="relative flex select-none items-center justify-center overflow-hidden bg-[#f0f0f0] dark:bg-zinc-900"
+            onMouseDown={(e) => {
+                setIsDragging(true);
+                updatePosition(e.clientX);
+            }}
             onTouchStart={(e) => {
                 setIsDragging(true);
                 const touch = e.touches[0];
@@ -206,50 +210,40 @@ function SwipeView({
                     updatePosition(touch.clientX);
                 }
             }}
-            onMouseDown={(e) => {
-                setIsDragging(true);
-                updatePosition(e.clientX);
-            }}
+            ref={containerRef}
         >
+            <ImageWithFallback
+                alt="Old version"
+                className="max-h-[600px] max-w-full object-contain"
+                src={oldUrl}
+            />
+            {/* Same centered box as the old image, clipped at the divider so the
+                two layers stay registered. */}
             <div
-                ref={containerRef}
-                className="relative bg-[#f0f0f0] dark:bg-zinc-900"
+                className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
+                style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}
             >
-                <ImageWithFallback
-                    alt="Old version"
-                    className="block max-h-[600px] w-full object-contain"
-                    src={oldUrl}
+                <Image
+                    alt="New version"
+                    className="max-h-[600px] max-w-full object-contain"
+                    draggable={false}
+                    height={0}
+                    sizes="100vw"
+                    src={newUrl}
+                    style={{ height: "auto", width: "auto" }}
+                    unoptimized
+                    width={0}
                 />
-                <div
-                    className="absolute top-0 left-0 h-full overflow-hidden"
-                    style={{ width: `${position}%` }}
-                >
-                    <Image
-                        alt="New version"
-                        className="block max-h-[600px] w-full object-contain"
-                        draggable={false}
-                        src={newUrl}
-                        unoptimized
-                        width={0}
-                        height={0}
-                        sizes="100vw"
-                        style={{
-                            width: `${(1 / (position / 100)) * 100}%`,
-                            maxWidth: "none",
-                            height: "auto",
-                        }}
-                    />
-                </div>
-                <div
-                    className="absolute top-0 h-full w-[3px] cursor-ew-resize bg-white shadow-[0_0_4px_rgba(0,0,0,0.5)]"
-                    style={{
-                        left: `${position}%`,
-                        transform: "translateX(-1.5px)",
-                    }}
-                >
-                    <div className="absolute top-1/2 left-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md">
-                        <ArrowLeftRight className="h-4 w-4 text-text-secondary" />
-                    </div>
+            </div>
+            <div
+                className="absolute top-0 h-full w-[3px] cursor-ew-resize bg-white shadow-[0_0_4px_rgba(0,0,0,0.5)]"
+                style={{
+                    left: `${position}%`,
+                    transform: "translateX(-1.5px)",
+                }}
+            >
+                <div className="absolute top-1/2 left-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md">
+                    <ArrowLeftRight className="h-4 w-4 text-text-secondary" />
                 </div>
             </div>
         </div>
