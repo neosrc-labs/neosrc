@@ -15,7 +15,9 @@ export interface ParsedQuery {
     tokens: QueryToken[];
 }
 
-const QUALIFIER_RE = /(\w+):("[^"]*"|\S+)/g;
+// Unquoted values stop at whitespace or a parenthesis so `(is:closed)` keeps
+// its closing bracket instead of swallowing it into the value.
+const QUALIFIER_RE = /(\w+):("[^"]*"|[^\s()]+)/g;
 
 export function parseQuery(query: string): ParsedQuery {
     const tokens: QueryToken[] = [];

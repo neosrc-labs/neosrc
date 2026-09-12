@@ -46,6 +46,9 @@ const UNPARSED_HINT =
     "The AND/OR groups could not be parsed, so the terms were searched together.";
 const OR_KEYWORD_HINT =
     "Codeberg search has no OR and the OR terms were treated as AND.";
+
+// Qualifiers the Codeberg provider applies itself (see parseForgejoQuery).
+const FORGEJO_APPLIED_KEYS = new Set(["is", "author", "label", "has", "no"]);
 const NOT_TERM_HINT = "NOT must be followed by a search term.";
 const NOT_FILTER_HINT =
     "Codeberg search cannot exclude a filter, so NOT was ignored.";
@@ -207,12 +210,22 @@ function parseFactor(tokens: Token[], state: { index: number }): Node {
     return { kind: "atom", token };
 }
 
+// Caps how many conjunctions expansion may build. Nested ORs multiply, so a
+// query such as (a OR b) AND (c OR d) AND ... would otherwise allocate
+// exponentially before the branch count is checked. Anything past the cap is
+// already over MAX_BRANCHES, so truncating only shortens the work, never a
+// query that would have been searched.
+const MAX_DNF_EXPANSION = 64;
+
 function cross(parts: Conjunction[][]): Conjunction[] {
     let result: Conjunction[] = [[]];
     for (const part of parts) {
         const next: Conjunction[] = [];
         for (const left of result) {
-            for (const right of part) next.push([...left, ...right]);
+            for (const right of part) {
+                next.push([...left, ...right]);
+                if (next.length >= MAX_DNF_EXPANSION) return next;
+            }
         }
         result = next;
     }
@@ -261,9 +274,7 @@ function renderLiteral(literal: Literal): string {
 function renderAndOnly(tokens: Token[]): string {
     return join(
         tokens.filter(
-            (token) =>
-                token.kind !== "paren" &&
-                !(token.kind === "operator" && token.operator === "OR"),
+            (token) => token.kind !== "paren" && token.kind !== "operator",
         ),
     );
 }
@@ -391,7 +402,13 @@ export function translateForgejoKeywords(query: string): BooleanTranslation {
         const token = tokens[i];
         if (token === undefined) break;
 
-        if (token.kind === "qualifier") continue;
+        if (token.kind === "qualifier") {
+            // Everything else would be dropped silently, so say so.
+            if (token.key && !FORGEJO_APPLIED_KEYS.has(token.key)) {
+                unsupported ??= `Codeberg search does not apply ${token.key}: filters, so they were ignored.`;
+            }
+            continue;
+        }
 
         if (token.kind === "paren") {
             unsupported ??= CB_PARENTHESES_HINT;
