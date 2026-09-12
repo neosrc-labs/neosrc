@@ -174,7 +174,7 @@ describe("planGithubQuery", () => {
 });
 
 describe("translateForgejoKeywords", () => {
-    it("makes bare terms required so they are ANDed", () => {
+    it("makes bare terms required so they are combined with AND", () => {
         expect(translateForgejoKeywords("foo bar").query).toBe("+foo +bar");
     });
 
@@ -202,7 +202,7 @@ describe("translateForgejoKeywords", () => {
         );
     });
 
-    it("reports OR and keeps the terms ANDed", () => {
+    it("reports OR and keeps the terms combined with AND", () => {
         const result = translateForgejoKeywords("foo OR bar");
         expect(result.query).toBe("+foo +bar");
         expect(result.unsupported).not.toBeNull();
