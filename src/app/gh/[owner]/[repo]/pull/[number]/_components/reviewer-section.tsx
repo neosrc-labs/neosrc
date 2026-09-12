@@ -7,6 +7,7 @@ import {
     CircleSlash,
     MessageSquare,
     MoreVertical,
+    RefreshCw,
     XCircle,
 } from "lucide-react";
 import Image from "next/image";
@@ -63,6 +64,9 @@ export function ReviewerSection({
 }) {
     const [operations, setOperations] = useState<ReviewerOperation[]>([]);
     const [showAll, setShowAll] = useState(false);
+    const [reRequestedLogins, setReRequestedLogins] = useState<Set<string>>(
+        new Set(),
+    );
     const [dismissTarget, setDismissTarget] = useState<{
         reviewId: number;
         login: string;
@@ -72,6 +76,7 @@ export function ReviewerSection({
     useEffect(() => {
         setOperations([]);
         setShowAll(false);
+        setReRequestedLogins(new Set());
         setDismissTarget(null);
     }, [pullRequestPromise]);
 
@@ -126,6 +131,27 @@ export function ReviewerSection({
         );
     };
 
+    /**
+     * Re-request a review from someone who already reviewed. Same request as
+     * adding a reviewer; the login is tracked locally so the row shows as
+     * pending until the request is fulfilled.
+     */
+    const handleReRequestReview = (reviewer: Reviewer) => {
+        setReRequestedLogins((prev) => new Set(prev).add(reviewer.login));
+        addMutation.mutate(
+            { owner, repo, number, reviewer: reviewer.login },
+            {
+                onError: () => {
+                    setReRequestedLogins((prev) => {
+                        const next = new Set(prev);
+                        next.delete(reviewer.login);
+                        return next;
+                    });
+                },
+            },
+        );
+    };
+
     function mergeReviewers(
         requested: Reviewer[],
         reviews: Array<{ user: Reviewer | null }>,
@@ -145,13 +171,16 @@ export function ReviewerSection({
         });
     }
 
+    /**
+     * Latest review decision per reviewer. Pending requests are handled at
+     * display time so a re-request does not clear an existing approval.
+     */
     function buildReviewStateMap(
         reviews: Array<{
             user: { login: string } | null;
             state: string;
             submitted_at?: string | null;
         }>,
-        requestedLogins: Set<string>,
     ): Map<string, string> {
         const map = new Map<string, string>();
         for (const review of reviews) {
@@ -164,11 +193,6 @@ export function ReviewerSection({
                 map.set(login, "DISMISSED");
             } else if (state === "COMMENTED" && !map.has(login)) {
                 map.set(login, "COMMENTED");
-            }
-        }
-        for (const login of requestedLogins) {
-            if (map.get(login) === "COMMENTED") {
-                map.set(login, "PENDING");
             }
         }
         return map;
@@ -255,17 +279,16 @@ export function ReviewerSection({
                         return <FieldSkeleton />;
                     }
                     const reviews = reviewsQuery.data ?? [];
-                    const reviewStateMap = buildReviewStateMap(
-                        reviews,
-                        new Set(
-                            pullRequest.requested_reviewers?.map(
-                                (r) => r.login,
-                            ) ?? [],
-                        ),
-                    );
+                    const reviewStateMap = buildReviewStateMap(reviews);
                     const reviewSortMap = buildReviewSortMap(reviews);
                     const dismissableReviewMap =
                         buildDismissableReviewMap(reviews);
+                    const requestedLogins = new Set([
+                        ...(pullRequest.requested_reviewers ?? []).map(
+                            (r) => r.login,
+                        ),
+                        ...reRequestedLogins,
+                    ]);
                     const requiredApprovals =
                         mergeReqsQuery.data?.requiredApprovingReviewCount ?? 0;
                     const approvedCount = [...reviewStateMap.values()].filter(
@@ -296,6 +319,13 @@ export function ReviewerSection({
                                         reviewSortMap={reviewSortMap}
                                         dismissableReviewMap={
                                             dismissableReviewMap
+                                        }
+                                        requestedLogins={requestedLogins}
+                                        canReRequestReviews={canEdit(
+                                            permissionContext,
+                                        )}
+                                        onReRequestReview={
+                                            handleReRequestReview
                                         }
                                         canDismissReviews={canPush(
                                             permissionContext,
@@ -400,6 +430,9 @@ function ReviewerSectionContent({
     reviewStateMap,
     reviewSortMap,
     dismissableReviewMap,
+    requestedLogins,
+    canReRequestReviews,
+    onReRequestReview,
     canDismissReviews,
     onDismissReview,
     codeOwnerLogins,
@@ -411,6 +444,9 @@ function ReviewerSectionContent({
     reviewStateMap: Map<string, string>;
     reviewSortMap: Map<string, number>;
     dismissableReviewMap: Map<string, number>;
+    requestedLogins: Set<string>;
+    canReRequestReviews: boolean;
+    onReRequestReview: (reviewer: Reviewer) => void;
     canDismissReviews: boolean;
     onDismissReview: (reviewId: number, login: string) => void;
     codeOwnerLogins: Set<string>;
@@ -446,11 +482,16 @@ function ReviewerSectionContent({
                 }`}
             >
                 {visibleReviewers.map((reviewer) => {
-                    const state =
-                        reviewStateMap.get(reviewer.login) ?? "PENDING";
+                    const isPending = requestedLogins.has(reviewer.login);
+                    const state = isPending
+                        ? "PENDING"
+                        : (reviewStateMap.get(reviewer.login) ?? "PENDING");
                     const dismissableReviewId = dismissableReviewMap.get(
                         reviewer.login,
                     );
+                    const showReRequest = canReRequestReviews && !isPending;
+                    const showDismiss =
+                        canDismissReviews && dismissableReviewId !== undefined;
                     return (
                         <li
                             className="group flex items-center gap-2 text-sm"
@@ -479,14 +520,23 @@ function ReviewerSectionContent({
                                 </span>
                             )}
                             <span className="ml-auto flex items-center gap-1">
-                                {canDismissReviews &&
-                                    dismissableReviewId !== undefined && (
-                                        <ReviewerDismissMenu
-                                            login={reviewer.login}
-                                            reviewId={dismissableReviewId}
-                                            onDismiss={onDismissReview}
-                                        />
-                                    )}
+                                {(showReRequest || showDismiss) && (
+                                    <ReviewerActionsMenu
+                                        login={reviewer.login}
+                                        canReRequest={showReRequest}
+                                        onReRequest={() =>
+                                            onReRequestReview(reviewer)
+                                        }
+                                        canDismiss={showDismiss}
+                                        onDismiss={() =>
+                                            dismissableReviewId !== undefined &&
+                                            onDismissReview(
+                                                dismissableReviewId,
+                                                reviewer.login,
+                                            )
+                                        }
+                                    />
+                                )}
                                 {state === "APPROVED" && (
                                     <Tooltip>
                                         <TooltipTrigger asChild>
@@ -567,16 +617,22 @@ function ReviewerSectionContent({
     );
 }
 
-function ReviewerDismissMenu({
+function ReviewerActionsMenu({
     login,
-    reviewId,
+    canReRequest,
+    onReRequest,
+    canDismiss,
     onDismiss,
 }: {
     login: string;
-    reviewId: number;
-    onDismiss: (reviewId: number, login: string) => void;
+    canReRequest: boolean;
+    onReRequest: () => void;
+    canDismiss: boolean;
+    onDismiss: () => void;
 }) {
     const [open, setOpen] = useState(false);
+    const itemClass =
+        "flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary";
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -588,18 +644,33 @@ function ReviewerDismissMenu({
                     <MoreVertical size={14} />
                 </button>
             </PopoverTrigger>
-            <PopoverContent className="w-44 bg-surface p-1" align="end">
-                <button
-                    type="button"
-                    onClick={() => {
-                        setOpen(false);
-                        onDismiss(reviewId, login);
-                    }}
-                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                >
-                    <CircleSlash size={14} />
-                    Dismiss review
-                </button>
+            <PopoverContent className="w-48 bg-surface p-1" align="end">
+                {canReRequest && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setOpen(false);
+                            onReRequest();
+                        }}
+                        className={itemClass}
+                    >
+                        <RefreshCw size={14} />
+                        Re-request review
+                    </button>
+                )}
+                {canDismiss && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setOpen(false);
+                            onDismiss();
+                        }}
+                        className={itemClass}
+                    >
+                        <CircleSlash size={14} />
+                        Dismiss review
+                    </button>
+                )}
             </PopoverContent>
         </Popover>
     );
