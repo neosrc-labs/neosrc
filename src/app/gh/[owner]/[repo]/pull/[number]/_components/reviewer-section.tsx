@@ -102,6 +102,19 @@ export function ReviewerSection({
         { staleTime: 30_000 },
     );
 
+    const reviews = reviewsQuery.data ?? [];
+    const reviewStateMap = buildReviewStateMap(reviews);
+    const requiredApprovals =
+        mergeReqsQuery.data?.requiredApprovingReviewCount ?? 0;
+    const approvedCount = [...reviewStateMap.values()].filter(
+        (state) => state === "APPROVED",
+    ).length;
+    // Wait for the requirement count so the header badge does not pop in.
+    const showRequiredApprovals =
+        requiredApprovals > 0 &&
+        !reviewsQuery.isPending &&
+        !mergeReqsQuery.isPending;
+
     const handleAdd = (reviewer: Reviewer) => {
         const repoUser = usersData.find((u) => u.login === reviewer.login);
         if (!repoUser) return;
@@ -243,7 +256,22 @@ export function ReviewerSection({
     return (
         <>
             <div className="flex items-start justify-between">
-                <h3 className="text-text-primary">Reviewers</h3>
+                <div className="flex items-baseline gap-1.5">
+                    <h3 className="text-text-primary">Reviewers</h3>
+                    {showRequiredApprovals && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span className="cursor-default text-text-tertiary text-xs">
+                                    ({approvedCount} of {requiredApprovals})
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                                {approvedCount} of {requiredApprovals} required
+                                approvals
+                            </TooltipContent>
+                        </Tooltip>
+                    )}
+                </div>
                 <Async promise={pullRequestPromise} fallback={null}>
                     {(pullRequest) => (
                         <Async
@@ -273,13 +301,9 @@ export function ReviewerSection({
             </div>
             <Async promise={pullRequestPromise} fallback={<FieldSkeleton />}>
                 {(pullRequest) => {
-                    // Wait for the requirement count too: revealing the
-                    // approvals line later would shift the list down.
                     if (reviewsQuery.isPending || mergeReqsQuery.isPending) {
                         return <FieldSkeleton />;
                     }
-                    const reviews = reviewsQuery.data ?? [];
-                    const reviewStateMap = buildReviewStateMap(reviews);
                     const reviewSortMap = buildReviewSortMap(reviews);
                     const dismissableReviewMap =
                         buildDismissableReviewMap(reviews);
@@ -289,67 +313,47 @@ export function ReviewerSection({
                         ),
                         ...reRequestedLogins,
                     ]);
-                    const requiredApprovals =
-                        mergeReqsQuery.data?.requiredApprovingReviewCount ?? 0;
-                    const approvedCount = [...reviewStateMap.values()].filter(
-                        (state) => state === "APPROVED",
-                    ).length;
                     return (
                         <Async
                             promise={permissionContextPromise}
                             fallback={null}
                         >
                             {(permissionContext) => (
-                                <>
-                                    {requiredApprovals > 0 && (
-                                        <p className="text-text-tertiary text-xs">
-                                            {approvedCount} of{" "}
-                                            {requiredApprovals} required
-                                            approvals
-                                        </p>
+                                <ReviewerSectionContent
+                                    reviewers={mergeReviewers(
+                                        pullRequest.requested_reviewers ?? [],
+                                        reviews,
+                                        pullRequest.user?.login,
                                     )}
-                                    <ReviewerSectionContent
-                                        reviewers={mergeReviewers(
-                                            pullRequest.requested_reviewers ??
-                                                [],
-                                            reviews,
-                                            pullRequest.user?.login,
-                                        )}
-                                        reviewStateMap={reviewStateMap}
-                                        reviewSortMap={reviewSortMap}
-                                        dismissableReviewMap={
-                                            dismissableReviewMap
-                                        }
-                                        requestedLogins={requestedLogins}
-                                        canReRequestReviews={canEdit(
-                                            permissionContext,
-                                        )}
-                                        onReRequestReview={
-                                            handleReRequestReview
-                                        }
-                                        canDismissReviews={canPush(
-                                            permissionContext,
-                                        )}
-                                        onDismissReview={(reviewId, login) =>
-                                            setDismissTarget({
-                                                reviewId,
-                                                login,
-                                            })
-                                        }
-                                        codeOwnerLogins={
-                                            new Set(
-                                                mergeStateQuery.data
-                                                    ?.codeOwnerReviewerLogins ??
-                                                    [],
-                                            )
-                                        }
-                                        operations={operations}
-                                        showAll={showAll}
-                                        onToggleShowAll={() =>
-                                            setShowAll((prev) => !prev)
-                                        }
-                                    />
-                                </>
+                                    reviewStateMap={reviewStateMap}
+                                    reviewSortMap={reviewSortMap}
+                                    dismissableReviewMap={dismissableReviewMap}
+                                    requestedLogins={requestedLogins}
+                                    canReRequestReviews={canEdit(
+                                        permissionContext,
+                                    )}
+                                    onReRequestReview={handleReRequestReview}
+                                    canDismissReviews={canPush(
+                                        permissionContext,
+                                    )}
+                                    onDismissReview={(reviewId, login) =>
+                                        setDismissTarget({
+                                            reviewId,
+                                            login,
+                                        })
+                                    }
+                                    codeOwnerLogins={
+                                        new Set(
+                                            mergeStateQuery.data
+                                                ?.codeOwnerReviewerLogins ?? [],
+                                        )
+                                    }
+                                    operations={operations}
+                                    showAll={showAll}
+                                    onToggleShowAll={() =>
+                                        setShowAll((prev) => !prev)
+                                    }
+                                />
                             )}
                         </Async>
                     );
