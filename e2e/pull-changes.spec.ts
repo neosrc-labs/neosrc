@@ -924,7 +924,9 @@ async function runDragRangeCommentScenario(
         expect(dragged).toBe(true);
         // Wait until React commits the extended range before releasing.
         await expect(
-            fileDiff.locator('tbody tr[data-new-line="4"] td.border-l-4'),
+            fileDiff
+                .locator('tbody tr[data-new-line="4"] td.d2h-split-selected')
+                .first(),
         ).toBeVisible({ timeout: 10_000 });
         await page.evaluate(() => {
             document.dispatchEvent(
@@ -970,18 +972,20 @@ async function runGapExpansionScenario(
         `[id="${gapFile.filename.replace(/\//g, "-")}"]`,
     );
 
+    // Two gaps render unfold rows: the one between the hunks and the trailing
+    // one at the end of the file. Only the first carries the next hunk's
+    // header ("@@ ..."), so filter on it instead of matching both.
+    const unfoldRow = fileDiff
+        .locator("tbody tr:has(button[title='Expand lines above'])")
+        .filter({ hasText: "@@" });
+
     await test.step("Verify the unfold row between hunks spans the content columns", async () => {
-        const unfoldRow = fileDiff.locator(
-            "tbody tr:has(button[title='Expand lines above'])",
-        );
         await expect(unfoldRow).toBeVisible();
         await expect(unfoldRow.locator('td[colspan="3"]')).toBeVisible();
     });
 
     await test.step("Expand the lines above the next hunk", async () => {
-        await fileDiff
-            .locator('tbody button[title="Expand lines above"]')
-            .click();
+        await unfoldRow.locator('button[title="Expand lines above"]').click();
     });
 
     await test.step("Verify the revealed gap rows use the old-file numbers", async () => {
