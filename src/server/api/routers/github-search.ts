@@ -128,19 +128,18 @@ export async function searchGqlItems<
     return { ...result, items: result.items.map(options.mapItem) };
 }
 
-// Splits the single state qualifier the list injects from the rest of the
-// query. Returns the last one when several are present.
+// Splits the state qualifier the list injects, which it always puts first, from
+// the rest of the query. A state nested inside a branch stays where it is.
 function splitState(
     query: string,
     countStates: ReadonlyArray<"open" | "closed" | "merged">,
 ): { state: "open" | "closed" | "merged" | null; rest: string } {
     const alternatives = countStates.join("|");
-    const pattern = () =>
-        new RegExp(`(?<=^|\\s)is:(${alternatives})(?=\\s|$)`, "g");
-    const matches = [...query.matchAll(pattern())];
-    const last = matches[matches.length - 1]?.[1];
-    const state = (last as "open" | "closed" | "merged" | undefined) ?? null;
-    const rest = query.replace(pattern(), " ").replace(/\s+/g, " ").trim();
+    const match = new RegExp(`^\\s*is:(${alternatives})(?=\\s|$)`).exec(query);
+    const state =
+        (match?.[1] as "open" | "closed" | "merged" | undefined) ?? null;
+    if (!match) return { state: null, rest: query.trim() };
+    const rest = query.slice(match[0].length).replace(/\s+/g, " ").trim();
     return { state, rest };
 }
 

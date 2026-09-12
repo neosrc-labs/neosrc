@@ -112,6 +112,23 @@ describe("planGithubQuery", () => {
         expect(planGithubQuery("NOT working").branches).toEqual(["-working"]);
     });
 
+    it("drops every operator from a fallback query", () => {
+        expect(planGithubQuery("foo NOT").branches).toEqual(["foo"]);
+        const large = planGithubQuery(
+            "(a OR b) AND (c OR d) AND (e OR f) AND (g OR h) AND (i OR j)",
+        );
+        expect(large.branches).toEqual(["a b c d e f g h i j"]);
+        expect(large.unsupported).not.toBeNull();
+    });
+
+    it("bounds expansion of deeply nested OR groups", () => {
+        const pairs = Array.from({ length: 20 }, (_, i) => `(a${i} OR b${i})`);
+        const plan = planGithubQuery(pairs.join(" AND "));
+        expect(plan.unsupported).not.toBeNull();
+        expect(plan.branches).toHaveLength(1);
+        expect(plan.branches[0]).not.toContain("OR");
+    });
+
     it("falls back to the plain terms when the query cannot be parsed", () => {
         const plan = planGithubQuery("label:a OR");
         expect(plan.branches).toEqual(["label:a"]);
@@ -200,6 +217,15 @@ describe("translateForgejoKeywords", () => {
         expect(translateForgejoKeywords("label:bug foo is:open").query).toBe(
             "+foo",
         );
+        expect(
+            translateForgejoKeywords("label:bug foo is:open").unsupported,
+        ).toBeNull();
+    });
+
+    it("reports qualifiers the provider does not apply", () => {
+        const result = translateForgejoKeywords("assignee:bob foo");
+        expect(result.query).toBe("+foo");
+        expect(result.unsupported).toContain("assignee:");
     });
 
     it("reports OR and keeps the terms combined with AND", () => {

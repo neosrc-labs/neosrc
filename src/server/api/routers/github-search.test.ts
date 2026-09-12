@@ -166,6 +166,25 @@ describe("searchGqlItems union", () => {
         ]);
     });
 
+    it("leaves a branch-local state qualifier in its own branch", async () => {
+        const harness = makeOptions({
+            query: "label:a OR is:closed label:b",
+            items: {
+                "label:a": [fakeItem(1, "2024-01-02")],
+                "is:closed label:b": [fakeItem(2, "2024-01-01")],
+            },
+            counts: { "label:a|open": 1, "is:closed label:b|open": 1 },
+        });
+
+        const result = await searchGqlItems(harness.options);
+
+        expect(harness.searched.sort()).toEqual([
+            "repo:own/repo is:issue is:closed label:b",
+            "repo:own/repo is:issue label:a",
+        ]);
+        expect(result.items.map((item) => item.databaseId)).toEqual([1, 2]);
+    });
+
     it("merges, dedupes and sorts the branches", async () => {
         const harness = makeOptions({
             query,

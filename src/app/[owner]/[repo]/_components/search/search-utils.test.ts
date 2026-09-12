@@ -3,6 +3,7 @@ import {
     formatQuery,
     matchQualifierPrefix,
     parseQuery,
+    removeQualifiersByKey,
     toggleQualifier,
 } from "./search-utils";
 
@@ -83,6 +84,13 @@ describe("toggleQualifier", () => {
         expect(toggleQualifier("label:bug", "label", "docs", "add")).toBe(
             "label:bug label:docs",
         );
+    });
+
+    it("keeps a closing parenthesis out of a qualifier value", () => {
+        expect(removeQualifiersByKey("foo OR (is:closed)", ["is"])).toContain(
+            ")",
+        );
+        expect(formatQuery(parseQuery("foo OR (is:closed)"))).toContain(")");
     });
 
     it("round-trips through parseQuery/formatQuery", () => {
