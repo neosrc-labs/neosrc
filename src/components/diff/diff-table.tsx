@@ -19,7 +19,7 @@ export function DiffTable({
     view = "unified",
 }: DiffTableProps) {
     return (
-        <div className="overflow-x-auto">
+        <div className="isolate overflow-x-auto">
             <style>{`
                 tr.line-highlighted td {
                     background-color: rgba(251, 146, 60, 0.2) !important;
