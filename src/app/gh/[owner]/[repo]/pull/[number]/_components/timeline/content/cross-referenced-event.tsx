@@ -58,7 +58,7 @@ export function CrossReferencedEventContent({
 
     return (
         <div className="text-sm text-text-secondary">
-            <div className="flex items-center gap-2">
+            <div className="flex items-start gap-2">
                 <UserLink actor={actor} />
                 <span title={fullDate}>
                     {` mentioned this ${isPR ? "pull request" : "issue"} `}

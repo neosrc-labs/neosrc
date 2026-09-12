@@ -23,7 +23,7 @@ export function ReviewRequestEventContent({
     const isSelfRequest = isUser && event.actor?.login === reviewer?.login;
 
     return (
-        <div className="flex items-center gap-1 text-sm text-text-secondary">
+        <div className="flex items-start gap-1 text-sm text-text-secondary">
             <UserLink actor={event.actor} />
             {isSelfRequest && isRequested ? (
                 <span title={fullDate}>

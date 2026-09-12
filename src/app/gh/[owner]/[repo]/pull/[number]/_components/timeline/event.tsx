@@ -203,7 +203,7 @@ const ICON_SIZE = 16;
 
 export function EventRow({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex items-center gap-1 text-sm text-text-secondary">
+        <div className="flex items-start gap-1 text-sm text-text-secondary">
             {children}
         </div>
     );

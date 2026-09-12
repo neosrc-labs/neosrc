@@ -295,7 +295,7 @@ export function PullRequestReviewContent({
 
     return (
         <>
-            <p className="flex items-center gap-1 text-sm text-text-secondary">
+            <p className="flex items-start gap-1 text-sm text-text-secondary">
                 <UserLink actor={event.author} />
                 {` ${stateLabel} `}
                 <span title={fullDate}>{timestamp}</span>

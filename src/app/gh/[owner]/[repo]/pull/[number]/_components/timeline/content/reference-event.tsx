@@ -14,7 +14,7 @@ export function ReferencedEventContent({
     const sha = event.commit?.oid?.slice(0, 7);
     return (
         <div className="flex items-center justify-between text-sm text-text-secondary">
-            <div className="flex items-center gap-1">
+            <div className="flex items-start gap-1">
                 <UserLink actor={event.actor} />
                 <span>
                     {" referenced this "}
