@@ -7,8 +7,20 @@ import { useEffect, useMemo, useRef } from "react";
 import { cn } from "~/lib/utils";
 import type { ReviewThreadSummary } from "~/server/github";
 import { api } from "~/trpc/react";
+import { bucketReviewThreads } from "./review-thread-groups";
 
+const HEADER_ITEM_HEIGHT = 28;
 const THREAD_ITEM_HEIGHT = 50;
+
+type ThreadListItem =
+    | {
+          kind: "header";
+          id: string;
+          label: string;
+          color: string;
+          count: number;
+      }
+    | { kind: "thread"; id: string; thread: ReviewThreadSummary };
 
 function truncateBody(body: string, maxLen = 80): string {
     const firstLine = body.split("\n")[0] ?? "";
@@ -157,12 +169,33 @@ export function ReviewThreadsSection({
         [data],
     );
 
+    const items = useMemo(() => {
+        const list: ThreadListItem[] = [];
+        for (const group of bucketReviewThreads(threads)) {
+            list.push({
+                kind: "header",
+                id: `header-${group.label}`,
+                label: group.label,
+                color: group.color,
+                count: group.threads.length,
+            });
+            for (const thread of group.threads) {
+                list.push({ kind: "thread", id: thread.id, thread });
+            }
+        }
+        return list;
+    }, [threads]);
+
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const virtualizer = useVirtualizer({
-        count: threads.length,
+        count: items.length,
         getScrollElement: () => scrollRef.current,
-        estimateSize: () => THREAD_ITEM_HEIGHT,
+        estimateSize: (index) =>
+            items[index]?.kind === "header"
+                ? HEADER_ITEM_HEIGHT
+                : THREAD_ITEM_HEIGHT,
+        getItemKey: (index) => items[index]?.id ?? index,
         overscan: 5,
     });
 
@@ -208,8 +241,8 @@ export function ReviewThreadsSection({
                 }}
             >
                 {virtualizer.getVirtualItems().map((virtualItem) => {
-                    const thread = threads[virtualItem.index];
-                    if (!thread) return null;
+                    const item = items[virtualItem.index];
+                    if (!item) return null;
                     return (
                         <div
                             key={virtualItem.key}
@@ -222,7 +255,17 @@ export function ReviewThreadsSection({
                                 transform: `translateY(${virtualItem.start}px)`,
                             }}
                         >
-                            <ThreadCard thread={thread} />
+                            {item.kind === "header" ? (
+                                <h3 className="flex h-full items-center gap-1.5 font-semibold text-text-secondary text-xs uppercase">
+                                    <span
+                                        className="size-2 shrink-0 rounded-full"
+                                        style={{ backgroundColor: item.color }}
+                                    />
+                                    {item.label} ({item.count})
+                                </h3>
+                            ) : (
+                                <ThreadCard thread={item.thread} />
+                            )}
                         </div>
                     );
                 })}

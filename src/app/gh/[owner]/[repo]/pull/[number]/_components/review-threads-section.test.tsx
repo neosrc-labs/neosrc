@@ -5,16 +5,27 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReviewThreadsSection } from "./review-threads-section";
 
 vi.mock("@tanstack/react-virtual", () => ({
-    useVirtualizer: ({ count }: { count: number }) => ({
-        getTotalSize: () => count * 50,
-        getVirtualItems: () =>
-            Array.from({ length: count }, (_, i) => ({
-                key: i,
-                index: i,
-                size: 50,
-                start: i * 50,
-            })),
-    }),
+    useVirtualizer: ({
+        count,
+        estimateSize,
+        getItemKey,
+    }: {
+        count: number;
+        estimateSize: (index: number) => number;
+        getItemKey?: (index: number) => string | number;
+    }) => {
+        const sizes = Array.from({ length: count }, (_, i) => estimateSize(i));
+        return {
+            getTotalSize: () => sizes.reduce((sum, size) => sum + size, 0),
+            getVirtualItems: () =>
+                sizes.map((size, index) => ({
+                    key: getItemKey?.(index) ?? index,
+                    index,
+                    size,
+                    start: sizes.slice(0, index).reduce((sum, s) => sum + s, 0),
+                })),
+        };
+    },
 }));
 
 const mockThreadsPageQuery = vi.hoisted(() => vi.fn());
@@ -56,6 +67,12 @@ const defaultProps = {
     repo: "rfcs",
     number: 3959,
 };
+
+function headings(): (string | null)[] {
+    return screen
+        .getAllByRole("heading", { level: 3 })
+        .map((node) => node.textContent);
+}
 
 describe("ReviewThreadsSection", () => {
     beforeEach(() => {
@@ -141,5 +158,52 @@ describe("ReviewThreadsSection", () => {
             "Suggestion in text/3959-llm-policy.md",
         );
         expect(suggestionLabel.className).not.toContain("line-through");
+    });
+
+    it("groups threads into unresolved then resolved sections", () => {
+        mockThreadsPageQuery.mockReturnValue({
+            data: {
+                pages: [
+                    {
+                        threads: [
+                            makeThread("t-resolved-a", true, false, "Resolved"),
+                            makeThread("t-unresolved", false, false, "Open"),
+                            makeThread("t-resolved-b", true, false, "Resolved"),
+                        ],
+                    },
+                ],
+            },
+            hasNextPage: false,
+            isFetchingNextPage: false,
+            isLoading: false,
+            fetchNextPage: vi.fn(),
+        });
+
+        render(<ReviewThreadsSection {...defaultProps} />);
+
+        expect(headings()).toEqual(["Unresolved (1)", "Resolved (2)"]);
+    });
+
+    it("omits empty groups from the sections", () => {
+        mockThreadsPageQuery.mockReturnValue({
+            data: {
+                pages: [
+                    {
+                        threads: [
+                            makeThread("t-one", false, false, "Open one"),
+                            makeThread("t-two", false, false, "Open two"),
+                        ],
+                    },
+                ],
+            },
+            hasNextPage: false,
+            isFetchingNextPage: false,
+            isLoading: false,
+            fetchNextPage: vi.fn(),
+        });
+
+        render(<ReviewThreadsSection {...defaultProps} />);
+
+        expect(headings()).toEqual(["Unresolved (2)"]);
     });
 });
