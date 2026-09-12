@@ -3,7 +3,6 @@
 import {
     Check,
     ChevronDown,
-    CircleSlash,
     Eye,
     EyeOff,
     Link,
@@ -43,7 +42,6 @@ import { formatDateTime, formatRelativeTime } from "~/utils";
 import {
     canEdit,
     canInteract,
-    canPush,
     type PullRequestPermissionContext,
 } from "../../../permissions-utils";
 import { ReviewComments } from "../../review-comments";
@@ -114,7 +112,6 @@ export function PullRequestReviewContent({
     const [menuOpen, setMenuOpen] = useState(false);
     const [copied, setCopied] = useState(false);
     const [hideDialogOpen, setHideDialogOpen] = useState(false);
-    const [dismissDialogOpen, setDismissDialogOpen] = useState(false);
 
     const { onToggleTask } = useTaskToggle({
         mutation: reviewToggleMutation,
@@ -145,13 +142,6 @@ export function PullRequestReviewContent({
         changes_requested: "requested changes",
     };
     const stateLabel = STATE_LABELS[state] ?? "reviewed";
-
-    // GitHub lets users with push access dismiss a submitted review, and only
-    // an approval or a changes-requested review is dismissable.
-    const canDismiss =
-        _canInteract &&
-        canPush(permissionContext) &&
-        (state === "approved" || state === "changes_requested");
 
     const isPendingByCurrentUser =
         state === "pending" &&
@@ -428,21 +418,6 @@ export function PullRequestReviewContent({
                                                         Hide
                                                     </button>
                                                 ))}
-                                            {canDismiss && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setMenuOpen(false);
-                                                        setDismissDialogOpen(
-                                                            true,
-                                                        );
-                                                    }}
-                                                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                                >
-                                                    <CircleSlash size={14} />
-                                                    Dismiss review
-                                                </button>
-                                            )}
                                         </PopoverContent>
                                     </Popover>
                                 )}
@@ -544,103 +519,6 @@ export function PullRequestReviewContent({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            <DismissReviewDialog
-                owner={owner}
-                repo={repo}
-                number={number}
-                reviewId={event.databaseId}
-                open={dismissDialogOpen}
-                onOpenChange={setDismissDialogOpen}
-            />
         </>
-    );
-}
-
-function DismissReviewDialog({
-    owner,
-    repo,
-    number,
-    reviewId,
-    open,
-    onOpenChange,
-}: {
-    owner: string;
-    repo: string;
-    number: number;
-    reviewId: number;
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-}) {
-    const utils = api.useUtils();
-    const [message, setMessage] = useState("");
-
-    const dismissMutation = api.reviews.dismiss.useMutation({
-        onSuccess: () => {
-            onOpenChange(false);
-            setMessage("");
-        },
-        onSettled: () => {
-            utils.timeline.list.invalidate({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
-            utils.pulls.listReviews.invalidate({ owner, repo, number });
-            utils.pulls.getMergeState.invalidate({ owner, repo, number });
-        },
-    });
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Dismiss review</DialogTitle>
-                    <DialogDescription>
-                        Dismissing a review changes its status to a review
-                        comment and adds your message to the conversation.
-                    </DialogDescription>
-                </DialogHeader>
-                <textarea
-                    aria-label="Reason for dismissing this review"
-                    value={message}
-                    onChange={(event) => setMessage(event.target.value)}
-                    placeholder="Reason for dismissing this review"
-                    rows={4}
-                    className="w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-ring dark:placeholder-zinc-500"
-                />
-                {dismissMutation.isError && (
-                    <p className="text-destructive text-sm">
-                        Dismissing this review failed. You may not have
-                        permission to dismiss reviews on this branch.
-                    </p>
-                )}
-                <DialogFooter>
-                    <Button
-                        variant="outline"
-                        onClick={() => onOpenChange(false)}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        disabled={
-                            message.trim().length === 0 ||
-                            dismissMutation.isPending
-                        }
-                        onClick={() =>
-                            dismissMutation.mutate({
-                                owner,
-                                repo,
-                                number,
-                                reviewId,
-                                message: message.trim(),
-                            })
-                        }
-                    >
-                        Dismiss review
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
     );
 }

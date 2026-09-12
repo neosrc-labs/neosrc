@@ -4,13 +4,20 @@ import {
     Check,
     ChevronDown,
     Circle,
+    CircleSlash,
     MessageSquare,
+    MoreVertical,
     XCircle,
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "~/components/ui/popover";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import {
     Tooltip,
@@ -18,12 +25,19 @@ import {
     TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { applyArrayOperations, opId } from "~/lib/utils";
-import type { Assignee, PullsGetResponseData, Reviewer } from "~/server/github";
+import type {
+    Assignee,
+    PullsGetResponseData,
+    ReviewComment2,
+    Reviewer,
+} from "~/server/github";
 import { api } from "~/trpc/react";
 import {
     canEdit,
+    canPush,
     type PullRequestPermissionContext,
 } from "../permissions-utils";
+import { DismissReviewDialog } from "./dismiss-review-dialog";
 import { FieldSkeleton } from "./metadata-section";
 
 const MAX_VISIBLE_REVIEWERS = 10;
@@ -49,11 +63,16 @@ export function ReviewerSection({
 }) {
     const [operations, setOperations] = useState<ReviewerOperation[]>([]);
     const [showAll, setShowAll] = useState(false);
+    const [dismissTarget, setDismissTarget] = useState<{
+        reviewId: number;
+        login: string;
+    } | null>(null);
 
     // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the state
     useEffect(() => {
         setOperations([]);
         setShowAll(false);
+        setDismissTarget(null);
     }, [pullRequestPromise]);
 
     const { data: repoUsers } = api.pulls.listAssignees.useQuery({
@@ -142,7 +161,7 @@ export function ReviewerSection({
             if (state === "APPROVED" || state === "CHANGES_REQUESTED") {
                 map.set(login, state);
             } else if (state === "DISMISSED") {
-                map.delete(login);
+                map.set(login, "DISMISSED");
             } else if (state === "COMMENTED" && !map.has(login)) {
                 map.set(login, "COMMENTED");
             }
@@ -168,6 +187,30 @@ export function ReviewerSection({
             const current = map.get(review.user.login);
             if (current === undefined || ts > current) {
                 map.set(review.user.login, ts);
+            }
+        }
+        return map;
+    }
+
+    /**
+     * Latest review per reviewer that is still dismissable. Follows
+     * buildReviewStateMap's ordering so the menu only shows where an
+     * approved or changes-requested state is displayed.
+     */
+    function buildDismissableReviewMap(
+        reviews: ReviewComment2[],
+    ): Map<string, number> {
+        const map = new Map<string, number>();
+        for (const review of reviews) {
+            if (!review.user) continue;
+            const login = review.user.login;
+            if (
+                review.state === "APPROVED" ||
+                review.state === "CHANGES_REQUESTED"
+            ) {
+                map.set(login, review.id);
+            } else if (review.state === "DISMISSED") {
+                map.delete(login);
             }
         }
         return map;
@@ -211,54 +254,87 @@ export function ReviewerSection({
                     if (reviewsQuery.isPending || mergeReqsQuery.isPending) {
                         return <FieldSkeleton />;
                     }
+                    const reviews = reviewsQuery.data ?? [];
                     const reviewStateMap = buildReviewStateMap(
-                        reviewsQuery.data ?? [],
+                        reviews,
                         new Set(
                             pullRequest.requested_reviewers?.map(
                                 (r) => r.login,
                             ) ?? [],
                         ),
                     );
-                    const reviewSortMap = buildReviewSortMap(
-                        reviewsQuery.data ?? [],
-                    );
+                    const reviewSortMap = buildReviewSortMap(reviews);
+                    const dismissableReviewMap =
+                        buildDismissableReviewMap(reviews);
                     const requiredApprovals =
                         mergeReqsQuery.data?.requiredApprovingReviewCount ?? 0;
                     const approvedCount = [...reviewStateMap.values()].filter(
                         (state) => state === "APPROVED",
                     ).length;
                     return (
-                        <>
-                            {requiredApprovals > 0 && (
-                                <p className="text-text-tertiary text-xs">
-                                    {approvedCount} of {requiredApprovals}{" "}
-                                    required approvals
-                                </p>
+                        <Async
+                            promise={permissionContextPromise}
+                            fallback={null}
+                        >
+                            {(permissionContext) => (
+                                <>
+                                    {requiredApprovals > 0 && (
+                                        <p className="text-text-tertiary text-xs">
+                                            {approvedCount} of{" "}
+                                            {requiredApprovals} required
+                                            approvals
+                                        </p>
+                                    )}
+                                    <ReviewerSectionContent
+                                        reviewers={mergeReviewers(
+                                            pullRequest.requested_reviewers ??
+                                                [],
+                                            reviews,
+                                            pullRequest.user?.login,
+                                        )}
+                                        reviewStateMap={reviewStateMap}
+                                        reviewSortMap={reviewSortMap}
+                                        dismissableReviewMap={
+                                            dismissableReviewMap
+                                        }
+                                        canDismissReviews={canPush(
+                                            permissionContext,
+                                        )}
+                                        onDismissReview={(reviewId, login) =>
+                                            setDismissTarget({
+                                                reviewId,
+                                                login,
+                                            })
+                                        }
+                                        codeOwnerLogins={
+                                            new Set(
+                                                mergeStateQuery.data
+                                                    ?.codeOwnerReviewerLogins ??
+                                                    [],
+                                            )
+                                        }
+                                        operations={operations}
+                                        showAll={showAll}
+                                        onToggleShowAll={() =>
+                                            setShowAll((prev) => !prev)
+                                        }
+                                    />
+                                </>
                             )}
-                            <ReviewerSectionContent
-                                reviewers={mergeReviewers(
-                                    pullRequest.requested_reviewers ?? [],
-                                    reviewsQuery.data ?? [],
-                                    pullRequest.user?.login,
-                                )}
-                                reviewStateMap={reviewStateMap}
-                                reviewSortMap={reviewSortMap}
-                                codeOwnerLogins={
-                                    new Set(
-                                        mergeStateQuery.data
-                                            ?.codeOwnerReviewerLogins ?? [],
-                                    )
-                                }
-                                operations={operations}
-                                showAll={showAll}
-                                onToggleShowAll={() =>
-                                    setShowAll((prev) => !prev)
-                                }
-                            />
-                        </>
+                        </Async>
                     );
                 }}
             </Async>
+            {dismissTarget && (
+                <DismissReviewDialog
+                    owner={owner}
+                    repo={repo}
+                    number={number}
+                    reviewId={dismissTarget.reviewId}
+                    reviewerLogin={dismissTarget.login}
+                    onClose={() => setDismissTarget(null)}
+                />
+            )}
         </>
     );
 }
@@ -323,6 +399,9 @@ function ReviewerSectionContent({
     reviewers,
     reviewStateMap,
     reviewSortMap,
+    dismissableReviewMap,
+    canDismissReviews,
+    onDismissReview,
     codeOwnerLogins,
     operations,
     showAll,
@@ -331,6 +410,9 @@ function ReviewerSectionContent({
     reviewers: Reviewer[];
     reviewStateMap: Map<string, string>;
     reviewSortMap: Map<string, number>;
+    dismissableReviewMap: Map<string, number>;
+    canDismissReviews: boolean;
+    onDismissReview: (reviewId: number, login: string) => void;
     codeOwnerLogins: Set<string>;
     operations: ReviewerOperation[];
     showAll: boolean;
@@ -366,6 +448,9 @@ function ReviewerSectionContent({
                 {visibleReviewers.map((reviewer) => {
                     const state =
                         reviewStateMap.get(reviewer.login) ?? "PENDING";
+                    const dismissableReviewId = dismissableReviewMap.get(
+                        reviewer.login,
+                    );
                     return (
                         <li
                             className="group flex items-center gap-2 text-sm"
@@ -393,59 +478,71 @@ function ReviewerSectionContent({
                                     code owner
                                 </span>
                             )}
-                            {state === "APPROVED" && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Check
-                                            className="ml-auto text-green-600"
-                                            size={16}
+                            <span className="ml-auto flex items-center gap-1">
+                                {canDismissReviews &&
+                                    dismissableReviewId !== undefined && (
+                                        <ReviewerDismissMenu
+                                            login={reviewer.login}
+                                            reviewId={dismissableReviewId}
+                                            onDismiss={onDismissReview}
                                         />
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left">
-                                        {reviewer.login} approved these changes
-                                    </TooltipContent>
-                                </Tooltip>
-                            )}
-                            {state === "CHANGES_REQUESTED" && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <XCircle
-                                            className="ml-auto text-red-600"
-                                            size={16}
-                                        />
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left">
-                                        {reviewer.login} requested changes
-                                    </TooltipContent>
-                                </Tooltip>
-                            )}
-                            {state === "COMMENTED" && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <MessageSquare
-                                            className="mr-0.5 ml-auto text-text-muted"
-                                            size={13}
-                                        />
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left">
-                                        {reviewer.login} left review comments
-                                    </TooltipContent>
-                                </Tooltip>
-                            )}
-                            {state === "PENDING" && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Circle
-                                            className="mr-1 ml-auto fill-yellow-500 text-yellow-500"
-                                            size={8}
-                                        />
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left">
-                                        Awaiting requested review from{" "}
-                                        {reviewer.login}
-                                    </TooltipContent>
-                                </Tooltip>
-                            )}
+                                    )}
+                                {state === "APPROVED" && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Check
+                                                className="text-green-600"
+                                                size={16}
+                                            />
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left">
+                                            {reviewer.login} approved these
+                                            changes
+                                        </TooltipContent>
+                                    </Tooltip>
+                                )}
+                                {state === "CHANGES_REQUESTED" && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <XCircle
+                                                className="text-red-600"
+                                                size={16}
+                                            />
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left">
+                                            {reviewer.login} requested changes
+                                        </TooltipContent>
+                                    </Tooltip>
+                                )}
+                                {state === "COMMENTED" && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <MessageSquare
+                                                className="text-text-muted"
+                                                size={13}
+                                            />
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left">
+                                            {reviewer.login} left review
+                                            comments
+                                        </TooltipContent>
+                                    </Tooltip>
+                                )}
+                                {state === "PENDING" && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Circle
+                                                className="fill-yellow-500 text-yellow-500"
+                                                size={8}
+                                            />
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left">
+                                            Awaiting requested review from{" "}
+                                            {reviewer.login}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                )}
+                            </span>
                         </li>
                     );
                 })}
@@ -467,6 +564,44 @@ function ReviewerSectionContent({
                 </button>
             )}
         </>
+    );
+}
+
+function ReviewerDismissMenu({
+    login,
+    reviewId,
+    onDismiss,
+}: {
+    login: string;
+    reviewId: number;
+    onDismiss: (reviewId: number, login: string) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    type="button"
+                    aria-label={`More options for ${login}`}
+                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                >
+                    <MoreVertical size={14} />
+                </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-44 bg-surface p-1" align="end">
+                <button
+                    type="button"
+                    onClick={() => {
+                        setOpen(false);
+                        onDismiss(reviewId, login);
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                >
+                    <CircleSlash size={14} />
+                    Dismiss review
+                </button>
+            </PopoverContent>
+        </Popover>
     );
 }
 
