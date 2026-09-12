@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { getSession } from "~/server/auth";
+import { getSession, isCodebergConfigured } from "~/server/auth";
 import { githubAppInstallUrl } from "~/server/auth/github-app";
 import { HydrateClient } from "~/trpc/server";
 import { ProfileView } from "./_components/profile-view";
@@ -25,6 +25,7 @@ export default async function ProfilePage() {
                     githubUsername={user.githubUsername ?? null}
                     codebergUsername={user.codebergUsername ?? null}
                     githubAppInstallationUrl={githubAppInstallUrl()}
+                    codebergEnabled={isCodebergConfigured()}
                 />
             </main>
         </HydrateClient>

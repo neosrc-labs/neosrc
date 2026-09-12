@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { genericOAuth } from "better-auth/plugins";
+import { type GenericOAuthConfig, genericOAuth } from "better-auth/plugins";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { cache } from "react";
@@ -89,6 +89,56 @@ async function refreshGitHubToken(refreshToken: string) {
     return body as RefreshedToken;
 }
 
+/**
+ * True when both Codeberg OAuth credentials are set. Codeberg is optional:
+ * without them the provider is not registered, so Codeberg entries must be
+ * hidden from sign-in and account linking.
+ */
+export function isCodebergConfigured(): boolean {
+    return Boolean(env.CODEBERG_CLIENT_ID && env.CODEBERG_CLIENT_SECRET);
+}
+
+/** Registered OAuth providers; empty when Codeberg is not configured. */
+function codebergOAuthConfigs(): GenericOAuthConfig[] {
+    const {
+        CODEBERG_CLIENT_ID: clientId,
+        CODEBERG_CLIENT_SECRET: clientSecret,
+    } = env;
+    if (!clientId || !clientSecret) return [];
+
+    return [
+        {
+            providerId: "codeberg",
+            clientId,
+            clientSecret,
+            discoveryUrl:
+                "https://codeberg.org/.well-known/openid-configuration",
+            scopes: [
+                "read:user",
+                "write:user",
+                "read:repository",
+                "write:repository",
+                "read:issue",
+                "write:issue",
+            ],
+            overrideUserInfo: true,
+            getUserInfo: async (tokens) => {
+                if (!tokens.accessToken) return null;
+                const profile = await getCodebergUser(tokens.accessToken);
+                if (!profile) return null;
+                return {
+                    id: String(profile.id),
+                    name: profile.full_name || profile.login,
+                    email: profile.email,
+                    image: profile.avatar_url,
+                    emailVerified: true,
+                    codebergUsername: profile.username,
+                };
+            },
+        },
+    ];
+}
+
 export const auth = betterAuth({
     database: drizzleAdapter(db, {
         provider: "pg",
@@ -144,44 +194,7 @@ export const auth = betterAuth({
             },
         },
     },
-    plugins: [
-        genericOAuth({
-            config: [
-                {
-                    providerId: "codeberg",
-                    clientId: env.CODEBERG_CLIENT_ID,
-                    clientSecret: env.CODEBERG_CLIENT_SECRET,
-                    discoveryUrl:
-                        "https://codeberg.org/.well-known/openid-configuration",
-                    scopes: [
-                        "read:user",
-                        "write:user",
-                        "read:repository",
-                        "write:repository",
-                        "read:issue",
-                        "write:issue",
-                    ],
-                    overrideUserInfo: true,
-                    getUserInfo: async (tokens) => {
-                        if (!tokens.accessToken) return null;
-                        const profile = await getCodebergUser(
-                            tokens.accessToken,
-                        );
-                        if (!profile) return null;
-                        return {
-                            id: String(profile.id),
-                            name: profile.full_name || profile.login,
-                            email: profile.email,
-                            image: profile.avatar_url,
-                            emailVerified: true,
-                            codebergUsername: profile.username,
-                        };
-                    },
-                },
-            ],
-        }),
-        nextCookies(),
-    ],
+    plugins: [genericOAuth({ config: codebergOAuthConfigs() }), nextCookies()],
     databaseHooks: {
         account: {
             create: {

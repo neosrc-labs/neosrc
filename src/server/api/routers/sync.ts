@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import { log } from "~/logging";
 import { createTRPCRouter, protectedMutation } from "~/server/api/trpc";
 import {
     getCodebergToken,
@@ -73,6 +74,10 @@ export const syncRouter = createTRPCRouter({
      * Updates the current user's account row and permissions (org/team
      * memberships and repo grants) for every connected provider. Always
      * performs a full re-sync, regardless of the incremental state.
+     *
+     * Providers are independent: one failing provider is reported in the logs
+     * and omitted from the result instead of failing the request, so a broken
+     * Codeberg token cannot block the GitHub sync.
      */
     currentUser: protectedMutation.mutation(async ({ ctx }) => {
         // protectedMutation guarantees a session; narrow for the token getters
@@ -87,33 +92,63 @@ export const syncRouter = createTRPCRouter({
         ]);
 
         const results: Partial<Record<"github" | "codeberg", SyncResult>> = {};
-        await Promise.all([
-            githubToken && !isAnonymousToken(githubToken)
-                ? syncCurrentUser(ctx.db, {
-                      provider: "github",
-                      accessToken: githubToken,
-                      userId,
-                      forceFull: true,
-                  }).then((result) => {
-                      results.github = result;
-                  })
-                : Promise.resolve(),
-            codebergToken
-                ? syncCurrentUser(ctx.db, {
-                      provider: "codeberg",
-                      accessToken: codebergToken,
-                      userId,
-                      forceFull: true,
-                  }).then((result) => {
-                      results.codeberg = result;
-                  })
-                : Promise.resolve(),
-        ]);
+        const failures: string[] = [];
+        const providers: Array<{
+            provider: "github" | "codeberg";
+            accessToken: string;
+        }> = [];
+        // The shared anonymous token exists for unauthenticated browsing; a
+        // sync must never run against it (unbounded fetches would burn its
+        // rate limit).
+        if (githubToken && !isAnonymousToken(githubToken)) {
+            providers.push({ provider: "github", accessToken: githubToken });
+        }
+        if (codebergToken) {
+            providers.push({
+                provider: "codeberg",
+                accessToken: codebergToken,
+            });
+        }
 
-        if (results.github === undefined && results.codeberg === undefined) {
+        await Promise.all(
+            providers.map(async ({ provider, accessToken }) => {
+                try {
+                    results[provider] = await syncCurrentUser(ctx.db, {
+                        provider,
+                        accessToken,
+                        userId,
+                        forceFull: true,
+                    });
+                } catch (error) {
+                    // One provider's API failure (revoked token, missing OAuth
+                    // scope) must not fail the request or discard the grants
+                    // the other providers just synced.
+                    failures.push(
+                        `${provider}: ${
+                            error instanceof Error
+                                ? error.message
+                                : String(error)
+                        }`,
+                    );
+                    log.error(
+                        { err: error, provider },
+                        "Permission sync failed for provider",
+                    );
+                }
+            }),
+        );
+
+        if (providers.length === 0) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
                 message: "No connected provider accounts to sync",
+            });
+        }
+
+        if (Object.keys(results).length === 0) {
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: `Permission sync failed: ${failures.join("; ")}`,
             });
         }
 
@@ -125,7 +160,8 @@ export const syncRouter = createTRPCRouter({
      * entirely when the last applied sync is under 5 minutes old (no input
      * fetch), otherwise skips all writes and the permission-view refresh
      * while nothing changed. Silent when no provider is connected (unlike
-     * `currentUser`, which is user-initiated).
+     * `currentUser`, which is user-initiated). A provider that fails is
+     * logged and omitted so it cannot stall the others' polling.
      */
     poll: protectedMutation.mutation(async ({ ctx }) => {
         if (!ctx.session?.user) {
@@ -151,32 +187,43 @@ export const syncRouter = createTRPCRouter({
                 { changed: boolean; result: SyncResult | null }
             >
         > = {};
-        await Promise.all([
-            githubToken && !isAnonymousToken(githubToken)
-                ? syncCurrentUser(ctx.db, {
-                      provider: "github",
-                      accessToken: githubToken,
-                      userId,
-                  }).then((result) => {
-                      results.github = {
-                          changed: hasChanges(result),
-                          result: hasChanges(result) ? result : null,
-                      };
-                  })
-                : Promise.resolve(),
-            codebergToken
-                ? syncCurrentUser(ctx.db, {
-                      provider: "codeberg",
-                      accessToken: codebergToken,
-                      userId,
-                  }).then((result) => {
-                      results.codeberg = {
-                          changed: hasChanges(result),
-                          result: hasChanges(result) ? result : null,
-                      };
-                  })
-                : Promise.resolve(),
-        ]);
+        const providers: Array<{
+            provider: "github" | "codeberg";
+            accessToken: string;
+        }> = [];
+        if (githubToken && !isAnonymousToken(githubToken)) {
+            providers.push({ provider: "github", accessToken: githubToken });
+        }
+        if (codebergToken) {
+            providers.push({
+                provider: "codeberg",
+                accessToken: codebergToken,
+            });
+        }
+
+        await Promise.all(
+            providers.map(async ({ provider, accessToken }) => {
+                try {
+                    const result = await syncCurrentUser(ctx.db, {
+                        provider,
+                        accessToken,
+                        userId,
+                    });
+                    const changed = hasChanges(result);
+                    results[provider] = {
+                        changed,
+                        result: changed ? result : null,
+                    };
+                } catch (error) {
+                    // Polling is best effort: a broken provider must not stop
+                    // the others from picking up changes.
+                    log.error(
+                        { err: error, provider },
+                        "Incremental permission sync failed for provider",
+                    );
+                }
+            }),
+        );
 
         return results;
     }),
