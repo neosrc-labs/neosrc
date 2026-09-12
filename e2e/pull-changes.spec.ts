@@ -544,7 +544,10 @@ test.describe
                     response.url().includes("reviews.submit"),
                 );
                 await reviewPopover
-                    .getByRole("button", { name: "Comment", exact: true })
+                    .getByRole("radio", { name: /Comment/ })
+                    .click();
+                await reviewPopover
+                    .getByRole("button", { name: "Submit review" })
                     .click();
                 await submitResponse;
             });
