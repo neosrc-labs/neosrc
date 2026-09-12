@@ -389,6 +389,42 @@ describe("ReviewComments", () => {
             ).toEqual(["line2", "line3", "line4", "line5"]);
         });
 
+        it("anchors on the original line when the head has moved it", () => {
+            // r3042671107: `line` follows the head (5) while `original_line`
+            // (3) is the code the comment was written against. GitHub renders
+            // the original, so the file fallback must read it too.
+            mockFileContent.lines = [
+                "line1",
+                "line2",
+                "line3",
+                "line4",
+                "line5",
+            ];
+            const comment = reviewComment({
+                id: 4,
+                line: 5,
+                original_line: 3,
+                side: "RIGHT",
+                commit_id: "head",
+                original_commit_id: "orig",
+                diff_hunk: "",
+            });
+            mockThreadsQuery.mockReturnValue({
+                data: [makeThread("thread", false, false, [comment.id])],
+            });
+
+            render(
+                <ReviewComments {...defaultProps} allComments={[comment]} />,
+            );
+
+            const snippet = screen.getByTestId("review-comment-snippet");
+            expect(
+                Array.from(snippet.querySelectorAll(".d2h-code-line-ctn")).map(
+                    (cell) => cell.textContent,
+                ),
+            ).toEqual(["line1", "line2", "line3"]);
+        });
+
         it("shows no snippet for a file-level comment", () => {
             const comment = reviewComment({
                 id: 3,

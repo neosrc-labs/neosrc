@@ -47,7 +47,7 @@ function comment(overrides: Record<string, unknown>) {
 }
 
 describe("snippetAnchor", () => {
-    it("uses the current coordinates and commit", () => {
+    it("uses the current coordinates when there is no original line", () => {
         expect(snippetAnchor(comment({ line: 20, start_line: 18 }))).toEqual({
             line: 20,
             startLine: 18,
@@ -56,7 +56,27 @@ describe("snippetAnchor", () => {
         });
     });
 
-    it("falls back to the original coordinates for an outdated comment", () => {
+    it("prefers the original coordinates when the head moved the line", () => {
+        // The current line belongs to the head commit: pairing it with the
+        // original commit reads a different line of the file.
+        expect(
+            snippetAnchor(
+                comment({
+                    line: 20,
+                    start_line: 18,
+                    original_line: 11,
+                    original_start_line: 9,
+                }),
+            ),
+        ).toEqual({
+            line: 11,
+            startLine: 9,
+            side: "RIGHT",
+            sha: "original",
+        });
+    });
+
+    it("uses the original coordinates for an outdated comment", () => {
         expect(
             snippetAnchor(
                 comment({ original_line: 99, original_start_line: 97 }),

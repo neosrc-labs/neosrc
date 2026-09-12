@@ -25,26 +25,29 @@ export interface SnippetAnchor {
 }
 
 /**
- * Where a comment's snippet should end. Outdated comments (`line` nulled by
- * GitHub once their lines left the diff) fall back to the original
- * coordinates, which still describe the commit they were written against.
- * File-level comments have no line and get no snippet.
+ * Where a comment's snippet should end. The timeline mirrors GitHub's
+ * conversation view, which shows the hunk the comment was written against, so
+ * this anchors on the original coordinates. `line` tracks the current head
+ * while `original_line` stays on the comment's commit; pairing `line` with
+ * the original commit (or its hunk/file) renders the wrong code once the head
+ * or the base has moved. Only when GitHub reports no original line does the
+ * current one apply.
  */
 export function snippetAnchor(
     comment: ReviewCommentBase,
 ): SnippetAnchor | null {
-    const isCurrent = comment.line != null;
-    const line = comment.line ?? comment.original_line ?? null;
+    const isOriginal = comment.original_line != null;
+    const line = isOriginal ? comment.original_line : comment.line;
     if (line == null) {
         return null;
     }
     const start =
-        (isCurrent ? comment.start_line : comment.original_start_line) ?? line;
+        (isOriginal ? comment.original_start_line : comment.start_line) ?? line;
     return {
         line,
         startLine: Math.min(start, line),
         side: comment.side === "LEFT" ? "LEFT" : "RIGHT",
-        sha: isCurrent ? comment.commit_id : comment.original_commit_id,
+        sha: isOriginal ? comment.original_commit_id : comment.commit_id,
     };
 }
 
