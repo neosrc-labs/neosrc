@@ -272,7 +272,11 @@ export function DiffContextRow({
                         onMouseEnter={() => setHovered("LEFT")}
                     >
                         <div className="d2h-split-code-line">
-                            <span className="d2h-code-line-ctn">
+                            <span
+                                className="d2h-code-line-ctn"
+                                data-line-side="LEFT"
+                                data-line-number={oldLineNum}
+                            >
                                 {content || <br />}
                             </span>
                         </div>
@@ -310,7 +314,11 @@ export function DiffContextRow({
                         onMouseEnter={() => setHovered("RIGHT")}
                     >
                         <div className="d2h-split-code-line">
-                            <span className="d2h-code-line-ctn">
+                            <span
+                                className="d2h-code-line-ctn"
+                                data-line-side="RIGHT"
+                                data-line-number={lineNum}
+                            >
                                 {content || <br />}
                             </span>
                         </div>
@@ -369,7 +377,11 @@ export function DiffContextRow({
                             paddingRight: "8px",
                         }}
                     >
-                        <span className="d2h-code-line-ctn">
+                        <span
+                            className="d2h-code-line-ctn"
+                            data-line-side="RIGHT"
+                            data-line-number={lineNum}
+                        >
                             {content || <br />}
                         </span>
                     </div>

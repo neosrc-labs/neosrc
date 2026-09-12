@@ -196,7 +196,11 @@ export function UnifiedBlockRows({
                                         paddingRight: "8px",
                                     }}
                                 >
-                                    <span className="d2h-code-line-ctn">
+                                    <span
+                                        className="d2h-code-line-ctn"
+                                        data-line-side={lineSide}
+                                        data-line-number={lineNum}
+                                    >
                                         {content || <br />}
                                     </span>
                                 </div>

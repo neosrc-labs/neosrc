@@ -460,7 +460,11 @@ export function SplitBlockRows({
                         onMouseEnter={hoverLeft}
                     >
                         <div className="d2h-split-code-line">
-                            <span className="d2h-code-line-ctn">
+                            <span
+                                className="d2h-code-line-ctn"
+                                data-line-side="LEFT"
+                                data-line-number={oldNum}
+                            >
                                 {oldContent || <br />}
                             </span>
                         </div>
@@ -502,7 +506,11 @@ export function SplitBlockRows({
                         onMouseEnter={hoverRight}
                     >
                         <div className="d2h-split-code-line">
-                            <span className="d2h-code-line-ctn">
+                            <span
+                                className="d2h-code-line-ctn"
+                                data-line-side="RIGHT"
+                                data-line-number={newNum}
+                            >
                                 {newContent || <br />}
                             </span>
                         </div>
