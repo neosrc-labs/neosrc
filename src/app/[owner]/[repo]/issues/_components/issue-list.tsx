@@ -7,7 +7,7 @@ import { ListSkeleton } from "~/app/[owner]/[repo]/_components/list/list-skeleto
 import { rowQualifierFilters } from "~/app/[owner]/[repo]/_components/list/row-qualifier-filters";
 import { SearchListLayout } from "~/app/[owner]/[repo]/_components/list/search-list-layout";
 import { useSearchList } from "~/app/[owner]/[repo]/_components/use-search-list";
-import { booleanSearchHint } from "~/lib/search-boolean";
+import { booleanSearchHint } from "~/lib/search-syntax";
 import type { IssueSearchItem } from "~/server/api/routers/issues/types";
 import { api } from "~/trpc/react";
 import { IssueEmptyState } from "./issue-empty-state";

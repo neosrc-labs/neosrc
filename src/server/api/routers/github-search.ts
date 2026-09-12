@@ -1,4 +1,4 @@
-import { planGithubQuery } from "~/lib/search-boolean";
+import { planGithubQuery } from "~/lib/search-syntax";
 import type { SearchParams } from "~/server/api/routers/provider";
 
 interface GqlSearchResponse<

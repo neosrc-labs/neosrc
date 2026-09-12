@@ -3,7 +3,7 @@ import {
     booleanSearchHint,
     planGithubQuery,
     translateForgejoKeywords,
-} from "~/lib/search-boolean";
+} from "~/lib/search-syntax";
 
 describe("planGithubQuery", () => {
     it("keeps a conjunctive query as a single branch", () => {
