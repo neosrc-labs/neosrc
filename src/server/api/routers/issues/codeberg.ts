@@ -1,4 +1,4 @@
-import { translateForgejoKeywords } from "~/lib/search-boolean";
+import { translateForgejoKeywords } from "~/lib/search-syntax";
 import {
     forgejoStateCounts,
     parseForgejoQuery,
