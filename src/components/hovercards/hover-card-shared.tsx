@@ -7,14 +7,17 @@ import {
     HoverCardTrigger,
 } from "~/components/ui/hover-card";
 
-/** Format a millisecond duration as `Xm Ys` (or `Ys` under a minute). */
+/**
+ * Format a millisecond duration as `Xm Ys`, dropping the seconds when they are
+ * zero: `3m`, `45s`, `2m 10s`.
+ */
 export function formatDurationMs(diffMs: number): string {
     const totalSec = Math.floor(diffMs / 1000);
     const min = Math.floor(totalSec / 60);
     const sec = totalSec % 60;
 
     if (min > 0) {
-        return `${min}m ${sec}s`;
+        return sec > 0 ? `${min}m ${sec}s` : `${min}m`;
     }
     return `${sec}s`;
 }

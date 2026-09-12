@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { CheckRunIcon } from "~/components/ci-status";
 import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
+import { formatDurationMs } from "~/components/hovercards/hover-card-shared";
 import { GitHubIcon } from "~/components/icons";
 import type { CheckRun } from "~/server/github";
 import { bucketChecks } from "./check-groups";
@@ -37,7 +38,24 @@ export function ChecksSection({ checks }: { checks: Array<CheckRun> }) {
     );
 }
 
+/** How long a finished check took as `3m` / `45s`, or null when unavailable. */
+function runDuration(check: CheckRun): string | null {
+    if (!check.started_at || !check.completed_at) return null;
+    const start = new Date(check.started_at).getTime();
+    const end = new Date(check.completed_at).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end)) return null;
+    const diffMs = end - start;
+    if (diffMs < 1000) return null;
+    return formatDurationMs(diffMs);
+}
+
 function CheckRow({ check }: { check: CheckRun }) {
+    // Rows without a description fall back to how long the run took, the same
+    // `Took ...` phrasing the hover card uses.
+    const description = check.description?.trim();
+    const duration = description ? null : runDuration(check);
+    const detail = description || (duration && `Took ${duration}`);
+
     return (
         <CheckHoverCard check={check}>
             <a
@@ -74,10 +92,10 @@ function CheckRow({ check }: { check: CheckRun }) {
                 </span>
                 <span className="min-w-0 truncate text-sm text-text-label">
                     {check.name}
-                    {check.description && (
-                        <span className="text-text-tertiary">
+                    {detail && (
+                        <span className="text-text-tertiary text-xs">
                             {" "}
-                            - {check.description}
+                            - {detail}
                         </span>
                     )}
                 </span>

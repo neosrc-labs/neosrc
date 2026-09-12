@@ -83,4 +83,44 @@ describe("ChecksSection", () => {
         expect(screen.getByText("No checks")).toBeInTheDocument();
         expect(screen.queryAllByRole("heading")).toHaveLength(0);
     });
+
+    it("shows the run duration when a check has no description", () => {
+        render(
+            <ChecksSection
+                checks={[
+                    makeCheck({
+                        name: "unit",
+                        started_at: "2024-01-01T00:00:00Z",
+                        completed_at: "2024-01-01T00:03:00Z",
+                    }),
+                    makeCheck({
+                        name: "e2e",
+                        started_at: "2024-01-01T00:00:00Z",
+                        completed_at: "2024-01-01T00:00:45Z",
+                    }),
+                ]}
+            />,
+        );
+
+        expect(screen.getByText(/Took 3m$/)).toBeInTheDocument();
+        expect(screen.getByText(/Took 45s$/)).toBeInTheDocument();
+    });
+
+    it("prefers the description over the run duration", () => {
+        render(
+            <ChecksSection
+                checks={[
+                    makeCheck({
+                        name: "lint",
+                        description: "2 warnings",
+                        started_at: "2024-01-01T00:00:00Z",
+                        completed_at: "2024-01-01T00:03:00Z",
+                    }),
+                ]}
+            />,
+        );
+
+        expect(screen.getByText(/- 2 warnings$/)).toBeInTheDocument();
+        expect(screen.queryByText(/Took/)).toBeNull();
+    });
 });
