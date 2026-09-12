@@ -3,7 +3,7 @@ import { detectQualifier, replaceQualifierValue } from "./search-autocomplete";
 
 // Mirrors the issue search qualifiers (see issue-list-config.ts / the
 // per-page `qualifiers` config passed to useSearchList).
-const QUALIFIERS = ["author", "label", "assignee", "sort", "is"];
+const QUALIFIERS = ["author", "label", "assignee", "sort", "is", "has", "no"];
 
 describe("detectQualifier", () => {
     it("finds the qualifier under the cursor", () => {
@@ -49,6 +49,23 @@ describe("detectQualifier", () => {
 
     it("returns null for a qualifier the search does not support", () => {
         expect(detectQualifier("milestone:v1", 12, QUALIFIERS)).toBeNull();
+    });
+
+    it("detects the has and no metadata modifiers", () => {
+        expect(detectQualifier("has:", 4, QUALIFIERS)).toEqual({
+            key: "has",
+            value: "",
+            quoted: false,
+            start: 0,
+            end: 4,
+        });
+        expect(detectQualifier("is:open no:ass", 14, QUALIFIERS)).toEqual({
+            key: "no",
+            value: "ass",
+            quoted: false,
+            start: 8,
+            end: 14,
+        });
     });
 
     it("returns null when the cursor is not inside a qualifier", () => {

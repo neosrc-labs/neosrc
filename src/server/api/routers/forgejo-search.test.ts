@@ -3,6 +3,7 @@ import {
     forgejoStateCounts,
     parseForgejoQuery,
 } from "~/server/api/routers/forgejo-search";
+import type { MetadataPresence } from "~/server/codeberg";
 
 describe("parseForgejoQuery", () => {
     it("defaults to open when no state qualifier is present", () => {
@@ -53,7 +54,46 @@ describe("parseForgejoQuery", () => {
             activeState: "open",
             author: "bob",
             labels: ["x", "y"],
+            presence: {},
         });
+    });
+
+    it("parses has: and no: for every metadata field", () => {
+        const result = parseForgejoQuery(
+            "has:assignee no:label has:milestone",
+            { allowMerged: false },
+        );
+        expect(result.presence).toEqual({
+            assignee: "has",
+            label: "no",
+            milestone: "has",
+        });
+    });
+
+    it("leaves presence empty without a has: or no: modifier", () => {
+        expect(
+            parseForgejoQuery("is:open assignee:bob", {
+                allowMerged: false,
+            }).presence,
+        ).toEqual({});
+    });
+
+    it("does not match presence modifiers inside larger tokens", () => {
+        // "has:assignees" and "no:assignee=1" are not valid modifiers.
+        expect(
+            parseForgejoQuery("has:assignees", { allowMerged: false }).presence,
+        ).toEqual({});
+        expect(
+            parseForgejoQuery("no:assignee=1", { allowMerged: false }).presence,
+        ).toEqual({});
+    });
+
+    it("lets the rightmost modifier for a field win", () => {
+        expect(
+            parseForgejoQuery("has:assignee no:assignee", {
+                allowMerged: false,
+            }).presence,
+        ).toEqual({ assignee: "no" });
     });
 });
 
@@ -61,6 +101,7 @@ describe("parseForgejoQuery", () => {
 async function captureCountParams(options: {
     author?: string;
     labels?: string[];
+    presence?: MetadataPresence;
 }) {
     const captured: Array<Record<string, unknown>> = [];
     const list = async (
@@ -101,6 +142,16 @@ describe("forgejoStateCounts", () => {
             expect(params.labels).toEqual(["bug"]);
             expect(params.limit).toBe(1);
             expect(params.page).toBe(1);
+        }
+    });
+
+    it("passes presence filters into both count requests", async () => {
+        const { captured } = await captureCountParams({
+            presence: { assignee: "no", label: "has" },
+        });
+        expect(captured).toHaveLength(2);
+        for (const params of captured) {
+            expect(params.presence).toEqual({ assignee: "no", label: "has" });
         }
     });
 });

@@ -93,6 +93,14 @@ export type CodebergPrListParams = {
     labels?: string[];
 };
 
+// Applies one has:/no: filter; an absent filter matches everything.
+function matchesPresence(
+    present: boolean,
+    filter: PresenceFilter | undefined,
+): boolean {
+    return filter === undefined || present === (filter === "has");
+}
+
 function parseTotalCountFromLinkHeader(
     linkHeader: string | null,
     totalFromHeader: string | null,
@@ -1017,6 +1025,19 @@ export type CodebergIssueSort =
     | "mostcomment"
     | "leastcomment";
 
+export type PresenceFilter = "has" | "no";
+
+/**
+ * has:/no: metadata filters for issue search: "has" keeps issues where the
+ * metadata is present, "no" where it is absent. Forgejo cannot filter on
+ * presence, so listIssues applies these to the fetched page.
+ */
+export type MetadataPresence = Partial<{
+    assignee: PresenceFilter;
+    label: PresenceFilter;
+    milestone: PresenceFilter;
+}>;
+
 export type CodebergIssueListParams = {
     state?: "open" | "closed" | "all";
     sort?: CodebergIssueSort;
@@ -1024,6 +1045,7 @@ export type CodebergIssueListParams = {
     limit?: number;
     author?: string;
     labels?: string[];
+    presence?: MetadataPresence;
 };
 
 export const listIssues = cache(
@@ -1071,6 +1093,25 @@ export const listIssues = cache(
                     issueLabelNames.includes(label.toLowerCase()),
                 );
             });
+        }
+
+        if (params.presence) {
+            const { presence } = params;
+            items = items.filter(
+                (issue) =>
+                    matchesPresence(
+                        (issue.assignees?.length ?? 0) > 0,
+                        presence.assignee,
+                    ) &&
+                    matchesPresence(
+                        (issue.labels?.length ?? 0) > 0,
+                        presence.label,
+                    ) &&
+                    matchesPresence(
+                        issue.milestone != null,
+                        presence.milestone,
+                    ),
+            );
         }
 
         const limit = params.limit ?? 30;

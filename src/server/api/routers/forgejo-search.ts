@@ -1,4 +1,8 @@
-import type { CodebergPullRequestSort } from "~/server/codeberg";
+import type {
+    CodebergPullRequestSort,
+    MetadataPresence,
+    PresenceFilter,
+} from "~/server/codeberg";
 import type { SearchParams } from "./provider";
 
 // Forgejo uses one sort vocabulary for both issues and pull requests.
@@ -27,6 +31,7 @@ export type ForgejoQueryQualifiers = {
     activeState: "open" | "closed" | "merged";
     author?: string;
     labels: string[];
+    presence: MetadataPresence;
 };
 
 // Pulls accept is:merged as a state qualifier; issues do not.
@@ -50,10 +55,21 @@ export function parseForgejoQuery(
         if (name) labels.push(name);
     }
 
+    // Rightmost modifier wins when a field is repeated, matching the state
+    // rules. Only the metadata the issue list exposes is modelled.
+    const presence: MetadataPresence = {};
+    for (const match of query.matchAll(
+        /(?<=^|\s)(has|no):(assignee|label|milestone)(?=\s|$)/g,
+    )) {
+        presence[match[2] as keyof MetadataPresence] =
+            match[1] as PresenceFilter;
+    }
+
     return {
         activeState,
         author: authorMatch?.[1],
         labels,
+        presence,
     };
 }
 
@@ -68,6 +84,7 @@ type ForgejoListFn = (
         page: number;
         author?: string;
         labels?: string[];
+        presence?: MetadataPresence;
     },
 ) => Promise<{ totalCount: number }>;
 
@@ -77,7 +94,11 @@ export async function forgejoStateCounts(
     owner: string,
     repo: string,
     sort: ForgejoSort,
-    filters: { author?: string; labels?: string[] } = {},
+    filters: {
+        author?: string;
+        labels?: string[];
+        presence?: MetadataPresence;
+    } = {},
 ): Promise<{ open: number; closed: number }> {
     const countParams = { sort, limit: 1, page: 1, ...filters };
     const [open, closed] = await Promise.all([

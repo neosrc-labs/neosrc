@@ -23,6 +23,15 @@ type GqlSearchFn<
     countQueries: TCountQueries,
 ) => Promise<GqlSearchResponse<TItem, TStateCounts>>;
 
+// GitHub's issue-page filters accept has:, but the search service this app
+// queries ignores it. Only assignee has a wildcard form, so the remaining has:
+// values cannot be expressed; the native no: qualifiers pass through untouched.
+const HAS_ASSIGNEE_RE = /(?<=^|\s)has:assignee(?=\s|$)/g;
+
+export function normalizeGithubSearchQuery(query: string): string {
+    return query.replace(HAS_ASSIGNEE_RE, "assignee:*");
+}
+
 // Shared shape of the GitHub PR/issue search procedures: build one GraphQL
 // query plus per-state count queries, then map each raw item.
 export async function searchGqlItems<
@@ -44,12 +53,13 @@ export async function searchGqlItems<
             ? ` sort:${params.sort}-${params.order}`
             : "";
     const kind = `is:${options.kind}`;
-    const gqlQuery = `repo:${params.owner}/${params.repo} ${kind} ${params.query}${sortOrder}`;
+    const query = normalizeGithubSearchQuery(params.query);
+    const gqlQuery = `repo:${params.owner}/${params.repo} ${kind} ${query}${sortOrder}`;
 
     const stateAlternatives = options.countStates
         .map((state) => `is:${state}`)
         .join("|");
-    const restQuery = params.query
+    const restQuery = query
         .replace(
             new RegExp(`(?<=^|\\s)(${stateAlternatives})(?=\\s|$)`, "g"),
             " ",

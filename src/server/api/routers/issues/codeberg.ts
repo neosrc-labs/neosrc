@@ -47,6 +47,9 @@ export class CodebergIssueProvider implements IssueProvider {
         if (qualifiers.labels.length > 0) {
             issueParams.labels = qualifiers.labels;
         }
+        if (Object.keys(qualifiers.presence).length > 0) {
+            issueParams.presence = qualifiers.presence;
+        }
 
         const [result, counts] = await Promise.all([
             listIssues(accessToken, params.owner, params.repo, issueParams),
@@ -56,7 +59,11 @@ export class CodebergIssueProvider implements IssueProvider {
                 params.owner,
                 params.repo,
                 cbSort,
-                { author: qualifiers.author, labels: qualifiers.labels },
+                {
+                    author: qualifiers.author,
+                    labels: qualifiers.labels,
+                    presence: qualifiers.presence,
+                },
             ),
         ]);
 
