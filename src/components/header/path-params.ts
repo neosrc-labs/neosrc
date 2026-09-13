@@ -6,6 +6,7 @@ export interface ParsedRepoPath {
     owner: string | null;
     repo: string | null;
     pullRequestNumber: number | null;
+    issueNumber: number | null;
     pathType: PathType | null;
 }
 
@@ -23,12 +24,21 @@ export function parseRepoPath(pathname: string): ParsedRepoPath {
     let pathType: PathType | null = null;
 
     let pullRequestNumber: number | null = null;
+    let issueNumber: number | null = null;
     if (repoMatch) {
         const prMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
         const pullsMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pulls/);
+        const issueDetailMatch = cleanPath.match(
+            /^\/([^/]+)\/([^/]+)\/issues\/(\d+)/,
+        );
         const issuesMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/issues/);
         if (pullsMatch) {
             pathType = "PULLS_LIST";
+        } else if (issueDetailMatch) {
+            pathType = "ISSUE_DETAIL";
+            if (issueDetailMatch[3]) {
+                issueNumber = parseInt(issueDetailMatch[3], 10);
+            }
         } else if (issuesMatch) {
             pathType = "ISSUES_LIST";
         } else if (prMatch) {
@@ -46,6 +56,7 @@ export function parseRepoPath(pathname: string): ParsedRepoPath {
         owner,
         repo,
         pullRequestNumber,
+        issueNumber,
         pathType,
     };
 }

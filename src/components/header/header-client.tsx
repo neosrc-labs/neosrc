@@ -151,7 +151,7 @@ function HeaderContent({
     initialOwner: string | null;
     initialRepo: string | null;
 }) {
-    const { provider, owner, repo, pullRequestNumber, pathType } =
+    const { provider, owner, repo, pullRequestNumber, issueNumber, pathType } =
         parseRepoPath(usePathname());
 
     const cacheKey = owner && repo ? `${provider}/${owner}/${repo}` : null;
@@ -257,6 +257,7 @@ function HeaderContent({
                                     owner={owner}
                                     repo={repo}
                                     pullRequestNumber={pullRequestNumber}
+                                    issueNumber={issueNumber}
                                     pathType={pathType}
                                 />
                             )}
@@ -287,7 +288,7 @@ function HeaderContent({
                 </div>
             )}
 
-            {pathType === "PULL_REQUEST" && (
+            {(pathType === "PULL_REQUEST" || pathType === "ISSUE_DETAIL") && (
                 <PullRequestSidebarToggles headerRef={headerRef} />
             )}
         </>
@@ -351,12 +352,14 @@ function ProviderIcon({
     owner,
     repo,
     pullRequestNumber,
+    issueNumber,
     pathType,
 }: {
     provider: Provider;
     owner: string;
     repo: string;
     pullRequestNumber?: number | null;
+    issueNumber?: number | null;
     pathType: PathType;
 }) {
     return (
@@ -365,11 +368,13 @@ function ProviderIcon({
             href={
                 pathType === "PULL_REQUEST"
                     ? `https://${domain(provider)}/${owner}/${repo}/pull/${pullRequestNumber}?neosrc_exit=1`
-                    : pathType === "ISSUES_LIST"
-                      ? `https://${domain(provider)}/${owner}/${repo}/issues`
-                      : pathType === "PULLS_LIST"
-                        ? `https://${domain(provider)}/${owner}/${repo}/pulls`
-                        : `https://${domain(provider)}/${owner}/${repo}`
+                    : pathType === "ISSUE_DETAIL"
+                      ? `https://${domain(provider)}/${owner}/${repo}/issues/${issueNumber}?neosrc_exit=1`
+                      : pathType === "ISSUES_LIST"
+                        ? `https://${domain(provider)}/${owner}/${repo}/issues`
+                        : pathType === "PULLS_LIST"
+                          ? `https://${domain(provider)}/${owner}/${repo}/pulls`
+                          : `https://${domain(provider)}/${owner}/${repo}`
             }
             target="_blank"
             rel="noopener noreferrer"
