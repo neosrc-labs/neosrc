@@ -22,6 +22,13 @@ const config = {
                 hostname: "codeberg.org",
                 pathname: "/avatars/**",
             },
+            {
+                // Forgejo serves its default avatar from /assets, which is
+                // what bot and mirror accounts use.
+                protocol: "https",
+                hostname: "codeberg.org",
+                pathname: "/assets/**",
+            },
         ],
     },
     reactCompiler: true,

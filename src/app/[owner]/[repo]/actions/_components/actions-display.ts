@@ -3,7 +3,6 @@ import type {
     WorkflowRunItem,
     WorkflowRunStatus,
 } from "~/server/api/routers/actions/types";
-import { WORKFLOW_RUN_STATUS_VALUES } from "~/server/api/routers/actions/types";
 
 const STATUS_LABELS: Record<WorkflowRunStatus, string> = {
     in_progress: "In progress",
@@ -20,20 +19,20 @@ const STATUS_LABELS: Record<WorkflowRunStatus, string> = {
     neutral: "Neutral",
     stale: "Stale",
     timed_out: "Timed out",
+    running: "Running",
+    blocked: "Blocked",
+    unknown: "Unknown",
 };
-
-export const WORKFLOW_RUN_STATUS_OPTIONS: readonly {
-    value: WorkflowRunStatus;
-    label: string;
-}[] = WORKFLOW_RUN_STATUS_VALUES.map((value) => ({
-    value,
-    label: STATUS_LABELS[value],
-}));
 
 // Keyed by plain string so a raw API status can be looked up without a cast.
 const STATUS_LABEL_BY_VALUE = new Map<string, string>(
-    WORKFLOW_RUN_STATUS_OPTIONS.map((option) => [option.value, option.label]),
+    Object.entries(STATUS_LABELS),
 );
+
+/** Label for a status or filter value, falling back to the raw name. */
+export function statusLabel(value: string): string {
+    return STATUS_LABEL_BY_VALUE.get(value) ?? value.replace(/_/g, " ");
+}
 
 const EVENT_LABELS: Record<string, string> = {
     push: "Push",
@@ -65,20 +64,18 @@ export function eventLabel(event: string): string {
 
 /**
  * Trailing label for a run row. A finished run shows nothing here and falls
- * back to its duration; anything that needs attention shows a status label.
+ * back to its duration; anything that needs attention shows a status label,
+ * whether the provider reports it as a conclusion or as a status.
  */
 export function runStatusLabel(
     status: string,
     conclusion: string | null,
 ): string | null {
-    if (status === "completed") {
-        const label =
-            !conclusion || conclusion === "success"
-                ? null
-                : STATUS_LABEL_BY_VALUE.get(conclusion);
-        return label ?? null;
+    if (conclusion && conclusion !== "success") {
+        return STATUS_LABEL_BY_VALUE.get(conclusion) ?? null;
     }
-    return STATUS_LABEL_BY_VALUE.get(status) ?? null;
+    if (status === "completed") return null;
+    return statusLabel(status);
 }
 
 export function runDurationLabel(run: WorkflowRunItem): string | null {

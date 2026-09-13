@@ -1,13 +1,16 @@
 import type { RestEndpointMethodTypes } from "@octokit/rest";
 import type {
     ActionsFilterOptions,
+    GithubRunStatus,
     RepoWorkflowItem,
     WorkflowRunActor,
     WorkflowRunItem,
     WorkflowRunPage,
-    WorkflowRunStatus,
 } from "~/server/api/routers/actions/types";
-import { WORKFLOW_RUNS_PER_PAGE } from "~/server/api/routers/actions/types";
+import {
+    GITHUB_RUN_STATUS_VALUES,
+    WORKFLOW_RUNS_PER_PAGE,
+} from "~/server/api/routers/actions/types";
 import { createOctokit } from "./client";
 
 type WorkflowRun =
@@ -28,7 +31,7 @@ export interface ListWorkflowRunsParams {
     branch?: string;
     actor?: string;
     event?: string;
-    status?: WorkflowRunStatus;
+    status?: GithubRunStatus;
     page?: number;
 }
 
@@ -99,10 +102,8 @@ export async function listRepoWorkflows(
     );
 
     return workflows.map((workflow) => ({
-        id: workflow.id,
+        id: String(workflow.id),
         name: workflow.name,
-        path: workflow.path,
-        state: workflow.state,
     }));
 }
 
@@ -140,5 +141,6 @@ export async function listWorkflowRunFilterOptions(
         actors: [...actors.values()].sort((a, b) =>
             a.login.localeCompare(b.login),
         ),
+        statuses: [...GITHUB_RUN_STATUS_VALUES],
     };
 }
