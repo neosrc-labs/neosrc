@@ -22,6 +22,7 @@ import {
 import {
     addReaction,
     type GQLPullRequestReactions,
+    getIssueReactionsGraphQL,
     getPullRequestReactionsGraphQL,
     getSubjectReactions,
     isOrgRestrictionError,
@@ -62,6 +63,49 @@ export const reactionsRouter = createTRPCRouter({
                     input.owner,
                     input.repo,
                     input.number,
+                );
+            }
+
+            return {
+                reactions: reactionData.reactions,
+                currentUserLogin: currentUser?.login,
+                counts: reactionData.counts,
+            };
+        }),
+
+    getForIssue: protectedProcedure
+        .input(
+            z.object({
+                owner: z.string(),
+                repo: z.string(),
+                issueNumber: z.number(),
+            }),
+        )
+        .query(async ({ ctx, input }) => {
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session?.user?.id,
+            );
+
+            const currentUser = isAnonymousToken(accessToken)
+                ? null
+                : await getAuthenticatedUser(accessToken);
+
+            let reactionData: GQLPullRequestReactions;
+            try {
+                reactionData = await getIssueReactionsGraphQL(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.issueNumber,
+                );
+            } catch (error) {
+                if (!isOrgRestrictionError(error)) throw error;
+                reactionData = await getPullRequestReactionsRest(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.issueNumber,
                 );
             }
 
