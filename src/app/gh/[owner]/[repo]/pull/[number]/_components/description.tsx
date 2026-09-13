@@ -1,6 +1,5 @@
 "use client";
 
-import type { components } from "@octokit/openapi-types";
 import { Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
 import Image from "next/image";
 import NextLink from "next/link";
@@ -10,8 +9,7 @@ import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { MarkdownEditor } from "~/components/markdown/markdown-editor";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
-import { ReactionBar } from "~/components/reaction-bar";
-import { ReactionPicker } from "~/components/reaction-picker";
+import { RoleBadge } from "~/components/role-badge";
 import {
     Popover,
     PopoverContent,
@@ -22,19 +20,9 @@ import {
     StatusPill,
 } from "~/components/ui/status-pill";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
-import type { ReactionContent } from "~/lib/reactions";
-import type { PullsGetResponseData, StackSuggestion } from "~/server/github";
-import { AdditionsDeletionsBadge } from "./additions-deletions-badge";
-import { AutoMergeBannerSection } from "./auto-merge-banner-section";
-import { ConflictedFiles } from "./conflicted-files";
-import { CreateStackDialog } from "./create-stack-dialog";
-import { StackBanner } from "./stack-banner";
-
-type SimpleUser = components["schemas"]["nullable-simple-user"];
-
-import { RoleBadge } from "~/components/role-badge";
 import { useLocalStorage } from "~/hooks/use-local-storage";
 import { useTaskToggle } from "~/hooks/use-task-toggle";
+import type { PullsGetResponseData, StackSuggestion } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
 import {
@@ -42,6 +30,12 @@ import {
     canInteract,
     type PullRequestPermissionContext,
 } from "./../permissions-utils";
+import { AdditionsDeletionsBadge } from "./additions-deletions-badge";
+import { AutoMergeBannerSection } from "./auto-merge-banner-section";
+import { ConflictedFiles } from "./conflicted-files";
+import { CreateStackDialog } from "./create-stack-dialog";
+import { ReactionFooter } from "./reaction-footer";
+import { StackBanner } from "./stack-banner";
 import { StackCreateBadge } from "./stack-create-badge";
 import { StackBadge } from "./stack-popover";
 
@@ -109,84 +103,9 @@ export function PullRequestDescriptionSection({
 
     const [menuOpen, setMenuOpen] = useState(false);
 
-    const { data: currentUserData } = api.users.currentUser.useQuery();
-
     const { data: reactionsData } = api.reactions.get.useQuery(
         { owner, repo, number },
         { staleTime: 30_000 },
-    );
-
-    const utils = api.useUtils();
-
-    const toggleIssueMutation = api.reactions.toggleIssue.useMutation({
-        onMutate: async ({ content }) => {
-            await utils.reactions.get.cancel({ owner, repo, number });
-            const prevData = utils.reactions.get.getData({
-                owner,
-                repo,
-                number,
-            });
-            utils.reactions.get.setData({ owner, repo, number }, (old) => {
-                if (!old) return old;
-                const userLogin = currentUserData?.login;
-                if (!userLogin) return old;
-                const existing = old.reactions?.find(
-                    (r) => r.user?.login === userLogin && r.content === content,
-                );
-                const updatedCounts = old.counts
-                    ? {
-                          ...old.counts,
-                          total_count: existing
-                              ? old.counts.total_count - 1
-                              : old.counts.total_count + 1,
-                          [content]: existing
-                              ? old.counts[content] - 1
-                              : old.counts[content] + 1,
-                      }
-                    : old.counts;
-
-                return {
-                    ...old,
-                    reactions: existing
-                        ? old.reactions.filter((r) => r.id !== existing.id)
-                        : [
-                              ...old.reactions,
-                              {
-                                  id: -Date.now(),
-                                  node_id: "",
-                                  content,
-                                  created_at: new Date().toISOString(),
-                                  user: placeholderUser(userLogin),
-                              },
-                          ],
-                    counts: updatedCounts,
-                };
-            });
-            return { prevData };
-        },
-        onError: (_err, _vars, ctx) => {
-            if (ctx?.prevData) {
-                utils.reactions.get.setData(
-                    { owner, repo, number },
-                    ctx.prevData,
-                );
-            }
-        },
-        onSettled: () => {
-            utils.reactions.get.invalidate({ owner, repo, number });
-        },
-    });
-
-    const handleReact = useCallback(
-        (content: ReactionContent) => {
-            toggleIssueMutation.mutate({
-                owner,
-                repo,
-                number,
-                content,
-            });
-        },
-        [owner, repo, number, toggleIssueMutation],
     );
 
     const handleStartEdit = useCallback((currentBody: string) => {
@@ -432,60 +351,18 @@ export function PullRequestDescriptionSection({
                                     }
                                     promise={permissionContextPromise}
                                 >
-                                    {(permissionContext) => {
-                                        const reactionCounts =
-                                            reactionsData?.counts
-                                                ? {
-                                                      "+1": reactionsData
-                                                          .counts["+1"],
-                                                      "-1": reactionsData
-                                                          .counts["-1"],
-                                                      laugh: reactionsData
-                                                          .counts.laugh,
-                                                      confused:
-                                                          reactionsData.counts
-                                                              .confused,
-                                                      heart: reactionsData
-                                                          .counts.heart,
-                                                      hooray: reactionsData
-                                                          .counts.hooray,
-                                                      rocket: reactionsData
-                                                          .counts.rocket,
-                                                      eyes: reactionsData.counts
-                                                          .eyes,
-                                                  }
-                                                : undefined;
-
-                                        if (!canInteract(permissionContext)) {
-                                            return null;
-                                        }
-
-                                        return (
-                                            <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                                                <ReactionPicker
-                                                    reactions={
-                                                        reactionsData?.reactions ??
-                                                        []
-                                                    }
-                                                    currentUserLogin={
-                                                        currentUserData?.login
-                                                    }
-                                                    onReact={handleReact}
-                                                />
-                                                <ReactionBar
-                                                    reactions={
-                                                        reactionsData?.reactions ??
-                                                        []
-                                                    }
-                                                    counts={reactionCounts}
-                                                    currentUserLogin={
-                                                        currentUserData?.login
-                                                    }
-                                                    onReact={handleReact}
-                                                />
-                                            </div>
-                                        );
-                                    }}
+                                    {(permissionContext) => (
+                                        <ReactionFooter
+                                            owner={owner}
+                                            repo={repo}
+                                            number={number}
+                                            kind="pull"
+                                            reactionsData={reactionsData}
+                                            permissionContext={
+                                                permissionContext
+                                            }
+                                        />
+                                    )}
                                 </Async>
                             )}
                         </div>
@@ -496,7 +373,7 @@ export function PullRequestDescriptionSection({
     );
 }
 
-function AuthorLabel({
+export function AuthorLabel({
     username,
     profileUrl,
     avatarUrl,
@@ -820,29 +697,4 @@ function useMainSectionWidth() {
     }, []);
 
     return width;
-}
-
-function placeholderUser(login: string): SimpleUser {
-    return {
-        login,
-        id: 0,
-        node_id: "",
-        avatar_url: "",
-        gravatar_id: null,
-        url: "",
-        html_url: "",
-        followers_url: "",
-        following_url: "",
-        gists_url: "",
-        starred_url: "",
-        subscriptions_url: "",
-        organizations_url: "",
-        repos_url: "",
-        events_url: "",
-        received_events_url: "",
-        type: "",
-        site_admin: false,
-        name: null,
-        email: null,
-    } satisfies SimpleUser;
 }
