@@ -6,7 +6,11 @@ import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { applyArrayOperations, opId } from "~/lib/utils";
-import type { Assignee, PullsGetResponseData } from "~/server/github";
+import type {
+    Assignee,
+    IssueGetResponseData,
+    PullsGetResponseData,
+} from "~/server/github";
 import { api } from "~/trpc/react";
 import {
     canEdit,
@@ -27,7 +31,11 @@ export function AssigneeSection({
     repo,
     number,
 }: {
-    pullRequestPromise: Promise<PullsGetResponseData>;
+    pullRequestPromise: Promise<{
+        labels: PullsGetResponseData["labels"] | IssueGetResponseData["labels"];
+        assignees?: PullsGetResponseData["assignees"];
+        milestone: PullsGetResponseData["milestone"];
+    }>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;

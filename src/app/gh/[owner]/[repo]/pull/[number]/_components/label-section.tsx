@@ -1,9 +1,15 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { Label as LabelComponent } from "~/components/ui/label";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { applyArrayOperations, opId } from "~/lib/utils";
-import type { Label, PullsGetResponseData } from "~/server/github";
+import type {
+    IssueGetResponseData,
+    Label,
+    PullsGetResponseData,
+} from "~/server/github";
 import { api } from "~/trpc/react";
 import {
     canEdit,
@@ -20,7 +26,11 @@ export function LabelsSection({
     repo,
     number,
 }: {
-    pullRequestPromise: Promise<PullsGetResponseData>;
+    pullRequestPromise: Promise<{
+        labels: PullsGetResponseData["labels"] | IssueGetResponseData["labels"];
+        assignees?: PullsGetResponseData["assignees"];
+        milestone: PullsGetResponseData["milestone"];
+    }>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;
@@ -89,7 +99,7 @@ export function LabelsSection({
                             {(permissionContext) => (
                                 <LabelSectionSettings
                                     repoLabels={labelsData}
-                                    labels={pullRequest.labels}
+                                    labels={toSectionLabels(pullRequest.labels)}
                                     operations={operations}
                                     onAddLabel={handleAdd}
                                     onRemoveLabel={handleRemove}
@@ -112,7 +122,7 @@ export function LabelsSection({
                     <Async promise={permissionContextPromise} fallback={null}>
                         {(permissionContext) => (
                             <LabelSectionContent
-                                labels={pullRequest.labels}
+                                labels={toSectionLabels(pullRequest.labels)}
                                 operations={operations}
                                 onRemoveLabel={handleRemove}
                                 canEdit={canEdit(permissionContext)}
@@ -237,4 +247,38 @@ function applyOperations(
         (op) => op.label,
         (l) => l.name,
     );
+}
+
+// issues.get types labels loosely (strings in list contexts, partial
+// objects); the section only reads name/color/description.
+function toSectionLabels(
+    labels: PullsGetResponseData["labels"] | IssueGetResponseData["labels"],
+): Label[] {
+    return labels.flatMap((label): Label[] => {
+        if (typeof label === "string") {
+            return [
+                {
+                    id: 0,
+                    node_id: "",
+                    url: "",
+                    name: label,
+                    description: null,
+                    color: "ededed",
+                    default: false,
+                },
+            ];
+        }
+        if (!label.name) return [];
+        return [
+            {
+                id: label.id ?? 0,
+                node_id: label.node_id ?? "",
+                url: label.url ?? "",
+                name: label.name,
+                description: label.description ?? null,
+                color: label.color ?? "ededed",
+                default: label.default ?? false,
+            },
+        ];
+    });
 }

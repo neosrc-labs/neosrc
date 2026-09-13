@@ -1,15 +1,15 @@
 import { getSession } from "~/server/auth";
-import {
-    getUserRepoPermission,
-    type PullsGetResponseData,
-} from "~/server/github";
+import { getUserRepoPermission } from "~/server/github";
 import type { PullRequestPermissionContext } from "./permissions-utils";
 
 export async function getPullRequestPermissionContext(
     accessToken: string,
     owner: string,
     repo: string,
-    pullRequestPromise: Promise<PullsGetResponseData>,
+    pullRequestPromise: Promise<{
+        locked: boolean;
+        user?: { login: string } | null;
+    }>,
     userId: string | undefined,
 ): Promise<PullRequestPermissionContext> {
     const session = await getSession();

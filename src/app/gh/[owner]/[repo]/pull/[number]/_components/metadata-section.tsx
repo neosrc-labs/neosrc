@@ -1,6 +1,7 @@
-"use client";
-
-import type { PullsGetResponseData } from "~/server/github";
+import type {
+    IssueGetResponseData,
+    PullsGetResponseData,
+} from "~/server/github";
 import type { PullRequestPermissionContext } from "../permissions-utils";
 import { AssigneeSection } from "./assignee-section";
 import { LabelsSection } from "./label-section";
@@ -8,11 +9,16 @@ import { MilestoneSection } from "./milestone-section";
 import { ReviewerSection } from "./reviewer-section";
 
 interface MetadataSectionProps {
-    pullRequestPromise: Promise<PullsGetResponseData>;
+    pullRequestPromise: Promise<{
+        labels: PullsGetResponseData["labels"] | IssueGetResponseData["labels"];
+        assignees?: PullsGetResponseData["assignees"];
+        milestone: PullsGetResponseData["milestone"];
+    }>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;
     number: number;
+    showReviewers?: boolean;
 }
 
 export function MetadataSection({
@@ -21,19 +27,25 @@ export function MetadataSection({
     owner,
     repo,
     number,
+    showReviewers = true,
 }: MetadataSectionProps) {
     return (
         <>
-            {/* Reviewers Section */}
-            <section>
-                <ReviewerSection
-                    permissionContextPromise={permissionContextPromise}
-                    pullRequestPromise={pullRequestPromise}
-                    owner={owner}
-                    repo={repo}
-                    number={number}
-                />
-            </section>
+            {showReviewers && (
+                <section>
+                    <ReviewerSection
+                        permissionContextPromise={permissionContextPromise}
+                        // Sound: reviewers render only for pull requests, whose
+                        // callers always supply the full PR payload.
+                        pullRequestPromise={
+                            pullRequestPromise as Promise<PullsGetResponseData>
+                        }
+                        owner={owner}
+                        repo={repo}
+                        number={number}
+                    />
+                </section>
+            )}
 
             {/* Assignees Section */}
             <section>
