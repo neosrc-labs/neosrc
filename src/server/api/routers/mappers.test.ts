@@ -2,12 +2,22 @@ import { describe, expect, it } from "vitest";
 import {
     mapCbAuthor,
     mapCbLabel,
+    mapCbReaction,
+    mapCbReactionCounts,
+    mapCodebergIssueDetail,
+    mapGitHubIssueDetail,
     mapGqlAssignee,
     mapGqlAuthor,
     mapGqlLabel,
+    mapPullRequestMetadata,
     mapRestAssignee,
     nullSafe,
 } from "~/server/api/routers/mappers";
+import type { CodebergIssue, CodebergReaction } from "~/server/codeberg";
+import type {
+    IssueGetResponseData,
+    PullsGetResponseData,
+} from "~/server/github";
 
 describe("mapGqlAssignee", () => {
     it("maps login and avatarUrl to camelCase fields", () => {
@@ -185,5 +195,202 @@ describe("nullSafe", () => {
         expect(result).toEqual([a, b]);
         expect(result[0]).toBe(a);
         expect(result[1]).toBe(b);
+    });
+});
+
+function githubIssue(
+    overrides: Record<string, unknown> = {},
+): IssueGetResponseData {
+    return {
+        number: 5,
+        title: "Broken",
+        body: "details",
+        state: "open",
+        locked: false,
+        comments: 2,
+        created_at: "2026-01-01T00:00:00Z",
+        user: {
+            login: "alice",
+            avatar_url: "https://avatars/alice",
+            html_url: "https://github.com/alice",
+        },
+        author_association: "MEMBER",
+        labels: [],
+        assignees: [],
+        milestone: null,
+        ...overrides,
+    } as unknown as IssueGetResponseData;
+}
+
+function codebergIssue(overrides: Record<string, unknown> = {}): CodebergIssue {
+    return {
+        id: 11,
+        number: 5,
+        title: "Broken",
+        state: "open",
+        html_url: "https://codeberg.org/o/r/issues/5",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+        closed_at: null,
+        body: "details",
+        user: {
+            id: 1,
+            login: "alice",
+            full_name: "Alice",
+            avatar_url: "https://avatars/alice",
+            html_url: "https://codeberg.org/alice",
+        },
+        assignees: [{ id: 2, login: "bob", avatar_url: "https://avatars/bob" }],
+        labels: [{ id: 3, name: "bug", color: "f00", description: null }],
+        milestone: { id: 4, title: "v1" },
+        comments: null,
+        pull_request: null,
+        ...overrides,
+    };
+}
+
+describe("mapGitHubIssueDetail", () => {
+    it("maps author association, state, author and milestone", () => {
+        const result = mapGitHubIssueDetail(
+            githubIssue({
+                state: "closed",
+                milestone: {
+                    number: 7,
+                    title: "v2",
+                    html_url: "https://github.com/o/r/milestone/7",
+                },
+            }),
+        );
+
+        expect(result.state).toBe("closed");
+        expect(result.authorAssociation).toBe("MEMBER");
+        expect(result.author).toEqual({
+            login: "alice",
+            avatarUrl: "https://avatars/alice",
+            profileUrl: "https://github.com/alice",
+        });
+        expect(result.milestone).toEqual({
+            id: "7",
+            title: "v2",
+            htmlUrl: "https://github.com/o/r/milestone/7",
+        });
+    });
+
+    it("normalizes string labels and a null body", () => {
+        const result = mapGitHubIssueDetail(
+            githubIssue({ labels: ["bug"], body: null }),
+        );
+
+        expect(result.body).toBe("");
+        expect(result.labels).toEqual([
+            { id: "", name: "bug", color: "ededed", description: null },
+        ]);
+    });
+});
+
+describe("mapCodebergIssueDetail", () => {
+    it("defaults comments to 0 and reports no lock or author association", () => {
+        const result = mapCodebergIssueDetail(codebergIssue(), "o", "r");
+
+        expect(result.comments).toBe(0);
+        expect(result.locked).toBe(false);
+        expect(result.authorAssociation).toBeNull();
+    });
+
+    it("maps labels, assignees and the milestone id", () => {
+        const result = mapCodebergIssueDetail(codebergIssue(), "o", "r");
+
+        expect(result.labels).toEqual([
+            { id: "3", name: "bug", color: "f00", description: null },
+        ]);
+        expect(result.assignees).toEqual([
+            { login: "bob", avatarUrl: "https://avatars/bob" },
+        ]);
+        expect(result.milestone?.id).toBe(
+            String(codebergIssue().milestone?.id),
+        );
+        expect(result.milestone?.htmlUrl).toBe(
+            "https://codeberg.org/o/r/milestone/4",
+        );
+    });
+
+    it("falls back to the provider profile URL when html_url is absent", () => {
+        const result = mapCodebergIssueDetail(
+            codebergIssue({
+                user: {
+                    id: 1,
+                    login: "alice",
+                    full_name: "Alice",
+                    avatar_url: "https://avatars/alice",
+                },
+            }),
+            "o",
+            "r",
+        );
+
+        expect(result.author?.profileUrl).toBe("https://codeberg.org/alice");
+    });
+});
+
+describe("mapPullRequestMetadata", () => {
+    it("reads labels, assignees and the milestone number", () => {
+        const pr = {
+            labels: [{ name: "bug", color: "f00", description: null }],
+            assignees: [{ login: "bob", avatar_url: "https://avatars/bob" }],
+            milestone: {
+                number: 9,
+                title: "v3",
+                html_url: "https://github.com/o/r/milestone/9",
+            },
+        } as unknown as PullsGetResponseData;
+
+        const result = mapPullRequestMetadata(pr);
+
+        expect(result.labels).toEqual([
+            { id: "", name: "bug", color: "f00", description: null },
+        ]);
+        expect(result.assignees).toEqual([
+            { login: "bob", avatarUrl: "https://avatars/bob" },
+        ]);
+        expect(result.milestone).toEqual({
+            id: "9",
+            title: "v3",
+            htmlUrl: "https://github.com/o/r/milestone/9",
+        });
+    });
+});
+
+describe("mapCbReaction", () => {
+    it("synthesizes a 1-based id and maps the user", () => {
+        const reaction: CodebergReaction = {
+            content: "heart",
+            created_at: "2026-01-01T00:00:00Z",
+            user: { login: "bob", avatar_url: "https://avatars/bob" },
+        };
+
+        const result = mapCbReaction(reaction, 4);
+
+        expect(result).toEqual({
+            databaseId: 5,
+            content: "heart",
+            createdAt: "2026-01-01T00:00:00Z",
+            user: { login: "bob", avatarUrl: "https://avatars/bob" },
+        });
+    });
+});
+
+describe("mapCbReactionCounts", () => {
+    it("counts each known content and totals every reaction", () => {
+        const counts = mapCbReactionCounts([
+            { content: "+1", created_at: "", user: null },
+            { content: "+1", created_at: "", user: null },
+            { content: "heart", created_at: "", user: null },
+            { content: "custom", created_at: "", user: null },
+        ]);
+
+        expect(counts["+1"]).toBe(2);
+        expect(counts.heart).toBe(1);
+        expect(counts.laugh).toBe(0);
+        expect(counts.total_count).toBe(4);
     });
 });

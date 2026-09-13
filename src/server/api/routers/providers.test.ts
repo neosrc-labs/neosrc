@@ -119,6 +119,12 @@ vi.mock("~/server/github", () => ({
 
 vi.mock("~/server/codeberg", () => ({
     ...fns(
+        "createIssueComment",
+        "createIssueCommentReaction",
+        "createIssueReaction",
+        "deleteIssueComment",
+        "deleteIssueCommentReaction",
+        "deleteIssueReaction",
         "deleteRepoSubscription",
         "getCachedRepo",
         "getCachedRepoCounts",
@@ -134,7 +140,11 @@ vi.mock("~/server/codeberg", () => ({
         "getRepoContents",
         "getRepoLanguages",
         "getTags",
+        "getUser",
         "getUserRepos",
+        "listIssueCommentReactions",
+        "listIssueReactions",
+        "listIssueTimeline",
         "setRepoSubscription",
         "starRepo",
         "unstarRepo",
@@ -142,6 +152,8 @@ vi.mock("~/server/codeberg", () => ({
         "listLabels",
         "listMilestones",
         "listRecentIssueAuthors",
+        "updateIssue",
+        "updateIssueComment",
     ),
 }));
 
@@ -153,6 +165,7 @@ vi.mock("~/server/api/routers/checks", () => ({
 }));
 vi.mock("@octokit/graphql", () => ({ graphql: vi.fn() }));
 
+import { issuesRouter } from "~/server/api/routers/issues";
 import { pullsRouter } from "~/server/api/routers/pulls";
 import { reposRouter } from "~/server/api/routers/repos";
 import { createCallerFactory, createTRPCContext } from "~/server/api/trpc";
@@ -172,6 +185,7 @@ async function callerFor(session: unknown) {
     return {
         repos: createCallerFactory(reposRouter)(ctx),
         pulls: createCallerFactory(pullsRouter)(ctx),
+        issues: createCallerFactory(issuesRouter)(ctx),
     };
 }
 
@@ -343,5 +357,83 @@ describe("github-only procedures (pulls router)", () => {
             "open",
             undefined,
         );
+    });
+});
+
+describe("provider-aware procedures (issues router)", () => {
+    it("adds a Codeberg comment with the Codeberg token", async () => {
+        const { issues } = await callerFor({ user: { id: "user-1" } });
+        vi.mocked(codeberg.createIssueComment).mockResolvedValue({
+            id: 42,
+        } as never);
+
+        await expect(
+            issues.addComment({
+                provider: "cb",
+                owner: "acme",
+                repo: "api",
+                issueNumber: 3,
+                body: "hi",
+            }),
+        ).resolves.toEqual({ success: true, id: 42 });
+
+        expect(getCodebergTokenMock).toHaveBeenCalledWith({}, "user-1");
+        expect(codeberg.createIssueComment).toHaveBeenCalledWith(
+            "cb-token",
+            "acme",
+            "api",
+            3,
+            "hi",
+        );
+        expect(getGitHubTokenMock).not.toHaveBeenCalled();
+    });
+
+    it("returns mapped Codeberg timeline events and a page cursor", async () => {
+        const { issues } = await callerFor({ user: { id: "user-1" } });
+        vi.mocked(codeberg.listIssueTimeline).mockResolvedValue({
+            items: [
+                {
+                    id: 5,
+                    type: "comment",
+                    body: "hi",
+                    created_at: "2026-01-01T00:00:00Z",
+                    user: null,
+                    label: null,
+                    milestone: null,
+                    assignee: null,
+                },
+            ],
+            hasNextPage: true,
+        } as never);
+        vi.mocked(codeberg.getUser).mockResolvedValue({
+            login: "alice",
+        } as never);
+        vi.mocked(codeberg.listIssueCommentReactions).mockResolvedValue(
+            [] as never,
+        );
+
+        const result = await issues.timeline({
+            provider: "cb",
+            owner: "acme",
+            repo: "api",
+            issueNumber: 3,
+            limit: 30,
+        });
+
+        expect(codeberg.listIssueTimeline).toHaveBeenCalledWith(
+            "cb-token",
+            "acme",
+            "api",
+            3,
+            1,
+            30,
+        );
+        expect(result.nextCursor).toBe("2");
+        expect(result.events).toHaveLength(1);
+        expect(result.events[0]).toMatchObject({
+            __typename: "IssueComment",
+            id: "5",
+        });
+        expect(result.currentUserLogin).toBe("alice");
     });
 });
