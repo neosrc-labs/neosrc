@@ -42,21 +42,24 @@ export const usersRouter = createTRPCRouter({
             const provider = input?.provider ?? "gh";
 
             if (provider === "cb") {
-                const codebergUsername = ctx.session?.user?.codebergUsername;
-                if (codebergUsername) {
-                    return {
-                        login: codebergUsername,
-                        avatarUrl: ctx.session?.user?.image ?? "",
-                    };
+                const userId = ctx.session?.user?.id;
+                // Anonymous visitors have no Codeberg account and the token
+                // getter throws rather than returning an empty token.
+                if (!userId) return null;
+
+                try {
+                    // Resolve the profile: the session image belongs to
+                    // whichever provider signed in last, so it can carry a
+                    // GitHub avatar for a Codeberg viewer.
+                    const accessToken = await getCodebergToken(ctx.db, userId);
+                    const user = await getCodebergUser(accessToken);
+                    return user
+                        ? { login: user.login, avatarUrl: user.avatar_url }
+                        : null;
+                } catch {
+                    // No linked Codeberg account; treat the viewer as unknown.
+                    return null;
                 }
-                const accessToken = await getCodebergToken(
-                    ctx.db,
-                    ctx.session?.user?.id,
-                );
-                const user = await getCodebergUser(accessToken);
-                return user
-                    ? { login: user.login, avatarUrl: user.avatar_url }
-                    : null;
             }
 
             const githubUsername = ctx.session?.user?.githubUsername;
