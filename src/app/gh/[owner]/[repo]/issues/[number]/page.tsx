@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense, use } from "react";
 import { DocumentTitleSetter } from "~/components/document-title-setter";
 import { getSession, githubAccessToken } from "~/server/auth";
-import { getIssue, type IssueGetResponseData } from "~/server/github";
+import type { IssueGetResponseData } from "~/server/github";
 import { generateIssueMetadata } from "~/server/metadata";
 import { getPullRequestPermissionContext } from "../../pull/[number]/permissions-server";
 import type { PullRequestPermissionContext } from "../../pull/[number]/permissions-utils";
@@ -12,6 +12,7 @@ import {
     IssueTimelineSection,
     TimelineSkeleton,
 } from "./_components/issue-timeline-section";
+import { loadIssueForRoute } from "./load-issue";
 
 interface PageProps {
     params: Promise<{
@@ -54,7 +55,7 @@ export default async function IssuePage({ params }: PageProps) {
 
     const session = await getSession();
     const userId = session?.user?.id;
-    const issuePromise = getIssue(accessToken, owner, repo, number);
+    const issuePromise = loadIssueForRoute(accessToken, owner, repo, number);
     const permissionContextPromise = getPullRequestPermissionContext(
         accessToken,
         owner,
