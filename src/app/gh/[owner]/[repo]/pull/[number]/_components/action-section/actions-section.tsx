@@ -25,6 +25,7 @@ import type { PullRequestMergeState } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 import { ConflictedFiles } from "../conflicted-files";
+import { useActionError } from "./action-errors";
 import { AutoMergeToggle } from "./auto-merge-toggle";
 import { DisableAutoMergeButton } from "./disable-auto-merge-button";
 import { resolveMergeOptions } from "./merge-options";
@@ -247,6 +248,25 @@ function Buttons({
         },
     });
 
+    useActionError(
+        "mark-as-draft",
+        markAsDraftMutation.isError
+            ? "Failed to mark as draft. Please try again."
+            : null,
+    );
+    useActionError(
+        "close",
+        closeMutation.isError ? "Failed to close. Please try again." : null,
+    );
+    useActionError(
+        "reopen",
+        reopenMutation.isError ? "Failed to reopen. Please try again." : null,
+    );
+    useActionError(
+        "merge",
+        mergeMutation.isError ? "Failed to merge. Please try again." : null,
+    );
+
     const handleCancelReview = useCallback(() => {
         if (!pendingReview) return;
         discardPendingReviewMutation.mutate({
@@ -438,7 +458,6 @@ function Buttons({
                         isMergeStateUnknown={isMergeStateUnknown}
                         isMergePermissionUnknown={isMergePermissionUnknown}
                         noMergeMethodsAvailable={noMergeMethodsAvailable}
-                        mergeError={mergeMutation.isError}
                         // React Query keeps the last `data` across failed
                         // background refetches; only treat requirements as
                         // unavailable when there is genuinely nothing to show.
@@ -495,21 +514,6 @@ function Buttons({
                         />
                     ) : null}
                 </div>
-            )}
-            {markAsDraftMutation.isError && (
-                <p className="text-red-600 text-xs">
-                    Failed to mark as draft. Please try again.
-                </p>
-            )}
-            {closeMutation.isError && (
-                <p className="text-red-600 text-xs">
-                    Failed to close. Please try again.
-                </p>
-            )}
-            {reopenMutation.isError && (
-                <p className="text-red-600 text-xs">
-                    Failed to reopen. Please try again.
-                </p>
             )}
             {!effectiveMerged &&
                 pullRequest.state === "open" &&

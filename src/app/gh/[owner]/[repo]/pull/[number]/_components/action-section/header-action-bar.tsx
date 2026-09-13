@@ -5,6 +5,7 @@ import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_compone
 import { Async } from "~/components/async";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
+import { ActionErrorBanner, useActionErrorPinned } from "./action-errors";
 import { ActionSection } from "./actions-section";
 
 interface HeaderActionBarProps {
@@ -39,6 +40,10 @@ export function HeaderActionBar({
     const [contentWidth, setContentWidth] = useState(0);
     const [mainWidth, setMainWidth] = useState(0);
     const [barHeight, setBarHeight] = useState(0);
+
+    // While pinned the header row scrolls away, so the error row moves into
+    // the fixed bar to stay visible.
+    useActionErrorPinned(isSticky);
 
     const captureDimensions = useCallback(() => {
         const main = sentinelRef.current?.closest("main");
@@ -186,6 +191,7 @@ export function HeaderActionBar({
                         )}
                     </Async>
                 </div>
+                <ActionErrorBanner pinned className="mx-2 mb-2" />
             </div>
             {isSticky && (
                 <div aria-hidden style={{ height: `${barHeight}px` }} />
