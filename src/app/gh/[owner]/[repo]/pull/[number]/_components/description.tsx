@@ -1,11 +1,15 @@
 "use client";
 
 import { Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
-import Image from "next/image";
-import NextLink from "next/link";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { AuthorLabel } from "~/app/[owner]/[repo]/_components/author-label";
+import {
+    canEdit,
+    canInteract,
+    type PullRequestPermissionContext,
+} from "~/app/[owner]/[repo]/_components/permissions-utils";
+import { ReactionFooter } from "~/app/[owner]/[repo]/_components/reaction-footer";
 import { Async } from "~/components/async";
-import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { MarkdownEditor } from "~/components/markdown/markdown-editor";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
@@ -25,16 +29,10 @@ import { useTaskToggle } from "~/hooks/use-task-toggle";
 import type { PullsGetResponseData, StackSuggestion } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
-import {
-    canEdit,
-    canInteract,
-    type PullRequestPermissionContext,
-} from "./../permissions-utils";
 import { AdditionsDeletionsBadge } from "./additions-deletions-badge";
 import { AutoMergeBannerSection } from "./auto-merge-banner-section";
 import { ConflictedFiles } from "./conflicted-files";
 import { CreateStackDialog } from "./create-stack-dialog";
-import { ReactionFooter } from "./reaction-footer";
 import { StackBanner } from "./stack-banner";
 import { StackCreateBadge } from "./stack-create-badge";
 import { StackBadge } from "./stack-popover";
@@ -357,6 +355,7 @@ export function PullRequestDescriptionSection({
                                             repo={repo}
                                             number={number}
                                             kind="pull"
+                                            provider="gh"
                                             reactionsData={reactionsData}
                                             permissionContext={
                                                 permissionContext
@@ -370,33 +369,6 @@ export function PullRequestDescriptionSection({
                 }}
             </Async>
         </div>
-    );
-}
-
-export function AuthorLabel({
-    username,
-    profileUrl,
-    avatarUrl,
-}: {
-    username: string;
-    profileUrl: string;
-    avatarUrl: string;
-}) {
-    return (
-        <UserHoverCard login={username}>
-            <NextLink className="flex items-center gap-2" href={profileUrl}>
-                {avatarUrl ? (
-                    <Image
-                        alt={username}
-                        className="h-5 w-5 rounded-full"
-                        src={avatarUrl}
-                        width={20}
-                        height={20}
-                    />
-                ) : null}
-                {username}{" "}
-            </NextLink>
-        </UserHoverCard>
     );
 }
 
@@ -601,6 +573,7 @@ function SubtitleActionRow({
                             username={pullRequest.user?.login ?? "ghost"}
                             avatarUrl={pullRequest.user?.avatar_url ?? ""}
                             profileUrl={pullRequest.user?.html_url ?? "#"}
+                            provider="gh"
                         />
                         <span title={formatDateTime(pullRequest.created_at)}>
                             {formatRelativeTime(pullRequest.created_at)}

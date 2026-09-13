@@ -1,0 +1,59 @@
+"use client";
+
+import NextLink from "next/link";
+import { CommitAuthors } from "~/components/commit-authors";
+import { CommitSubject } from "~/components/commit-subject";
+import { VerifiedBadge } from "~/components/verified-badge";
+import type { GQLPullRequestCommit } from "~/server/github-graphql";
+import type { Provider } from "~/utils/provider-url";
+
+export function PullRequestCommitContent({
+    event,
+    provider,
+    owner,
+    repo,
+    number,
+}: {
+    event: GQLPullRequestCommit;
+    provider: Provider;
+    owner: string;
+    repo: string;
+    number: number;
+}) {
+    const commit = event.commit;
+    return (
+        <div className="item-center flex justify-between text-sm text-text-secondary">
+            <div className="item-center flex min-w-0 gap-2">
+                {commit && (
+                    <CommitAuthors
+                        authors={commit.authors?.nodes ?? []}
+                        size={20}
+                    />
+                )}
+                <NextLink
+                    href={`/${provider}/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
+                    className="truncate hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                >
+                    <CommitSubject
+                        message={commit?.message ?? ""}
+                        className="truncate"
+                        provider={provider}
+                        owner={owner}
+                        repo={repo}
+                    />
+                </NextLink>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+                {commit?.signature?.isValid && (
+                    <VerifiedBadge signature={commit.signature} />
+                )}
+                <NextLink
+                    href={`/${provider}/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
+                    className="font-mono text-text-secondary text-xs hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                >
+                    {commit?.oid.slice(0, 7)}
+                </NextLink>
+            </div>
+        </div>
+    );
+}

@@ -7,7 +7,10 @@ import {
     getGithubUsername,
     isAnonymousToken,
 } from "~/server/auth";
-import { getUserByUsername as getCodebergUserByUsername } from "~/server/codeberg";
+import {
+    getUser as getCodebergUser,
+    getUserByUsername as getCodebergUserByUsername,
+} from "~/server/codeberg";
 import {
     getAuthenticatedUser,
     getGitHubTeam,
@@ -29,28 +32,60 @@ export type UserProfile = {
 };
 
 export const usersRouter = createTRPCRouter({
-    currentUser: protectedProcedure.query(async ({ ctx }) => {
-        const githubUsername = ctx.session?.user?.githubUsername;
-        const avatarUrl = ctx.session?.user?.image;
+    currentUser: protectedProcedure
+        .input(
+            z
+                .object({ provider: z.enum(["gh", "cb"]).default("gh") })
+                .optional(),
+        )
+        .query(async ({ ctx, input }) => {
+            const provider = input?.provider ?? "gh";
 
-        if (githubUsername && avatarUrl) {
-            return { login: githubUsername, avatarUrl };
-        }
+            if (provider === "cb") {
+                const userId = ctx.session?.user?.id;
+                // Anonymous visitors have no Codeberg account and the token
+                // getter throws rather than returning an empty token.
+                if (!userId) return null;
 
-        const accessToken = await getGitHubToken(ctx.db, ctx.session?.user?.id);
-        if (isAnonymousToken(accessToken)) return null;
-        const user = await getAuthenticatedUser(accessToken);
+                try {
+                    // Resolve the profile: the session image belongs to
+                    // whichever provider signed in last, so it can carry a
+                    // GitHub avatar for a Codeberg viewer.
+                    const accessToken = await getCodebergToken(ctx.db, userId);
+                    const user = await getCodebergUser(accessToken);
+                    return user
+                        ? { login: user.login, avatarUrl: user.avatar_url }
+                        : null;
+                } catch {
+                    // No linked Codeberg account; treat the viewer as unknown.
+                    return null;
+                }
+            }
 
-        return {
-            login:
-                githubUsername ??
-                (await getGithubUsername(
-                    ctx.session?.user?.id ?? null,
-                    accessToken,
-                )),
-            avatarUrl: avatarUrl ?? user.avatar_url,
-        };
-    }),
+            const githubUsername = ctx.session?.user?.githubUsername;
+            const avatarUrl = ctx.session?.user?.image;
+
+            if (githubUsername && avatarUrl) {
+                return { login: githubUsername, avatarUrl };
+            }
+
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session?.user?.id,
+            );
+            if (isAnonymousToken(accessToken)) return null;
+            const user = await getAuthenticatedUser(accessToken);
+
+            return {
+                login:
+                    githubUsername ??
+                    (await getGithubUsername(
+                        ctx.session?.user?.id ?? null,
+                        accessToken,
+                    )),
+                avatarUrl: avatarUrl ?? user.avatar_url,
+            };
+        }),
     getByUsername: protectedProcedure
         .input(
             z.object({

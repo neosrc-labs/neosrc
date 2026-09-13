@@ -4,8 +4,20 @@ import {
     createTRPCRouter,
     protectedMutation,
     protectedProcedure,
+    providerInput,
+    providerMutation,
+    providerQuery,
 } from "~/server/api/trpc";
 import { getGitHubToken, isAnonymousToken } from "~/server/auth";
+import {
+    createIssueCommentReaction as createCodebergIssueCommentReaction,
+    createIssueReaction as createCodebergIssueReaction,
+    deleteIssueCommentReaction as deleteCodebergIssueCommentReaction,
+    deleteIssueReaction as deleteCodebergIssueReaction,
+    getUser as getCodebergUser,
+    listIssueCommentReactions,
+    listIssueReactions,
+} from "~/server/codeberg";
 import {
     createIssueCommentReaction,
     createIssueReaction,
@@ -28,6 +40,19 @@ import {
     isOrgRestrictionError,
     removeReaction,
 } from "~/server/github-graphql";
+import { mapCbReactionCounts } from "./mappers";
+
+// Both providers accept the same eight reaction contents.
+const reactionContentSchema = z.enum([
+    "+1",
+    "-1",
+    "laugh",
+    "confused",
+    "heart",
+    "hooray",
+    "rocket",
+    "eyes",
+]);
 
 export const reactionsRouter = createTRPCRouter({
     get: protectedProcedure
@@ -73,20 +98,13 @@ export const reactionsRouter = createTRPCRouter({
             };
         }),
 
-    getForIssue: protectedProcedure
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                issueNumber: z.number(),
-            }),
-        )
-        .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+    getForIssue: providerQuery({
+        input: providerInput({
+            owner: z.string(),
+            repo: z.string(),
+            issueNumber: z.number(),
+        }),
+        gh: async ({ input, accessToken }) => {
             const currentUser = isAnonymousToken(accessToken)
                 ? null
                 : await getAuthenticatedUser(accessToken);
@@ -114,32 +132,39 @@ export const reactionsRouter = createTRPCRouter({
                 currentUserLogin: currentUser?.login,
                 counts: reactionData.counts,
             };
+        },
+        cb: async ({ input, accessToken }) => {
+            const [reactions, viewer] = await Promise.all([
+                listIssueReactions(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.issueNumber,
+                ),
+                getCodebergUser(accessToken),
+            ]);
+            return {
+                reactions: reactions.map((reaction, index) => ({
+                    id: index + 1,
+                    node_id: "",
+                    content: reaction.content,
+                    created_at: reaction.created_at,
+                    user: reaction.user ? { login: reaction.user.login } : null,
+                })),
+                currentUserLogin: viewer?.login,
+                counts: mapCbReactionCounts(reactions),
+            };
+        },
+    }),
+
+    toggleIssueComment: providerMutation({
+        input: providerInput({
+            owner: z.string(),
+            repo: z.string(),
+            commentId: z.number(),
+            content: reactionContentSchema,
         }),
-
-    toggleIssueComment: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                commentId: z.number(),
-                content: z.enum([
-                    "+1",
-                    "-1",
-                    "laugh",
-                    "confused",
-                    "heart",
-                    "hooray",
-                    "rocket",
-                    "eyes",
-                ]),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+        gh: async ({ input, accessToken }) => {
             const [currentUser, existingReactions] = await Promise.all([
                 isAnonymousToken(accessToken)
                     ? null
@@ -177,7 +202,42 @@ export const reactionsRouter = createTRPCRouter({
                 input.content,
             );
             return { action: "added" as const };
-        }),
+        },
+        cb: async ({ input, accessToken }) => {
+            const viewer = (await getCodebergUser(accessToken))?.login;
+            const existingReactions = await listIssueCommentReactions(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.commentId,
+            );
+
+            const existing = existingReactions.find(
+                (r) => r.user?.login === viewer && r.content === input.content,
+            );
+
+            if (existing) {
+                // Forgejo deletes by content, not by reaction id.
+                await deleteCodebergIssueCommentReaction(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.commentId,
+                    input.content,
+                );
+                return { action: "removed" as const };
+            }
+
+            await createCodebergIssueCommentReaction(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.commentId,
+                input.content,
+            );
+            return { action: "added" as const };
+        },
+    }),
 
     togglePullRequestReviewComment: protectedMutation
         .input(
@@ -185,16 +245,7 @@ export const reactionsRouter = createTRPCRouter({
                 owner: z.string(),
                 repo: z.string(),
                 commentId: z.number(),
-                content: z.enum([
-                    "+1",
-                    "-1",
-                    "laugh",
-                    "confused",
-                    "heart",
-                    "hooray",
-                    "rocket",
-                    "eyes",
-                ]),
+                content: reactionContentSchema,
             }),
         )
         .mutation(async ({ ctx, input }) => {
@@ -246,16 +297,7 @@ export const reactionsRouter = createTRPCRouter({
         .input(
             z.object({
                 subjectId: z.string(),
-                content: z.enum([
-                    "+1",
-                    "-1",
-                    "laugh",
-                    "confused",
-                    "heart",
-                    "hooray",
-                    "rocket",
-                    "eyes",
-                ]),
+                content: reactionContentSchema,
                 databaseId: z.number().optional(),
             }),
         )
@@ -331,30 +373,14 @@ export const reactionsRouter = createTRPCRouter({
             return reactionMap;
         }),
 
-    toggleIssue: protectedMutation
-        .input(
-            z.object({
-                owner: z.string(),
-                repo: z.string(),
-                number: z.number(),
-                content: z.enum([
-                    "+1",
-                    "-1",
-                    "laugh",
-                    "confused",
-                    "heart",
-                    "hooray",
-                    "rocket",
-                    "eyes",
-                ]),
-            }),
-        )
-        .mutation(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-
+    toggleIssue: providerMutation({
+        input: providerInput({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            content: reactionContentSchema,
+        }),
+        gh: async ({ input, accessToken }) => {
             const [currentUser, existingReactions] = await Promise.all([
                 isAnonymousToken(accessToken)
                     ? null
@@ -392,5 +418,39 @@ export const reactionsRouter = createTRPCRouter({
                 input.content,
             );
             return { action: "added" as const };
-        }),
+        },
+        cb: async ({ input, accessToken }) => {
+            const viewer = (await getCodebergUser(accessToken))?.login;
+            const existingReactions = await listIssueReactions(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+            );
+
+            const existing = existingReactions.find(
+                (r) => r.user?.login === viewer && r.content === input.content,
+            );
+
+            if (existing) {
+                await deleteCodebergIssueReaction(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.number,
+                    input.content,
+                );
+                return { action: "removed" as const };
+            }
+
+            await createCodebergIssueReaction(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.number,
+                input.content,
+            );
+            return { action: "added" as const };
+        },
+    }),
 });

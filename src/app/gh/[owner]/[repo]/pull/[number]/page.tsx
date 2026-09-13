@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense, use } from "react";
+import { getIssuePermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
+import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
+import {
+    TimelineSection,
+    TimelineSkeleton,
+} from "~/app/[owner]/[repo]/_components/timeline/section";
 import { DocumentTitleSetter } from "~/components/document-title-setter";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
@@ -15,12 +21,6 @@ import { generatePRMetadata } from "~/server/metadata";
 import { HeaderActionBar } from "./_components/action-section/header-action-bar";
 import { PullRequestDescriptionSection } from "./_components/description";
 import { PullRequestContent } from "./_components/pull-request-content";
-import {
-    TimelineSection,
-    TimelineSkeleton,
-} from "./_components/timeline/section";
-import { getPullRequestPermissionContext } from "./permissions-server";
-import type { PullRequestPermissionContext } from "./permissions-utils";
 
 interface PageProps {
     params: Promise<{
@@ -87,13 +87,14 @@ export default async function PullRequestPage({ params }: PageProps) {
     const checksPromise = pullRequestPromise.then((pr) =>
         getChecksForCommit(accessToken, owner, repo, pr.head.sha),
     );
-    const permissionContextPromise = getPullRequestPermissionContext(
+    const permissionContextPromise = getIssuePermissionContext({
+        provider: "gh",
         accessToken,
         owner,
         repo,
-        pullRequestPromise,
+        subjectPromise: pullRequestPromise,
         userId,
-    );
+    });
     const stackSuggestionPromise = getStackSuggestion(
         accessToken,
         owner,

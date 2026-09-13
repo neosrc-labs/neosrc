@@ -1,0 +1,45 @@
+"use client";
+
+import { UserLink } from "~/components/user-link";
+import type {
+    GQLClosedEvent,
+    GQLConvertToDraftEvent,
+    GQLReadyForReviewEvent,
+    GQLReopenedEvent,
+} from "~/server/github-graphql";
+import { formatDateTime, formatRelativeTime } from "~/utils";
+import type { Provider } from "~/utils/provider-url";
+import { EventRow } from "../event";
+
+export function StateEventContent({
+    event,
+    provider,
+}: {
+    event:
+        | GQLClosedEvent
+        | GQLReopenedEvent
+        | GQLConvertToDraftEvent
+        | GQLReadyForReviewEvent;
+    provider: Provider;
+}) {
+    const timestamp = formatRelativeTime(event.createdAt);
+    const fullDate = formatDateTime(event.createdAt);
+    const verb =
+        event.__typename === "ClosedEvent"
+            ? "closed"
+            : event.__typename === "ReopenedEvent"
+              ? "reopened"
+              : event.__typename === "ConvertToDraftEvent"
+                ? "converted to draft"
+                : "marked ready for review";
+    return (
+        <EventRow>
+            <UserLink actor={event.actor} provider={provider} />
+            <p>
+                {verb}
+                {" this "}
+                <span title={fullDate}>{timestamp}</span>
+            </p>
+        </EventRow>
+    );
+}

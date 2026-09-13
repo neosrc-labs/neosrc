@@ -2,8 +2,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import type { PullsGetResponseData } from "~/server/github";
-import type { PullRequestPermissionContext } from "../permissions-utils";
 import { ConflictedFiles } from "./conflicted-files";
 
 vi.mock("next/image", () => ({

@@ -2,23 +2,25 @@
 
 import { Check, Circle } from "lucide-react";
 import { use, useRef, useState } from "react";
+import { MetadataSection } from "~/app/[owner]/[repo]/_components/metadata-section";
+import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import { StatusCheckIcon } from "~/components/ci-status";
 import {
     Tooltip,
     TooltipContent,
     TooltipTrigger,
 } from "~/components/ui/tooltip";
+import type { IssueMetadata } from "~/server/api/routers/issues/types";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { computeChecksPollingInterval } from "~/utils/checks-polling";
-import type { PullRequestPermissionContext } from "../permissions-utils";
 import { checkBreakdown } from "./check-groups";
 import { ChecksSection } from "./checks-section";
 import { CommitsSection } from "./commits-section";
-import { MetadataSection } from "./metadata-section";
 
 interface RightSidebarProps {
     pullRequestPromise: Promise<PullsGetResponseData> | null;
+    metadataPromise: Promise<IssueMetadata> | null;
     checksPromise: Promise<Array<CheckRun>> | null;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
@@ -120,6 +122,7 @@ function ChecksTabIcon({ checks }: { checks: CheckRun[] }) {
 
 export default function RightSidebar({
     pullRequestPromise,
+    metadataPromise,
     checksPromise,
     permissionContextPromise,
     owner,
@@ -202,13 +205,17 @@ export default function RightSidebar({
             data-testid="right-sidebar"
         >
             <div className="sticky top-0 z-10 space-y-4 bg-surface pb-4">
-                <MetadataSection
-                    permissionContextPromise={permissionContextPromise}
-                    pullRequestPromise={pullRequestPromise}
-                    owner={owner}
-                    repo={repo}
-                    number={number}
-                />
+                {metadataPromise && (
+                    <MetadataSection
+                        provider="gh"
+                        metadataPromise={metadataPromise}
+                        reviewerPayloadPromise={pullRequestPromise}
+                        permissionContextPromise={permissionContextPromise}
+                        owner={owner}
+                        repo={repo}
+                        number={number}
+                    />
+                )}
                 <div className="mt-10 flex gap-1 border-border-subtle border-b pb-2">
                     {tabs.map(({ key, icon, label }) => (
                         <button

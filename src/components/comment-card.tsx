@@ -6,10 +6,12 @@ import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { MarkdownEditor } from "~/components/markdown/markdown-editor";
 import { RoleBadge } from "~/components/role-badge";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import type { Provider } from "~/utils/provider-url";
 
 interface CommentCardProps {
     user: { login: string; avatar_url: string } | null;
     userHref?: string;
+    provider?: Provider;
     createdAt: string;
     authorAssociation?: string | null;
     isPending?: boolean;
@@ -35,6 +37,7 @@ interface CommentCardProps {
 export function CommentCard({
     user,
     userHref,
+    provider = "gh",
     createdAt,
     authorAssociation,
     isPending,
@@ -133,7 +136,7 @@ export function CommentCard({
             >
                 <div className="flex min-w-0 items-center gap-2">
                     {user && userHref ? (
-                        <UserHoverCard login={user.login}>
+                        <UserHoverCard login={user.login} provider={provider}>
                             <a
                                 className="flex items-center gap-2"
                                 href={userHref}

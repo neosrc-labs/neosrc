@@ -1,8 +1,8 @@
-import type { PullsGetResponseData } from "~/server/github";
 import {
     canPush,
     type PullRequestPermissionContext,
-} from "../../permissions-utils";
+} from "~/app/[owner]/[repo]/_components/permissions-utils";
+import type { PullsGetResponseData } from "~/server/github";
 
 /**
  * Capability and merge-state flags for the action bar, derived once from

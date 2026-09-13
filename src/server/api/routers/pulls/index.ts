@@ -16,15 +16,18 @@ import {
     protectedMutation,
     protectedProcedure,
     providerInput,
+    providerMutation,
     providerQuery,
 } from "~/server/api/trpc";
 import { getGitHubToken, getGithubUsername } from "~/server/auth";
 import { deleteCache, prCacheKey, readCache } from "~/server/cache";
 import {
+    deleteIssueComment as deleteCodebergIssueComment,
     listAssignees as listCodebergAssignees,
     listLabels as listCodebergLabels,
     listMilestones as listCodebergMilestones,
     listRecentIssueAuthors as listCodebergRecentAuthors,
+    updateIssueComment as updateCodebergIssueComment,
 } from "~/server/codeberg";
 import {
     addAssigneesToIssue,
@@ -151,16 +154,28 @@ export const pullsRouter = createTRPCRouter({
         },
     }),
 
-    // Comment edits intentionally leave the cached PR payload untouched.
-    updateComment: githubMutation({
-        input: z.object({
+    // Comment edits intentionally leave the cached PR payload untouched. The
+    // issue timeline reuses these procedures because issue comments and PR
+    // comments share one endpoint per provider.
+    updateComment: providerMutation({
+        input: providerInput({
             owner: z.string(),
             repo: z.string(),
             commentId: z.number(),
             body: z.string(),
         }),
-        run: async ({ input, accessToken }) => {
+        gh: async ({ input, accessToken }) => {
             const comment = await updateIssueComment(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.commentId,
+                input.body,
+            );
+            return { success: true as const, body: comment.body };
+        },
+        cb: async ({ input, accessToken }) => {
+            const comment = await updateCodebergIssueComment(
                 accessToken,
                 input.owner,
                 input.repo,
@@ -171,14 +186,23 @@ export const pullsRouter = createTRPCRouter({
         },
     }),
 
-    deleteComment: githubMutation({
-        input: z.object({
+    deleteComment: providerMutation({
+        input: providerInput({
             owner: z.string(),
             repo: z.string(),
             commentId: z.number(),
         }),
-        run: async ({ input, accessToken }) => {
+        gh: async ({ input, accessToken }) => {
             await deleteIssueComment(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.commentId,
+            );
+            return { success: true as const };
+        },
+        cb: async ({ input, accessToken }) => {
+            await deleteCodebergIssueComment(
                 accessToken,
                 input.owner,
                 input.repo,

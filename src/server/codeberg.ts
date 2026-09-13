@@ -995,6 +995,7 @@ export type CodebergIssue = {
         login: string;
         full_name: string;
         avatar_url: string;
+        html_url?: string;
     } | null;
     assignees: Array<{
         id: number;
@@ -1012,6 +1013,7 @@ export type CodebergIssue = {
         title: string;
     } | null;
     comments: number | null;
+    is_locked?: boolean;
     pull_request?: {
         url: string;
     } | null;
@@ -1197,6 +1199,326 @@ export const searchIssues = cache(
             }));
     },
 );
+
+type CodebergTimelineActor = {
+    id: number;
+    login: string;
+    avatar_url: string;
+    html_url: string;
+};
+
+export type CodebergComment = {
+    id: number;
+    html_url: string;
+    issue_url: string;
+    body: string;
+    created_at: string;
+    updated_at: string;
+    user: CodebergTimelineActor | null;
+};
+
+// Only the fields the timeline adapter reads.
+export type CodebergTimelineEntry = {
+    id: number;
+    type: string;
+    body: string;
+    created_at: string;
+    user: CodebergTimelineActor | null;
+    label: {
+        id: number;
+        name: string;
+        color: string;
+        description?: string | null;
+    } | null;
+    milestone: { id: number; title: string } | null;
+    old_milestone?: { id: number; title: string } | null;
+    assignee: {
+        id: number;
+        login: string;
+        avatar_url: string;
+        html_url: string;
+    } | null;
+    removed_assignee?: boolean;
+    old_title?: string;
+    new_title?: string;
+};
+
+export type CodebergReaction = {
+    content: string;
+    created_at: string;
+    user: { login: string; avatar_url: string } | null;
+};
+
+// Forgejo write helper: JSON body when present, TRPCError on a non-OK status.
+async function forgejoWrite(
+    accessToken: string,
+    method: "POST" | "PATCH" | "DELETE",
+    path: string,
+    body: unknown,
+    failure: string,
+): Promise<Response> {
+    const res = await fetch(`${CODEBERG_API}/api/v1${path}`, {
+        method,
+        headers: {
+            Authorization: `token ${accessToken}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    if (!res.ok) {
+        throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `${failure}: ${res.status}`,
+        });
+    }
+    return res;
+}
+
+// Forgejo caps a page at max_response_items (50); request more and it errors.
+const TIMELINE_MAX_LIMIT = 50;
+
+export const listIssueTimeline = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        issueNumber: number,
+        page: number,
+        limit: number,
+    ): Promise<{ items: CodebergTimelineEntry[]; hasNextPage: boolean }> => {
+        const effectiveLimit = Math.min(limit, TIMELINE_MAX_LIMIT);
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/${issueNumber}/timeline?page=${page}&limit=${effectiveLimit}`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) {
+            if (res.status === 404) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: `Issue ${issueNumber} not found in ${owner}/${repo}`,
+                });
+            }
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: `Failed to fetch issue timeline ${issueNumber} in ${owner}/${repo}: ${res.status}`,
+            });
+        }
+        const data = (await res.json()) as CodebergTimelineEntry[] | null;
+        const items = Array.isArray(data) ? data : [];
+        // Forgejo sends no Link header today; treat a full page as "more".
+        const hasNextPage =
+            (res.headers.get("Link")?.includes('rel="next"') ?? false) ||
+            items.length === effectiveLimit;
+        return { items, hasNextPage };
+    },
+);
+
+export const createIssueComment = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    body: string,
+): Promise<CodebergComment> => {
+    const res = await forgejoWrite(
+        accessToken,
+        "POST",
+        `/repos/${owner}/${repo}/issues/${issueNumber}/comments`,
+        { body },
+        `Failed to create comment in ${owner}/${repo}`,
+    );
+    return res.json() as Promise<CodebergComment>;
+};
+
+export const updateIssueComment = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    commentId: number,
+    body: string,
+): Promise<CodebergComment> => {
+    const res = await forgejoWrite(
+        accessToken,
+        "PATCH",
+        `/repos/${owner}/${repo}/issues/comments/${commentId}`,
+        { body },
+        `Failed to update comment ${commentId} in ${owner}/${repo}`,
+    );
+    return res.json() as Promise<CodebergComment>;
+};
+
+export const deleteIssueComment = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    commentId: number,
+): Promise<void> => {
+    await forgejoWrite(
+        accessToken,
+        "DELETE",
+        `/repos/${owner}/${repo}/issues/comments/${commentId}`,
+        undefined,
+        `Failed to delete comment ${commentId} in ${owner}/${repo}`,
+    );
+};
+
+export const updateIssue = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    fields: { title?: string; body?: string; state?: "open" | "closed" },
+): Promise<CodebergIssue> => {
+    const res = await forgejoWrite(
+        accessToken,
+        "PATCH",
+        `/repos/${owner}/${repo}/issues/${issueNumber}`,
+        fields,
+        `Failed to update issue ${issueNumber} in ${owner}/${repo}`,
+    );
+    return res.json() as Promise<CodebergIssue>;
+};
+
+export const listIssueReactions = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        issueNumber: number,
+    ): Promise<CodebergReaction[]> => {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/${issueNumber}/reactions`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        // A failed read must not look like "no reactions": the toggle paths
+        // would then add a second reaction instead of removing the existing one.
+        if (!res.ok) {
+            if (res.status === 404) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: `Issue ${issueNumber} not found in ${owner}/${repo}`,
+                });
+            }
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: `Failed to fetch reactions for issue ${issueNumber} in ${owner}/${repo}: ${res.status}`,
+            });
+        }
+        const data = (await res.json()) as CodebergReaction[] | null;
+        // Forgejo answers JSON null, not [], when there are no reactions.
+        return Array.isArray(data) ? data : [];
+    },
+);
+
+export const listIssueCommentReactions = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        commentId: number,
+    ): Promise<CodebergReaction[]> => {
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/comments/${commentId}/reactions`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) {
+            if (res.status === 404) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: `Issue comment ${commentId} not found in ${owner}/${repo}`,
+                });
+            }
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: `Failed to fetch reactions for comment ${commentId} in ${owner}/${repo}: ${res.status}`,
+            });
+        }
+        const data = (await res.json()) as CodebergReaction[] | null;
+        // Forgejo answers JSON null, not [], when there are no reactions.
+        return Array.isArray(data) ? data : [];
+    },
+);
+
+export const createIssueReaction = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    content: string,
+): Promise<void> => {
+    await forgejoWrite(
+        accessToken,
+        "POST",
+        `/repos/${owner}/${repo}/issues/${issueNumber}/reactions`,
+        { content },
+        `Failed to add reaction to issue ${issueNumber} in ${owner}/${repo}`,
+    );
+};
+
+export const createIssueCommentReaction = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    commentId: number,
+    content: string,
+): Promise<void> => {
+    await forgejoWrite(
+        accessToken,
+        "POST",
+        `/repos/${owner}/${repo}/issues/comments/${commentId}/reactions`,
+        { content },
+        `Failed to add reaction to comment ${commentId} in ${owner}/${repo}`,
+    );
+};
+
+export const deleteIssueReaction = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    content: string,
+): Promise<void> => {
+    // Forgejo deletes by content, not by reaction id.
+    await forgejoWrite(
+        accessToken,
+        "DELETE",
+        `/repos/${owner}/${repo}/issues/${issueNumber}/reactions`,
+        { content },
+        `Failed to remove reaction from issue ${issueNumber} in ${owner}/${repo}`,
+    );
+};
+
+export const deleteIssueCommentReaction = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    commentId: number,
+    content: string,
+): Promise<void> => {
+    await forgejoWrite(
+        accessToken,
+        "DELETE",
+        `/repos/${owner}/${repo}/issues/comments/${commentId}/reactions`,
+        { content },
+        `Failed to remove reaction from comment ${commentId} in ${owner}/${repo}`,
+    );
+};
 
 export interface CodebergRepoHeaderInfo {
     hasIssues: boolean;

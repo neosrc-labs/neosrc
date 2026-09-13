@@ -3,7 +3,7 @@
 import type { ColorSchemeType, DiffFile } from "diff2html/lib/types";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
+import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import type { ReviewComment } from "~/server/github";
 import type { DiffViewMode } from "~/utils/diff-view";
 import { filenameHash } from "~/utils/filename-hash";
