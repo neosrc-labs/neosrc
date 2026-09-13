@@ -436,6 +436,166 @@ query PullRequestTimeline(
 	viewer { login }
 }
 `;
+const ISSUE_TIMELINE_QUERY = `
+${SIMPLE_USER_FRAGMENT}
+
+query IssueTimeline(
+	$owner: String!
+	$repo: String!
+	$number: Int!
+	$first: Int!
+	$after: String
+) {
+	repository(owner: $owner, name: $repo) {
+		issue(number: $number) {
+			timelineItems(first: $first, after: $after, itemTypes: [
+				ISSUE_COMMENT,
+				LABELED_EVENT,
+				UNLABELED_EVENT,
+				ASSIGNED_EVENT,
+				UNASSIGNED_EVENT,
+				CLOSED_EVENT,
+				REOPENED_EVENT,
+				RENAMED_TITLE_EVENT,
+				LOCKED_EVENT,
+				UNLOCKED_EVENT,
+				MILESTONED_EVENT,
+				DEMILESTONED_EVENT,
+				REFERENCED_EVENT,
+				CROSS_REFERENCED_EVENT,
+				COMMENT_DELETED_EVENT
+			]) {
+				nodes {
+					__typename
+					... on IssueComment {
+						id
+						databaseId
+						body
+						author { ...SimpleUser }
+						createdAt
+						authorAssociation
+						isMinimized
+						minimizedReason
+						reactions(first: 10) {
+							nodes {
+								databaseId
+								content
+								createdAt
+								user { login avatarUrl }
+							}
+						}
+					}
+					... on CrossReferencedEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						source {
+							__typename
+							... on Issue {
+								number
+								title
+								url
+								state
+								repository { name owner { login } }
+							}
+							... on PullRequest {
+								number
+								title
+								url
+								state
+								body
+								repository { name owner { login } }
+							}
+						}
+					}
+					... on AssignedEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						assignee { ...SimpleUser }
+					}
+					... on UnassignedEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						assignee { ...SimpleUser }
+					}
+					... on ClosedEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+					}
+					... on ReopenedEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+					}
+					... on LabeledEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						label { name color description }
+					}
+					... on UnlabeledEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						label { name color description }
+					}
+					... on RenamedTitleEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						previousTitle
+						currentTitle
+					}
+					... on LockedEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						lockReason
+					}
+					... on UnlockedEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+					}
+					... on MilestonedEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						milestoneTitle
+					}
+					... on DemilestonedEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						milestoneTitle
+					}
+					... on ReferencedEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						commit { oid committedDate messageHeadline commitUrl }
+						commitRepository { name owner { login } }
+					}
+					... on CommentDeletedEvent {
+						id
+						actor { ...SimpleUser }
+						createdAt
+						deletedCommentAuthor { ...SimpleUser }
+					}
+				}
+				pageInfo {
+					hasNextPage
+					endCursor
+				}
+			}
+		}
+	}
+	viewer { login }
+}
+`;
 const PR_COMMITS_QUERY = `
 ${SIMPLE_USER_FRAGMENT}
 ${COMMIT_FIELDS_FRAGMENT}
@@ -1030,6 +1190,101 @@ export async function getPullRequestTimelineGraphQL(
         mergeQueueEntry,
     };
 }
+export async function getIssueTimelineGraphQL(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    limit: number,
+    after?: string,
+): Promise<{
+    events: GQLTimelineEvent[];
+    hasMore: boolean;
+    endCursor: string | undefined;
+    commentReactions: Record<
+        string,
+        {
+            databaseId: number;
+            content: string;
+            createdAt: string;
+            user: { login: string; avatarUrl?: string } | null;
+        }[]
+    >;
+    currentUserLogin: string | undefined;
+}> {
+    const graphql = createGraphql(accessToken);
+
+    const result = await graphql<{
+        repository: {
+            issue: {
+                timelineItems: {
+                    nodes: Record<string, unknown>[];
+                    pageInfo: {
+                        hasNextPage: boolean;
+                        endCursor: string | null;
+                    };
+                };
+            };
+        };
+        viewer: { login: string };
+    }>(ISSUE_TIMELINE_QUERY, {
+        owner,
+        repo,
+        number: issueNumber,
+        first: limit,
+        after: after ?? undefined,
+    });
+
+    const events = result.repository.issue.timelineItems.nodes.filter(
+        Boolean,
+    ) as GQLTimelineEvent[];
+    const pageInfo = result.repository.issue.timelineItems.pageInfo;
+
+    const commentReactions: Record<
+        string,
+        {
+            databaseId: number;
+            content: string;
+            createdAt: string;
+            user: { login: string; avatarUrl?: string } | null;
+        }[]
+    > = {};
+
+    // IssueComment and PullRequestReview databaseIds come from independent
+    // sequences. Namespace the keys so an ID collision cannot make one
+    // object display another object's reactions.
+    for (const node of events) {
+        if (
+            node.__typename === "IssueComment" ||
+            node.__typename === "PullRequestReview"
+        ) {
+            const { reactions, databaseId } = node;
+            if (databaseId && reactions?.nodes) {
+                const key =
+                    node.__typename === "IssueComment"
+                        ? `comment:${databaseId}`
+                        : `review:${databaseId}`;
+                commentReactions[key] = reactions.nodes
+                    .filter((r): r is GQLReactionNode => r !== null)
+                    .map((r) => ({
+                        databaseId: r.databaseId,
+                        content:
+                            CONTENT_MAP[r.content] ?? r.content.toLowerCase(),
+                        createdAt: r.createdAt,
+                        user: r.user,
+                    }));
+            }
+        }
+    }
+
+    return {
+        events,
+        hasMore: pageInfo.hasNextPage,
+        endCursor: pageInfo.endCursor ?? undefined,
+        commentReactions,
+        currentUserLogin: result.viewer.login,
+    };
+}
 
 export async function getSubjectReactions(
     accessToken: string,
@@ -1196,6 +1451,106 @@ export async function getPullRequestReactionsGraphQL(
         eyes: 0,
     };
     for (const group of result.repository?.pullRequest?.reactionGroups ?? []) {
+        const key = CONTENT_MAP[group.content];
+        if (key && key in counts && key !== "total_count") {
+            counts[key as keyof Omit<typeof counts, "total_count">] =
+                group.reactors.totalCount;
+            counts.total_count += group.reactors.totalCount;
+        }
+    }
+
+    return { reactions, counts };
+}
+/**
+ * Fetches an issue's first page of reactions plus per-content totals
+ * in one graphql call. The shape mirrors the REST reactions list and the
+ * pull-request-level reactions summary so existing consumers are unaffected.
+ */
+export async function getIssueReactionsGraphQL(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+): Promise<GQLPullRequestReactions> {
+    const graphql = createGraphql(accessToken);
+
+    const result = await graphql<{
+        repository: {
+            issue: {
+                reactions: {
+                    nodes: ({
+                        databaseId: number;
+                        id: string;
+                        content: string;
+                        createdAt: string;
+                        user: { login: string } | null;
+                    } | null)[];
+                } | null;
+                reactionGroups: Array<{
+                    content: string;
+                    reactors: { totalCount: number };
+                }> | null;
+            } | null;
+        } | null;
+    }>(
+        `
+		query($owner: String!, $repo: String!, $number: Int!) {
+			repository(owner: $owner, name: $repo) {
+				issue(number: $number) {
+					reactions(first: 100) {
+						nodes {
+							databaseId
+							id
+							content
+							createdAt
+							user { login }
+						}
+					}
+					reactionGroups {
+						content
+						reactors {
+							totalCount
+						}
+					}
+				}
+			}
+		}
+	`,
+        { owner, repo, number: issueNumber },
+    );
+
+    const reactions = (result.repository?.issue?.reactions?.nodes ?? [])
+        .filter(
+            (
+                r,
+            ): r is {
+                databaseId: number;
+                id: string;
+                content: string;
+                createdAt: string;
+                user: { login: string } | null;
+            } => r !== null,
+        )
+        .map((r) => ({
+            id: r.databaseId,
+            node_id: r.id,
+            content: CONTENT_MAP[r.content] ?? r.content.toLowerCase(),
+            created_at: r.createdAt,
+            user: r.user,
+        }));
+
+    const counts: GQLPullRequestReactions["counts"] = {
+        total_count: 0,
+        "+1": 0,
+        "-1": 0,
+        laugh: 0,
+        confused: 0,
+        heart: 0,
+        hooray: 0,
+        rocket: 0,
+        eyes: 0,
+    };
+    for (const group of result.repository?.issue?.reactionGroups ?? []) {
         const key = CONTENT_MAP[group.content];
         if (key && key in counts && key !== "total_count") {
             counts[key as keyof Omit<typeof counts, "total_count">] =
