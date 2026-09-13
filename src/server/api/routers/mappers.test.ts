@@ -297,6 +297,16 @@ describe("mapCodebergIssueDetail", () => {
         expect(result.authorAssociation).toBeNull();
     });
 
+    it("carries the provider lock state through", () => {
+        const result = mapCodebergIssueDetail(
+            codebergIssue({ is_locked: true }),
+            "o",
+            "r",
+        );
+
+        expect(result.locked).toBe(true);
+    });
+
     it("maps labels, assignees and the milestone id", () => {
         const result = mapCodebergIssueDetail(codebergIssue(), "o", "r");
 

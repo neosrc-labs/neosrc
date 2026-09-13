@@ -41,9 +41,9 @@ export async function getIssuePermissionContext({
         return {
             currentUser,
             repoPermission: mapCodebergPermission(permission),
-            // Codeberg has no issue lock.
-            isPullRequestLocked: false,
+            isPullRequestLocked: subject.locked,
             isPullRequestAuthor: currentUser === subject.user?.login,
+            provider: "cb",
         };
     }
 
@@ -55,6 +55,7 @@ export async function getIssuePermissionContext({
             repoPermission: null,
             isPullRequestLocked: subject.locked,
             isPullRequestAuthor: false,
+            provider: "gh",
         };
     }
 
@@ -74,6 +75,7 @@ export async function getIssuePermissionContext({
         repoPermission: userPermission,
         isPullRequestLocked: subject.locked,
         isPullRequestAuthor: currentUser === subject.user?.login,
+        provider: "gh",
     };
 }
 

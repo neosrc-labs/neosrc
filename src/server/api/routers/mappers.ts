@@ -207,7 +207,7 @@ export function mapCodebergIssueDetail(
         title: issue.title,
         body: issue.body,
         state: issue.state,
-        locked: false,
+        locked: issue.is_locked ?? false,
         comments: issue.comments ?? 0,
         createdAt: issue.created_at,
         author: issue.user
