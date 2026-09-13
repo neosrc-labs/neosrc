@@ -168,6 +168,7 @@ vi.mock("@octokit/graphql", () => ({ graphql: vi.fn() }));
 import { issuesRouter } from "~/server/api/routers/issues";
 import { pullsRouter } from "~/server/api/routers/pulls";
 import { reposRouter } from "~/server/api/routers/repos";
+import { usersRouter } from "~/server/api/routers/users";
 import { createCallerFactory, createTRPCContext } from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken, getSession } from "~/server/auth";
 import * as cache from "~/server/cache";
@@ -186,6 +187,7 @@ async function callerFor(session: unknown) {
         repos: createCallerFactory(reposRouter)(ctx),
         pulls: createCallerFactory(pullsRouter)(ctx),
         issues: createCallerFactory(issuesRouter)(ctx),
+        users: createCallerFactory(usersRouter)(ctx),
     };
 }
 
@@ -435,5 +437,78 @@ describe("provider-aware procedures (issues router)", () => {
             id: "5",
         });
         expect(result.currentUserLogin).toBe("alice");
+    });
+});
+
+describe("users.currentUser (Codeberg)", () => {
+    it("returns null for anonymous visitors without requesting a token", async () => {
+        const { users } = await callerFor(null);
+
+        await expect(users.currentUser({ provider: "cb" })).resolves.toBeNull();
+
+        expect(getCodebergTokenMock).not.toHaveBeenCalled();
+    });
+
+    it("uses the Codeberg profile avatar instead of the shared session image", async () => {
+        const { users } = await callerFor({
+            user: {
+                id: "user-1",
+                codebergUsername: "ranger-ross",
+                image: "https://github.com/avatars/ranger-ross.png",
+            },
+        });
+        vi.mocked(codeberg.getUser).mockResolvedValue({
+            login: "ranger-ross",
+            avatar_url: "https://codeberg.org/avatars/ranger-ross.png",
+        } as never);
+
+        await expect(users.currentUser({ provider: "cb" })).resolves.toEqual({
+            login: "ranger-ross",
+            avatarUrl: "https://codeberg.org/avatars/ranger-ross.png",
+        });
+    });
+
+    it("returns null when no Codeberg account is linked", async () => {
+        const { users } = await callerFor({ user: { id: "user-1" } });
+        getCodebergTokenMock.mockRejectedValue(
+            new Error("Codeberg account not connected"),
+        );
+
+        await expect(users.currentUser({ provider: "cb" })).resolves.toBeNull();
+    });
+});
+
+describe("issues.timeline cursor validation", () => {
+    async function timelineWithCursor(cursor: string) {
+        const { issues } = await callerFor({ user: { id: "user-1" } });
+        vi.mocked(codeberg.listIssueTimeline).mockResolvedValue({
+            items: [],
+            hasNextPage: false,
+        } as never);
+
+        await issues.timeline({
+            provider: "cb",
+            owner: "acme",
+            repo: "api",
+            issueNumber: 3,
+            limit: 30,
+            cursor,
+        });
+
+        return vi.mocked(codeberg.listIssueTimeline).mock.calls.at(-1)?.[4];
+    }
+
+    it("passes a malformed cursor through as the first page", async () => {
+        expect(await timelineWithCursor("abc")).toBe(1);
+    });
+
+    it("rejects fractional, zero and negative pages", async () => {
+        expect(await timelineWithCursor("1.5")).toBe(1);
+        expect(await timelineWithCursor("0")).toBe(1);
+        expect(await timelineWithCursor("-3")).toBe(1);
+    });
+
+    it("keeps a valid page number", async () => {
+        expect(await timelineWithCursor("4")).toBe(4);
     });
 });
