@@ -149,6 +149,23 @@ describe("useDiffSyntaxHighlighting", () => {
         expect(mockHighlightLines.mock.calls[1]![0]).toBe(lines[MAX_RUN_LINES]);
     });
 
+    it("discards tokens whose cell changed while pending", async () => {
+        // React reuses the cell for new content while its tokens are computed.
+        mockHighlightLines.mockImplementationOnce(async () => {
+            spans()[0]!.textContent = "second";
+            return ['<span class="shiki-token">first</span>'];
+        });
+
+        render(<Harness lines={["first"]} />);
+
+        // The stale result is thrown away and the new text is highlighted.
+        await vi.waitFor(() => {
+            expect(spans()[0]!.innerHTML).toBe(
+                '<span class="shiki-token">second</span>',
+            );
+        });
+    });
+
     it("leaves an unsupported language as plain text", async () => {
         render(<Harness lines={["unsupported"]} />);
         await vi.waitFor(() => expect(highlighted()).toHaveLength(1));

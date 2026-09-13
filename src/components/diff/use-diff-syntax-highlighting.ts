@@ -153,6 +153,17 @@ export function useDiffSyntaxHighlighting({
                     ? await highlightLines(text, language)
                     : [""];
                 if (disposed) return;
+                // React reuses a cell when its row content changes. If that
+                // happened while the tokens were being computed, writing them
+                // now would mark the new content as done with stale markup.
+                if (
+                    run
+                        .map((entry) => entry.source.textContent ?? "")
+                        .join("\n") !== text
+                ) {
+                    schedule();
+                    return;
+                }
                 run.forEach((entry, index) => {
                     if (!entry.target) return;
                     // An unsupported language leaves the plain text alone.

@@ -48,6 +48,39 @@ describe("fenced code highlighting", () => {
         );
     });
 
+    it("drops the previous block's markup while new code is pending", async () => {
+        const { container, rerender } = render(
+            <MarkdownRenderer content={"```js\nconst a = 1;\n```"} />,
+        );
+        await vi.waitFor(() =>
+            expect(container.querySelector(".shiki-token")).not.toBeNull(),
+        );
+
+        let release: (lines: string[] | null) => void = () => {};
+        vi.mocked(highlightLines).mockImplementationOnce(
+            () =>
+                new Promise((resolve) => {
+                    release = resolve;
+                }),
+        );
+
+        rerender(<MarkdownRenderer content={"```js\nconst b = 2;\n```"} />);
+
+        // While the new request is pending, the previous block's tokens must
+        // not linger over the new code.
+        expect(container.querySelector("code")?.textContent).toContain(
+            "const b = 2;",
+        );
+        expect(container.querySelector(".shiki-token")).toBeNull();
+
+        release(['<span class="shiki-token">const b = 2;</span>']);
+        await vi.waitFor(() =>
+            expect(container.querySelector(".shiki-token")?.textContent).toBe(
+                "const b = 2;",
+            ),
+        );
+    });
+
     it("falls back to plain text when shiki has no grammar", async () => {
         const container = renderCode(
             ["```definitelynotalanguage", "no tokens here", "```"].join("\n"),
