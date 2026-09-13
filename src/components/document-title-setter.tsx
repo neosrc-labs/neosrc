@@ -7,11 +7,16 @@ export function DocumentTitleSetter({
 }: {
     titlePromise: Promise<string>;
 }) {
-    // biome-ignore lint/correctness/useExhaustiveDependencies: promise is stable across renders
     useEffect(() => {
+        let active = true;
         titlePromise.then((title) => {
-            document.title = title;
+            if (active) {
+                document.title = title;
+            }
         });
-    }, []);
+        return () => {
+            active = false;
+        };
+    }, [titlePromise]);
     return null;
 }
