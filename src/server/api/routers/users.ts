@@ -7,7 +7,10 @@ import {
     getGithubUsername,
     isAnonymousToken,
 } from "~/server/auth";
-import { getUserByUsername as getCodebergUserByUsername } from "~/server/codeberg";
+import {
+    getUser as getCodebergUser,
+    getUserByUsername as getCodebergUserByUsername,
+} from "~/server/codeberg";
 import {
     getAuthenticatedUser,
     getGitHubTeam,
@@ -29,28 +32,57 @@ export type UserProfile = {
 };
 
 export const usersRouter = createTRPCRouter({
-    currentUser: protectedProcedure.query(async ({ ctx }) => {
-        const githubUsername = ctx.session?.user?.githubUsername;
-        const avatarUrl = ctx.session?.user?.image;
+    currentUser: protectedProcedure
+        .input(
+            z
+                .object({ provider: z.enum(["gh", "cb"]).default("gh") })
+                .optional(),
+        )
+        .query(async ({ ctx, input }) => {
+            const provider = input?.provider ?? "gh";
 
-        if (githubUsername && avatarUrl) {
-            return { login: githubUsername, avatarUrl };
-        }
+            if (provider === "cb") {
+                const codebergUsername = ctx.session?.user?.codebergUsername;
+                if (codebergUsername) {
+                    return {
+                        login: codebergUsername,
+                        avatarUrl: ctx.session?.user?.image ?? "",
+                    };
+                }
+                const accessToken = await getCodebergToken(
+                    ctx.db,
+                    ctx.session?.user?.id,
+                );
+                const user = await getCodebergUser(accessToken);
+                return user
+                    ? { login: user.login, avatarUrl: user.avatar_url }
+                    : null;
+            }
 
-        const accessToken = await getGitHubToken(ctx.db, ctx.session?.user?.id);
-        if (isAnonymousToken(accessToken)) return null;
-        const user = await getAuthenticatedUser(accessToken);
+            const githubUsername = ctx.session?.user?.githubUsername;
+            const avatarUrl = ctx.session?.user?.image;
 
-        return {
-            login:
-                githubUsername ??
-                (await getGithubUsername(
-                    ctx.session?.user?.id ?? null,
-                    accessToken,
-                )),
-            avatarUrl: avatarUrl ?? user.avatar_url,
-        };
-    }),
+            if (githubUsername && avatarUrl) {
+                return { login: githubUsername, avatarUrl };
+            }
+
+            const accessToken = await getGitHubToken(
+                ctx.db,
+                ctx.session?.user?.id,
+            );
+            if (isAnonymousToken(accessToken)) return null;
+            const user = await getAuthenticatedUser(accessToken);
+
+            return {
+                login:
+                    githubUsername ??
+                    (await getGithubUsername(
+                        ctx.session?.user?.id ?? null,
+                        accessToken,
+                    )),
+                avatarUrl: avatarUrl ?? user.avatar_url,
+            };
+        }),
     getByUsername: protectedProcedure
         .input(
             z.object({

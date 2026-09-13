@@ -2,26 +2,35 @@ import { z } from "zod";
 
 import {
     createTRPCRouter,
-    githubMutation,
-    githubQuery,
     protectedProcedure,
+    providerInput,
+    providerMutation,
+    providerQuery,
 } from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
 import {
+    createIssueComment as createCodebergIssueComment,
     getIssue as getCodebergIssue,
+    getUser as getCodebergUser,
+    listIssueCommentReactions,
+    listIssueTimeline,
     searchIssues as searchCodebergIssues,
+    updateIssue as updateCodebergIssue,
 } from "~/server/codeberg";
 import {
     createIssueComment,
-    deleteIssueComment,
     getIssue as getGitHubIssue,
     searchIssues,
     updateIssue,
-    updateIssueComment,
 } from "~/server/github";
 import { getIssueTimelineGraphQL } from "~/server/github-graphql";
+import { mapCbReaction } from "../mappers";
 import type { TimelineResult } from "../timeline";
 import { CodebergIssueProvider } from "./codeberg";
+import {
+    codebergCommentIds,
+    mapCodebergTimelineEvents,
+} from "./codeberg-timeline";
 import { GitHubIssueProvider } from "./github";
 import type { IssueProvider } from "./provider";
 import type { IssueSearchResult } from "./types";
@@ -115,15 +124,15 @@ export const issuesRouter = createTRPCRouter({
             );
         }),
 
-    timeline: githubQuery({
-        input: z.object({
+    timeline: providerQuery({
+        input: providerInput({
             owner: z.string(),
             repo: z.string(),
             issueNumber: z.number(),
             limit: z.number().min(1).max(100).default(30),
             cursor: z.string().optional(),
         }),
-        run: ({ input, accessToken }): Promise<TimelineResult> =>
+        gh: ({ input, accessToken }): Promise<TimelineResult> =>
             getIssueTimelineGraphQL(
                 accessToken,
                 input.owner,
@@ -138,17 +147,66 @@ export const issuesRouter = createTRPCRouter({
                 currentUserLogin: r.currentUserLogin,
                 mergeQueueEntry: null,
             })),
+        cb: async ({ input, accessToken }): Promise<TimelineResult> => {
+            const page = Number(input.cursor ?? "1");
+            const { items, hasNextPage } = await listIssueTimeline(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.issueNumber,
+                page,
+                input.limit,
+            );
+            const commentIds = codebergCommentIds(items);
+            // Forgejo has no batch endpoint; fetch one reactions list per
+            // comment on the page (capped by the page limit).
+            const [viewer, reactionLists] = await Promise.all([
+                getCodebergUser(accessToken),
+                Promise.all(
+                    commentIds.map((id) =>
+                        listIssueCommentReactions(
+                            accessToken,
+                            input.owner,
+                            input.repo,
+                            id,
+                        ).catch(() => []),
+                    ),
+                ),
+            ]);
+            return {
+                events: mapCodebergTimelineEvents(items),
+                nextCursor: hasNextPage ? String(page + 1) : undefined,
+                commentReactions: Object.fromEntries(
+                    commentIds.map((id, i) => [
+                        `comment:${id}`,
+                        (reactionLists[i] ?? []).map(mapCbReaction),
+                    ]),
+                ),
+                currentUserLogin: viewer?.login,
+                mergeQueueEntry: null,
+            };
+        },
     }),
 
-    addComment: githubMutation({
-        input: z.object({
+    addComment: providerMutation({
+        input: providerInput({
             owner: z.string(),
             repo: z.string(),
             issueNumber: z.number(),
             body: z.string().min(1),
         }),
-        run: async ({ input, accessToken }) => {
+        gh: async ({ input, accessToken }) => {
             const comment = await createIssueComment(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.issueNumber,
+                input.body,
+            );
+            return { success: true as const, id: comment.id };
+        },
+        cb: async ({ input, accessToken }) => {
+            const comment = await createCodebergIssueComment(
                 accessToken,
                 input.owner,
                 input.repo,
@@ -159,51 +217,25 @@ export const issuesRouter = createTRPCRouter({
         },
     }),
 
-    updateComment: githubMutation({
-        input: z.object({
-            owner: z.string(),
-            repo: z.string(),
-            commentId: z.number(),
-            body: z.string(),
-        }),
-        run: async ({ input, accessToken }) => {
-            const comment = await updateIssueComment(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.commentId,
-                input.body,
-            );
-            return { success: true as const, body: comment.body };
-        },
-    }),
-
-    deleteComment: githubMutation({
-        input: z.object({
-            owner: z.string(),
-            repo: z.string(),
-            commentId: z.number(),
-        }),
-        run: async ({ input, accessToken }) => {
-            await deleteIssueComment(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.commentId,
-            );
-            return { success: true as const };
-        },
-    }),
-
-    updateTitle: githubMutation({
-        input: z.object({
+    updateTitle: providerMutation({
+        input: providerInput({
             owner: z.string(),
             repo: z.string(),
             issueNumber: z.number(),
             title: z.string().min(1),
         }),
-        run: async ({ input, accessToken }) => {
+        gh: async ({ input, accessToken }) => {
             const result = await updateIssue(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.issueNumber,
+                { title: input.title },
+            );
+            return { success: true as const, title: result.title };
+        },
+        cb: async ({ input, accessToken }) => {
+            const result = await updateCodebergIssue(
                 accessToken,
                 input.owner,
                 input.repo,
@@ -214,15 +246,25 @@ export const issuesRouter = createTRPCRouter({
         },
     }),
 
-    updateBody: githubMutation({
-        input: z.object({
+    updateBody: providerMutation({
+        input: providerInput({
             owner: z.string(),
             repo: z.string(),
             issueNumber: z.number(),
             body: z.string(),
         }),
-        run: async ({ input, accessToken }) => {
+        gh: async ({ input, accessToken }) => {
             const result = await updateIssue(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.issueNumber,
+                { body: input.body },
+            );
+            return { success: true as const, body: result.body };
+        },
+        cb: async ({ input, accessToken }) => {
+            const result = await updateCodebergIssue(
                 accessToken,
                 input.owner,
                 input.repo,
@@ -233,14 +275,14 @@ export const issuesRouter = createTRPCRouter({
         },
     }),
 
-    close: githubMutation({
-        input: z.object({
+    close: providerMutation({
+        input: providerInput({
             owner: z.string(),
             repo: z.string(),
             issueNumber: z.number(),
             body: z.string().trim().min(1).optional(),
         }),
-        run: async ({ input, accessToken }) => {
+        gh: async ({ input, accessToken }) => {
             if (input.body) {
                 await createIssueComment(
                     accessToken,
@@ -263,16 +305,37 @@ export const issuesRouter = createTRPCRouter({
             );
             return { success: true as const };
         },
+        cb: async ({ input, accessToken }) => {
+            if (input.body) {
+                await createCodebergIssueComment(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.issueNumber,
+                    input.body,
+                );
+            }
+
+            // Forgejo ignores state_reason; omit it.
+            await updateCodebergIssue(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.issueNumber,
+                { state: "closed" },
+            );
+            return { success: true as const };
+        },
     }),
 
-    reopen: githubMutation({
-        input: z.object({
+    reopen: providerMutation({
+        input: providerInput({
             owner: z.string(),
             repo: z.string(),
             issueNumber: z.number(),
             body: z.string().trim().min(1).optional(),
         }),
-        run: async ({ input, accessToken }) => {
+        gh: async ({ input, accessToken }) => {
             if (input.body) {
                 await createIssueComment(
                     accessToken,
@@ -292,6 +355,26 @@ export const issuesRouter = createTRPCRouter({
                     state: "open",
                     state_reason: "reopened",
                 },
+            );
+            return { success: true as const };
+        },
+        cb: async ({ input, accessToken }) => {
+            if (input.body) {
+                await createCodebergIssueComment(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    input.issueNumber,
+                    input.body,
+                );
+            }
+
+            await updateCodebergIssue(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.issueNumber,
+                { state: "open" },
             );
             return { success: true as const };
         },
