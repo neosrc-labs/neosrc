@@ -3,8 +3,34 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { mockMarkdownEditor } from "~/__tests__/helpers/component-mocks";
-
+import type { PullRequestPermissionContext } from "../permissions-utils";
 import { CommentForm } from "./comment-form";
+
+const signedIn: PullRequestPermissionContext = {
+    currentUser: "octocat",
+    isPullRequestAuthor: false,
+    isPullRequestLocked: false,
+    repoPermission: "write",
+};
+
+const signedInLocked: PullRequestPermissionContext = {
+    currentUser: "octocat",
+    isPullRequestAuthor: false,
+    isPullRequestLocked: true,
+    repoPermission: "none",
+};
+
+const anonymous: PullRequestPermissionContext = {
+    currentUser: null,
+    isPullRequestAuthor: false,
+    isPullRequestLocked: false,
+    repoPermission: null,
+};
+
+const anonymousLocked: PullRequestPermissionContext = {
+    ...anonymous,
+    isPullRequestLocked: true,
+};
 
 const mocks = vi.hoisted(() => ({
     closeMutate: vi.fn(),
@@ -113,6 +139,7 @@ function renderForm(canClose = false, canReopen = false, branchExists = true) {
             owner="owner"
             repo="repo"
             number={1}
+            permissionContext={signedIn}
             canClose={canClose}
             canReopen={canReopen}
             branchExists={branchExists}
@@ -279,7 +306,13 @@ describe("CommentForm reopen button", () => {
 describe("CommentForm issue kind", () => {
     it("posts comments with issueNumber", async () => {
         render(
-            <CommentForm owner="owner" repo="repo" number={1} kind="issue" />,
+            <CommentForm
+                owner="owner"
+                repo="repo"
+                number={1}
+                kind="issue"
+                permissionContext={signedIn}
+            />,
         );
 
         await userEvent.type(screen.getByTestId("editor-textarea"), "hello");
@@ -300,6 +333,7 @@ describe("CommentForm issue kind", () => {
                 repo="repo"
                 number={1}
                 kind="issue"
+                permissionContext={signedIn}
                 canClose
             />,
         );
@@ -322,6 +356,7 @@ describe("CommentForm issue kind", () => {
                 repo="repo"
                 number={1}
                 kind="issue"
+                permissionContext={signedIn}
                 canReopen
             />,
         );
@@ -335,5 +370,70 @@ describe("CommentForm issue kind", () => {
             repo: "repo",
             issueNumber: 1,
         });
+    });
+});
+
+describe("CommentForm viewer states", () => {
+    it("prompts a signed-out visitor to sign in instead of claiming the subject is locked", () => {
+        render(
+            <CommentForm
+                owner="owner"
+                repo="repo"
+                number={1}
+                kind="issue"
+                permissionContext={anonymous}
+            />,
+        );
+
+        expect(
+            screen.getByText("Sign in to comment on this issue."),
+        ).toBeInTheDocument();
+        expect(screen.queryByText(/is locked/)).not.toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute(
+            "href",
+            "/api/auth/signin",
+        );
+    });
+
+    it("tells a signed-in viewer without access that the subject is locked", () => {
+        render(
+            <CommentForm
+                owner="owner"
+                repo="repo"
+                number={1}
+                permissionContext={signedInLocked}
+            />,
+        );
+
+        expect(
+            screen.getByText(
+                "This pull request is locked. Only collaborators can comment.",
+            ),
+        ).toBeInTheDocument();
+        expect(
+            screen.queryByRole("button", { name: "Comment" }),
+        ).not.toBeInTheDocument();
+    });
+
+    it("still reports a locked subject to a signed-out visitor", () => {
+        render(
+            <CommentForm
+                owner="owner"
+                repo="repo"
+                number={1}
+                kind="issue"
+                permissionContext={anonymousLocked}
+            />,
+        );
+
+        expect(
+            screen.getByText(
+                "This issue is locked. Only collaborators can comment.",
+            ),
+        ).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute(
+            "href",
+            "/api/auth/signin",
+        );
     });
 });

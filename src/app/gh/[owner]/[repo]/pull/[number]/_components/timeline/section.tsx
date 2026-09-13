@@ -9,7 +9,6 @@ import type {
 import { api } from "~/trpc/react";
 import {
     canEdit,
-    canInteract,
     type PullRequestPermissionContext,
 } from "../../permissions-utils";
 import { CommentForm } from "../comment-form";
@@ -269,7 +268,7 @@ export function TimelineSection({
                         canEdit(permissionContext)
                     }
                     branchExists={pullRequestBranchExists}
-                    disabled={!canInteract(permissionContext)}
+                    permissionContext={permissionContext}
                     kind="pull"
                     number={number}
                     owner={owner}

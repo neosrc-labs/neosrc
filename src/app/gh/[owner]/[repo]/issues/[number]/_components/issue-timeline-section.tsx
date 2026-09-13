@@ -16,7 +16,6 @@ import {
 } from "../../../pull/[number]/_components/timeline/utils";
 import {
     canEdit,
-    canInteract,
     type PullRequestPermissionContext,
 } from "../../../pull/[number]/permissions-utils";
 
@@ -96,7 +95,7 @@ export function IssueTimelineSection({
                     canReopen={
                         issueState === "closed" && canEdit(permissionContext)
                     }
-                    disabled={!canInteract(permissionContext)}
+                    permissionContext={permissionContext}
                     kind="issue"
                     number={number}
                     owner={owner}

@@ -1,6 +1,6 @@
 "use client";
 
-import { GitPullRequestClosed, Lock } from "lucide-react";
+import { GitPullRequestClosed, Lock, LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import {
@@ -9,6 +9,10 @@ import {
 } from "~/components/markdown/markdown-editor";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { api } from "~/trpc/react";
+import {
+    canInteract,
+    type PullRequestPermissionContext,
+} from "../permissions-utils";
 import {
     buildOptimisticComment,
     type TimelineCacheData,
@@ -20,7 +24,7 @@ interface CommentFormProps {
     repo: string;
     number: number;
     kind?: "pull" | "issue";
-    disabled?: boolean;
+    permissionContext: PullRequestPermissionContext;
     canClose?: boolean;
     canReopen?: boolean;
     branchExists?: boolean;
@@ -31,7 +35,7 @@ export function CommentForm({
     repo,
     number,
     kind = "pull",
-    disabled,
+    permissionContext,
     canClose = false,
     canReopen = false,
     branchExists = true,
@@ -185,16 +189,29 @@ export function CommentForm({
         }
     }, [body, owner, repo, number, isIssue, issuesReopen, pullsReopen]);
 
-    if (disabled) {
+    if (!canInteract(permissionContext)) {
+        const { currentUser, isPullRequestLocked } = permissionContext;
         return (
             <div className="mt-6 border-gray-200 border-t pt-6">
-                <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-secondary px-4 py-3 text-sm text-text-tertiary">
-                    <Lock size={14} />
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-secondary px-4 py-3 text-sm text-text-tertiary">
+                    {isPullRequestLocked ? (
+                        <Lock size={14} />
+                    ) : (
+                        <LogIn size={14} />
+                    )}
                     <span>
-                        {isIssue
-                            ? "This issue is locked. Only collaborators can comment."
-                            : "This pull request is locked. Only collaborators can comment."}
+                        {isPullRequestLocked
+                            ? `This ${noun} is locked. Only collaborators can comment.`
+                            : `Sign in to comment on this ${noun}.`}
                     </span>
+                    {!currentUser && (
+                        <a
+                            href="/api/auth/signin"
+                            className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                            Sign in
+                        </a>
+                    )}
                 </div>
             </div>
         );
