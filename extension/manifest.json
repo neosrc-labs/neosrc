@@ -1,10 +1,17 @@
 {
     "manifest_version": 3,
     "name": "Neosrc Redirector",
-    "version": "0.4.0",
-    "description": "Neosrc Redirector",
-    "host_permissions": ["https://github.com/*", "https://www.github.com/*"],
-    "permissions": ["declarativeNetRequest", "storage"],
+    "version": "0.5.0",
+    "description": "Opens supported GitHub pages (pull requests, issues, commits, repositories) in Neosrc.",
+    "host_permissions": [
+        "https://github.com/*",
+        "https://www.github.com/*",
+        "https://neosrc.dev/*",
+        "https://www.neosrc.dev/*",
+        "http://localhost/*"
+    ],
+    "optional_host_permissions": ["*://*/*"],
+    "permissions": ["declarativeNetRequest", "storage", "alarms"],
     "background": {
         "service_worker": "background.js"
     },
@@ -25,7 +32,7 @@
     "content_scripts": [
         {
             "matches": ["https://github.com/*", "https://www.github.com/*"],
-            "js": ["content.js"],
+            "js": ["routes.generated.js", "lib/route-table.js", "content.js"],
             "run_at": "document_start"
         }
     ]

@@ -1,86 +1,78 @@
-console.log("[Neosrc BG] service worker started");
+// Service worker: owns settings, the route table and the declarativeNetRequest
+// rules. Redirect decisions happen here (or in content.js for in-page
+// navigations), and the extension only redirects pages the app publishes.
+importScripts("routes.generated.js", "lib/route-table.js");
 
-const RULE_ID = 1;
+const ROUTES = globalThis.NeosrcRoutes;
+
 const DEFAULT_NEOSRC_URL = "https://neosrc.dev";
-const DEFAULT_EXCLUDED_OWNERS = [];
+const TABLE_REFRESH_ALARM = "neosrc-refresh-routes";
+const TABLE_REFRESH_MINUTES = 12 * 60;
+const EXITED_PATHS_KEY = "exitedPaths";
 
-function escapeRe2(s) {
-    return s.replace(/[\\^$.*+?(){}[\]|/]/g, "\\$&");
-}
-
-function buildExcludedRegexFilter(excludedOwners) {
-    // `neosrc_exit` URLs must never be redirected by DNR: content.js is the
-    // single exit hatch and strips the param to break the redirect loop. This
-    // exclusion only has an effect once the regexFilter also matches query
-    // strings, so keep the two patterns in sync (same hosts, same anchors).
-    const parts = ["[?&]neosrc_exit"];
-    if (excludedOwners.length > 0) {
-        const ownersPattern = excludedOwners.map(escapeRe2).join("|");
-        parts.push(`^https://(?:www\\.)?github\\.com/(${ownersPattern})/`);
-    }
-    return parts.join("|");
-}
-
-function buildDnrRule(neosrcUrl, excludedOwners) {
-    const url = new URL(neosrcUrl);
-    const scheme = url.protocol.replace(":", "");
-    const host = url.hostname;
-    const port = url.port || "";
-    const excludedRegexFilter = buildExcludedRegexFilter(excludedOwners);
-
-    if (scheme === "http" && host === "localhost" && port === "3000") {
-        return {
-            id: RULE_ID,
-            priority: 1,
-            action: {
-                type: "redirect",
-                redirect: {
-                    transform: {
-                        scheme: "http",
-                        host: "localhost",
-                        port: "3000",
-                    },
-                },
-            },
-            condition: {
-                urlFilter: "https://github.com/*/pull/*",
-                resourceTypes: ["main_frame"],
-                excludedRegexFilter,
-            },
-        };
-    }
-
-    const substitutionUrl = `${scheme}://${host}${port ? `:${port}` : ""}`;
+async function readSettings() {
+    const stored = await chrome.storage.sync.get([
+        "enabled",
+        "neosrcUrl",
+        "excludedOwners",
+    ]);
     return {
-        id: RULE_ID,
-        priority: 1,
-        action: {
-            type: "redirect",
-            redirect: {
-                // \1 = /owner/repo/pull/<number>, \2 = optional /path (e.g. /files).
-                // Query string and fragment are matched but not substituted, so the
-                // redirect target is the clean neosrc PR page (matches content.js).
-                regexSubstitution: `${substitutionUrl}\\1\\2`,
-            },
-        },
-        condition: {
-            regexFilter:
-                "^https://(?:www\\.)?github\\.com(/[^/]+/[^/]+/pull/\\d+)(/[^?#]*)?(\\?[^#]*)?(#.*)?$",
-            resourceTypes: ["main_frame"],
-            excludedRegexFilter,
-        },
+        enabled: stored.enabled === true,
+        // Falls back to the default rather than handing an unusable origin to
+        // the rule builder, which would leave the extension with no rules.
+        neosrcUrl: ROUTES.originOf(stored.neosrcUrl) ?? DEFAULT_NEOSRC_URL,
+        excludedOwners: stored.excludedOwners || [],
     };
 }
 
-async function syncSession(enabled, neosrcUrl, excludedOwners) {
+function originPattern(neosrcUrl) {
+    // Match patterns reject ports; the host permission covers every port.
+    const url = new URL(neosrcUrl);
+    return `${url.protocol}//${url.hostname}/*`;
+}
+
+/**
+ * Variants of the configured origin the extension is allowed to touch. Without
+ * host access the app cannot be told that a visit came from here, and its
+ * canonical-host redirect would drop the header anyway.
+ */
+async function permittedOrigins(neosrcUrl) {
+    const checks = await Promise.all(
+        ROUTES.originVariants(neosrcUrl).map(async (origin) => ({
+            origin,
+            granted: await chrome.permissions.contains({
+                origins: [originPattern(origin)],
+            }),
+        })),
+    );
+    return checks.filter((check) => check.granted).map((check) => check.origin);
+}
+
+/** Table previously fetched from the app, or null when there is none. */
+async function readCachedTable() {
+    const stored = await chrome.storage.local.get(["routeTable"]);
+    return ROUTES.sanitizeTable(stored.routeTable);
+}
+
+async function refreshRouteTable(neosrcUrl) {
     try {
-        await chrome.storage.session.set({
-            enabled: enabled === true,
-            neosrcUrl: neosrcUrl || DEFAULT_NEOSRC_URL,
-            excludedOwners: excludedOwners || DEFAULT_EXCLUDED_OWNERS,
-        });
-    } catch (err) {
-        console.error("[Neosrc BG] failed to sync session:", err);
+        const response = await fetch(
+            `${neosrcUrl.replace(/\/$/, "")}${ROUTES.routeTablePath()}`,
+            // A dev server or a deployment that never answers must not hold
+            // up whatever is queued behind this.
+            { cache: "no-store", signal: AbortSignal.timeout(5_000) },
+        );
+        if (!response.ok) return null;
+        const table = ROUTES.sanitizeTable(await response.json());
+        if (!table) {
+            console.warn("[Neosrc] ignoring route table the app published");
+            return null;
+        }
+        await chrome.storage.local.set({ routeTable: table });
+        return table;
+    } catch (error) {
+        console.warn("[Neosrc] route table refresh failed:", error);
+        return null;
     }
 }
 
@@ -93,82 +85,196 @@ function setBadge(enabled) {
     }
 }
 
-async function updateRules(enabled, neosrcUrl, excludedOwners) {
+/**
+ * Drops rules whose regex the browser cannot compile. One rejected rule rejects
+ * the whole `updateDynamicRules` call, so an unsupported pattern from a fetched
+ * table must not be able to turn every redirect off.
+ */
+async function installableRules(rules) {
+    const checks = await Promise.all(
+        rules.map(async (rule) => {
+            const result = await chrome.declarativeNetRequest.isRegexSupported({
+                regex: rule.condition.regexFilter,
+                isCaseSensitive:
+                    rule.condition.isUrlFilterCaseSensitive !== false,
+                requireCapturing: rule.action.type === "redirect",
+            });
+            if (result.isSupported) return rule;
+            console.warn(
+                "[Neosrc] dropping unsupported rule",
+                rule.id,
+                result.reason,
+            );
+            return null;
+        }),
+    );
+    return checks.filter((rule) => rule !== null);
+}
+
+async function installRules(settings, table) {
+    const existing = await chrome.declarativeNetRequest.getDynamicRules();
+    const removeRuleIds = existing.map((rule) => rule.id);
+
+    if (!settings.enabled) {
+        await chrome.declarativeNetRequest.updateDynamicRules({
+            removeRuleIds,
+        });
+        setBadge(false);
+        return;
+    }
+
+    const headerOrigins = await permittedOrigins(settings.neosrcUrl);
+    if (headerOrigins.length === 0) {
+        // Without the header the app cannot tell an extension-driven visit from
+        // a direct one, so pages it cannot serve would show its 404 instead of
+        // returning to GitHub.
+        console.warn(
+            "[Neosrc] no host permission for",
+            settings.neosrcUrl,
+            "- falling back without the extension header",
+        );
+    }
+
+    const rules = ROUTES.buildRules(table, settings.neosrcUrl, {
+        excludedOwners: settings.excludedOwners,
+        extensionVersion: chrome.runtime.getManifest().version,
+        permittedOrigins: headerOrigins,
+    });
     try {
         await chrome.declarativeNetRequest.updateDynamicRules({
-            removeRuleIds: [RULE_ID],
+            removeRuleIds,
+            addRules: await installableRules(rules),
         });
-
-        if (!enabled) {
-            console.log("[Neosrc BG] DNR rule removed (disabled)");
-            setBadge(false);
-            return;
-        }
-
-        const rule = buildDnrRule(neosrcUrl, excludedOwners);
+    } catch (error) {
+        // Belt and braces: the redirects are the part worth keeping, so try
+        // again without everything else.
+        console.error(
+            "[Neosrc] rule set rejected, installing redirects only:",
+            error,
+        );
         await chrome.declarativeNetRequest.updateDynamicRules({
-            addRules: [rule],
+            removeRuleIds,
+            addRules: rules.filter((rule) => rule.action.type === "redirect"),
         });
-        console.log(
-            "[Neosrc BG] DNR rule added (enabled) — redirecting github.com PRs to",
-            neosrcUrl,
-            "excluding owners:",
-            excludedOwners,
-        );
-        setBadge(true);
-    } catch (err) {
-        console.error("[Neosrc BG] failed to update DNR rules:", err);
     }
-    syncSession(enabled, neosrcUrl, excludedOwners);
+    setBadge(true);
 }
 
-async function init() {
-    const result = await chrome.storage.sync.get([
-        "enabled",
-        "neosrcUrl",
-        "excludedOwners",
-    ]);
-    const enabled = result.enabled === true;
-    const neosrcUrl = result.neosrcUrl || DEFAULT_NEOSRC_URL;
-    const excludedOwners = result.excludedOwners || DEFAULT_EXCLUDED_OWNERS;
-    console.log(
-        "[Neosrc BG] init: enabled =",
-        enabled,
-        "neosrcUrl =",
-        neosrcUrl,
-        "excludedOwners =",
-        excludedOwners,
+/** Pages the user was handed back to GitHub for, per tab, until the tab closes. */
+async function readExitedPaths() {
+    const stored = await chrome.storage.session.get(EXITED_PATHS_KEY);
+    return Array.isArray(stored[EXITED_PATHS_KEY])
+        ? stored[EXITED_PATHS_KEY]
+        : [];
+}
+
+async function installSessionRules() {
+    const entries = await readExitedPaths();
+    const existing = await chrome.declarativeNetRequest.getSessionRules();
+    await chrome.declarativeNetRequest.updateSessionRules({
+        removeRuleIds: existing.map((rule) => rule.id),
+        addRules: ROUTES.buildSessionRules(entries),
+    });
+}
+
+async function rememberExitedPath(tabId, host, pathname) {
+    const entries = await readExitedPaths();
+    const kept = entries
+        .filter((entry) => entry.tabId !== tabId || entry.pathname !== pathname)
+        .slice(1 - ROUTES.MAX_SESSION_RULES);
+    kept.push({ tabId, host, pathname });
+    await chrome.storage.session.set({ [EXITED_PATHS_KEY]: kept });
+    await installSessionRules();
+}
+
+async function forgetTab(tabId) {
+    const entries = await readExitedPaths();
+    const kept = entries.filter((entry) => entry.tabId !== tabId);
+    if (kept.length === entries.length) return;
+    await chrome.storage.session.set({ [EXITED_PATHS_KEY]: kept });
+    await installSessionRules();
+}
+
+/**
+ * Rule installs run one at a time, in the order they were requested. The worker
+ * applies stored settings on startup while a settings change can arrive at the
+ * same moment, and an older install landing last would leave the wrong rules on
+ * (or none at all).
+ */
+let pendingApply = Promise.resolve();
+
+function queueApply(run) {
+    pendingApply = pendingApply.then(run, run);
+    return pendingApply.catch((error) =>
+        console.error("[Neosrc] apply failed:", error),
     );
-    await updateRules(enabled, neosrcUrl, excludedOwners);
 }
 
-chrome.runtime.onStartup.addListener(init);
-chrome.runtime.onInstalled.addListener(init);
+/** Reads settings inside the queue so the newest ones win. */
+function applyStoredSettings({ refresh }) {
+    const applied = queueApply(async () => {
+        const settings = await readSettings();
+        const table = await readCachedTable();
+        // Redirects go in immediately from what is already known; waiting on a
+        // round trip to the app would leave the browser unredirected meanwhile.
+        await installRules(settings, table ?? ROUTES.bakedTable());
+    });
 
-chrome.storage.onChanged.addListener(async (changes, area) => {
-    if (area !== "sync") return;
+    if (refresh) {
+        queueApply(async () => {
+            const settings = await readSettings();
+            const table = await refreshRouteTable(settings.neosrcUrl);
+            if (table) await installRules(settings, table);
+        });
+    }
 
-    const result = await chrome.storage.sync.get([
-        "enabled",
-        "neosrcUrl",
-        "excludedOwners",
-    ]);
-    const enabled = result.enabled === true;
-    const neosrcUrl = result.neosrcUrl || DEFAULT_NEOSRC_URL;
-    const excludedOwners = result.excludedOwners || DEFAULT_EXCLUDED_OWNERS;
+    return applied;
+}
 
-    if (changes.enabled || changes.neosrcUrl || changes.excludedOwners) {
-        console.log(
-            "[Neosrc BG] storage changed — re-applying DNR rule:",
-            "enabled =",
-            enabled,
-            "neosrcUrl =",
-            neosrcUrl,
-            "excludedOwners =",
-            excludedOwners,
-        );
-        await updateRules(enabled, neosrcUrl, excludedOwners);
+function initialize({ refresh = false } = {}) {
+    const applied = applyStoredSettings({ refresh });
+    queueApply(() => installSessionRules());
+    chrome.alarms.create(TABLE_REFRESH_ALARM, {
+        periodInMinutes: TABLE_REFRESH_MINUTES,
+    });
+    return applied;
+}
+
+chrome.runtime.onStartup.addListener(() => initialize({ refresh: true }));
+chrome.runtime.onInstalled.addListener(() => initialize({ refresh: true }));
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === TABLE_REFRESH_ALARM) {
+        applyStoredSettings({ refresh: true });
     }
 });
 
-init();
+chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "sync") return;
+    if (!changes.enabled && !changes.neosrcUrl && !changes.excludedOwners) {
+        return;
+    }
+    applyStoredSettings({ refresh: Boolean(changes.neosrcUrl) });
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+    queueApply(() => forgetTab(tabId));
+});
+
+// Granting or revoking host access for the Neosrc origin adds or removes the
+// header rule, which is what lets the app send un-servable pages back.
+chrome.permissions.onAdded.addListener(() =>
+    applyStoredSettings({ refresh: false }),
+);
+chrome.permissions.onRemoved.addListener(() =>
+    applyStoredSettings({ refresh: false }),
+);
+
+chrome.runtime.onMessage.addListener((message, sender) => {
+    if (message?.type !== "neosrc-exit") return;
+    const tabId = sender.tab?.id;
+    if (tabId === undefined) return;
+    queueApply(() => rememberExitedPath(tabId, message.host, message.pathname));
+});
+
+initialize();
