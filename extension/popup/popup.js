@@ -1,10 +1,12 @@
-console.log("[Neosrc Popup] popup opened");
+const ROUTES = globalThis.NeosrcRoutes;
 
 const DEFAULT_NEOSRC_URL = "https://neosrc.dev";
 const DEFAULT_EXCLUDED_OWNERS = [];
 
 const toggle = document.getElementById("toggle");
-const status = document.getElementById("status");
+const statusEl = document.getElementById("status");
+const pageStatus = document.getElementById("pageStatus");
+const grantAccess = document.getElementById("grantAccess");
 const urlInput = document.getElementById("neosrcUrl");
 const excludeInput = document.getElementById("excludeInput");
 const addExcludeBtn = document.getElementById("addExcludeBtn");
@@ -12,6 +14,7 @@ const excludedTags = document.getElementById("excludedTags");
 
 let previousUrl = DEFAULT_NEOSRC_URL;
 let excludedOwners = DEFAULT_EXCLUDED_OWNERS;
+let table = null;
 
 function renderTags() {
     excludedTags.innerHTML = "";
@@ -30,8 +33,14 @@ function renderTags() {
     }
 }
 
-async function saveExcludedOwners() {
-    await chrome.storage.sync.set({ excludedOwners });
+function setStatusText(enabled) {
+    statusEl.textContent = enabled
+        ? "Enabled — supported GitHub pages open in Neosrc"
+        : "Disabled — GitHub pages get an Open in Neosrc button";
+}
+
+function saveExcludedOwners() {
+    return chrome.storage.sync.set({ excludedOwners });
 }
 
 function addOwner() {
@@ -54,70 +63,127 @@ function removeOwner(owner) {
 }
 
 addExcludeBtn.addEventListener("click", addOwner);
-excludeInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") addOwner();
+excludeInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") addOwner();
+});
+
+function permissionPattern(neosrcUrl) {
+    const url = new URL(neosrcUrl);
+    return `${url.protocol}//${url.hostname}/*`;
+}
+
+function permissionPatterns(neosrcUrl) {
+    return ROUTES.originVariants(neosrcUrl).map(permissionPattern);
+}
+
+/**
+ * Accepts what people type ("neosrc.dev", "localhost:3000") and returns the
+ * origin to store, or null when there is nothing usable to save. Bare hostnames
+ * default to https, except for a local dev server, which is plain http.
+ */
+function normalizeNeosrcUrl(value) {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return null;
+
+    let candidate = trimmed;
+    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
+        const host = (trimmed.split("/")[0] ?? "").split(":")[0] ?? "";
+        const local = ["localhost", "127.0.0.1", "[::1]"].includes(
+            host.toLowerCase(),
+        );
+        candidate = `${local ? "http" : "https"}://${trimmed}`;
+    }
+
+    return ROUTES.originOf(candidate);
+}
+
+/** Shows whether the tab the popup was opened over is a page Neosrc serves. */
+async function renderPageStatus() {
+    pageStatus.textContent = "";
+    pageStatus.className = "";
+    if (!table) return;
+
+    const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+    });
+    if (!tab?.url) return;
+
+    let url;
+    try {
+        url = new URL(tab.url);
+    } catch {
+        return;
+    }
+    const match = ROUTES.matchPath(table, url.hostname, url.pathname);
+    pageStatus.textContent = match
+        ? "This page: Neosrc"
+        : "This page: GitHub (not covered by Neosrc)";
+    pageStatus.className = match ? "page-status covered" : "page-status";
+}
+
+/** Neosrc needs host access to tell it when a redirect came from here. */
+async function renderAccessStatus(neosrcUrl) {
+    const patterns = permissionPatterns(neosrcUrl);
+    const granted = await chrome.permissions.contains({ origins: patterns });
+    grantAccess.hidden = granted;
+    grantAccess.textContent = `Allow access to ${new URL(neosrcUrl).host}`;
+    grantAccess.dataset.patterns = JSON.stringify(patterns);
+}
+
+grantAccess.addEventListener("click", async () => {
+    const patterns = JSON.parse(grantAccess.dataset.patterns ?? "[]");
+    const granted = await chrome.permissions.request({ origins: patterns });
+    if (!granted) return;
+    const neosrcUrl = normalizeNeosrcUrl(urlInput.value);
+    if (neosrcUrl) await renderAccessStatus(neosrcUrl);
 });
 
 async function updateUI() {
-    console.log("[Neosrc Popup] updateUI: reading settings from storage");
-    const result = await chrome.storage.sync.get([
-        "enabled",
-        "neosrcUrl",
-        "excludedOwners",
+    const [stored, local] = await Promise.all([
+        chrome.storage.sync.get(["enabled", "neosrcUrl", "excludedOwners"]),
+        chrome.storage.local.get(["routeTable"]),
     ]);
-    const enabled = result.enabled === true;
-    const neosrcUrl = result.neosrcUrl || DEFAULT_NEOSRC_URL;
-    excludedOwners = result.excludedOwners || DEFAULT_EXCLUDED_OWNERS;
+    const enabled = stored.enabled === true;
+    const neosrcUrl =
+        normalizeNeosrcUrl(String(stored.neosrcUrl ?? "")) ??
+        DEFAULT_NEOSRC_URL;
+    excludedOwners = stored.excludedOwners || DEFAULT_EXCLUDED_OWNERS;
+    table = ROUTES.sanitizeTable(local.routeTable) ?? ROUTES.bakedTable();
     previousUrl = neosrcUrl;
-    console.log(
-        "[Neosrc Popup] updateUI: enabled =",
-        enabled,
-        "neosrcUrl =",
-        neosrcUrl,
-        "excludedOwners =",
-        excludedOwners,
-    );
+
     toggle.checked = enabled;
     urlInput.value = neosrcUrl;
-    status.textContent = enabled
-        ? "Enabled — redirecting PRs to Neosrc"
-        : "Disabled — showing Neosrc button only";
+    setStatusText(enabled);
     renderTags();
+    await Promise.all([renderPageStatus(), renderAccessStatus(neosrcUrl)]);
 }
 
 toggle.addEventListener("change", async () => {
     const enabled = toggle.checked;
-    console.log("[Neosrc Popup] toggle changed to:", enabled);
     await chrome.storage.sync.set({ enabled });
-    status.textContent = enabled
-        ? "Enabled — redirecting PRs to Neosrc"
-        : "Disabled — showing Neosrc button only";
+    setStatusText(enabled);
 });
 
 let urlSaveTimeout = null;
 urlInput.addEventListener("input", () => {
     clearTimeout(urlSaveTimeout);
     urlSaveTimeout = setTimeout(async () => {
-        const neosrcUrl = urlInput.value.trim() || DEFAULT_NEOSRC_URL;
+        const neosrcUrl = normalizeNeosrcUrl(urlInput.value);
+        if (!neosrcUrl) {
+            statusEl.textContent = "Enter a URL like https://neosrc.dev";
+            return;
+        }
+        setStatusText(toggle.checked);
         if (neosrcUrl === previousUrl) return;
         previousUrl = neosrcUrl;
-        console.log("[Neosrc Popup] saving neosrcUrl:", neosrcUrl);
         await chrome.storage.sync.set({ neosrcUrl });
+        await renderAccessStatus(neosrcUrl);
     }, 600);
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
-    console.log(
-        "[Neosrc Popup] storage.onChanged: area =",
-        area,
-        "changes =",
-        changes,
-    );
     if (area === "sync" && (changes.enabled || changes.excludedOwners)) {
-        console.log(
-            "[Neosrc Popup] syncing UI from storage change:",
-            changes.enabled.newValue,
-        );
         updateUI();
     }
 });

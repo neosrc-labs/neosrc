@@ -22,6 +22,8 @@
         "e2e:install": "playwright install --with-deps chromium",
         "e2e:setup": "dotenv -e .env.e2e -- npx drizzle-kit push && dotenv -e .env.e2e -- node scripts/e2e-setup.mjs",
         "e2e:ui": "dotenv -e .env.e2e -- playwright test --ui",
+        "extension-test": "playwright test --config=playwright.extension.config.ts",
+        "extension-test:ui": "playwright test --config=playwright.extension.config.ts --ui",
         "functional-test": "dotenv -e .env.test -- playwright test --config=playwright.functional.config.cjs --project=chromium",
         "functional-test:ui": "dotenv -e .env.test -- playwright test --ui --config=playwright.functional.config.cjs --project=chromium",
         "functional-test:setup": "dotenv -e .env.test -- npx drizzle-kit push",
