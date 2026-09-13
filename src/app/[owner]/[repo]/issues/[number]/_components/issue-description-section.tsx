@@ -119,7 +119,10 @@ export function IssueDescriptionSection({
                     issuePromise={issuePromise}
                     permissionContextPromise={permissionContextPromise}
                 />
-                <IssueSubtitleRow issuePromise={issuePromise} />
+                <IssueSubtitleRow
+                    issuePromise={issuePromise}
+                    provider={provider}
+                />
             </div>
 
             <Async
@@ -453,8 +456,10 @@ function IssueTitleRow({
 
 function IssueSubtitleRow({
     issuePromise,
+    provider,
 }: {
     issuePromise: Promise<IssueDetail>;
+    provider: Provider;
 }) {
     return (
         <Async
@@ -471,6 +476,7 @@ function IssueSubtitleRow({
                             username={issue.author?.login ?? "ghost"}
                             avatarUrl={issue.author?.avatarUrl ?? ""}
                             profileUrl={issue.author?.profileUrl ?? "#"}
+                            provider={provider}
                         />
                         <span title={formatDateTime(issue.createdAt)}>
                             {formatRelativeTime(issue.createdAt)}
