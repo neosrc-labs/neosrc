@@ -351,7 +351,9 @@ describe("reaction toggle factories", () => {
         );
         const rollback = utils.setInfiniteData.mock.calls[1] ?? [];
         expect(rollback[0]).toEqual({ ...SCOPE, limit: TIMELINE_PAGE_SIZE });
-        expect(rollback[1]).toBe(data);
+        const restore = rollback[1] as (old: unknown) => unknown;
+        expect(restore(undefined)).toBe(data);
+        expect(restore({ pages: [] })).toBe(data);
     });
 });
 

@@ -8,14 +8,18 @@ import {
     MarkdownEditor,
 } from "~/components/markdown/markdown-editor";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
-import type { GQLIssueComment } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
+import {
+    buildOptimisticComment,
+    type TimelineCacheData,
+    useTimelineListCache,
+} from "./timeline/use-timeline-comment-actions";
 
 interface CommentFormProps {
     owner: string;
     repo: string;
     number: number;
+    kind?: "pull" | "issue";
     disabled?: boolean;
     canClose?: boolean;
     canReopen?: boolean;
@@ -26,83 +30,64 @@ export function CommentForm({
     owner,
     repo,
     number,
+    kind = "pull",
     disabled,
     canClose = false,
     canReopen = false,
     branchExists = true,
 }: CommentFormProps) {
-    const commentKey = `pr-autosave:comment:${owner}:${repo}:${number}`;
+    const isIssue = kind === "issue";
+    const noun = isIssue ? "issue" : "pull request";
+    const commentKey = `${isIssue ? "issue" : "pr"}-autosave:comment:${owner}:${repo}:${number}`;
     const [body, setBody] = useState(() => readAutosave(commentKey) ?? "");
     const { clear: clearComment } = useAutosave(commentKey, body);
     const router = useRouter();
     const utils = api.useUtils();
     const { data: currentUserData } = api.users.currentUser.useQuery();
 
-    const addComment = api.pulls.addComment.useMutation({
-        onMutate: async ({ body }) => {
-            await utils.timeline.list.cancel({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
+    const cache = useTimelineListCache(
+        isIssue
+            ? { owner, repo, issueNumber: number }
+            : { owner, repo, number },
+    );
 
-            const prevData = utils.timeline.list.getInfiniteData({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
+    const addCommentHandlers = {
+        onMutate: async ({ body }: { body: string }) => {
+            await cache.cancel();
+
+            const prevData = cache.get();
 
             if (currentUserData?.login && currentUserData.avatarUrl) {
-                const now = new Date().toISOString();
-                const tempId = -Date.now();
-                const comment: GQLIssueComment = {
-                    __typename: "IssueComment",
-                    id: `optimistic-issue-comment-${Math.abs(tempId)}`,
-                    databaseId: tempId,
-                    body,
-                    author: {
-                        __typename: "User",
-                        login: currentUserData.login,
-                        avatarUrl: currentUserData.avatarUrl,
-                        url: `https://github.com/${currentUserData.login}`,
-                    },
-                    createdAt: now,
-                    authorAssociation: "NONE",
-                    isMinimized: false,
-                    minimizedReason: null,
-                    reactions: { nodes: [] },
-                };
-
-                utils.timeline.list.setInfiniteData(
-                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                    (old) => {
-                        if (!old) return old;
-                        return {
-                            ...old,
-                            pages: old.pages.map((page, index) =>
-                                index === old.pages.length - 1
-                                    ? {
-                                          ...page,
-                                          events: [...page.events, comment],
-                                      }
-                                    : page,
-                            ),
-                        };
-                    },
-                );
+                const comment = buildOptimisticComment(body, {
+                    login: currentUserData.login,
+                    avatarUrl: currentUserData.avatarUrl,
+                });
+                cache.set((old) => {
+                    if (!old) return old;
+                    return {
+                        ...old,
+                        pages: old.pages.map((page, index) =>
+                            index === old.pages.length - 1
+                                ? {
+                                      ...page,
+                                      events: [...page.events, comment],
+                                  }
+                                : page,
+                        ),
+                    };
+                });
             }
 
             setBody("");
             return { prevData };
         },
-        onError: (_err, { body }, ctx) => {
+        onError: (
+            _err: unknown,
+            { body }: { body: string },
+            ctx: { prevData: TimelineCacheData | undefined } | undefined,
+        ) => {
             if (ctx?.prevData) {
-                utils.timeline.list.setInfiniteData(
-                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                    ctx.prevData,
-                );
+                cache.set(() => ctx.prevData);
             }
             setBody(body);
         },
@@ -110,67 +95,95 @@ export function CommentForm({
             clearComment();
         },
         onSettled: () => {
-            utils.timeline.list.invalidate({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
+            cache.invalidate();
             router.refresh();
         },
-    });
+    };
 
-    const closeMutation = api.pulls.close.useMutation({
+    const pullsAdd = api.pulls.addComment.useMutation(addCommentHandlers);
+    const issuesAdd = api.issues.addComment.useMutation(addCommentHandlers);
+    const addComment = isIssue ? issuesAdd : pullsAdd;
+
+    const pullsClose = api.pulls.close.useMutation({
         onSuccess: () => {
             clearComment();
-            utils.timeline.list.invalidate({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
+            cache.invalidate();
             utils.reviews.getPending.invalidate();
             router.refresh();
         },
     });
-    const reopenMutation = api.pulls.reopen.useMutation({
+    const issuesClose = api.issues.close.useMutation({
         onSuccess: () => {
             clearComment();
-            utils.timeline.list.invalidate({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
+            cache.invalidate();
+            router.refresh();
+        },
+    });
+    const closeMutation = isIssue ? issuesClose : pullsClose;
+
+    const pullsReopen = api.pulls.reopen.useMutation({
+        onSuccess: () => {
+            clearComment();
+            cache.invalidate();
             utils.reviews.getPending.invalidate();
             router.refresh();
         },
     });
+    const issuesReopen = api.issues.reopen.useMutation({
+        onSuccess: () => {
+            clearComment();
+            cache.invalidate();
+            router.refresh();
+        },
+    });
+    const reopenMutation = isIssue ? issuesReopen : pullsReopen;
 
     const handleSubmit = useCallback(() => {
         if (!body.trim()) return;
-        addComment.mutate({ owner, repo, number, body });
-    }, [body, owner, repo, number, addComment]);
+        if (isIssue) {
+            issuesAdd.mutate({ owner, repo, issueNumber: number, body });
+        } else {
+            pullsAdd.mutate({ owner, repo, number, body });
+        }
+    }, [body, owner, repo, number, isIssue, issuesAdd, pullsAdd]);
 
     const handleClose = useCallback(() => {
         const trimmed = body.trim();
-        closeMutation.mutate({
-            owner,
-            repo,
-            number,
-            ...(trimmed ? { body } : {}),
-        });
-    }, [body, owner, repo, number, closeMutation]);
+        if (isIssue) {
+            issuesClose.mutate({
+                owner,
+                repo,
+                issueNumber: number,
+                ...(trimmed ? { body } : {}),
+            });
+        } else {
+            pullsClose.mutate({
+                owner,
+                repo,
+                number,
+                ...(trimmed ? { body } : {}),
+            });
+        }
+    }, [body, owner, repo, number, isIssue, issuesClose, pullsClose]);
 
     const handleReopen = useCallback(() => {
         const trimmed = body.trim();
-        reopenMutation.mutate({
-            owner,
-            repo,
-            number,
-            ...(trimmed ? { body } : {}),
-        });
-    }, [body, owner, repo, number, reopenMutation]);
+        if (isIssue) {
+            issuesReopen.mutate({
+                owner,
+                repo,
+                issueNumber: number,
+                ...(trimmed ? { body } : {}),
+            });
+        } else {
+            pullsReopen.mutate({
+                owner,
+                repo,
+                number,
+                ...(trimmed ? { body } : {}),
+            });
+        }
+    }, [body, owner, repo, number, isIssue, issuesReopen, pullsReopen]);
 
     if (disabled) {
         return (
@@ -178,8 +191,9 @@ export function CommentForm({
                 <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-secondary px-4 py-3 text-sm text-text-tertiary">
                     <Lock size={14} />
                     <span>
-                        This pull request is locked. Only collaborators can
-                        comment.
+                        {isIssue
+                            ? "This issue is locked. Only collaborators can comment."
+                            : "This pull request is locked. Only collaborators can comment."}
                     </span>
                 </div>
             </div>
@@ -188,7 +202,7 @@ export function CommentForm({
 
     const stateAction: FooterAction | null = canClose
         ? {
-              label: body.trim() ? "Close with comment" : "Close pull request",
+              label: body.trim() ? "Close with comment" : `Close ${noun}`,
               onClick: handleClose,
               variant: "outline",
               disabled: () => closeMutation.isPending,
@@ -201,15 +215,14 @@ export function CommentForm({
           }
         : canReopen
           ? {
-                label: body.trim()
-                    ? "Reopen and comment"
-                    : "Reopen pull request",
+                label: body.trim() ? "Reopen and comment" : `Reopen ${noun}`,
                 onClick: handleReopen,
                 variant: "outline",
                 disabled: () => reopenMutation.isPending || !branchExists,
-                tooltip: branchExists
-                    ? undefined
-                    : "The head branch was deleted.",
+                tooltip:
+                    !isIssue && !branchExists
+                        ? "The head branch was deleted."
+                        : undefined,
             }
           : null;
 
@@ -246,12 +259,12 @@ export function CommentForm({
             )}
             {closeMutation.isError && (
                 <p className="mt-2 text-red-600 text-sm">
-                    Failed to close pull request. Please try again.
+                    Failed to close {noun}. Please try again.
                 </p>
             )}
             {reopenMutation.isError && (
                 <p className="mt-2 text-red-600 text-sm">
-                    Failed to reopen pull request. Please try again.
+                    Failed to reopen {noun}. Please try again.
                 </p>
             )}
         </div>

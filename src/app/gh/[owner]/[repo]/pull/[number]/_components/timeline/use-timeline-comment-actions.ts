@@ -4,17 +4,93 @@ import type { ReactionContent } from "~/lib/reactions";
 import { toggleReactionInList } from "~/lib/reactions";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { TimelineResult } from "~/server/api/routers/timeline";
-import type { GQLTimelineEvent } from "~/server/github-graphql";
+import type {
+    GQLIssueComment,
+    GQLTimelineEvent,
+} from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 
-interface PullScope {
+export interface PullScope {
     owner: string;
     repo: string;
     number: number;
 }
 
-function timelineInput(scope: PullScope) {
-    return { ...scope, limit: TIMELINE_PAGE_SIZE };
+export interface IssueScope {
+    owner: string;
+    repo: string;
+    issueNumber: number;
+}
+
+export type TimelineScope = PullScope | IssueScope;
+
+export type TimelineCacheData = InfiniteData<TimelineResult, TimelinePageParam>;
+
+export interface TimelineListCache {
+    cancel: () => Promise<void>;
+    get: () => TimelineCacheData | undefined;
+    set: (
+        updater: (
+            old: TimelineCacheData | undefined,
+        ) => TimelineCacheData | undefined,
+    ) => void;
+    invalidate: () => void;
+}
+
+/**
+ * Scope-parameterized access to the cached infinite timeline list. Both the
+ * pull request timeline and the issue timeline store TimelineResult pages,
+ * so one handle serves optimistic updates for either scope.
+ */
+export function useTimelineListCache(scope: TimelineScope): TimelineListCache {
+    const utils = api.useUtils();
+    if ("issueNumber" in scope) {
+        const input = {
+            owner: scope.owner,
+            repo: scope.repo,
+            issueNumber: scope.issueNumber,
+            limit: TIMELINE_PAGE_SIZE,
+        };
+        const proc = utils.issues.timeline;
+        return {
+            cancel: () => proc.cancel(input),
+            get: () => proc.getInfiniteData(input),
+            set: (updater) => proc.setInfiniteData(input, updater),
+            invalidate: () => proc.invalidate(input),
+        };
+    }
+    const input = { ...scope, limit: TIMELINE_PAGE_SIZE };
+    const proc = utils.timeline.list;
+    return {
+        cancel: () => proc.cancel(input),
+        get: () => proc.getInfiniteData(input),
+        set: (updater) => proc.setInfiniteData(input, updater),
+        invalidate: () => proc.invalidate(input),
+    };
+}
+
+export function buildOptimisticComment(
+    body: string,
+    author: { login: string; avatarUrl: string },
+): GQLIssueComment {
+    const tempId = -Date.now();
+    return {
+        __typename: "IssueComment",
+        id: `optimistic-issue-comment-${Math.abs(tempId)}`,
+        databaseId: tempId,
+        body,
+        author: {
+            __typename: "User",
+            login: author.login,
+            avatarUrl: author.avatarUrl,
+            url: `https://github.com/${author.login}`,
+        },
+        createdAt: new Date().toISOString(),
+        authorAssociation: "NONE",
+        isMinimized: false,
+        minimizedReason: null,
+        reactions: { nodes: [] },
+    };
 }
 
 /**
@@ -154,15 +230,13 @@ interface ReactionToggleCore {
  * Optimistic reaction toggle against the cached timeline list. The comment
  * and review variants differ only in endpoint and cache-key prefix
  * (`comment:` / `review:`); both roll back the snapshot when the request
- * fails and invalidate on settle. Pass `issueNumber` to target an issue
- * timeline instead of a pull request timeline.
+ * fails and invalidate on settle.
  */
 function useReactionToggleCore(
-    scope: PullScope,
+    scope: TimelineScope,
     currentUserLogin: string | null,
-    issueNumber?: number,
 ): ReactionToggleCore {
-    const utils = api.useUtils();
+    const cache = useTimelineListCache(scope);
 
     const toggle = async (
         subjectKey: string | null,
@@ -171,43 +245,11 @@ function useReactionToggleCore(
         if (!currentUserLogin || !subjectKey) {
             return undefined;
         }
-        if (issueNumber !== undefined) {
-            const input = {
-                owner: scope.owner,
-                repo: scope.repo,
-                issueNumber,
-                limit: TIMELINE_PAGE_SIZE,
-            };
-            await utils.issues.timeline.cancel(input);
+        await cache.cancel();
 
-            const prevData = utils.issues.timeline.getInfiniteData(input);
+        const prevData = cache.get();
 
-            utils.issues.timeline.setInfiniteData(input, (old) =>
-                old
-                    ? applyReactionToggle(
-                          old,
-                          subjectKey,
-                          currentUserLogin,
-                          content,
-                      )
-                    : old,
-            );
-
-            return {
-                restore: () => {
-                    if (prevData) {
-                        utils.issues.timeline.setInfiniteData(input, prevData);
-                    }
-                },
-            };
-        }
-        await utils.timeline.list.cancel(timelineInput(scope));
-
-        const prevData = utils.timeline.list.getInfiniteData(
-            timelineInput(scope),
-        );
-
-        utils.timeline.list.setInfiniteData(timelineInput(scope), (old) =>
+        cache.set((old) =>
             old
                 ? applyReactionToggle(
                       old,
@@ -221,37 +263,24 @@ function useReactionToggleCore(
         return {
             restore: () => {
                 if (prevData) {
-                    utils.timeline.list.setInfiniteData(
-                        timelineInput(scope),
-                        prevData,
-                    );
+                    cache.set(() => prevData);
                 }
             },
         };
     };
 
     const settle = () => {
-        if (issueNumber !== undefined) {
-            utils.issues.timeline.invalidate({
-                owner: scope.owner,
-                repo: scope.repo,
-                issueNumber,
-                limit: TIMELINE_PAGE_SIZE,
-            });
-            return;
-        }
-        utils.timeline.list.invalidate(timelineInput(scope));
+        cache.invalidate();
     };
 
     return { toggle, settle };
 }
 
 export function useIssueCommentReactionToggle(
-    scope: PullScope,
+    scope: TimelineScope,
     currentUserLogin: string | null,
-    issueNumber?: number,
 ) {
-    const core = useReactionToggleCore(scope, currentUserLogin, issueNumber);
+    const core = useReactionToggleCore(scope, currentUserLogin);
     return api.reactions.toggleIssueComment.useMutation({
         onMutate: ({ commentId, content }) =>
             core.toggle(`comment:${commentId}`, content),
@@ -286,120 +315,37 @@ function withoutDeletedComment(
 
 /**
  * Optimistic issue-comment delete against the cached timeline list.
- * Pass `issueNumber` to target an issue timeline instead of pull request.
  */
-export function useDeleteTimelineComment(
-    scope: PullScope,
-    issueNumber?: number,
-) {
-    const utils = api.useUtils();
+export function useDeleteTimelineComment(scope: TimelineScope) {
+    const cache = useTimelineListCache(scope);
     return api.pulls.deleteComment.useMutation({
         onMutate: async ({ commentId }) => {
-            if (issueNumber !== undefined) {
-                const input = {
-                    owner: scope.owner,
-                    repo: scope.repo,
-                    issueNumber,
-                    limit: TIMELINE_PAGE_SIZE,
-                };
-                await utils.issues.timeline.cancel(input);
+            await cache.cancel();
 
-                const prevData = utils.issues.timeline.getInfiniteData(input);
+            const prevData = cache.get();
 
-                utils.issues.timeline.setInfiniteData(input, (old) => {
-                    if (!old) return old;
-                    return {
-                        ...old,
-                        pages: old.pages.map((page) => ({
-                            ...page,
-                            events: withoutDeletedComment(
-                                page.events,
-                                commentId,
-                            ),
-                        })),
-                    };
-                });
-
+            cache.set((old) => {
+                if (!old) return old;
                 return {
-                    restore: () => {
-                        if (prevData) {
-                            utils.issues.timeline.setInfiniteData(
-                                input,
-                                prevData,
-                            );
-                        }
-                    },
+                    ...old,
+                    pages: old.pages.map((page) => ({
+                        ...page,
+                        events: withoutDeletedComment(page.events, commentId),
+                    })),
                 };
-            }
-            await utils.timeline.list.cancel({
-                owner: scope.owner,
-                repo: scope.repo,
-                number: scope.number,
-                limit: TIMELINE_PAGE_SIZE,
             });
-
-            const prevData = utils.timeline.list.getInfiniteData({
-                owner: scope.owner,
-                repo: scope.repo,
-                number: scope.number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
-
-            utils.timeline.list.setInfiniteData(
-                {
-                    owner: scope.owner,
-                    repo: scope.repo,
-                    number: scope.number,
-                    limit: TIMELINE_PAGE_SIZE,
-                },
-                (old) => {
-                    if (!old) return old;
-                    return {
-                        ...old,
-                        pages: old.pages.map((page) => ({
-                            ...page,
-                            events: withoutDeletedComment(
-                                page.events,
-                                commentId,
-                            ),
-                        })),
-                    };
-                },
-            );
 
             return {
                 restore: () => {
                     if (prevData) {
-                        utils.timeline.list.setInfiniteData(
-                            {
-                                owner: scope.owner,
-                                repo: scope.repo,
-                                number: scope.number,
-                                limit: TIMELINE_PAGE_SIZE,
-                            },
-                            prevData,
-                        );
+                        cache.set(() => prevData);
                     }
                 },
             };
         },
         onError: (_err, _vars, ctx) => ctx?.restore(),
         onSettled: () => {
-            if (issueNumber !== undefined) {
-                utils.issues.timeline.invalidate({
-                    owner: scope.owner,
-                    repo: scope.repo,
-                    issueNumber,
-                    limit: TIMELINE_PAGE_SIZE,
-                });
-                return;
-            }
-            utils.timeline.list.invalidate({
-                owner: scope.owner,
-                repo: scope.repo,
-                number: scope.number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
+            cache.invalidate();
         },
     });
 }

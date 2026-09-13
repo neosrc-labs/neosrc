@@ -10,6 +10,9 @@ const mocks = vi.hoisted(() => ({
     closeMutate: vi.fn(),
     reopenMutate: vi.fn(),
     addCommentMutate: vi.fn(),
+    issueAddMutate: vi.fn(),
+    issueCloseMutate: vi.fn(),
+    issueReopenMutate: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -25,6 +28,14 @@ vi.mock("~/trpc/react", () => ({
         useUtils: () => ({
             timeline: {
                 list: {
+                    cancel: vi.fn(),
+                    getInfiniteData: vi.fn(),
+                    setInfiniteData: vi.fn(),
+                    invalidate: vi.fn(),
+                },
+            },
+            issues: {
+                timeline: {
                     cancel: vi.fn(),
                     getInfiniteData: vi.fn(),
                     setInfiniteData: vi.fn(),
@@ -58,6 +69,29 @@ vi.mock("~/trpc/react", () => ({
             reopen: {
                 useMutation: () => ({
                     mutate: mocks.reopenMutate,
+                    isPending: false,
+                    isError: false,
+                }),
+            },
+        },
+        issues: {
+            addComment: {
+                useMutation: () => ({
+                    mutate: mocks.issueAddMutate,
+                    isPending: false,
+                    isError: false,
+                }),
+            },
+            close: {
+                useMutation: () => ({
+                    mutate: mocks.issueCloseMutate,
+                    isPending: false,
+                    isError: false,
+                }),
+            },
+            reopen: {
+                useMutation: () => ({
+                    mutate: mocks.issueReopenMutate,
                     isPending: false,
                     isError: false,
                 }),
@@ -239,5 +273,67 @@ describe("CommentForm reopen button", () => {
 
         expect(reopen).toBeDisabled();
         expect(reopen).toHaveAttribute("title", "The head branch was deleted.");
+    });
+});
+
+describe("CommentForm issue kind", () => {
+    it("posts comments with issueNumber", async () => {
+        render(
+            <CommentForm owner="owner" repo="repo" number={1} kind="issue" />,
+        );
+
+        await userEvent.type(screen.getByTestId("editor-textarea"), "hello");
+        await userEvent.click(screen.getByRole("button", { name: "Comment" }));
+
+        expect(mocks.issueAddMutate).toHaveBeenCalledWith({
+            owner: "owner",
+            repo: "repo",
+            issueNumber: 1,
+            body: "hello",
+        });
+    });
+
+    it("renders Close issue and closes with issueNumber", async () => {
+        render(
+            <CommentForm
+                owner="owner"
+                repo="repo"
+                number={1}
+                kind="issue"
+                canClose
+            />,
+        );
+
+        await userEvent.click(
+            screen.getByRole("button", { name: "Close issue" }),
+        );
+
+        expect(mocks.issueCloseMutate).toHaveBeenCalledWith({
+            owner: "owner",
+            repo: "repo",
+            issueNumber: 1,
+        });
+    });
+
+    it("renders Reopen issue and reopens with issueNumber", async () => {
+        render(
+            <CommentForm
+                owner="owner"
+                repo="repo"
+                number={1}
+                kind="issue"
+                canReopen
+            />,
+        );
+
+        await userEvent.click(
+            screen.getByRole("button", { name: "Reopen issue" }),
+        );
+
+        expect(mocks.issueReopenMutate).toHaveBeenCalledWith({
+            owner: "owner",
+            repo: "repo",
+            issueNumber: 1,
+        });
     });
 });
