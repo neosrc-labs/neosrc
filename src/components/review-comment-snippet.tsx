@@ -97,10 +97,7 @@ export function ReviewCommentSnippet({
                 onMouseOver={NOOP}
             >
                 {rows.map((row) => (
-                    <tr
-                        key={`${row.kind}-${row.oldNumber}-${row.newNumber}`}
-                        className={ROW_CLASS[row.kind]}
-                    >
+                    <tr key={`${row.kind}-${row.oldNumber}-${row.newNumber}`}>
                         <td
                             className={`d2h-code-linenumber ${ROW_CLASS[row.kind]}`}
                             // The diff's number cell copies a permalink; the
