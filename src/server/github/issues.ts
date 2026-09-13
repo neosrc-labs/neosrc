@@ -69,6 +69,28 @@ export const updateIssueMilestone = async (
     return response.data;
 };
 
+export const updateIssue = async (
+    accessToken: string,
+    owner: string,
+    repo: string,
+    issueNumber: number,
+    fields: {
+        title?: string;
+        body?: string;
+        state?: "open" | "closed";
+        state_reason?: "completed" | "not_planned" | "reopened";
+    },
+) => {
+    const octokit = createOctokit(accessToken);
+    const response = await octokit.issues.update({
+        owner,
+        repo,
+        issue_number: issueNumber,
+        ...fields,
+    });
+    return response.data;
+};
+
 export const getIssue = cache(
     async (
         accessToken: string,
