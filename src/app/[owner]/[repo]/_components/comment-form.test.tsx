@@ -39,6 +39,7 @@ const mocks = vi.hoisted(() => ({
     issueAddMutate: vi.fn(),
     issueCloseMutate: vi.fn(),
     issueReopenMutate: vi.fn(),
+    readAutosave: vi.fn((_key: string) => ""),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -129,7 +130,7 @@ vi.mock("~/trpc/react", () => ({
 vi.mock("~/components/markdown/markdown-editor", () => mockMarkdownEditor());
 
 vi.mock("~/hooks/use-autosave", () => ({
-    readAutosave: () => "",
+    readAutosave: mocks.readAutosave,
     useAutosave: () => ({ clear: vi.fn() }),
 }));
 
@@ -445,5 +446,33 @@ describe("CommentForm viewer states", () => {
             "href",
             "/api/auth/signin",
         );
+    });
+});
+
+describe("CommentForm draft keys", () => {
+    function draftKeyFor(provider: "gh" | "cb"): string {
+        mocks.readAutosave.mockClear();
+        render(
+            <CommentForm
+                owner="owner"
+                repo="repo"
+                number={1}
+                kind="issue"
+                provider={provider}
+                permissionContext={signedIn}
+            />,
+        );
+        const key = mocks.readAutosave.mock.calls[0]?.[0];
+        if (typeof key !== "string") throw new Error("no draft key read");
+        return key;
+    }
+
+    it("keeps GitHub and Codeberg drafts in separate keys", () => {
+        const ghKey = draftKeyFor("gh");
+        const cbKey = draftKeyFor("cb");
+
+        expect(ghKey).not.toBe(cbKey);
+        expect(ghKey).toContain("gh");
+        expect(cbKey).toContain("cb");
     });
 });
