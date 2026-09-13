@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense, use } from "react";
+import { DocumentTitleSetter } from "~/components/document-title-setter";
 import { getSession, githubAccessToken } from "~/server/auth";
 import { getIssue, type IssueGetResponseData } from "~/server/github";
 import { generateIssueMetadata } from "~/server/metadata";
@@ -11,7 +12,6 @@ import {
     IssueTimelineSection,
     TimelineSkeleton,
 } from "./_components/issue-timeline-section";
-import { IssueTitleSetter } from "./_components/issue-title-setter";
 
 interface PageProps {
     params: Promise<{
@@ -65,11 +65,10 @@ export default async function IssuePage({ params }: PageProps) {
 
     return (
         <div className="px-6 py-8">
-            <IssueTitleSetter
-                owner={owner}
-                repo={repo}
-                number={number}
-                issuePromise={issuePromise}
+            <DocumentTitleSetter
+                titlePromise={issuePromise.then(
+                    (issue) => `${issue.title} - ${owner}/${repo} #${number}`,
+                )}
             />
             <IssueDescriptionSection
                 owner={owner}

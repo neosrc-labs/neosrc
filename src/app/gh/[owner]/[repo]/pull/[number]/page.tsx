@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense, use } from "react";
+import { DocumentTitleSetter } from "~/components/document-title-setter";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
     doesBranchExist,
@@ -18,7 +19,6 @@ import {
     TimelineSection,
     TimelineSkeleton,
 } from "./_components/timeline/section";
-import { PullRequestTitleSetter } from "./_components/title-setter";
 import { getPullRequestPermissionContext } from "./permissions-server";
 import type { PullRequestPermissionContext } from "./permissions-utils";
 
@@ -109,7 +109,12 @@ export default async function PullRequestPage({ params }: PageProps) {
 
     return (
         <div className="px-6 py-8">
-            <PullRequestTitleSetter pullRequestPromise={pullRequestPromise} />
+            <DocumentTitleSetter
+                titlePromise={pullRequestPromise.then(
+                    (pr) =>
+                        `${pr.title} - ${pr.base.repo.full_name} #${pr.number}`,
+                )}
+            />
             <PullRequestDescriptionSection
                 owner={owner}
                 repo={repo}
