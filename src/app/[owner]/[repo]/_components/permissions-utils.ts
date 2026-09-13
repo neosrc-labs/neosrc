@@ -1,8 +1,12 @@
+import type { Provider } from "~/utils/provider-url";
+
 export type PullRequestPermissionContext = {
     isPullRequestLocked: boolean;
     isPullRequestAuthor: boolean;
     repoPermission: "admin" | "none" | "read" | "write" | null;
     currentUser: string | null;
+    /** Defaults to GitHub for contexts built before the provider was known. */
+    provider?: Provider;
 };
 
 export function canInteract({
@@ -10,12 +14,24 @@ export function canInteract({
     isPullRequestAuthor,
     isPullRequestLocked,
     repoPermission,
+    provider = "gh",
 }: PullRequestPermissionContext): boolean {
     if (!currentUser) {
         return false;
     }
+    if (!isPullRequestLocked) {
+        return true;
+    }
+    // Forgejo restricts a locked issue to write access, so a read-level
+    // collaborator gets no comment or reaction controls there.
+    if (provider === "cb") {
+        return (
+            repoPermission === "admin" ||
+            repoPermission === "write" ||
+            isPullRequestAuthor
+        );
+    }
     return (
-        !isPullRequestLocked ||
         repoPermission === "admin" ||
         repoPermission === "write" ||
         repoPermission === "read" ||

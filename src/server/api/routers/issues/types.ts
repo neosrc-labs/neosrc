@@ -38,7 +38,7 @@ export interface IssueDetail {
     title: string;
     body: string;
     state: "open" | "closed";
-    /** Codeberg has no issue lock; always false there. */
+    /** True when the provider locks the conversation to write access. */
     locked: boolean;
     comments: number;
     createdAt: string;

@@ -1013,6 +1013,7 @@ export type CodebergIssue = {
         title: string;
     } | null;
     comments: number | null;
+    is_locked?: boolean;
     pull_request?: {
         url: string;
     } | null;
