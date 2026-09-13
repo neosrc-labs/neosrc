@@ -1,10 +1,12 @@
 import { MetadataSection } from "~/app/[owner]/[repo]/_components/metadata-section";
 import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
-import { mapGitHubIssueDetail } from "~/server/api/routers/mappers";
-import type { IssueGetResponseData } from "~/server/github";
+import type { IssueMetadata } from "~/server/api/routers/issues/types";
+import type { Provider } from "~/utils/provider-url";
 
 interface IssueRightSidebarProps {
-    issuePromise: Promise<IssueGetResponseData> | null;
+    provider: Provider;
+    editable: boolean;
+    metadataPromise: Promise<IssueMetadata> | null;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;
@@ -12,13 +14,15 @@ interface IssueRightSidebarProps {
 }
 
 export function IssueRightSidebar({
-    issuePromise,
+    provider,
+    editable,
+    metadataPromise,
     permissionContextPromise,
     owner,
     repo,
     number,
 }: IssueRightSidebarProps) {
-    if (!issuePromise) {
+    if (!metadataPromise) {
         return (
             <aside
                 className="border-border-subtle border-l bg-surface px-4 py-6"
@@ -38,9 +42,9 @@ export function IssueRightSidebar({
         >
             <div className="sticky top-0 z-10 space-y-4 bg-surface pb-4">
                 <MetadataSection
-                    provider="gh"
-                    editable
-                    metadataPromise={issuePromise.then(mapGitHubIssueDetail)}
+                    provider={provider}
+                    editable={editable}
+                    metadataPromise={metadataPromise}
                     permissionContextPromise={permissionContextPromise}
                     owner={owner}
                     repo={repo}

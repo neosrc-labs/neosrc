@@ -10,7 +10,6 @@ export default async function IssueRedirectPage({
     const { github, codeberg } = await resolveRepoProviders(owner, repo);
 
     if (github) redirect(`/gh/${owner}/${repo}/issues/${number}`);
-    if (codeberg)
-        redirect(`https://codeberg.org/${owner}/${repo}/issues/${number}`);
+    if (codeberg) redirect(`/cb/${owner}/${repo}/issues/${number}`);
     notFound();
 }

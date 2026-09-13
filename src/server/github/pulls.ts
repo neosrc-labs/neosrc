@@ -38,7 +38,6 @@ export type PullsGetResponseData =
             position: number;
         };
     };
-export type Label = NonNullable<PullsGetResponseData["labels"]>[number];
 export type Reviewer = NonNullable<
     PullsGetResponseData["requested_reviewers"]
 >[number];

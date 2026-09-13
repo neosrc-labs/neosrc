@@ -18,5 +18,5 @@ export async function generateMetadata({
 }
 
 export default function IssuePage({ params }: PageProps) {
-    return <IssueDetailPage provider="gh" params={params} />;
+    return <IssueDetailPage provider="cb" params={params} />;
 }

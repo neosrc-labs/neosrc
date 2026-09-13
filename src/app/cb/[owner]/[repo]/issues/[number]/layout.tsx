@@ -12,7 +12,7 @@ interface LayoutProps {
 
 export default function Layout({ children, params }: LayoutProps) {
     return (
-        <IssueLayout provider="gh" params={params}>
+        <IssueLayout provider="cb" params={params}>
             {children}
         </IssueLayout>
     );

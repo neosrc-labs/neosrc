@@ -2,8 +2,10 @@
 
 import { Async } from "~/components/async";
 import { NavItem, NavMenu } from "~/components/ui/nav-menu";
+import type { Provider } from "~/utils/provider-url";
 
 interface IssueLeftSidebarProps {
+    provider: Provider;
     owner: string;
     repo: string;
     number: number;
@@ -11,6 +13,7 @@ interface IssueLeftSidebarProps {
 }
 
 export function IssueLeftSidebar({
+    provider,
     owner,
     repo,
     number,
@@ -23,7 +26,7 @@ export function IssueLeftSidebar({
         >
             <NavMenu>
                 <NavItem
-                    href={`/gh/${owner}/${repo}/issues/${number}`}
+                    href={`/${provider}/${owner}/${repo}/issues/${number}`}
                     isActive
                     label="Conversation"
                     count={

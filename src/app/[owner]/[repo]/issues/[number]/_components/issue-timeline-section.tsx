@@ -17,11 +17,14 @@ import {
     aggregateEvents,
     filterTimelineEvents,
 } from "~/app/[owner]/[repo]/_components/timeline/utils";
+import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import { api } from "~/trpc/react";
+import type { Provider } from "~/utils/provider-url";
 
 export { TimelineSkeleton };
 
 interface IssueTimelineSectionProps {
+    provider: Provider;
     owner: string;
     repo: string;
     number: number;
@@ -30,6 +33,7 @@ interface IssueTimelineSectionProps {
 }
 
 export function IssueTimelineSection({
+    provider,
     owner,
     repo,
     number,
@@ -38,7 +42,13 @@ export function IssueTimelineSection({
 }: IssueTimelineSectionProps) {
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
         api.issues.timeline.useInfiniteQuery(
-            { owner, repo, issueNumber: number, limit: 100 },
+            {
+                provider,
+                owner,
+                repo,
+                issueNumber: number,
+                limit: TIMELINE_PAGE_SIZE,
+            },
             {
                 getNextPageParam: (lastPage) => lastPage.nextCursor,
             },
@@ -58,7 +68,7 @@ export function IssueTimelineSection({
 
     const timelineEndRef = useTimelineBottomScroll(
         data,
-        `/gh/${owner}/${repo}/issues/${number}`,
+        `/${provider}/${owner}/${repo}/issues/${number}`,
     );
     useTimelineHashScroll(data);
 
@@ -77,7 +87,7 @@ export function IssueTimelineSection({
         <div className="mt-5">
             <TimelineEventList
                 wrappers={wrappers}
-                provider="gh"
+                provider={provider}
                 number={number}
                 owner={owner}
                 repo={repo}
@@ -98,7 +108,7 @@ export function IssueTimelineSection({
                     }
                     permissionContext={permissionContext}
                     kind="issue"
-                    provider="gh"
+                    provider={provider}
                     number={number}
                     owner={owner}
                     repo={repo}

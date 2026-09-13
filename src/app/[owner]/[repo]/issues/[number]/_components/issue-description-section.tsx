@@ -22,19 +22,22 @@ import {
 import { StatusPill } from "~/components/ui/status-pill";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTaskToggle } from "~/hooks/use-task-toggle";
-import type { IssueGetResponseData } from "~/server/github";
+import type { IssueDetail } from "~/server/api/routers/issues/types";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import type { Provider } from "~/utils/provider-url";
 
 interface IssueDescriptionSectionProps {
+    provider: Provider;
     owner: string;
     repo: string;
     number: number;
-    issuePromise: Promise<IssueGetResponseData>;
+    issuePromise: Promise<IssueDetail>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
 }
 
 export function IssueDescriptionSection({
+    provider,
     owner,
     repo,
     number,
@@ -42,7 +45,7 @@ export function IssueDescriptionSection({
     permissionContextPromise,
 }: IssueDescriptionSectionProps) {
     const [isEditing, setIsEditing] = useState(false);
-    const descBodyKey = `issue-autosave:desc-body:${owner}:${repo}:${number}`;
+    const descBodyKey = `issue-autosave:desc-body:${provider}:${owner}:${repo}:${number}`;
     const [editBody, setEditBody] = useState(
         () => readAutosave(descBodyKey) ?? "",
     );
@@ -74,13 +77,13 @@ export function IssueDescriptionSection({
     });
     const { onToggleTask } = useTaskToggle({
         mutation: taskToggleMutation,
-        staticInput: { owner, repo, issueNumber: number },
+        staticInput: { provider, owner, repo, issueNumber: number },
     });
 
     const [menuOpen, setMenuOpen] = useState(false);
 
     const { data: reactionsData } = api.reactions.getForIssue.useQuery(
-        { owner, repo, issueNumber: number },
+        { provider, owner, repo, issueNumber: number },
         { staleTime: 30_000 },
     );
 
@@ -96,18 +99,20 @@ export function IssueDescriptionSection({
 
     const handleSave = useCallback(() => {
         updateMutation.mutate({
+            provider,
             owner,
             repo,
             issueNumber: number,
             body: editBody,
         });
-    }, [editBody, owner, repo, number, updateMutation]);
+    }, [editBody, provider, owner, repo, number, updateMutation]);
 
     return (
         <div data-testid="issue-description">
             {/* Issue Header */}
             <div className="mb-3">
                 <IssueTitleRow
+                    provider={provider}
                     owner={owner}
                     repo={repo}
                     number={number}
@@ -130,11 +135,13 @@ export function IssueDescriptionSection({
                             <div className="flex items-center justify-between rounded-t-lg border-border border-b bg-surface-secondary px-4 py-2">
                                 <h3 className="text-text-label">Description</h3>
                                 <div className="flex items-center gap-0.5">
-                                    <RoleBadge
-                                        authorAssociation={
-                                            issue.author_association
-                                        }
-                                    />
+                                    {issue.authorAssociation && (
+                                        <RoleBadge
+                                            authorAssociation={
+                                                issue.authorAssociation
+                                            }
+                                        />
+                                    )}
                                     <Async
                                         fallback={null}
                                         promise={permissionContextPromise}
@@ -166,8 +173,7 @@ export function IssueDescriptionSection({
                                                             onClick={() => {
                                                                 handleStartEdit(
                                                                     savedBody ??
-                                                                        issue.body ??
-                                                                        "",
+                                                                        issue.body,
                                                                 );
                                                                 setMenuOpen(
                                                                     false,
@@ -264,7 +270,7 @@ export function IssueDescriptionSection({
                                             repo={repo}
                                             number={number}
                                             kind="issue"
-                                            provider="gh"
+                                            provider={provider}
                                             reactionsData={reactionsData}
                                             permissionContext={
                                                 permissionContext
@@ -282,19 +288,21 @@ export function IssueDescriptionSection({
 }
 
 function IssueTitleRow({
+    provider,
     owner,
     repo,
     number,
     issuePromise,
     permissionContextPromise,
 }: {
+    provider: Provider;
     owner: string;
     repo: string;
     number: number;
-    issuePromise: Promise<IssueGetResponseData>;
+    issuePromise: Promise<IssueDetail>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
 }) {
-    const titleKey = `issue-autosave:desc-title:${owner}:${repo}:${number}`;
+    const titleKey = `issue-autosave:desc-title:${provider}:${owner}:${repo}:${number}`;
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [editTitle, setEditTitle] = useState(
         () => readAutosave(titleKey) ?? "",
@@ -329,12 +337,13 @@ function IssueTitleRow({
 
     const handleSaveTitle = useCallback(() => {
         updateTitleMutation.mutate({
+            provider,
             owner,
             repo,
             issueNumber: number,
             title: editTitle,
         });
-    }, [editTitle, owner, repo, number, updateTitleMutation]);
+    }, [editTitle, provider, owner, repo, number, updateTitleMutation]);
 
     return (
         <div className="flex items-center gap-2">
@@ -346,9 +355,7 @@ function IssueTitleRow({
             >
                 {(issue) => (
                     <>
-                        <StatusPill
-                            state={issue.state === "open" ? "open" : "closed"}
-                        />
+                        <StatusPill state={issue.state} />
                         {issue.locked && (
                             <span className="flex items-center gap-1 rounded-md border border-border bg-surface-secondary px-2 py-0.5 text-text-tertiary text-xs">
                                 <Lock size={12} />
@@ -404,7 +411,7 @@ function IssueTitleRow({
                                 <>
                                     <h1 className="font-medium text-3xl text-text-primary">
                                         <CodeTitle
-                                            provider="gh"
+                                            provider={provider}
                                             owner={owner}
                                             repo={repo}
                                         >
@@ -443,10 +450,11 @@ function IssueTitleRow({
         </div>
     );
 }
+
 function IssueSubtitleRow({
     issuePromise,
 }: {
-    issuePromise: Promise<IssueGetResponseData>;
+    issuePromise: Promise<IssueDetail>;
 }) {
     return (
         <Async
@@ -460,12 +468,12 @@ function IssueSubtitleRow({
                     <div className="flex items-center gap-2 text-sm text-text-secondary">
                         <span>Opened by</span>
                         <AuthorLabel
-                            username={issue.user?.login ?? "ghost"}
-                            avatarUrl={issue.user?.avatar_url ?? ""}
-                            profileUrl={issue.user?.html_url ?? "#"}
+                            username={issue.author?.login ?? "ghost"}
+                            avatarUrl={issue.author?.avatarUrl ?? ""}
+                            profileUrl={issue.author?.profileUrl ?? "#"}
                         />
-                        <span title={formatDateTime(issue.created_at)}>
-                            {formatRelativeTime(issue.created_at)}
+                        <span title={formatDateTime(issue.createdAt)}>
+                            {formatRelativeTime(issue.createdAt)}
                         </span>
                     </div>
                 </div>

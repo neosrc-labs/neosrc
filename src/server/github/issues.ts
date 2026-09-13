@@ -2,7 +2,6 @@ import type { RestEndpointMethodTypes } from "@octokit/rest";
 import { cache } from "react";
 import { createGraphql, isOrgRestrictionError } from "~/server/github-graphql";
 import { createOctokit } from "./client";
-import type { PullsGetResponseData } from "./pulls";
 
 export type IssueSearchItem = {
     number: number;
@@ -35,7 +34,6 @@ export const searchIssues = cache(
         );
     },
 );
-export type Milestone = NonNullable<PullsGetResponseData["milestone"]>;
 
 export const listMilestonesForRepo = async (
     accessToken: string,
