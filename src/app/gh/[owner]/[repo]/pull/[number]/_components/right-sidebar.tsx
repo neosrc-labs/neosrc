@@ -2,6 +2,8 @@
 
 import { Check, Circle } from "lucide-react";
 import { use, useRef, useState } from "react";
+import { MetadataSection } from "~/app/[owner]/[repo]/_components/metadata-section";
+import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import { StatusCheckIcon } from "~/components/ci-status";
 import {
     Tooltip,
@@ -11,11 +13,9 @@ import {
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { computeChecksPollingInterval } from "~/utils/checks-polling";
-import type { PullRequestPermissionContext } from "../permissions-utils";
 import { checkBreakdown } from "./check-groups";
 import { ChecksSection } from "./checks-section";
 import { CommitsSection } from "./commits-section";
-import { MetadataSection } from "./metadata-section";
 
 interface RightSidebarProps {
     pullRequestPromise: Promise<PullsGetResponseData> | null;

@@ -2,10 +2,10 @@ import type {
     IssueGetResponseData,
     PullsGetResponseData,
 } from "~/server/github";
-import type { PullRequestPermissionContext } from "../permissions-utils";
 import { AssigneeSection } from "./assignee-section";
 import { LabelsSection } from "./label-section";
 import { MilestoneSection } from "./milestone-section";
+import type { PullRequestPermissionContext } from "./permissions-utils";
 import { ReviewerSection } from "./reviewer-section";
 
 interface MetadataSectionProps {

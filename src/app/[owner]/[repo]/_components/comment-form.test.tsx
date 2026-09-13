@@ -3,8 +3,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { mockMarkdownEditor } from "~/__tests__/helpers/component-mocks";
-import type { PullRequestPermissionContext } from "../permissions-utils";
 import { CommentForm } from "./comment-form";
+import type { PullRequestPermissionContext } from "./permissions-utils";
 
 const signedIn: PullRequestPermissionContext = {
     currentUser: "octocat",

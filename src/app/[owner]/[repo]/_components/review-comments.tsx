@@ -28,7 +28,7 @@ import {
     canInteract,
     canResolveReviewThread,
     type PullRequestPermissionContext,
-} from "../permissions-utils";
+} from "./permissions-utils";
 
 type Reaction = components["schemas"]["reaction"];
 

@@ -1,23 +1,23 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { api } from "~/trpc/react";
-import { CommentForm } from "../../../pull/[number]/_components/comment-form";
-import { TimelineEventList } from "../../../pull/[number]/_components/timeline/event";
-import { TimelineSkeleton } from "../../../pull/[number]/_components/timeline/section";
+import { CommentForm } from "~/app/[owner]/[repo]/_components/comment-form";
+import {
+    canEdit,
+    type PullRequestPermissionContext,
+} from "~/app/[owner]/[repo]/_components/permissions-utils";
+import { TimelineEventList } from "~/app/[owner]/[repo]/_components/timeline/event";
+import { TimelineSkeleton } from "~/app/[owner]/[repo]/_components/timeline/section";
 import {
     useMergedCommentReactions,
     useTimelineBottomScroll,
     useTimelineHashScroll,
-} from "../../../pull/[number]/_components/timeline/use-timeline-view";
+} from "~/app/[owner]/[repo]/_components/timeline/use-timeline-view";
 import {
     aggregateEvents,
     filterTimelineEvents,
-} from "../../../pull/[number]/_components/timeline/utils";
-import {
-    canEdit,
-    type PullRequestPermissionContext,
-} from "../../../pull/[number]/permissions-utils";
+} from "~/app/[owner]/[repo]/_components/timeline/utils";
+import { api } from "~/trpc/react";
 
 export { TimelineSkeleton };
 

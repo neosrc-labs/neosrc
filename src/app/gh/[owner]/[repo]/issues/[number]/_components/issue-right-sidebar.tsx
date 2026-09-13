@@ -1,6 +1,6 @@
+import { MetadataSection } from "~/app/[owner]/[repo]/_components/metadata-section";
+import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import type { IssueGetResponseData } from "~/server/github";
-import { MetadataSection } from "../../../pull/[number]/_components/metadata-section";
-import type { PullRequestPermissionContext } from "../../../pull/[number]/permissions-utils";
 
 interface IssueRightSidebarProps {
     issuePromise: Promise<IssueGetResponseData> | null;

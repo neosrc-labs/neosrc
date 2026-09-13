@@ -11,11 +11,11 @@ import type {
     PullsGetResponseData,
 } from "~/server/github";
 import { api } from "~/trpc/react";
+import { FieldSkeleton } from "./metadata-section";
 import {
     canEdit,
     type PullRequestPermissionContext,
-} from "../permissions-utils";
-import { FieldSkeleton } from "./metadata-section";
+} from "./permissions-utils";
 
 type LabelOperation = { id: number; op: "add" | "remove"; label: Label };
 

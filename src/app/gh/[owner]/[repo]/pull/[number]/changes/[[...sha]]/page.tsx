@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { getPullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
     type CommitData,
@@ -19,7 +20,6 @@ import {
     CommitHeaderSkeleton,
 } from "../../_components/commit-header";
 import { FilesSection } from "../../_components/files-client";
-import { getPullRequestPermissionContext } from "../../permissions-server";
 
 interface ChangesPageProps {
     params: Promise<{

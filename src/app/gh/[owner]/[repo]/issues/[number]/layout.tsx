@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { getSession, githubAccessToken } from "~/server/auth";
-import type { IssueGetResponseData } from "~/server/github";
-import { getPullRequestPermissionContext } from "../../pull/[number]/permissions-server";
+import { getPullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
 import {
     disabled,
     type PullRequestPermissionContext,
-} from "../../pull/[number]/permissions-utils";
+} from "~/app/[owner]/[repo]/_components/permissions-utils";
+import { getSession, githubAccessToken } from "~/server/auth";
+import type { IssueGetResponseData } from "~/server/github";
 import { IssueLeftSidebar } from "./_components/issue-left-sidebar";
 import { IssueRightSidebar } from "./_components/issue-right-sidebar";
 import { IssueClientLayout } from "./layout-client";

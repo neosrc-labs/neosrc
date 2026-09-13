@@ -113,12 +113,9 @@ vi.mock("~/components/hovercards/user-hover-card", () => ({
     ),
 }));
 
-vi.mock(
-    "~/app/gh/[owner]/[repo]/pull/[number]/_components/review-comments",
-    () => ({
-        ReviewComments: () => <div data-testid="review-comments" />,
-    }),
-);
+vi.mock("~/app/[owner]/[repo]/_components/review-comments", () => ({
+    ReviewComments: () => <div data-testid="review-comments" />,
+}));
 
 function makeReview(
     overrides: Partial<GQLPullRequestReview> = {},

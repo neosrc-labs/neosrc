@@ -12,7 +12,7 @@ import { api } from "~/trpc/react";
 import {
     canInteract,
     type PullRequestPermissionContext,
-} from "../permissions-utils";
+} from "./permissions-utils";
 import {
     buildOptimisticComment,
     type TimelineCacheData,

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense, use } from "react";
+import { getPullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
+import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import { DocumentTitleSetter } from "~/components/document-title-setter";
 import { getSession, githubAccessToken } from "~/server/auth";
 import type { IssueGetResponseData } from "~/server/github";
 import { generateIssueMetadata } from "~/server/metadata";
-import { getPullRequestPermissionContext } from "../../pull/[number]/permissions-server";
-import type { PullRequestPermissionContext } from "../../pull/[number]/permissions-utils";
 import { IssueDescriptionSection } from "./_components/issue-description-section";
 import {
     IssueTimelineSection,

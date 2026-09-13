@@ -33,13 +33,13 @@ import type {
     Reviewer,
 } from "~/server/github";
 import { api } from "~/trpc/react";
+import { DismissReviewDialog } from "./dismiss-review-dialog";
+import { FieldSkeleton } from "./metadata-section";
 import {
     canEdit,
     canPush,
     type PullRequestPermissionContext,
-} from "../permissions-utils";
-import { DismissReviewDialog } from "./dismiss-review-dialog";
-import { FieldSkeleton } from "./metadata-section";
+} from "./permissions-utils";
 
 const MAX_VISIBLE_REVIEWERS = 10;
 
