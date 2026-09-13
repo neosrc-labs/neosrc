@@ -1308,7 +1308,8 @@ export const listIssueTimeline = cache(
                 message: `Failed to fetch issue timeline ${issueNumber} in ${owner}/${repo}: ${res.status}`,
             });
         }
-        const items = (await res.json()) as CodebergTimelineEntry[];
+        const data = (await res.json()) as CodebergTimelineEntry[] | null;
+        const items = Array.isArray(data) ? data : [];
         // Forgejo sends no Link header today; treat a full page as "more".
         const hasNextPage =
             (res.headers.get("Link")?.includes('rel="next"') ?? false) ||
@@ -1400,7 +1401,9 @@ export const listIssueReactions = cache(
             },
         );
         if (!res.ok) return [];
-        return (await res.json()) as CodebergReaction[];
+        const data = (await res.json()) as CodebergReaction[] | null;
+        // Forgejo answers JSON null, not [], when there are no reactions.
+        return Array.isArray(data) ? data : [];
     },
 );
 
@@ -1421,7 +1424,9 @@ export const listIssueCommentReactions = cache(
             },
         );
         if (!res.ok) return [];
-        return (await res.json()) as CodebergReaction[];
+        const data = (await res.json()) as CodebergReaction[] | null;
+        // Forgejo answers JSON null, not [], when there are no reactions.
+        return Array.isArray(data) ? data : [];
     },
 );
 
