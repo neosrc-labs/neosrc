@@ -1,5 +1,6 @@
 import { aliasedTable, and, eq, sql } from "drizzle-orm";
 import { after } from "next/server";
+import { cache } from "react";
 import { log } from "~/logging";
 
 import { db } from "./db";
@@ -194,51 +195,58 @@ export type RepoPermissionLevel =
  * `permissions` field is whoever-last-wrote it: never trust it for the
  * current viewer; resolve access from the materialized view instead.
  */
-export async function getRepoPermissionForUser(
-    provider: SyncProvider,
-    providerUsername: string | null,
-    owner: string,
-    repoName: string,
-): Promise<RepoPermissionLevel | null> {
-    if (!providerUsername) return null;
+// Request-scoped: a route's layout and page resolve the same viewer
+// permission, which would otherwise run the query twice per render.
+export const getRepoPermissionForUser = cache(
+    async (
+        provider: SyncProvider,
+        providerUsername: string | null,
+        owner: string,
+        repoName: string,
+    ): Promise<RepoPermissionLevel | null> => {
+        if (!providerUsername) return null;
 
-    const ownerAccount = aliasedTable(account, "owner_account");
-    const viewerAccount = aliasedTable(account, "viewer_account");
+        const ownerAccount = aliasedTable(account, "owner_account");
+        const viewerAccount = aliasedTable(account, "viewer_account");
 
-    const [row] = await db
-        .select({ permission: mvUserRepoPermissions.effectivePermission })
-        .from(repo)
-        .innerJoin(ownerAccount, eq(repo.accountId, ownerAccount.id))
-        .innerJoin(
-            viewerAccount,
-            and(
-                eq(viewerAccount.provider, provider),
-                eq(
-                    sql`lower(${viewerAccount.username})`,
-                    providerUsername.toLowerCase(),
+        const [row] = await db
+            .select({ permission: mvUserRepoPermissions.effectivePermission })
+            .from(repo)
+            .innerJoin(ownerAccount, eq(repo.accountId, ownerAccount.id))
+            .innerJoin(
+                viewerAccount,
+                and(
+                    eq(viewerAccount.provider, provider),
+                    eq(
+                        sql`lower(${viewerAccount.username})`,
+                        providerUsername.toLowerCase(),
+                    ),
                 ),
-            ),
-        )
-        .innerJoin(
-            mvUserRepoPermissions,
-            and(
-                eq(mvUserRepoPermissions.repoId, repo.id),
-                eq(mvUserRepoPermissions.userId, viewerAccount.id),
-            ),
-        )
-        .where(
-            and(
-                eq(repo.provider, provider),
-                // Same case-insensitive slug matching as the cache lookup: the
-                // stored rows carry canonical API casing.
-                eq(sql`lower(${ownerAccount.username})`, owner.toLowerCase()),
-                eq(sql`lower(${repo.name})`, repoName.toLowerCase()),
-            ),
-        )
-        .limit(1);
+            )
+            .innerJoin(
+                mvUserRepoPermissions,
+                and(
+                    eq(mvUserRepoPermissions.repoId, repo.id),
+                    eq(mvUserRepoPermissions.userId, viewerAccount.id),
+                ),
+            )
+            .where(
+                and(
+                    eq(repo.provider, provider),
+                    // Same case-insensitive slug matching as the cache lookup: the
+                    // stored rows carry canonical API casing.
+                    eq(
+                        sql`lower(${ownerAccount.username})`,
+                        owner.toLowerCase(),
+                    ),
+                    eq(sql`lower(${repo.name})`, repoName.toLowerCase()),
+                ),
+            )
+            .limit(1);
 
-    return (row?.permission ?? null) as RepoPermissionLevel | null;
-}
+        return (row?.permission ?? null) as RepoPermissionLevel | null;
+    },
+);
 
 export type ViewerRepoAccess = {
     /** False when the repo is private and the viewer holds no grant. */

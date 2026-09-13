@@ -573,6 +573,7 @@ function SubtitleActionRow({
                             username={pullRequest.user?.login ?? "ghost"}
                             avatarUrl={pullRequest.user?.avatar_url ?? ""}
                             profileUrl={pullRequest.user?.html_url ?? "#"}
+                            provider="gh"
                         />
                         <span title={formatDateTime(pullRequest.created_at)}>
                             {formatRelativeTime(pullRequest.created_at)}

@@ -3,18 +3,21 @@
 import Image from "next/image";
 import NextLink from "next/link";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import type { Provider } from "~/utils/provider-url";
 
 export function AuthorLabel({
     username,
     profileUrl,
     avatarUrl,
+    provider = "gh",
 }: {
     username: string;
     profileUrl: string;
     avatarUrl: string;
+    provider?: Provider;
 }) {
     return (
-        <UserHoverCard login={username}>
+        <UserHoverCard login={username} provider={provider}>
             <NextLink className="flex items-center gap-2" href={profileUrl}>
                 {avatarUrl ? (
                     <Image
