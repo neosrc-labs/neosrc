@@ -152,9 +152,7 @@ export function ReactionFooter({
         [owner, repo, number, toggleMutation],
     );
 
-    if (!canInteract(permissionContext)) {
-        return null;
-    }
+    const canReact = canInteract(permissionContext);
 
     const reactionCounts = reactionsData?.counts
         ? {
@@ -169,18 +167,27 @@ export function ReactionFooter({
           }
         : undefined;
 
+    // Signed-out visitors still see the existing reactions; only adding one
+    // requires an authenticated viewer.
+    if (!canReact && (reactionsData?.counts?.total_count ?? 0) === 0) {
+        return null;
+    }
+
     return (
         <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
-            <ReactionPicker
-                reactions={reactionsData?.reactions ?? []}
-                currentUserLogin={currentUserData?.login}
-                onReact={handleReact}
-            />
+            {canReact && (
+                <ReactionPicker
+                    reactions={reactionsData?.reactions ?? []}
+                    currentUserLogin={currentUserData?.login}
+                    onReact={handleReact}
+                />
+            )}
             <ReactionBar
                 reactions={reactionsData?.reactions ?? []}
                 counts={reactionCounts}
                 currentUserLogin={currentUserData?.login}
                 onReact={handleReact}
+                disabled={!canReact}
             />
         </div>
     );
