@@ -161,7 +161,13 @@ export function ActionsList({
                         <ActionsEmptyState filtered={hasFilters} />
                     ) : (
                         items.map((run) => (
-                            <WorkflowRunRow key={run.id} run={run} />
+                            <WorkflowRunRow
+                                key={run.id}
+                                run={run}
+                                provider={provider}
+                                owner={owner}
+                                repo={repo}
+                            />
                         ))
                     )}
                 </div>

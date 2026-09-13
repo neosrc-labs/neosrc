@@ -88,3 +88,13 @@ export function runDurationLabel(run: WorkflowRunItem): string | null {
     if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return null;
     return formatDurationMs(end - start);
 }
+
+// Events whose runs belong to a pull request. GitHub reports associated pull
+// requests for other events too (a push to main lists pull requests targeting
+// main), which would read as if the run belonged to them.
+const PULL_REQUEST_EVENTS = new Set(["pull_request", "pull_request_target"]);
+
+/** Pull request a run belongs to, or null when the run is not PR-triggered. */
+export function runPullRequestNumber(run: WorkflowRunItem): number | null {
+    return PULL_REQUEST_EVENTS.has(run.event) ? run.pullRequestNumber : null;
+}

@@ -1,13 +1,40 @@
 "use client";
 
-import Image from "next/image";
+import Link from "next/link";
 import { CheckRunIcon } from "~/components/ci-status";
+import { UserLink } from "~/components/user-link";
 import type { WorkflowRunItem } from "~/server/api/routers/actions/types";
-import { runDurationLabel, runStatusLabel } from "./actions-display";
+import {
+    runDurationLabel,
+    runPullRequestNumber,
+    runStatusLabel,
+} from "./actions-display";
 
-export function WorkflowRunRow({ run }: { run: WorkflowRunItem }) {
+function pullRequestHref(
+    provider: "gh" | "cb",
+    owner: string,
+    repo: string,
+    number: number,
+): string {
+    return provider === "cb"
+        ? `https://codeberg.org/${owner}/${repo}/pulls/${number}`
+        : `/gh/${owner}/${repo}/pull/${number}`;
+}
+
+export function WorkflowRunRow({
+    run,
+    provider,
+    owner,
+    repo,
+}: {
+    run: WorkflowRunItem;
+    provider: "gh" | "cb";
+    owner: string;
+    repo: string;
+}) {
     const trailing =
         runStatusLabel(run.status, run.conclusion) ?? runDurationLabel(run);
+    const pullRequestNumber = runPullRequestNumber(run);
 
     return (
         <div className="flex items-start gap-3 border-border-subtle border-b px-4 py-3">
@@ -25,24 +52,41 @@ export function WorkflowRunRow({ run }: { run: WorkflowRunItem }) {
                 >
                     {run.displayTitle}
                 </a>
-                <div className="truncate text-text-muted text-xs">
-                    {run.name} #{run.runNumber}
+                <div className="flex min-w-0 items-center gap-1.5 text-xs">
+                    <span className="min-w-0 truncate text-text-secondary">
+                        {run.name} #{run.runNumber}
+                    </span>
+                    {pullRequestNumber !== null && (
+                        <>
+                            <Separator />
+                            <Link
+                                className="shrink-0 text-text-secondary hover:underline"
+                                href={pullRequestHref(
+                                    provider,
+                                    owner,
+                                    repo,
+                                    pullRequestNumber,
+                                )}
+                            >
+                                Pull request #{pullRequestNumber}
+                            </Link>
+                        </>
+                    )}
+                    {run.actor && (
+                        <>
+                            <Separator />
+                            <UserLink actor={run.actor} provider={provider} />
+                        </>
+                    )}
+                    {run.branch && (
+                        <>
+                            <Separator />
+                            <span className="min-w-0 truncate text-text-muted">
+                                {run.branch}
+                            </span>
+                        </>
+                    )}
                 </div>
-                {run.actor && (
-                    <div className="flex items-center gap-1.5 truncate text-text-secondary text-xs">
-                        <Image
-                            src={run.actor.avatarUrl}
-                            alt=""
-                            className="size-4 shrink-0 rounded-full"
-                            width={16}
-                            height={16}
-                        />
-                        <span className="truncate">
-                            {run.actor.login}
-                            {run.branch ? `:${run.branch}` : ""}
-                        </span>
-                    </div>
-                )}
             </div>
             {trailing && (
                 <div className="shrink-0 text-text-muted text-xs">
@@ -50,5 +94,13 @@ export function WorkflowRunRow({ run }: { run: WorkflowRunItem }) {
                 </div>
             )}
         </div>
+    );
+}
+
+function Separator() {
+    return (
+        <span aria-hidden="true" className="text-text-muted">
+            ·
+        </span>
     );
 }
