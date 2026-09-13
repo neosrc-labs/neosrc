@@ -135,6 +135,68 @@ export function TimelineEvent({
     );
 }
 
+export function TimelineEventList({
+    wrappers,
+    owner,
+    repo,
+    number,
+    commentReactions,
+    allComments,
+    permissionContext,
+    issueNumber,
+    isFetchingNextPage,
+}: {
+    wrappers: TimelineWrapper[];
+    owner: string;
+    repo: string;
+    number: number;
+    commentReactions: Record<string, GQLReactionNode[]>;
+    allComments: ReviewComment[];
+    permissionContext: PullRequestPermissionContext;
+    issueNumber?: number;
+    isFetchingNextPage: boolean;
+}) {
+    return (
+        <>
+            {wrappers.length === 0 && (
+                <p className="text-sm text-text-tertiary">
+                    No timeline events yet.
+                </p>
+            )}
+
+            <div className="relative">
+                <div className="absolute top-0 bottom-0 left-6 w-px bg-surface-selected" />
+
+                {wrappers.map((wrapper) => (
+                    <TimelineEvent
+                        key={
+                            wrapper.type === "raw"
+                                ? `raw-${wrapper.event.id}`
+                                : `label-${wrapper.createdAt}`
+                        }
+                        wrapper={wrapper}
+                        number={number}
+                        owner={owner}
+                        repo={repo}
+                        commentReactions={commentReactions}
+                        allComments={allComments}
+                        permissionContext={permissionContext}
+                        issueNumber={issueNumber}
+                    />
+                ))}
+            </div>
+
+            {isFetchingNextPage && (
+                <div className="py-4 text-center">
+                    <p className="text-sm text-text-tertiary">
+                        Loading more...
+                    </p>
+                </div>
+            )}
+        </>
+    );
+}
+
 function AggregatedLabel({
     wrapper,
 }: {
@@ -368,15 +430,16 @@ function EventContent({
     const commentTaskToggleMutation = useCommentTaskToggle(savedBodiesStore);
     const reviewTaskToggleMutation = useReviewTaskToggle(savedBodiesStore);
 
-    const deleteCommentMutation = useDeleteTimelineComment(
-        { owner, repo, number },
-        issueNumber,
-    );
+    const timelineScope =
+        issueNumber !== undefined
+            ? { owner, repo, issueNumber }
+            : { owner, repo, number };
+
+    const deleteCommentMutation = useDeleteTimelineComment(timelineScope);
 
     const commentReactionMutation = useIssueCommentReactionToggle(
-        { owner, repo, number },
+        timelineScope,
         permissionContext.currentUser,
-        issueNumber,
     );
 
     const reviewReactionMutation = usePullRequestReviewReactionToggle(
