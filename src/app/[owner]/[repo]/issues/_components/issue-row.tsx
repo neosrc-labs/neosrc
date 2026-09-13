@@ -52,7 +52,11 @@ export function IssueRow({
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                     <a
-                        href={`${repoUrl(provider, owner, repo)}/issues/${issue.number}`}
+                        href={
+                            provider === "gh"
+                                ? `/gh/${owner}/${repo}/issues/${issue.number}`
+                                : `${repoUrl(provider, owner, repo)}/issues/${issue.number}`
+                        }
                         className="font-medium text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                     >
                         <CodeTitle
@@ -136,7 +140,11 @@ export function IssueRow({
             <div className="flex w-16 shrink-0 items-center justify-end">
                 {issue.comments_count > 0 ? (
                     <a
-                        href={`${repoUrl(provider, owner, repo)}/issues/${issue.number}`}
+                        href={
+                            provider === "gh"
+                                ? `/gh/${owner}/${repo}/issues/${issue.number}`
+                                : `${repoUrl(provider, owner, repo)}/issues/${issue.number}`
+                        }
                         className="flex items-center gap-1 text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
                     >
                         <MessageSquare className="size-4" />
