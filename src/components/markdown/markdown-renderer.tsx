@@ -654,21 +654,38 @@ function CodeElement({
         ? children.join("")
         : String(children ?? "");
     const tag = className?.replace(/^language-/, "").toLowerCase();
-    const [highlighted, setHighlighted] = useState<string | null>(null);
+    const [highlight, setHighlight] = useState<{
+        code: string;
+        tag: string;
+        html: string;
+    } | null>(null);
 
     useEffect(() => {
         if (!isBlock || !tag) {
-            setHighlighted(null);
+            setHighlight(null);
             return;
         }
         let cancelled = false;
         highlightLines(codeString, tag).then((lines) => {
-            if (!cancelled) setHighlighted(lines?.join("\n") ?? null);
+            if (cancelled) return;
+            setHighlight(
+                lines
+                    ? { code: codeString, tag, html: lines.join("\n") }
+                    : null,
+            );
         });
         return () => {
             cancelled = true;
         };
     }, [isBlock, tag, codeString]);
+
+    // Bind the markup to the props it was produced for. A prop change re-runs
+    // the effect only after this render, so a bare result would briefly show
+    // the previous block's tokens until the new request lands.
+    const highlighted =
+        highlight && highlight.code === codeString && highlight.tag === tag
+            ? highlight.html
+            : null;
 
     if (!isBlock) {
         return <InlineCode>{children}</InlineCode>;
