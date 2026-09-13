@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
-import { ListSkeleton } from "~/app/[owner]/[repo]/_components/list/list-skeleton";
 import { Pagination } from "~/components/ui/pagination";
 import { formatCount } from "~/lib/utils";
 import { WORKFLOW_RUNS_PER_PAGE } from "~/server/api/routers/actions/types";
@@ -12,6 +11,7 @@ import { ActionsEmptyState } from "./actions-empty-state";
 import type { ActionsFilterOption } from "./actions-filter-dropdown";
 import { ActionsToolbar } from "./actions-toolbar";
 import { WorkflowRunRow } from "./workflow-run-row";
+import { WorkflowRunSkeleton } from "./workflow-run-skeleton";
 import { WorkflowSidebar } from "./workflow-sidebar";
 
 export function ActionsList({
@@ -152,7 +152,7 @@ export function ActionsList({
 
                 <div className="border-border-subtle border-t">
                     {runsQuery.isLoading ? (
-                        <ListSkeleton />
+                        <WorkflowRunSkeleton />
                     ) : runsQuery.isError ? (
                         <p className="px-4 py-8 text-center text-red-600 text-sm">
                             Failed to load workflow runs.
