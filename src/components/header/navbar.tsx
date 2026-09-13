@@ -114,7 +114,8 @@ export function useTabs({
                 label: "Issues",
                 path: `/${provider}/${owner}/${repo}/issues`,
                 show: repoData.hasIssues ?? true,
-                isActive: pathType === "ISSUES_LIST",
+                isActive:
+                    pathType === "ISSUES_LIST" || pathType === "ISSUE_DETAIL",
                 icon: CircleDot,
                 count: repoData.openIssuesCount,
             },
