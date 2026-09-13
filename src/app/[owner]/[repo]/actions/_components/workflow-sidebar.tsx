@@ -7,11 +7,17 @@ import { domain } from "~/utils/provider-url";
 
 const SIDEBAR_WORKFLOW_LIMIT = 10;
 
-const SHIMMER_ROWS = ["s1", "s2", "s3", "s4", "s5", "s6"];
+// Mirrors the loaded list: "All workflows" plus the workflows shown before the
+// "Show more" control. Items sit on a 32px pitch (px-3 py-1.5 text-sm), so a
+// 24px bar plus its 8px gap spans exactly one item.
+const SIDEBAR_SKELETON_ROWS = Array.from(
+    { length: SIDEBAR_WORKFLOW_LIMIT + 1 },
+    (_, index) => `workflow-skeleton-${index}`,
+);
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
     return (
-        <h3 className="px-3 pt-2 pb-1 font-semibold text-text-muted text-xs uppercase tracking-wide">
+        <h3 className="px-3 pt-1 pb-2 font-semibold text-text-secondary text-xs uppercase tracking-wide">
             {children}
         </h3>
     );
@@ -70,10 +76,10 @@ export function WorkflowSidebar({
         <aside className="w-full shrink-0 lg:w-64">
             <SectionTitle>Workflows</SectionTitle>
             {isLoading ? (
-                <div className="space-y-1 px-3 py-1">
-                    {SHIMMER_ROWS.map((id) => (
+                <div className="space-y-2">
+                    {SIDEBAR_SKELETON_ROWS.map((id) => (
                         <div
-                            className="h-6 animate-pulse rounded bg-surface-selected"
+                            className="h-6 animate-pulse rounded-md bg-surface-selected"
                             key={id}
                         />
                     ))}
@@ -109,23 +115,25 @@ export function WorkflowSidebar({
                 </>
             )}
 
-            <SectionTitle>Management</SectionTitle>
-            <a
-                className="block truncate rounded-md px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary"
-                href={`https://${providerDomain}/${owner}/${repo}/actions/caches`}
-                target="_blank"
-                rel="noreferrer"
-            >
-                Caches
-            </a>
-            <a
-                className="block truncate rounded-md px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary"
-                href={`https://${providerDomain}/${owner}/${repo}/deployments`}
-                target="_blank"
-                rel="noreferrer"
-            >
-                Deployments
-            </a>
+            <section className="mt-3 border-border border-t pt-3">
+                <SectionTitle>Management</SectionTitle>
+                <a
+                    className="block truncate rounded-md px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary"
+                    href={`https://${providerDomain}/${owner}/${repo}/actions/caches`}
+                    target="_blank"
+                    rel="noreferrer"
+                >
+                    Caches
+                </a>
+                <a
+                    className="block truncate rounded-md px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary"
+                    href={`https://${providerDomain}/${owner}/${repo}/deployments`}
+                    target="_blank"
+                    rel="noreferrer"
+                >
+                    Deployments
+                </a>
+            </section>
         </aside>
     );
 }
