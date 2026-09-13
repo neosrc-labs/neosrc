@@ -285,3 +285,33 @@ describe("null list payloads", () => {
         expect(result.hasNextPage).toBe(false);
     });
 });
+
+describe("reaction read failures", () => {
+    function stubFailure(status: number) {
+        const mock = vi.fn(async (_url: string) => ({
+            ok: false,
+            status,
+            json: async () => ({}),
+            headers: { get: () => null },
+        }));
+        vi.stubGlobal("fetch", mock);
+    }
+
+    it("rejects instead of reporting an empty issue reaction list", async () => {
+        stubFailure(403);
+
+        await expect(listIssueReactions("tok", "o", "r", 31)).rejects.toThrow(
+            "Failed to fetch reactions for issue 31 in o/r: 403",
+        );
+    });
+
+    it("rejects instead of reporting an empty comment reaction list", async () => {
+        stubFailure(500);
+
+        await expect(
+            listIssueCommentReactions("tok", "o", "r", 32),
+        ).rejects.toThrow(
+            "Failed to fetch reactions for comment 32 in o/r: 500",
+        );
+    });
+});
