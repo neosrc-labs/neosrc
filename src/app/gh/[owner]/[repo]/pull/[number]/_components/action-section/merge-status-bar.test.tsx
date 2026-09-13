@@ -31,7 +31,6 @@ function renderBar(canMerge: boolean, isMergePermissionUnknown: boolean): void {
             isMergeStateUnknown={false}
             isMergePermissionUnknown={isMergePermissionUnknown}
             noMergeMethodsAvailable={false}
-            mergeError={false}
             isMergeRequirementsUnavailable={false}
             isMergeStatusLoading={false}
         />,

@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "~/trpc/react";
+import { useActionError } from "./action-errors";
 
 interface DisableAutoMergeButtonProps {
     owner: string;
@@ -26,6 +27,14 @@ export function DisableAutoMergeButton({
         onError: (err) => setError(err.message),
     });
 
+    useActionError(
+        "auto-merge-disable",
+        error ??
+            (disableMutation.isError
+                ? "Failed to disable. Please try again."
+                : null),
+    );
+
     return (
         <div className="flex items-center gap-2">
             <button
@@ -40,12 +49,6 @@ export function DisableAutoMergeButton({
                     ? "Disabling..."
                     : "Disable auto-merge"}
             </button>
-            {error && <span className="text-red-600 text-xs">{error}</span>}
-            {disableMutation.isError && !error && (
-                <span className="text-red-600 text-xs">
-                    Failed to disable. Please try again.
-                </span>
-            )}
         </div>
     );
 }

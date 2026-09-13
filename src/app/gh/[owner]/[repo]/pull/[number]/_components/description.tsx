@@ -29,6 +29,10 @@ import { useTaskToggle } from "~/hooks/use-task-toggle";
 import type { PullsGetResponseData, StackSuggestion } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import {
+    ActionErrorBanner,
+    ActionErrorProvider,
+} from "./action-section/action-errors";
 import { AdditionsDeletionsBadge } from "./additions-deletions-badge";
 import { AutoMergeBannerSection } from "./auto-merge-banner-section";
 import { ConflictedFiles } from "./conflicted-files";
@@ -131,15 +135,18 @@ export function PullRequestDescriptionSection({
                     pullRequestPromise={pullRequestPromise}
                     permissionContextPromise={permissionContextPromise}
                 />
-                <SubtitleActionRow
-                    owner={owner}
-                    repo={repo}
-                    pullRequestPromise={pullRequestPromise}
-                    actionSection={actionSection}
-                    stackSuggestionPromise={stackSuggestionPromise}
-                    stackBannerDismissed={stackBannerDismissed}
-                    onCreateStack={() => setStackDialogOpen(true)}
-                />
+                <ActionErrorProvider>
+                    <SubtitleActionRow
+                        owner={owner}
+                        repo={repo}
+                        pullRequestPromise={pullRequestPromise}
+                        actionSection={actionSection}
+                        stackSuggestionPromise={stackSuggestionPromise}
+                        stackBannerDismissed={stackBannerDismissed}
+                        onCreateStack={() => setStackDialogOpen(true)}
+                    />
+                    <ActionErrorBanner className="mt-3" />
+                </ActionErrorProvider>
                 {conflictedFilesPromise && (
                     <Async fallback={null} promise={pullRequestPromise}>
                         {(pullRequest) => (

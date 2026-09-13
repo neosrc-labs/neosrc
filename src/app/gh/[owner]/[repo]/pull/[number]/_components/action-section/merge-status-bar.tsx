@@ -48,7 +48,6 @@ interface MergeStatusBarProps {
     /** Set when the viewer's permission could not be resolved at all. */
     isMergePermissionUnknown?: boolean;
     noMergeMethodsAvailable: boolean;
-    mergeError: boolean;
     isMergeRequirementsUnavailable: boolean;
     approvalCount?: number;
     changesRequestedCount?: number;
@@ -75,7 +74,6 @@ export function MergeStatusBar({
     isMergeStateUnknown,
     isMergePermissionUnknown = false,
     noMergeMethodsAvailable,
-    mergeError,
     isMergeRequirementsUnavailable,
     approvalCount = 0,
     changesRequestedCount = 0,
@@ -181,11 +179,6 @@ export function MergeStatusBar({
               : "Merge pull request";
     return (
         <div className="flex items-stretch">
-            {mergeError && (
-                <span className="mr-2 text-red-600 text-xs">
-                    Failed to merge. Please try again.
-                </span>
-            )}
             <button
                 className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-l-md bg-[#2da44e] px-1.5 py-2 font-medium text-white text-xs transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
                 disabled={isMerging}

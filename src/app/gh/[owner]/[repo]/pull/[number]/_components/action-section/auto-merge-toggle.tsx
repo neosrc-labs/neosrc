@@ -6,6 +6,7 @@ import { useState } from "react";
 import type { RepositoryInfo } from "~/server/api/routers/repos";
 import type { MergeMethod, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
+import { useActionError } from "./action-errors";
 import { MergeModeDropdown } from "./merge-status-bar";
 
 interface AutoMergeToggleProps {
@@ -46,6 +47,15 @@ export function AutoMergeToggle({
         },
         onError: (err) => setError(err.message),
     });
+
+    // Reported before the guards below so the hook order stays stable.
+    useActionError(
+        "auto-merge-enable",
+        error ??
+            (enableMutation.isError
+                ? "Failed to enable. Please try again."
+                : null),
+    );
 
     type AutoMergeData = {
         enabled_by: { login: string } | null;
@@ -93,16 +103,6 @@ export function AutoMergeToggle({
     // Not enabled — show enable affordance
     return (
         <div className="flex items-stretch">
-            {error && (
-                <span className="mr-2 self-center text-red-600 text-xs">
-                    {error}
-                </span>
-            )}
-            {enableMutation.isError && !error && (
-                <span className="mr-2 self-center text-red-600 text-xs">
-                    Failed to enable. Please try again.
-                </span>
-            )}
             <button
                 className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-l-md border-border border-y border-l bg-surface-tertiary px-3 py-2 font-medium text-text-primary text-xs ring-1 ring-ring transition-colors hover:bg-surface-secondary disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={enableMutation.isPending}

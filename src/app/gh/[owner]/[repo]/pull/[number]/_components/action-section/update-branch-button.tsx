@@ -3,6 +3,7 @@
 import { ArrowDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api } from "~/trpc/react";
+import { useActionError } from "./action-errors";
 
 interface UpdateBranchButtonProps {
     owner: string;
@@ -30,6 +31,8 @@ export function UpdateBranchButton({
         },
     });
 
+    useActionError("update-branch", updateMutation.error?.message ?? null);
+
     return (
         <div className="flex items-center gap-2">
             <button
@@ -49,11 +52,6 @@ export function UpdateBranchButton({
                 <ArrowDown size={14} />
                 {updateMutation.isPending ? "Updating..." : "Update branch"}
             </button>
-            {updateMutation.error && (
-                <span className="text-red-600 text-xs">
-                    {updateMutation.error.message}
-                </span>
-            )}
         </div>
     );
 }
