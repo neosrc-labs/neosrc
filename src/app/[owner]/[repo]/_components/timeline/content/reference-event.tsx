@@ -3,11 +3,14 @@
 import { UserLink } from "~/components/user-link";
 import type { GQLReferencedEvent } from "~/server/github-graphql";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import type { Provider } from "~/utils/provider-url";
 
 export function ReferencedEventContent({
     event,
+    provider,
 }: {
     event: GQLReferencedEvent;
+    provider: Provider;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
     const fullDate = formatDateTime(event.createdAt);
@@ -15,7 +18,7 @@ export function ReferencedEventContent({
     return (
         <div className="flex items-center justify-between text-sm text-text-secondary">
             <div className="flex items-start gap-1">
-                <UserLink actor={event.actor} />
+                <UserLink actor={event.actor} provider={provider} />
                 <span>
                     {" referenced this "}
                     <span title={fullDate}>{timestamp}</span>

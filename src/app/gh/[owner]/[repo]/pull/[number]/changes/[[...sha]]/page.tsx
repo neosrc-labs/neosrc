@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { getPullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
+import { getIssuePermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
     type CommitData,
@@ -75,13 +75,14 @@ export default async function ChangesPage({ params }: ChangesPageProps) {
         userId,
     );
 
-    const permissionContextPromise = getPullRequestPermissionContext(
+    const permissionContextPromise = getIssuePermissionContext({
+        provider: "gh",
         accessToken,
         owner,
         repo,
-        prPromise,
+        subjectPromise: prPromise,
         userId,
-    );
+    });
 
     const conflictedFilesPromise = prPromise.then(async (pr) => {
         if (pr.mergeable_state === "dirty") {

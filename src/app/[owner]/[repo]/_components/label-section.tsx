@@ -5,12 +5,10 @@ import { Async } from "~/components/async";
 import { Label as LabelComponent } from "~/components/ui/label";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { applyArrayOperations, opId } from "~/lib/utils";
-import type {
-    IssueGetResponseData,
-    Label,
-    PullsGetResponseData,
-} from "~/server/github";
+import type { IssueMetadata } from "~/server/api/routers/issues/types";
+import type { Label } from "~/server/api/routers/mappers";
 import { api } from "~/trpc/react";
+import type { Provider } from "~/utils/provider-url";
 import { FieldSkeleton } from "./metadata-section";
 import {
     canEdit,
@@ -19,44 +17,62 @@ import {
 
 type LabelOperation = { id: number; op: "add" | "remove"; label: Label };
 
-export function LabelsSection({
-    pullRequestPromise,
-    permissionContextPromise,
-    owner,
-    repo,
-    number,
-}: {
-    pullRequestPromise: Promise<{
-        labels: PullsGetResponseData["labels"] | IssueGetResponseData["labels"];
-        assignees?: PullsGetResponseData["assignees"];
-        milestone: PullsGetResponseData["milestone"];
-    }>;
+// Repo label list payload; both providers carry these fields.
+type RepoLabel = {
+    id?: number;
+    name: string;
+    color: string;
+    description: string | null;
+};
+
+const toLabel = (l: RepoLabel): Label => ({
+    id: String(l.id ?? ""),
+    name: l.name,
+    color: l.color,
+    description: l.description,
+});
+
+interface LabelsSectionProps {
+    provider: Provider;
+    /** GitHub-only: no Codeberg label write path yet. */
+    editable: boolean;
+    metadataPromise: Promise<IssueMetadata>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;
     number: number;
-}) {
+}
+
+export function LabelsSection({
+    provider,
+    editable,
+    metadataPromise,
+    permissionContextPromise,
+    owner,
+    repo,
+    number,
+}: LabelsSectionProps) {
     // We use a list of operations made by the user to track the UI state.
     // Instead of trying to sync the state with the server constantly, which is quite difficult,
-    // we just take the initial pull request labels and apply the operation log to it.
+    // we just take the initial labels and apply the operation log to it.
     // This allows us to optimistically update and handle users adding multiple in quick succession without racing on the server response.
     const [operations, setOperations] = useState<LabelOperation[]>([]);
 
-    // If we reload the pull request we should remove all operations the user made and assume the new pull has the latest data.
+    // If we reload the payload we should remove all operations the user made
+    // and assume the new data is the latest.
     // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the operations
     useEffect(() => {
         setOperations([]);
-    }, [pullRequestPromise]);
+    }, [metadataPromise]);
 
-    const { data: repoLabels } = api.pulls.listLabels.useQuery({
-        provider: "gh",
-        owner,
-        repo,
-    });
+    const { data: repoLabels } = api.pulls.listLabels.useQuery(
+        { provider, owner, repo },
+        { enabled: editable },
+    );
     const addMutation = api.pulls.addLabel.useMutation();
     const removeMutation = api.pulls.removeLabel.useMutation();
 
-    const labelsData = (repoLabels ?? []) as Label[];
+    const labelsData: RepoLabel[] = repoLabels ?? [];
     const handleAdd = (label: Label) => {
         const repoLabel = labelsData.find((l) => l.name === label.name);
         if (!repoLabel) return;
@@ -90,42 +106,44 @@ export function LabelsSection({
         <>
             <div className="flex items-start justify-between">
                 <h3 className="text-text-primary">Labels</h3>
-                <Async promise={pullRequestPromise} fallback={null}>
-                    {(pullRequest) => (
-                        <Async
-                            promise={permissionContextPromise}
-                            fallback={null}
-                        >
-                            {(permissionContext) => (
-                                <LabelSectionSettings
-                                    repoLabels={labelsData}
-                                    labels={toSectionLabels(pullRequest.labels)}
-                                    operations={operations}
-                                    onAddLabel={handleAdd}
-                                    onRemoveLabel={handleRemove}
-                                    disabled={!canEdit(permissionContext)}
-                                />
-                            )}
-                        </Async>
-                    )}
-                </Async>
+                {editable && (
+                    <Async promise={metadataPromise} fallback={null}>
+                        {(metadata) => (
+                            <Async
+                                promise={permissionContextPromise}
+                                fallback={null}
+                            >
+                                {(permissionContext) => (
+                                    <LabelSectionSettings
+                                        repoLabels={labelsData}
+                                        labels={metadata.labels}
+                                        operations={operations}
+                                        onAddLabel={handleAdd}
+                                        onRemoveLabel={handleRemove}
+                                        disabled={!canEdit(permissionContext)}
+                                    />
+                                )}
+                            </Async>
+                        )}
+                    </Async>
+                )}
             </div>
             <Async
-                promise={pullRequestPromise}
+                promise={metadataPromise}
                 fallback={
                     <div className="mt-2">
                         <FieldSkeleton />
                     </div>
                 }
             >
-                {(pullRequest) => (
+                {(metadata) => (
                     <Async promise={permissionContextPromise} fallback={null}>
                         {(permissionContext) => (
                             <LabelSectionContent
-                                labels={toSectionLabels(pullRequest.labels)}
+                                labels={metadata.labels}
                                 operations={operations}
                                 onRemoveLabel={handleRemove}
-                                canEdit={canEdit(permissionContext)}
+                                canEdit={editable && canEdit(permissionContext)}
                             />
                         )}
                     </Async>
@@ -143,7 +161,7 @@ function LabelSectionSettings({
     onRemoveLabel,
     disabled,
 }: {
-    repoLabels: Label[];
+    repoLabels: RepoLabel[];
     labels: Label[];
     operations: LabelOperation[];
     onAddLabel: (label: Label) => void;
@@ -158,7 +176,9 @@ function LabelSectionSettings({
             items={repoLabels}
             isSelected={(l) => currentNames.has(l.name)}
             onSelect={(l) =>
-                currentNames.has(l.name) ? onRemoveLabel(l) : onAddLabel(l)
+                currentNames.has(l.name)
+                    ? onRemoveLabel(toLabel(l))
+                    : onAddLabel(toLabel(l))
             }
             keyFn={(l) => l.name}
             searchFn={(l, q) => l.name.toLowerCase().includes(q)}
@@ -247,38 +267,4 @@ function applyOperations(
         (op) => op.label,
         (l) => l.name,
     );
-}
-
-// issues.get types labels loosely (strings in list contexts, partial
-// objects); the section only reads name/color/description.
-function toSectionLabels(
-    labels: PullsGetResponseData["labels"] | IssueGetResponseData["labels"],
-): Label[] {
-    return labels.flatMap((label): Label[] => {
-        if (typeof label === "string") {
-            return [
-                {
-                    id: 0,
-                    node_id: "",
-                    url: "",
-                    name: label,
-                    description: null,
-                    color: "ededed",
-                    default: false,
-                },
-            ];
-        }
-        if (!label.name) return [];
-        return [
-            {
-                id: label.id ?? 0,
-                node_id: label.node_id ?? "",
-                url: label.url ?? "",
-                name: label.name,
-                description: label.description ?? null,
-                color: label.color ?? "ededed",
-                default: label.default ?? false,
-            },
-        ];
-    });
 }

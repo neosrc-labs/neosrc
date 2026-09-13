@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense, use } from "react";
-import { getPullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
+import { getIssuePermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
 import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import { DocumentTitleSetter } from "~/components/document-title-setter";
 import { getSession, githubAccessToken } from "~/server/auth";
@@ -56,13 +56,14 @@ export default async function IssuePage({ params }: PageProps) {
     const session = await getSession();
     const userId = session?.user?.id;
     const issuePromise = loadIssueForRoute(accessToken, owner, repo, number);
-    const permissionContextPromise = getPullRequestPermissionContext(
+    const permissionContextPromise = getIssuePermissionContext({
+        provider: "gh",
         accessToken,
         owner,
         repo,
-        issuePromise,
+        subjectPromise: issuePromise,
         userId,
-    );
+    });
 
     return (
         <div className="px-6 py-8">

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense, use } from "react";
-import { getPullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
+import { getIssuePermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
 import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import {
     TimelineSection,
@@ -87,13 +87,14 @@ export default async function PullRequestPage({ params }: PageProps) {
     const checksPromise = pullRequestPromise.then((pr) =>
         getChecksForCommit(accessToken, owner, repo, pr.head.sha),
     );
-    const permissionContextPromise = getPullRequestPermissionContext(
+    const permissionContextPromise = getIssuePermissionContext({
+        provider: "gh",
         accessToken,
         owner,
         repo,
-        pullRequestPromise,
+        subjectPromise: pullRequestPromise,
         userId,
-    );
+    });
     const stackSuggestionPromise = getStackSuggestion(
         accessToken,
         owner,

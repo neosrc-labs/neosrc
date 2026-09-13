@@ -39,6 +39,7 @@ import type {
 } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import type { Provider } from "~/utils/provider-url";
 import {
     canEdit,
     canInteract,
@@ -60,6 +61,7 @@ const REVIEW_MINIMIZE_REASONS: {
 
 interface PullRequestReviewContentProps {
     event: GQLPullRequestReview;
+    provider: Provider;
     owner: string;
     repo: string;
     number: number;
@@ -91,6 +93,7 @@ interface PullRequestReviewContentProps {
 
 export function PullRequestReviewContent({
     event,
+    provider,
     owner,
     repo,
     number,
@@ -296,7 +299,7 @@ export function PullRequestReviewContent({
     return (
         <>
             <p className="flex items-start gap-1 text-sm text-text-secondary">
-                <UserLink actor={event.author} />
+                <UserLink actor={event.author} provider={provider} />
                 {` ${stateLabel} `}
                 <span title={fullDate}>{timestamp}</span>
             </p>
@@ -304,6 +307,7 @@ export function PullRequestReviewContent({
                 <div className="mt-3">
                     <CommentCard
                         id={`pullrequestreview-${event.databaseId}`}
+                        provider={provider}
                         user={
                             event.author
                                 ? {

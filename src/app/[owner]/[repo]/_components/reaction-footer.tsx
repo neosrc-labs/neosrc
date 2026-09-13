@@ -6,6 +6,7 @@ import { ReactionPicker } from "~/components/reaction-picker";
 import type { ReactionContent } from "~/lib/reactions";
 import type { GQLPullRequestReactions } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
+import type { Provider } from "~/utils/provider-url";
 import {
     canInteract,
     type PullRequestPermissionContext,
@@ -39,6 +40,7 @@ export function ReactionFooter({
     repo,
     number,
     kind,
+    provider,
     reactionsData,
     permissionContext,
 }: {
@@ -46,34 +48,40 @@ export function ReactionFooter({
     repo: string;
     number: number;
     kind: "pull" | "issue";
+    provider: Provider;
     reactionsData: SubjectReactionsData | undefined;
     permissionContext: PullRequestPermissionContext;
 }) {
     const isIssue = kind === "issue";
-    const { data: currentUserData } = api.users.currentUser.useQuery();
+    const { data: currentUserData } = api.users.currentUser.useQuery({
+        provider,
+    });
     const utils = api.useUtils();
 
     const store: ReactionStore = isIssue
         ? {
               cancel: () =>
                   utils.reactions.getForIssue.cancel({
+                      provider,
                       owner,
                       repo,
                       issueNumber: number,
                   }),
               get: () =>
                   utils.reactions.getForIssue.getData({
+                      provider,
                       owner,
                       repo,
                       issueNumber: number,
                   }),
               set: (updater) =>
                   utils.reactions.getForIssue.setData(
-                      { owner, repo, issueNumber: number },
+                      { provider, owner, repo, issueNumber: number },
                       updater,
                   ),
               invalidate: () =>
                   utils.reactions.getForIssue.invalidate({
+                      provider,
                       owner,
                       repo,
                       issueNumber: number,
@@ -143,13 +151,14 @@ export function ReactionFooter({
     const handleReact = useCallback(
         (content: ReactionContent) => {
             toggleMutation.mutate({
+                provider,
                 owner,
                 repo,
                 number,
                 content,
             });
         },
-        [owner, repo, number, toggleMutation],
+        [provider, owner, repo, number, toggleMutation],
     );
 
     const canReact = canInteract(permissionContext);

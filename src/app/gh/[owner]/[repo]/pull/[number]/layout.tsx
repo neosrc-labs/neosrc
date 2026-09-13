@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { getPullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
+import { getIssuePermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
 import {
     disabled,
     type PullRequestPermissionContext,
 } from "~/app/[owner]/[repo]/_components/permissions-utils";
+import type { IssueMetadata } from "~/server/api/routers/issues/types";
+import { mapPullRequestMetadata } from "~/server/api/routers/mappers";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
     type CheckRun,
@@ -43,6 +45,7 @@ export default async function PullRequestLayout({
     }
 
     let pullRequest: Promise<PullsGetResponseData> | null = null;
+    let metadataPromise: Promise<IssueMetadata> | null = null;
     let checks: Promise<Array<CheckRun>> | null = EMPTY_ARRAY_PROMISE;
     let permissionContextPromise: Promise<PullRequestPermissionContext> =
         Promise.resolve(disabled());
@@ -60,14 +63,16 @@ export default async function PullRequestLayout({
             number,
             userId,
         );
+        metadataPromise = pullRequest.then(mapPullRequestMetadata);
 
-        permissionContextPromise = getPullRequestPermissionContext(
+        permissionContextPromise = getIssuePermissionContext({
+            provider: "gh",
             accessToken,
             owner,
             repo,
-            pullRequest,
-            userId ?? undefined,
-        );
+            subjectPromise: pullRequest,
+            userId: userId ?? undefined,
+        });
 
         // Fetch check runs and commit statuses if we have the PR head SHA
         checks = pullRequest.then((pullRequest) =>
@@ -87,6 +92,7 @@ export default async function PullRequestLayout({
             }
             rightSidebar={
                 <RightSidebar
+                    metadataPromise={metadataPromise}
                     permissionContextPromise={permissionContextPromise}
                     checksPromise={checks}
                     pullRequestPromise={pullRequest}

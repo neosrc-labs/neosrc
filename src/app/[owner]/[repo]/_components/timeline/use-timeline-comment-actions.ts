@@ -9,6 +9,7 @@ import type {
     GQLTimelineEvent,
 } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
+import { domain, type Provider } from "~/utils/provider-url";
 
 export interface PullScope {
     owner: string;
@@ -17,6 +18,7 @@ export interface PullScope {
 }
 
 export interface IssueScope {
+    provider: Provider;
     owner: string;
     repo: string;
     issueNumber: number;
@@ -46,6 +48,7 @@ export function useTimelineListCache(scope: TimelineScope): TimelineListCache {
     const utils = api.useUtils();
     if ("issueNumber" in scope) {
         const input = {
+            provider: scope.provider,
             owner: scope.owner,
             repo: scope.repo,
             issueNumber: scope.issueNumber,
@@ -72,6 +75,7 @@ export function useTimelineListCache(scope: TimelineScope): TimelineListCache {
 export function buildOptimisticComment(
     body: string,
     author: { login: string; avatarUrl: string },
+    provider: Provider,
 ): GQLIssueComment {
     const tempId = -Date.now();
     return {
@@ -83,7 +87,7 @@ export function buildOptimisticComment(
             __typename: "User",
             login: author.login,
             avatarUrl: author.avatarUrl,
-            url: `https://github.com/${author.login}`,
+            url: `https://${domain(provider)}/${author.login}`,
         },
         createdAt: new Date().toISOString(),
         authorAssociation: "NONE",

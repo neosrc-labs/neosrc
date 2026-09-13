@@ -9,6 +9,7 @@ import {
 } from "~/components/markdown/markdown-editor";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { api } from "~/trpc/react";
+import type { Provider } from "~/utils/provider-url";
 import {
     canInteract,
     type PullRequestPermissionContext,
@@ -24,6 +25,7 @@ interface CommentFormProps {
     repo: string;
     number: number;
     kind?: "pull" | "issue";
+    provider: Provider;
     permissionContext: PullRequestPermissionContext;
     canClose?: boolean;
     canReopen?: boolean;
@@ -35,6 +37,7 @@ export function CommentForm({
     repo,
     number,
     kind = "pull",
+    provider,
     permissionContext,
     canClose = false,
     canReopen = false,
@@ -47,11 +50,13 @@ export function CommentForm({
     const { clear: clearComment } = useAutosave(commentKey, body);
     const router = useRouter();
     const utils = api.useUtils();
-    const { data: currentUserData } = api.users.currentUser.useQuery();
+    const { data: currentUserData } = api.users.currentUser.useQuery({
+        provider,
+    });
 
     const cache = useTimelineListCache(
         isIssue
-            ? { owner, repo, issueNumber: number }
+            ? { provider, owner, repo, issueNumber: number }
             : { owner, repo, number },
     );
 
@@ -62,10 +67,14 @@ export function CommentForm({
             const prevData = cache.get();
 
             if (currentUserData?.login && currentUserData.avatarUrl) {
-                const comment = buildOptimisticComment(body, {
-                    login: currentUserData.login,
-                    avatarUrl: currentUserData.avatarUrl,
-                });
+                const comment = buildOptimisticComment(
+                    body,
+                    {
+                        login: currentUserData.login,
+                        avatarUrl: currentUserData.avatarUrl,
+                    },
+                    provider,
+                );
                 cache.set((old) => {
                     if (!old) return old;
                     return {
@@ -145,16 +154,23 @@ export function CommentForm({
     const handleSubmit = useCallback(() => {
         if (!body.trim()) return;
         if (isIssue) {
-            issuesAdd.mutate({ owner, repo, issueNumber: number, body });
+            issuesAdd.mutate({
+                provider,
+                owner,
+                repo,
+                issueNumber: number,
+                body,
+            });
         } else {
             pullsAdd.mutate({ owner, repo, number, body });
         }
-    }, [body, owner, repo, number, isIssue, issuesAdd, pullsAdd]);
+    }, [body, provider, owner, repo, number, isIssue, issuesAdd, pullsAdd]);
 
     const handleClose = useCallback(() => {
         const trimmed = body.trim();
         if (isIssue) {
             issuesClose.mutate({
+                provider,
                 owner,
                 repo,
                 issueNumber: number,
@@ -168,12 +184,13 @@ export function CommentForm({
                 ...(trimmed ? { body } : {}),
             });
         }
-    }, [body, owner, repo, number, isIssue, issuesClose, pullsClose]);
+    }, [body, provider, owner, repo, number, isIssue, issuesClose, pullsClose]);
 
     const handleReopen = useCallback(() => {
         const trimmed = body.trim();
         if (isIssue) {
             issuesReopen.mutate({
+                provider,
                 owner,
                 repo,
                 issueNumber: number,
@@ -187,7 +204,16 @@ export function CommentForm({
                 ...(trimmed ? { body } : {}),
             });
         }
-    }, [body, owner, repo, number, isIssue, issuesReopen, pullsReopen]);
+    }, [
+        body,
+        provider,
+        owner,
+        repo,
+        number,
+        isIssue,
+        issuesReopen,
+        pullsReopen,
+    ]);
 
     if (!canInteract(permissionContext)) {
         const { currentUser, isPullRequestLocked } = permissionContext;

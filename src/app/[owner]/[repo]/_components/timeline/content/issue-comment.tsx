@@ -30,6 +30,7 @@ import {
 import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
 import type { ReactionContent } from "~/lib/reactions";
 import type { GQLIssueComment, GQLReactionNode } from "~/server/github-graphql";
+import type { Provider } from "~/utils/provider-url";
 import {
     canEdit,
     canInteract,
@@ -39,6 +40,7 @@ import { formatReason } from "../event";
 
 interface IssueCommentContentProps {
     event: GQLIssueComment;
+    provider: Provider;
     owner: string;
     repo: string;
     permissionContext: PullRequestPermissionContext;
@@ -55,6 +57,7 @@ interface IssueCommentContentProps {
     onReactToComment: (commentId: number, content: ReactionContent) => void;
     onToggleMinimized: (commentId: number, expanded: boolean) => void;
     commentToggleMutation: TaskToggleApi<{
+        provider: Provider;
         owner: string;
         repo: string;
         commentId: number;
@@ -64,6 +67,7 @@ interface IssueCommentContentProps {
 
 export function IssueCommentContent({
     event,
+    provider,
     owner,
     repo,
     permissionContext,
@@ -86,7 +90,7 @@ export function IssueCommentContent({
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const { onToggleTask } = useTaskToggle({
         mutation: commentToggleMutation,
-        staticInput: { owner, repo, commentId: event.databaseId },
+        staticInput: { provider, owner, repo, commentId: event.databaseId },
     });
 
     const handleCopyLink = useCallback(async () => {
@@ -145,6 +149,7 @@ export function IssueCommentContent({
         <>
             <CommentCard
                 id={`issuecomment-${event.databaseId}`}
+                provider={provider}
                 user={
                     event.author
                         ? {

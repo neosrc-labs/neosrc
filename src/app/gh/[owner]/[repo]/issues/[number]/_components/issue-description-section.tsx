@@ -264,6 +264,7 @@ export function IssueDescriptionSection({
                                             repo={repo}
                                             number={number}
                                             kind="issue"
+                                            provider="gh"
                                             reactionsData={reactionsData}
                                             permissionContext={
                                                 permissionContext

@@ -4,15 +4,18 @@ import NextLink from "next/link";
 import { UserLink } from "~/components/user-link";
 import type { GQLHeadRefForcePushedEvent } from "~/server/github-graphql";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import { domain, type Provider } from "~/utils/provider-url";
 import { EventRow } from "../event";
 
 export function HeadRefForcePushContent({
     event,
+    provider,
     owner,
     repo,
     number,
 }: {
     event: GQLHeadRefForcePushedEvent;
+    provider: Provider;
     owner: string;
     repo: string;
     number: number;
@@ -22,14 +25,14 @@ export function HeadRefForcePushContent({
     const beforeShort = event.beforeCommit?.oid.slice(0, 7) ?? "unknown";
     const afterShort = event.afterCommit?.oid.slice(0, 7) ?? "unknown";
     const beforeHref = event.beforeCommit?.oid
-        ? `/gh/${owner}/${repo}/pull/${number}/changes/${event.beforeCommit.oid}`
+        ? `/${provider}/${owner}/${repo}/pull/${number}/changes/${event.beforeCommit.oid}`
         : null;
     const afterHref = event.afterCommit?.oid
-        ? `/gh/${owner}/${repo}/pull/${number}/changes/${event.afterCommit.oid}`
+        ? `/${provider}/${owner}/${repo}/pull/${number}/changes/${event.afterCommit.oid}`
         : null;
     return (
         <EventRow>
-            <UserLink actor={event.actor} />
+            <UserLink actor={event.actor} provider={provider} />
             <p>
                 {"force pushed from "}
                 {beforeHref ? (
@@ -61,7 +64,7 @@ export function HeadRefForcePushContent({
             <span title={fullDate}>{timestamp}</span>
             {event.beforeCommit?.oid && event.afterCommit?.oid && (
                 <a
-                    href={`https://github.com/${owner}/${repo}/compare/${event.beforeCommit.oid}...${event.afterCommit.oid}`}
+                    href={`https://${domain(provider)}/${owner}/${repo}/compare/${event.beforeCommit.oid}...${event.afterCommit.oid}`}
                     target="_blank"
                     rel="noreferrer"
                     className="ml-auto rounded bg-surface-tertiary px-1.5 py-0.5 text-text-secondary text-xs transition-colors hover:bg-surface-selected"

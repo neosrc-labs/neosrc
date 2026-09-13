@@ -139,6 +139,7 @@ function renderForm(canClose = false, canReopen = false, branchExists = true) {
             owner="owner"
             repo="repo"
             number={1}
+            provider="gh"
             permissionContext={signedIn}
             canClose={canClose}
             canReopen={canReopen}
@@ -304,13 +305,14 @@ describe("CommentForm reopen button", () => {
 });
 
 describe("CommentForm issue kind", () => {
-    it("posts comments with issueNumber", async () => {
+    it("posts comments with issueNumber and the Codeberg provider", async () => {
         render(
             <CommentForm
                 owner="owner"
                 repo="repo"
                 number={1}
                 kind="issue"
+                provider="cb"
                 permissionContext={signedIn}
             />,
         );
@@ -319,6 +321,7 @@ describe("CommentForm issue kind", () => {
         await userEvent.click(screen.getByRole("button", { name: "Comment" }));
 
         expect(mocks.issueAddMutate).toHaveBeenCalledWith({
+            provider: "cb",
             owner: "owner",
             repo: "repo",
             issueNumber: 1,
@@ -333,6 +336,7 @@ describe("CommentForm issue kind", () => {
                 repo="repo"
                 number={1}
                 kind="issue"
+                provider="cb"
                 permissionContext={signedIn}
                 canClose
             />,
@@ -343,6 +347,7 @@ describe("CommentForm issue kind", () => {
         );
 
         expect(mocks.issueCloseMutate).toHaveBeenCalledWith({
+            provider: "cb",
             owner: "owner",
             repo: "repo",
             issueNumber: 1,
@@ -356,6 +361,7 @@ describe("CommentForm issue kind", () => {
                 repo="repo"
                 number={1}
                 kind="issue"
+                provider="cb"
                 permissionContext={signedIn}
                 canReopen
             />,
@@ -366,6 +372,7 @@ describe("CommentForm issue kind", () => {
         );
 
         expect(mocks.issueReopenMutate).toHaveBeenCalledWith({
+            provider: "cb",
             owner: "owner",
             repo: "repo",
             issueNumber: 1,
@@ -381,6 +388,7 @@ describe("CommentForm viewer states", () => {
                 repo="repo"
                 number={1}
                 kind="issue"
+                provider="gh"
                 permissionContext={anonymous}
             />,
         );
@@ -401,6 +409,7 @@ describe("CommentForm viewer states", () => {
                 owner="owner"
                 repo="repo"
                 number={1}
+                provider="gh"
                 permissionContext={signedInLocked}
             />,
         );
@@ -422,6 +431,7 @@ describe("CommentForm viewer states", () => {
                 repo="repo"
                 number={1}
                 kind="issue"
+                provider="gh"
                 permissionContext={anonymousLocked}
             />,
         );

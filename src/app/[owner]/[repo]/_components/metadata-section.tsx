@@ -1,7 +1,6 @@
-import type {
-    IssueGetResponseData,
-    PullsGetResponseData,
-} from "~/server/github";
+import type { IssueMetadata } from "~/server/api/routers/issues/types";
+import type { PullsGetResponseData } from "~/server/github";
+import type { Provider } from "~/utils/provider-url";
 import { AssigneeSection } from "./assignee-section";
 import { LabelsSection } from "./label-section";
 import { MilestoneSection } from "./milestone-section";
@@ -9,37 +8,37 @@ import type { PullRequestPermissionContext } from "./permissions-utils";
 import { ReviewerSection } from "./reviewer-section";
 
 interface MetadataSectionProps {
-    pullRequestPromise: Promise<{
-        labels: PullsGetResponseData["labels"] | IssueGetResponseData["labels"];
-        assignees?: PullsGetResponseData["assignees"];
-        milestone: PullsGetResponseData["milestone"];
-    }>;
+    provider: Provider;
+    /** GitHub-only: no Codeberg write path for labels/assignees/milestones yet. */
+    editable?: boolean;
+    metadataPromise: Promise<IssueMetadata>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;
     number: number;
     showReviewers?: boolean;
+    /** PR-only: reviewers render from the full pull request payload. */
+    reviewerPayloadPromise?: Promise<PullsGetResponseData>;
 }
 
 export function MetadataSection({
-    pullRequestPromise,
+    provider,
+    editable = true,
+    metadataPromise,
     permissionContextPromise,
     owner,
     repo,
     number,
     showReviewers = true,
+    reviewerPayloadPromise,
 }: MetadataSectionProps) {
     return (
         <>
-            {showReviewers && (
+            {showReviewers && reviewerPayloadPromise && (
                 <section>
                     <ReviewerSection
                         permissionContextPromise={permissionContextPromise}
-                        // Sound: reviewers render only for pull requests, whose
-                        // callers always supply the full PR payload.
-                        pullRequestPromise={
-                            pullRequestPromise as Promise<PullsGetResponseData>
-                        }
+                        pullRequestPromise={reviewerPayloadPromise}
                         owner={owner}
                         repo={repo}
                         number={number}
@@ -50,8 +49,10 @@ export function MetadataSection({
             {/* Assignees Section */}
             <section>
                 <AssigneeSection
+                    provider={provider}
+                    editable={editable}
+                    metadataPromise={metadataPromise}
                     permissionContextPromise={permissionContextPromise}
-                    pullRequestPromise={pullRequestPromise}
                     owner={owner}
                     repo={repo}
                     number={number}
@@ -61,8 +62,10 @@ export function MetadataSection({
             {/* Milestone Section */}
             <section>
                 <MilestoneSection
+                    provider={provider}
+                    editable={editable}
+                    metadataPromise={metadataPromise}
                     permissionContextPromise={permissionContextPromise}
-                    pullRequestPromise={pullRequestPromise}
                     owner={owner}
                     repo={repo}
                     number={number}
@@ -72,8 +75,10 @@ export function MetadataSection({
             {/* Labels Section */}
             <section className="min-h-30">
                 <LabelsSection
+                    provider={provider}
+                    editable={editable}
+                    metadataPromise={metadataPromise}
                     permissionContextPromise={permissionContextPromise}
-                    pullRequestPromise={pullRequestPromise}
                     owner={owner}
                     repo={repo}
                     number={number}
