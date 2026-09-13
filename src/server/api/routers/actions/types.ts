@@ -30,6 +30,7 @@ export function isWorkflowRunStatus(value: string): value is WorkflowRunStatus {
 export interface WorkflowRunActor {
     login: string;
     avatarUrl: string;
+    url?: string;
 }
 
 export interface WorkflowRunItem {
@@ -42,6 +43,12 @@ export interface WorkflowRunItem {
     conclusion: string | null;
     branch: string | null;
     actor: WorkflowRunActor | null;
+    /**
+     * Pull request the provider associates with the run. GitHub matches on the
+     * run's branch, so a push run lists pull requests that merely target that
+     * branch; gate on the event before showing this.
+     */
+    pullRequestNumber: number | null;
     createdAt: string;
     runStartedAt: string | null;
     updatedAt: string;

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
     eventLabel,
     runDurationLabel,
+    runPullRequestNumber,
     runStatusLabel,
 } from "~/app/[owner]/[repo]/actions/_components/actions-display";
 import type { WorkflowRunItem } from "~/server/api/routers/actions/types";
@@ -17,6 +18,7 @@ function makeRun(overrides: Partial<WorkflowRunItem>): WorkflowRunItem {
         conclusion: "success",
         branch: "main",
         actor: { login: "octocat", avatarUrl: "https://example.com/a.png" },
+        pullRequestNumber: null,
         createdAt: "2024-01-01T00:00:00Z",
         runStartedAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-01T00:01:30Z",
@@ -54,6 +56,36 @@ describe("eventLabel", () => {
 
     it("humanizes an unknown event name", () => {
         expect(eventLabel("some_new_event")).toBe("some new event");
+    });
+});
+
+describe("runPullRequestNumber", () => {
+    it("returns the pull request for a PR-triggered run", () => {
+        expect(
+            runPullRequestNumber(
+                makeRun({ event: "pull_request", pullRequestNumber: 42 }),
+            ),
+        ).toBe(42);
+        expect(
+            runPullRequestNumber(
+                makeRun({
+                    event: "pull_request_target",
+                    pullRequestNumber: 42,
+                }),
+            ),
+        ).toBe(42);
+    });
+
+    it("ignores the branch-matched pull requests GitHub reports for a push", () => {
+        expect(
+            runPullRequestNumber(
+                makeRun({ event: "push", pullRequestNumber: 1 }),
+            ),
+        ).toBeNull();
+    });
+
+    it("returns null when the run has no pull request", () => {
+        expect(runPullRequestNumber(makeRun({ event: "schedule" }))).toBeNull();
     });
 });
 

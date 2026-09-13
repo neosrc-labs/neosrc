@@ -2,6 +2,7 @@ import type { RestEndpointMethodTypes } from "@octokit/rest";
 import type {
     ActionsFilterOptions,
     RepoWorkflowItem,
+    WorkflowRunActor,
     WorkflowRunItem,
     WorkflowRunPage,
 } from "~/server/api/routers/actions/types";
@@ -13,6 +14,16 @@ import { createOctokit } from "./client";
 
 type WorkflowRun =
     RestEndpointMethodTypes["actions"]["listWorkflowRunsForRepo"]["response"]["data"]["workflow_runs"][number];
+
+type ActorData = NonNullable<WorkflowRun["actor"]>;
+
+function mapActor(actor: ActorData): WorkflowRunActor {
+    return {
+        login: actor.login,
+        avatarUrl: actor.avatar_url,
+        url: actor.html_url,
+    };
+}
 
 export interface ListWorkflowRunsParams {
     workflowId?: string;
@@ -33,9 +44,8 @@ function mapWorkflowRun(run: WorkflowRun): WorkflowRunItem {
         status: run.status ?? "",
         conclusion: run.conclusion,
         branch: run.head_branch ?? null,
-        actor: run.actor
-            ? { login: run.actor.login, avatarUrl: run.actor.avatar_url }
-            : null,
+        actor: run.actor ? mapActor(run.actor) : null,
+        pullRequestNumber: run.pull_requests?.[0]?.number ?? null,
         createdAt: run.created_at,
         runStartedAt: run.run_started_at ?? null,
         updatedAt: run.updated_at,
@@ -121,19 +131,19 @@ export async function listWorkflowRunFilterOptions(
 
     const branches = new Set<string>();
     const events = new Set<string>();
-    const actors = new Map<string, string>();
+    const actors = new Map<string, WorkflowRunActor>();
 
     for (const run of data.workflow_runs) {
         if (run.head_branch) branches.add(run.head_branch);
         events.add(run.event);
-        if (run.actor) actors.set(run.actor.login, run.actor.avatar_url);
+        if (run.actor) actors.set(run.actor.login, mapActor(run.actor));
     }
 
     return {
         branches: [...branches].sort((a, b) => a.localeCompare(b)),
         events: [...events].sort((a, b) => a.localeCompare(b)),
-        actors: [...actors]
-            .map(([login, avatarUrl]) => ({ login, avatarUrl }))
-            .sort((a, b) => a.login.localeCompare(b.login)),
+        actors: [...actors.values()].sort((a, b) =>
+            a.login.localeCompare(b.login),
+        ),
     };
 }
