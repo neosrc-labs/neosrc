@@ -17,7 +17,7 @@ function pullRequestHref(
     number: number,
 ): string {
     return provider === "cb"
-        ? `https://codeberg.org/${owner}/${repo}/pulls/${number}`
+        ? `/cb/${owner}/${repo}/pull/${number}`
         : `/gh/${owner}/${repo}/pull/${number}`;
 }
 

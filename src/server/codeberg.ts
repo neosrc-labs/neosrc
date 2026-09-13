@@ -451,6 +451,117 @@ export const getBranches = cache(
     },
 );
 
+type ForgejoWorkflowRunRaw = {
+    id: number;
+    title: string;
+    workflow_id: string;
+    index_in_repo: number;
+    prettyref?: string;
+    commit_sha: string;
+    event: string;
+    status: string;
+    trigger_user: { login: string; avatar_url: string } | null;
+    created: string;
+    started: string;
+    updated: string;
+    html_url: string;
+};
+
+export type CodebergWorkflowRun = {
+    id: number;
+    title: string;
+    workflowId: string;
+    indexInRepo: number;
+    /** Ref that caused the run: a branch, a tag, or #1234 for a pull request. */
+    prettyRef: string | null;
+    commitSha: string;
+    event: string;
+    /** Forgejo status, one value per run rather than a status/conclusion pair. */
+    status: string;
+    actor: { login: string; avatarUrl: string } | null;
+    createdAt: string;
+    runStartedAt: string | null;
+    updatedAt: string;
+    htmlUrl: string;
+};
+
+export type CodebergWorkflowRunParams = {
+    page?: number;
+    limit?: number;
+    event?: string;
+    status?: string;
+    /** Full ref, for example refs/heads/main. */
+    ref?: string;
+    /** Workflow file name, for example ci.yml. */
+    workflowId?: string;
+};
+
+/** Forgejo sends the zero time for runs that have not started yet. */
+function runTimestamp(value: string): string | null {
+    return value && !value.startsWith("0001-") ? value : null;
+}
+
+/** Workflow runs, newest first. Forgejo caps a page at 50 items. */
+export const listWorkflowRuns = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        params: CodebergWorkflowRunParams = {},
+    ): Promise<{ runs: CodebergWorkflowRun[]; totalCount: number }> => {
+        const query = new URLSearchParams({
+            page: String(params.page ?? 1),
+            limit: String(params.limit ?? 30),
+        });
+        if (params.event) query.set("event", params.event);
+        if (params.status) query.set("status", params.status);
+        if (params.ref) query.set("ref", params.ref);
+        if (params.workflowId) query.set("workflow_id", params.workflowId);
+
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/actions/runs?${query}`,
+            {
+                // Public repositories are readable without a token, and
+                // Forgejo rejects an empty one.
+                headers: accessToken
+                    ? {
+                          Authorization: `token ${accessToken}`,
+                          Accept: "application/json",
+                      }
+                    : { Accept: "application/json" },
+            },
+        );
+        if (!res.ok) return { runs: [], totalCount: 0 };
+        const body = (await res.json()) as {
+            total_count?: number;
+            workflow_runs?: ForgejoWorkflowRunRaw[];
+        };
+        return {
+            runs: (body.workflow_runs ?? []).map((run) => ({
+                id: run.id,
+                title: run.title,
+                workflowId: run.workflow_id,
+                indexInRepo: run.index_in_repo,
+                prettyRef: run.prettyref ?? null,
+                commitSha: run.commit_sha,
+                event: run.event,
+                status: run.status,
+                actor: run.trigger_user
+                    ? {
+                          login: run.trigger_user.login,
+                          avatarUrl: run.trigger_user.avatar_url,
+                      }
+                    : null,
+                createdAt: run.created,
+                runStartedAt: runTimestamp(run.started),
+                updatedAt: run.updated,
+                htmlUrl: run.html_url,
+            })),
+            totalCount: body.total_count ?? 0,
+        };
+    },
+);
+
 type CodebergActivityRaw = {
     op_type: string;
     ref_name: string | null;

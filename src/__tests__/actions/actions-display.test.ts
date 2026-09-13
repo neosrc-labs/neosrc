@@ -4,8 +4,14 @@ import {
     runDurationLabel,
     runPullRequestNumber,
     runStatusLabel,
+    statusLabel,
 } from "~/app/[owner]/[repo]/actions/_components/actions-display";
-import type { WorkflowRunItem } from "~/server/api/routers/actions/types";
+import {
+    FORGEJO_RUN_STATUS_VALUES,
+    GITHUB_RUN_STATUS_VALUES,
+    isWorkflowRunStatus,
+    type WorkflowRunItem,
+} from "~/server/api/routers/actions/types";
 
 function makeRun(overrides: Partial<WorkflowRunItem>): WorkflowRunItem {
     return {
@@ -37,6 +43,11 @@ describe("runStatusLabel", () => {
         expect(runStatusLabel("completed", "action_required")).toBe(
             "Action required",
         );
+        // Forgejo reports a run blocked on approval as a status, not a
+        // conclusion, and it has to read the same way.
+        expect(runStatusLabel("queued", "action_required")).toBe(
+            "Action required",
+        );
     });
 
     it("returns null for a successful run so the row shows its duration", () => {
@@ -46,6 +57,28 @@ describe("runStatusLabel", () => {
     it("labels an unsuccessful run by its conclusion", () => {
         expect(runStatusLabel("completed", "failure")).toBe("Failure");
         expect(runStatusLabel("completed", "cancelled")).toBe("Cancelled");
+    });
+});
+
+describe("statusLabel", () => {
+    it("labels a status value", () => {
+        expect(statusLabel("blocked")).toBe("Blocked");
+        expect(statusLabel("timed_out")).toBe("Timed out");
+    });
+
+    it("humanizes a status with no curated label", () => {
+        expect(statusLabel("some_new_status")).toBe("some new status");
+    });
+});
+
+describe("status vocabulary", () => {
+    it("accepts every value either provider reports", () => {
+        for (const value of [
+            ...GITHUB_RUN_STATUS_VALUES,
+            ...FORGEJO_RUN_STATUS_VALUES,
+        ]) {
+            expect(isWorkflowRunStatus(value)).toBe(true);
+        }
     });
 });
 

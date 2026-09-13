@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { cn } from "~/lib/utils";
-import type { RepoWorkflowItem } from "~/server/api/routers/actions/types";
+import {
+    ACTIONS_CAPABILITIES,
+    type RepoWorkflowItem,
+} from "~/server/api/routers/actions/types";
 import { domain } from "~/utils/provider-url";
 
 const SIDEBAR_WORKFLOW_LIMIT = 10;
@@ -94,11 +97,9 @@ export function WorkflowSidebar({
                     </SidebarItem>
                     {visibleWorkflows.map((workflow) => (
                         <SidebarItem
-                            active={selectedWorkflowId === String(workflow.id)}
+                            active={selectedWorkflowId === workflow.id}
                             key={workflow.id}
-                            onClick={() =>
-                                onSelectWorkflow(String(workflow.id))
-                            }
+                            onClick={() => onSelectWorkflow(workflow.id)}
                         >
                             {workflow.name}
                         </SidebarItem>
@@ -115,25 +116,27 @@ export function WorkflowSidebar({
                 </>
             )}
 
-            <section className="mt-3 border-border border-t pt-3">
-                <SectionTitle>Management</SectionTitle>
-                <a
-                    className="block truncate rounded-md px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary"
-                    href={`https://${providerDomain}/${owner}/${repo}/actions/caches`}
-                    target="_blank"
-                    rel="noreferrer"
-                >
-                    Caches
-                </a>
-                <a
-                    className="block truncate rounded-md px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary"
-                    href={`https://${providerDomain}/${owner}/${repo}/deployments`}
-                    target="_blank"
-                    rel="noreferrer"
-                >
-                    Deployments
-                </a>
-            </section>
+            {ACTIONS_CAPABILITIES[provider].managementLinks && (
+                <section className="mt-3 border-border border-t pt-3">
+                    <SectionTitle>Management</SectionTitle>
+                    <a
+                        className="block truncate rounded-md px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary"
+                        href={`https://${providerDomain}/${owner}/${repo}/actions/caches`}
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        Caches
+                    </a>
+                    <a
+                        className="block truncate rounded-md px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary"
+                        href={`https://${providerDomain}/${owner}/${repo}/deployments`}
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        Deployments
+                    </a>
+                </section>
+            )}
         </aside>
     );
 }

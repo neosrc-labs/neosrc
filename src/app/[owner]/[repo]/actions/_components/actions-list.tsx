@@ -5,11 +5,13 @@ import { useCallback } from "react";
 import { Pagination } from "~/components/ui/pagination";
 import { formatCount } from "~/lib/utils";
 import {
+    ACTIONS_CAPABILITIES,
+    type ActionsFilterKey,
     isWorkflowRunStatus,
     WORKFLOW_RUNS_PER_PAGE,
 } from "~/server/api/routers/actions/types";
 import { api } from "~/trpc/react";
-import { eventLabel } from "./actions-display";
+import { eventLabel, statusLabel } from "./actions-display";
 import { ActionsEmptyState } from "./actions-empty-state";
 import type { ActionsFilterOption } from "./actions-filter-dropdown";
 import { ActionsToolbar } from "./actions-toolbar";
@@ -46,6 +48,21 @@ export function ActionsList({
         Number.parseInt(searchParams.get("page") ?? "1", 10) || 1,
     );
 
+    // A provider only offers the filters it applies, so a stale query param it
+    // cannot honour is dropped instead of failing the request.
+    const { filters: supportedFilters } = ACTIONS_CAPABILITIES[provider];
+    const applied = <T extends string>(
+        key: ActionsFilterKey,
+        value: T | null,
+    ) => (supportedFilters.includes(key) ? (value ?? undefined) : undefined);
+    const activeFilters = {
+        workflow: applied("workflow", workflow),
+        branch: applied("branch", branch),
+        actor: applied("actor", actor),
+        event: applied("event", event),
+        status: applied("status", status),
+    };
+
     const navigate = useCallback(
         (changes: Record<string, string | null>) => {
             const params = new URLSearchParams(searchParams);
@@ -66,11 +83,11 @@ export function ActionsList({
         provider,
         owner,
         repo,
-        workflow: workflow ?? undefined,
-        branch: branch ?? undefined,
-        actor: actor ?? undefined,
-        event: event ?? undefined,
-        status: status ?? undefined,
+        workflow: activeFilters.workflow,
+        branch: activeFilters.branch,
+        actor: activeFilters.actor,
+        event: activeFilters.event,
+        status: activeFilters.status,
         page,
     });
     const workflowsQuery = api.actions.listWorkflows.useQuery({
@@ -90,11 +107,14 @@ export function ActionsList({
     const totalCount = runsQuery.data?.totalCount ?? 0;
 
     const workflowOptions: ActionsFilterOption[] = (workflows ?? []).map(
-        (item) => ({ value: String(item.id), label: item.name }),
+        (item) => ({ value: item.id, label: item.name }),
     );
     const eventOptions: ActionsFilterOption[] = (
         filterOptions?.events ?? []
     ).map((value) => ({ value, label: eventLabel(value) }));
+    const statusOptions: ActionsFilterOption[] = (
+        filterOptions?.statuses ?? []
+    ).map((value) => ({ value, label: statusLabel(value) }));
     const branchOptions: ActionsFilterOption[] = (
         filterOptions?.branches ?? []
     ).map((value) => ({ value, label: value }));
@@ -106,9 +126,11 @@ export function ActionsList({
         avatarUrl: option.avatarUrl,
     }));
     const selectedWorkflow =
-        workflows?.find((item) => String(item.id) === workflow) ?? null;
-    const selectedWorkflowName = selectedWorkflow?.name ?? null;
-    const hasFilters = Boolean(workflow || branch || actor || event || status);
+        workflows?.find((item) => item.id === workflow) ?? null;
+    // A provider whose catalogue comes from recent runs may not know the
+    // filtered workflow; the raw value still names it.
+    const selectedWorkflowName = selectedWorkflow?.name ?? workflow;
+    const hasFilters = Object.values(activeFilters).some(Boolean);
     const filterOptionsLoading =
         workflowsQuery.isLoading || filterOptionsQuery.isLoading;
 
@@ -143,8 +165,10 @@ export function ActionsList({
                 </div>
 
                 <ActionsToolbar
+                    filters={supportedFilters}
                     workflowOptions={workflowOptions}
                     eventOptions={eventOptions}
+                    statusOptions={statusOptions}
                     branchOptions={branchOptions}
                     actorOptions={actorOptions}
                     selectedWorkflow={workflow}
