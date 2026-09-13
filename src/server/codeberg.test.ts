@@ -5,6 +5,8 @@ vi.mock("~/server/db", () => ({ db: {} }));
 
 import {
     createIssueComment,
+    listIssueCommentReactions,
+    listIssueReactions,
     listIssues,
     listIssueTimeline,
     updateIssue,
@@ -248,6 +250,38 @@ describe("listIssueTimeline pagination", () => {
 
         const result = await listIssueTimeline("tok", "o", "r", 8, 1, 50);
 
+        expect(result.hasNextPage).toBe(false);
+    });
+});
+
+describe("null list payloads", () => {
+    function stubJsonNull() {
+        const mock = vi.fn(async (_url: string) => ({
+            ok: true,
+            json: async () => null,
+            headers: { get: () => null },
+        }));
+        vi.stubGlobal("fetch", mock);
+        return mock;
+    }
+
+    it("normalizes a JSON null reaction list to an empty array", async () => {
+        stubJsonNull();
+
+        await expect(listIssueReactions("tok", "o", "r", 21)).resolves.toEqual(
+            [],
+        );
+        await expect(
+            listIssueCommentReactions("tok", "o", "r", 22),
+        ).resolves.toEqual([]);
+    });
+
+    it("normalizes a JSON null timeline page to an empty page", async () => {
+        stubJsonNull();
+
+        const result = await listIssueTimeline("tok", "o", "r", 23, 1, 50);
+
+        expect(result.items).toEqual([]);
         expect(result.hasNextPage).toBe(false);
     });
 });
