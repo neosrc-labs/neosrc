@@ -2,6 +2,10 @@
 
 import { Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
+import {
+    ActionErrorBanner,
+    ActionErrorProvider,
+} from "~/app/[owner]/[repo]/_components/action-errors";
 import { AuthorLabel } from "~/app/[owner]/[repo]/_components/author-label";
 import {
     canEdit,
@@ -29,10 +33,6 @@ import { useTaskToggle } from "~/hooks/use-task-toggle";
 import type { PullsGetResponseData, StackSuggestion } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
-import {
-    ActionErrorBanner,
-    ActionErrorProvider,
-} from "./action-section/action-errors";
 import { AdditionsDeletionsBadge } from "./additions-deletions-badge";
 import { AutoMergeBannerSection } from "./auto-merge-banner-section";
 import { ConflictedFiles } from "./conflicted-files";

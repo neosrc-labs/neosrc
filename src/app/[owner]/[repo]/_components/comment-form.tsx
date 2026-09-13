@@ -10,6 +10,7 @@ import {
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { api } from "~/trpc/react";
 import type { Provider } from "~/utils/provider-url";
+import { ActionErrorRow } from "./action-errors";
 import {
     canInteract,
     type PullRequestPermissionContext,
@@ -295,21 +296,20 @@ export function CommentForm({
                 repo={repo}
                 footerActions={footerActions}
             />
-            {addComment.isError && (
-                <p className="mt-2 text-red-600 text-sm">
-                    Failed to post comment. Please try again.
-                </p>
-            )}
-            {closeMutation.isError && (
-                <p className="mt-2 text-red-600 text-sm">
-                    Failed to close {noun}. Please try again.
-                </p>
-            )}
-            {reopenMutation.isError && (
-                <p className="mt-2 text-red-600 text-sm">
-                    Failed to reopen {noun}. Please try again.
-                </p>
-            )}
+            <ActionErrorRow
+                className="mt-3"
+                messages={[
+                    addComment.isError
+                        ? "Failed to post comment. Please try again."
+                        : null,
+                    closeMutation.isError
+                        ? `Failed to close ${noun}. Please try again.`
+                        : null,
+                    reopenMutation.isError
+                        ? `Failed to reopen ${noun}. Please try again.`
+                        : null,
+                ]}
+            />
         </div>
     );
 }
