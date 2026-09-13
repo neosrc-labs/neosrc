@@ -2,8 +2,8 @@
 
 import { ArrowDown } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useActionError } from "~/app/[owner]/[repo]/_components/action-errors";
 import { api } from "~/trpc/react";
-import { useActionError } from "./action-errors";
 
 interface UpdateBranchButtonProps {
     owner: string;

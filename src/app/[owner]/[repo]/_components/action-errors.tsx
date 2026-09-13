@@ -25,7 +25,7 @@ interface ActionErrorContextValue {
 const ActionErrorContext = createContext<ActionErrorContextValue | null>(null);
 
 /**
- * Collects failures from the action row so they render in a single row below
+ * Collects failures from an action area so they render in a single row below
  * the buttons instead of squeezing between them.
  */
 export function ActionErrorProvider({ children }: { children: ReactNode }) {
@@ -98,6 +98,24 @@ export function ActionErrorBanner({
     if (context.pinned !== pinned) return null;
 
     return (
+        <ActionErrorRow className={className} messages={[...errors.values()]} />
+    );
+}
+
+/** Banner row for callers that own their failures outright. */
+export function ActionErrorRow({
+    messages,
+    className,
+}: {
+    messages: Array<string | null | undefined>;
+    className?: string;
+}) {
+    const visible = [
+        ...new Set(messages.filter((message): message is string => !!message)),
+    ];
+    if (visible.length === 0) return null;
+
+    return (
         <div
             className={cn(
                 "flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 dark:border-red-500/20 dark:bg-red-500/10",
@@ -107,9 +125,9 @@ export function ActionErrorBanner({
         >
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" />
             <div className="min-w-0 space-y-1">
-                {[...errors].map(([key, message]) => (
+                {visible.map((message) => (
                     <p
-                        key={key}
+                        key={message}
                         className="break-words font-medium text-red-700 text-sm dark:text-red-300"
                     >
                         {message}

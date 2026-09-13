@@ -15,6 +15,10 @@ import {
     useRef,
     useState,
 } from "react";
+import {
+    ActionErrorBanner,
+    ActionErrorProvider,
+} from "~/app/[owner]/[repo]/_components/action-errors";
 import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import { Async } from "~/components/async";
 import FileDiff from "~/components/file-diff";
@@ -44,10 +48,6 @@ import type {
 import { api } from "~/trpc/react";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
-import {
-    ActionErrorBanner,
-    ActionErrorProvider,
-} from "./action-section/action-errors";
 import { ActionSection } from "./action-section/actions-section";
 import { AdditionsDeletionsBadge } from "./additions-deletions-badge";
 import { Branches } from "./description";

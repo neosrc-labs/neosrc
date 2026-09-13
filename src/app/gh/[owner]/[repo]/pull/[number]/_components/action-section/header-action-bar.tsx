@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+    ActionErrorBanner,
+    useActionErrorPinned,
+} from "~/app/[owner]/[repo]/_components/action-errors";
 import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import { Async } from "~/components/async";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
-import { ActionErrorBanner, useActionErrorPinned } from "./action-errors";
 import { ActionSection } from "./actions-section";
 
 interface HeaderActionBarProps {
