@@ -33,6 +33,7 @@ function aggregateEvents(events: GQLTimelineEvent[]): TimelineWrapper[] {
             event.__typename === "UnlabeledEvent"
         ) {
             const changes: LabelChange[] = [];
+            const groupActorLogin = event.actor?.login ?? null;
 
             while (i < events.length) {
                 const current = events[i] as GQLTimelineEvent;
@@ -40,6 +41,11 @@ function aggregateEvents(events: GQLTimelineEvent[]): TimelineWrapper[] {
                     current.__typename !== "LabeledEvent" &&
                     current.__typename !== "UnlabeledEvent"
                 ) {
+                    break;
+                }
+                // A different actor starts its own group so each row shows the
+                // person who made those changes.
+                if ((current.actor?.login ?? null) !== groupActorLogin) {
                     break;
                 }
                 if (changes.length > 0) {

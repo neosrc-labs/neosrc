@@ -91,7 +91,6 @@ export function useTimelineHashScroll(data: unknown): void {
             }
 
             if (handledHashRef.current === targetId) return;
-            handledHashRef.current = targetId;
 
             if (adjustIntervalRef.current) {
                 clearInterval(adjustIntervalRef.current);
@@ -105,6 +104,10 @@ export function useTimelineHashScroll(data: unknown): void {
             scrollIntervalRef.current = setInterval(() => {
                 const el = document.getElementById(targetId);
                 if (el) {
+                    // Mark it handled only now: a deep link into a later page
+                    // is not scrollable until that page has loaded and re-runs
+                    // this effect.
+                    handledHashRef.current = targetId;
                     if (scrollIntervalRef.current) {
                         clearInterval(scrollIntervalRef.current);
                         scrollIntervalRef.current = null;
