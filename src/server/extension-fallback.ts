@@ -1,5 +1,4 @@
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import {
     EXTENSION_EXIT_PARAM,
     EXTENSION_REQUEST_HEADER,
@@ -25,14 +24,4 @@ export async function externalFallbackTarget(): Promise<string | null> {
     // The marker keeps the extension from redirecting straight back here and
     // keeps GitHub from being re-entered through Neosrc on the way.
     return `${external}?${EXTENSION_EXIT_PARAM}=1`;
-}
-
-/**
- * Same hand-back, as a redirect thrown during rendering. Only meaningful before
- * the response is committed; a not-found boundary renders too late for this and
- * uses the client-side bounce instead (src/components/redirect-to-external.tsx).
- */
-export async function fallbackToExternal(): Promise<void> {
-    const target = await externalFallbackTarget();
-    if (target) redirect(target);
 }
