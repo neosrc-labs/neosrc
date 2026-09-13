@@ -995,6 +995,7 @@ export type CodebergIssue = {
         login: string;
         full_name: string;
         avatar_url: string;
+        html_url?: string;
     } | null;
     assignees: Array<{
         id: number;

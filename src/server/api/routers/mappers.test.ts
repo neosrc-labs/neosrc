@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-    mapCbAssignee,
     mapCbAuthor,
     mapCbLabel,
     mapGqlAssignee,
     mapGqlAuthor,
     mapGqlLabel,
+    mapRestAssignee,
     nullSafe,
 } from "~/server/api/routers/mappers";
 
@@ -92,9 +92,9 @@ describe("mapGqlAuthor", () => {
     });
 });
 
-describe("mapCbAssignee", () => {
+describe("mapRestAssignee", () => {
     it("renames the snake_case avatar_url to camelCase avatarUrl", () => {
-        const result = mapCbAssignee({
+        const result = mapRestAssignee({
             login: "dave",
             avatar_url: "https://codeberg/avatars/dave",
         });
@@ -105,7 +105,7 @@ describe("mapCbAssignee", () => {
     });
 
     it("does not include the source's avatar_url key", () => {
-        const result = mapCbAssignee({ login: "eve", avatar_url: "x" });
+        const result = mapRestAssignee({ login: "eve", avatar_url: "x" });
         expect(Object.keys(result).sort()).toEqual(["avatarUrl", "login"]);
     });
 });
