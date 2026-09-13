@@ -374,7 +374,9 @@ function ProviderIcon({
                         ? `https://${domain(provider)}/${owner}/${repo}/issues`
                         : pathType === "PULLS_LIST"
                           ? `https://${domain(provider)}/${owner}/${repo}/pulls`
-                          : `https://${domain(provider)}/${owner}/${repo}`
+                          : pathType === "ACTIONS_LIST"
+                            ? `https://${domain(provider)}/${owner}/${repo}/actions`
+                            : `https://${domain(provider)}/${owner}/${repo}`
             }
             target="_blank"
             rel="noopener noreferrer"

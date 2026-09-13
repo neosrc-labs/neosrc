@@ -1,6 +1,13 @@
 "use client";
 
-import { Check, Circle, CircleSlash, CircleX, X } from "lucide-react";
+import {
+    Check,
+    Circle,
+    CircleSlash,
+    CircleX,
+    TriangleAlert,
+    X,
+} from "lucide-react";
 import { formatDurationMs } from "~/components/hovercards/hover-card-shared";
 import {
     HoverCard,
@@ -154,6 +161,9 @@ export function StatusCheckIcon({
     }
     if (state === "QUEUED" || state === "PENDING" || state === "EXPECTED") {
         return <CheckQueuedIcon className={className} />;
+    }
+    if (state === "ACTION_REQUIRED") {
+        return <TriangleAlert className={cn(className, "text-yellow-500")} />;
     }
     return <Circle className={cn(className, "text-text-muted")} />;
 }

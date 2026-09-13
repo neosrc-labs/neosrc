@@ -28,6 +28,7 @@ export function parseRepoPath(pathname: string): ParsedRepoPath {
     if (repoMatch) {
         const prMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
         const pullsMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/pulls/);
+        const actionsMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/actions/);
         const issueDetailMatch = cleanPath.match(
             /^\/([^/]+)\/([^/]+)\/issues\/(\d+)/,
         );
@@ -46,6 +47,8 @@ export function parseRepoPath(pathname: string): ParsedRepoPath {
             if (prMatch[3]) {
                 pullRequestNumber = parseInt(prMatch[3], 10);
             }
+        } else if (actionsMatch) {
+            pathType = "ACTIONS_LIST";
         } else {
             pathType = "REPO";
         }

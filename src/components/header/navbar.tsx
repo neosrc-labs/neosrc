@@ -130,9 +130,12 @@ export function useTabs({
             },
             {
                 label: "Actions",
-                path: `https://${domain(provider)}/${owner}/${repo}/actions`,
+                path:
+                    provider === "gh"
+                        ? `/${provider}/${owner}/${repo}/actions`
+                        : `https://${domain(provider)}/${owner}/${repo}/actions`,
                 show: true,
-                isActive: false,
+                isActive: provider === "gh" && pathType === "ACTIONS_LIST",
                 icon: CirclePlay,
             },
             {
