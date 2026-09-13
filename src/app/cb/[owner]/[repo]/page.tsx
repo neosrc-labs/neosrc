@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { requireRepoData } from "~/server/repo-route";
 import { api } from "~/trpc/server";
 import type { RepoData } from "../../../[owner]/[repo]/_components/repo-code-page";
 import { RepoCodePage } from "../../../[owner]/[repo]/_components/repo-code-page";
@@ -61,14 +60,12 @@ export default async function CodebergRepoPage({
         repo,
     });
 
-    const repoData = await requireRepoData(repoDataPromise);
-
     return (
         <RepoCodePage
             provider="cb"
             owner={owner}
             repo={repo}
-            repoDataPromise={Promise.resolve(repoData)}
+            repoDataPromise={repoDataPromise}
             contributorsPromise={contributorsPromise}
             docFileNamesPromise={docFileNamesPromise}
             languagesPromise={languagesPromise}
