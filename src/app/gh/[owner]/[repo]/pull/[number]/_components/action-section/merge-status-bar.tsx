@@ -45,6 +45,8 @@ interface MergeStatusBarProps {
     availableMergeOptions: MergeOptionDef[];
     isMergeBlocked: boolean;
     isMergeStateUnknown: boolean;
+    /** Set when the viewer's permission could not be resolved at all. */
+    isMergePermissionUnknown?: boolean;
     noMergeMethodsAvailable: boolean;
     mergeError: boolean;
     isMergeRequirementsUnavailable: boolean;
@@ -71,6 +73,7 @@ export function MergeStatusBar({
     availableMergeOptions,
     isMergeBlocked,
     isMergeStateUnknown,
+    isMergePermissionUnknown = false,
     noMergeMethodsAvailable,
     mergeError,
     isMergeRequirementsUnavailable,
@@ -151,6 +154,13 @@ export function MergeStatusBar({
     }
 
     if (!canMerge) {
+        if (isMergePermissionUnknown) {
+            return (
+                <CannotMerge>
+                    Couldn&apos;t determine your merge permissions
+                </CannotMerge>
+            );
+        }
         return (
             <CannotMerge>You don&apos;t have permission to merge</CannotMerge>
         );

@@ -1,4 +1,4 @@
-import { getSession } from "~/server/auth";
+import { getSession, isAnonymousToken } from "~/server/auth";
 import { getUserRepoPermission } from "~/server/github";
 import {
     getRepoPermissionForUser,
@@ -40,7 +40,7 @@ export async function getIssuePermissionContext({
         ]);
         return {
             currentUser,
-            repoPermission: mapCodebergPermission(permission),
+            repoPermission: mapRepoPermissionLevel(permission),
             isPullRequestLocked: subject.locked,
             isPullRequestAuthor: currentUser === subject.user?.login,
             provider: "cb",
@@ -61,26 +61,63 @@ export async function getIssuePermissionContext({
 
     const [subject, userPermission] = await Promise.all([
         subjectPromise,
-        getUserRepoPermission(
+        resolveGitHubPermissionLevel({
             accessToken,
+            username: currentUser,
             owner,
             repo,
-            currentUser,
             userId,
-        ).catch(() => null),
+        }),
     ]);
 
     return {
         currentUser,
-        repoPermission: userPermission,
+        repoPermission: mapRepoPermissionLevel(userPermission),
         isPullRequestLocked: subject.locked,
         isPullRequestAuthor: currentUser === subject.user?.login,
         provider: "gh",
     };
 }
 
-function mapCodebergPermission(
-    permission: RepoPermissionLevel | null,
+/**
+ * GitHub's collaborator endpoint is the authority on the viewer's permission,
+ * but it only answers for a token that can read collaborators: the shared
+ * anonymous token carries no `repo` scope and answers 403, and a rejected or
+ * expired token answers 401. A lookup that fails says nothing about access, so
+ * fall back to the synced view, which resolves the viewer's stored grants
+ * without calling GitHub.
+ */
+async function resolveGitHubPermissionLevel({
+    accessToken,
+    username,
+    owner,
+    repo,
+    userId,
+}: {
+    accessToken: string;
+    username: string;
+    owner: string;
+    repo: string;
+    userId: string;
+}): Promise<RepoPermissionLevel | "none" | null> {
+    if (!isAnonymousToken(accessToken)) {
+        try {
+            return await getUserRepoPermission(
+                accessToken,
+                owner,
+                repo,
+                username,
+                userId,
+            );
+        } catch {
+            // Fall through to the synced view.
+        }
+    }
+    return getRepoPermissionForUser("github", username, owner, repo);
+}
+
+function mapRepoPermissionLevel(
+    permission: RepoPermissionLevel | "none" | null,
 ): PullRequestPermissionContext["repoPermission"] {
     switch (permission) {
         case "admin":
@@ -91,6 +128,8 @@ function mapCodebergPermission(
         case "triage":
         case "read":
             return "read";
+        case "none":
+            return "none";
         default:
             return null;
     }

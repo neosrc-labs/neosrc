@@ -359,6 +359,18 @@ describe("viewerRepoAccess", () => {
         ).toEqual({ canView: true, admin: true, write: true });
     });
 
+    it("grants write access for a maintain grant without admin", () => {
+        // GitHub and Forgejo both model maintain as a push role; the view
+        // stores it as its own level.
+        expect(
+            viewerRepoAccess({
+                username: "alice",
+                payload,
+                permission: "maintain",
+            }),
+        ).toEqual({ canView: true, admin: false, write: true });
+    });
+
     it("never gates a public repo", () => {
         expect(
             viewerRepoAccess({

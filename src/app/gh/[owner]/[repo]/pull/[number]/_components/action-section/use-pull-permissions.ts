@@ -16,6 +16,12 @@ export function usePullPermissions(
     const canWrite = canPush(permissionContext);
     const canManagePR = isAuthor || canWrite;
     const canMerge = canWrite;
+    // Signed in, but the lookup produced no level: saying "you don't have
+    // permission" would claim something we never resolved.
+    const isMergePermissionUnknown =
+        !canWrite &&
+        permissionContext.currentUser !== null &&
+        permissionContext.repoPermission === null;
     const canInteract =
         !!permissionContext.currentUser &&
         (!permissionContext.isPullRequestLocked || canWrite || isAuthor);
@@ -31,6 +37,7 @@ export function usePullPermissions(
         canInteract,
         isMergeBlocked,
         isMergeStateUnknown,
+        isMergePermissionUnknown,
         isStackMerge,
     };
 }

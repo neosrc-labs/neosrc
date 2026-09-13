@@ -252,7 +252,7 @@ export type ViewerRepoAccess = {
     /** False when the repo is private and the viewer holds no grant. */
     canView: boolean;
     admin: boolean;
-    /** True when the viewer holds write (or admin) permission on the repo. */
+    /** True when the viewer holds write, maintain, or admin permission. */
     write: boolean;
 };
 
@@ -275,6 +275,8 @@ export function viewerRepoAccess(params: {
     return {
         canView: !payload.private || isOwner || permission !== null,
         admin,
-        write: admin || permission === "write",
+        // "maintain" is a push role: the view stores it as its own level, and
+        // a maintainer may push and merge like a writer.
+        write: admin || permission === "write" || permission === "maintain",
     };
 }

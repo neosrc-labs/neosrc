@@ -268,6 +268,7 @@ function Buttons({
         canInteract,
         isMergeBlocked,
         isMergeStateUnknown,
+        isMergePermissionUnknown,
         isStackMerge,
     } = usePullPermissions(permissionContext, pullRequest);
     const { data: stackData, isLoading: stackLoading } =
@@ -435,6 +436,7 @@ function Buttons({
                         availableMergeOptions={availableMergeOptions}
                         isMergeBlocked={isMergeBlocked}
                         isMergeStateUnknown={isMergeStateUnknown}
+                        isMergePermissionUnknown={isMergePermissionUnknown}
                         noMergeMethodsAvailable={noMergeMethodsAvailable}
                         mergeError={mergeMutation.isError}
                         // React Query keeps the last `data` across failed
