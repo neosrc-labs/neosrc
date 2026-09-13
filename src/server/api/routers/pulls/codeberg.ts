@@ -4,9 +4,9 @@ import {
     resolveForgejoSort,
 } from "~/server/api/routers/forgejo-search";
 import {
-    mapCbAssignee,
     mapCbAuthor,
     mapCbLabel,
+    mapRestAssignee,
     nullSafe,
 } from "~/server/api/routers/mappers";
 import type { Ctx, SearchParams } from "~/server/api/routers/provider";
@@ -98,7 +98,7 @@ function mapCodebergPr(pr: CodebergPullRequest): PrSearchItem {
         mergedAt: pr.merged_at,
         author: mapCbAuthor(pr.user),
         labels: nullSafe(pr.labels).map(mapCbLabel),
-        assignees: nullSafe(pr.assignees).map(mapCbAssignee),
+        assignees: nullSafe(pr.assignees).map(mapRestAssignee),
         comments: pr.comments ?? 0,
         reviewDecision: null,
         stack: null,
