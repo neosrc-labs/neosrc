@@ -45,7 +45,7 @@ export function CommentForm({
 }: CommentFormProps) {
     const isIssue = kind === "issue";
     const noun = isIssue ? "issue" : "pull request";
-    const commentKey = `${isIssue ? "issue" : "pr"}-autosave:comment:${owner}:${repo}:${number}`;
+    const commentKey = `${isIssue ? "issue" : "pr"}-autosave:comment:${provider}:${owner}:${repo}:${number}`;
     const [body, setBody] = useState(() => readAutosave(commentKey) ?? "");
     const { clear: clearComment } = useAutosave(commentKey, body);
     const router = useRouter();
