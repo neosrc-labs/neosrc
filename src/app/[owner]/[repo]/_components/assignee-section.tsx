@@ -6,12 +6,10 @@ import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { applyArrayOperations, opId } from "~/lib/utils";
-import type {
-    Assignee,
-    IssueGetResponseData,
-    PullsGetResponseData,
-} from "~/server/github";
+import type { IssueMetadata } from "~/server/api/routers/issues/types";
+import type { Assignee } from "~/server/api/routers/mappers";
 import { api } from "~/trpc/react";
+import { domain, type Provider } from "~/utils/provider-url";
 import { FieldSkeleton } from "./metadata-section";
 import {
     canEdit,
@@ -24,36 +22,46 @@ type AssigneeOperation = {
     assignee: Assignee;
 };
 
-export function AssigneeSection({
-    pullRequestPromise,
-    permissionContextPromise,
-    owner,
-    repo,
-    number,
-}: {
-    pullRequestPromise: Promise<{
-        labels: PullsGetResponseData["labels"] | IssueGetResponseData["labels"];
-        assignees?: PullsGetResponseData["assignees"];
-        milestone: PullsGetResponseData["milestone"];
-    }>;
+// Repo assignee list payload (REST snake_case); both providers fit.
+type RepoAssignee = { login: string; avatar_url: string };
+
+const toAssignee = (a: RepoAssignee): Assignee => ({
+    login: a.login,
+    avatarUrl: a.avatar_url,
+});
+
+interface AssigneeSectionProps {
+    provider: Provider;
+    /** GitHub-only: no Codeberg assignee write path yet. */
+    editable: boolean;
+    metadataPromise: Promise<IssueMetadata>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;
     number: number;
-}) {
+}
+
+export function AssigneeSection({
+    provider,
+    editable,
+    metadataPromise,
+    permissionContextPromise,
+    owner,
+    repo,
+    number,
+}: AssigneeSectionProps) {
     const [operations, setOperations] = useState<AssigneeOperation[]>([]);
 
     // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the operations
     useEffect(() => {
         setOperations([]);
-    }, [pullRequestPromise]);
+    }, [metadataPromise]);
 
-    const { data: repoAssignees } = api.pulls.listAssignees.useQuery({
-        provider: "gh",
-        owner,
-        repo,
-    });
-    const assigneesData = (repoAssignees ?? []) as Assignee[];
+    const { data: repoAssignees } = api.pulls.listAssignees.useQuery(
+        { provider, owner, repo },
+        { enabled: editable },
+    );
+    const assigneesData: RepoAssignee[] = repoAssignees ?? [];
     const addMutation = api.pulls.addAssignee.useMutation();
     const removeMutation = api.pulls.removeAssignee.useMutation();
 
@@ -92,42 +100,45 @@ export function AssigneeSection({
         <>
             <div className="flex items-start justify-between">
                 <h3 className="text-text-primary">Assignees</h3>
-                <Async promise={pullRequestPromise} fallback={null}>
-                    {(pullRequest) => (
-                        <Async
-                            promise={permissionContextPromise}
-                            fallback={null}
-                        >
-                            {(permissionContext) => (
-                                <AssigneeSectionSettings
-                                    repoAssignees={assigneesData}
-                                    assignees={pullRequest.assignees ?? []}
-                                    operations={operations}
-                                    onAddAssignee={handleAdd}
-                                    onRemoveAssignee={handleRemove}
-                                    disabled={!canEdit(permissionContext)}
-                                />
-                            )}
-                        </Async>
-                    )}
-                </Async>
+                {editable && (
+                    <Async promise={metadataPromise} fallback={null}>
+                        {(metadata) => (
+                            <Async
+                                promise={permissionContextPromise}
+                                fallback={null}
+                            >
+                                {(permissionContext) => (
+                                    <AssigneeSectionSettings
+                                        repoAssignees={assigneesData}
+                                        assignees={metadata.assignees}
+                                        operations={operations}
+                                        onAddAssignee={handleAdd}
+                                        onRemoveAssignee={handleRemove}
+                                        disabled={!canEdit(permissionContext)}
+                                    />
+                                )}
+                            </Async>
+                        )}
+                    </Async>
+                )}
             </div>
             <Async
-                promise={pullRequestPromise}
+                promise={metadataPromise}
                 fallback={
                     <div className="mt-2">
                         <FieldSkeleton />
                     </div>
                 }
             >
-                {(pullRequest) => (
+                {(metadata) => (
                     <Async promise={permissionContextPromise} fallback={null}>
                         {(permissionContext) => (
                             <AssigneeSectionContent
-                                assignees={pullRequest.assignees ?? []}
+                                provider={provider}
+                                assignees={metadata.assignees}
                                 operations={operations}
                                 onRemoveAssignee={handleRemove}
-                                canEdit={canEdit(permissionContext)}
+                                canEdit={editable && canEdit(permissionContext)}
                             />
                         )}
                     </Async>
@@ -145,7 +156,7 @@ function AssigneeSectionSettings({
     onRemoveAssignee,
     disabled,
 }: {
-    repoAssignees: Assignee[];
+    repoAssignees: RepoAssignee[];
     assignees: Assignee[];
     operations: AssigneeOperation[];
     onAddAssignee: (assignee: Assignee) => void;
@@ -161,8 +172,8 @@ function AssigneeSectionSettings({
             isSelected={(a) => currentLogins.has(a.login)}
             onSelect={(a) =>
                 currentLogins.has(a.login)
-                    ? onRemoveAssignee(a)
-                    : onAddAssignee(a)
+                    ? onRemoveAssignee(toAssignee(a))
+                    : onAddAssignee(toAssignee(a))
             }
             keyFn={(a) => a.login}
             searchFn={(a, q) => a.login.toLowerCase().includes(q)}
@@ -194,11 +205,13 @@ function AssigneeSectionSettings({
 }
 
 function AssigneeSectionContent({
+    provider,
     assignees,
     operations,
     onRemoveAssignee,
     canEdit,
 }: {
+    provider: Provider;
     assignees: Assignee[];
     operations: AssigneeOperation[];
     onRemoveAssignee: (assignee: Assignee) => void;
@@ -217,15 +230,15 @@ function AssigneeSectionContent({
                     className="group flex items-center gap-2 text-sm"
                     key={assignee.login}
                 >
-                    <UserHoverCard login={assignee.login}>
+                    <UserHoverCard login={assignee.login} provider={provider}>
                         <a
                             className="flex items-center gap-2"
-                            href={assignee.html_url}
+                            href={`https://${domain(provider)}/${assignee.login}`}
                         >
                             <Image
                                 alt={assignee.login}
                                 className="h-5 w-5 rounded-full"
-                                src={assignee.avatar_url}
+                                src={assignee.avatarUrl}
                                 width={20}
                                 height={20}
                             />

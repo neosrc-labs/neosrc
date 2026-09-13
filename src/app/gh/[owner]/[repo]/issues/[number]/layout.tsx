@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { getPullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
+import { getIssuePermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
 import {
     disabled,
     type PullRequestPermissionContext,
@@ -45,13 +45,14 @@ export default async function IssueLayout({ children, params }: LayoutProps) {
 
         issue = loadIssueForRoute(accessToken, owner, repo, number);
 
-        permissionContextPromise = getPullRequestPermissionContext(
+        permissionContextPromise = getIssuePermissionContext({
+            provider: "gh",
             accessToken,
             owner,
             repo,
-            issue,
-            userId ?? undefined,
-        );
+            subjectPromise: issue,
+            userId: userId ?? undefined,
+        });
     }
 
     return (

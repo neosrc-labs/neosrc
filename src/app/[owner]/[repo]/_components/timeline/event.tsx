@@ -38,6 +38,7 @@ import type {
     GQLTimelineEvent,
 } from "~/server/github-graphql";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import type { Provider } from "~/utils/provider-url";
 import type { PullRequestPermissionContext } from "../permissions-utils";
 import { AssignedEventContent } from "./content/assigned-event";
 import { AutoMergeEventContent } from "./content/auto-merge-event";
@@ -80,6 +81,7 @@ export const formatReason = (reason: string) =>
 
 interface TimelineEventProps {
     wrapper: TimelineWrapper;
+    provider: Provider;
     owner: string;
     repo: string;
     number: number;
@@ -91,6 +93,7 @@ interface TimelineEventProps {
 
 export function TimelineEvent({
     wrapper,
+    provider,
     owner,
     repo,
     number,
@@ -100,12 +103,12 @@ export function TimelineEvent({
     issueNumber,
 }: TimelineEventProps) {
     if (wrapper.type === "aggregated-label") {
-        return <AggregatedLabel wrapper={wrapper} />;
+        return <AggregatedLabel wrapper={wrapper} provider={provider} />;
     }
 
     return (
         <div className="relative mb-8 ml-14">
-            <TimelineIcon event={wrapper.event} />
+            <TimelineIcon event={wrapper.event} provider={provider} />
 
             <div
                 // content-visibility: auto implies paint containment, which clips
@@ -122,6 +125,7 @@ export function TimelineEvent({
             >
                 <EventContent
                     event={wrapper.event}
+                    provider={provider}
                     owner={owner}
                     repo={repo}
                     number={number}
@@ -137,6 +141,7 @@ export function TimelineEvent({
 
 export function TimelineEventList({
     wrappers,
+    provider,
     owner,
     repo,
     number,
@@ -147,6 +152,7 @@ export function TimelineEventList({
     isFetchingNextPage,
 }: {
     wrappers: TimelineWrapper[];
+    provider: Provider;
     owner: string;
     repo: string;
     number: number;
@@ -175,6 +181,7 @@ export function TimelineEventList({
                                 : `label-${wrapper.createdAt}`
                         }
                         wrapper={wrapper}
+                        provider={provider}
                         number={number}
                         owner={owner}
                         repo={repo}
@@ -199,8 +206,10 @@ export function TimelineEventList({
 
 function AggregatedLabel({
     wrapper,
+    provider,
 }: {
     wrapper: Extract<TimelineWrapper, { type: "aggregated-label" }>;
+    provider: Provider;
 }) {
     const { actor, changes, createdAt } = wrapper;
     const timestamp = formatRelativeTime(createdAt);
@@ -215,7 +224,7 @@ function AggregatedLabel({
                 <Tag size={ICON_SIZE} />
             </div>
             <div className="flex flex-wrap items-center gap-1.5 text-sm text-text-secondary">
-                <UserLink actor={actor} />
+                <UserLink actor={actor} provider={provider} />
                 {added.length > 0 && (
                     <>
                         {" added "}
@@ -273,10 +282,16 @@ export function EventRow({ children }: { children: React.ReactNode }) {
     );
 }
 
-function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
+function TimelineIcon({
+    event,
+    provider,
+}: {
+    event: GQLTimelineEvent;
+    provider: Provider;
+}) {
     if (event.__typename === "IssueComment" && event.author) {
         return (
-            <UserHoverCard login={event.author.login} provider="gh">
+            <UserHoverCard login={event.author.login} provider={provider}>
                 <a
                     className="absolute -left-[52px] h-10 w-10 overflow-hidden rounded-full ring-1 ring-border"
                     href={event.author.url}
@@ -386,6 +401,7 @@ function TimelineIcon({ event }: { event: GQLTimelineEvent }) {
 
 function EventContent({
     event,
+    provider,
     owner,
     repo,
     number,
@@ -395,6 +411,7 @@ function EventContent({
     issueNumber,
 }: {
     event: GQLTimelineEvent;
+    provider: Provider;
     owner: string;
     repo: string;
     number: number;
@@ -432,7 +449,7 @@ function EventContent({
 
     const timelineScope =
         issueNumber !== undefined
-            ? { owner, repo, issueNumber }
+            ? { provider, owner, repo, issueNumber }
             : { owner, repo, number };
 
     const deleteCommentMutation = useDeleteTimelineComment(timelineScope);
@@ -448,7 +465,13 @@ function EventContent({
     );
 
     const handleSaveComment = (commentId: number, body: string) => {
-        updateCommentMutation.mutate({ owner, repo, commentId, body });
+        updateCommentMutation.mutate({
+            provider,
+            owner,
+            repo,
+            commentId,
+            body,
+        });
     };
 
     const handleSaveReview = (reviewId: number, body: string) => {
@@ -456,14 +479,20 @@ function EventContent({
     };
 
     const handleDeleteComment = (commentId: number) => {
-        deleteCommentMutation.mutate({ owner, repo, commentId });
+        deleteCommentMutation.mutate({ provider, owner, repo, commentId });
     };
 
     const handleCommentReaction = (
         commentId: number,
         content: ReactionContent,
     ) => {
-        commentReactionMutation.mutate({ owner, repo, commentId, content });
+        commentReactionMutation.mutate({
+            provider,
+            owner,
+            repo,
+            commentId,
+            content,
+        });
     };
 
     const handleReviewReaction = (
@@ -481,7 +510,7 @@ function EventContent({
         }));
     };
 
-    const baseProps = { owner, repo, permissionContext };
+    const baseProps = { provider, owner, repo, permissionContext };
 
     switch (event.__typename) {
         case "IssueComment":
@@ -543,6 +572,7 @@ function EventContent({
             return (
                 <PullRequestCommitContent
                     event={event}
+                    provider={provider}
                     owner={owner}
                     repo={repo}
                     number={number}
@@ -550,12 +580,13 @@ function EventContent({
             );
 
         case "ReviewDismissedEvent":
-            return <ReviewDismissedContent event={event} />;
+            return <ReviewDismissedContent event={event} provider={provider} />;
 
         case "HeadRefForcePushedEvent":
             return (
                 <HeadRefForcePushContent
                     event={event}
+                    provider={provider}
                     owner={owner}
                     repo={repo}
                     number={number}
@@ -563,16 +594,17 @@ function EventContent({
             );
 
         case "ReferencedEvent":
-            return <ReferencedEventContent event={event} />;
+            return <ReferencedEventContent event={event} provider={provider} />;
 
         case "HeadRefDeletedEvent":
         case "HeadRefRestoredEvent":
-            return <HeadRefEventContent event={event} />;
+            return <HeadRefEventContent event={event} provider={provider} />;
 
         case "CrossReferencedEvent":
             return (
                 <CrossReferencedEventContent
                     event={event}
+                    provider={provider}
                     owner={owner}
                     repo={repo}
                 />
@@ -580,53 +612,60 @@ function EventContent({
 
         case "AssignedEvent":
         case "UnassignedEvent":
-            return <AssignedEventContent event={event} />;
+            return <AssignedEventContent event={event} provider={provider} />;
 
         case "BaseRefChangedEvent":
-            return <BaseRefChangedContent event={event} />;
+            return <BaseRefChangedContent event={event} provider={provider} />;
 
         case "MergedEvent":
             return (
-                <MergedEventContent event={event} owner={owner} repo={repo} />
+                <MergedEventContent
+                    event={event}
+                    provider={provider}
+                    owner={owner}
+                    repo={repo}
+                />
             );
 
         case "ClosedEvent":
         case "ReopenedEvent":
         case "ConvertToDraftEvent":
         case "ReadyForReviewEvent":
-            return <StateEventContent event={event} />;
+            return <StateEventContent event={event} provider={provider} />;
 
         case "RenamedTitleEvent":
-            return <RenamedTitleContent event={event} />;
+            return <RenamedTitleContent event={event} provider={provider} />;
 
         case "MilestonedEvent":
         case "DemilestonedEvent":
-            return <MilestoneEventContent event={event} />;
+            return <MilestoneEventContent event={event} provider={provider} />;
 
         case "LockedEvent":
         case "UnlockedEvent":
-            return <LockedEventContent event={event} />;
+            return <LockedEventContent event={event} provider={provider} />;
 
         case "ReviewRequestedEvent":
         case "ReviewRequestRemovedEvent":
-            return <ReviewRequestEventContent event={event} />;
+            return (
+                <ReviewRequestEventContent event={event} provider={provider} />
+            );
 
         case "AddedToProjectV2Event":
         case "ProjectV2ItemStatusChangedEvent":
-            return <ProjectEventContent event={event} />;
+            return <ProjectEventContent event={event} provider={provider} />;
 
         case "DeployedEvent":
-            return <DeployedEventContent event={event} />;
+            return <DeployedEventContent event={event} provider={provider} />;
 
         case "AutoMergeEnabledEvent":
         case "AutoSquashEnabledEvent":
         case "AutoRebaseEnabledEvent":
         case "AutoMergeDisabledEvent":
-            return <AutoMergeEventContent event={event} />;
+            return <AutoMergeEventContent event={event} provider={provider} />;
 
         case "AddedToMergeQueueEvent":
         case "RemovedFromMergeQueueEvent":
-            return <MergeQueueEventContent event={event} />;
+            return <MergeQueueEventContent event={event} provider={provider} />;
 
         default:
             console.warn(`unknown event type: ${event.__typename}`, event);

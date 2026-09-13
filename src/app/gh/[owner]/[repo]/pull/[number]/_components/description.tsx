@@ -355,6 +355,7 @@ export function PullRequestDescriptionSection({
                                             repo={repo}
                                             number={number}
                                             kind="pull"
+                                            provider="gh"
                                             reactionsData={reactionsData}
                                             permissionContext={
                                                 permissionContext

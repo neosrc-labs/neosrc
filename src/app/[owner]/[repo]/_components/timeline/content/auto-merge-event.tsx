@@ -6,16 +6,19 @@ import type {
     GQLAutoRebaseEnabledEvent,
     GQLAutoSquashEnabledEvent,
 } from "~/server/github-graphql";
+import type { Provider } from "~/utils/provider-url";
 import { MergeEventRow } from "./merge-event-row";
 
 export function AutoMergeEventContent({
     event,
+    provider,
 }: {
     event:
         | GQLAutoMergeEnabledEvent
         | GQLAutoSquashEnabledEvent
         | GQLAutoRebaseEnabledEvent
         | GQLAutoMergeDisabledEvent;
+    provider: Provider;
 }) {
     const isEnabled =
         event.__typename === "AutoMergeEnabledEvent" ||
@@ -32,6 +35,7 @@ export function AutoMergeEventContent({
     return (
         <MergeEventRow
             event={event}
+            provider={provider}
             isActive={isEnabled}
             activeText={
                 mergeMethod

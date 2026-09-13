@@ -146,6 +146,7 @@ const baseProps = {
     owner: "ranger-ross",
     repo: "jj-fun-times",
     number: 29,
+    provider: "gh" as const,
     permissionContext: {
         currentUser: "testuser",
         isPullRequestAuthor: false,

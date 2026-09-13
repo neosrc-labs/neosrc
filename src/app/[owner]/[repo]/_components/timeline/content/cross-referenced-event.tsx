@@ -6,13 +6,16 @@ import { StatusPill } from "~/components/ui/status-pill";
 import { UserLink } from "~/components/user-link";
 import type { GQLCrossReferencedEvent } from "~/server/github-graphql";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import type { Provider } from "~/utils/provider-url";
 
 export function CrossReferencedEventContent({
     event,
+    provider,
     owner,
     repo,
 }: {
     event: GQLCrossReferencedEvent;
+    provider: Provider;
     owner: string;
     repo: string;
 }) {
@@ -29,7 +32,7 @@ export function CrossReferencedEventContent({
     const isSameRepo = repoOwner === owner && repoName === repo;
     const appHref =
         repoOwner && repoName && sourceNumber
-            ? `/gh/${repoOwner}/${repoName}/${isPR ? "pull" : "issues"}/${sourceNumber}`
+            ? `/${provider}/${repoOwner}/${repoName}/${isPR ? "pull" : "issues"}/${sourceNumber}`
             : null;
     const sourceRef =
         sourceNumber &&
@@ -59,7 +62,7 @@ export function CrossReferencedEventContent({
     return (
         <div className="text-sm text-text-secondary">
             <div className="flex items-start gap-2">
-                <UserLink actor={actor} />
+                <UserLink actor={actor} provider={provider} />
                 <span title={fullDate}>
                     {` mentioned this ${isPR ? "pull request" : "issue"} `}
                     {timestamp}

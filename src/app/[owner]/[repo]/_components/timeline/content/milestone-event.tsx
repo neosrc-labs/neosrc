@@ -6,19 +6,22 @@ import type {
     GQLMilestonedEvent,
 } from "~/server/github-graphql";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import type { Provider } from "~/utils/provider-url";
 import { EventRow } from "../event";
 
 export function MilestoneEventContent({
     event,
+    provider,
 }: {
     event: GQLMilestonedEvent | GQLDemilestonedEvent;
+    provider: Provider;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
     const fullDate = formatDateTime(event.createdAt);
     const isAdded = event.__typename === "MilestonedEvent";
     return (
         <EventRow>
-            <UserLink actor={event.actor} />
+            <UserLink actor={event.actor} provider={provider} />
             <p>
                 {isAdded ? " added the milestone " : " removed the milestone "}
                 <span className="font-medium text-gray-800 dark:text-zinc-200">

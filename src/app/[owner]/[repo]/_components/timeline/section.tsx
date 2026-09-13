@@ -235,6 +235,7 @@ export function TimelineSection({
 
             <TimelineEventList
                 wrappers={wrappers}
+                provider="gh"
                 number={number}
                 owner={owner}
                 repo={repo}
@@ -270,6 +271,7 @@ export function TimelineSection({
                     branchExists={pullRequestBranchExists}
                     permissionContext={permissionContext}
                     kind="pull"
+                    provider="gh"
                     number={number}
                     owner={owner}
                     repo={repo}

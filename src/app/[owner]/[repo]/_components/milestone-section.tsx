@@ -5,55 +5,82 @@ import { Async } from "~/components/async";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn, opId } from "~/lib/utils";
 import type {
-    IssueGetResponseData,
-    Milestone,
-    PullsGetResponseData,
-} from "~/server/github";
+    IssueMetadata,
+    IssueMilestone,
+} from "~/server/api/routers/issues/types";
 import { api } from "~/trpc/react";
+import type { Provider } from "~/utils/provider-url";
 import { FieldSkeleton } from "./metadata-section";
 import {
     canEdit,
     type PullRequestPermissionContext,
 } from "./permissions-utils";
 
-type MilestoneOperation = { id: number; milestone: Milestone | null };
+type MilestoneOperation = { id: number; milestone: IssueMilestone | null };
 
-export function MilestoneSection({
-    pullRequestPromise,
-    permissionContextPromise,
-    owner,
-    repo,
-    number,
-}: {
-    pullRequestPromise: Promise<{
-        labels: PullsGetResponseData["labels"] | IssueGetResponseData["labels"];
-        assignees?: PullsGetResponseData["assignees"];
-        milestone: PullsGetResponseData["milestone"];
-    }>;
+// Repo milestone list payload: GitHub exposes `number`, Codeberg `id`.
+type RepoMilestone = {
+    id: number;
+    number?: number;
+    title: string;
+    description: string | null;
+    html_url?: string;
+};
+
+const milestoneKey = (m: RepoMilestone): string => String(m.number ?? m.id);
+
+const toMilestone = (m: RepoMilestone): IssueMilestone => ({
+    id: milestoneKey(m),
+    title: m.title,
+    htmlUrl: m.html_url ?? "",
+});
+
+interface MilestoneSectionProps {
+    provider: Provider;
+    /** GitHub-only: no Codeberg milestone write path yet. */
+    editable: boolean;
+    metadataPromise: Promise<IssueMetadata>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;
     number: number;
-}) {
+}
+
+export function MilestoneSection({
+    provider,
+    editable,
+    metadataPromise,
+    permissionContextPromise,
+    owner,
+    repo,
+    number,
+}: MilestoneSectionProps) {
     const [operations, setOperations] = useState<MilestoneOperation[]>([]);
 
     // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the operations
     useEffect(() => {
         setOperations([]);
-    }, [pullRequestPromise]);
+    }, [metadataPromise]);
 
-    const { data: repoMilestones } = api.pulls.listMilestones.useQuery({
-        owner,
-        repo,
-    });
+    const { data: repoMilestones } = api.pulls.listMilestones.useQuery(
+        { provider, owner, repo },
+        { enabled: editable },
+    );
     const setMutation = api.pulls.setMilestone.useMutation();
 
-    const milestonesData = (repoMilestones ?? []) as Milestone[];
-    const handleSet = (milestone: Milestone | null) => {
+    const milestonesData: RepoMilestone[] = repoMilestones ?? [];
+    const handleSet = (milestone: IssueMilestone | null) => {
         const id = opId();
         setOperations((prev) => [...prev, { id, milestone }]);
         setMutation.mutate(
-            { owner, repo, number, milestone: milestone?.number ?? null },
+            {
+                owner,
+                repo,
+                number,
+                // GitHub's write API takes the milestone number, which
+                // IssueMilestone.id holds for GitHub.
+                milestone: milestone ? Number(milestone.id) : null,
+            },
             {
                 onError: () => {
                     setOperations((prev) => prev.filter((op) => op.id !== id));
@@ -66,36 +93,38 @@ export function MilestoneSection({
         <>
             <div className="flex items-start justify-between">
                 <h3 className="text-text-primary">Milestone</h3>
-                <Async promise={pullRequestPromise} fallback={null}>
-                    {(pullRequest) => (
-                        <Async
-                            promise={permissionContextPromise}
-                            fallback={null}
-                        >
-                            {(permissionContext) => (
-                                <MilestoneSectionSettings
-                                    repoMilestones={milestonesData}
-                                    milestone={pullRequest.milestone}
-                                    operations={operations}
-                                    onSetMilestone={handleSet}
-                                    disabled={!canEdit(permissionContext)}
-                                />
-                            )}
-                        </Async>
-                    )}
-                </Async>
+                {editable && (
+                    <Async promise={metadataPromise} fallback={null}>
+                        {(metadata) => (
+                            <Async
+                                promise={permissionContextPromise}
+                                fallback={null}
+                            >
+                                {(permissionContext) => (
+                                    <MilestoneSectionSettings
+                                        repoMilestones={milestonesData}
+                                        milestone={metadata.milestone}
+                                        operations={operations}
+                                        onSetMilestone={handleSet}
+                                        disabled={!canEdit(permissionContext)}
+                                    />
+                                )}
+                            </Async>
+                        )}
+                    </Async>
+                )}
             </div>
             <Async
-                promise={pullRequestPromise}
+                promise={metadataPromise}
                 fallback={
                     <div className="mt-2">
                         <FieldSkeleton />
                     </div>
                 }
             >
-                {(pullRequest) => (
+                {(metadata) => (
                     <MilestoneSectionContent
-                        milestone={pullRequest.milestone}
+                        milestone={metadata.milestone}
                         operations={operations}
                     />
                 )}
@@ -111,25 +140,25 @@ function MilestoneSectionSettings({
     onSetMilestone,
     disabled,
 }: {
-    repoMilestones: Milestone[];
-    milestone: Milestone | null;
+    repoMilestones: RepoMilestone[];
+    milestone: IssueMilestone | null;
     operations: MilestoneOperation[];
-    onSetMilestone: (milestone: Milestone | null) => void;
+    onSetMilestone: (milestone: IssueMilestone | null) => void;
     disabled?: boolean;
 }) {
     const currentMilestone = applyOperations(milestone, operations);
-    const currentNumber = currentMilestone?.number ?? null;
+    const currentId = currentMilestone?.id ?? null;
 
     return (
         <SearchableDropdown
             items={repoMilestones}
-            isSelected={(m) => m.number === currentNumber}
+            isSelected={(m) => milestoneKey(m) === currentId}
             onSelect={(m) => {
-                if (m.number !== currentNumber) {
-                    onSetMilestone(m);
+                if (milestoneKey(m) !== currentId) {
+                    onSetMilestone(toMilestone(m));
                 }
             }}
-            keyFn={(m) => m.number}
+            keyFn={(m) => milestoneKey(m)}
             searchFn={(m, q) => m.title.toLowerCase().includes(q)}
             renderItem={(m, selected) => (
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -154,21 +183,20 @@ function MilestoneSectionSettings({
                 <li
                     className={cn(
                         "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-surface-tertiary",
-                        currentNumber === null &&
-                            "bg-blue-50 dark:bg-blue-950/30",
+                        currentId === null && "bg-blue-50 dark:bg-blue-950/30",
                     )}
                     onClick={() => {
-                        if (currentNumber !== null) {
+                        if (currentId !== null) {
                             onSetMilestone(null);
                         }
                     }}
                     role="option"
-                    aria-selected={currentNumber === null}
+                    aria-selected={currentId === null}
                 >
                     <span className="flex-1 text-text-tertiary italic">
                         No milestone
                     </span>
-                    {currentNumber === null && (
+                    {currentId === null && (
                         <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
                             &#10003;
                         </span>
@@ -183,7 +211,7 @@ function MilestoneSectionContent({
     milestone,
     operations,
 }: {
-    milestone: Milestone | null;
+    milestone: IssueMilestone | null;
     operations: MilestoneOperation[];
 }) {
     const currentMilestone = applyOperations(milestone, operations);
@@ -195,7 +223,7 @@ function MilestoneSectionContent({
     return (
         <a
             className="text-sm text-text-secondary hover:underline"
-            href={currentMilestone.html_url}
+            href={currentMilestone.htmlUrl}
             target="_blank"
             rel="noreferrer"
         >
@@ -205,9 +233,9 @@ function MilestoneSectionContent({
 }
 
 function applyOperations(
-    milestone: Milestone | null,
+    milestone: IssueMilestone | null,
     operations: MilestoneOperation[],
-): Milestone | null {
+): IssueMilestone | null {
     let updatedMilestone = milestone;
     for (const op of operations) {
         updatedMilestone = op.milestone;

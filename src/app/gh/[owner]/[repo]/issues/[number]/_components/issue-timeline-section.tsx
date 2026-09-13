@@ -77,6 +77,7 @@ export function IssueTimelineSection({
         <div className="mt-5">
             <TimelineEventList
                 wrappers={wrappers}
+                provider="gh"
                 number={number}
                 owner={owner}
                 repo={repo}
@@ -97,6 +98,7 @@ export function IssueTimelineSection({
                     }
                     permissionContext={permissionContext}
                     kind="issue"
+                    provider="gh"
                     number={number}
                     owner={owner}
                     repo={repo}

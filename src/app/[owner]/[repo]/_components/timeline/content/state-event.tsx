@@ -8,16 +8,19 @@ import type {
     GQLReopenedEvent,
 } from "~/server/github-graphql";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import type { Provider } from "~/utils/provider-url";
 import { EventRow } from "../event";
 
 export function StateEventContent({
     event,
+    provider,
 }: {
     event:
         | GQLClosedEvent
         | GQLReopenedEvent
         | GQLConvertToDraftEvent
         | GQLReadyForReviewEvent;
+    provider: Provider;
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
     const fullDate = formatDateTime(event.createdAt);
@@ -31,7 +34,7 @@ export function StateEventContent({
                 : "marked ready for review";
     return (
         <EventRow>
-            <UserLink actor={event.actor} />
+            <UserLink actor={event.actor} provider={provider} />
             <p>
                 {verb}
                 {" this "}

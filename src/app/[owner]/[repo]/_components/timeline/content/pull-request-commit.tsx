@@ -5,14 +5,17 @@ import { CommitAuthors } from "~/components/commit-authors";
 import { CommitSubject } from "~/components/commit-subject";
 import { VerifiedBadge } from "~/components/verified-badge";
 import type { GQLPullRequestCommit } from "~/server/github-graphql";
+import type { Provider } from "~/utils/provider-url";
 
 export function PullRequestCommitContent({
     event,
+    provider,
     owner,
     repo,
     number,
 }: {
     event: GQLPullRequestCommit;
+    provider: Provider;
     owner: string;
     repo: string;
     number: number;
@@ -28,13 +31,13 @@ export function PullRequestCommitContent({
                     />
                 )}
                 <NextLink
-                    href={`/gh/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
+                    href={`/${provider}/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
                     className="truncate hover:text-blue-600 hover:underline dark:hover:text-blue-400"
                 >
                     <CommitSubject
                         message={commit?.message ?? ""}
                         className="truncate"
-                        provider="gh"
+                        provider={provider}
                         owner={owner}
                         repo={repo}
                     />
@@ -45,7 +48,7 @@ export function PullRequestCommitContent({
                     <VerifiedBadge signature={commit.signature} />
                 )}
                 <NextLink
-                    href={`/gh/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
+                    href={`/${provider}/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
                     className="font-mono text-text-secondary text-xs hover:text-blue-600 hover:underline dark:hover:text-blue-400"
                 >
                     {commit?.oid.slice(0, 7)}

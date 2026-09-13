@@ -1,5 +1,6 @@
 import { MetadataSection } from "~/app/[owner]/[repo]/_components/metadata-section";
 import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
+import { mapGitHubIssueDetail } from "~/server/api/routers/mappers";
 import type { IssueGetResponseData } from "~/server/github";
 
 interface IssueRightSidebarProps {
@@ -37,8 +38,10 @@ export function IssueRightSidebar({
         >
             <div className="sticky top-0 z-10 space-y-4 bg-surface pb-4">
                 <MetadataSection
+                    provider="gh"
+                    editable
+                    metadataPromise={issuePromise.then(mapGitHubIssueDetail)}
                     permissionContextPromise={permissionContextPromise}
-                    pullRequestPromise={issuePromise}
                     owner={owner}
                     repo={repo}
                     number={number}

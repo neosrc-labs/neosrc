@@ -3,10 +3,12 @@
 import type { ComponentProps } from "react";
 import { UserLink } from "~/components/user-link";
 import { formatDateTime, formatRelativeTime } from "~/utils";
+import type { Provider } from "~/utils/provider-url";
 import { EventRow } from "../event";
 
 export function MergeEventRow({
     event,
+    provider,
     activeText,
     inactiveText,
     isActive,
@@ -16,6 +18,7 @@ export function MergeEventRow({
         createdAt: string;
         reason?: string | null;
     };
+    provider: Provider;
     activeText: string;
     inactiveText: string;
     isActive: boolean;
@@ -28,7 +31,7 @@ export function MergeEventRow({
 
     return (
         <EventRow>
-            <UserLink actor={event.actor} />
+            <UserLink actor={event.actor} provider={provider} />
             <p>
                 {isActive ? activeText : inactiveText}
                 {!isActive && reasonDisplay ? ` — ${reasonDisplay}` : ""}
