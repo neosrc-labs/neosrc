@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { getSession, githubAccessToken } from "~/server/auth";
 import type { IssueGetResponseData } from "~/server/github";
-import { getIssue } from "~/server/github";
 import { getPullRequestPermissionContext } from "../../pull/[number]/permissions-server";
 import {
     disabled,
@@ -11,6 +10,7 @@ import {
 import { IssueLeftSidebar } from "./_components/issue-left-sidebar";
 import { IssueRightSidebar } from "./_components/issue-right-sidebar";
 import { IssueClientLayout } from "./layout-client";
+import { loadIssueForRoute } from "./load-issue";
 
 interface LayoutProps {
     children: ReactNode;
@@ -43,7 +43,7 @@ export default async function IssueLayout({ children, params }: LayoutProps) {
     if (accessToken) {
         const userId = session?.user?.id ?? null;
 
-        issue = getIssue(accessToken, owner, repo, number);
+        issue = loadIssueForRoute(accessToken, owner, repo, number);
 
         permissionContextPromise = getPullRequestPermissionContext(
             accessToken,
