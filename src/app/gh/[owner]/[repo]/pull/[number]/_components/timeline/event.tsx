@@ -32,13 +32,11 @@ import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { Label } from "~/components/ui/label";
 import { UserLink } from "~/components/user-link";
 import type { ReactionContent } from "~/lib/reactions";
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewComment } from "~/server/github";
 import type {
     GQLReactionNode,
     GQLTimelineEvent,
 } from "~/server/github-graphql";
-import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
 import type { PullRequestPermissionContext } from "../../permissions-utils";
 import { AssignedEventContent } from "./content/assigned-event";
@@ -64,6 +62,7 @@ import { StateEventContent } from "./content/state-event";
 import type { TimelineWrapper } from "./types";
 import {
     useCommentTaskToggle,
+    useDeleteTimelineComment,
     useIssueCommentReactionToggle,
     usePullRequestReviewReactionToggle,
     useReviewTaskToggle,
@@ -87,6 +86,7 @@ interface TimelineEventProps {
     commentReactions: Record<string, GQLReactionNode[]>;
     allComments: ReviewComment[];
     permissionContext: PullRequestPermissionContext;
+    issueNumber?: number;
 }
 
 export function TimelineEvent({
@@ -97,6 +97,7 @@ export function TimelineEvent({
     commentReactions,
     allComments,
     permissionContext,
+    issueNumber,
 }: TimelineEventProps) {
     if (wrapper.type === "aggregated-label") {
         return <AggregatedLabel wrapper={wrapper} />;
@@ -127,6 +128,7 @@ export function TimelineEvent({
                     commentReactions={commentReactions}
                     allComments={allComments}
                     permissionContext={permissionContext}
+                    issueNumber={issueNumber}
                 />
             </div>
         </div>
@@ -328,6 +330,7 @@ function EventContent({
     commentReactions,
     allComments,
     permissionContext,
+    issueNumber,
 }: {
     event: GQLTimelineEvent;
     owner: string;
@@ -336,6 +339,7 @@ function EventContent({
     commentReactions: Record<string, GQLReactionNode[]>;
     allComments: ReviewComment[];
     permissionContext: PullRequestPermissionContext;
+    issueNumber?: number;
 }) {
     const [editingCommentId, setEditingCommentId] = useState<number | null>(
         null,
@@ -344,8 +348,6 @@ function EventContent({
     const [expandedMinimized, setExpandedMinimized] = useState<
         Record<number, boolean>
     >({});
-
-    const utils = api.useUtils();
 
     const savedBodiesStore = useSavedBodies();
     const editTransitions = {
@@ -366,63 +368,15 @@ function EventContent({
     const commentTaskToggleMutation = useCommentTaskToggle(savedBodiesStore);
     const reviewTaskToggleMutation = useReviewTaskToggle(savedBodiesStore);
 
-    const deleteCommentMutation = api.pulls.deleteComment.useMutation({
-        onMutate: async ({ commentId }) => {
-            await utils.timeline.list.cancel({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
-
-            const prevData = utils.timeline.list.getInfiniteData({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
-
-            utils.timeline.list.setInfiniteData(
-                { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                (old) => {
-                    if (!old) return old;
-                    return {
-                        ...old,
-                        pages: old.pages.map((page) => ({
-                            ...page,
-                            events: page.events.filter(
-                                (event) =>
-                                    event.__typename !== "IssueComment" ||
-                                    event.databaseId !== commentId,
-                            ),
-                        })),
-                    };
-                },
-            );
-
-            return { prevData };
-        },
-        onError: (_err, _vars, ctx) => {
-            if (ctx?.prevData) {
-                utils.timeline.list.setInfiniteData(
-                    { owner, repo, number, limit: TIMELINE_PAGE_SIZE },
-                    ctx.prevData,
-                );
-            }
-        },
-        onSettled: () => {
-            utils.timeline.list.invalidate({
-                owner,
-                repo,
-                number,
-                limit: TIMELINE_PAGE_SIZE,
-            });
-        },
-    });
+    const deleteCommentMutation = useDeleteTimelineComment(
+        { owner, repo, number },
+        issueNumber,
+    );
 
     const commentReactionMutation = useIssueCommentReactionToggle(
         { owner, repo, number },
         permissionContext.currentUser,
+        issueNumber,
     );
 
     const reviewReactionMutation = usePullRequestReviewReactionToggle(

@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { cn, opId } from "~/lib/utils";
-import type { Milestone, PullsGetResponseData } from "~/server/github";
+import type {
+    IssueGetResponseData,
+    Milestone,
+    PullsGetResponseData,
+} from "~/server/github";
 import { api } from "~/trpc/react";
 import {
     canEdit,
@@ -21,7 +25,11 @@ export function MilestoneSection({
     repo,
     number,
 }: {
-    pullRequestPromise: Promise<PullsGetResponseData>;
+    pullRequestPromise: Promise<{
+        labels: PullsGetResponseData["labels"] | IssueGetResponseData["labels"];
+        assignees?: PullsGetResponseData["assignees"];
+        milestone: PullsGetResponseData["milestone"];
+    }>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     owner: string;
     repo: string;

@@ -4,6 +4,7 @@ import type { ReactionContent } from "~/lib/reactions";
 import { toggleReactionInList } from "~/lib/reactions";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { TimelineResult } from "~/server/api/routers/timeline";
+import type { GQLTimelineEvent } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 
 interface PullScope {
@@ -145,23 +146,7 @@ interface ReactionToggleCore {
     toggle(
         subjectKey: string | null,
         content: ReactionContent,
-    ): Promise<
-        | {
-              prevData:
-                  | InfiniteData<TimelineResult, TimelinePageParam>
-                  | undefined;
-          }
-        | undefined
-    >;
-    restore(
-        ctx:
-            | {
-                  prevData:
-                      | InfiniteData<TimelineResult, TimelinePageParam>
-                      | undefined;
-              }
-            | undefined,
-    ): void;
+    ): Promise<{ restore: () => void } | undefined>;
     settle(): void;
 }
 
@@ -169,34 +154,15 @@ interface ReactionToggleCore {
  * Optimistic reaction toggle against the cached timeline list. The comment
  * and review variants differ only in endpoint and cache-key prefix
  * (`comment:` / `review:`); both roll back the snapshot when the request
- * fails and invalidate on settle.
+ * fails and invalidate on settle. Pass `issueNumber` to target an issue
+ * timeline instead of a pull request timeline.
  */
 function useReactionToggleCore(
     scope: PullScope,
     currentUserLogin: string | null,
+    issueNumber?: number,
 ): ReactionToggleCore {
     const utils = api.useUtils();
-
-    const restore = (
-        ctx:
-            | {
-                  prevData:
-                      | InfiniteData<TimelineResult, TimelinePageParam>
-                      | undefined;
-              }
-            | undefined,
-    ) => {
-        if (ctx?.prevData) {
-            utils.timeline.list.setInfiniteData(
-                timelineInput(scope),
-                ctx.prevData,
-            );
-        }
-    };
-
-    const settle = () => {
-        utils.timeline.list.invalidate(timelineInput(scope));
-    };
 
     const toggle = async (
         subjectKey: string | null,
@@ -204,6 +170,36 @@ function useReactionToggleCore(
     ) => {
         if (!currentUserLogin || !subjectKey) {
             return undefined;
+        }
+        if (issueNumber !== undefined) {
+            const input = {
+                owner: scope.owner,
+                repo: scope.repo,
+                issueNumber,
+                limit: TIMELINE_PAGE_SIZE,
+            };
+            await utils.issues.timeline.cancel(input);
+
+            const prevData = utils.issues.timeline.getInfiniteData(input);
+
+            utils.issues.timeline.setInfiniteData(input, (old) =>
+                old
+                    ? applyReactionToggle(
+                          old,
+                          subjectKey,
+                          currentUserLogin,
+                          content,
+                      )
+                    : old,
+            );
+
+            return {
+                restore: () => {
+                    if (prevData) {
+                        utils.issues.timeline.setInfiniteData(input, prevData);
+                    }
+                },
+            };
         }
         await utils.timeline.list.cancel(timelineInput(scope));
 
@@ -222,21 +218,44 @@ function useReactionToggleCore(
                 : old,
         );
 
-        return { prevData };
+        return {
+            restore: () => {
+                if (prevData) {
+                    utils.timeline.list.setInfiniteData(
+                        timelineInput(scope),
+                        prevData,
+                    );
+                }
+            },
+        };
     };
 
-    return { toggle, restore, settle };
+    const settle = () => {
+        if (issueNumber !== undefined) {
+            utils.issues.timeline.invalidate({
+                owner: scope.owner,
+                repo: scope.repo,
+                issueNumber,
+                limit: TIMELINE_PAGE_SIZE,
+            });
+            return;
+        }
+        utils.timeline.list.invalidate(timelineInput(scope));
+    };
+
+    return { toggle, settle };
 }
 
 export function useIssueCommentReactionToggle(
     scope: PullScope,
     currentUserLogin: string | null,
+    issueNumber?: number,
 ) {
-    const core = useReactionToggleCore(scope, currentUserLogin);
+    const core = useReactionToggleCore(scope, currentUserLogin, issueNumber);
     return api.reactions.toggleIssueComment.useMutation({
         onMutate: ({ commentId, content }) =>
             core.toggle(`comment:${commentId}`, content),
-        onError: (_error, _vars, ctx) => core.restore(ctx),
+        onError: (_error, _vars, ctx) => ctx?.restore(),
         onSettled: core.settle,
     });
 }
@@ -249,7 +268,138 @@ export function usePullRequestReviewReactionToggle(
     return api.reactions.togglePullRequestReview.useMutation({
         onMutate: ({ databaseId, content }) =>
             core.toggle(databaseId ? `review:${databaseId}` : null, content),
-        onError: (_error, _vars, ctx) => core.restore(ctx),
+        onError: (_error, _vars, ctx) => ctx?.restore(),
         onSettled: core.settle,
+    });
+}
+
+function withoutDeletedComment(
+    events: GQLTimelineEvent[],
+    commentId: number,
+): GQLTimelineEvent[] {
+    return events.filter(
+        (event) =>
+            event.__typename !== "IssueComment" ||
+            event.databaseId !== commentId,
+    );
+}
+
+/**
+ * Optimistic issue-comment delete against the cached timeline list.
+ * Pass `issueNumber` to target an issue timeline instead of pull request.
+ */
+export function useDeleteTimelineComment(
+    scope: PullScope,
+    issueNumber?: number,
+) {
+    const utils = api.useUtils();
+    return api.pulls.deleteComment.useMutation({
+        onMutate: async ({ commentId }) => {
+            if (issueNumber !== undefined) {
+                const input = {
+                    owner: scope.owner,
+                    repo: scope.repo,
+                    issueNumber,
+                    limit: TIMELINE_PAGE_SIZE,
+                };
+                await utils.issues.timeline.cancel(input);
+
+                const prevData = utils.issues.timeline.getInfiniteData(input);
+
+                utils.issues.timeline.setInfiniteData(input, (old) => {
+                    if (!old) return old;
+                    return {
+                        ...old,
+                        pages: old.pages.map((page) => ({
+                            ...page,
+                            events: withoutDeletedComment(
+                                page.events,
+                                commentId,
+                            ),
+                        })),
+                    };
+                });
+
+                return {
+                    restore: () => {
+                        if (prevData) {
+                            utils.issues.timeline.setInfiniteData(
+                                input,
+                                prevData,
+                            );
+                        }
+                    },
+                };
+            }
+            await utils.timeline.list.cancel({
+                owner: scope.owner,
+                repo: scope.repo,
+                number: scope.number,
+                limit: TIMELINE_PAGE_SIZE,
+            });
+
+            const prevData = utils.timeline.list.getInfiniteData({
+                owner: scope.owner,
+                repo: scope.repo,
+                number: scope.number,
+                limit: TIMELINE_PAGE_SIZE,
+            });
+
+            utils.timeline.list.setInfiniteData(
+                {
+                    owner: scope.owner,
+                    repo: scope.repo,
+                    number: scope.number,
+                    limit: TIMELINE_PAGE_SIZE,
+                },
+                (old) => {
+                    if (!old) return old;
+                    return {
+                        ...old,
+                        pages: old.pages.map((page) => ({
+                            ...page,
+                            events: withoutDeletedComment(
+                                page.events,
+                                commentId,
+                            ),
+                        })),
+                    };
+                },
+            );
+
+            return {
+                restore: () => {
+                    if (prevData) {
+                        utils.timeline.list.setInfiniteData(
+                            {
+                                owner: scope.owner,
+                                repo: scope.repo,
+                                number: scope.number,
+                                limit: TIMELINE_PAGE_SIZE,
+                            },
+                            prevData,
+                        );
+                    }
+                },
+            };
+        },
+        onError: (_err, _vars, ctx) => ctx?.restore(),
+        onSettled: () => {
+            if (issueNumber !== undefined) {
+                utils.issues.timeline.invalidate({
+                    owner: scope.owner,
+                    repo: scope.repo,
+                    issueNumber,
+                    limit: TIMELINE_PAGE_SIZE,
+                });
+                return;
+            }
+            utils.timeline.list.invalidate({
+                owner: scope.owner,
+                repo: scope.repo,
+                number: scope.number,
+                limit: TIMELINE_PAGE_SIZE,
+            });
+        },
     });
 }
