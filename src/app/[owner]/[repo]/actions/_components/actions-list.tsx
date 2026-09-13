@@ -4,7 +4,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import { Pagination } from "~/components/ui/pagination";
 import { formatCount } from "~/lib/utils";
-import { WORKFLOW_RUNS_PER_PAGE } from "~/server/api/routers/actions/types";
+import {
+    isWorkflowRunStatus,
+    WORKFLOW_RUNS_PER_PAGE,
+} from "~/server/api/routers/actions/types";
 import { api } from "~/trpc/react";
 import { eventLabel } from "./actions-display";
 import { ActionsEmptyState } from "./actions-empty-state";
@@ -32,7 +35,12 @@ export function ActionsList({
     const branch = searchParams.get("branch");
     const actor = searchParams.get("actor");
     const event = searchParams.get("event");
-    const status = searchParams.get("status");
+    // Unknown status values are ignored rather than rejected, so a hand-edited
+    // URL shows unfiltered runs instead of a validation error. Same shape as
+    // the sort/order normalization in use-search-list.
+    const statusParam = searchParams.get("status");
+    const status =
+        statusParam && isWorkflowRunStatus(statusParam) ? statusParam : null;
     const page = Math.max(
         1,
         Number.parseInt(searchParams.get("page") ?? "1", 10) || 1,

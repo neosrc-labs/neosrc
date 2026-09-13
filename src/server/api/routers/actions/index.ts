@@ -9,7 +9,11 @@ import {
     listWorkflowRunFilterOptions,
     listWorkflowRuns,
 } from "~/server/github";
-import type { ActionsFilterOptions, WorkflowRunPage } from "./types";
+import {
+    type ActionsFilterOptions,
+    WORKFLOW_RUN_STATUS_VALUES,
+    type WorkflowRunPage,
+} from "./types";
 
 const EMPTY_RUN_PAGE: WorkflowRunPage = {
     items: [],
@@ -32,7 +36,7 @@ export const actionsRouter = createTRPCRouter({
             branch: z.string().optional(),
             actor: z.string().optional(),
             event: z.string().optional(),
-            status: z.string().optional(),
+            status: z.enum(WORKFLOW_RUN_STATUS_VALUES).optional(),
             page: z.number().int().min(1).default(1),
         }),
         cbFallback: (): WorkflowRunPage => EMPTY_RUN_PAGE,

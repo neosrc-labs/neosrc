@@ -5,11 +5,9 @@ import type {
     WorkflowRunActor,
     WorkflowRunItem,
     WorkflowRunPage,
+    WorkflowRunStatus,
 } from "~/server/api/routers/actions/types";
-import {
-    isWorkflowRunStatus,
-    WORKFLOW_RUNS_PER_PAGE,
-} from "~/server/api/routers/actions/types";
+import { WORKFLOW_RUNS_PER_PAGE } from "~/server/api/routers/actions/types";
 import { createOctokit } from "./client";
 
 type WorkflowRun =
@@ -30,7 +28,7 @@ export interface ListWorkflowRunsParams {
     branch?: string;
     actor?: string;
     event?: string;
-    status?: string;
+    status?: WorkflowRunStatus;
     page?: number;
 }
 
@@ -70,10 +68,7 @@ export async function listWorkflowRuns(
         branch: params.branch,
         actor: params.actor,
         event: params.event,
-        status:
-            params.status && isWorkflowRunStatus(params.status)
-                ? params.status
-                : undefined,
+        status: params.status,
     };
 
     // The repo-wide endpoint has no workflow parameter, so a workflow filter
