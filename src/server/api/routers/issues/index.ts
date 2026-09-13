@@ -148,7 +148,13 @@ export const issuesRouter = createTRPCRouter({
                 mergeQueueEntry: null,
             })),
         cb: async ({ input, accessToken }): Promise<TimelineResult> => {
-            const page = Number(input.cursor ?? "1");
+            // Only positive integers are valid Forgejo page numbers; a
+            // malformed cursor falls back to the first page.
+            const requestedPage = Number(input.cursor ?? "1");
+            const page =
+                Number.isInteger(requestedPage) && requestedPage > 0
+                    ? requestedPage
+                    : 1;
             const { items, hasNextPage } = await listIssueTimeline(
                 accessToken,
                 input.owner,
