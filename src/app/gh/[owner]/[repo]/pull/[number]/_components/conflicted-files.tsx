@@ -3,12 +3,12 @@
 import { AlertTriangle, Check, ChevronDown, Copy, FilePen } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PullsGetResponseData } from "~/server/github";
-import { getFileIconName } from "~/utils/icons";
 import {
     canPush,
     type PullRequestPermissionContext,
-} from "../permissions-utils";
+} from "~/app/[owner]/[repo]/_components/permissions-utils";
+import type { PullsGetResponseData } from "~/server/github";
+import { getFileIconName } from "~/utils/icons";
 
 interface ConflictedFilesProps {
     owner: string;

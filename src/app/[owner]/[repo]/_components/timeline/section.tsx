@@ -7,12 +7,12 @@ import type {
     GQLMergeQueueEntryState,
 } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
+import { CommentForm } from "../comment-form";
+import { DeleteBranchSection } from "../delete-branch-section";
 import {
     canEdit,
     type PullRequestPermissionContext,
-} from "../../permissions-utils";
-import { CommentForm } from "../comment-form";
-import { DeleteBranchSection } from "../delete-branch-section";
+} from "../permissions-utils";
 import { TimelineEventList } from "./event";
 import { RevertedBanner, type RevertedByEntry } from "./reverted-banner";
 import {

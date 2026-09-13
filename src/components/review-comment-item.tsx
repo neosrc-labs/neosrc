@@ -7,7 +7,7 @@ import {
     canEdit,
     canInteract,
     type PullRequestPermissionContext,
-} from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
+} from "~/app/[owner]/[repo]/_components/permissions-utils";
 import type { ReactionContent } from "~/lib/reactions";
 import type { ReviewCommentBase } from "~/server/github";
 import { CommentCard } from "./comment-card";

@@ -43,7 +43,7 @@ import {
     canEdit,
     canInteract,
     type PullRequestPermissionContext,
-} from "../../../permissions-utils";
+} from "../../permissions-utils";
 import { ReviewComments } from "../../review-comments";
 import { formatReason } from "../event";
 

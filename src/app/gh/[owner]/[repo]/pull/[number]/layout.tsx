@@ -1,5 +1,10 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { getPullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
+import {
+    disabled,
+    type PullRequestPermissionContext,
+} from "~/app/[owner]/[repo]/_components/permissions-utils";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
     type CheckRun,
@@ -11,11 +16,6 @@ import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 import LeftSidebar from "./_components/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
 import { PullRequestClientLayout } from "./layout-client";
-import { getPullRequestPermissionContext } from "./permissions-server";
-import {
-    disabled,
-    type PullRequestPermissionContext,
-} from "./permissions-utils";
 
 interface LayoutProps {
     children: ReactNode;

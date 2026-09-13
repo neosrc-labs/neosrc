@@ -2,6 +2,13 @@
 
 import { Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
 import { useCallback, useState } from "react";
+import { AuthorLabel } from "~/app/[owner]/[repo]/_components/author-label";
+import {
+    canEdit,
+    canInteract,
+    type PullRequestPermissionContext,
+} from "~/app/[owner]/[repo]/_components/permissions-utils";
+import { ReactionFooter } from "~/app/[owner]/[repo]/_components/reaction-footer";
 import { Async } from "~/components/async";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { MarkdownEditor } from "~/components/markdown/markdown-editor";
@@ -18,13 +25,6 @@ import { useTaskToggle } from "~/hooks/use-task-toggle";
 import type { IssueGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
-import { AuthorLabel } from "../../../pull/[number]/_components/description";
-import { ReactionFooter } from "../../../pull/[number]/_components/reaction-footer";
-import {
-    canEdit,
-    canInteract,
-    type PullRequestPermissionContext,
-} from "../../../pull/[number]/permissions-utils";
 
 interface IssueDescriptionSectionProps {
     owner: string;

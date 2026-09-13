@@ -4,6 +4,7 @@ import Image from "next/image";
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
+import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
@@ -23,7 +24,6 @@ import type {
 import type { PullRequestMergeState } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
-import type { PullRequestPermissionContext } from "../../permissions-utils";
 import { ConflictedFiles } from "../conflicted-files";
 import { AutoMergeToggle } from "./auto-merge-toggle";
 import { DisableAutoMergeButton } from "./disable-auto-merge-button";

@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { Fragment, type ReactNode, useCallback, useState } from "react";
-import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
+import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import type { ReviewComment } from "~/server/github";
 import { InlineCommentThread } from "../inline-comment-thread";
 import type { FooterAction } from "../markdown/markdown-editor";

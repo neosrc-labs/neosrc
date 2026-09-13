@@ -1,6 +1,6 @@
 "use client";
 
-import type { PullRequestPermissionContext } from "~/app/gh/[owner]/[repo]/pull/[number]/permissions-utils";
+import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import type { ReviewComment } from "~/server/github";
 import { InlineCommentThread } from "./inline-comment-thread";
 import { groupReviewCommentThreads } from "./review-comment-threads";

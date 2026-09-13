@@ -38,7 +38,7 @@ import type {
     GQLTimelineEvent,
 } from "~/server/github-graphql";
 import { formatDateTime, formatRelativeTime } from "~/utils";
-import type { PullRequestPermissionContext } from "../../permissions-utils";
+import type { PullRequestPermissionContext } from "../permissions-utils";
 import { AssignedEventContent } from "./content/assigned-event";
 import { AutoMergeEventContent } from "./content/auto-merge-event";
 import { BaseRefChangedContent } from "./content/base-ref-changed";
