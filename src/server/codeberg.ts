@@ -1404,6 +1404,12 @@ export const listIssueReactions = cache(
         // A failed read must not look like "no reactions": the toggle paths
         // would then add a second reaction instead of removing the existing one.
         if (!res.ok) {
+            if (res.status === 404) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: `Issue ${issueNumber} not found in ${owner}/${repo}`,
+                });
+            }
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message: `Failed to fetch reactions for issue ${issueNumber} in ${owner}/${repo}: ${res.status}`,
@@ -1432,6 +1438,12 @@ export const listIssueCommentReactions = cache(
             },
         );
         if (!res.ok) {
+            if (res.status === 404) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: `Issue comment ${commentId} not found in ${owner}/${repo}`,
+                });
+            }
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message: `Failed to fetch reactions for comment ${commentId} in ${owner}/${repo}: ${res.status}`,

@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import {
@@ -148,13 +149,15 @@ export const issuesRouter = createTRPCRouter({
                 mergeQueueEntry: null,
             })),
         cb: async ({ input, accessToken }): Promise<TimelineResult> => {
-            // Only positive integers are valid Forgejo page numbers; a
-            // malformed cursor falls back to the first page.
-            const requestedPage = Number(input.cursor ?? "1");
-            const page =
-                Number.isInteger(requestedPage) && requestedPage > 0
-                    ? requestedPage
-                    : 1;
+            // Forgejo pages are positive integers; reject anything else rather
+            // than letting NaN or a fraction reach the page parameter.
+            const page = Number(input.cursor ?? "1");
+            if (!Number.isInteger(page) || page < 1) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: `Invalid timeline cursor: ${input.cursor}`,
+                });
+            }
             const { items, hasNextPage } = await listIssueTimeline(
                 accessToken,
                 input.owner,

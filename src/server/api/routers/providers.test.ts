@@ -486,7 +486,7 @@ describe("issues.timeline cursor validation", () => {
             hasNextPage: false,
         } as never);
 
-        await issues.timeline({
+        const result = issues.timeline({
             provider: "cb",
             owner: "acme",
             repo: "api",
@@ -495,20 +495,24 @@ describe("issues.timeline cursor validation", () => {
             cursor,
         });
 
-        return vi.mocked(codeberg.listIssueTimeline).mock.calls.at(-1)?.[4];
+        return { result, page: vi.mocked(codeberg.listIssueTimeline) };
     }
 
-    it("passes a malformed cursor through as the first page", async () => {
-        expect(await timelineWithCursor("abc")).toBe(1);
-    });
+    it("rejects malformed, fractional, zero and negative pages", async () => {
+        for (const cursor of ["abc", "NaN", "1.5", "0", "-3"]) {
+            const { result, page } = await timelineWithCursor(cursor);
 
-    it("rejects fractional, zero and negative pages", async () => {
-        expect(await timelineWithCursor("1.5")).toBe(1);
-        expect(await timelineWithCursor("0")).toBe(1);
-        expect(await timelineWithCursor("-3")).toBe(1);
+            await expect(result).rejects.toMatchObject({
+                code: "BAD_REQUEST",
+            });
+            expect(page).not.toHaveBeenCalled();
+        }
     });
 
     it("keeps a valid page number", async () => {
-        expect(await timelineWithCursor("4")).toBe(4);
+        const { result, page } = await timelineWithCursor("4");
+
+        await result;
+        expect(page.mock.calls.at(-1)?.[4]).toBe(4);
     });
 });

@@ -314,4 +314,15 @@ describe("reaction read failures", () => {
             "Failed to fetch reactions for comment 32 in o/r: 500",
         );
     });
+
+    it("maps a missing issue or comment to NOT_FOUND", async () => {
+        stubFailure(404);
+
+        await expect(
+            listIssueReactions("tok", "o", "r", 33),
+        ).rejects.toMatchObject({ code: "NOT_FOUND" });
+        await expect(
+            listIssueCommentReactions("tok", "o", "r", 34),
+        ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    });
 });
