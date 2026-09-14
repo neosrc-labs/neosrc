@@ -23,6 +23,8 @@ interface RefSelectorProps {
     provider: Provider;
     selectedRef: string;
     onSelect: (ref: string) => void;
+    /** `rail` fills its container, e.g. the file tree header. */
+    variant?: "default" | "rail";
 }
 
 type Tab = "branches" | "tags";
@@ -37,6 +39,7 @@ export function RefSelector({
     provider,
     selectedRef,
     onSelect,
+    variant = "default",
 }: RefSelectorProps) {
     const [open, setOpen] = useState(false);
     const [tab, setTab] = useState<Tab>("branches");
@@ -87,10 +90,18 @@ export function RefSelector({
                         open
                             ? "border-border bg-surface-secondary text-text-primary"
                             : "border-border bg-surface text-text-primary hover:bg-surface-secondary",
+                        variant === "rail" && "w-full min-w-0",
                     )}
                 >
                     <GitBranchIcon className="h-4 w-4 shrink-0 text-text-tertiary" />
-                    <span className="max-w-[200px] truncate">
+                    <span
+                        className={cn(
+                            "truncate",
+                            variant === "rail"
+                                ? "min-w-0 flex-1 text-left"
+                                : "max-w-[200px]",
+                        )}
+                    >
                         {selectedRef}
                     </span>
                     <ChevronDownIcon className="h-3 w-3 shrink-0 text-text-tertiary" />

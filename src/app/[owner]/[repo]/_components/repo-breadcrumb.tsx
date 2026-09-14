@@ -35,7 +35,7 @@ export function RepoBreadcrumb({
     return (
         <nav
             aria-label="Breadcrumb"
-            className="flex min-h-12 flex-wrap items-center gap-1 border-border border-b px-4 py-3 text-sm"
+            className="flex min-h-6 flex-wrap items-center gap-1 pb-3 text-sm"
         >
             {crumbs.map((crumb, index) => {
                 const isLast = index === crumbs.length - 1;

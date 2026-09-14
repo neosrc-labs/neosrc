@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { RepoBlobPage } from "~/app/[owner]/[repo]/_components/repo-blob-page";
-import { loadRepoPageData } from "~/app/[owner]/[repo]/_components/repo-page-data";
+import { loadRepoHeaderData } from "~/app/[owner]/[repo]/_components/repo-page-data";
 
 interface BlobParams {
     owner: string;
@@ -33,7 +33,7 @@ export default async function BlobPage({
             repo={repo}
             selectedRef={branch}
             path={(path ?? []).join("/")}
-            {...loadRepoPageData("gh", owner, repo)}
+            {...loadRepoHeaderData("gh", owner, repo)}
         />
     );
 }

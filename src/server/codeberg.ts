@@ -785,6 +785,51 @@ export const getFileLatestCommit = cache(
     },
 );
 
+/** Newest commits that touched `path`, newest first. */
+export const getPathCommits = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        ref: string,
+        path: string,
+        limit = 2,
+    ) => {
+        const params = new URLSearchParams({
+            limit: String(limit),
+            path,
+        });
+        if (ref) params.set("sha", ref);
+
+        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`;
+
+        const res = await fetch(url, {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        });
+        if (!res.ok) return [];
+
+        const commits = (await res.json()) as CodebergCommitRaw[];
+
+        return commits.slice(0, limit).map((commit) => ({
+            sha: commit.sha,
+            message: commit.commit.message.split("\n")[0] ?? "",
+            committedDate:
+                commit.commit.committer?.date ??
+                commit.commit.author?.date ??
+                null,
+            author: commit.author
+                ? {
+                      login: commit.author.login,
+                      avatarUrl: commit.author.avatar_url,
+                  }
+                : null,
+        }));
+    },
+);
+
 export const getRepoContents = cache(
     async (
         accessToken: string,
