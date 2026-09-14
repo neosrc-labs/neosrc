@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { api } from "~/trpc/server";
-import type { RepoData } from "../../../[owner]/[repo]/_components/repo-code-page";
-import { RepoCodePage } from "../../../[owner]/[repo]/_components/repo-code-page";
+import { RepoCodePage } from "~/app/[owner]/[repo]/_components/repo-code-page";
+import { loadRepoPageData } from "~/app/[owner]/[repo]/_components/repo-page-data";
 
 export async function generateMetadata({
     params,
@@ -19,32 +18,12 @@ export default async function CodePage({
 }) {
     const { owner, repo } = await params;
 
-    const repoDataPromise = api.repos.getByOwnerAndRepo({
-        provider: "gh",
-        owner,
-        repo,
-    }) as Promise<RepoData>;
-    const contributorsPromise = api.repos.getContributors({ owner, repo });
-    const docFileNamesPromise = api.repos.getDocFileNames({ owner, repo });
-    const languagesPromise = api.repos.getRepoLanguages({ owner, repo });
-    const deploymentsPromise = api.repos.getDeployments({ owner, repo });
-    const latestReleasePromise = api.repos.getLatestRelease({ owner, repo });
-    const starredPromise = api.repos.getStarred({ owner, repo });
-    const subscriptionPromise = api.repos.getSubscription({ owner, repo });
-
     return (
         <RepoCodePage
             provider="gh"
             owner={owner}
             repo={repo}
-            repoDataPromise={repoDataPromise}
-            contributorsPromise={contributorsPromise}
-            docFileNamesPromise={docFileNamesPromise}
-            languagesPromise={languagesPromise}
-            deploymentsPromise={deploymentsPromise}
-            latestReleasePromise={latestReleasePromise}
-            starredPromise={starredPromise}
-            subscriptionPromise={subscriptionPromise}
+            {...loadRepoPageData("gh", owner, repo)}
         />
     );
 }

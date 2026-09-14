@@ -6,12 +6,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import { getDocFileDisplayName, getDocFileHashName } from "~/lib/doc-files";
 import { api } from "~/trpc/react";
+import type { Provider } from "~/utils/provider-url";
 
 interface RepoDocFilesProps {
     owner: string;
     repo: string;
     ref: string;
-    provider?: "gh" | "cb";
+    provider?: Provider;
     fileNames?: { name: string; path: string }[];
 }
 

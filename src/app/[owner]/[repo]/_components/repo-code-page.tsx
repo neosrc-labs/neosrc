@@ -1,188 +1,73 @@
 "use client";
 
 import { Async } from "~/components/async";
+import type { Provider } from "~/utils/provider-url";
 import { RecentlyPushedBanner } from "./recently-pushed-banner";
 import { RepoDocFiles, RepoDocFilesSkeleton } from "./repo-doc-files";
 import { RepoFileTable, RepoFileTableSkeleton } from "./repo-file-table";
-import { RepoHeader } from "./repo-header";
-import { RepoSidebar, RepoSidebarSkeleton } from "./repo-sidebar";
+import { RepoPageBody } from "./repo-page-body";
+import type { RepoPageData } from "./repo-page-types";
 
-export interface RepoData {
-    ownerAvatarUrl: string;
-    isPrivate: boolean;
-    stars: number;
-    forks: number;
-    watchers: number;
-    description: string | null;
-    defaultBranch: string;
-    homepage: string | null;
-    language: string | null;
-    topics: string[];
-    license: { spdxId: string | null; name: string; url: string | null } | null;
-    createdAt: string;
-    isFork: boolean;
-    parentFullName: string | null;
-    parentDefaultBranch: string | null;
-}
-
-interface Contributor {
-    login: string | null;
-    avatarUrl: string | null;
-}
-
-export interface DocFileName {
-    name: string;
-    path: string;
-    displayName: string;
-}
-
-interface Deployment {
-    id: string;
-    environment: string;
-    state: string;
-    createdAt: string;
-}
-
-type Provider = "gh" | "cb";
-
-interface RepoCodePageProps {
+interface RepoCodePageProps extends RepoPageData {
     owner: string;
     repo: string;
     provider: Provider;
-    repoDataPromise: Promise<RepoData>;
-    contributorsPromise: Promise<Contributor[]>;
-    docFileNamesPromise: Promise<DocFileName[]>;
-    languagesPromise: Promise<Record<string, number>>;
-    deploymentsPromise: Promise<Deployment[]>;
-    latestReleasePromise: Promise<{
-        name: string;
-        tagName: string;
-        createdAt: string;
-        htmlUrl: string;
-    } | null>;
-    starredPromise: Promise<boolean>;
-    subscriptionPromise: Promise<{
-        subscribed: boolean;
-        ignored: boolean;
-    } | null>;
 }
 
 export function RepoCodePage({
     owner,
     repo,
     provider,
-    repoDataPromise,
-    contributorsPromise,
-    docFileNamesPromise,
-    languagesPromise,
-    deploymentsPromise,
-    latestReleasePromise,
-    starredPromise,
-    subscriptionPromise,
+    ...data
 }: RepoCodePageProps) {
     return (
-        <main className="min-h-[calc(100svh-var(--header-height))] min-w-0 border-border-subtle border-r bg-surface">
-            <div className="mx-auto max-w-7xl px-6 py-6">
-                <div className="mb-4">
-                    <RepoHeader
+        <RepoPageBody
+            {...data}
+            owner={owner}
+            repo={repo}
+            provider={provider}
+            contentFallback={
+                <RepoFileTableSkeleton owner={owner} repo={repo} />
+            }
+        >
+            {(repoData) => (
+                <>
+                    <RecentlyPushedBanner
                         owner={owner}
                         repo={repo}
                         provider={provider}
-                        repoDataPromise={repoDataPromise}
-                        starredPromise={starredPromise}
-                        subscriptionPromise={subscriptionPromise}
                     />
-                </div>
 
-                <div className="flex gap-8">
-                    <div className="min-w-0 flex-1">
-                        <RecentlyPushedBanner
-                            owner={owner}
-                            repo={repo}
-                            provider={provider}
-                        />
-
-                        <Async
-                            promise={repoDataPromise}
-                            fallback={
-                                <RepoFileTableSkeleton
-                                    owner={owner}
-                                    repo={repo}
-                                />
-                            }
-                        >
-                            {(repoData) => (
-                                <RepoFileTable
-                                    key={`${owner}/${repo}`}
-                                    owner={owner}
-                                    repo={repo}
-                                    provider={provider}
-                                    defaultBranch={repoData.defaultBranch}
-                                    isFork={repoData.isFork}
-                                    parentFullName={repoData.parentFullName}
-                                    parentDefaultBranch={
-                                        repoData.parentDefaultBranch
-                                    }
-                                />
-                            )}
-                        </Async>
-
-                        <Async
-                            promise={Promise.all([
-                                repoDataPromise,
-                                docFileNamesPromise,
-                            ])}
-                            fallback={<RepoDocFilesSkeleton />}
-                        >
-                            {([repoData, docFileNames]) => (
-                                <RepoDocFiles
-                                    owner={owner}
-                                    repo={repo}
-                                    ref={repoData.defaultBranch}
-                                    fileNames={docFileNames}
-                                    provider={provider}
-                                />
-                            )}
-                        </Async>
-                    </div>
+                    <RepoFileTable
+                        key={`${owner}/${repo}`}
+                        owner={owner}
+                        repo={repo}
+                        provider={provider}
+                        defaultBranch={repoData.defaultBranch}
+                        isFork={repoData.isFork}
+                        parentFullName={repoData.parentFullName}
+                        parentDefaultBranch={repoData.parentDefaultBranch}
+                    />
 
                     <Async
                         promise={Promise.all([
-                            repoDataPromise,
-                            contributorsPromise,
-                            docFileNamesPromise,
-                            languagesPromise,
-                            deploymentsPromise,
-                            latestReleasePromise,
+                            data.repoDataPromise,
+                            data.docFileNamesPromise,
                         ])}
-                        fallback={<RepoSidebarSkeleton />}
+                        fallback={<RepoDocFilesSkeleton />}
                     >
-                        {([
-                            repoData,
-                            contributors,
-                            docFileNames,
-                            languages,
-                            deployments,
-                            latestRelease,
-                        ]) => (
-                            <RepoSidebar
+                        {([repoDataForDocs, docFileNames]) => (
+                            <RepoDocFiles
                                 owner={owner}
                                 repo={repo}
+                                ref={repoDataForDocs.defaultBranch}
+                                fileNames={docFileNames}
                                 provider={provider}
-                                description={repoData.description}
-                                homepage={repoData.homepage}
-                                topics={repoData.topics}
-                                createdAt={repoData.createdAt}
-                                contributors={contributors}
-                                docFileNames={docFileNames}
-                                languages={languages}
-                                deployments={deployments}
-                                latestRelease={latestRelease}
                             />
                         )}
                     </Async>
-                </div>
-            </div>
-        </main>
+                </>
+            )}
+        </RepoPageBody>
     );
 }
