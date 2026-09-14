@@ -1,15 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { blobHref, type Provider } from "~/utils/provider-url";
+import type { Provider } from "~/utils/provider-url";
 import { RepoBreadcrumb } from "./repo-breadcrumb";
-import { RepoBrowseLayout } from "./repo-browse-layout";
 import { RepoContentCard } from "./repo-content-card";
 import { RepoFileView, RepoFileViewSkeleton } from "./repo-file-view";
-import { RepoPageBody } from "./repo-page-body";
-import type { RepoPageData } from "./repo-page-types";
+import type { RepoPathPageData } from "./repo-page-types";
+import { RepoPathPage } from "./repo-path-page";
 
-interface RepoBlobPageProps extends RepoPageData {
+interface RepoBlobPageProps extends RepoPathPageData {
     owner: string;
     repo: string;
     provider: Provider;
@@ -19,56 +17,45 @@ interface RepoBlobPageProps extends RepoPageData {
     path: string;
 }
 
+/**
+ * File page: the file browser rail beside the file's breadcrumb, commit bar
+ * and body.
+ */
 export function RepoBlobPage({
     owner,
     repo,
     provider,
     selectedRef,
     path,
-    ...data
+    repoDataPromise,
 }: RepoBlobPageProps) {
-    const router = useRouter();
-
     return (
-        <RepoBrowseLayout
+        <RepoPathPage
             owner={owner}
             repo={repo}
             provider={provider}
             selectedRef={selectedRef}
-            onSelectRef={(next) =>
-                router.push(blobHref(provider, owner, repo, next, path))
-            }
             path={path}
+            view="blob"
+            repoDataPromise={repoDataPromise}
+            contentFallback={<RepoFileViewSkeleton />}
         >
-            <RepoPageBody
-                {...data}
+            <RepoBreadcrumb
                 owner={owner}
                 repo={repo}
+                selectedRef={selectedRef}
                 provider={provider}
-                embedded
-                contentFallback={<RepoFileViewSkeleton />}
-            >
-                {() => (
-                    <>
-                        <RepoBreadcrumb
-                            owner={owner}
-                            repo={repo}
-                            selectedRef={selectedRef}
-                            provider={provider}
-                            path={path}
-                        />
-                        <RepoContentCard>
-                            <RepoFileView
-                                owner={owner}
-                                repo={repo}
-                                provider={provider}
-                                selectedRef={selectedRef}
-                                path={path}
-                            />
-                        </RepoContentCard>
-                    </>
-                )}
-            </RepoPageBody>
-        </RepoBrowseLayout>
+                path={path}
+            />
+            <RepoContentCard>
+                <RepoFileView
+                    owner={owner}
+                    repo={repo}
+                    provider={provider}
+                    selectedRef={selectedRef}
+                    path={path}
+                />
+            </RepoContentCard>
+        </RepoPathPage>
     );
 }

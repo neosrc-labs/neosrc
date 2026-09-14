@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { RepoDirectoryPage } from "~/app/[owner]/[repo]/_components/repo-directory-page";
 import {
-    loadRepoHeaderData,
     loadRepoPageData,
+    loadRepoPathData,
 } from "~/app/[owner]/[repo]/_components/repo-page-data";
 import { RepoTreePage } from "~/app/[owner]/[repo]/_components/repo-tree-page";
 
@@ -31,17 +32,28 @@ export default async function TreePage({
     const { owner, repo, branch, path } = await params;
     const repoPath = (path ?? []).join("/");
 
+    // The branch root is the repo root view; a path inside it is a directory
+    // page, which renders no repo name header and no About column.
+    if (repoPath !== "") {
+        return (
+            <RepoDirectoryPage
+                provider="gh"
+                owner={owner}
+                repo={repo}
+                selectedRef={branch}
+                path={repoPath}
+                {...loadRepoPathData("gh", owner, repo)}
+            />
+        );
+    }
+
     return (
         <RepoTreePage
             provider="gh"
             owner={owner}
             repo={repo}
             selectedRef={branch}
-            path={repoPath}
-            // A path page shows no About column, so it needs no About queries.
-            {...(repoPath
-                ? loadRepoHeaderData("gh", owner, repo)
-                : loadRepoPageData("gh", owner, repo))}
+            {...loadRepoPageData("gh", owner, repo)}
         />
     );
 }

@@ -42,7 +42,7 @@ export interface SubscriptionState {
     ignored: boolean;
 }
 
-/** Queries behind the About column; omitted by views that hide it. */
+/** Queries behind the repo name header and the About column. */
 export interface RepoAboutData {
     contributorsPromise: Promise<Contributor[]>;
     languagesPromise: Promise<Record<string, number>>;
@@ -50,15 +50,18 @@ export interface RepoAboutData {
     latestReleasePromise: Promise<Release | null>;
 }
 
-/**
- * The queries every repo page view shares. Started on the server so the
- * header and sidebar stream in with the page-specific content, then spread
- * into the view that renders them.
- */
-export interface RepoPageData {
+/** Data every repo view needs: the repository the view belongs to. */
+export interface RepoPathPageData {
     repoDataPromise: Promise<RepoData>;
+}
+
+/**
+ * Data for views that render the repo name header and the About column. The
+ * file and directory pages omit it, so they never start these queries.
+ */
+export interface RepoPageData extends RepoPathPageData {
     docFileNamesPromise: Promise<DocFileName[]>;
     starredPromise: Promise<boolean>;
     subscriptionPromise: Promise<SubscriptionState | null>;
-    about?: RepoAboutData;
+    about: RepoAboutData;
 }
