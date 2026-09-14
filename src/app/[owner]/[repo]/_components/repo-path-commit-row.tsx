@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
+import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import {
     blobHref,
@@ -9,6 +10,7 @@ import {
     treeHref,
 } from "~/utils/provider-url";
 import { RepoCommitRow } from "./repo-commit-row";
+import { pathCommitsPrevious } from "./repo-previous-data";
 
 interface RepoPathCommitRowProps {
     owner: string;
@@ -36,14 +38,26 @@ export function RepoPathCommitRow({
     view,
     trailing,
 }: RepoPathCommitRowProps) {
-    const { data: commits } = api.repos.getPathCommits.useQuery({
-        provider,
-        owner,
-        repo,
-        ref: selectedRef,
-        path,
-        limit: 2,
-    });
+    const queryKey = `${provider}/${owner}/${repo}/${selectedRef}/${path}`;
+
+    const { data: commits, isPlaceholderData } =
+        api.repos.getPathCommits.useQuery(
+            {
+                provider,
+                owner,
+                repo,
+                ref: selectedRef,
+                path,
+                limit: 2,
+            },
+            { placeholderData: () => pathCommitsPrevious.previous(queryKey) },
+        );
+
+    useEffect(() => {
+        if (!isPlaceholderData && commits !== undefined) {
+            pathCommitsPrevious.remember(queryKey, commits);
+        }
+    }, [isPlaceholderData, commits, queryKey]);
 
     const latest = commits?.[0] ?? null;
     const previous = commits?.[1] ?? null;
@@ -54,15 +68,27 @@ export function RepoPathCommitRow({
         : undefined;
 
     return (
-        <RepoCommitRow
-            owner={owner}
-            repo={repo}
-            provider={provider}
-            commit={latest}
-            author={latest?.author ?? null}
-            historyHref={historyUrl(provider, owner, repo, selectedRef, path)}
-            previousHref={previousHref}
-            trailing={trailing}
-        />
+        <div
+            className={cn(
+                isPlaceholderData && "pointer-events-none opacity-60",
+            )}
+        >
+            <RepoCommitRow
+                owner={owner}
+                repo={repo}
+                provider={provider}
+                commit={latest}
+                author={latest?.author ?? null}
+                historyHref={historyUrl(
+                    provider,
+                    owner,
+                    repo,
+                    selectedRef,
+                    path,
+                )}
+                previousHref={previousHref}
+                trailing={trailing}
+            />
+        </div>
     );
 }

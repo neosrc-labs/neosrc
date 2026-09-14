@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { RepoDirectoryPage } from "~/app/[owner]/[repo]/_components/repo-directory-page";
-import {
-    loadRepoPageData,
-    loadRepoPathData,
-} from "~/app/[owner]/[repo]/_components/repo-page-data";
+import { loadRepoPageData } from "~/app/[owner]/[repo]/_components/repo-page-data";
 import { RepoTreePage } from "~/app/[owner]/[repo]/_components/repo-tree-page";
 
 interface TreeParams {
@@ -42,7 +39,6 @@ export default async function TreePage({
                 repo={repo}
                 selectedRef={branch}
                 path={repoPath}
-                {...loadRepoPathData("gh", owner, repo)}
             />
         );
     }

@@ -1,10 +1,6 @@
 import { api } from "~/trpc/server";
 import type { Provider } from "~/utils/provider-url";
-import type {
-    RepoData,
-    RepoPageData,
-    RepoPathPageData,
-} from "./repo-page-types";
+import type { RepoData, RepoPageData } from "./repo-page-types";
 
 /**
  * Repository query shared by every repo page view. Called from a server
@@ -26,18 +22,6 @@ function repoDataPromise(
 }
 
 /**
- * Starts the queries of the file and directory pages, which render neither
- * the repo name header nor the About column.
- */
-export function loadRepoPathData(
-    provider: Provider,
-    owner: string,
-    repo: string,
-): RepoPathPageData {
-    return { repoDataPromise: repoDataPromise(provider, owner, repo) };
-}
-
-/**
  * Starts the repo queries of the views that render the repo name header and
  * the About column, so both stream in with the page-specific content.
  */
@@ -47,7 +31,7 @@ export function loadRepoPageData(
     repo: string,
 ): RepoPageData {
     return {
-        ...loadRepoPathData(provider, owner, repo),
+        repoDataPromise: repoDataPromise(provider, owner, repo),
         docFileNamesPromise: api.repos.getDocFileNames({
             provider,
             owner,

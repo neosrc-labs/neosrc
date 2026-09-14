@@ -3,11 +3,9 @@
 import { pickDocFileNames } from "~/lib/doc-files";
 import type { Provider } from "~/utils/provider-url";
 import { RepoDocFiles } from "./repo-doc-files";
-import type { RepoPathPageData } from "./repo-page-types";
-import { RepoPathBrowse, RepoPathBrowseSkeleton } from "./repo-path-browse";
-import { RepoPathPage } from "./repo-path-page";
+import { RepoPathBrowse } from "./repo-path-browse";
 
-interface RepoDirectoryPageProps extends RepoPathPageData {
+interface RepoDirectoryPageProps {
     owner: string;
     repo: string;
     provider: Provider;
@@ -18,8 +16,8 @@ interface RepoDirectoryPageProps extends RepoPathPageData {
 }
 
 /**
- * Directory page: the file browser rail beside the directory's breadcrumb,
- * commit bar and listing.
+ * Directory page: the browser rail's main column for a directory, the
+ * breadcrumb, commit bar and listing. The rail itself is the (browse) layout's.
  */
 export function RepoDirectoryPage({
     owner,
@@ -27,37 +25,25 @@ export function RepoDirectoryPage({
     provider,
     selectedRef,
     path,
-    repoDataPromise,
 }: RepoDirectoryPageProps) {
     return (
-        <RepoPathPage
+        <RepoPathBrowse
             owner={owner}
             repo={repo}
             provider={provider}
             selectedRef={selectedRef}
             path={path}
-            view="tree"
-            repoDataPromise={repoDataPromise}
-            contentFallback={<RepoPathBrowseSkeleton />}
         >
-            <RepoPathBrowse
-                owner={owner}
-                repo={repo}
-                provider={provider}
-                selectedRef={selectedRef}
-                path={path}
-            >
-                {(contents) => (
-                    <RepoDocFiles
-                        owner={owner}
-                        repo={repo}
-                        provider={provider}
-                        ref={selectedRef}
-                        fileNames={pickDocFileNames(contents)}
-                        hideEmpty
-                    />
-                )}
-            </RepoPathBrowse>
-        </RepoPathPage>
+            {(contents) => (
+                <RepoDocFiles
+                    owner={owner}
+                    repo={repo}
+                    provider={provider}
+                    ref={selectedRef}
+                    fileNames={pickDocFileNames(contents)}
+                    hideEmpty
+                />
+            )}
+        </RepoPathBrowse>
     );
 }

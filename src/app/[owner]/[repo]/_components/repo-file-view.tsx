@@ -4,12 +4,15 @@ import { CopyIcon, DownloadIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { CopyButton } from "~/components/ui/copy-button";
+import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { highlightLines } from "~/utils/highlight";
 import { type Provider, rawUrl, treeHref } from "~/utils/provider-url";
+import { RepoBusyBar } from "./repo-busy-bar";
 import { isFileEntry } from "./repo-contents";
 import { RepoPathCommitRow } from "./repo-path-commit-row";
 import { RepoPathNotFound } from "./repo-path-not-found";
+import { contentsPrevious, fileContentPrevious } from "./repo-previous-data";
 
 interface RepoFileViewProps {
     owner: string;
@@ -28,29 +31,71 @@ export function RepoFileView({
     path,
 }: RepoFileViewProps) {
     const router = useRouter();
+    const queryKey = `${provider}/${owner}/${repo}/${selectedRef}/${path}`;
 
-    const { data: contents, error: contentsError } =
-        api.repos.getContents.useQuery({
+    const contentsQuery = api.repos.getContents.useQuery(
+        {
             provider,
             owner,
             repo,
             ref: selectedRef,
             path,
-        });
+        },
+        { placeholderData: () => contentsPrevious.previous(queryKey) },
+    );
+    const contents = contentsQuery.data;
+    const contentsError = contentsQuery.error;
+    // The listing on screen still belongs to the path the user just left.
+    const contentsStale = contentsQuery.isPlaceholderData;
 
-    const { data: fileData } = api.repos.getFileContent.useQuery({
-        provider,
-        owner,
-        repo,
-        ref: selectedRef,
-        path,
-    });
+    useEffect(() => {
+        if (!contentsStale && contents !== undefined && contents.length > 0) {
+            contentsPrevious.remember(queryKey, contents);
+        }
+    }, [contentsStale, contents, queryKey]);
 
-    const isFile = isFileEntry(contents, path);
+    // Only a page that showed a file itself can supply a plausible body; a
+    // directory listing means the remembered body is from an older page.
+    const previousContents = contentsPrevious.previous(queryKey);
+    const previousWasFile =
+        previousContents?.length === 1 &&
+        isFileEntry(previousContents, previousContents[0]?.path ?? "");
+
+    const contentQuery = api.repos.getFileContent.useQuery(
+        {
+            provider,
+            owner,
+            repo,
+            ref: selectedRef,
+            path,
+        },
+        {
+            placeholderData: previousWasFile
+                ? () => fileContentPrevious.previous(queryKey)
+                : undefined,
+        },
+    );
+    const fileData = contentQuery.data;
+
+    useEffect(() => {
+        if (!contentQuery.isPlaceholderData && fileData !== undefined) {
+            fileContentPrevious.remember(queryKey, fileData);
+        }
+    }, [contentQuery.isPlaceholderData, fileData, queryKey]);
+
+    const busy =
+        contentsStale ||
+        contentQuery.isPlaceholderData ||
+        (!contentsQuery.isPending && contentQuery.isFetching);
+
+    const isFile = !contentsStale && isFileEntry(contents, path);
     const entry = isFile ? (contents?.[0] ?? null) : null;
     // Any other non-empty listing is the directory's children.
     const isDirectory =
-        contents !== undefined && contents.length > 0 && !isFile;
+        !contentsStale &&
+        contents !== undefined &&
+        contents.length > 0 &&
+        !isFile;
 
     // A blob URL pointing at a directory lands on its tree page, as on GitHub.
     useEffect(() => {
@@ -61,7 +106,7 @@ export function RepoFileView({
 
     const pathMissing =
         contentsError !== null ||
-        (contents !== undefined && contents.length === 0);
+        (!contentsStale && contents !== undefined && contents.length === 0);
 
     if (pathMissing) {
         return (
@@ -80,6 +125,7 @@ export function RepoFileView({
 
     return (
         <>
+            <RepoBusyBar busy={busy} />
             <RepoPathCommitRow
                 owner={owner}
                 repo={repo}
@@ -96,70 +142,60 @@ export function RepoFileView({
                 }
             />
 
-            <div className="flex min-h-10 items-center justify-between border-border border-b bg-surface-elevated px-4 py-1.5">
-                <span className="text-text-tertiary text-xs">
-                    {content === null
-                        ? "Binary file"
-                        : `${content.split("\n").length.toLocaleString()} lines`}
-                </span>
-                <div className="flex items-center gap-1">
-                    {content !== null && (
-                        <CopyButton
-                            text={content}
-                            title="Copy raw contents"
-                            className="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-text-secondary text-xs hover:bg-surface-secondary hover:text-text-primary"
+            <div className={cn(busy && "pointer-events-none opacity-60")}>
+                <div className="flex min-h-10 items-center justify-between border-border border-b bg-surface-elevated px-4 py-1.5">
+                    <span className="text-text-tertiary text-xs">
+                        {content === null
+                            ? "Binary file"
+                            : `${content.split("\n").length.toLocaleString()} lines`}
+                    </span>
+                    <div className="flex items-center gap-1">
+                        {content !== null && (
+                            <CopyButton
+                                text={content}
+                                title="Copy raw contents"
+                                className="inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-text-secondary text-xs hover:bg-surface-secondary hover:text-text-primary"
+                            >
+                                {(copied) => (
+                                    <>
+                                        <CopyIcon className="h-3.5 w-3.5" />
+                                        {copied ? "Copied" : "Copy raw"}
+                                    </>
+                                )}
+                            </CopyButton>
+                        )}
+                        {content !== null && (
+                            <DownloadButton name={name} content={content} />
+                        )}
+                        <a
+                            href={raw}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-text-secondary text-xs hover:bg-surface-secondary hover:text-text-primary"
                         >
-                            {(copied) => (
-                                <>
-                                    <CopyIcon className="h-3.5 w-3.5" />
-                                    {copied ? "Copied" : "Copy raw"}
-                                </>
-                            )}
-                        </CopyButton>
-                    )}
-                    {content !== null && (
-                        <DownloadButton name={name} content={content} />
-                    )}
-                    <a
-                        href={raw}
-                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-text-secondary text-xs hover:bg-surface-secondary hover:text-text-primary"
-                    >
-                        <DownloadIcon className="h-3.5 w-3.5" />
-                        Raw
-                    </a>
+                            <DownloadIcon className="h-3.5 w-3.5" />
+                            Raw
+                        </a>
+                    </div>
                 </div>
-            </div>
 
-            {fileData === undefined ? (
-                <FileBodySkeleton />
-            ) : content === null ? (
-                <div className="px-6 py-12 text-center">
-                    <p className="font-medium text-base text-text-primary">
-                        This file is binary or too large to display.
-                    </p>
-                    <a
-                        href={raw}
-                        className="mt-2 inline-block text-blue-600 text-sm hover:underline dark:text-blue-400"
-                    >
-                        View raw
-                    </a>
-                </div>
-            ) : (
-                <CodeView name={name} content={content} />
-            )}
+                {fileData === undefined ? (
+                    <FileBodySkeleton />
+                ) : content === null ? (
+                    <div className="px-6 py-12 text-center">
+                        <p className="font-medium text-base text-text-primary">
+                            This file is binary or too large to display.
+                        </p>
+                        <a
+                            href={raw}
+                            className="mt-2 inline-block text-blue-600 text-sm hover:underline dark:text-blue-400"
+                        >
+                            View raw
+                        </a>
+                    </div>
+                ) : (
+                    <CodeView name={name} content={content} />
+                )}
+            </div>
         </>
-    );
-}
-
-export function RepoFileViewSkeleton() {
-    return (
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
-            <div className="flex min-h-12 items-center gap-3 border-border border-b px-4 py-3">
-                <div className="h-5 w-24 animate-pulse rounded bg-surface-secondary" />
-                <div className="h-5 w-64 animate-pulse rounded bg-surface-secondary" />
-            </div>
-            <FileBodySkeleton />
-        </div>
     );
 }
 

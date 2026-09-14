@@ -18,8 +18,8 @@ interface RepoPageBodyProps extends RepoPageData {
 
 /**
  * Repo name header, content column and About column, shared by the repo code
- * page and the branch root. The file and directory pages use
- * `RepoPathPageBody` instead, which renders neither the header nor the column.
+ * page and the branch root. The file and directory pages render only their main
+ * column instead, with neither the header nor the About column.
  */
 export function RepoPageBody({
     owner,

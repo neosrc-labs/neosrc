@@ -210,6 +210,11 @@ interface FileTreeProps {
     onToggle: (path: string) => void;
     /** Link target for a file node. */
     fileHref: (node: FileNode) => string;
+    /**
+     * How file rows navigate: "route" renders next/link so the rail keeps its
+     * state, "anchor" renders a plain <a> for same-page diff anchors.
+     */
+    fileLink: "route" | "anchor";
     /** When set, a directory's name links here; the chevron still toggles. */
     dirHref?: (node: FileNode) => string;
     /** Row rendered as the current location; scrolled into view when it changes. */
@@ -222,6 +227,7 @@ export function FileTree({
     isExpanded,
     onToggle,
     fileHref,
+    fileLink,
     dirHref,
     activePath,
     filter,
@@ -287,6 +293,7 @@ export function FileTree({
                                 depth={item.depth}
                                 dirHref={dirHref}
                                 fileHref={fileHref}
+                                fileLink={fileLink}
                                 filter={filter}
                                 isExpanded={isExpanded(item.node.path)}
                                 node={item.node}
@@ -306,6 +313,7 @@ function FileTreeNode({
     isExpanded,
     onToggle,
     fileHref,
+    fileLink,
     dirHref,
     filter,
     activePath,
@@ -315,6 +323,7 @@ function FileTreeNode({
     isExpanded: boolean;
     onToggle: (path: string) => void;
     fileHref: (node: FileNode) => string;
+    fileLink: "route" | "anchor";
     dirHref?: (node: FileNode) => string;
     filter?: string;
     activePath?: string;
@@ -349,15 +358,12 @@ function FileTreeNode({
                   : node.status === "removed"
                     ? "text-red-500"
                     : undefined;
-        return (
-            <a
-                className={cn(
-                    "flex items-center gap-1.5 truncate rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-surface-tertiary",
-                    isActive && "bg-surface-secondary",
-                )}
-                href={fileHref(node)}
-                style={{ paddingLeft: `${paddingLeft}px` }}
-            >
+        const rowClass = cn(
+            "flex items-center gap-1.5 truncate rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-surface-tertiary",
+            isActive && "bg-surface-secondary",
+        );
+        const content = (
+            <>
                 <Image
                     alt=""
                     className="h-4 w-4 flex-shrink-0"
@@ -376,6 +382,29 @@ function FileTreeNode({
                 >
                     {filter ? highlightMatch(node.name, filter) : node.name}
                 </span>
+            </>
+        );
+
+        if (fileLink === "route") {
+            return (
+                <Link
+                    className={rowClass}
+                    href={fileHref(node)}
+                    prefetch={false}
+                    style={{ paddingLeft: `${paddingLeft}px` }}
+                >
+                    {content}
+                </Link>
+            );
+        }
+
+        return (
+            <a
+                className={rowClass}
+                href={fileHref(node)}
+                style={{ paddingLeft: `${paddingLeft}px` }}
+            >
+                {content}
             </a>
         );
     }
