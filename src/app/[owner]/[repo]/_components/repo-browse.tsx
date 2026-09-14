@@ -1,15 +1,13 @@
 "use client";
 
 import { Fzf } from "fzf";
-import { GitBranchIcon, HistoryIcon, Search, TagIcon, X } from "lucide-react";
-import Link from "next/link";
+import { GitBranchIcon, Search, TagIcon, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
     mapChecksListToStatusContexts,
     StatusChecksHoverCard,
 } from "~/components/ci-status";
-import { UserLink } from "~/components/user-link";
 import type {
     CodeSearchResultItem,
     FileLatestCommit,
@@ -30,7 +28,9 @@ import { FileTypeIcon } from "./file-type-icon";
 import { ForkSyncRow } from "./fork-sync-row";
 import { RefSelector } from "./ref-selector";
 import { RepoBreadcrumb } from "./repo-breadcrumb";
-import { isFileEntry } from "./repo-contents";
+import { RepoCommitRow, RepoCommitRowSkeleton } from "./repo-commit-row";
+import { RepoContentCard } from "./repo-content-card";
+import { isFileEntry, sortRepoContents } from "./repo-contents";
 import { RepoPathNotFound } from "./repo-path-not-found";
 
 interface RepoBrowseProps {
@@ -84,14 +84,10 @@ export function RepoBrowse({
         path: path || undefined,
     });
 
-    const sortedContents = useMemo(() => {
-        if (!contents) return [];
-        return [...contents].sort((a, b) => {
-            if (a.type === "dir" && b.type !== "dir") return -1;
-            if (a.type !== "dir" && b.type === "dir") return 1;
-            return a.name.localeCompare(b.name);
-        });
-    }, [contents]);
+    const sortedContents = useMemo(
+        () => sortRepoContents(contents ?? []),
+        [contents],
+    );
 
     const paths = useMemo(
         () => sortedContents.map((c) => c.path),
@@ -148,7 +144,7 @@ export function RepoBrowse({
 
     return (
         <>
-            <div className="overflow-hidden rounded-xl border border-border bg-surface">
+            <RepoContentCard>
                 <FileTableHeader
                     owner={owner}
                     repo={repo}
@@ -176,23 +172,19 @@ export function RepoBrowse({
                         )
                     ) : (
                         <>
-                            {latestCommit ? (
-                                <CommitRow
-                                    owner={owner}
-                                    repo={repo}
-                                    provider={provider}
-                                    latestCommit={latestCommit}
-                                    selectedRef={selectedRef}
-                                />
-                            ) : (
-                                <CommitRowSkeleton />
-                            )}
                             <RepoBreadcrumb
                                 owner={owner}
                                 repo={repo}
                                 selectedRef={selectedRef}
                                 provider={provider}
                                 path={path}
+                            />
+                            <ListingCommitRow
+                                owner={owner}
+                                repo={repo}
+                                provider={provider}
+                                selectedRef={selectedRef}
+                                latestCommit={latestCommit}
                             />
                             {contentsLoading || fileCommitsLoading ? (
                                 <TableSkeleton />
@@ -236,7 +228,7 @@ export function RepoBrowse({
                         </>
                     )}
                 </div>
-            </div>
+            </RepoContentCard>
             {children?.(sortedContents)}
         </>
     );
@@ -311,7 +303,7 @@ function FileTable({
                     <th className="px-4 py-2 text-left font-medium">
                         Last commit
                     </th>
-                    <th className="px-4 py-2 text-right font-medium">
+                    <th className="whitespace-nowrap px-4 py-2 text-right font-medium">
                         Last commit date
                     </th>
                 </tr>
@@ -367,7 +359,7 @@ function FileTable({
                                     </a>
                                 ) : null}
                             </td>
-                            <td className="px-4 py-2 text-right">
+                            <td className="whitespace-nowrap px-4 py-2 text-right">
                                 {commit?.committedDate ? (
                                     <span
                                         className="shrink-0 text-sm text-text-tertiary"
@@ -463,11 +455,11 @@ interface RepoBrowseSkeletonProps {
 
 export function RepoBrowseSkeleton({ owner, repo }: RepoBrowseSkeletonProps) {
     return (
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <RepoContentCard>
             <FileTableHeaderSkeleton owner={owner} repo={repo} />
-            <CommitRowSkeleton />
+            <RepoCommitRowSkeleton />
             <TableSkeleton />
-        </div>
+        </RepoContentCard>
     );
 }
 
@@ -604,22 +596,22 @@ function FileTableHeader({
     );
 }
 
-function CommitRow({
+function ListingCommitRow({
     owner,
     repo,
     provider,
-    latestCommit,
     selectedRef,
+    latestCommit,
 }: {
     owner: string;
     repo: string;
     provider: Provider;
-    latestCommit: RepoLatestCommit;
     selectedRef: string;
+    latestCommit: RepoLatestCommit | undefined;
 }) {
     const { data: checks, isFetching: checksFetching } =
         api.checks.list.useQuery(
-            { owner, repo, sha: latestCommit?.sha as string },
+            { owner, repo, sha: latestCommit?.sha ?? "" },
             { enabled: !!latestCommit?.sha },
         );
 
@@ -627,84 +619,42 @@ function CommitRow({
         () => (checks ? mapChecksListToStatusContexts(checks) : []),
         [checks],
     );
-    const baseUrl = repoUrl(provider, owner, repo);
-    const commitsHref = `/${provider === "gh" ? "gh" : "cb"}/${owner}/${repo}/commits/${encodeURIComponent(selectedRef)}`;
-    return (
-        <div className="flex min-h-12 items-center gap-3 border-border border-b px-4 py-3">
-            <div className="[&_img]:h-5 [&_img]:w-5 [&_span]:text-sm">
-                <UserLink
-                    provider={provider}
-                    actor={
-                        latestCommit.author
-                            ? {
-                                  ...latestCommit.author,
-                                  url:
-                                      provider === "cb"
-                                          ? `https://codeberg.org/${latestCommit.author.login}`
-                                          : `https://github.com/${latestCommit.author.login}`,
-                              }
-                            : null
-                    }
-                />
-            </div>
-            <a
-                href={`${baseUrl}/commit/${latestCommit.sha}`}
-                className="min-w-0 flex-1 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-            >
-                {latestCommit.message}
-            </a>
-            {statusContexts.length > 0 ? (
-                <StatusChecksHoverCard
-                    items-center
-                    justify-between
-                    border-border
-                    border-b
-                    bg-surface-elevated
-                    px-4
-                    py-3
-                    contexts={statusContexts}
-                    className="size-3.5"
-                />
-            ) : checksFetching ? (
-                <div className="size-3.5 shrink-0" aria-hidden />
-            ) : null}
-            <a
-                href={`${baseUrl}/commit/${latestCommit.sha}`}
-                className="ml-auto shrink-0 pt-px font-mono text-text-tertiary text-xs hover:text-blue-600 dark:hover:text-blue-400"
-            >
-                {latestCommit.sha.slice(0, 7)}
-            </a>
-            {latestCommit.committedDate && (
-                <span
-                    className="shrink-0 text-text-tertiary text-xs"
-                    title={new Date(
-                        latestCommit.committedDate,
-                    ).toLocaleString()}
-                >
-                    {formatRelativeTime(latestCommit.committedDate)}
-                </span>
-            )}
-            <Link
-                href={commitsHref}
-                className="inline-flex shrink-0 items-center gap-1 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
-            >
-                <HistoryIcon className="h-3.5 w-3.5" />
-                {latestCommit.commitCount.toLocaleString()}{" "}
-                {latestCommit.commitCount === 1 ? "commit" : "commits"}
-            </Link>
-        </div>
-    );
-}
 
-function CommitRowSkeleton() {
+    const commitCount = latestCommit?.commitCount ?? 0;
+
     return (
-        <div className="flex min-h-12 items-center gap-3 border-border border-b px-4 py-3">
-            <div className="h-5 w-24 animate-pulse rounded bg-surface-secondary" />
-            <div className="h-5 w-84 animate-pulse rounded bg-surface-secondary" />
-            <div className="flex-1" />
-            <div className="ml-auto h-5 w-32 animate-pulse rounded bg-surface-secondary" />
-            <div className="h-5 w-28 animate-pulse rounded bg-surface-secondary" />
-        </div>
+        <RepoCommitRow
+            owner={owner}
+            repo={repo}
+            provider={provider}
+            commit={latestCommit ?? null}
+            author={latestCommit?.author ?? null}
+            historyHref={`/${provider}/${owner}/${repo}/commits/${encodeURIComponent(selectedRef)}`}
+            historyLabel={
+                latestCommit
+                    ? `${commitCount.toLocaleString()} ${
+                          commitCount === 1 ? "commit" : "commits"
+                      }`
+                    : undefined
+            }
+            status={
+                statusContexts.length > 0 ? (
+                    <StatusChecksHoverCard
+                        items-center
+                        justify-between
+                        border-border
+                        border-b
+                        bg-surface-elevated
+                        px-4
+                        py-3
+                        contexts={statusContexts}
+                        className="size-3.5"
+                    />
+                ) : checksFetching ? (
+                    <div className="size-3.5 shrink-0" aria-hidden />
+                ) : null
+            }
+        />
     );
 }
 

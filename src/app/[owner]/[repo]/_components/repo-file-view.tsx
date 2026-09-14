@@ -1,13 +1,13 @@
 "use client";
 
-import { CopyIcon, DownloadIcon, HistoryIcon } from "lucide-react";
+import { CopyIcon, DownloadIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { CopyButton } from "~/components/ui/copy-button";
 import { api } from "~/trpc/react";
-import { formatRelativeTime } from "~/utils";
 import { highlightLines } from "~/utils/highlight";
-import { domain, type Provider, rawUrl, treeHref } from "~/utils/provider-url";
+import { type Provider, rawUrl, treeHref } from "~/utils/provider-url";
+import { RepoCommitRow } from "./repo-commit-row";
 import { isFileEntry } from "./repo-contents";
 import { RepoPathNotFound } from "./repo-path-not-found";
 
@@ -89,51 +89,26 @@ export function RepoFileView({
 
     return (
         <>
-            <div className="flex min-h-12 flex-wrap items-center gap-3 border-border border-b px-4 py-3">
-                {commit ? (
-                    <a
-                        href={`https://${domain(provider)}/${owner}/${repo}/commit/${commit.sha}`}
-                        className="min-w-0 flex-1 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-                    >
-                        {commit.message}
-                    </a>
-                ) : (
-                    <span className="min-w-0 flex-1 text-sm text-text-tertiary">
-                        Loading latest commit...
-                    </span>
+            <RepoCommitRow
+                owner={owner}
+                repo={repo}
+                provider={provider}
+                commit={commit}
+                historyHref={fileHistoryUrl(
+                    provider,
+                    owner,
+                    repo,
+                    selectedRef,
+                    path,
                 )}
-                {commit && (
-                    <span className="shrink-0 font-mono text-text-tertiary text-xs">
-                        {commit.sha.slice(0, 7)}
-                    </span>
-                )}
-                {commit?.committedDate && (
-                    <span
-                        className="shrink-0 text-text-tertiary text-xs"
-                        title={new Date(commit.committedDate).toLocaleString()}
-                    >
-                        {formatRelativeTime(commit.committedDate)}
-                    </span>
-                )}
-                {entry?.type === "file" && (
-                    <span className="shrink-0 text-text-tertiary text-xs">
-                        {formatFileSize(entry.size)}
-                    </span>
-                )}
-                <a
-                    href={fileHistoryUrl(
-                        provider,
-                        owner,
-                        repo,
-                        selectedRef,
-                        path,
-                    )}
-                    className="inline-flex shrink-0 items-center gap-1 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
-                >
-                    <HistoryIcon className="h-3.5 w-3.5" />
-                    History
-                </a>
-            </div>
+                trailing={
+                    entry?.type === "file" ? (
+                        <span className="shrink-0 text-text-tertiary text-xs">
+                            {formatFileSize(entry.size)}
+                        </span>
+                    ) : null
+                }
+            />
 
             <div className="flex min-h-10 items-center justify-between border-border border-b bg-surface-elevated px-4 py-1.5">
                 <span className="text-text-tertiary text-xs">

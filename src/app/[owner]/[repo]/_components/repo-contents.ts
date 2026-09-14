@@ -14,3 +14,12 @@ export function isFileEntry(
     const [entry] = contents;
     return entry !== undefined && entry.path === path && entry.type !== "dir";
 }
+
+/** Directory listing order: directories first, then files, each alphabetical. */
+export function sortRepoContents(items: RepoContentItem[]): RepoContentItem[] {
+    return [...items].sort((a, b) => {
+        if (a.type === "dir" && b.type !== "dir") return -1;
+        if (a.type !== "dir" && b.type === "dir") return 1;
+        return a.name.localeCompare(b.name);
+    });
+}

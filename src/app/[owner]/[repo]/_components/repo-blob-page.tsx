@@ -2,6 +2,7 @@
 
 import type { Provider } from "~/utils/provider-url";
 import { RepoBreadcrumb } from "./repo-breadcrumb";
+import { RepoContentCard } from "./repo-content-card";
 import { RepoFileView, RepoFileViewSkeleton } from "./repo-file-view";
 import { RepoPageBody } from "./repo-page-body";
 import type { RepoPageData } from "./repo-page-types";
@@ -33,7 +34,7 @@ export function RepoBlobPage({
             contentFallback={<RepoFileViewSkeleton />}
         >
             {() => (
-                <div className="overflow-hidden rounded-xl border border-border bg-surface">
+                <RepoContentCard>
                     <RepoBreadcrumb
                         owner={owner}
                         repo={repo}
@@ -48,7 +49,7 @@ export function RepoBlobPage({
                         selectedRef={selectedRef}
                         path={path}
                     />
-                </div>
+                </RepoContentCard>
             )}
         </RepoPageBody>
     );
