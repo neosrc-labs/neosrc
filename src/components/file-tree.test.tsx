@@ -6,7 +6,7 @@ import {
     type FileNode,
     highlightMatch,
     pruneTree,
-} from "./file-tree";
+} from "~/components/file-tree";
 
 function file(filename: string, status = "modified") {
     return {
