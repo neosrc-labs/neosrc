@@ -7,7 +7,7 @@
         globalThis.NEOSRC_ROUTE_BUNDLE?.exitParam ?? "neosrc_exit";
     const EXTENSION_HEADER =
         globalThis.NEOSRC_ROUTE_BUNDLE?.header ?? "x-neosrc-extension";
-    const SUPPORTED_TABLE_VERSION = 1;
+    const SUPPORTED_TABLE_VERSION = 2;
     const MAX_RULES = 64;
     const MAX_PATTERN_LENGTH = 200;
     const MAX_SESSION_RULES = 200;
@@ -47,9 +47,8 @@
 
     function isSafePattern(pattern) {
         if (typeof pattern !== "string") return false;
-        if (pattern.length === 0 || pattern.length > MAX_PATTERN_LENGTH) {
-            return false;
-        }
+        const tooLong = pattern.length > MAX_PATTERN_LENGTH;
+        if (pattern.length === 0 || tooLong) return false;
         if (!pattern.startsWith("^") || !pattern.endsWith("$")) return false;
         // RE2 (declarativeNetRequest) has no lookarounds or backreferences, and
         // a quantifier on a group is how a fetched table could make a page hang.
@@ -84,63 +83,66 @@
     function sanitizeTable(candidate) {
         if (!candidate || typeof candidate !== "object") return null;
         if (candidate.version !== SUPPORTED_TABLE_VERSION) return null;
-        if (
-            !Array.isArray(candidate.platforms) ||
-            !Array.isArray(candidate.rules)
-        ) {
-            return null;
-        }
-        if (
-            candidate.rules.length === 0 ||
-            candidate.rules.length > MAX_RULES
-        ) {
-            return null;
-        }
+        if (!Array.isArray(candidate.platforms)) return null;
+        if (!Array.isArray(candidate.rules)) return null;
+        const ruleCount = candidate.rules.length;
+        if (ruleCount === 0 || ruleCount > MAX_RULES) return null;
 
         const hosts = allowedHosts();
         const platforms = [];
         for (const platform of candidate.platforms) {
             if (!platform || typeof platform !== "object") return null;
-            if (typeof platform.host !== "string") return null;
-            if (!hosts.includes(platform.host)) return null;
-            if (typeof platform.provider !== "string") return null;
-            if (!isStringArray(platform.reserved)) return null;
-            platforms.push({
-                host: platform.host,
-                provider: platform.provider,
-                reserved: platform.reserved,
-            });
+            const { host, provider, reserved } = platform;
+            if (typeof host !== "string") return null;
+            if (!hosts.includes(host)) return null;
+            if (typeof provider !== "string") return null;
+            if (!isStringArray(reserved)) return null;
+            platforms.push({ host, provider, reserved });
         }
         if (platforms.length === 0) return null;
 
         const known = new Set(platforms.map((p) => p.host));
         const rules = [];
         for (const rule of candidate.rules) {
-            if (!rule || typeof rule !== "object") return null;
-            if (typeof rule.id !== "string" || rule.id.length === 0)
-                return null;
-            if (typeof rule.host !== "string" || !known.has(rule.host)) {
-                return null;
-            }
-            if (typeof rule.provider !== "string") return null;
-            if (!isSafePattern(rule.pattern)) return null;
-            const groups = countGroups(rule.pattern);
-            if (groups === 0) return null;
-            if (!isSafeTemplate(rule.to, groups)) return null;
-            if (!isSafeTemplate(rule.external, groups)) return null;
-            rules.push({
-                id: rule.id,
-                host: rule.host,
-                provider: rule.provider,
-                pattern: rule.pattern,
-                to: rule.to,
-                external: rule.external,
-                query: rule.query === true,
-                hash: rule.hash === true,
-            });
+            const sanitized = sanitizeRule(rule, known);
+            if (!sanitized) return null;
+            rules.push(sanitized);
         }
 
         return { version: SUPPORTED_TABLE_VERSION, platforms, rules };
+    }
+
+    /**
+     * Accepts one rule of a fetched table, or null when it is malformed.
+     */
+    function sanitizeRule(rule, known) {
+        if (!rule || typeof rule !== "object") return null;
+        if (typeof rule.id !== "string" || rule.id.length === 0) return null;
+        if (typeof rule.host !== "string" || !known.has(rule.host)) return null;
+        if (typeof rule.provider !== "string") return null;
+        if (!isSafePattern(rule.pattern)) return null;
+        const groups = countGroups(rule.pattern);
+        if (groups === 0) return null;
+        if (!isSafeTemplate(rule.to, groups)) return null;
+        if (!isSafeTemplate(rule.external, groups)) return null;
+        const tailGroup = rule.tailGroup;
+        const tailInRange =
+            tailGroup === undefined ||
+            (Number.isInteger(tailGroup) &&
+                tailGroup >= 1 &&
+                tailGroup <= groups);
+        if (!tailInRange) return null;
+        return {
+            id: rule.id,
+            host: rule.host,
+            provider: rule.provider,
+            pattern: rule.pattern,
+            to: rule.to,
+            external: rule.external,
+            query: rule.query === true,
+            hash: rule.hash === true,
+            tailGroup,
+        };
     }
 
     function bakedTable() {

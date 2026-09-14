@@ -179,6 +179,18 @@ test("covers the pages Neosrc serves and keeps the rest on GitHub", async () => 
             "https://github.com/acme/widget/commits/main",
             "https://neosrc.dev/gh/acme/widget/commits/main",
         ],
+        [
+            "https://github.com/acme/widget/tree/main",
+            "https://neosrc.dev/gh/acme/widget/tree/main",
+        ],
+        [
+            "https://github.com/acme/widget/tree/main/src",
+            "https://neosrc.dev/gh/acme/widget/tree/main/src",
+        ],
+        [
+            "https://github.com/acme/widget/blob/main/README.md",
+            "https://neosrc.dev/gh/acme/widget/blob/main/README.md",
+        ],
     ];
 
     for (const [url, target] of covered) {
@@ -188,8 +200,6 @@ test("covers the pages Neosrc serves and keeps the rest on GitHub", async () => 
     }
 
     const uncovered = [
-        "https://github.com/acme/widget/tree/main/src",
-        "https://github.com/acme/widget/blob/main/README.md",
         "https://github.com/acme/widget/pull/12/checks",
         "https://github.com/settings/profile",
     ];
@@ -277,8 +287,10 @@ test("returns an un-servable page to GitHub", async () => {
 });
 
 test("leaves for Neosrc on a link click rather than routing in GitHub", async () => {
-    const page = await open("https://github.com/acme/widget/tree/main");
-    expect(page.url()).toBe("https://github.com/acme/widget/tree/main");
+    // Any path no rule claims keeps the page on GitHub; the stub serves it with
+    // the same markup, including the pull link.
+    const page = await open("https://github.com/acme/widget/releases");
+    expect(page.url()).toBe("https://github.com/acme/widget/releases");
 
     await page.click("#pull-link");
 
@@ -287,7 +299,7 @@ test("leaves for Neosrc on a link click rather than routing in GitHub", async ()
 });
 
 test("follows an in-page Turbo navigation", async () => {
-    const page = await open("https://github.com/acme/widget/tree/main");
+    const page = await open("https://github.com/acme/widget/releases");
 
     await page.evaluate(() => {
         window.history.pushState({}, "", "/acme/widget/pull/42");
