@@ -54,7 +54,7 @@ function fns<T extends string[]>(...names: T) {
 vi.mock("~/server/github", () => ({
     ...fns(
         "deleteRepoSubscription",
-        "getCachedDocFileContent",
+        "getCachedFileContent",
         "getCachedRepo",
         "getCachedRepoContributors",
         "getCachedRepoDocFileNames",
