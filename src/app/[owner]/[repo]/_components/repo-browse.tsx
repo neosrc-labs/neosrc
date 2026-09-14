@@ -3,7 +3,7 @@
 import { Fzf } from "fzf";
 import { GitBranchIcon, HistoryIcon, Search, TagIcon, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
     mapChecksListToStatusContexts,
     StatusChecksHoverCard,
@@ -24,38 +24,42 @@ import { FileTypeIcon } from "./file-type-icon";
 import { ForkSyncRow } from "./fork-sync-row";
 import { RefSelector } from "./ref-selector";
 
-interface RepoFileTableProps {
+interface RepoBrowseProps {
     owner: string;
     repo: string;
     provider: Provider;
-    defaultBranch: string;
-    isFork: boolean;
-    parentFullName: string | null;
-    parentDefaultBranch: string | null;
+    /** Branch or tag being listed. Controlled by the caller. */
+    ref: string;
+    /** Repo-relative directory path; "" is the repo root. */
+    path: string;
+    onSelectRef: (ref: string) => void;
+    isFork?: boolean;
+    parentFullName?: string | null;
+    parentDefaultBranch?: string | null;
+    /** Rendered below the card once the listing resolves. */
+    children?: (contents: RepoContentItem[]) => ReactNode;
 }
 
-export function RepoFileTable({
+export function RepoBrowse({
     owner,
     repo,
     provider,
-    defaultBranch,
+    ref,
+    path,
+    onSelectRef,
     isFork,
     parentFullName,
     parentDefaultBranch,
-}: RepoFileTableProps) {
-    const [selectedBranch, setSelectedBranch] = useState(defaultBranch);
+    children,
+}: RepoBrowseProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [hasRequestedTree, setHasRequestedTree] = useState(false);
-
-    useEffect(() => {
-        setSelectedBranch(defaultBranch);
-    }, [defaultBranch]);
 
     const { data: latestCommit } = api.repos.getLatestCommit.useQuery({
         provider,
         owner,
         repo,
-        ref: selectedBranch,
+        ref,
     });
 
     const { data: contents, isLoading: contentsLoading } =
@@ -63,7 +67,8 @@ export function RepoFileTable({
             provider,
             owner,
             repo,
-            ref: selectedBranch,
+            ref,
+            path: path || undefined,
         });
 
     const sortedContents = useMemo(() => {
@@ -86,7 +91,7 @@ export function RepoFileTable({
                 provider,
                 owner,
                 repo,
-                ref: selectedBranch,
+                ref,
                 paths,
             },
             { enabled: paths.length > 0 },
@@ -99,7 +104,7 @@ export function RepoFileTable({
             provider,
             owner,
             repo,
-            ref: selectedBranch,
+            ref,
         },
         { enabled: hasRequestedTree },
     );
@@ -116,75 +121,125 @@ export function RepoFileTable({
     }, [fileTree, searchQuery, isSearchActive]);
 
     return (
-        <div className="overflow-hidden rounded-xl border border-border bg-surface">
-            <FileTableHeader
-                owner={owner}
-                repo={repo}
-                provider={provider}
-                selectedBranch={selectedBranch}
-                setSelectedBranch={setSelectedBranch}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                setHasRequestedTree={setHasRequestedTree}
-            />
-            <div>
-                {isSearchActive ? (
-                    !searchResults?.length ? (
-                        <div className="p-8 text-center text-sm text-text-tertiary">
-                            No files matching &quot;{searchQuery}&quot;
-                        </div>
-                    ) : (
-                        <SearchResultsTable searchResults={searchResults} />
-                    )
-                ) : (
-                    <>
-                        {latestCommit ? (
-                            <CommitRow
-                                owner={owner}
-                                repo={repo}
-                                provider={provider}
-                                latestCommit={latestCommit}
-                                selectedBranch={selectedBranch}
-                            />
-                        ) : (
-                            <CommitRowSkeleton />
-                        )}
-                        {contentsLoading || fileCommitsLoading ? (
-                            <TableSkeleton />
-                        ) : sortedContents.length === 0 ? (
+        <>
+            <div
+                data-probe-ref={ref}
+                className="overflow-hidden rounded-xl border border-border bg-surface"
+            >
+                <FileTableHeader
+                    owner={owner}
+                    repo={repo}
+                    provider={provider}
+                    selectedBranch={ref}
+                    setSelectedBranch={onSelectRef}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    setHasRequestedTree={setHasRequestedTree}
+                />
+                <div>
+                    {isSearchActive ? (
+                        !searchResults?.length ? (
                             <div className="p-8 text-center text-sm text-text-tertiary">
-                                This directory is empty.
+                                No files matching &quot;{searchQuery}&quot;
                             </div>
                         ) : (
-                            <>
-                                {isFork &&
-                                    parentFullName &&
-                                    parentDefaultBranch &&
-                                    provider !== "cb" && (
-                                        <ForkSyncRow
-                                            owner={owner}
-                                            repo={repo}
-                                            parentFullName={parentFullName}
-                                            defaultBranch={defaultBranch}
-                                            parentDefaultBranch={
-                                                parentDefaultBranch
-                                            }
-                                        />
-                                    )}
-                                <FileTable
+                            <SearchResultsTable searchResults={searchResults} />
+                        )
+                    ) : (
+                        <>
+                            {latestCommit ? (
+                                <CommitRow
                                     owner={owner}
                                     repo={repo}
                                     provider={provider}
-                                    selectedBranch={selectedBranch}
-                                    sortedContents={sortedContents}
-                                    fileCommits={fileCommits}
+                                    latestCommit={latestCommit}
+                                    ref={ref}
                                 />
-                            </>
-                        )}
-                    </>
-                )}
+                            ) : (
+                                <CommitRowSkeleton />
+                            )}
+                            {contentsLoading || fileCommitsLoading ? (
+                                <TableSkeleton />
+                            ) : sortedContents.length === 0 ? (
+                                <div className="p-8 text-center text-sm text-text-tertiary">
+                                    This directory is empty.
+                                </div>
+                            ) : (
+                                <>
+                                    {isFork &&
+                                        parentFullName &&
+                                        parentDefaultBranch &&
+                                        provider !== "cb" && (
+                                            <ForkSyncRow
+                                                owner={owner}
+                                                repo={repo}
+                                                parentFullName={parentFullName}
+                                                defaultBranch={ref}
+                                                parentDefaultBranch={
+                                                    parentDefaultBranch
+                                                }
+                                            />
+                                        )}
+                                    <FileTable
+                                        owner={owner}
+                                        repo={repo}
+                                        provider={provider}
+                                        ref={ref}
+                                        sortedContents={sortedContents}
+                                        fileCommits={fileCommits}
+                                    />
+                                </>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
-        </div>
+            {children?.(sortedContents)}
+        </>
+    );
+}
+
+interface RepoBrowseRootProps {
+    owner: string;
+    repo: string;
+    provider: Provider;
+    defaultBranch: string;
+    isFork: boolean;
+    parentFullName: string | null;
+    parentDefaultBranch: string | null;
+}
+
+/**
+ * Repo-root browser that owns the listed ref, for pages whose URL carries no
+ * branch. The tree page drives `RepoBrowse` from the URL instead.
+ */
+export function RepoBrowseRoot({
+    owner,
+    repo,
+    provider,
+    defaultBranch,
+    isFork,
+    parentFullName,
+    parentDefaultBranch,
+}: RepoBrowseRootProps) {
+    const [ref, setRef] = useState(defaultBranch);
+
+    useEffect(() => {
+        setRef(defaultBranch);
+    }, [defaultBranch]);
+
+    return (
+        <RepoBrowse
+            owner={owner}
+            repo={repo}
+            provider={provider}
+            ref={ref}
+            path=""
+            onSelectRef={setRef}
+            isFork={isFork}
+            parentFullName={parentFullName}
+            parentDefaultBranch={parentDefaultBranch}
+        />
     );
 }
 
@@ -192,14 +247,14 @@ function FileTable({
     owner,
     repo,
     provider,
-    selectedBranch,
+    ref,
     sortedContents,
     fileCommits,
 }: {
     owner: string;
     repo: string;
     provider: Provider;
-    selectedBranch: string;
+    ref: string;
     sortedContents: RepoContentItem[];
     fileCommits: Record<string, FileLatestCommit | null> | undefined;
 }) {
@@ -214,10 +269,10 @@ function FileTable({
                         .join("/");
                     const href =
                         provider === "cb"
-                            ? `${repoUrl(provider, owner, repo)}/src/branch/${selectedBranch}/${encodedPath}`
+                            ? `${repoUrl(provider, owner, repo)}/src/branch/${ref}/${encodedPath}`
                             : isDir
-                              ? `${repoUrl(provider, owner, repo)}/tree/${selectedBranch}/${encodedPath}`
-                              : `${repoUrl(provider, owner, repo)}/blob/${selectedBranch}/${encodedPath}`;
+                              ? `${repoUrl(provider, owner, repo)}/tree/${ref}/${encodedPath}`
+                              : `${repoUrl(provider, owner, repo)}/blob/${ref}/${encodedPath}`;
                     const iconName = isDir
                         ? getFolderIconName(item.name)
                         : getFileIconName(item.name);
@@ -316,15 +371,12 @@ function SearchResultsTable({
     );
 }
 
-interface RepoFileTableSkeletonProps {
+interface RepoBrowseSkeletonProps {
     owner: string;
     repo: string;
 }
 
-export function RepoFileTableSkeleton({
-    owner,
-    repo,
-}: RepoFileTableSkeletonProps) {
+export function RepoBrowseSkeleton({ owner, repo }: RepoBrowseSkeletonProps) {
     return (
         <div className="overflow-hidden rounded-xl border border-border bg-surface">
             <FileTableHeaderSkeleton owner={owner} repo={repo} />
@@ -472,13 +524,13 @@ function CommitRow({
     repo,
     provider,
     latestCommit,
-    selectedBranch,
+    ref,
 }: {
     owner: string;
     repo: string;
     provider: Provider;
     latestCommit: RepoLatestCommit;
-    selectedBranch: string;
+    ref: string;
 }) {
     const { data: checks, isFetching: checksFetching } =
         api.checks.list.useQuery(
@@ -491,7 +543,7 @@ function CommitRow({
         [checks],
     );
     const baseUrl = repoUrl(provider, owner, repo);
-    const commitsHref = `/${provider === "gh" ? "gh" : "cb"}/${owner}/${repo}/commits/${selectedBranch}`;
+    const commitsHref = `/${provider === "gh" ? "gh" : "cb"}/${owner}/${repo}/commits/${encodeURIComponent(ref)}`;
     return (
         <div className="flex min-h-12 items-center gap-3 border-border border-b px-4 py-3">
             <div className="[&_img]:h-5 [&_img]:w-5 [&_span]:text-sm">

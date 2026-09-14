@@ -3,8 +3,8 @@
 import { Async } from "~/components/async";
 import type { Provider } from "~/utils/provider-url";
 import { RecentlyPushedBanner } from "./recently-pushed-banner";
+import { RepoBrowseRoot, RepoBrowseSkeleton } from "./repo-browse";
 import { RepoDocFiles, RepoDocFilesSkeleton } from "./repo-doc-files";
-import { RepoFileTable, RepoFileTableSkeleton } from "./repo-file-table";
 import { RepoPageBody } from "./repo-page-body";
 import type { RepoPageData } from "./repo-page-types";
 
@@ -26,9 +26,7 @@ export function RepoCodePage({
             owner={owner}
             repo={repo}
             provider={provider}
-            contentFallback={
-                <RepoFileTableSkeleton owner={owner} repo={repo} />
-            }
+            contentFallback={<RepoBrowseSkeleton owner={owner} repo={repo} />}
         >
             {(repoData) => (
                 <>
@@ -38,7 +36,7 @@ export function RepoCodePage({
                         provider={provider}
                     />
 
-                    <RepoFileTable
+                    <RepoBrowseRoot
                         key={`${owner}/${repo}`}
                         owner={owner}
                         repo={repo}
