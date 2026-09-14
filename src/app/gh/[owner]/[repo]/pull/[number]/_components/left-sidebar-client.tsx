@@ -2,14 +2,18 @@
 
 import { Search, X } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { use, useEffect, useMemo, useRef, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Async } from "~/components/async";
+import {
+    buildFileTree,
+    FileTree,
+    FileTreeSkeleton,
+} from "~/components/file-tree";
 import { useSidebar } from "~/components/sidebar-context";
 import { NavItem, NavMenu } from "~/components/ui/nav-menu";
 import { useFiles } from "~/hooks/files";
 import type { PullsGetResponseData } from "~/server/github";
 import { NULL_PROMISE } from "~/utils/promise";
-import { buildFileTree, FileTree, FileTreeSkeleton } from "./file-tree";
 import { ReviewThreadsSection } from "./review-threads-section";
 import { StackSection } from "./stack-section";
 
@@ -91,7 +95,19 @@ function SidebarFileTree({
 
     const [searchOpen, setSearchOpen] = useState(false);
     const [search, setSearch] = useState("");
+    const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(
+        new Set(),
+    );
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const togglePath = useCallback((path: string) => {
+        setCollapsedPaths((previous) => {
+            const next = new Set(previous);
+            if (next.has(path)) next.delete(path);
+            else next.add(path);
+            return next;
+        });
+    }, []);
 
     return (
         <div className="flex h-full flex-col">
@@ -151,9 +167,13 @@ function SidebarFileTree({
                 )}
                 {files.length > 0 ? (
                     <FileTree
-                        basePath={basePath}
-                        files={fileTree}
+                        fileHref={(node) =>
+                            `${basePath}/changes#${node.path.replace(/\//g, "-")}`
+                        }
                         filter={search || undefined}
+                        isExpanded={(nodePath) => !collapsedPaths.has(nodePath)}
+                        nodes={fileTree}
+                        onToggle={togglePath}
                     />
                 ) : isLoading ? (
                     <FileTreeSkeleton />

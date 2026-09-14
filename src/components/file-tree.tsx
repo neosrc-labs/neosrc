@@ -2,7 +2,8 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import Image from "next/image";
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import { cn } from "~/lib/utils";
 import type { PullRequestFile } from "~/server/github";
 import { getFileIconName, getFolderIconName } from "~/utils/icons";
@@ -17,6 +18,8 @@ export interface FileNode {
     status?: string;
     additions?: number;
     deletions?: number;
+    /** Placeholder row while a directory's children load. */
+    isLoading?: boolean;
 }
 
 interface FlatItem {
@@ -26,14 +29,14 @@ interface FlatItem {
 
 function flattenFileTree(
     files: FileNode[],
-    collapsedPaths: Set<string>,
+    isExpanded: (path: string) => boolean,
 ): FlatItem[] {
     const result: FlatItem[] = [];
 
     function walk(nodes: FileNode[], depth: number) {
         for (const node of nodes) {
             result.push({ node, depth });
-            if (node.children && !collapsedPaths.has(node.path)) {
+            if (node.children && isExpanded(node.path)) {
                 walk(node.children, depth + 1);
             }
         }
@@ -200,30 +203,39 @@ export function highlightMatch(text: string, query: string): ReactNode {
     return parts;
 }
 
-export function FileTree({
-    files,
-    basePath,
-    filter,
-}: {
-    files: FileNode[];
-    basePath: string;
+interface FileTreeProps {
+    nodes: FileNode[];
+    /** Whether a directory's children are listed. */
+    isExpanded: (path: string) => boolean;
+    onToggle: (path: string) => void;
+    /** Link target for a file node. */
+    fileHref: (node: FileNode) => string;
+    /** When set, a directory's name links here; the chevron still toggles. */
+    dirHref?: (node: FileNode) => string;
+    /** Row rendered as the current location; scrolled into view when it changes. */
+    activePath?: string;
     filter?: string;
-}) {
-    const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(
-        new Set(),
-    );
+}
 
+export function FileTree({
+    nodes,
+    isExpanded,
+    onToggle,
+    fileHref,
+    dirHref,
+    activePath,
+    filter,
+}: FileTreeProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const displayFiles = useMemo(
-        () => (filter ? pruneTree(files, filter) : files),
-        [files, filter],
+        () => (filter ? pruneTree(nodes, filter) : nodes),
+        [nodes, filter],
     );
 
     const flatItems = useMemo(
-        () =>
-            flattenFileTree(displayFiles, filter ? new Set() : collapsedPaths),
-        [displayFiles, collapsedPaths, filter],
+        () => flattenFileTree(displayFiles, filter ? () => true : isExpanded),
+        [displayFiles, isExpanded, filter],
     );
 
     const virtualizer = useVirtualizer({
@@ -233,17 +245,19 @@ export function FileTree({
         overscan: 10,
     });
 
-    const toggleFolder = useCallback((path: string) => {
-        setCollapsedPaths((prev) => {
-            const next = new Set(prev);
-            if (next.has(path)) {
-                next.delete(path);
-            } else {
-                next.add(path);
-            }
-            return next;
-        });
-    }, []);
+    const activeIndex = useMemo(
+        () =>
+            activePath
+                ? flatItems.findIndex((item) => item.node.path === activePath)
+                : -1,
+        [flatItems, activePath],
+    );
+
+    useEffect(() => {
+        if (activeIndex >= 0) {
+            virtualizer.scrollToIndex(activeIndex, { align: "auto" });
+        }
+    }, [activeIndex, virtualizer]);
 
     return (
         <div ref={scrollRef} className="h-full overflow-y-auto">
@@ -269,12 +283,14 @@ export function FileTree({
                             }}
                         >
                             <FileTreeNode
-                                basePath={basePath}
+                                activePath={activePath}
                                 depth={item.depth}
+                                dirHref={dirHref}
+                                fileHref={fileHref}
                                 filter={filter}
-                                isCollapsed={collapsedPaths.has(item.node.path)}
+                                isExpanded={isExpanded(item.node.path)}
                                 node={item.node}
-                                onToggle={toggleFolder}
+                                onToggle={onToggle}
                             />
                         </div>
                     );
@@ -287,20 +303,35 @@ export function FileTree({
 function FileTreeNode({
     node,
     depth,
-    basePath,
-    filter,
-    isCollapsed,
+    isExpanded,
     onToggle,
+    fileHref,
+    dirHref,
+    filter,
+    activePath,
 }: {
     node: FileNode;
     depth: number;
-    basePath: string;
-    filter?: string;
-    isCollapsed: boolean;
+    isExpanded: boolean;
     onToggle: (path: string) => void;
+    fileHref: (node: FileNode) => string;
+    dirHref?: (node: FileNode) => string;
+    filter?: string;
+    activePath?: string;
 }) {
     const paddingLeft = depth * 12 + 8 + (node.isFile ? 8 : 0);
-    const fileId = node.path.replace(/\//g, "-");
+    const isActive = activePath === node.path;
+
+    if (node.isLoading) {
+        return (
+            <div
+                className="flex items-center gap-1.5 rounded px-2 py-1"
+                style={{ paddingLeft: `${paddingLeft}px` }}
+            >
+                <div className="h-4 w-28 animate-pulse rounded bg-surface-secondary" />
+            </div>
+        );
+    }
 
     if (node.isFile) {
         const iconName = getFileIconName(node.name);
@@ -320,8 +351,11 @@ function FileTreeNode({
                     : undefined;
         return (
             <a
-                className="flex items-center gap-1.5 truncate rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                href={`${basePath}/changes#${fileId}`}
+                className={cn(
+                    "flex items-center gap-1.5 truncate rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-surface-tertiary",
+                    isActive && "bg-surface-secondary",
+                )}
+                href={fileHref(node)}
                 style={{ paddingLeft: `${paddingLeft}px` }}
             >
                 <Image
@@ -346,43 +380,86 @@ function FileTreeNode({
         );
     }
 
-    return (
-        <button
-            className="flex w-full cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-            onClick={() => onToggle(node.path)}
-            style={{ paddingLeft: `${paddingLeft}px` }}
-            type="button"
-        >
-            <svg
-                className={`h-3 w-3 flex-shrink-0 transition-transform ${isCollapsed ? "-rotate-90" : "rotate-0"}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+    const folderIcon = (
+        <Image
+            alt=""
+            className="h-4 w-4 flex-shrink-0"
+            loading="lazy"
+            src={`/material-icons/${getFolderIconName(node.name, isExpanded)}.svg`}
+            width={16}
+            height={16}
+            onError={(e) => {
+                (e.target as HTMLImageElement).src = `/material-icons/folder${
+                    isExpanded ? "-open" : ""
+                }.svg`;
+            }}
+        />
+    );
+
+    const label = filter ? highlightMatch(node.name, filter) : node.name;
+
+    if (!dirHref) {
+        return (
+            <button
+                className={cn(
+                    "flex w-full cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-surface-tertiary",
+                    isActive && "bg-surface-secondary",
+                )}
+                onClick={() => onToggle(node.path)}
+                style={{ paddingLeft: `${paddingLeft}px` }}
+                type="button"
             >
-                <title>Toggle folder</title>
-                <path
-                    d="M19 9l-7 7-7-7"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                />
-            </svg>
-            <Image
-                alt=""
-                className="h-4 w-4 flex-shrink-0"
-                loading="lazy"
-                src={`/material-icons/${getFolderIconName(node.name, !isCollapsed)}.svg`}
-                width={16}
-                height={16}
-                onError={(e) => {
-                    (e.target as HTMLImageElement).src =
-                        `/material-icons/folder${isCollapsed ? "" : "-open"}.svg`;
-                }}
+                <ChevronIcon isExpanded={isExpanded} />
+                {folderIcon}
+                <span className="truncate">{label}</span>
+            </button>
+        );
+    }
+
+    return (
+        <div
+            className={cn(
+                "flex items-center gap-1.5 rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-surface-tertiary",
+                isActive && "bg-surface-secondary",
+            )}
+            style={{ paddingLeft: `${paddingLeft}px` }}
+        >
+            <button
+                aria-expanded={isExpanded}
+                aria-label={`${isExpanded ? "Collapse" : "Expand"} ${node.name}`}
+                className="flex-shrink-0 cursor-pointer rounded p-0.5 transition-colors hover:bg-surface-tertiary"
+                onClick={() => onToggle(node.path)}
+                type="button"
+            >
+                <ChevronIcon isExpanded={isExpanded} />
+            </button>
+            <Link
+                className="flex min-w-0 flex-1 items-center gap-1.5"
+                href={dirHref(node)}
+            >
+                {folderIcon}
+                <span className="truncate">{label}</span>
+            </Link>
+        </div>
+    );
+}
+
+function ChevronIcon({ isExpanded }: { isExpanded: boolean }) {
+    return (
+        <svg
+            className={`h-3 w-3 flex-shrink-0 transition-transform ${isExpanded ? "rotate-0" : "-rotate-90"}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <title>Toggle folder</title>
+            <path
+                d="M19 9l-7 7-7-7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
             />
-            <span className="truncate">
-                {filter ? highlightMatch(node.name, filter) : node.name}
-            </span>
-        </button>
+        </svg>
     );
 }
 
