@@ -1,0 +1,55 @@
+"use client";
+
+import type { Provider } from "~/utils/provider-url";
+import { RepoBreadcrumb } from "./repo-breadcrumb";
+import { RepoFileView, RepoFileViewSkeleton } from "./repo-file-view";
+import { RepoPageBody } from "./repo-page-body";
+import type { RepoPageData } from "./repo-page-types";
+
+interface RepoBlobPageProps extends RepoPageData {
+    owner: string;
+    repo: string;
+    provider: Provider;
+    /** Branch or tag taken from the URL. */
+    selectedRef: string;
+    /** Repo-relative file path. */
+    path: string;
+}
+
+export function RepoBlobPage({
+    owner,
+    repo,
+    provider,
+    selectedRef,
+    path,
+    ...data
+}: RepoBlobPageProps) {
+    return (
+        <RepoPageBody
+            {...data}
+            owner={owner}
+            repo={repo}
+            provider={provider}
+            contentFallback={<RepoFileViewSkeleton />}
+        >
+            {() => (
+                <div className="overflow-hidden rounded-xl border border-border bg-surface">
+                    <RepoBreadcrumb
+                        owner={owner}
+                        repo={repo}
+                        selectedRef={selectedRef}
+                        provider={provider}
+                        path={path}
+                    />
+                    <RepoFileView
+                        owner={owner}
+                        repo={repo}
+                        provider={provider}
+                        selectedRef={selectedRef}
+                        path={path}
+                    />
+                </div>
+            )}
+        </RepoPageBody>
+    );
+}

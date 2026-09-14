@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import { getDocFileDisplayName, getDocFileHashName } from "~/lib/doc-files";
 import { api } from "~/trpc/react";
-import type { Provider } from "~/utils/provider-url";
+import { type Provider, rawUrl } from "~/utils/provider-url";
 
 interface RepoDocFilesProps {
     owner: string;
@@ -118,10 +118,7 @@ export function RepoDocFiles({
     const docDir = activeFile?.path.includes("/")
         ? activeFile.path.slice(0, activeFile.path.lastIndexOf("/"))
         : "";
-    const imageBaseUrl =
-        (provider ?? "gh") === "cb"
-            ? `https://codeberg.org/${owner}/${repo}/raw/branch/${ref}`
-            : `https://raw.githubusercontent.com/${owner}/${repo}/${ref}`;
+    const imageBaseUrl = `${rawUrl(provider ?? "gh", owner, repo, ref, "")}${docDir ? `/${docDir}` : ""}`;
 
     return (
         <div
