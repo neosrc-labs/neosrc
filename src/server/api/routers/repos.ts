@@ -23,6 +23,7 @@ import {
     getFileTree as getCodebergFileTree,
     getLatestCommit as getCodebergLatestCommit,
     getLatestRelease as getCodebergLatestRelease,
+    getPathCommits as getCodebergPathCommits,
     getRefCounts as getCodebergRefCounts,
     getRepoContents as getCodebergRepoContents,
     getRepoLanguages as getCodebergRepoLanguages,
@@ -47,6 +48,7 @@ import {
     getForkComparison,
     getUserRepos as getGitHubUserRepos,
     getLatestRelease,
+    getPathCommits,
     getRepoBranches,
     getRepoContents,
     getRepoDeployments,
@@ -358,6 +360,33 @@ export const reposRouter = createTRPCRouter({
                 input.owner,
                 input.repo,
                 input.branch,
+            ),
+    }),
+    getPathCommits: providerQuery({
+        input: providerInput({
+            owner: z.string(),
+            repo: z.string(),
+            ref: z.string(),
+            path: z.string(),
+            limit: z.number().int().min(1).max(10).optional(),
+        }),
+        cb: ({ accessToken, input }) =>
+            getCodebergPathCommits(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.ref,
+                input.path,
+                input.limit ?? 2,
+            ),
+        gh: ({ accessToken, input }) =>
+            getPathCommits(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.ref,
+                input.path,
+                input.limit ?? 2,
             ),
     }),
     getFileLatestCommits: providerQuery({

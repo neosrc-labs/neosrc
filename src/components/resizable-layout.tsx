@@ -24,6 +24,8 @@ interface ResizableLayoutProps {
     children: ReactNode;
     rightSidebar: ReactNode;
     boxed?: boolean;
+    /** Keeps the left rail visible: it cannot be collapsed by dragging. */
+    pinnedLeft?: boolean;
 }
 
 export function ResizableLayout({
@@ -31,6 +33,7 @@ export function ResizableLayout({
     children,
     rightSidebar,
     boxed = true,
+    pinnedLeft = false,
 }: ResizableLayoutProps) {
     const { isLeftOpen, isRightOpen, toggleLeft, toggleRight } = useSidebar();
     const [leftWidth, setLeftWidth] = useState(DEFAULT_LEFT_WIDTH);
@@ -117,7 +120,10 @@ export function ResizableLayout({
                 const side = dragSideRef.current;
                 const finalWidth = currentWidthRef.current;
 
-                if (finalWidth < COLLAPSE_THRESHOLD) {
+                if (
+                    finalWidth < COLLAPSE_THRESHOLD &&
+                    !(side === "left" && pinnedLeft)
+                ) {
                     if (side === "left") {
                         toggleLeft();
                         setLeftWidth(DEFAULT_LEFT_WIDTH);
@@ -189,8 +195,12 @@ export function ResizableLayout({
                                 }}
                                 onMouseDown={handleMouseDown("left")}
                                 onDoubleClick={() => {
-                                    toggleLeft();
-                                    setLeftWidth(DEFAULT_LEFT_WIDTH);
+                                    if (pinnedLeft) {
+                                        setLeftWidth(DEFAULT_LEFT_WIDTH);
+                                    } else {
+                                        toggleLeft();
+                                        setLeftWidth(DEFAULT_LEFT_WIDTH);
+                                    }
                                 }}
                             />
                         </>

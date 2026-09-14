@@ -12,6 +12,42 @@ export function loadRepoPageData(
     repo: string,
 ): RepoPageData {
     return {
+        ...loadRepoHeaderData(provider, owner, repo),
+        about: {
+            contributorsPromise: api.repos.getContributors({
+                provider,
+                owner,
+                repo,
+            }),
+            languagesPromise: api.repos.getRepoLanguages({
+                provider,
+                owner,
+                repo,
+            }),
+            deploymentsPromise: api.repos.getDeployments({
+                provider,
+                owner,
+                repo,
+            }),
+            latestReleasePromise: api.repos.getLatestRelease({
+                provider,
+                owner,
+                repo,
+            }),
+        },
+    };
+}
+
+/**
+ * Header-only variant for views that do not render the About column, so a
+ * file or directory page costs no contributor, language or release queries.
+ */
+export function loadRepoHeaderData(
+    provider: Provider,
+    owner: string,
+    repo: string,
+): RepoPageData {
+    return {
         // The router types `defaultBranch` as nullable because the provider
         // payload can lack it; every repo the page renders has one.
         repoDataPromise: api.repos.getByOwnerAndRepo({
@@ -19,27 +55,7 @@ export function loadRepoPageData(
             owner,
             repo,
         }) as Promise<RepoData>,
-        contributorsPromise: api.repos.getContributors({
-            provider,
-            owner,
-            repo,
-        }),
         docFileNamesPromise: api.repos.getDocFileNames({
-            provider,
-            owner,
-            repo,
-        }),
-        languagesPromise: api.repos.getRepoLanguages({
-            provider,
-            owner,
-            repo,
-        }),
-        deploymentsPromise: api.repos.getDeployments({
-            provider,
-            owner,
-            repo,
-        }),
-        latestReleasePromise: api.repos.getLatestRelease({
             provider,
             owner,
             repo,

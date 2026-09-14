@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import { withStaleWhileRevalidate } from "~/server/cache";
-import { createGraphql } from "~/server/github-graphql";
+import {
+    createGraphql,
+    type GQLCommitAuthor,
+    resolveCommitAuthor,
+} from "~/server/github-graphql";
 import { createOctokit } from "./client";
 
 export interface FileLatestCommit {
@@ -120,6 +124,97 @@ async function fetchFileCommits(
     }
 
     return record;
+}
+
+export interface PathCommit {
+    sha: string;
+    message: string;
+    committedDate: string | null;
+    author: { login: string; avatarUrl: string } | null;
+}
+
+interface GqlPathCommitNode {
+    oid: string;
+    messageHeadline: string;
+    committedDate: string | null;
+    authors: { nodes: (GQLCommitAuthor | null)[] };
+}
+
+const PATH_COMMITS_QUERY = `query PathCommits($owner: String!, $repo: String!, $expression: String!, $path: String, $first: Int!) {
+  repository(owner: $owner, name: $repo) {
+    object(expression: $expression) {
+      ... on Commit {
+        history(first: $first, path: $path) {
+          nodes {
+            oid
+            messageHeadline
+            committedDate
+            authors(first: 1) {
+              nodes {
+                name
+                email
+                avatarUrl
+                user {
+                  __typename
+                  login
+                  avatarUrl
+                  url
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+/**
+ * Newest commits that touched `path` (a file or a directory), newest first.
+ * Drives the commit bar above a directory listing or a file body.
+ */
+export async function getPathCommits(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    ref: string,
+    path: string,
+    limit = 2,
+): Promise<PathCommit[]> {
+    const graphql = createGraphql(accessToken);
+
+    const result = await graphql<{
+        repository?: {
+            object?: {
+                history?: { nodes?: (GqlPathCommitNode | null)[] };
+            } | null;
+        } | null;
+    }>(PATH_COMMITS_QUERY, {
+        owner,
+        repo,
+        expression: ref,
+        path,
+        first: limit,
+    });
+
+    const nodes = result.repository?.object?.history?.nodes ?? [];
+
+    return nodes
+        .filter((node): node is GqlPathCommitNode => node !== null)
+        .map((node) => {
+            const commitAuthor = node.authors.nodes[0];
+            const author = commitAuthor
+                ? resolveCommitAuthor(commitAuthor).user
+                : null;
+            return {
+                sha: node.oid,
+                message: node.messageHeadline,
+                committedDate: node.committedDate,
+                author: author
+                    ? { login: author.login, avatarUrl: author.avatarUrl }
+                    : null,
+            };
+        });
 }
 
 export interface CodeSearchResultItem {

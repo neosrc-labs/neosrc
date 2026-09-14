@@ -1,6 +1,6 @@
 "use client";
 
-import { HistoryIcon } from "lucide-react";
+import { ChevronLeftIcon, HistoryIcon } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { UserLink } from "~/components/user-link";
@@ -25,6 +25,8 @@ interface RepoCommitRowProps {
     /** Commits page (or file history) the row links to. */
     historyHref: string;
     historyLabel?: string;
+    /** Previous commit for the row's path; omits the button when unset. */
+    previousHref?: string;
 }
 
 /**
@@ -41,6 +43,7 @@ export function RepoCommitRow({
     trailing,
     historyHref,
     historyLabel,
+    previousHref,
 }: RepoCommitRowProps) {
     if (!commit) return <RepoCommitRowSkeleton />;
 
@@ -86,6 +89,16 @@ export function RepoCommitRow({
                 </span>
             )}
             {trailing}
+            {previousHref && (
+                <Link
+                    href={previousHref}
+                    aria-label="Previous commit for this path"
+                    title="Previous commit"
+                    className="inline-flex size-6 shrink-0 items-center justify-center rounded-md border border-border text-text-secondary hover:bg-surface-secondary hover:text-text-primary"
+                >
+                    <ChevronLeftIcon className="h-3.5 w-3.5" />
+                </Link>
+            )}
             <Link
                 href={historyHref}
                 className="inline-flex shrink-0 items-center gap-1 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"

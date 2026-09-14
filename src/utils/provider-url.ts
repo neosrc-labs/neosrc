@@ -40,6 +40,21 @@ export function blobHref(
     return `/${provider}/${owner}/${repo}/blob/${encodeURIComponent(ref)}/${encodeRepoPath(path)}`;
 }
 
+/** The provider's commit-history page for `path` at `ref`. */
+export function historyUrl(
+    provider: Provider,
+    owner: string,
+    repo: string,
+    ref: string,
+    path: string,
+): string {
+    const encodedPath = encodeRepoPath(path);
+    const encodedRef = encodeURIComponent(ref);
+    return provider === "cb"
+        ? `https://codeberg.org/${owner}/${repo}/commits/branch/${encodedRef}/${encodedPath}`
+        : `https://github.com/${owner}/${repo}/commits/${encodedRef}/${encodedPath}`;
+}
+
 /** The provider's raw blob URL (githubusercontent / codeberg raw). */
 export function rawUrl(
     provider: Provider,

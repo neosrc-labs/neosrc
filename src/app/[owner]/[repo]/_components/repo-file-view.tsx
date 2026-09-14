@@ -7,8 +7,8 @@ import { CopyButton } from "~/components/ui/copy-button";
 import { api } from "~/trpc/react";
 import { highlightLines } from "~/utils/highlight";
 import { type Provider, rawUrl, treeHref } from "~/utils/provider-url";
-import { RepoCommitRow } from "./repo-commit-row";
 import { isFileEntry } from "./repo-contents";
+import { RepoPathCommitRow } from "./repo-path-commit-row";
 import { RepoPathNotFound } from "./repo-path-not-found";
 
 interface RepoFileViewProps {
@@ -46,14 +46,6 @@ export function RepoFileView({
         path,
     });
 
-    const { data: fileCommits } = api.repos.getFileLatestCommits.useQuery({
-        provider,
-        owner,
-        repo,
-        ref: selectedRef,
-        paths: [path],
-    });
-
     const isFile = isFileEntry(contents, path);
     const entry = isFile ? (contents?.[0] ?? null) : null;
     // Any other non-empty listing is the directory's children.
@@ -83,24 +75,18 @@ export function RepoFileView({
     }
 
     const name = path.split("/").pop() ?? path;
-    const commit = fileCommits?.[path] ?? null;
     const raw = rawUrl(provider, owner, repo, selectedRef, path);
     const content = fileData?.content ?? null;
 
     return (
         <>
-            <RepoCommitRow
+            <RepoPathCommitRow
                 owner={owner}
                 repo={repo}
                 provider={provider}
-                commit={commit}
-                historyHref={fileHistoryUrl(
-                    provider,
-                    owner,
-                    repo,
-                    selectedRef,
-                    path,
-                )}
+                selectedRef={selectedRef}
+                path={path}
+                view="blob"
                 trailing={
                     entry?.type === "file" ? (
                         <span className="shrink-0 text-text-tertiary text-xs">
@@ -269,20 +255,6 @@ function DownloadButton({ name, content }: { name: string; content: string }) {
 function fileExtension(name: string): string {
     const dot = name.lastIndexOf(".");
     return dot > 0 ? name.slice(dot + 1).toLowerCase() : "";
-}
-
-function fileHistoryUrl(
-    provider: Provider,
-    owner: string,
-    repo: string,
-    ref: string,
-    path: string,
-): string {
-    const encodedPath = path.split("/").map(encodeURIComponent).join("/");
-    const encodedRef = encodeURIComponent(ref);
-    return provider === "cb"
-        ? `https://codeberg.org/${owner}/${repo}/commits/branch/${encodedRef}/${encodedPath}`
-        : `https://github.com/${owner}/${repo}/commits/${encodedRef}/${encodedPath}`;
 }
 
 function formatFileSize(bytes: number): string {
