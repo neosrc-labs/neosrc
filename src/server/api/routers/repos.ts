@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import { pickDocFileNames } from "~/lib/doc-files";
 import {
     createTRPCRouter,
     protectedProcedure,
@@ -33,7 +34,6 @@ import {
 } from "~/server/codeberg";
 import type { ForkComparison } from "~/server/github";
 import {
-    DOC_FILE_PATTERNS,
     deleteRepoSubscription,
     getCachedDocFileContent,
     getCachedRepo,
@@ -43,8 +43,6 @@ import {
     getCachedRepoLanguages,
     getCachedRepoStarred,
     getCachedRepoSubscription,
-    getDocFileDisplayName,
-    getDocFileSortKey,
     getFileLatestCommits,
     getForkComparison,
     getUserRepos as getGitHubUserRepos,
@@ -446,31 +444,16 @@ export const reposRouter = createTRPCRouter({
             repo: z.string(),
             ref: z.string().optional(),
         }),
-        cb: async ({ input, accessToken }) => {
-            const items = await getCodebergRepoContents(
-                accessToken,
-                input.owner,
-                input.repo,
-                undefined,
-                input.ref,
-            );
-            const docItems = items.filter(
-                (item) =>
-                    item.type === "file" &&
-                    DOC_FILE_PATTERNS.some((p) => p.test(item.name)),
-            );
-            return docItems
-                .map((item) => ({
-                    name: item.name,
-                    path: item.path,
-                    displayName: getDocFileDisplayName(item.name),
-                }))
-                .sort((a, b) =>
-                    getDocFileSortKey(a.name).localeCompare(
-                        getDocFileSortKey(b.name),
-                    ),
-                );
-        },
+        cb: async ({ input, accessToken }) =>
+            pickDocFileNames(
+                await getCodebergRepoContents(
+                    accessToken,
+                    input.owner,
+                    input.repo,
+                    undefined,
+                    input.ref,
+                ),
+            ),
         gh: ({ accessToken, userId, input }) =>
             getCachedRepoDocFileNames(
                 accessToken,

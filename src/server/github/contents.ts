@@ -1,3 +1,9 @@
+import {
+    DOC_FILE_PATTERNS,
+    type DocFileName,
+    getDocFileSortKey,
+    pickDocFileNames,
+} from "~/lib/doc-files";
 import { withStaleWhileRevalidate } from "~/server/cache";
 import { createGraphql } from "~/server/github-graphql";
 import { createOctokit } from "./client";
@@ -55,57 +61,12 @@ export interface RepoDocFile {
     content: string;
 }
 
-export interface RepoDocFileName {
-    name: string;
-    path: string;
-    displayName: string;
-}
-
-export const DOC_FILE_PATTERNS = [
-    /^readme/i,
-    /^contributing\.md$/i,
-    /^code_of_conduct\.md$/i,
-    /^(licen[cs]e|copying)/i,
-];
-
-const PRIORITY_ORDER: Record<string, number> = {
-    readme: 0,
-    contributing: 1,
-    code_of_conduct: 2,
-};
-
-export function getDocFileSortKey(name: string): string {
-    const base = name.replace(/\.[^.]+$/, "").toLowerCase();
-    const priority = PRIORITY_ORDER[base];
-    if (priority !== undefined) {
-        return String(priority).padStart(3, "0");
-    }
-    return `zzz${name.toLowerCase()}`;
-}
-
-export function getDocFileDisplayName(name: string): string {
-    const base = name.replace(/\.[^.]+$/, "");
-    const lowerBase = base.toLowerCase();
-
-    if (/^readme/i.test(name)) return "README";
-    if (/^contributing/i.test(name)) return "Contributing";
-    if (/^code_of_conduct/i.test(name)) return "Code of Conduct";
-
-    if (/mit/i.test(lowerBase)) return "MIT License";
-    if (/apache/i.test(lowerBase)) return "Apache-2.0 License";
-    if (/gpl/i.test(lowerBase)) return "GPL License";
-    if (/bsd/i.test(lowerBase)) return "BSD License";
-    if (/mpl/i.test(lowerBase)) return "MPL License";
-
-    return base;
-}
-
 export async function getRepoDocFileNames(
     accessToken: string,
     owner: string,
     repo: string,
     ref?: string,
-): Promise<RepoDocFileName[]> {
+): Promise<DocFileName[]> {
     const octokit = createOctokit(accessToken);
 
     const { data: rootData } = await octokit.rest.repos.getContent({
@@ -117,21 +78,7 @@ export async function getRepoDocFileNames(
 
     const items = Array.isArray(rootData) ? rootData : [rootData];
 
-    const docItems = items.filter(
-        (item) =>
-            item.type === "file" &&
-            DOC_FILE_PATTERNS.some((p) => p.test(item.name)),
-    );
-
-    return docItems
-        .map((item) => ({
-            name: item.name,
-            path: item.path,
-            displayName: getDocFileDisplayName(item.name),
-        }))
-        .sort((a, b) =>
-            getDocFileSortKey(a.name).localeCompare(getDocFileSortKey(b.name)),
-        );
+    return pickDocFileNames(items);
 }
 
 export async function getDocFileContent(
