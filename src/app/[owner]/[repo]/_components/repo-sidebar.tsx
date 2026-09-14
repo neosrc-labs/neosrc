@@ -19,7 +19,8 @@ import { useRouter } from "next/navigation";
 
 import { CheckQueuedIcon, StatusCheckIcon } from "~/components/ci-status";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
-import { cn, getDocFileHashName } from "~/lib/utils";
+import { getDocFileHashName } from "~/lib/doc-files";
+import { cn } from "~/lib/utils";
 import { formatRelativeTime } from "~/utils";
 import type { DocFileName } from "./repo-code-page";
 

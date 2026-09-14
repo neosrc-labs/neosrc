@@ -52,7 +52,6 @@ function fns<T extends string[]>(...names: T) {
 }
 
 vi.mock("~/server/github", () => ({
-    DOC_FILE_PATTERNS: [],
     ...fns(
         "deleteRepoSubscription",
         "getCachedDocFileContent",
@@ -63,8 +62,6 @@ vi.mock("~/server/github", () => ({
         "getCachedRepoLanguages",
         "getCachedRepoStarred",
         "getCachedRepoSubscription",
-        "getDocFileDisplayName",
-        "getDocFileSortKey",
         "getFileLatestCommits",
         "getForkComparison",
         "getUserRepos",

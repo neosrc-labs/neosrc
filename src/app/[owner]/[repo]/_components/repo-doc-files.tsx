@@ -4,7 +4,7 @@ import { BookOpen } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
-import { getDocFileHashName } from "~/lib/utils";
+import { getDocFileDisplayName, getDocFileHashName } from "~/lib/doc-files";
 import { api } from "~/trpc/react";
 
 interface RepoDocFilesProps {
@@ -13,23 +13,6 @@ interface RepoDocFilesProps {
     ref: string;
     provider?: "gh" | "cb";
     fileNames?: { name: string; path: string }[];
-}
-
-function getDisplayName(name: string): string {
-    const base = name.replace(/\.[^.]+$/, "");
-    const lowerBase = base.toLowerCase();
-
-    if (/^readme/i.test(name)) return "README";
-    if (/^contributing/i.test(name)) return "Contributing";
-    if (/^code_of_conduct/i.test(name)) return "Code of Conduct";
-
-    if (/mit/i.test(lowerBase)) return "MIT License";
-    if (/apache/i.test(lowerBase)) return "Apache-2.0 License";
-    if (/gpl/i.test(lowerBase)) return "GPL License";
-    if (/bsd/i.test(lowerBase)) return "BSD License";
-    if (/mpl/i.test(lowerBase)) return "MPL License";
-
-    return base;
 }
 
 export function RepoDocFiles({
@@ -152,7 +135,7 @@ export function RepoDocFiles({
                                     : "text-text-secondary hover:text-text-primary"
                             }`}
                         >
-                            {getDisplayName(file.name)}
+                            {getDocFileDisplayName(file.name)}
                         </button>
                     ))}
                 </div>

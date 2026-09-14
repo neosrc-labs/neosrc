@@ -1,5 +1,6 @@
 import type { RestEndpointMethodTypes } from "@octokit/rest";
 import { cache } from "react";
+import type { DocFileName } from "~/lib/doc-files";
 import {
     repoContributorsCacheKey,
     repoDocFilesCacheKey,
@@ -23,11 +24,7 @@ import {
 } from "~/server/repo-cache";
 import { githubRepoToSyncRepo } from "~/server/sync/mappers";
 import { createOctokit } from "./client";
-import {
-    getRepoDocFileNames,
-    getRepoLanguages,
-    type RepoDocFileName,
-} from "./contents";
+import { getRepoDocFileNames, getRepoLanguages } from "./contents";
 
 export const getUserRepoPermission = cache(
     async (
@@ -337,7 +334,7 @@ export async function getCachedRepoDocFileNames(
     owner: string,
     repo: string,
     ref?: string,
-): Promise<RepoDocFileName[]> {
+): Promise<DocFileName[]> {
     return withStaleWhileRevalidate(
         repoDocFilesCacheKey(userId, owner, repo, ref),
         () => getRepoDocFileNames(accessToken, owner, repo, ref),
