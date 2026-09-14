@@ -3,6 +3,7 @@
 import { Fzf } from "fzf";
 import { GitBranchIcon, HistoryIcon, Search, TagIcon, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
     mapChecksListToStatusContexts,
@@ -18,12 +19,18 @@ import type {
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 import { getFileIconName, getFolderIconName } from "~/utils/icons";
-import { type Provider, repoUrl, treeHref } from "~/utils/provider-url";
+import {
+    blobHref,
+    type Provider,
+    repoUrl,
+    treeHref,
+} from "~/utils/provider-url";
 import { ClonePopover } from "./clone-popover";
 import { FileTypeIcon } from "./file-type-icon";
 import { ForkSyncRow } from "./fork-sync-row";
 import { RefSelector } from "./ref-selector";
 import { RepoBreadcrumb } from "./repo-breadcrumb";
+import { isFileEntry } from "./repo-contents";
 import { RepoPathNotFound } from "./repo-path-not-found";
 
 interface RepoBrowseProps {
@@ -54,6 +61,7 @@ export function RepoBrowse({
     parentDefaultBranch,
     children,
 }: RepoBrowseProps) {
+    const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
     const [hasRequestedTree, setHasRequestedTree] = useState(false);
 
@@ -109,6 +117,14 @@ export function RepoBrowse({
     const pathMissing =
         contentsError !== null || (path !== "" && sortedContents.length === 0);
 
+    // A tree URL that names a file lands on the file page, as on GitHub.
+    const isFile = isFileEntry(sortedContents, path);
+    useEffect(() => {
+        if (isFile) {
+            router.replace(blobHref(provider, owner, repo, selectedRef, path));
+        }
+    }, [isFile, router, provider, owner, repo, selectedRef, path]);
+
     const { data: fileTree } = api.repos.getFileTree.useQuery(
         {
             provider,
@@ -150,7 +166,13 @@ export function RepoBrowse({
                                 No files matching &quot;{searchQuery}&quot;
                             </div>
                         ) : (
-                            <SearchResultsTable searchResults={searchResults} />
+                            <SearchResultsTable
+                                searchResults={searchResults}
+                                owner={owner}
+                                repo={repo}
+                                provider={provider}
+                                selectedRef={selectedRef}
+                            />
                         )
                     ) : (
                         <>
@@ -305,10 +327,13 @@ function FileTable({
                               selectedRef,
                               item.path,
                           )
-                        : `${repoUrl(provider, owner, repo)}/blob/${selectedRef}/${item.path
-                              .split("/")
-                              .map(encodeURIComponent)
-                              .join("/")}`;
+                        : blobHref(
+                              provider,
+                              owner,
+                              repo,
+                              selectedRef,
+                              item.path,
+                          );
                     const iconName = isDir
                         ? getFolderIconName(item.name)
                         : getFileIconName(item.name);
@@ -366,8 +391,16 @@ function FileTable({
 
 function SearchResultsTable({
     searchResults,
+    owner,
+    repo,
+    provider,
+    selectedRef,
 }: {
     searchResults: CodeSearchResultItem[];
+    owner: string;
+    repo: string;
+    provider: Provider;
+    selectedRef: string;
 }) {
     return (
         <table className="w-full">
@@ -384,7 +417,23 @@ function SearchResultsTable({
                         >
                             <td className="px-4 py-2">
                                 <a
-                                    href={item.htmlUrl}
+                                    href={
+                                        isDir
+                                            ? treeHref(
+                                                  provider,
+                                                  owner,
+                                                  repo,
+                                                  selectedRef,
+                                                  item.path,
+                                              )
+                                            : blobHref(
+                                                  provider,
+                                                  owner,
+                                                  repo,
+                                                  selectedRef,
+                                                  item.path,
+                                              )
+                                    }
                                     className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                                 >
                                     <FileTypeIcon
