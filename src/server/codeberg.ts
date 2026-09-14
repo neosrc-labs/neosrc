@@ -869,20 +869,21 @@ export const getFileContent = cache(
                 Accept: "application/json",
             },
         });
-        if (!res.ok) throw new Error(`File not found: ${path}`);
+        if (!res.ok) return { content: null };
 
         const data = (await res.json()) as {
             encoding?: string | null;
             content?: string | null;
         };
-        if (!data.content) throw new Error(`File not found: ${path}`);
+        if (!data.content) return { content: null };
 
         const decoded =
             data.encoding === "base64"
                 ? Buffer.from(data.content, "base64").toString("utf-8")
                 : data.content;
 
-        return { content: decoded };
+        // NUL bytes only appear in binary payloads decoded as text.
+        return { content: decoded.includes("\u0000") ? null : decoded };
     },
 );
 

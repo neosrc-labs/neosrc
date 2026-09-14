@@ -81,13 +81,13 @@ export async function getRepoDocFileNames(
     return pickDocFileNames(items);
 }
 
-export async function getDocFileContent(
+export async function getFileContent(
     accessToken: string,
     owner: string,
     repo: string,
     ref: string,
     path: string,
-): Promise<{ content: string }> {
+): Promise<{ content: string | null }> {
     const graphql = createGraphql(accessToken);
 
     const query = `query GetDocFile($owner: String!, $repo: String!, $expression: String!) {
@@ -110,25 +110,22 @@ export async function getDocFileContent(
         expression: `${ref}:${path}`,
     });
 
-    const text = result.repository?.object?.text;
-    if (text == null) {
-        throw new Error(`File not found: ${path}`);
-    }
-
-    return { content: text };
+    // A null blob text means binary content or a file past the GraphQL blob
+    // limit; the caller shows a notice instead of the file body.
+    return { content: result.repository?.object?.text ?? null };
 }
 
-export async function getCachedDocFileContent(
+export async function getCachedFileContent(
     accessToken: string,
     userId: string,
     owner: string,
     repo: string,
     ref: string,
     path: string,
-): Promise<{ content: string }> {
+): Promise<{ content: string | null }> {
     return withStaleWhileRevalidate(
-        `doc-file:${userId}:${owner}:${repo}:${ref}:${path}`,
-        () => getDocFileContent(accessToken, owner, repo, ref, path),
+        `file-content:${userId}:${owner}:${repo}:${ref}:${path}`,
+        () => getFileContent(accessToken, owner, repo, ref, path),
         {
             staleAfter: 24 * 60 * 60 * 1000,
             deleteAfter: 7 * 24 * 60 * 60 * 1000,

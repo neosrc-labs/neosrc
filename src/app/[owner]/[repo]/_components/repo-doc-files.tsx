@@ -25,9 +25,9 @@ export function RepoDocFiles({
     const router = useRouter();
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState<string | null>(null);
-    const [fileContents, setFileContents] = useState<Record<string, string>>(
-        {},
-    );
+    const [fileContents, setFileContents] = useState<
+        Record<string, string | null>
+    >({});
     const [loadingPath, setLoadingPath] = useState<string | null>(null);
     const fileContentsRef = useRef(fileContents);
     fileContentsRef.current = fileContents;
@@ -45,7 +45,7 @@ export function RepoDocFiles({
             const version = ++loadVersionRef.current;
             setLoadingPath(path);
             try {
-                const data = await trpcUtils.repos.getDocFileContent.fetch({
+                const data = await trpcUtils.repos.getFileContent.fetch({
                     owner,
                     repo,
                     ref,
@@ -58,7 +58,7 @@ export function RepoDocFiles({
                     [path]: data.content,
                 }));
             } catch {
-                // file not found or API error
+                // API error; a null content is cached as "nothing to show".
             } finally {
                 if (version === loadVersionRef.current) setLoadingPath(null);
             }

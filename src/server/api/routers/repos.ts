@@ -35,7 +35,7 @@ import {
 import type { ForkComparison } from "~/server/github";
 import {
     deleteRepoSubscription,
-    getCachedDocFileContent,
+    getCachedFileContent,
     getCachedRepo,
     getCachedRepoContributors,
     getCachedRepoDocFileNames,
@@ -488,7 +488,7 @@ export const reposRouter = createTRPCRouter({
         gh: ({ accessToken, input }) =>
             getRepoDocFiles(accessToken, input.owner, input.repo, input.ref),
     }),
-    getDocFileContent: providerQuery({
+    getFileContent: providerQuery({
         input: providerInput({
             owner: z.string(),
             repo: z.string(),
@@ -504,7 +504,7 @@ export const reposRouter = createTRPCRouter({
                 input.ref,
             ),
         gh: ({ accessToken, userId, input }) =>
-            getCachedDocFileContent(
+            getCachedFileContent(
                 accessToken,
                 userId ?? "anonymous",
                 input.owner,
