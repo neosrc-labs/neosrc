@@ -14,6 +14,8 @@ interface RepoDocFilesProps {
     ref: string;
     provider?: Provider;
     fileNames?: { name: string; path: string }[];
+    /** Render nothing instead of the "add a README" card when empty. */
+    hideEmpty?: boolean;
 }
 
 export function RepoDocFiles({
@@ -22,6 +24,7 @@ export function RepoDocFiles({
     ref,
     provider,
     fileNames = [],
+    hideEmpty = false,
 }: RepoDocFilesProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -103,7 +106,9 @@ export function RepoDocFiles({
     );
 
     if (fileNames.length === 0) {
-        return <EmptyReadmeSection />;
+        // Directories without a doc file show nothing, as on GitHub; the repo
+        // root keeps the prompt to add a README.
+        return hideEmpty ? null : <EmptyReadmeSection />;
     }
 
     const currentContent = activeFile

@@ -18,18 +18,20 @@ import type {
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
 import { getFileIconName, getFolderIconName } from "~/utils/icons";
-import { type Provider, repoUrl } from "~/utils/provider-url";
+import { type Provider, repoUrl, treeHref } from "~/utils/provider-url";
 import { ClonePopover } from "./clone-popover";
 import { FileTypeIcon } from "./file-type-icon";
 import { ForkSyncRow } from "./fork-sync-row";
 import { RefSelector } from "./ref-selector";
+import { RepoBreadcrumb } from "./repo-breadcrumb";
+import { RepoPathNotFound } from "./repo-path-not-found";
 
 interface RepoBrowseProps {
     owner: string;
     repo: string;
     provider: Provider;
     /** Branch or tag being listed. Controlled by the caller. */
-    ref: string;
+    selectedRef: string;
     /** Repo-relative directory path; "" is the repo root. */
     path: string;
     onSelectRef: (ref: string) => void;
@@ -44,7 +46,7 @@ export function RepoBrowse({
     owner,
     repo,
     provider,
-    ref,
+    selectedRef,
     path,
     onSelectRef,
     isFork,
@@ -59,17 +61,20 @@ export function RepoBrowse({
         provider,
         owner,
         repo,
-        ref,
+        ref: selectedRef,
     });
 
-    const { data: contents, isLoading: contentsLoading } =
-        api.repos.getContents.useQuery({
-            provider,
-            owner,
-            repo,
-            ref,
-            path: path || undefined,
-        });
+    const {
+        data: contents,
+        isLoading: contentsLoading,
+        error: contentsError,
+    } = api.repos.getContents.useQuery({
+        provider,
+        owner,
+        repo,
+        ref: selectedRef,
+        path: path || undefined,
+    });
 
     const sortedContents = useMemo(() => {
         if (!contents) return [];
@@ -91,7 +96,7 @@ export function RepoBrowse({
                 provider,
                 owner,
                 repo,
-                ref,
+                ref: selectedRef,
                 paths,
             },
             { enabled: paths.length > 0 },
@@ -99,12 +104,17 @@ export function RepoBrowse({
 
     const isSearchActive = searchQuery.length > 0;
 
+    // Git cannot store empty directories, so an empty listing below the repo
+    // root means the path does not exist.
+    const pathMissing =
+        contentsError !== null || (path !== "" && sortedContents.length === 0);
+
     const { data: fileTree } = api.repos.getFileTree.useQuery(
         {
             provider,
             owner,
             repo,
-            ref,
+            ref: selectedRef,
         },
         { enabled: hasRequestedTree },
     );
@@ -122,16 +132,13 @@ export function RepoBrowse({
 
     return (
         <>
-            <div
-                data-probe-ref={ref}
-                className="overflow-hidden rounded-xl border border-border bg-surface"
-            >
+            <div className="overflow-hidden rounded-xl border border-border bg-surface">
                 <FileTableHeader
                     owner={owner}
                     repo={repo}
                     provider={provider}
-                    selectedBranch={ref}
-                    setSelectedBranch={onSelectRef}
+                    selectedRef={selectedRef}
+                    setSelectedRef={onSelectRef}
                     searchQuery={searchQuery}
                     setSearchQuery={setSearchQuery}
                     setHasRequestedTree={setHasRequestedTree}
@@ -153,13 +160,27 @@ export function RepoBrowse({
                                     repo={repo}
                                     provider={provider}
                                     latestCommit={latestCommit}
-                                    ref={ref}
+                                    selectedRef={selectedRef}
                                 />
                             ) : (
                                 <CommitRowSkeleton />
                             )}
+                            <RepoBreadcrumb
+                                owner={owner}
+                                repo={repo}
+                                selectedRef={selectedRef}
+                                provider={provider}
+                                path={path}
+                            />
                             {contentsLoading || fileCommitsLoading ? (
                                 <TableSkeleton />
+                            ) : pathMissing ? (
+                                <RepoPathNotFound
+                                    provider={provider}
+                                    owner={owner}
+                                    repo={repo}
+                                    selectedRef={selectedRef}
+                                />
                             ) : sortedContents.length === 0 ? (
                                 <div className="p-8 text-center text-sm text-text-tertiary">
                                     This directory is empty.
@@ -174,7 +195,7 @@ export function RepoBrowse({
                                                 owner={owner}
                                                 repo={repo}
                                                 parentFullName={parentFullName}
-                                                defaultBranch={ref}
+                                                defaultBranch={selectedRef}
                                                 parentDefaultBranch={
                                                     parentDefaultBranch
                                                 }
@@ -184,7 +205,7 @@ export function RepoBrowse({
                                         owner={owner}
                                         repo={repo}
                                         provider={provider}
-                                        ref={ref}
+                                        selectedRef={selectedRef}
                                         sortedContents={sortedContents}
                                         fileCommits={fileCommits}
                                     />
@@ -233,7 +254,7 @@ export function RepoBrowseRoot({
             owner={owner}
             repo={repo}
             provider={provider}
-            ref={ref}
+            selectedRef={ref}
             path=""
             onSelectRef={setRef}
             isFork={isFork}
@@ -247,32 +268,47 @@ function FileTable({
     owner,
     repo,
     provider,
-    ref,
+    selectedRef,
     sortedContents,
     fileCommits,
 }: {
     owner: string;
     repo: string;
     provider: Provider;
-    ref: string;
+    selectedRef: string;
     sortedContents: RepoContentItem[];
     fileCommits: Record<string, FileLatestCommit | null> | undefined;
 }) {
     return (
         <table className="w-full">
+            <thead>
+                <tr className="border-border border-b bg-surface-elevated text-text-tertiary text-xs">
+                    <th className="w-2/5 px-4 py-2 text-left font-medium">
+                        Name
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium">
+                        Last commit
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium">
+                        Last commit date
+                    </th>
+                </tr>
+            </thead>
             <tbody>
                 {sortedContents.map((item) => {
                     const isDir = item.type === "dir";
-                    const encodedPath = item.path
-                        .split("/")
-                        .map(encodeURIComponent)
-                        .join("/");
-                    const href =
-                        provider === "cb"
-                            ? `${repoUrl(provider, owner, repo)}/src/branch/${ref}/${encodedPath}`
-                            : isDir
-                              ? `${repoUrl(provider, owner, repo)}/tree/${ref}/${encodedPath}`
-                              : `${repoUrl(provider, owner, repo)}/blob/${ref}/${encodedPath}`;
+                    const href = isDir
+                        ? treeHref(
+                              provider,
+                              owner,
+                              repo,
+                              selectedRef,
+                              item.path,
+                          )
+                        : `${repoUrl(provider, owner, repo)}/blob/${selectedRef}/${item.path
+                              .split("/")
+                              .map(encodeURIComponent)
+                              .join("/")}`;
                     const iconName = isDir
                         ? getFolderIconName(item.name)
                         : getFileIconName(item.name);
@@ -298,26 +334,26 @@ function FileTable({
                             </td>
                             <td className="px-4 py-2">
                                 {commit ? (
-                                    <div className="flex items-center gap-2">
-                                        <a
-                                            href={`${repoUrl(provider, owner, repo)}/commit/${commit.sha}`}
-                                            className="min-w-0 flex-1 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
-                                        >
-                                            {commit.message}
-                                        </a>
-                                        {commit.committedDate && (
-                                            <span
-                                                className="shrink-0 text-sm text-text-tertiary"
-                                                title={new Date(
-                                                    commit.committedDate,
-                                                ).toLocaleString()}
-                                            >
-                                                {formatRelativeTime(
-                                                    commit.committedDate,
-                                                )}
-                                            </span>
+                                    <a
+                                        href={`${repoUrl(provider, owner, repo)}/commit/${commit.sha}`}
+                                        className="block min-w-0 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
+                                    >
+                                        {commit.message}
+                                    </a>
+                                ) : null}
+                            </td>
+                            <td className="px-4 py-2 text-right">
+                                {commit?.committedDate ? (
+                                    <span
+                                        className="shrink-0 text-sm text-text-tertiary"
+                                        title={new Date(
+                                            commit.committedDate,
+                                        ).toLocaleString()}
+                                    >
+                                        {formatRelativeTime(
+                                            commit.committedDate,
                                         )}
-                                    </div>
+                                    </span>
                                 ) : null}
                             </td>
                         </tr>
@@ -428,8 +464,8 @@ function FileTableHeader({
     owner,
     repo,
     provider,
-    selectedBranch,
-    setSelectedBranch,
+    selectedRef,
+    setSelectedRef,
     searchQuery,
     setSearchQuery,
     setHasRequestedTree,
@@ -437,8 +473,8 @@ function FileTableHeader({
     owner: string;
     repo: string;
     provider: Provider;
-    selectedBranch: string;
-    setSelectedBranch: (b: string) => void;
+    selectedRef: string;
+    setSelectedRef: (b: string) => void;
     searchQuery: string;
     setSearchQuery: (b: string) => void;
     setHasRequestedTree: (o: boolean) => void;
@@ -458,8 +494,8 @@ function FileTableHeader({
                     owner={owner}
                     repo={repo}
                     provider={provider}
-                    selectedRef={selectedBranch}
-                    onSelect={setSelectedBranch}
+                    selectedRef={selectedRef}
+                    onSelect={setSelectedRef}
                 />
                 {refCounts ? (
                     <span className="inline-flex items-center gap-1 text-sm text-text-tertiary">
@@ -524,13 +560,13 @@ function CommitRow({
     repo,
     provider,
     latestCommit,
-    ref,
+    selectedRef,
 }: {
     owner: string;
     repo: string;
     provider: Provider;
     latestCommit: RepoLatestCommit;
-    ref: string;
+    selectedRef: string;
 }) {
     const { data: checks, isFetching: checksFetching } =
         api.checks.list.useQuery(
@@ -543,7 +579,7 @@ function CommitRow({
         [checks],
     );
     const baseUrl = repoUrl(provider, owner, repo);
-    const commitsHref = `/${provider === "gh" ? "gh" : "cb"}/${owner}/${repo}/commits/${encodeURIComponent(ref)}`;
+    const commitsHref = `/${provider === "gh" ? "gh" : "cb"}/${owner}/${repo}/commits/${encodeURIComponent(selectedRef)}`;
     return (
         <div className="flex min-h-12 items-center gap-3 border-border border-b px-4 py-3">
             <div className="[&_img]:h-5 [&_img]:w-5 [&_span]:text-sm">
@@ -642,17 +678,14 @@ function TableSkeleton() {
                     "r12",
                 ].map((key) => (
                     <tr key={key} className="h-10">
-                        <td className="px-4 py-2">
-                            <div className="flex items-center gap-15">
-                                <div className="h-5 w-44 animate-pulse rounded bg-surface-secondary" />
-                                <div className="h-5 w-64 animate-pulse rounded bg-surface-secondary" />
-                            </div>
+                        <td className="w-2/5 px-4 py-2">
+                            <div className="h-5 w-44 animate-pulse rounded bg-surface-secondary" />
                         </td>
                         <td className="px-4 py-2">
-                            <div className="flex items-center gap-2">
-                                <div className="flex-1" />
-                                <div className="h-5 w-24 shrink-0 animate-pulse rounded bg-surface-secondary" />
-                            </div>
+                            <div className="h-5 w-64 animate-pulse rounded bg-surface-secondary" />
+                        </td>
+                        <td className="px-4 py-2">
+                            <div className="ml-auto h-5 w-24 animate-pulse rounded bg-surface-secondary" />
                         </td>
                     </tr>
                 ))}
