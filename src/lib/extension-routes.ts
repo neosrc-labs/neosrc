@@ -31,6 +31,12 @@ export interface ExtensionRouteRule {
     query?: boolean;
     /** Forward the source fragment (comment and diff deep links). */
     hash?: boolean;
+    /**
+     * 1-based capture group whose value spans the remaining path segments, so
+     * a multi-segment tail survives the round trip. Every other group is a
+     * single segment.
+     */
+    tailGroup?: number;
 }
 
 export interface ExtensionPlatform {
@@ -47,7 +53,7 @@ export interface ExtensionPlatform {
  * Bumped when the shape or meaning of the table changes, so an extension
  * holding a cached copy can tell it is stale.
  */
-export const EXTENSION_ROUTE_TABLE_VERSION = 1;
+export const EXTENSION_ROUTE_TABLE_VERSION = 2;
 
 /**
  * Where Neosrc serves the route table to the extension. The extension falls
@@ -124,9 +130,8 @@ export const EXTENSION_PLATFORMS: ExtensionPlatform[] = [
 
 /**
  * Route coverage. A host URL is redirected only when it matches one of these;
- * everything else (blob and tree browsing, settings, actions, releases, wiki)
- * stays on the host, which is what keeps the extension from stranding users on
- * a Neosrc 404.
+ * everything else (settings, actions, releases, wiki) stays on the host, which
+ * is what keeps the extension from stranding users on a Neosrc 404.
  */
 export const EXTENSION_ROUTE_RULES: ExtensionRouteRule[] = [
     {
@@ -203,6 +208,34 @@ export const EXTENSION_ROUTE_RULES: ExtensionRouteRule[] = [
         external: "/$1/$2/commits/$3",
         query: true,
     },
+    {
+        id: "gh-tree",
+        host: "github.com",
+        provider: "gh",
+        pattern: "^/([^/]+)/([^/]+)/tree/([^/?#]+)/?$",
+        to: "/gh/$1/$2/tree/$3",
+        external: "/$1/$2/tree/$3",
+    },
+    // No optional groups: the extension rejects a quantified group, so the
+    // root case needs its own rule.
+    {
+        id: "gh-tree-path",
+        host: "github.com",
+        provider: "gh",
+        pattern: "^/([^/]+)/([^/]+)/tree/([^/?#]+)/(.+)$",
+        to: "/gh/$1/$2/tree/$3/$4",
+        external: "/$1/$2/tree/$3/$4",
+        tailGroup: 4,
+    },
+    {
+        id: "gh-blob",
+        host: "github.com",
+        provider: "gh",
+        pattern: "^/([^/]+)/([^/]+)/blob/([^/?#]+)/(.+)$",
+        to: "/gh/$1/$2/blob/$3/$4",
+        external: "/$1/$2/blob/$3/$4",
+        tailGroup: 4,
+    },
 ];
 
 export interface ExtensionRouteTable {
@@ -224,16 +257,18 @@ export function serializeExtensionRouteTable(): string {
 
 /**
  * Turns a path template into a match regex, treating `$n` as a single path
- * segment. Used to map a Neosrc path back to its host page.
+ * segment. `tailGroup` picks the one group that spans the remaining path
+ * instead. Used to map a Neosrc path back to its host page.
  */
-export function templateToRegex(template: string): RegExp {
+export function templateToRegex(template: string, tailGroup?: number): RegExp {
     const source = template
         .split(/(\$\d)/)
-        .map((part) =>
-            /^\$\d$/.test(part)
-                ? "([^/]+)"
-                : part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-        )
+        .map((part) => {
+            if (!/^\$\d$/.test(part)) {
+                return part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            }
+            return Number(part.slice(1)) === tailGroup ? "(.*)" : "([^/]+)";
+        })
         .join("");
     return new RegExp(`^${source}/?$`);
 }
@@ -291,7 +326,7 @@ export function matchExternalPath(
  */
 export function externalUrlForNeosrcPath(pathname: string): string | null {
     for (const rule of EXTENSION_ROUTE_RULES) {
-        const match = templateToRegex(rule.to).exec(pathname);
+        const match = templateToRegex(rule.to, rule.tailGroup).exec(pathname);
         if (!match) continue;
         const platform = EXTENSION_PLATFORMS.find(
             (candidate) => candidate.provider === rule.provider,

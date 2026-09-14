@@ -40,13 +40,22 @@ describe("matchExternalPath", () => {
             matchExternalPath("github.com", "/acme/widget/commits/main")?.rule
                 .id,
         ).toBe("gh-commits");
+        expect(
+            matchExternalPath("github.com", "/acme/widget/tree/main")?.rule.id,
+        ).toBe("gh-tree");
+        expect(
+            matchExternalPath("github.com", "/acme/widget/tree/main/src")?.rule
+                .id,
+        ).toBe("gh-tree-path");
+        expect(
+            matchExternalPath("github.com", "/acme/widget/blob/main/README.md")
+                ?.rule.id,
+        ).toBe("gh-blob");
     });
 
     it("keeps pages Neosrc cannot render on GitHub", () => {
         const unsupported = [
             "/acme",
-            "/acme/widget/tree/main/packages",
-            "/acme/widget/blob/main/README.md",
             "/acme/widget/pull/12/commits",
             "/acme/widget/pull/12/checks",
             "/acme/widget/commits",
@@ -124,15 +133,21 @@ describe("externalUrlForNeosrcPath", () => {
         expect(externalUrlForNeosrcPath("/gh/acme/widget/commits/main")).toBe(
             "https://github.com/acme/widget/commits/main",
         );
+        expect(externalUrlForNeosrcPath("/gh/acme/widget/tree/main")).toBe(
+            "https://github.com/acme/widget/tree/main",
+        );
+        expect(
+            externalUrlForNeosrcPath("/gh/acme/widget/tree/main/dev/src"),
+        ).toBe("https://github.com/acme/widget/tree/main/dev/src");
+        expect(externalUrlForNeosrcPath("/gh/acme/widget/blob/main/a.ts")).toBe(
+            "https://github.com/acme/widget/blob/main/a.ts",
+        );
     });
 
     it("returns null for pages with no host equivalent", () => {
         expect(externalUrlForNeosrcPath("/")).toBeNull();
         expect(externalUrlForNeosrcPath("/profile")).toBeNull();
         expect(externalUrlForNeosrcPath("/cb/acme/widget")).toBeNull();
-        expect(
-            externalUrlForNeosrcPath("/gh/acme/widget/blob/main/a.ts"),
-        ).toBeNull();
     });
 });
 
@@ -168,9 +183,11 @@ describe("route table", () => {
         for (const rule of EXTENSION_ROUTE_RULES) {
             const concrete = rule.to.replace(/\$\d/g, "value");
             const groups = [...rule.to.matchAll(/\$(\d)/g)].map(() => "value");
-            expect(templateToRegex(rule.to).exec(concrete)?.slice(1)).toEqual(
-                groups.length > 0 ? groups : [],
-            );
+            expect(
+                templateToRegex(rule.to, rule.tailGroup)
+                    .exec(concrete)
+                    ?.slice(1),
+            ).toEqual(groups.length > 0 ? groups : []);
         }
     });
 
