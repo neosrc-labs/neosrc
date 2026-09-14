@@ -19,31 +19,11 @@ import { useRouter } from "next/navigation";
 
 import { CheckQueuedIcon, StatusCheckIcon } from "~/components/ci-status";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
-import { getDocFileHashName } from "~/lib/doc-files";
+import { type DocFileName, getDocFileHashName } from "~/lib/doc-files";
 import { cn } from "~/lib/utils";
 import { formatRelativeTime } from "~/utils";
-import type { DocFileName } from "./repo-code-page";
-
-interface Contributor {
-    login: string | null;
-    avatarUrl: string | null;
-}
-
-interface Deployment {
-    id: string;
-    environment: string;
-    state: string;
-    createdAt: string;
-}
-
-interface Release {
-    name: string;
-    tagName: string;
-    createdAt: string;
-    htmlUrl: string;
-}
-
-type Provider = "gh" | "cb";
+import type { Provider } from "~/utils/provider-url";
+import type { Contributor, Deployment, Release } from "./repo-page-types";
 
 interface RepoSidebarProps {
     owner: string;

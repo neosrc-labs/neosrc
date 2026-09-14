@@ -18,10 +18,8 @@ import {
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
-import { domain } from "~/utils/provider-url";
-import type { RepoData } from "./repo-code-page";
-
-type Provider = "gh" | "cb";
+import { domain, type Provider } from "~/utils/provider-url";
+import type { RepoData, SubscriptionState } from "./repo-page-types";
 
 interface RepoHeaderProps {
     owner: string;
@@ -29,10 +27,7 @@ interface RepoHeaderProps {
     provider: Provider;
     repoDataPromise: Promise<RepoData>;
     starredPromise: Promise<boolean>;
-    subscriptionPromise: Promise<{
-        subscribed: boolean;
-        ignored: boolean;
-    } | null>;
+    subscriptionPromise: Promise<SubscriptionState | null>;
 }
 
 export function RepoHeader({
@@ -170,11 +165,6 @@ function RepoHeaderLoading({
             </div>
         </div>
     );
-}
-
-interface SubscriptionState {
-    subscribed: boolean;
-    ignored: boolean;
 }
 
 function WatchDropdown({

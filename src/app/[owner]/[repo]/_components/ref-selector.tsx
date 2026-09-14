@@ -15,8 +15,7 @@ import {
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
-
-type Provider = "gh" | "cb";
+import type { Provider } from "~/utils/provider-url";
 
 interface RefSelectorProps {
     owner: string;
