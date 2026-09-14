@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { RepoBlobPage } from "~/app/[owner]/[repo]/_components/repo-blob-page";
-import { loadRepoPathData } from "~/app/[owner]/[repo]/_components/repo-page-data";
 
 interface BlobParams {
     owner: string;
@@ -33,7 +32,6 @@ export default async function CodebergBlobPage({
             repo={repo}
             selectedRef={branch}
             path={(path ?? []).join("/")}
-            {...loadRepoPathData("cb", owner, repo)}
         />
     );
 }

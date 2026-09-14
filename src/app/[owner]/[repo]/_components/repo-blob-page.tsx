@@ -3,11 +3,9 @@
 import type { Provider } from "~/utils/provider-url";
 import { RepoBreadcrumb } from "./repo-breadcrumb";
 import { RepoContentCard } from "./repo-content-card";
-import { RepoFileView, RepoFileViewSkeleton } from "./repo-file-view";
-import type { RepoPathPageData } from "./repo-page-types";
-import { RepoPathPage } from "./repo-path-page";
+import { RepoFileView } from "./repo-file-view";
 
-interface RepoBlobPageProps extends RepoPathPageData {
+interface RepoBlobPageProps {
     owner: string;
     repo: string;
     provider: Provider;
@@ -18,8 +16,8 @@ interface RepoBlobPageProps extends RepoPathPageData {
 }
 
 /**
- * File page: the file browser rail beside the file's breadcrumb, commit bar
- * and body.
+ * File page: the browser rail's main column for a file, the breadcrumb, commit
+ * bar and body. The rail itself is the (browse) layout's.
  */
 export function RepoBlobPage({
     owner,
@@ -27,19 +25,9 @@ export function RepoBlobPage({
     provider,
     selectedRef,
     path,
-    repoDataPromise,
 }: RepoBlobPageProps) {
     return (
-        <RepoPathPage
-            owner={owner}
-            repo={repo}
-            provider={provider}
-            selectedRef={selectedRef}
-            path={path}
-            view="blob"
-            repoDataPromise={repoDataPromise}
-            contentFallback={<RepoFileViewSkeleton />}
-        >
+        <>
             <RepoBreadcrumb
                 owner={owner}
                 repo={repo}
@@ -56,6 +44,6 @@ export function RepoBlobPage({
                     path={path}
                 />
             </RepoContentCard>
-        </RepoPathPage>
+        </>
     );
 }

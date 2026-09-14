@@ -170,6 +170,7 @@ function SidebarFileTree({
                         fileHref={(node) =>
                             `${basePath}/changes#${node.path.replace(/\//g, "-")}`
                         }
+                        fileLink="anchor"
                         filter={search || undefined}
                         isExpanded={(nodePath) => !collapsedPaths.has(nodePath)}
                         nodes={fileTree}

@@ -168,6 +168,7 @@ export function RepoFileTree({
                 fileHref={(node) =>
                     blobHref(provider, owner, repo, selectedRef, node.path)
                 }
+                fileLink="route"
                 isExpanded={isExpanded}
                 nodes={nodes}
                 onToggle={toggle}

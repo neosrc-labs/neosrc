@@ -50,16 +50,12 @@ export interface RepoAboutData {
     latestReleasePromise: Promise<Release | null>;
 }
 
-/** Data every repo view needs: the repository the view belongs to. */
-export interface RepoPathPageData {
-    repoDataPromise: Promise<RepoData>;
-}
-
 /**
- * Data for views that render the repo name header and the About column. The
- * file and directory pages omit it, so they never start these queries.
+ * Data for views that render the repo name header and the About column: the
+ * repository itself plus those views' own queries.
  */
-export interface RepoPageData extends RepoPathPageData {
+export interface RepoPageData {
+    repoDataPromise: Promise<RepoData>;
     docFileNamesPromise: Promise<DocFileName[]>;
     starredPromise: Promise<boolean>;
     subscriptionPromise: Promise<SubscriptionState | null>;

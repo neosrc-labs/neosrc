@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type {
     CodeSearchResultItem,
     FileLatestCommit,
@@ -76,8 +77,9 @@ export function RepoFileTable({
                             className="h-10 transition-colors hover:bg-surface-secondary"
                         >
                             <td className="px-4 py-2">
-                                <a
+                                <Link
                                     href={href}
+                                    prefetch={false}
                                     className="flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                                 >
                                     <FileTypeIcon
@@ -85,7 +87,7 @@ export function RepoFileTable({
                                         isDir={isDir}
                                     />
                                     <span>{item.name}</span>
-                                </a>
+                                </Link>
                             </td>
                             <td className="px-4 py-2">
                                 {commit ? (
@@ -147,7 +149,7 @@ export function RepoSearchResultsTable({
                             className="transition-colors hover:bg-surface-secondary"
                         >
                             <td className="px-4 py-2">
-                                <a
+                                <Link
                                     href={
                                         isDir
                                             ? treeHref(
@@ -165,6 +167,7 @@ export function RepoSearchResultsTable({
                                                   item.path,
                                               )
                                     }
+                                    prefetch={false}
                                     className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
                                 >
                                     <FileTypeIcon
@@ -177,7 +180,7 @@ export function RepoSearchResultsTable({
                                             {item.path}
                                         </span>
                                     </div>
-                                </a>
+                                </Link>
                             </td>
                         </tr>
                     );
