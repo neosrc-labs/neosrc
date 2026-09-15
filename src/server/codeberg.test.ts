@@ -5,11 +5,13 @@ vi.mock("~/server/db", () => ({ db: {} }));
 
 import {
     createIssueComment,
+    deleteBranch,
     getBranches,
     listIssueCommentReactions,
     listIssueReactions,
     listIssues,
     listIssueTimeline,
+    renameBranch,
     updateIssue,
 } from "~/server/codeberg";
 
@@ -408,5 +410,48 @@ describe("getBranches", () => {
         );
 
         await expect(getBranches("tok", "own", "repo")).resolves.toEqual([]);
+    });
+});
+
+describe("branch mutations", () => {
+    it("renames through the branch route and surfaces the provider message", async () => {
+        const mock = vi.fn(async (_url: string, init?: RequestInit) => ({
+            ok: false,
+            status: 409,
+            json: async () => ({ message: "branch already exists" }),
+            headers: { get: () => null },
+            request: init,
+        }));
+        vi.stubGlobal("fetch", mock);
+
+        await expect(
+            renameBranch("tok", "own", "repo", "feat/x", "feat/y"),
+        ).rejects.toThrow("branch already exists");
+
+        const [url, init] = mock.mock.calls[0] ?? [];
+        expect(String(url)).toBe(
+            "https://codeberg.org/api/v1/repos/own/repo/branches/feat%2Fx",
+        );
+        expect(init?.method).toBe("PATCH");
+        expect(init?.body).toBe(JSON.stringify({ name: "feat/y" }));
+    });
+
+    it("deletes through the branch route", async () => {
+        const mock = vi.fn(async (_url: string, init?: RequestInit) => ({
+            ok: true,
+            status: 204,
+            json: async () => ({}),
+            headers: { get: () => null },
+            request: init,
+        }));
+        vi.stubGlobal("fetch", mock);
+
+        await deleteBranch("tok", "own", "repo", "old");
+
+        const [url, init] = mock.mock.calls[0] ?? [];
+        expect(String(url)).toBe(
+            "https://codeberg.org/api/v1/repos/own/repo/branches/old",
+        );
+        expect(init?.method).toBe("DELETE");
     });
 });
