@@ -1,16 +1,16 @@
 "use client";
 
 import { ChevronDown, CircleCheck, Eye } from "lucide-react";
-import { StateTabs } from "~/app/[owner]/[repo]/_components/list/state-tabs";
-import { AssigneeDropdown } from "~/app/[owner]/[repo]/_components/search/assignee-dropdown";
-import { AuthorDropdown } from "~/app/[owner]/[repo]/_components/search/author-dropdown";
-import { LabelDropdown } from "~/app/[owner]/[repo]/_components/search/label-dropdown";
-import { MilestoneDropdown } from "~/app/[owner]/[repo]/_components/search/milestone-dropdown";
+import { StateTabs } from "~/components/list/state-tabs";
+import { AssigneeDropdown } from "~/components/search/assignee-dropdown";
+import { AuthorDropdown } from "~/components/search/author-dropdown";
+import { LabelDropdown } from "~/components/search/label-dropdown";
+import { MilestoneDropdown } from "~/components/search/milestone-dropdown";
 import {
     hasQualifier,
     toggleQualifier,
-} from "~/app/[owner]/[repo]/_components/search/search-utils";
-import { SortDropdown } from "~/app/[owner]/[repo]/_components/search/sort-dropdown";
+} from "~/components/search/search-utils";
+import { SortDropdown } from "~/components/search/sort-dropdown";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import type {
     FilterState,

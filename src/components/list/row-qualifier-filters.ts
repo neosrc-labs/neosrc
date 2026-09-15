@@ -1,4 +1,4 @@
-import { toggleQualifier } from "~/app/[owner]/[repo]/_components/search/search-utils";
+import { toggleQualifier } from "~/components/search/search-utils";
 
 interface RowFilterList {
     searchQuery: string;

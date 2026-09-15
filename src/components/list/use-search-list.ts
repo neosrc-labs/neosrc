@@ -5,13 +5,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     detectQualifier,
     replaceQualifierValue,
-} from "~/app/[owner]/[repo]/_components/search/search-autocomplete";
+} from "~/components/search/search-autocomplete";
 import {
     addQualifier,
     getQualifierValue,
     removeQualifier,
     removeQualifiersByKey,
-} from "~/app/[owner]/[repo]/_components/search/search-utils";
+} from "~/components/search/search-utils";
 
 export interface SearchArgs {
     provider: "gh" | "cb";

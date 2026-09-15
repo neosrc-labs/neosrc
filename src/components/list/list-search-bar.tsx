@@ -5,11 +5,11 @@ import {
     detectQualifier,
     SearchAutocomplete,
     type SearchAutocompleteHandle,
-} from "~/app/[owner]/[repo]/_components/search/search-autocomplete";
+} from "~/components/search/search-autocomplete";
 import {
     matchQualifierPrefix,
     splitQuery,
-} from "~/app/[owner]/[repo]/_components/search/search-utils";
+} from "~/components/search/search-utils";
 
 export interface ListExternalUrls {
     labels: string;
