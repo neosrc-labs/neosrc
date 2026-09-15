@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { CommitsList } from "~/app/[owner]/[repo]/commits/_components/commits-list";
-import { ghConfig } from "~/app/[owner]/[repo]/commits/_components/commits-list-config";
+import { CommitsList } from "~/components/commit/commits-list";
+import { ghConfig } from "~/components/commit/commits-list-config";
 
 export async function generateMetadata({
     params,
