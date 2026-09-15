@@ -2,7 +2,6 @@
 
 import { GitPullRequest } from "lucide-react";
 import { useMemo } from "react";
-import { RecentlyPushedBanner } from "~/app/[owner]/[repo]/_components/recently-pushed-banner";
 import type { PrRowData } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
 import { PullRequestRow } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
 import { computeStatusState } from "~/components/ci-status";
@@ -11,6 +10,7 @@ import { ListSkeleton } from "~/components/list/list-skeleton";
 import { rowQualifierFilters } from "~/components/list/row-qualifier-filters";
 import { SearchListLayout } from "~/components/list/search-list-layout";
 import { useSearchList } from "~/components/list/use-search-list";
+import { RecentlyPushedBanner } from "~/components/repo/recently-pushed-banner";
 import type { PrSearchItem } from "~/server/api/routers/pulls/types";
 import { api } from "~/trpc/react";
 import { PullRequestEmptyState } from "./pull-request-empty-state";

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { RepoDirectoryPage } from "~/app/[owner]/[repo]/_components/repo-directory-page";
-import { loadRepoPageData } from "~/app/[owner]/[repo]/_components/repo-page-data";
-import { RepoTreePage } from "~/app/[owner]/[repo]/_components/repo-tree-page";
+import { RepoDirectoryPage } from "~/components/repo/repo-directory-page";
+import { loadRepoPageData } from "~/components/repo/repo-page-data";
+import { RepoTreePage } from "~/components/repo/repo-tree-page";
 
 interface TreeParams {
     owner: string;

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { RepoCodePage } from "~/app/[owner]/[repo]/_components/repo-code-page";
-import { loadRepoPageData } from "~/app/[owner]/[repo]/_components/repo-page-data";
+import { RepoCodePage } from "~/components/repo/repo-code-page";
+import { loadRepoPageData } from "~/components/repo/repo-page-data";
 
 export async function generateMetadata({
     params,

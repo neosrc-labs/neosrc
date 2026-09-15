@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { RepoBrowseShell } from "~/app/[owner]/[repo]/_components/repo-browse-shell";
+import { RepoBrowseShell } from "~/components/repo/repo-browse-shell";
 
 /**
  * Shell of the Codeberg file and directory routes. Owning the rail here keeps it
