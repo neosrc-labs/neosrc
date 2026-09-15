@@ -8,13 +8,15 @@ import { Pagination } from "~/components/ui/pagination";
 import { api } from "~/trpc/react";
 import type { Provider } from "~/utils/provider-url";
 import { BranchEmptyState } from "./branch-empty-state";
-import { BRANCH_TABS, branchConfig } from "./branch-list-config";
+import {
+    BRANCH_PAGE_SIZE,
+    BRANCH_TABS,
+    branchConfig,
+} from "./branch-list-config";
+import { BranchSection } from "./branch-section";
 import { BranchTable } from "./branch-table";
 import { BranchTableSkeleton } from "./branch-table-skeleton";
 import { useBranchList } from "./use-branch-list";
-
-/** Rows per page; the pagination control divides the total by the same size. */
-const PAGE_SIZE = 30;
 
 /** github.com's branch search is a plain name filter, so no qualifier syntax. */
 function BranchSearchBar({
@@ -92,6 +94,11 @@ export function BranchListShared({
         query === ""
             ? "?tab=all"
             : `?tab=all&query=${encodeURIComponent(query)}`;
+    // GitHub's date tabs only see part of the ref list; say so next to the
+    // tabs, where it costs no layout.
+    const scanNote = data?.scanLimit
+        ? `Active and Stale are computed from ${data.scanLimit.scanned} of ${data.scanLimit.total} branches. All lists every branch.`
+        : null;
 
     const table = (rows: NonNullable<typeof data>["items"]) => (
         <BranchTable
@@ -111,14 +118,21 @@ export function BranchListShared({
                 Branches
             </h1>
             <div className="overflow-hidden rounded-md border border-border-subtle">
-                <div className="border-border-subtle border-b">
-                    <StateTabs
-                        tabs={BRANCH_TABS}
-                        activeTab={tab}
-                        onTabChange={(next) =>
-                            setParams({ tab: next, page: null })
-                        }
-                    />
+                <div className="flex items-center justify-between gap-2 border-border-subtle border-b">
+                    <div className="shrink-0">
+                        <StateTabs
+                            tabs={BRANCH_TABS}
+                            activeTab={tab}
+                            onTabChange={(next) =>
+                                setParams({ tab: next, page: null })
+                            }
+                        />
+                    </div>
+                    {scanNote && (
+                        <p className="min-w-0 flex-1 truncate pr-4 text-right text-text-tertiary text-xs">
+                            {scanNote}
+                        </p>
+                    )}
                 </div>
                 <BranchSearchBar
                     query={query}
@@ -131,83 +145,60 @@ export function BranchListShared({
                 />
 
                 {isLoading || !data ? (
-                    <BranchTableSkeleton />
+                    <BranchTableSkeleton tab={tab} />
+                ) : tab === "overview" ? (
+                    <>
+                        {data.defaultBranchRow && (
+                            <BranchSection title="Default">
+                                {table([data.defaultBranchRow])}
+                            </BranchSection>
+                        )}
+                        <BranchSection title="Active branches" className="pt-6">
+                            {data.items.length === 0 ? (
+                                <BranchEmptyState
+                                    searchQuery={query}
+                                    activeTab={tab}
+                                />
+                            ) : (
+                                <>
+                                    {table(data.items)}
+                                    <div className="px-4 py-3">
+                                        <Link
+                                            href={allHref}
+                                            prefetch={false}
+                                            className="block cursor-pointer text-blue-600 text-sm hover:underline dark:text-blue-400"
+                                        >
+                                            View more branches
+                                        </Link>
+                                    </div>
+                                </>
+                            )}
+                        </BranchSection>
+                    </>
                 ) : (
                     <>
-                        {data.scanLimit && (
-                            <p className="border-border-subtle border-b px-4 py-2 text-text-tertiary text-xs">
-                                Active and Stale are computed from{" "}
-                                {data.scanLimit.scanned} of{" "}
-                                {data.scanLimit.total} branches. All lists every
-                                branch.
-                            </p>
-                        )}
-                        {tab === "overview" ? (
-                            <>
-                                {data.defaultBranchRow && (
-                                    <>
-                                        <SectionHeading>Default</SectionHeading>
-                                        {table([data.defaultBranchRow])}
-                                    </>
-                                )}
-                                <SectionHeading>Active branches</SectionHeading>
-                                {data.items.length === 0 ? (
-                                    <BranchEmptyState
-                                        searchQuery={query}
-                                        activeTab={tab}
-                                    />
-                                ) : (
-                                    <>
-                                        {table(data.items)}
-                                        <div className="px-4 py-3">
-                                            <Link
-                                                href={allHref}
-                                                prefetch={false}
-                                                className="cursor-pointer text-blue-600 text-sm hover:underline dark:text-blue-400"
-                                            >
-                                                View more branches
-                                            </Link>
-                                        </div>
-                                    </>
-                                )}
-                            </>
+                        {data.items.length === 0 ? (
+                            <BranchEmptyState
+                                searchQuery={query}
+                                activeTab={tab}
+                            />
                         ) : (
-                            <>
-                                {data.items.length === 0 ? (
-                                    <BranchEmptyState
-                                        searchQuery={query}
-                                        activeTab={tab}
-                                    />
-                                ) : (
-                                    table(data.items)
-                                )}
-                                <Pagination
-                                    currentPage={page}
-                                    totalPages={Math.ceil(
-                                        data.totalCount / PAGE_SIZE,
-                                    )}
-                                    onPageChange={(next) =>
-                                        setParams({
-                                            page:
-                                                next === 1
-                                                    ? null
-                                                    : String(next),
-                                        })
-                                    }
-                                />
-                            </>
+                            table(data.items)
                         )}
+                        <Pagination
+                            currentPage={page}
+                            totalPages={Math.ceil(
+                                data.totalCount / BRANCH_PAGE_SIZE,
+                            )}
+                            onPageChange={(next) =>
+                                setParams({
+                                    page: next === 1 ? null : String(next),
+                                })
+                            }
+                        />
                     </>
                 )}
             </div>
         </div>
-    );
-}
-
-function SectionHeading({ children }: { children: React.ReactNode }) {
-    return (
-        <h2 className="border-border-subtle border-b bg-surface-elevated px-4 py-2 font-semibold text-sm text-text-primary">
-            {children}
-        </h2>
     );
 }

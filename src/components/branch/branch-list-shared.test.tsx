@@ -67,8 +67,13 @@ vi.mock("~/trpc/react", () => ({
     },
 }));
 
-import { ghBranchConfig } from "./branch-list-config";
+import {
+    BRANCH_PAGE_SIZE,
+    ghBranchConfig,
+    OVERVIEW_PREVIEW_SIZE,
+} from "./branch-list-config";
 import { BranchListShared } from "./branch-list-shared";
+import { BranchTableSkeleton } from "./branch-table-skeleton";
 import { RenameBranchDialog } from "./rename-branch-dialog";
 
 function row(overrides: Partial<BranchRow> = {}): BranchRow {
@@ -290,5 +295,31 @@ describe("RenameBranchDialog", () => {
             branch: "feat/x",
             newName: "feat/y",
         });
+    });
+});
+
+describe("BranchTableSkeleton", () => {
+    it("mirrors the overview sections and their row counts", () => {
+        const { container } = render(<BranchTableSkeleton tab="overview" />);
+
+        expect(
+            screen.getByRole("heading", { name: "Default" }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole("heading", { name: "Active branches" }),
+        ).toBeInTheDocument();
+        expect(container.querySelectorAll("table")).toHaveLength(2);
+        expect(container.querySelectorAll("tbody tr")).toHaveLength(
+            1 + OVERVIEW_PREVIEW_SIZE,
+        );
+    });
+
+    it("mirrors a page of the list tabs", () => {
+        const { container } = render(<BranchTableSkeleton tab="all" />);
+
+        expect(container.querySelectorAll("table")).toHaveLength(1);
+        expect(container.querySelectorAll("tbody tr")).toHaveLength(
+            BRANCH_PAGE_SIZE,
+        );
     });
 });

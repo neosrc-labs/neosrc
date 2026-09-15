@@ -66,18 +66,19 @@ export function BranchTableRow({
         <>
             <tr className="h-10 border-border-subtle border-b hover:bg-surface-secondary">
                 <td className="px-4 py-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
                         <Link
                             href={treeHref(provider, owner, repo, branch.name)}
                             prefetch={false}
-                            className="font-mono text-blue-600 text-sm hover:underline dark:text-blue-400"
+                            title={branch.name}
+                            className="min-w-0 truncate font-mono text-blue-600 text-sm hover:underline dark:text-blue-400"
                         >
                             {branch.name}
                         </Link>
                         <CopyButton
                             text={branch.name}
                             title="Copy branch name"
-                            className="flex size-5 cursor-pointer items-center justify-center rounded text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
+                            className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
                         >
                             {(copied) =>
                                 copied ? (
@@ -93,7 +94,7 @@ export function BranchTableRow({
                                 target="_blank"
                                 rel="noreferrer"
                                 aria-label="Protected branch"
-                                className="flex items-center text-text-tertiary hover:text-text-secondary"
+                                className="flex shrink-0 items-center text-text-tertiary hover:text-text-secondary"
                             >
                                 <Shield className="size-3.5" />
                             </a>
@@ -102,7 +103,7 @@ export function BranchTableRow({
                 </td>
 
                 <td className="px-4 py-2">
-                    <div className="flex items-center gap-2 text-sm text-text-secondary">
+                    <div className="flex min-w-0 items-center gap-2 text-sm text-text-secondary">
                         {branch.author?.login && branch.author.avatarUrl ? (
                             <UserLink
                                 provider={provider}
@@ -115,14 +116,16 @@ export function BranchTableRow({
                             />
                         ) : (
                             <>
-                                <UserRound className="size-4 text-text-tertiary" />
-                                <span>{branch.author?.name}</span>
+                                <UserRound className="size-4 shrink-0 text-text-tertiary" />
+                                <span className="truncate">
+                                    {branch.author?.name}
+                                </span>
                             </>
                         )}
                         <a
                             href={`https://${host}/${owner}/${repo}/commit/${branch.sha}`}
                             title={formatDateTime(branch.updatedAt)}
-                            className="text-text-tertiary hover:text-text-secondary"
+                            className="shrink-0 whitespace-nowrap text-text-tertiary hover:text-text-secondary"
                         >
                             {formatRelativeTime(branch.updatedAt)}
                         </a>
