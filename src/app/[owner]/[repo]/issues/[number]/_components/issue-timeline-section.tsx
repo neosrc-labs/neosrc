@@ -2,21 +2,21 @@
 
 import { useEffect, useMemo } from "react";
 import { CommentForm } from "~/app/[owner]/[repo]/_components/comment-form";
-import { TimelineEventList } from "~/app/[owner]/[repo]/_components/timeline/event";
-import { TimelineSkeleton } from "~/app/[owner]/[repo]/_components/timeline/section";
-import {
-    useMergedCommentReactions,
-    useTimelineBottomScroll,
-    useTimelineHashScroll,
-} from "~/app/[owner]/[repo]/_components/timeline/use-timeline-view";
-import {
-    aggregateEvents,
-    filterTimelineEvents,
-} from "~/app/[owner]/[repo]/_components/timeline/utils";
 import {
     canEdit,
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
+import { TimelineEventList } from "~/components/timeline/event";
+import { TimelineSkeleton } from "~/components/timeline/section";
+import {
+    useMergedCommentReactions,
+    useTimelineBottomScroll,
+    useTimelineHashScroll,
+} from "~/components/timeline/use-timeline-view";
+import {
+    aggregateEvents,
+    filterTimelineEvents,
+} from "~/components/timeline/utils";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import { api } from "~/trpc/react";
 import type { Provider } from "~/utils/provider-url";

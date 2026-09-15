@@ -11,15 +11,15 @@ import {
     canInteract,
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
-import { readAutosave, useAutosave } from "~/hooks/use-autosave";
-import { api } from "~/trpc/react";
-import type { Provider } from "~/utils/provider-url";
-import { ActionErrorRow } from "./action-errors";
 import {
     buildOptimisticComment,
     type TimelineCacheData,
     useTimelineListCache,
-} from "./timeline/use-timeline-comment-actions";
+} from "~/components/timeline/use-timeline-comment-actions";
+import { readAutosave, useAutosave } from "~/hooks/use-autosave";
+import { api } from "~/trpc/react";
+import type { Provider } from "~/utils/provider-url";
+import { ActionErrorRow } from "./action-errors";
 
 interface CommentFormProps {
     owner: string;
