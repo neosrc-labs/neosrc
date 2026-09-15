@@ -1,5 +1,6 @@
 import { actionsRouter } from "~/server/api/routers/actions";
 import { apiKeysRouter } from "~/server/api/routers/api-keys";
+import { branchesRouter } from "~/server/api/routers/branches";
 import { checksRouter } from "~/server/api/routers/checks";
 import { commitsRouter } from "~/server/api/routers/commits";
 import { dashboardRouter } from "~/server/api/routers/dashboard";
@@ -22,6 +23,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 export const appRouter = createTRPCRouter({
     actions: actionsRouter,
     apiKeys: apiKeysRouter,
+    branches: branchesRouter,
     checks: checksRouter,
     commits: commitsRouter,
     dashboard: dashboardRouter,

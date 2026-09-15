@@ -52,6 +52,12 @@ function fns<T extends string[]>(...names: T) {
 }
 
 vi.mock("~/server/github", () => ({
+    // Constants the routers read off the module are not functions, so the
+    // wholesale mock has to declare them.
+    BRANCH_PAGE_SIZE: 30,
+    REF_SCAN_PAGE_SIZE: 100,
+    MAX_REF_SCAN_PAGES: 3,
+    MAX_REF_WALK_PAGES: 20,
     ...fns(
         "deleteRepoSubscription",
         "getCachedFileContent",
@@ -87,6 +93,10 @@ vi.mock("~/server/github", () => ({
         "createPullRequestStack",
         "deleteBranchRef",
         "deleteIssueComment",
+        "deleteRepoBranch",
+        "getBranchDetails",
+        "getBranchProtectionMap",
+        "getBranchRefs",
         "getCachedPullRequest",
         "getMergeAsyncResult",
         "getMergeRequirements",
@@ -105,6 +115,7 @@ vi.mock("~/server/github", () => ({
         "removeAssigneesFromIssue",
         "removeLabelFromIssue",
         "removeReviewersFromPullRequest",
+        "renameRepoBranch",
         "revertPullRequest",
         "unstackPullRequests",
         "updateIssueComment",
@@ -120,6 +131,7 @@ vi.mock("~/server/codeberg", () => ({
         "createIssueComment",
         "createIssueCommentReaction",
         "createIssueReaction",
+        "deleteBranch",
         "deleteIssueComment",
         "deleteIssueCommentReaction",
         "deleteIssueReaction",
@@ -129,6 +141,7 @@ vi.mock("~/server/codeberg", () => ({
         "getCachedRepoStarred",
         "getCachedRepoSubscription",
         "getBranches",
+        "getCommitCombinedStatus",
         "getFileContent",
         "getFileLatestCommit",
         "getFileTree",
@@ -140,6 +153,7 @@ vi.mock("~/server/codeberg", () => ({
         "getRepoLanguages",
         "getTags",
         "getUser",
+        "getUserByUsername",
         "getUserRepos",
         "listIssueCommentReactions",
         "listIssueReactions",
@@ -151,6 +165,7 @@ vi.mock("~/server/codeberg", () => ({
         "listLabels",
         "listMilestones",
         "listRecentIssueAuthors",
+        "renameBranch",
         "updateIssue",
         "updateIssueComment",
     ),
@@ -164,6 +179,7 @@ vi.mock("~/server/api/routers/checks", () => ({
 }));
 vi.mock("@octokit/graphql", () => ({ graphql: vi.fn() }));
 
+import { branchesRouter } from "~/server/api/routers/branches";
 import { issuesRouter } from "~/server/api/routers/issues";
 import { pullsRouter } from "~/server/api/routers/pulls";
 import { reposRouter } from "~/server/api/routers/repos";
@@ -187,6 +203,7 @@ async function callerFor(session: unknown) {
         pulls: createCallerFactory(pullsRouter)(ctx),
         issues: createCallerFactory(issuesRouter)(ctx),
         users: createCallerFactory(usersRouter)(ctx),
+        branches: createCallerFactory(branchesRouter)(ctx),
     };
 }
 
@@ -513,5 +530,171 @@ describe("issues.timeline cursor validation", () => {
 
         await result;
         expect(page.mock.calls.at(-1)?.[4]).toBe(4);
+    });
+});
+
+describe("branches router", () => {
+    const refsPage = {
+        refs: [{ name: "main", committedDate: "2026-09-01T00:00:00Z" }],
+        totalCount: 1,
+        hasNextPage: false,
+        endCursor: null,
+        defaultBranch: "main",
+    };
+
+    it("lists through the GitHub handler, resolving an anonymous user id", async () => {
+        const { branches } = await callerFor(null);
+        vi.mocked(github.getBranchRefs).mockResolvedValue(refsPage as never);
+        vi.mocked(github.getBranchDetails).mockResolvedValue([] as never);
+        vi.mocked(github.getBranchProtectionMap).mockResolvedValue({} as never);
+
+        const result = await branches.list({ owner: "acme", repo: "api" });
+
+        expect(getGitHubTokenMock).toHaveBeenCalledWith({}, "anonymous");
+        expect(github.getBranchRefs).toHaveBeenCalledWith(
+            "gh-token",
+            "acme",
+            "api",
+            { query: null, direction: "DESC", pages: 3 },
+        );
+        expect(github.getBranchDetails).toHaveBeenCalledWith(
+            "gh-token",
+            "acme",
+            "api",
+            ["main"],
+        );
+        expect(result.items).toEqual([]);
+        expect(result.defaultBranchRow?.name).toBe("main");
+    });
+
+    it("lists through the Codeberg handler when provider is cb", async () => {
+        const { branches } = await callerFor({ user: { id: "user-1" } });
+        vi.mocked(codeberg.getBranches).mockResolvedValue([
+            {
+                name: "main",
+                sha: "s1",
+                isProtected: true,
+                updatedAt: "2026-09-01T00:00:00Z",
+                authorName: "Alice",
+                authorUsername: "alice",
+            },
+        ] as never);
+        vi.mocked(codeberg.getCachedRepo).mockResolvedValue({
+            default_branch: "main",
+        } as never);
+        vi.mocked(codeberg.getCommitCombinedStatus).mockResolvedValue(null);
+        vi.mocked(codeberg.getUserByUsername).mockResolvedValue({
+            avatar_url: "https://codeberg.org/avatars/alice",
+        } as never);
+
+        const result = await branches.list({
+            provider: "cb",
+            owner: "acme",
+            repo: "api",
+            tab: "all",
+        });
+
+        expect(getCodebergTokenMock).toHaveBeenCalledWith({}, "user-1");
+        expect(result.items).toHaveLength(1);
+        expect(result.items[0]).toMatchObject({
+            name: "main",
+            isProtected: true,
+            author: {
+                login: "alice",
+                name: "Alice",
+                avatarUrl: "https://codeberg.org/avatars/alice",
+            },
+        });
+    });
+
+    it("refuses to delete or rename the default branch", async () => {
+        const { branches } = await callerFor({ user: { id: "user-1" } });
+        vi.mocked(github.getCachedRepo).mockResolvedValue({
+            default_branch: "main",
+        } as never);
+
+        await expect(
+            branches.deleteBranch({
+                owner: "acme",
+                repo: "api",
+                branch: "main",
+            }),
+        ).rejects.toMatchObject({
+            code: "BAD_REQUEST",
+            message: "The default branch cannot be deleted",
+        });
+        await expect(
+            branches.renameBranch({
+                owner: "acme",
+                repo: "api",
+                branch: "main",
+                newName: "trunk",
+            }),
+        ).rejects.toMatchObject({
+            code: "BAD_REQUEST",
+            message: "The default branch cannot be renamed",
+        });
+        expect(github.deleteRepoBranch).not.toHaveBeenCalled();
+        expect(github.renameRepoBranch).not.toHaveBeenCalled();
+    });
+
+    it("deletes a branch and surfaces the provider rejection", async () => {
+        const { branches } = await callerFor({ user: { id: "user-1" } });
+        vi.mocked(github.getCachedRepo).mockResolvedValue({
+            default_branch: "main",
+        } as never);
+        vi.mocked(github.deleteRepoBranch).mockResolvedValue(undefined);
+
+        await expect(
+            branches.deleteBranch({
+                owner: "acme",
+                repo: "api",
+                branch: "feat/x",
+            }),
+        ).resolves.toEqual({ success: true });
+        expect(github.deleteRepoBranch).toHaveBeenCalledWith(
+            "gh-token",
+            "acme",
+            "api",
+            "feat/x",
+        );
+
+        vi.mocked(github.deleteRepoBranch).mockRejectedValue(
+            Object.assign(new Error("Branch is protected"), { status: 422 }),
+        );
+        await expect(
+            branches.deleteBranch({
+                owner: "acme",
+                repo: "api",
+                branch: "feat/x",
+            }),
+        ).rejects.toMatchObject({
+            code: "BAD_REQUEST",
+            message: "Branch is protected",
+        });
+    });
+
+    it("renames a branch to the requested name", async () => {
+        const { branches } = await callerFor({ user: { id: "user-1" } });
+        vi.mocked(github.getCachedRepo).mockResolvedValue({
+            default_branch: "main",
+        } as never);
+        vi.mocked(github.renameRepoBranch).mockResolvedValue(undefined);
+
+        await expect(
+            branches.renameBranch({
+                owner: "acme",
+                repo: "api",
+                branch: "feat/x",
+                newName: "feat/y",
+            }),
+        ).resolves.toEqual({ name: "feat/y" });
+        expect(github.renameRepoBranch).toHaveBeenCalledWith(
+            "gh-token",
+            "acme",
+            "api",
+            "feat/x",
+            "feat/y",
+        );
     });
 });
