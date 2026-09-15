@@ -56,3 +56,9 @@ export function formatCount(n: number): string {
     const m = n / 1_000_000;
     return `${m % 1 === 0 ? m : m.toFixed(1)}M`;
 }
+
+export function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
