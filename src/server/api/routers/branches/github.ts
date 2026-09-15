@@ -49,7 +49,8 @@ function withDetails(
 /**
  * GitHub's refs connection returns branches in name order (its only RefOrder
  * value is honoured for tags), so a date tab can only classify a prefix of the
- * list. The scan reports how much of it it saw; `all` pages the whole list.
+ * list and `direction` only picks which prefix. The scan reports how much of
+ * the list it saw; `all` pages the whole list in that order.
  */
 export const githubBranchProvider: BranchProvider = {
     async list({ accessToken, owner, repo, tab, query, page }) {
@@ -65,7 +66,7 @@ export const githubBranchProvider: BranchProvider = {
             );
             const refsPage = await getBranchRefs(accessToken, owner, repo, {
                 query: scanQuery,
-                direction: "DESC",
+                direction: "ASC",
                 pages,
             });
             const start = (page - 1) * BRANCH_PAGE_SIZE;
@@ -86,7 +87,7 @@ export const githubBranchProvider: BranchProvider = {
         } else {
             const refsPage = await getBranchRefs(accessToken, owner, repo, {
                 query: scanQuery,
-                direction: "DESC",
+                direction: "ASC",
                 pages: MAX_REF_SCAN_PAGES,
             });
             const scanRows = refsPage.refs.map(scanRow);

@@ -23,6 +23,8 @@ vi.mock("next/navigation", () => ({
 
 let listData: BranchListResult | undefined;
 let repoPermissions = { write: false, admin: false };
+const deleteMutate = vi.fn();
+const renameMutate = vi.fn();
 
 vi.mock("~/trpc/react", () => ({
     api: {
@@ -39,14 +41,14 @@ vi.mock("~/trpc/react", () => ({
             },
             deleteBranch: {
                 useMutation: () => ({
-                    mutate: vi.fn(),
+                    mutate: deleteMutate,
                     isPending: false,
                     error: null,
                 }),
             },
             renameBranch: {
                 useMutation: () => ({
-                    mutate: vi.fn(),
+                    mutate: renameMutate,
                     isPending: false,
                     error: null,
                 }),
@@ -65,7 +67,9 @@ vi.mock("~/trpc/react", () => ({
     },
 }));
 
+import { ghBranchConfig } from "./branch-list-config";
 import { BranchListShared } from "./branch-list-shared";
+import { RenameBranchDialog } from "./rename-branch-dialog";
 
 function row(overrides: Partial<BranchRow> = {}): BranchRow {
     return {
@@ -114,6 +118,8 @@ function renderList() {
 beforeEach(() => {
     paramsState = new URLSearchParams();
     mockPush.mockClear();
+    deleteMutate.mockClear();
+    renameMutate.mockClear();
     listData = undefined;
     repoPermissions = { write: false, admin: false };
 });
@@ -203,6 +209,37 @@ describe("BranchListShared", () => {
         ).toBeInTheDocument();
     });
 
+    it("opens the delete dialog for a manageable branch", async () => {
+        const user = userEvent.setup();
+        paramsState = new URLSearchParams("tab=all");
+        repoPermissions = { write: true, admin: false };
+        listData = listResult({
+            items: [row({ name: "feat/x" }), row({ name: "main" })],
+            totalCount: 2,
+            defaultBranchRow: null,
+        });
+        listData.defaultBranch = "main";
+
+        renderList();
+        await user.click(
+            screen.getByRole("button", { name: "Delete branch feat/x" }),
+        );
+
+        expect(screen.getByText("Delete branch 'feat/x'?")).toBeInTheDocument();
+        // The default branch has no delete control at all.
+        expect(
+            screen.queryByRole("button", { name: "Delete branch main" }),
+        ).toBeNull();
+
+        await user.click(screen.getByRole("button", { name: "Delete branch" }));
+        expect(deleteMutate).toHaveBeenCalledWith({
+            provider: "gh",
+            owner: "test-owner",
+            repo: "test-repo",
+            branch: "feat/x",
+        });
+    });
+
     it("hides the delete control without write permission", () => {
         paramsState = new URLSearchParams("tab=all");
         listData = listResult({
@@ -221,5 +258,37 @@ describe("BranchListShared", () => {
         expect(
             screen.getByRole("button", { name: "Delete branch feat/x" }),
         ).toBeInTheDocument();
+    });
+});
+
+describe("RenameBranchDialog", () => {
+    it("seeds the current name and submits the new one", async () => {
+        const user = userEvent.setup();
+        const onClose = vi.fn();
+
+        render(
+            <RenameBranchDialog
+                owner="test-owner"
+                repo="test-repo"
+                branch="feat/x"
+                config={ghBranchConfig}
+                onClose={onClose}
+            />,
+        );
+
+        const input = screen.getByLabelText("New branch name");
+        expect(input).toHaveValue("feat/x");
+
+        await user.clear(input);
+        await user.type(input, "feat/y");
+        await user.click(screen.getByRole("button", { name: "Rename branch" }));
+
+        expect(renameMutate).toHaveBeenCalledWith({
+            provider: "gh",
+            owner: "test-owner",
+            repo: "test-repo",
+            branch: "feat/x",
+            newName: "feat/y",
+        });
     });
 });
