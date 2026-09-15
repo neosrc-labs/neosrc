@@ -5,7 +5,7 @@ import {
     canInteract,
     canResolveReviewThread,
     type PullRequestPermissionContext,
-} from "~/app/[owner]/[repo]/_components/permissions-utils";
+} from "~/components/permissions/permissions-utils";
 import {
     CollapseButton,
     ResolveButton,

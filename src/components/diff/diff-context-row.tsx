@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
+import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import type { ReviewComment } from "~/server/github";
 import type { DiffViewMode } from "~/utils/diff-view";
 import { InlineCommentThread } from "../inline-comment-thread";

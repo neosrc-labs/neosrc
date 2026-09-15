@@ -19,11 +19,11 @@ import {
     ActionErrorBanner,
     ActionErrorProvider,
 } from "~/app/[owner]/[repo]/_components/action-errors";
-import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import { Async } from "~/components/async";
 import FileDiff from "~/components/file-diff";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
+import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import {
     DropdownMenu,
     DropdownMenuContent,

@@ -4,6 +4,10 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import {
+    canEdit,
+    type PullRequestPermissionContext,
+} from "~/components/permissions/permissions-utils";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { applyArrayOperations, opId } from "~/lib/utils";
 import type { IssueMetadata } from "~/server/api/routers/issues/types";
@@ -11,10 +15,6 @@ import type { Assignee } from "~/server/api/routers/mappers";
 import { api } from "~/trpc/react";
 import { domain, type Provider } from "~/utils/provider-url";
 import { FieldSkeleton } from "./metadata-section";
-import {
-    canEdit,
-    type PullRequestPermissionContext,
-} from "./permissions-utils";
 
 type AssigneeOperation = {
     id: number;

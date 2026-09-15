@@ -1,7 +1,7 @@
 import {
     canPush,
     type PullRequestPermissionContext,
-} from "~/app/[owner]/[repo]/_components/permissions-utils";
+} from "~/components/permissions/permissions-utils";
 import type { PullsGetResponseData } from "~/server/github";
 
 /**

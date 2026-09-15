@@ -3,6 +3,11 @@
 import type { components } from "@octokit/openapi-types";
 import { ChevronDown } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import {
+    canInteract,
+    canResolveReviewThread,
+    type PullRequestPermissionContext,
+} from "~/components/permissions/permissions-utils";
 import { ResolveButton } from "~/components/resolved-thread-banner";
 import { ReviewCommentItem } from "~/components/review-comment-item";
 import {
@@ -24,11 +29,6 @@ import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewCommentBase } from "~/server/github";
 import { api } from "~/trpc/react";
-import {
-    canInteract,
-    canResolveReviewThread,
-    type PullRequestPermissionContext,
-} from "./permissions-utils";
 
 type Reaction = components["schemas"]["reaction"];
 

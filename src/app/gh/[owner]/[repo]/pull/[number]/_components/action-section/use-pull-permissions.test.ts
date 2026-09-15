@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
+import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import type { PullsGetResponseData } from "~/server/github";
 import { usePullPermissions } from "./use-pull-permissions";
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { getIssuePermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
+import { getIssuePermissionContext } from "~/components/permissions/permissions-server";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
     type CommitData,

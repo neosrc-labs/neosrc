@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { Suspense, use } from "react";
 import { DocumentTitleSetter } from "~/components/document-title-setter";
+import { getIssuePermissionContext } from "~/components/permissions/permissions-server";
+import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import type { IssueDetail } from "~/server/api/routers/issues/types";
 import {
     codebergAccessToken,
@@ -8,8 +10,6 @@ import {
     githubAccessToken,
 } from "~/server/auth";
 import type { Provider } from "~/utils/provider-url";
-import { getIssuePermissionContext } from "../../_components/permissions-server";
-import type { PullRequestPermissionContext } from "../../_components/permissions-utils";
 import { IssueDescriptionSection } from "./_components/issue-description-section";
 import {
     IssueTimelineSection,

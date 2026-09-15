@@ -1,3 +1,5 @@
+import "server-only";
+
 import { getSession, isAnonymousToken } from "~/server/auth";
 import { getUserRepoPermission } from "~/server/github";
 import {

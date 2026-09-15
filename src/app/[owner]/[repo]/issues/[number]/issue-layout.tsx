@@ -1,5 +1,10 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { getIssuePermissionContext } from "~/components/permissions/permissions-server";
+import {
+    disabled,
+    type PullRequestPermissionContext,
+} from "~/components/permissions/permissions-utils";
 import type { IssueDetail } from "~/server/api/routers/issues/types";
 import {
     codebergAccessToken,
@@ -7,11 +12,6 @@ import {
     githubAccessToken,
 } from "~/server/auth";
 import type { Provider } from "~/utils/provider-url";
-import { getIssuePermissionContext } from "../../_components/permissions-server";
-import {
-    disabled,
-    type PullRequestPermissionContext,
-} from "../../_components/permissions-utils";
 import { IssueClientLayout } from "./_components/issue-client-layout";
 import { IssueLeftSidebar } from "./_components/issue-left-sidebar";
 import { IssueRightSidebar } from "./_components/issue-right-sidebar";

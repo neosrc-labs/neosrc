@@ -1,5 +1,5 @@
 import type { DiffBlock } from "diff2html/lib/types";
-import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
+import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import type { FooterAction } from "../markdown/markdown-editor";
 
 export type DiffSide = "LEFT" | "RIGHT";
