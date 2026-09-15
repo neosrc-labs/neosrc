@@ -5,7 +5,7 @@ import {
     runPullRequestNumber,
     runStatusLabel,
     statusLabel,
-} from "~/app/[owner]/[repo]/actions/_components/actions-display";
+} from "~/components/actions/actions-display";
 import {
     FORGEJO_RUN_STATUS_VALUES,
     GITHUB_RUN_STATUS_VALUES,

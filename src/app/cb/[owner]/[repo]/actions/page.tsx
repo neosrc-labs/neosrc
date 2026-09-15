@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ActionsList } from "~/app/[owner]/[repo]/actions/_components/actions-list";
+import { ActionsList } from "~/components/actions/actions-list";
 
 export async function generateMetadata({
     params,
