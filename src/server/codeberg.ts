@@ -442,7 +442,12 @@ export const getBranches = cache(
                     sha: b.commit.id,
                     isProtected: b.protected === true,
                     updatedAt: b.commit.timestamp ?? "",
-                    authorName: b.commit.author?.name ?? "",
+                    // Forgejo leaves `name` empty for some authors while
+                    // `username` is set, so the display name falls back to it.
+                    authorName:
+                        b.commit.author?.name ||
+                        b.commit.author?.username ||
+                        "",
                     authorUsername: b.commit.author?.username || null,
                 });
             }
