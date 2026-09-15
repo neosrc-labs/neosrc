@@ -5,6 +5,7 @@ vi.mock("~/server/db", () => ({ db: {} }));
 
 import {
     createIssueComment,
+    getBranches,
     listIssueCommentReactions,
     listIssueReactions,
     listIssues,
@@ -324,5 +325,88 @@ describe("reaction read failures", () => {
         await expect(
             listIssueCommentReactions("tok", "o", "r", 34),
         ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    });
+});
+
+function branch(index: number, overrides: Record<string, unknown> = {}) {
+    return {
+        name: `b${index}`,
+        commit: {
+            id: `sha${index}`,
+            timestamp: "2026-01-01T00:00:00Z",
+            author: { name: "Alice", username: "alice" },
+        },
+        protected: false,
+        ...overrides,
+    };
+}
+
+/** Stub fetch with one body per requested page number. */
+function stubBranchPages(pages: unknown[][]) {
+    const mock = vi.fn(async (url: string) => {
+        const page = Number(new URL(url).searchParams.get("page") ?? "1");
+        return {
+            ok: true,
+            status: 200,
+            json: async () => pages[page - 1] ?? [],
+            headers: { get: () => null },
+        };
+    });
+    vi.stubGlobal("fetch", mock);
+    return mock;
+}
+
+describe("getBranches", () => {
+    it("walks every page and maps commit metadata", async () => {
+        const first = Array.from({ length: 50 }, (_, i) => branch(i));
+        const mock = stubBranchPages([
+            first,
+            [
+                branch(50, {
+                    protected: true,
+                    commit: {
+                        id: "sha50",
+                        timestamp: "2025-06-01T10:00:00Z",
+                        author: { name: "Bob", username: null },
+                    },
+                }),
+            ],
+        ]);
+
+        const result = await getBranches("tok", "own", "repo");
+
+        expect(mock).toHaveBeenCalledTimes(2);
+        expect(String(mock.mock.calls[1]?.[0])).toContain("page=2");
+        expect(result).toHaveLength(51);
+        expect(result[0]).toMatchObject({
+            name: "b0",
+            sha: "sha0",
+            isProtected: false,
+            updatedAt: "2026-01-01T00:00:00Z",
+            authorName: "Alice",
+            authorUsername: "alice",
+        });
+        expect(result[50]).toMatchObject({
+            name: "b50",
+            sha: "sha50",
+            isProtected: true,
+            updatedAt: "2025-06-01T10:00:00Z",
+            authorName: "Bob",
+            authorUsername: null,
+        });
+    });
+
+    it("returns [] when the listing fails", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => ({
+                ok: false,
+                status: 403,
+                json: async () => ({}),
+                headers: { get: () => null },
+            })),
+        );
+
+        await expect(getBranches("tok", "own", "repo")).resolves.toEqual([]);
     });
 });

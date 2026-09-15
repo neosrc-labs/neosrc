@@ -391,10 +391,66 @@ export async function getCachedRepo(
     });
 }
 
-type CodebergBranchRaw = {
+export type CodebergBranchRaw = {
     name: string;
-    commit: { id: string };
+    commit: {
+        id: string;
+        timestamp?: string;
+        author?: { name?: string | null; username?: string | null } | null;
+    };
+    protected?: boolean;
 };
+
+export interface CodebergBranch {
+    name: string;
+    sha: string;
+    isProtected: boolean;
+    /** ISO timestamp of the branch head commit. */
+    updatedAt: string;
+    authorName: string;
+    /** Forgejo username of the head commit author; null when unlinked. */
+    authorUsername: string | null;
+}
+
+const BRANCH_PAGE_LIMIT = 50;
+/** Safety bound for the page walk: 2000 branches. */
+const MAX_BRANCH_PAGES = 40;
+
+export const getBranches = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+    ): Promise<CodebergBranch[]> => {
+        const branches: CodebergBranch[] = [];
+        for (let page = 1; page <= MAX_BRANCH_PAGES; page++) {
+            const res = await fetch(
+                `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches?limit=${BRANCH_PAGE_LIMIT}&page=${page}`,
+                {
+                    headers: {
+                        Authorization: `token ${accessToken}`,
+                        Accept: "application/json",
+                    },
+                },
+            );
+            if (!res.ok) return [];
+            const body = (await res.json()) as CodebergBranchRaw[];
+            const batch = Array.isArray(body) ? body : [];
+            for (const b of batch) {
+                branches.push({
+                    name: b.name,
+                    sha: b.commit.id,
+                    isProtected: b.protected === true,
+                    updatedAt: b.commit.timestamp ?? "",
+                    authorName: b.commit.author?.name ?? "",
+                    authorUsername: b.commit.author?.username || null,
+                });
+            }
+            if (batch.length < BRANCH_PAGE_LIMIT) break;
+        }
+        return branches;
+    },
+);
 
 type CodebergTagRaw = {
     name: string;
@@ -433,23 +489,6 @@ type CodebergReleaseRaw = {
     created_at: string;
     html_url: string;
 };
-
-export const getBranches = cache(
-    async (accessToken: string, owner: string, repo: string) => {
-        const res = await fetch(
-            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
-        );
-        if (!res.ok) return [];
-        const branches = (await res.json()) as CodebergBranchRaw[];
-        return branches.map((b) => ({ name: b.name, sha: b.commit.id }));
-    },
-);
 
 type ForgejoWorkflowRunRaw = {
     id: number;
