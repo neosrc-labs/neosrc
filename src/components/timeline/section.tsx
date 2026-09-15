@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import { CommentForm } from "~/app/[owner]/[repo]/_components/comment-form";
 import {
     canEdit,
     type PullRequestPermissionContext,
@@ -11,8 +12,7 @@ import type {
     GQLMergeQueueEntryState,
 } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
-import { CommentForm } from "../comment-form";
-import { DeleteBranchSection } from "../delete-branch-section";
+import { DeleteBranchSection } from "./delete-branch-section";
 import { TimelineEventList } from "./event";
 import { RevertedBanner, type RevertedByEntry } from "./reverted-banner";
 import {

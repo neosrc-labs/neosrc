@@ -10,6 +10,7 @@ import {
     SquarePen,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { ReviewComments } from "~/app/[owner]/[repo]/_components/review-comments";
 import { CommentCard } from "~/components/comment-card";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import {
@@ -45,7 +46,6 @@ import type {
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
 import type { Provider } from "~/utils/provider-url";
-import { ReviewComments } from "../../review-comments";
 import { formatReason } from "../event";
 
 const REVIEW_MINIMIZE_REASONS: {

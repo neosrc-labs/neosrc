@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense, use } from "react";
-import {
-    TimelineSection,
-    TimelineSkeleton,
-} from "~/app/[owner]/[repo]/_components/timeline/section";
 import { DocumentTitleSetter } from "~/components/document-title-setter";
 import { getIssuePermissionContext } from "~/components/permissions/permissions-server";
 import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
+import {
+    TimelineSection,
+    TimelineSkeleton,
+} from "~/components/timeline/section";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
     doesBranchExist,
