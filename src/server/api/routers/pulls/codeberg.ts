@@ -19,10 +19,10 @@ import {
     listPullRequests,
     listRepoActivity,
 } from "~/server/codeberg";
+import { compareUrl } from "~/utils/provider-url";
 import type { PullRequestProvider } from "./provider";
 import {
     bestEffortBanner,
-    codebergCompareUrl,
     fromCodebergActivity,
     PR_LOOKUP_LIMIT,
     type RecentlyPushedBranch,
@@ -144,7 +144,8 @@ export function getCodebergRecentlyPushedBranch(
             return {
                 branch: match.branch,
                 pushedAt: match.pushedAt,
-                compareUrl: codebergCompareUrl(
+                compareUrl: compareUrl(
+                    "cb",
                     owner,
                     repo,
                     match.branch,

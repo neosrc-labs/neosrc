@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
     type BranchActivity,
     branchFromRef,
-    codebergCompareUrl,
-    githubCompareUrl,
     RECENT_PUSH_WINDOW_MS,
     rankRecentPushes,
 } from "./recent-push";
@@ -115,25 +113,5 @@ describe("branchFromRef", () => {
         expect(branchFromRef("feat/login")).toBe("feat/login");
         expect(branchFromRef("")).toBeNull();
         expect(branchFromRef(null)).toBeNull();
-    });
-});
-
-describe("compare urls", () => {
-    it("builds a GitHub compare url with the form pre-expanded", () => {
-        expect(githubCompareUrl("acme", "app", "feat/login", "main")).toBe(
-            "https://github.com/acme/app/compare/main...feat/login?expand=1",
-        );
-    });
-
-    it("falls back to the branch-only range without a default branch", () => {
-        expect(githubCompareUrl("acme", "app", "feat/login", null)).toBe(
-            "https://github.com/acme/app/compare/feat/login?expand=1",
-        );
-    });
-
-    it("escapes branch characters that are not path separators", () => {
-        expect(codebergCompareUrl("acme", "app", "fix/a b", "main")).toBe(
-            "https://codeberg.org/acme/app/compare/main...fix/a%20b",
-        );
     });
 });

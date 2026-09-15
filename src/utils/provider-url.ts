@@ -59,6 +59,26 @@ export function historyUrl(
         : `https://github.com/${owner}/${repo}/commits/${encodedRef}/${encodedPath}`;
 }
 
+/**
+ * Provider compare page for `branch` against `base` (null base omits the range
+ * start). Slashes are kept as separators, everything else percent-encoded.
+ */
+export function compareUrl(
+    provider: Provider,
+    owner: string,
+    repo: string,
+    branch: string,
+    base: string | null,
+): string {
+    const target = branch.split("/").map(encodeURIComponent).join("/");
+    const range = base
+        ? `${base.split("/").map(encodeURIComponent).join("/")}...${target}`
+        : target;
+    return provider === "cb"
+        ? `https://codeberg.org/${owner}/${repo}/compare/${range}`
+        : `https://github.com/${owner}/${repo}/compare/${range}?expand=1`;
+}
+
 /** The provider's raw blob URL (githubusercontent / codeberg raw). */
 export function rawUrl(
     provider: Provider,

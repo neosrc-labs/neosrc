@@ -155,34 +155,6 @@ export function rankRecentPushes(
         .map(([branch, { pushedAt }]) => ({ branch, pushedAt }));
 }
 
-function encodeRef(ref: string) {
-    return ref.split("/").map(encodeURIComponent).join("/");
-}
-
-export function githubCompareUrl(
-    owner: string,
-    repo: string,
-    branch: string,
-    base: string | null,
-) {
-    const range = base
-        ? `${encodeRef(base)}...${encodeRef(branch)}`
-        : encodeRef(branch);
-    return `https://github.com/${owner}/${repo}/compare/${range}?expand=1`;
-}
-
-export function codebergCompareUrl(
-    owner: string,
-    repo: string,
-    branch: string,
-    base: string | null,
-) {
-    const range = base
-        ? `${encodeRef(base)}...${encodeRef(branch)}`
-        : encodeRef(branch);
-    return `https://codeberg.org/${owner}/${repo}/compare/${range}`;
-}
-
 /**
  * The banner is decorative, so provider failures (rate limits, OAuth app
  * restrictions, unreachable hosts) resolve to "no banner" instead of
