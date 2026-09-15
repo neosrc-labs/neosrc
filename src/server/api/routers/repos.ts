@@ -34,6 +34,7 @@ import {
 import type { ForkComparison } from "~/server/github";
 import {
     deleteRepoSubscription,
+    getCachedFileBlame,
     getCachedFileContent,
     getCachedRepo,
     getCachedRepoContributors,
@@ -536,6 +537,26 @@ export const reposRouter = createTRPCRouter({
             getCachedFileContent(
                 accessToken,
                 userId ?? "anonymous",
+                input.owner,
+                input.repo,
+                input.ref,
+                input.path,
+            ),
+    }),
+    getBlame: providerQuery({
+        input: providerInput({
+            owner: z.string(),
+            repo: z.string(),
+            ref: z.string(),
+            path: z.string(),
+        }),
+        userId: "anonymous",
+        // Codeberg's API has no blame endpoint, so its file view never offers it.
+        cbFallback: () => null,
+        gh: ({ accessToken, userId, input }) =>
+            getCachedFileBlame(
+                accessToken,
+                userId,
                 input.owner,
                 input.repo,
                 input.ref,
