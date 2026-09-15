@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "~/components/ui/tooltip";
-import { MarkdownEditor } from "../markdown-editor";
+import { MarkdownEditor } from "./markdown-editor";
 
 vi.mock("~/trpc/react", () => ({
     api: {

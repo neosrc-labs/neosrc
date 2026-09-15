@@ -48,4 +48,53 @@ describe("review comment domain", () => {
         expect(threads.map((thread) => thread.parent.id)).toEqual([1, 3]);
         expect(threads[0]?.replies.map((reply) => reply.id)).toEqual([2]);
     });
+
+    it("returns one thread with empty replies for a standalone comment", () => {
+        const threads = groupReviewCommentThreads([comment({ id: 1 })]);
+        expect(threads).toHaveLength(1);
+        expect(threads[0]?.parent.id).toBe(1);
+        expect(threads[0]?.replies).toEqual([]);
+    });
+
+    it("groups parent with replies under the same root id", () => {
+        const threads = groupReviewCommentThreads([
+            comment({ id: 1 }),
+            comment({ id: 2, in_reply_to_id: 1 }),
+            comment({ id: 3, in_reply_to_id: 1 }),
+        ]);
+        expect(threads).toHaveLength(1);
+        expect(threads[0]?.parent.id).toBe(1);
+        expect(threads[0]?.replies).toHaveLength(2);
+        expect(threads[0]?.replies.map((reply) => reply.id).sort()).toEqual([
+            2, 3,
+        ]);
+    });
+
+    it("handles multiple independent threads", () => {
+        const threads = groupReviewCommentThreads([
+            comment({ id: 1 }),
+            comment({ id: 10, in_reply_to_id: 1 }),
+            comment({ id: 2 }),
+            comment({ id: 20, in_reply_to_id: 2 }),
+        ]);
+        expect(threads).toHaveLength(2);
+        const thread1 = threads.find((thread) => thread.parent.id === 1);
+        const thread2 = threads.find((thread) => thread.parent.id === 2);
+        expect(thread1?.replies.map((reply) => reply.id)).toEqual([10]);
+        expect(thread2?.replies.map((reply) => reply.id)).toEqual([20]);
+    });
+
+    it("treats a reply that arrives before its root as the thread root", () => {
+        const threads = groupReviewCommentThreads([
+            comment({ id: 2, in_reply_to_id: 1 }),
+            comment({ id: 1 }),
+        ]);
+        expect(threads).toHaveLength(1);
+        expect(threads[0]?.parent.id).toBe(2);
+        expect(threads[0]?.replies.map((reply) => reply.id)).toEqual([1]);
+    });
+
+    it("returns no threads for no comments", () => {
+        expect(groupReviewCommentThreads([])).toEqual([]);
+    });
 });
