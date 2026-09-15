@@ -33,6 +33,15 @@ export function treeHref(
     return path ? `${base}/${encodeRepoPath(path)}` : base;
 }
 
+/** In-app branch-list URL. */
+export function branchesHref(
+    provider: Provider,
+    owner: string,
+    repo: string,
+): string {
+    return `/${provider}/${owner}/${repo}/branches`;
+}
+
 /** In-app file URL for `ref` + `path`. */
 export function blobHref(
     provider: Provider,
