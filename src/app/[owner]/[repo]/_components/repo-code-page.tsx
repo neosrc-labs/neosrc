@@ -26,7 +26,13 @@ export function RepoCodePage({
             owner={owner}
             repo={repo}
             provider={provider}
-            contentFallback={<RepoBrowseSkeleton owner={owner} repo={repo} />}
+            contentFallback={
+                <RepoBrowseSkeleton
+                    owner={owner}
+                    repo={repo}
+                    provider={provider}
+                />
+            }
         >
             {(repoData) => (
                 <>

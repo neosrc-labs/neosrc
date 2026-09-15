@@ -35,7 +35,6 @@ export function RepoDocFiles({
     const [loadingPath, setLoadingPath] = useState<string | null>(null);
     const fileContentsRef = useRef(fileContents);
     fileContentsRef.current = fileContents;
-    const initRef = useRef(false);
     const contentRef = useRef<HTMLDivElement>(null);
 
     const trpcUtils = api.useUtils();
@@ -76,20 +75,21 @@ export function RepoDocFiles({
     }, [activeTab, fileNames]);
 
     useEffect(() => {
-        if (fileNames.length === 0 || initRef.current) return;
-        initRef.current = true;
-
-        const tabParam = searchParams.get("tab");
-        let target = fileNames[0] ?? null;
-        if (tabParam) {
-            const match = fileNames.find(
-                (f) => getDocFileHashName(f.name) === tabParam,
-            );
-            if (match) target = match;
+        if (fileNames.length === 0) return;
+        // Keep the selection while the listing still offers that file;
+        // otherwise a new listing falls back to the ?tab= request, then to the
+        // first doc file.
+        if (activeTab !== null && fileNames.some((f) => f.name === activeTab)) {
+            return;
         }
 
+        const tabParam = searchParams.get("tab");
+        const requested = tabParam
+            ? fileNames.find((f) => getDocFileHashName(f.name) === tabParam)
+            : undefined;
+        const target = requested ?? fileNames[0];
         if (target) setActiveTab(target.name);
-    }, [fileNames, searchParams]);
+    }, [fileNames, activeTab, searchParams]);
 
     useEffect(() => {
         if (activeFile) loadContent(activeFile.path);

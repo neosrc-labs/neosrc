@@ -273,12 +273,21 @@ export function RepoBrowseRoot({
 interface RepoBrowseSkeletonProps {
     owner: string;
     repo: string;
+    provider: Provider;
 }
 
-export function RepoBrowseSkeleton({ owner, repo }: RepoBrowseSkeletonProps) {
+export function RepoBrowseSkeleton({
+    owner,
+    repo,
+    provider,
+}: RepoBrowseSkeletonProps) {
     return (
         <RepoContentCard>
-            <FileTableHeaderSkeleton owner={owner} repo={repo} />
+            <FileTableHeaderSkeleton
+                owner={owner}
+                repo={repo}
+                provider={provider}
+            />
             <RepoCommitRowSkeleton />
             <RepoFileTableSkeleton />
         </RepoContentCard>
@@ -288,9 +297,11 @@ export function RepoBrowseSkeleton({ owner, repo }: RepoBrowseSkeletonProps) {
 function FileTableHeaderSkeleton({
     owner,
     repo,
+    provider,
 }: {
     owner: string;
     repo: string;
+    provider: Provider;
 }) {
     return (
         <div className="flex min-h-16 items-center justify-between border-border border-b bg-surface-elevated px-4 py-3">
@@ -308,7 +319,7 @@ function FileTableHeaderSkeleton({
                         className="h-8 w-48 rounded-md border border-border bg-transparent py-1 pr-7 pl-8 text-sm text-text-primary placeholder-text-tertiary"
                     />
                 </div>
-                <ClonePopover owner={owner} repo={repo} />
+                <ClonePopover owner={owner} repo={repo} provider={provider} />
             </div>
         </div>
     );

@@ -20,6 +20,8 @@ export interface FileNode {
     deletions?: number;
     /** Placeholder row while a directory's children load. */
     isLoading?: boolean;
+    /** Placeholder row for a directory whose children failed to load. */
+    isFailed?: boolean;
 }
 
 interface FlatItem {
@@ -338,6 +340,17 @@ function FileTreeNode({
                 style={{ paddingLeft: `${paddingLeft}px` }}
             >
                 <div className="h-4 w-28 animate-pulse rounded bg-surface-secondary" />
+            </div>
+        );
+    }
+
+    if (node.isFailed) {
+        return (
+            <div
+                className="flex items-center gap-1.5 rounded px-2 py-1 text-sm text-text-tertiary"
+                style={{ paddingLeft: `${paddingLeft}px` }}
+            >
+                <span className="truncate">{node.name}</span>
             </div>
         );
     }
