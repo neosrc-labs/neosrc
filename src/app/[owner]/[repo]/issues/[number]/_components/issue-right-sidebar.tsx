@@ -1,4 +1,4 @@
-import { MetadataSection } from "~/app/[owner]/[repo]/_components/metadata-section";
+import { MetadataSection } from "~/components/metadata/metadata-section";
 import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import type { IssueMetadata } from "~/server/api/routers/issues/types";
 import type { Provider } from "~/utils/provider-url";
