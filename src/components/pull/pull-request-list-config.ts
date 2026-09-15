@@ -10,13 +10,19 @@ export interface PullRequestListConfig {
     showStatusFilter: boolean;
     showReviewFilter: boolean;
     fetchStatusChecks: boolean;
-    externalUrls: (
-        owner: string,
-        repo: string,
-    ) => {
-        labels: string;
-        milestones: string;
-        newItem: string;
+}
+
+/** Provider-hosted labels / milestones / compare URLs for the search bar. */
+export function pullRequestExternalUrls(
+    provider: "gh" | "cb",
+    owner: string,
+    repo: string,
+): { labels: string; milestones: string; newItem: string } {
+    const host = provider === "cb" ? "codeberg.org" : "github.com";
+    return {
+        labels: `https://${host}/${owner}/${repo}/labels`,
+        milestones: `https://${host}/${owner}/${repo}/milestones`,
+        newItem: `https://${host}/${owner}/${repo}/compare`,
     };
 }
 
@@ -96,11 +102,6 @@ export const ghConfig: PullRequestListConfig = {
     showStatusFilter: true,
     showReviewFilter: true,
     fetchStatusChecks: true,
-    externalUrls: (owner: string, repo: string) => ({
-        labels: `https://github.com/${owner}/${repo}/labels`,
-        milestones: `https://github.com/${owner}/${repo}/milestones`,
-        newItem: `https://github.com/${owner}/${repo}/compare`,
-    }),
 };
 
 export const cbConfig: PullRequestListConfig = {
@@ -113,9 +114,4 @@ export const cbConfig: PullRequestListConfig = {
     showStatusFilter: false,
     showReviewFilter: false,
     fetchStatusChecks: false,
-    externalUrls: (owner: string, repo: string) => ({
-        labels: `https://codeberg.org/${owner}/${repo}/labels`,
-        milestones: `https://codeberg.org/${owner}/${repo}/milestones`,
-        newItem: `https://codeberg.org/${owner}/${repo}/compare`,
-    }),
 };
