@@ -5,9 +5,9 @@ import { SearchIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { cn } from "~/lib/utils";
 import type { CodeSearchResultItem } from "~/server/github";
 import { api } from "~/trpc/react";
+import { cn } from "~/utils/helpers";
 import { blobHref, type Provider, treeHref } from "~/utils/provider-url";
 
 interface RepoFileSearchProps {

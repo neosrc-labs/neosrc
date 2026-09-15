@@ -5,7 +5,7 @@ import {
     formatCount,
     opId,
     parseTarget,
-} from "~/lib/utils";
+} from "./helpers";
 
 describe("cn", () => {
     it("returns a string for a single class", () => {

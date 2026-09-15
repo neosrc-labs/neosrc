@@ -5,8 +5,8 @@ import Image from "next/image";
 import { useState } from "react";
 import { CopyButton } from "~/components/ui/copy-button";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
-import { parseTarget } from "~/lib/utils";
 import { api } from "~/trpc/react";
+import { parseTarget } from "~/utils/helpers";
 
 type PermissionKind = "UPLOAD_REPORT_OWNER" | "UPLOAD_REPORT_REPO";
 

@@ -3,7 +3,7 @@ import {
     EXTENSION_EXIT_PARAM,
     EXTENSION_REQUEST_HEADER,
     externalUrlForNeosrcPath,
-} from "~/lib/extension-routes";
+} from "~/utils/extension-routes";
 
 /**
  * Host URL to send a browser back to when Neosrc cannot serve the page it asked

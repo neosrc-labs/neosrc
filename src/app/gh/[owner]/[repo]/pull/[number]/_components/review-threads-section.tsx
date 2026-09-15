@@ -4,9 +4,9 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { CheckCircle, Circle, Code2, MessageSquare } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useMemo, useRef } from "react";
-import { cn } from "~/lib/utils";
 import type { ReviewThreadSummary } from "~/server/github";
 import { api } from "~/trpc/react";
+import { cn } from "~/utils/helpers";
 import { bucketReviewThreads } from "./review-thread-groups";
 
 const HEADER_ITEM_HEIGHT = 28;

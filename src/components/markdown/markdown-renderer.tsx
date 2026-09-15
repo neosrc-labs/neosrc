@@ -22,7 +22,7 @@ import { IssueHoverCard } from "~/components/hovercards/issue-hover-card";
 import { TeamHoverCard } from "~/components/hovercards/team-hover-card";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CopyButton } from "~/components/ui/copy-button";
-import { cn } from "~/lib/utils";
+import { cn } from "~/utils/helpers";
 import { highlightLines } from "~/utils/highlight";
 import { SuggestionBlock } from "./accessories/suggestion-block";
 import { remarkCommitPlugin } from "./plugins/remark-commit";

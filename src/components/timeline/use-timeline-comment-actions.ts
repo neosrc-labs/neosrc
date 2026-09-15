@@ -1,8 +1,5 @@
 import type { InfiniteData } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
-import type { ReactionContent } from "~/lib/reactions";
-import { toggleReactionInList } from "~/lib/reactions";
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { TimelineResult } from "~/server/api/routers/timeline";
 import type {
     GQLIssueComment,
@@ -10,6 +7,9 @@ import type {
 } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { domain, type Provider } from "~/utils/provider-url";
+import type { ReactionContent } from "~/utils/reactions";
+import { toggleReactionInList } from "~/utils/reactions";
+import { TIMELINE_PAGE_SIZE } from "~/utils/timeline-constants";
 
 export interface PullScope {
     owner: string;

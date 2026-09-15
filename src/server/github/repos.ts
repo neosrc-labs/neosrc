@@ -1,6 +1,5 @@
 import type { RestEndpointMethodTypes } from "@octokit/rest";
 import { cache } from "react";
-import type { DocFileName } from "~/lib/doc-files";
 import {
     repoContributorsCacheKey,
     repoDocFilesCacheKey,
@@ -23,6 +22,7 @@ import {
     viewerRepoAccess,
 } from "~/server/repo-cache";
 import { githubRepoToSyncRepo } from "~/server/sync/mappers";
+import type { DocFileName } from "~/utils/doc-files";
 import { createOctokit } from "./client";
 import { getRepoDocFileNames, getRepoLanguages } from "./contents";
 

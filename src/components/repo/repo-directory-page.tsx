@@ -1,6 +1,6 @@
 "use client";
 
-import { pickDocFileNames } from "~/lib/doc-files";
+import { pickDocFileNames } from "~/utils/doc-files";
 import type { Provider } from "~/utils/provider-url";
 import { RepoDocFiles } from "./repo-doc-files";
 import { RepoPathBrowse } from "./repo-path-browse";

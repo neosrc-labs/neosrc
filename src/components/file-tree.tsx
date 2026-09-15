@@ -4,8 +4,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import Image from "next/image";
 import Link from "next/link";
 import { type ReactNode, useEffect, useMemo, useRef } from "react";
-import { cn } from "~/lib/utils";
 import type { PullRequestFile } from "~/server/github";
+import { cn } from "~/utils/helpers";
 import { getFileIconName, getFolderIconName } from "~/utils/icons";
 
 const ITEM_HEIGHT = 30;

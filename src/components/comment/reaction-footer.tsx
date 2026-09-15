@@ -7,10 +7,10 @@ import {
 } from "~/components/permissions/permissions-utils";
 import { ReactionBar } from "~/components/reaction/reaction-bar";
 import { ReactionPicker } from "~/components/reaction/reaction-picker";
-import type { ReactionContent } from "~/lib/reactions";
 import type { GQLPullRequestReactions } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import type { Provider } from "~/utils/provider-url";
+import type { ReactionContent } from "~/utils/reactions";
 
 type SubjectReactionsData = Pick<
     GQLPullRequestReactions,

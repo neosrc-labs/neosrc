@@ -1,6 +1,6 @@
 // Route matching and declarativeNetRequest rule building, shared by the
 // service worker, content script and popup. Mirrors the semantics of
-// src/lib/extension-routes.ts, which generates routes.generated.js; that file
+// src/utils/extension-routes.ts, which generates routes.generated.js; that file
 // is the data, this file is the behaviour.
 (() => {
     const EXIT_PARAM =

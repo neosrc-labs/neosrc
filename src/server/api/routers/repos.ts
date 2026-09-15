@@ -1,7 +1,5 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-
-import { pickDocFileNames } from "~/lib/doc-files";
 import {
     createTRPCRouter,
     protectedProcedure,
@@ -68,6 +66,7 @@ import {
     RepoNotFoundError,
     viewerRepoAccess,
 } from "~/server/repo-cache";
+import { pickDocFileNames } from "~/utils/doc-files";
 
 /**
  * Maps the repo cache's miss (its fetcher returned null: repo absent or the

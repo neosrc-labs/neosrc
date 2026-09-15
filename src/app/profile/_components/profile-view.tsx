@@ -12,9 +12,9 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
 import { AccountManager } from "~/app/_components/account-manager";
-import { authClient } from "~/lib/auth-client";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";
+import { authClient } from "~/utils/auth-client";
 import { GithubAppSection } from "./github-app-section";
 import { SyncSection } from "./sync-section";
 

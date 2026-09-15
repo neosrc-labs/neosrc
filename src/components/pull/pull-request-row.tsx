@@ -21,8 +21,8 @@ import {
     TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { UserLink } from "~/components/user/user-link";
-import { cn } from "~/lib/utils";
 import { formatRelativeTime } from "~/utils";
+import { cn } from "~/utils/helpers";
 import { StackBadge } from "./stack/stack-popover";
 
 export interface PrRowData {

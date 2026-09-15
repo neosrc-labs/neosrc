@@ -14,10 +14,10 @@ import {
     applyReviewThreadOperations,
     useReviewThreadOperations,
 } from "~/hooks/use-review-thread-operations";
-import type { ReactionContent } from "~/lib/reactions";
-import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
+import type { ReactionContent } from "~/utils/reactions";
+import { removeCommentFromFlatList } from "~/utils/review-comment-cache-utils";
 import {
     CollapseButton,
     ResolveButton,

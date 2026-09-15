@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { toggleReactionInList } from "~/lib/reactions";
 import type { GQLReactionNode } from "~/server/github-graphql";
+import { toggleReactionInList } from "./reactions";
 
 function reaction(overrides: Partial<GQLReactionNode>): GQLReactionNode {
     return {

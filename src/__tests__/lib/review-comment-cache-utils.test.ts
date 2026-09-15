@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
 import type { ReviewComment } from "~/server/github";
+import { removeCommentFromFlatList } from "~/utils/review-comment-cache-utils";
 
 function c(overrides: {
     id: number;

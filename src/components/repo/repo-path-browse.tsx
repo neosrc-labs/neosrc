@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useMemo } from "react";
-import { cn } from "~/lib/utils";
 import type { RepoContentItem } from "~/server/github";
 import { api } from "~/trpc/react";
+import { cn } from "~/utils/helpers";
 import { blobHref, type Provider } from "~/utils/provider-url";
 import { RepoBreadcrumb } from "./repo-breadcrumb";
 import { RepoBusyBar } from "./repo-busy-bar";

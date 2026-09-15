@@ -1,4 +1,4 @@
-import { EXTENSION_ROUTE_TABLE } from "~/lib/extension-routes";
+import { EXTENSION_ROUTE_TABLE } from "~/utils/extension-routes";
 
 /**
  * Route coverage the extension is allowed to redirect, served so a browser that

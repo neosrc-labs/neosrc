@@ -4,8 +4,8 @@ import { BookOpen } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
-import { getDocFileDisplayName, getDocFileHashName } from "~/lib/doc-files";
 import { api } from "~/trpc/react";
+import { getDocFileDisplayName, getDocFileHashName } from "~/utils/doc-files";
 import { type Provider, rawUrl } from "~/utils/provider-url";
 
 interface RepoDocFilesProps {

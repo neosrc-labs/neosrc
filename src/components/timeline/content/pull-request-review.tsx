@@ -36,8 +36,6 @@ import {
 } from "~/components/ui/popover";
 import { UserLink } from "~/components/user/user-link";
 import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
-import type { ReactionContent } from "~/lib/reactions";
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewComment, ReviewMinimizeClassifier } from "~/server/github";
 import type {
     GQLPullRequestReview,
@@ -46,6 +44,8 @@ import type {
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils";
 import type { Provider } from "~/utils/provider-url";
+import type { ReactionContent } from "~/utils/reactions";
+import { TIMELINE_PAGE_SIZE } from "~/utils/timeline-constants";
 import { formatReason } from "../event";
 
 const REVIEW_MINIMIZE_REASONS: {

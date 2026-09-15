@@ -8,8 +8,8 @@ import {
     GitPullRequestDraft,
 } from "lucide-react";
 import Link from "next/link";
-import { cn } from "~/lib/utils";
 import type { StackEntry } from "~/server/github-graphql";
+import { cn } from "~/utils/helpers";
 
 interface StackListProps {
     owner: string;

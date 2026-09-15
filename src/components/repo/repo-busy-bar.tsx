@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "~/lib/utils";
+import { cn } from "~/utils/helpers";
 
 /** 2px progress strip reserved at the top of a card; pulsing while data loads. */
 export function RepoBusyBar({ busy }: { busy: boolean }) {

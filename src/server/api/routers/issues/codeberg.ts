@@ -1,4 +1,3 @@
-import { translateForgejoKeywords } from "~/lib/search-syntax";
 import {
     forgejoStateCounts,
     parseForgejoQuery,
@@ -17,6 +16,7 @@ import {
     type CodebergIssueListParams,
     listIssues,
 } from "~/server/codeberg";
+import { translateForgejoKeywords } from "~/utils/search-syntax";
 import type { IssueProvider } from "./provider";
 import type { IssueSearchItem, IssueSearchResult } from "./types";
 

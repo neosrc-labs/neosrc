@@ -1,4 +1,3 @@
-import { ALL_REACTIONS, type ReactionContent } from "~/lib/reactions";
 import type { CodebergIssue, CodebergReaction } from "~/server/codeberg";
 import type {
     IssueGetResponseData,
@@ -11,6 +10,7 @@ import type {
     GqlPrSearchItem,
 } from "~/server/github-graphql";
 import { domain, repoUrl } from "~/utils/provider-url";
+import { ALL_REACTIONS, type ReactionContent } from "~/utils/reactions";
 import type {
     IssueDetail,
     IssueMetadata,

@@ -10,7 +10,7 @@ import {
     useMemo,
     useState,
 } from "react";
-import { cn } from "~/lib/utils";
+import { cn } from "~/utils/helpers";
 
 type ReportActionError = (key: string, message: string | null) => void;
 
