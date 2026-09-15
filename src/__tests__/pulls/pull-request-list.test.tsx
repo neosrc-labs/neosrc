@@ -91,7 +91,8 @@ vi.mock("~/trpc/react", () => ({
     },
 }));
 
-import { PullRequestList } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-list";
+import { ghConfig } from "~/components/pull/pull-request-list-config";
+import { PullRequestListShared } from "~/components/pull/pull-request-list-shared";
 import { api } from "~/trpc/react";
 
 // --- Helpers ---
@@ -102,12 +103,13 @@ function renderList(props?: {
     defaultState?: string;
 }) {
     return render(
-        <PullRequestList
+        <PullRequestListShared
             owner={props?.owner ?? "test-owner"}
             repo={props?.repo ?? "test-repo"}
             defaultState={
                 (props?.defaultState as "open" | "closed" | "merged") ?? "open"
             }
+            config={ghConfig}
         />,
     );
 }

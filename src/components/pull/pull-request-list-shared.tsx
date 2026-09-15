@@ -12,9 +12,10 @@ import { RecentlyPushedBanner } from "~/components/repo/recently-pushed-banner";
 import type { PrSearchItem } from "~/server/api/routers/pulls/types";
 import { api } from "~/trpc/react";
 import { PullRequestEmptyState } from "./pull-request-empty-state";
-import type {
-    FilterState,
-    PullRequestListConfig,
+import {
+    type FilterState,
+    type PullRequestListConfig,
+    pullRequestExternalUrls,
 } from "./pull-request-list-config";
 import type { PrRowData } from "./pull-request-row";
 import { PullRequestRow } from "./pull-request-row";
@@ -138,7 +139,11 @@ export function PullRequestListShared({
                         owner={owner}
                         repo={repo}
                         placeholder="Search pull requests by title, body, or comments"
-                        urls={config.externalUrls(owner, repo)}
+                        urls={pullRequestExternalUrls(
+                            config.provider,
+                            owner,
+                            repo,
+                        )}
                         newItemIcon={<GitPullRequest className="size-4" />}
                         newItemLabel="New Pull Request"
                         onSearch={list.handleSearch}

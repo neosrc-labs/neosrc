@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { PullRequestList } from "./_components/pull-request-list";
+import { cbConfig } from "~/components/pull/pull-request-list-config";
+import { PullRequestListShared } from "~/components/pull/pull-request-list-shared";
 
 export async function generateMetadata({
     params,
@@ -31,10 +32,11 @@ export default async function PullsPage({
     return (
         <main className="min-h-[calc(100svh-var(--header-height))] min-w-0 border-border-subtle border-r bg-surface">
             <div className="mx-auto max-w-7xl px-6 py-8">
-                <PullRequestList
+                <PullRequestListShared
                     owner={owner}
                     repo={repo}
                     defaultState={defaultState}
+                    config={cbConfig}
                 />
             </div>
         </main>
