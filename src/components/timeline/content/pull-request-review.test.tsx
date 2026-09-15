@@ -113,7 +113,7 @@ vi.mock("~/components/hovercards/user-hover-card", () => ({
     ),
 }));
 
-vi.mock("~/app/[owner]/[repo]/_components/review-comments", () => ({
+vi.mock("~/components/comment/review-comments", () => ({
     ReviewComments: () => <div data-testid="review-comments" />,
 }));
 

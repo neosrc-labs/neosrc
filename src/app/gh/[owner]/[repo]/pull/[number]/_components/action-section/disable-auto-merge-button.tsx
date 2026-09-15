@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useActionError } from "~/app/[owner]/[repo]/_components/action-errors";
+import { useActionError } from "~/components/action-errors";
 import { api } from "~/trpc/react";
 
 interface DisableAutoMergeButtonProps {

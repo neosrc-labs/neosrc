@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActionErrorBanner,
     useActionErrorPinned,
-} from "~/app/[owner]/[repo]/_components/action-errors";
+} from "~/components/action-errors";
 import { Async } from "~/components/async";
 import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";

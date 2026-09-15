@@ -3,7 +3,7 @@
 import { ChevronDown, GitPullRequestArrow } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useActionError } from "~/app/[owner]/[repo]/_components/action-errors";
+import { useActionError } from "~/components/action-errors";
 import type { RepositoryInfo } from "~/server/api/routers/repos";
 import type { MergeMethod, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";

@@ -19,7 +19,7 @@ import {
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { api } from "~/trpc/react";
 import type { Provider } from "~/utils/provider-url";
-import { ActionErrorRow } from "./action-errors";
+import { ActionErrorRow } from "../action-errors";
 
 interface CommentFormProps {
     owner: string;

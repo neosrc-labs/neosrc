@@ -18,7 +18,7 @@ import {
 import {
     ActionErrorBanner,
     ActionErrorProvider,
-} from "~/app/[owner]/[repo]/_components/action-errors";
+} from "~/components/action-errors";
 import { Async } from "~/components/async";
 import FileDiff from "~/components/file-diff";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
