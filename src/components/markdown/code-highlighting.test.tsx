@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MarkdownRenderer } from "../markdown-renderer";
+import { MarkdownRenderer } from "./markdown-renderer";
 
 vi.mock("~/utils/highlight", () => ({
     highlightLines: vi.fn(async (code: string, tag: string) =>

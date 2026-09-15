@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { MarkdownRenderer } from "../markdown-renderer";
+import { MarkdownRenderer } from "./markdown-renderer";
 
 function renderMarkdown(
     content: string,
