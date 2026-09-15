@@ -1,4 +1,5 @@
 export * from "./github/actions";
+export * from "./github/branches";
 export * from "./github/checks";
 export * from "./github/client";
 export * from "./github/contents";
