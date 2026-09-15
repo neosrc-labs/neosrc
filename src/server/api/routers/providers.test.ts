@@ -555,7 +555,7 @@ describe("branches router", () => {
             "gh-token",
             "acme",
             "api",
-            { query: null, direction: "DESC", pages: 3 },
+            { query: null, direction: "ASC", pages: 3 },
         );
         expect(github.getBranchDetails).toHaveBeenCalledWith(
             "gh-token",
