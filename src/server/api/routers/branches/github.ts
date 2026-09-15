@@ -1,0 +1,143 @@
+import {
+    BRANCH_PAGE_SIZE,
+    type GitHubBranchRef,
+    getBranchDetails,
+    getBranchProtectionMap,
+    getBranchRefs,
+    MAX_REF_SCAN_PAGES,
+    MAX_REF_WALK_PAGES,
+    REF_SCAN_PAGE_SIZE,
+} from "~/server/github";
+import { type BranchProvider, branchAuthor } from "./provider";
+import { paginateRows, selectTabRows } from "./tabs";
+import type { BranchListResult, BranchRow } from "./types";
+
+/** The scan only knows the name and head-commit date; details fill the rest. */
+function scanRow(ref: { name: string; committedDate: string }): BranchRow {
+    return {
+        name: ref.name,
+        sha: "",
+        updatedAt: ref.committedDate,
+        author: null,
+        isProtected: false,
+        pullRequestNumber: null,
+        checks: [],
+    };
+}
+
+function withDetails(
+    row: BranchRow,
+    detail: GitHubBranchRef | undefined,
+    isProtected: boolean,
+): BranchRow {
+    if (!detail) return { ...row, isProtected };
+    return {
+        name: row.name,
+        sha: detail.oid,
+        updatedAt: detail.committedDate || row.updatedAt,
+        author: branchAuthor(
+            detail.authorName,
+            detail.authorLogin,
+            detail.authorAvatarUrl,
+        ),
+        isProtected,
+        pullRequestNumber: detail.pullRequestNumber,
+        checks: detail.checks,
+    };
+}
+
+export const githubBranchProvider: BranchProvider = {
+    async list({ accessToken, owner, repo, tab, query, page }) {
+        const scanQuery = query.trim() === "" ? null : query;
+
+        let result: BranchListResult;
+        if (tab === "all") {
+            // The walk covers the requested page: 30 rows per scan page of 100.
+            const pages = Math.min(
+                MAX_REF_WALK_PAGES,
+                Math.ceil((page * BRANCH_PAGE_SIZE) / REF_SCAN_PAGE_SIZE),
+            );
+            const refsPage = await getBranchRefs(accessToken, owner, repo, {
+                query: scanQuery,
+                direction: "DESC",
+                pages,
+            });
+            const start = (page - 1) * BRANCH_PAGE_SIZE;
+            const items = refsPage.refs
+                .slice(start, start + BRANCH_PAGE_SIZE)
+                .map(scanRow);
+            const totalCount =
+                refsPage.hasNextPage && pages === MAX_REF_WALK_PAGES
+                    ? MAX_REF_WALK_PAGES * REF_SCAN_PAGE_SIZE
+                    : refsPage.totalCount;
+            result = {
+                items,
+                totalCount,
+                hasNextPage: page * BRANCH_PAGE_SIZE < totalCount,
+                defaultBranch: refsPage.defaultBranch,
+                defaultBranchRow: null,
+            };
+        } else {
+            const refsPage = await getBranchRefs(accessToken, owner, repo, {
+                query: scanQuery,
+                direction: tab === "stale" ? "ASC" : "DESC",
+                pages: MAX_REF_SCAN_PAGES,
+            });
+            const scanRows = refsPage.refs.map(scanRow);
+            const paged = paginateRows(
+                selectTabRows(scanRows, {
+                    tab,
+                    query,
+                    defaultBranch: refsPage.defaultBranch,
+                    now: Date.now(),
+                }),
+                page,
+                BRANCH_PAGE_SIZE,
+            );
+            result = {
+                items: paged.items,
+                totalCount: paged.totalCount,
+                hasNextPage: paged.hasNextPage,
+                defaultBranch: refsPage.defaultBranch,
+                defaultBranchRow:
+                    tab === "overview" && refsPage.defaultBranch
+                        ? (scanRows.find(
+                              (row) => row.name === refsPage.defaultBranch,
+                          ) ??
+                          scanRow({
+                              name: refsPage.defaultBranch,
+                              committedDate: "",
+                          }))
+                        : null,
+            };
+        }
+
+        const names = result.items.map((row) => row.name);
+        if (result.defaultBranchRow) names.push(result.defaultBranchRow.name);
+        if (names.length === 0) return result;
+
+        const [details, protection] = await Promise.all([
+            getBranchDetails(accessToken, owner, repo, names),
+            getBranchProtectionMap(accessToken, owner, repo, names),
+        ]);
+        const byName = new Map(details.map((detail) => [detail.name, detail]));
+
+        return {
+            ...result,
+            items: result.items.map((row) =>
+                withDetails(
+                    row,
+                    byName.get(row.name),
+                    protection[row.name] === true,
+                ),
+            ),
+            defaultBranchRow: result.defaultBranchRow
+                ? withDetails(
+                      result.defaultBranchRow,
+                      byName.get(result.defaultBranchRow.name),
+                      protection[result.defaultBranchRow.name] === true,
+                  )
+                : null,
+        };
+    },
+};
