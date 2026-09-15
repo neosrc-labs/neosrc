@@ -10,7 +10,12 @@ import {
 } from "~/components/ci-status";
 import type { RepoContentItem, RepoLatestCommit } from "~/server/github";
 import { api } from "~/trpc/react";
-import { blobHref, type Provider, repoUrl } from "~/utils/provider-url";
+import {
+    blobHref,
+    branchesHref,
+    type Provider,
+    repoUrl,
+} from "~/utils/provider-url";
 import { ClonePopover } from "./clone-popover";
 import { ForkSyncRow } from "./fork-sync-row";
 import { RefSelector } from "./ref-selector";
@@ -374,7 +379,7 @@ function FileTableHeader({
                 {refCounts ? (
                     <span className="inline-flex items-center gap-1 text-sm text-text-tertiary">
                         <a
-                            href={`${repoUrl(provider, owner, repo)}/branches`}
+                            href={branchesHref(provider, owner, repo)}
                             className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-surface-secondary"
                         >
                             <GitBranchIcon className="h-3 w-3" />

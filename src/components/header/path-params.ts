@@ -33,6 +33,7 @@ export function parseRepoPath(pathname: string): ParsedRepoPath {
             /^\/([^/]+)\/([^/]+)\/issues\/(\d+)/,
         );
         const issuesMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/issues/);
+        const branchesMatch = cleanPath.match(/^\/([^/]+)\/([^/]+)\/branches/);
         if (pullsMatch) {
             pathType = "PULLS_LIST";
         } else if (issueDetailMatch) {
@@ -49,6 +50,8 @@ export function parseRepoPath(pathname: string): ParsedRepoPath {
             }
         } else if (actionsMatch) {
             pathType = "ACTIONS_LIST";
+        } else if (branchesMatch) {
+            pathType = "BRANCHES_LIST";
         } else {
             pathType = "REPO";
         }
