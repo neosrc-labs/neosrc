@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import {
+    canEdit,
+    type PullRequestPermissionContext,
+} from "~/components/permissions/permissions-utils";
 import { UserLink } from "~/components/user-link";
 import type {
     GQLMergeQueueEntry,
@@ -9,10 +13,6 @@ import type {
 import { api } from "~/trpc/react";
 import { CommentForm } from "../comment-form";
 import { DeleteBranchSection } from "../delete-branch-section";
-import {
-    canEdit,
-    type PullRequestPermissionContext,
-} from "../permissions-utils";
 import { TimelineEventList } from "./event";
 import { RevertedBanner, type RevertedByEntry } from "./reverted-banner";
 import {

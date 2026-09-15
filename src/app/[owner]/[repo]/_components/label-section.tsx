@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
+import {
+    canEdit,
+    type PullRequestPermissionContext,
+} from "~/components/permissions/permissions-utils";
 import { Label as LabelComponent } from "~/components/ui/label";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import { applyArrayOperations, opId } from "~/lib/utils";
@@ -10,10 +14,6 @@ import type { Label } from "~/server/api/routers/mappers";
 import { api } from "~/trpc/react";
 import type { Provider } from "~/utils/provider-url";
 import { FieldSkeleton } from "./metadata-section";
-import {
-    canEdit,
-    type PullRequestPermissionContext,
-} from "./permissions-utils";
 
 type LabelOperation = { id: number; op: "add" | "remove"; label: Label };
 

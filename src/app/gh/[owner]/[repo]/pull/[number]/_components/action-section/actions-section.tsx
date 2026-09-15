@@ -5,10 +5,10 @@ import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { useActionError } from "~/app/[owner]/[repo]/_components/action-errors";
-import type { PullRequestPermissionContext } from "~/app/[owner]/[repo]/_components/permissions-utils";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
+import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import {
     extractPullRequestState,
     StatusPill,

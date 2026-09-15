@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { getIssuePermissionContext } from "~/app/[owner]/[repo]/_components/permissions-server";
+import { getIssuePermissionContext } from "~/components/permissions/permissions-server";
 import {
     disabled,
     type PullRequestPermissionContext,
-} from "~/app/[owner]/[repo]/_components/permissions-utils";
+} from "~/components/permissions/permissions-utils";
 import type { IssueMetadata } from "~/server/api/routers/issues/types";
 import { mapPullRequestMetadata } from "~/server/api/routers/mappers";
 import { getSession, githubAccessToken } from "~/server/auth";

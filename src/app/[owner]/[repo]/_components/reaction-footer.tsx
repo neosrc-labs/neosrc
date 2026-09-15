@@ -1,16 +1,16 @@
 "use client";
 
 import { useCallback } from "react";
+import {
+    canInteract,
+    type PullRequestPermissionContext,
+} from "~/components/permissions/permissions-utils";
 import { ReactionBar } from "~/components/reaction-bar";
 import { ReactionPicker } from "~/components/reaction-picker";
 import type { ReactionContent } from "~/lib/reactions";
 import type { GQLPullRequestReactions } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import type { Provider } from "~/utils/provider-url";
-import {
-    canInteract,
-    type PullRequestPermissionContext,
-} from "./permissions-utils";
 
 type SubjectReactionsData = Pick<
     GQLPullRequestReactions,

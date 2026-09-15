@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canInteract } from "~/app/[owner]/[repo]/_components/permissions-utils";
+import { canInteract } from "./permissions-utils";
 
 const base = {
     currentUser: "viewer",

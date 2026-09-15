@@ -11,6 +11,11 @@ import {
 import { useCallback, useState } from "react";
 import { CommentCard } from "~/components/comment-card";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
+import {
+    canEdit,
+    canInteract,
+    type PullRequestPermissionContext,
+} from "~/components/permissions/permissions-utils";
 import { ReactionBar } from "~/components/reaction-bar";
 import { ReactionPicker } from "~/components/reaction-picker";
 import { Button } from "~/components/ui/button";
@@ -31,11 +36,6 @@ import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
 import type { ReactionContent } from "~/lib/reactions";
 import type { GQLIssueComment, GQLReactionNode } from "~/server/github-graphql";
 import type { Provider } from "~/utils/provider-url";
-import {
-    canEdit,
-    canInteract,
-    type PullRequestPermissionContext,
-} from "../../permissions-utils";
 import { formatReason } from "../event";
 
 interface IssueCommentContentProps {

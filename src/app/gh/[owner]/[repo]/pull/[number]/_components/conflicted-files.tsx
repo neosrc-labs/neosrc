@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
     canPush,
     type PullRequestPermissionContext,
-} from "~/app/[owner]/[repo]/_components/permissions-utils";
+} from "~/components/permissions/permissions-utils";
 import type { PullsGetResponseData } from "~/server/github";
 import { getFileIconName } from "~/utils/icons";
 

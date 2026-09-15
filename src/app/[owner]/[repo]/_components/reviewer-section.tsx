@@ -15,6 +15,11 @@ import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import {
+    canEdit,
+    canPush,
+    type PullRequestPermissionContext,
+} from "~/components/permissions/permissions-utils";
+import {
     Popover,
     PopoverContent,
     PopoverTrigger,
@@ -35,11 +40,6 @@ import type {
 import { api } from "~/trpc/react";
 import { DismissReviewDialog } from "./dismiss-review-dialog";
 import { FieldSkeleton } from "./metadata-section";
-import {
-    canEdit,
-    canPush,
-    type PullRequestPermissionContext,
-} from "./permissions-utils";
 
 const MAX_VISIBLE_REVIEWERS = 10;
 

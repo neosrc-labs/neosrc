@@ -29,6 +29,7 @@ import {
 import Image from "next/image";
 import { useState } from "react";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import { Label } from "~/components/ui/label";
 import { UserLink } from "~/components/user-link";
 import type { ReactionContent } from "~/lib/reactions";
@@ -39,7 +40,6 @@ import type {
 } from "~/server/github-graphql";
 import { formatDateTime, formatRelativeTime } from "~/utils";
 import type { Provider } from "~/utils/provider-url";
-import type { PullRequestPermissionContext } from "../permissions-utils";
 import { AssignedEventContent } from "./content/assigned-event";
 import { AutoMergeEventContent } from "./content/auto-merge-event";
 import { BaseRefChangedContent } from "./content/base-ref-changed";

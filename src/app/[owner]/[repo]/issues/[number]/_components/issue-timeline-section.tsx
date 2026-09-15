@@ -2,10 +2,6 @@
 
 import { useEffect, useMemo } from "react";
 import { CommentForm } from "~/app/[owner]/[repo]/_components/comment-form";
-import {
-    canEdit,
-    type PullRequestPermissionContext,
-} from "~/app/[owner]/[repo]/_components/permissions-utils";
 import { TimelineEventList } from "~/app/[owner]/[repo]/_components/timeline/event";
 import { TimelineSkeleton } from "~/app/[owner]/[repo]/_components/timeline/section";
 import {
@@ -17,6 +13,10 @@ import {
     aggregateEvents,
     filterTimelineEvents,
 } from "~/app/[owner]/[repo]/_components/timeline/utils";
+import {
+    canEdit,
+    type PullRequestPermissionContext,
+} from "~/components/permissions/permissions-utils";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import { api } from "~/trpc/react";
 import type { Provider } from "~/utils/provider-url";

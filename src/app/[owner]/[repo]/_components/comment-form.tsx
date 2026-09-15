@@ -7,14 +7,14 @@ import {
     type FooterAction,
     MarkdownEditor,
 } from "~/components/markdown/markdown-editor";
+import {
+    canInteract,
+    type PullRequestPermissionContext,
+} from "~/components/permissions/permissions-utils";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { api } from "~/trpc/react";
 import type { Provider } from "~/utils/provider-url";
 import { ActionErrorRow } from "./action-errors";
-import {
-    canInteract,
-    type PullRequestPermissionContext,
-} from "./permissions-utils";
 import {
     buildOptimisticComment,
     type TimelineCacheData,
