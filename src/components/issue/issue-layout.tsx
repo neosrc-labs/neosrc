@@ -12,9 +12,9 @@ import {
     githubAccessToken,
 } from "~/server/auth";
 import type { Provider } from "~/utils/provider-url";
-import { IssueClientLayout } from "./_components/issue-client-layout";
-import { IssueLeftSidebar } from "./_components/issue-left-sidebar";
-import { IssueRightSidebar } from "./_components/issue-right-sidebar";
+import { IssueClientLayout } from "./issue-client-layout";
+import { IssueLeftSidebar } from "./issue-left-sidebar";
+import { IssueRightSidebar } from "./issue-right-sidebar";
 import { loadIssueForRoute } from "./load-issue";
 
 interface IssueLayoutProps {
