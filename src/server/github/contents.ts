@@ -1,11 +1,11 @@
+import { withStaleWhileRevalidate } from "~/server/cache";
+import { createGraphql } from "~/server/github-graphql";
 import {
     DOC_FILE_PATTERNS,
     type DocFileName,
     getDocFileSortKey,
     pickDocFileNames,
-} from "~/lib/doc-files";
-import { withStaleWhileRevalidate } from "~/server/cache";
-import { createGraphql } from "~/server/github-graphql";
+} from "~/utils/doc-files";
 import { createOctokit } from "./client";
 
 export interface RepoContentItem {

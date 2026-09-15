@@ -1,5 +1,5 @@
-import { planGithubQuery } from "~/lib/search-syntax";
 import type { SearchParams } from "~/server/api/routers/provider";
+import { planGithubQuery } from "~/utils/search-syntax";
 
 interface GqlSearchResponse<
     TItem,

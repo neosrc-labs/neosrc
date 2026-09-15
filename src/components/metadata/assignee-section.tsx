@@ -9,10 +9,10 @@ import {
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
-import { applyArrayOperations, opId } from "~/lib/utils";
 import type { IssueMetadata } from "~/server/api/routers/issues/types";
 import type { Assignee } from "~/server/api/routers/mappers";
 import { api } from "~/trpc/react";
+import { applyArrayOperations, opId } from "~/utils/helpers";
 import { domain, type Provider } from "~/utils/provider-url";
 import { FieldSkeleton } from "./metadata-section";
 

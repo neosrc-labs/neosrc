@@ -8,8 +8,8 @@ import {
     canInteract,
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
-import type { ReactionContent } from "~/lib/reactions";
 import type { ReviewCommentBase } from "~/server/github";
+import type { ReactionContent } from "~/utils/reactions";
 import { MarkdownRenderer } from "../markdown/markdown-renderer";
 import { ReactionBar } from "../reaction/reaction-bar";
 import { ReactionPicker } from "../reaction/reaction-picker";

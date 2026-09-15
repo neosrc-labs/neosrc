@@ -7,8 +7,8 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from "~/components/ui/tooltip";
-import type { ReactionContent } from "~/lib/reactions";
-import { REACTION_EMOJIS, REACTION_ORDER } from "~/lib/reactions";
+import type { ReactionContent } from "~/utils/reactions";
+import { REACTION_EMOJIS, REACTION_ORDER } from "~/utils/reactions";
 
 interface ReactionBarItem {
     content: string;

@@ -22,8 +22,8 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
+import { cn } from "~/utils/helpers";
 import { StackList } from "./stack-list";
 
 interface StackPopoverProps {

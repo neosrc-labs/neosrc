@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import type { ElementType } from "react";
 import { useMemo } from "react";
-import { cn, formatCount } from "~/lib/utils";
+import { cn, formatCount } from "~/utils/helpers";
 import { domain, type Provider } from "~/utils/provider-url";
 import type { HeaderRepoData } from "./header-client";
 import type { PathType } from "./types";

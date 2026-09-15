@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { pickDocFileNames } from "~/lib/doc-files";
+import { pickDocFileNames } from "~/utils/doc-files";
 import { type Provider, treeHref } from "~/utils/provider-url";
 import { RepoBrowse, RepoBrowseSkeleton } from "./repo-browse";
 import { RepoDocFiles } from "./repo-doc-files";

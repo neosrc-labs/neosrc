@@ -30,7 +30,6 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { applyArrayOperations, opId } from "~/lib/utils";
 import type {
     Assignee,
     PullsGetResponseData,
@@ -38,6 +37,7 @@ import type {
     Reviewer,
 } from "~/server/github";
 import { api } from "~/trpc/react";
+import { applyArrayOperations, opId } from "~/utils/helpers";
 import { DismissReviewDialog } from "./dismiss-review-dialog";
 import { FieldSkeleton } from "./metadata-section";
 

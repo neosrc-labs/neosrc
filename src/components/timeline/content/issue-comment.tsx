@@ -33,9 +33,9 @@ import {
     PopoverTrigger,
 } from "~/components/ui/popover";
 import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
-import type { ReactionContent } from "~/lib/reactions";
 import type { GQLIssueComment, GQLReactionNode } from "~/server/github-graphql";
 import type { Provider } from "~/utils/provider-url";
+import type { ReactionContent } from "~/utils/reactions";
 import { formatReason } from "../event";
 
 interface IssueCommentContentProps {

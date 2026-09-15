@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "~/lib/utils";
 import {
     ACTIONS_CAPABILITIES,
     type RepoWorkflowItem,
 } from "~/server/api/routers/actions/types";
+import { cn } from "~/utils/helpers";
 import { domain } from "~/utils/provider-url";
 
 const SIDEBAR_WORKFLOW_LIMIT = 10;

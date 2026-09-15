@@ -2,8 +2,8 @@
 
 import { GitMerge, GitPullRequestClosed } from "lucide-react";
 import { useState } from "react";
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import { api } from "~/trpc/react";
+import { TIMELINE_PAGE_SIZE } from "~/utils/timeline-constants";
 
 const branchLinkClassName =
     "rounded bg-blue-100 px-1.5 py-0.5 font-mono text-xs text-blue-800 hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30";

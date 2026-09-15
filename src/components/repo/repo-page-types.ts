@@ -1,4 +1,4 @@
-import type { DocFileName } from "~/lib/doc-files";
+import type { DocFileName } from "~/utils/doc-files";
 
 export interface RepoData {
     ownerAvatarUrl: string;

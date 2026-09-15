@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { opId } from "~/lib/utils";
 import type { ReviewThreadData } from "~/server/github";
 import { api } from "~/trpc/react";
+import { opId } from "~/utils/helpers";
 
 export type ReviewThreadOperation = {
     id: number;

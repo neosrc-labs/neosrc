@@ -7,12 +7,12 @@ import {
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
-import { cn, opId } from "~/lib/utils";
 import type {
     IssueMetadata,
     IssueMilestone,
 } from "~/server/api/routers/issues/types";
 import { api } from "~/trpc/react";
+import { cn, opId } from "~/utils/helpers";
 import type { Provider } from "~/utils/provider-url";
 import { FieldSkeleton } from "./metadata-section";
 

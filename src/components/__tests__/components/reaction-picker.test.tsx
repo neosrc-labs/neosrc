@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReactionPicker } from "~/components/reaction/reaction-picker";
-import { ALL_REACTIONS } from "~/lib/reactions";
+import { ALL_REACTIONS } from "~/utils/reactions";
 
 vi.mock("~/components/ui/popover", () => ({
     Popover: ({ children }: { children: ReactNode }) => <>{children}</>,

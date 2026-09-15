@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
+import { TIMELINE_PAGE_SIZE } from "~/utils/timeline-constants";
 import { DeleteBranchSection } from "./delete-branch-section";
 
 const mocks = vi.hoisted(() => ({

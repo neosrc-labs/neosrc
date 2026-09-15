@@ -2,7 +2,7 @@
 
 import { ChevronDown, ListOrdered } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { cn } from "~/lib/utils";
+import { cn } from "~/utils/helpers";
 
 const SORT_OPTIONS: {
     label: string;

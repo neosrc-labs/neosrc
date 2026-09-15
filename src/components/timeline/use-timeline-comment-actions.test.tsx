@@ -4,8 +4,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { TimelineResult } from "~/server/api/routers/timeline";
+import { TIMELINE_PAGE_SIZE } from "~/utils/timeline-constants";
 import {
     applyReactionToggle,
     useCommentTaskToggle,

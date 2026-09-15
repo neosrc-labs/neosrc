@@ -10,8 +10,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from "~/components/ui/dialog";
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import { api } from "~/trpc/react";
+import { TIMELINE_PAGE_SIZE } from "~/utils/timeline-constants";
 
 /**
  * Dismisses a submitted review. GitHub requires a message, turns the review

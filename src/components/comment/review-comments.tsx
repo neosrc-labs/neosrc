@@ -17,11 +17,11 @@ import {
     useReviewThreadOperations,
 } from "~/hooks/use-review-thread-operations";
 import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
-import type { ReactionContent } from "~/lib/reactions";
-import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewCommentBase } from "~/server/github";
 import { api } from "~/trpc/react";
+import type { ReactionContent } from "~/utils/reactions";
+import { removeCommentFromFlatList } from "~/utils/review-comment-cache-utils";
+import { TIMELINE_PAGE_SIZE } from "~/utils/timeline-constants";
 import { ResolveButton } from "./resolved-thread-banner";
 import { ReviewCommentItem } from "./review-comment-item";
 import {

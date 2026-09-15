@@ -17,9 +17,9 @@ import {
     aggregateEvents,
     filterTimelineEvents,
 } from "~/components/timeline/utils";
-import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import { api } from "~/trpc/react";
 import type { Provider } from "~/utils/provider-url";
+import { TIMELINE_PAGE_SIZE } from "~/utils/timeline-constants";
 
 export { TimelineSkeleton };
 

@@ -7,8 +7,8 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
-import type { ReactionContent } from "~/lib/reactions";
-import { ALL_REACTIONS, REACTION_EMOJIS } from "~/lib/reactions";
+import type { ReactionContent } from "~/utils/reactions";
+import { ALL_REACTIONS, REACTION_EMOJIS } from "~/utils/reactions";
 
 interface ReactionItem {
     content: string;

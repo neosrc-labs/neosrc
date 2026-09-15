@@ -1,6 +1,6 @@
 import { cache } from "react";
-import type { ReactionContent } from "~/lib/reactions";
 import type { GQLPullRequestReactions } from "~/server/github-graphql";
+import type { ReactionContent } from "~/utils/reactions";
 import { createOctokit } from "./client";
 
 export const getPullRequestReactions = cache(

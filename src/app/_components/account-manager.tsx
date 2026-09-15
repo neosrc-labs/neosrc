@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { authClient } from "~/lib/auth-client";
+import { authClient } from "~/utils/auth-client";
 
 export function AccountManager({
     githubUsername,

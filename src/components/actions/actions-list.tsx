@@ -3,7 +3,6 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import { Pagination } from "~/components/ui/pagination";
-import { formatCount } from "~/lib/utils";
 import {
     ACTIONS_CAPABILITIES,
     type ActionsFilterKey,
@@ -11,6 +10,7 @@ import {
     WORKFLOW_RUNS_PER_PAGE,
 } from "~/server/api/routers/actions/types";
 import { api } from "~/trpc/react";
+import { formatCount } from "~/utils/helpers";
 import { eventLabel, statusLabel } from "./actions-display";
 import { ActionsEmptyState } from "./actions-empty-state";
 import type { ActionsFilterOption } from "./actions-filter-dropdown";
