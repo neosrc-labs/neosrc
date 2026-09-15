@@ -54,6 +54,16 @@ describe("parseRepoBrowsePath", () => {
         );
     });
 
+    it("parses a blame path", () => {
+        expect(
+            parseRepoBrowsePath(`${base}/blame/master/a/b.md`, base),
+        ).toEqual({
+            view: "blame",
+            ref: "master",
+            path: "a/b.md",
+        });
+    });
+
     it("parses the branch root with an empty path", () => {
         expect(parseRepoBrowsePath(`${base}/tree/master`, base)).toEqual({
             view: "tree",

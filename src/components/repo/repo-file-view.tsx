@@ -5,6 +5,7 @@ import { type Provider, rawUrl } from "~/utils/provider-url";
 import { RepoBusyBar } from "./repo-busy-bar";
 import { CodeView, FileBodySkeleton } from "./repo-code-view";
 import { useRepoFileData } from "./repo-file-data";
+import { RepoFileTabs } from "./repo-file-tabs";
 import { RepoFileActions, RepoFileToolbar } from "./repo-file-toolbar";
 import { RepoPathCommitRow } from "./repo-path-commit-row";
 import { RepoPathNotFound } from "./repo-path-not-found";
@@ -70,6 +71,16 @@ export function RepoFileView({
 
             <div className={cn(busy && "pointer-events-none opacity-60")}>
                 <RepoFileToolbar
+                    tabs={
+                        <RepoFileTabs
+                            provider={provider}
+                            owner={owner}
+                            repo={repo}
+                            selectedRef={selectedRef}
+                            path={path}
+                            active="blob"
+                        />
+                    }
                     meta={contentLabel}
                     actions={
                         <RepoFileActions

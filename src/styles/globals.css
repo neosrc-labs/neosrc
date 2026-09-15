@@ -53,6 +53,18 @@
     --color-state-draft: #71717a; /* zinc-500 */
     --color-state-queued: #a16207; /* yellow-700 */
     --color-state-unknown: #374151; /* gray-700 */
+
+    /* Blame age scale, oldest (0) to newest (9). GitHub's orange display scale. */
+    --color-blame-age-0: #ffe7d1;
+    --color-blame-age-1: #fecfaa;
+    --color-blame-age-2: #fbaf74;
+    --color-blame-age-3: #f68c41;
+    --color-blame-age-4: #eb670f;
+    --color-blame-age-5: #b8500f;
+    --color-blame-age-6: #a24610;
+    --color-blame-age-7: #8d3c11;
+    --color-blame-age-8: #70300f;
+    --color-blame-age-9: #54230d;
 }
 
 /* Queued checks: muted static dot. Running checks render the spinning amber arc
@@ -91,6 +103,17 @@
     --color-text-label: #d4d4d8;
     --color-destructive: #ef4444;
     --color-destructive-foreground: #ffffff;
+
+    --color-blame-age-0: #311708;
+    --color-blame-age-1: #43200a;
+    --color-blame-age-2: #632f0d;
+    --color-blame-age-3: #7b3c0e;
+    --color-blame-age-4: #984b10;
+    --color-blame-age-5: #c46212;
+    --color-blame-age-6: #ed8326;
+    --color-blame-age-7: #f1933b;
+    --color-blame-age-8: #f6b06a;
+    --color-blame-age-9: #fac68f;
 }
 
 html {

@@ -53,6 +53,17 @@ export function blobHref(
     return `/${provider}/${owner}/${repo}/blob/${encodeURIComponent(ref)}/${encodeRepoPath(path)}`;
 }
 
+/** In-app blame URL for `ref` + `path`. */
+export function blameHref(
+    provider: Provider,
+    owner: string,
+    repo: string,
+    ref: string,
+    path: string,
+): string {
+    return `/${provider}/${owner}/${repo}/blame/${encodeURIComponent(ref)}/${encodeRepoPath(path)}`;
+}
+
 /** The provider's commit-history page for `path` at `ref`. */
 export function historyUrl(
     provider: Provider,
