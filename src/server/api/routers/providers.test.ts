@@ -567,6 +567,34 @@ describe("branches router", () => {
         expect(result.defaultBranchRow?.name).toBe("main");
     });
 
+    it("reports a partial ref scan for the date tabs but not for all", async () => {
+        const { branches } = await callerFor(null);
+        vi.mocked(github.getBranchRefs).mockResolvedValue({
+            refs: [{ name: "main", committedDate: "2026-09-01T00:00:00Z" }],
+            totalCount: 2593,
+            hasNextPage: true,
+            endCursor: "cursor-1",
+            defaultBranch: "main",
+        } as never);
+        vi.mocked(github.getBranchDetails).mockResolvedValue([] as never);
+        vi.mocked(github.getBranchProtectionMap).mockResolvedValue({} as never);
+
+        const active = await branches.list({
+            owner: "acme",
+            repo: "api",
+            tab: "active",
+        });
+        const all = await branches.list({
+            owner: "acme",
+            repo: "api",
+            tab: "all",
+        });
+
+        expect(active.scanLimit).toEqual({ scanned: 1, total: 2593 });
+        expect(all.scanLimit).toBeNull();
+        expect(all.hasNextPage).toBe(true);
+    });
+
     it("lists through the Codeberg handler when provider is cb", async () => {
         const { branches } = await callerFor({ user: { id: "user-1" } });
         vi.mocked(codeberg.getBranches).mockResolvedValue([

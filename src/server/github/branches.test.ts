@@ -98,9 +98,11 @@ describe("getBranchRefs", () => {
             owner: "acme",
             repo: "app",
             first: REF_SCAN_PAGE_SIZE,
-            query: "turbo",
+            // `query` is reserved by @octokit/graphql, hence the prefixed name.
+            nameQuery: "turbo",
             direction: "ASC",
         });
+        expect(String(mockGraphql.mock.calls[0]?.[0])).toContain("$nameQuery");
         expect(mockGraphql.mock.calls[0]?.[1]).not.toHaveProperty("after");
         expect(mockGraphql.mock.calls[1]?.[1]).toMatchObject({
             after: "cursor-1",

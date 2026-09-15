@@ -65,7 +65,6 @@ vi.mock("~/trpc/react", () => ({
     },
 }));
 
-import { ghBranchConfig } from "./branch-list-config";
 import { BranchListShared } from "./branch-list-shared";
 
 function row(overrides: Partial<BranchRow> = {}): BranchRow {
@@ -92,13 +91,23 @@ function context(name: string, state: string) {
     };
 }
 
+function listResult(
+    overrides: Partial<BranchListResult> = {},
+): BranchListResult {
+    return {
+        items: [],
+        totalCount: 0,
+        hasNextPage: false,
+        defaultBranch: "main",
+        defaultBranchRow: null,
+        scanLimit: null,
+        ...overrides,
+    };
+}
+
 function renderList() {
     return render(
-        <BranchListShared
-            owner="test-owner"
-            repo="test-repo"
-            config={ghBranchConfig}
-        />,
+        <BranchListShared owner="test-owner" repo="test-repo" provider="gh" />,
     );
 }
 
@@ -111,13 +120,11 @@ beforeEach(() => {
 
 describe("BranchListShared", () => {
     it("opens on the overview tab with the default and active sections", () => {
-        listData = {
+        listData = listResult({
             items: [row({ name: "fresh" })],
             totalCount: 1,
-            hasNextPage: false,
-            defaultBranch: "main",
             defaultBranchRow: row({ name: "main" }),
-        };
+        });
 
         renderList();
 
@@ -137,13 +144,7 @@ describe("BranchListShared", () => {
 
     it("pushes tab=active when the active tab is clicked", async () => {
         const user = userEvent.setup();
-        listData = {
-            items: [],
-            totalCount: 0,
-            hasNextPage: false,
-            defaultBranch: "main",
-            defaultBranchRow: null,
-        };
+        listData = listResult({ items: [] });
 
         renderList();
         await user.click(screen.getByRole("button", { name: "Active" }));
@@ -155,7 +156,7 @@ describe("BranchListShared", () => {
 
     it("renders the branch, its check rollup, pull request and protected shield", () => {
         paramsState = new URLSearchParams("tab=all");
-        listData = {
+        listData = listResult({
             items: [
                 row({
                     name: "feat/x",
@@ -169,10 +170,7 @@ describe("BranchListShared", () => {
                 row({ name: "plain" }),
             ],
             totalCount: 2,
-            hasNextPage: false,
-            defaultBranch: "main",
-            defaultBranchRow: null,
-        };
+        });
 
         renderList();
 
@@ -188,15 +186,29 @@ describe("BranchListShared", () => {
         expect(screen.getAllByText("—")).toHaveLength(1);
     });
 
-    it("hides the delete control without write permission", () => {
-        paramsState = new URLSearchParams("tab=all");
-        listData = {
+    it("notes the partial ref scan behind the date tabs", () => {
+        paramsState = new URLSearchParams("tab=active");
+        listData = listResult({
             items: [row({ name: "feat/x" })],
             totalCount: 1,
-            hasNextPage: false,
-            defaultBranch: "main",
-            defaultBranchRow: null,
-        };
+            scanLimit: { scanned: 300, total: 2593 },
+        });
+
+        renderList();
+
+        expect(
+            screen.getByText(
+                "Active and Stale are filtered from the first 300 of 2593 branches. All lists every branch.",
+            ),
+        ).toBeInTheDocument();
+    });
+
+    it("hides the delete control without write permission", () => {
+        paramsState = new URLSearchParams("tab=all");
+        listData = listResult({
+            items: [row({ name: "feat/x" })],
+            totalCount: 1,
+        });
 
         const { unmount } = renderList();
         expect(

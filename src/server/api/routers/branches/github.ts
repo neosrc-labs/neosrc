@@ -46,11 +46,17 @@ function withDetails(
     };
 }
 
+/**
+ * GitHub's refs connection returns branches in name order (its only RefOrder
+ * value is honoured for tags), so a date tab can only classify a prefix of the
+ * list. The scan reports how much of it it saw; `all` pages the whole list.
+ */
 export const githubBranchProvider: BranchProvider = {
     async list({ accessToken, owner, repo, tab, query, page }) {
         const scanQuery = query.trim() === "" ? null : query;
 
-        let result: BranchListResult;
+        let result: Omit<BranchListResult, "scanLimit">;
+        let scanLimit: BranchListResult["scanLimit"] = null;
         if (tab === "all") {
             // The walk covers the requested page: 30 rows per scan page of 100.
             const pages = Math.min(
@@ -80,7 +86,7 @@ export const githubBranchProvider: BranchProvider = {
         } else {
             const refsPage = await getBranchRefs(accessToken, owner, repo, {
                 query: scanQuery,
-                direction: tab === "stale" ? "ASC" : "DESC",
+                direction: "DESC",
                 pages: MAX_REF_SCAN_PAGES,
             });
             const scanRows = refsPage.refs.map(scanRow);
@@ -94,6 +100,12 @@ export const githubBranchProvider: BranchProvider = {
                 page,
                 BRANCH_PAGE_SIZE,
             );
+            if (refsPage.refs.length < refsPage.totalCount) {
+                scanLimit = {
+                    scanned: refsPage.refs.length,
+                    total: refsPage.totalCount,
+                };
+            }
             result = {
                 items: paged.items,
                 totalCount: paged.totalCount,
@@ -114,7 +126,7 @@ export const githubBranchProvider: BranchProvider = {
 
         const names = result.items.map((row) => row.name);
         if (result.defaultBranchRow) names.push(result.defaultBranchRow.name);
-        if (names.length === 0) return result;
+        if (names.length === 0) return { ...result, scanLimit };
 
         const [details, protection] = await Promise.all([
             getBranchDetails(accessToken, owner, repo, names),
@@ -124,6 +136,7 @@ export const githubBranchProvider: BranchProvider = {
 
         return {
             ...result,
+            scanLimit,
             items: result.items.map((row) =>
                 withDetails(
                     row,

@@ -27,4 +27,10 @@ export interface BranchListResult {
     defaultBranch: string | null;
     /** Overview only: the pinned default-branch row. */
     defaultBranchRow: BranchRow | null;
+    /**
+     * Set when the provider classified only part of the ref list, which is the
+     * case for GitHub: its refs connection is name-ordered, so date tabs can
+     * only cover a prefix of it. Null when every branch was considered.
+     */
+    scanLimit: { scanned: number; total: number } | null;
 }

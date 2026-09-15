@@ -94,15 +94,16 @@ interface BranchDetailsResponse {
 /**
  * Cheap branch scan: names and head-commit dates, ordered by commit date.
  * `after` is only declared when the caller pages, since GraphQL rejects
- * unused variables.
+ * unused variables. The name filter is `$nameQuery` because `@octokit/graphql`
+ * reserves `query` as a parameter name.
  */
 export function buildBranchRefsQuery(includeAfter: boolean): string {
     const afterVar = includeAfter ? ", $after: String" : "";
     const afterArg = includeAfter ? ", after: $after" : "";
-    return `query BranchRefs($owner: String!, $repo: String!, $query: String, $first: Int!, $direction: OrderDirection!${afterVar}) {
+    return `query BranchRefs($owner: String!, $repo: String!, $nameQuery: String, $first: Int!, $direction: OrderDirection!${afterVar}) {
   repository(owner: $owner, name: $repo) {
     defaultBranchRef { name target { ... on Commit { committedDate } } }
-    refs(refPrefix: "refs/heads/", first: $first${afterArg}, query: $query, orderBy: {field: TAG_COMMIT_DATE, direction: $direction}) {
+    refs(refPrefix: "refs/heads/", first: $first${afterArg}, query: $nameQuery, orderBy: {field: TAG_COMMIT_DATE, direction: $direction}) {
       totalCount
       pageInfo { hasNextPage endCursor }
       nodes { name target { ... on Commit { committedDate } } }
@@ -170,7 +171,7 @@ export async function getBranchRefs(
             owner,
             repo,
             first: REF_SCAN_PAGE_SIZE,
-            query: opts.query,
+            nameQuery: opts.query,
             direction: opts.direction,
         };
         if (cursor !== null) variables.after = cursor;
