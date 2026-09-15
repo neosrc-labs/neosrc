@@ -13,8 +13,8 @@ import { useCallback, useState } from "react";
 
 import { AccountManager } from "~/app/_components/account-manager";
 import { api } from "~/trpc/react";
-import { formatRelativeTime } from "~/utils";
 import { authClient } from "~/utils/auth-client";
+import { formatRelativeTime } from "~/utils/format-time";
 import { GithubAppSection } from "./github-app-section";
 import { SyncSection } from "./sync-section";
 

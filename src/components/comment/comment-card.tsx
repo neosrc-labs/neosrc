@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { MarkdownEditor } from "~/components/markdown/markdown-editor";
 import { RoleBadge } from "~/components/user/role-badge";
-import { formatDateTime, formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils/format-time";
 import type { Provider } from "~/utils/provider-url";
 
 interface CommentCardProps {

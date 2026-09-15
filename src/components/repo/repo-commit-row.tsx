@@ -4,7 +4,7 @@ import { ChevronLeftIcon, HistoryIcon } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { UserLink } from "~/components/user/user-link";
-import { formatRelativeTime } from "~/utils";
+import { formatRelativeTime } from "~/utils/format-time";
 import { domain, type Provider } from "~/utils/provider-url";
 
 interface RepoCommitRowProps {

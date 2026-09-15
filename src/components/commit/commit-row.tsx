@@ -16,7 +16,7 @@ import {
 import { UserLink } from "~/components/user/user-link";
 import { VerifiedBadge } from "~/components/user/verified-badge";
 import type { CommitListItem } from "~/server/api/routers/commits/types";
-import { formatRelativeTime } from "~/utils";
+import { formatRelativeTime } from "~/utils/format-time";
 import { CommitSubject } from "./commit-subject";
 
 interface CommitRowProps {

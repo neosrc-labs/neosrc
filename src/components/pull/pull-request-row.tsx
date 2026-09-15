@@ -21,7 +21,7 @@ import {
     TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { UserLink } from "~/components/user/user-link";
-import { formatRelativeTime } from "~/utils";
+import { formatRelativeTime } from "~/utils/format-time";
 import { cn } from "~/utils/helpers";
 import { StackBadge } from "./stack/stack-popover";
 

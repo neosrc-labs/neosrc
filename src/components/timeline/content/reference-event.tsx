@@ -2,7 +2,7 @@
 
 import { UserLink } from "~/components/user/user-link";
 import type { GQLReferencedEvent } from "~/server/github-graphql";
-import { formatDateTime, formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils/format-time";
 import type { Provider } from "~/utils/provider-url";
 
 export function ReferencedEventContent({
