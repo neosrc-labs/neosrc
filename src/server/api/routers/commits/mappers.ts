@@ -1,5 +1,9 @@
 import type { StatusContext } from "~/components/ci-status";
-import type { CodebergCommitRaw } from "~/server/codeberg";
+import { mapCodebergStatusContexts } from "~/server/api/routers/mappers";
+import type {
+    CodebergCombinedStatus,
+    CodebergCommitRaw,
+} from "~/server/codeberg";
 import type { BranchCommitsResult } from "~/server/github-graphql";
 import type { CommitListItem } from "./types";
 
@@ -87,17 +91,7 @@ export function mapGQLCommit(
 
 export function mapCodebergCommit(
     c: CodebergCommitRaw,
-    combinedStatus?: {
-        state: string;
-        statuses: Array<{
-            context: string;
-            status: string;
-            description: string | null;
-            target_url: string | null;
-            created_at: string;
-            updated_at: string;
-        }>;
-    } | null,
+    combinedStatus: CodebergCombinedStatus | null = null,
 ): CommitListItem {
     return {
         sha: c.sha,
@@ -117,21 +111,7 @@ export function mapCodebergCommit(
             (combinedStatus.statuses?.length ?? 0) > 0
                 ? combinedStatus.state.toUpperCase()
                 : null,
-        statusContexts: combinedStatus?.statuses
-            ? combinedStatus.statuses.map(
-                  (s): StatusContext => ({
-                      name: s.context,
-                      state:
-                          s.status != null ? s.status.toUpperCase() : "PENDING",
-                      description: s.description,
-                      url: s.target_url?.startsWith("/")
-                          ? `https://codeberg.org${s.target_url}`
-                          : s.target_url,
-                      startedAt: s.created_at,
-                      completedAt: s.updated_at,
-                  }),
-              )
-            : [],
+        statusContexts: mapCodebergStatusContexts(combinedStatus),
         signature: null,
     };
 }

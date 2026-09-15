@@ -5,6 +5,7 @@ import {
     mapCbReaction,
     mapCbReactionCounts,
     mapCodebergIssueDetail,
+    mapCodebergStatusContexts,
     mapGitHubIssueDetail,
     mapGqlAssignee,
     mapGqlAuthor,
@@ -13,7 +14,11 @@ import {
     mapRestAssignee,
     nullSafe,
 } from "~/server/api/routers/mappers";
-import type { CodebergIssue, CodebergReaction } from "~/server/codeberg";
+import type {
+    CodebergCombinedStatus,
+    CodebergIssue,
+    CodebergReaction,
+} from "~/server/codeberg";
 import type {
     IssueGetResponseData,
     PullsGetResponseData,
@@ -402,5 +407,67 @@ describe("mapCbReactionCounts", () => {
         expect(counts.heart).toBe(1);
         expect(counts.laugh).toBe(0);
         expect(counts.total_count).toBe(4);
+    });
+});
+
+describe("mapCodebergStatusContexts", () => {
+    const status = (
+        overrides: Partial<CodebergCombinedStatus["statuses"][number]> = {},
+    ) => ({
+        context: "ci/build",
+        status: "success",
+        description: "ok",
+        target_url: "https://ci.example/1",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:05:00Z",
+        ...overrides,
+    });
+
+    it("maps statuses to contexts with uppercased states", () => {
+        const contexts = mapCodebergStatusContexts({
+            state: "success",
+            sha: "abc",
+            total_count: 1,
+            statuses: [status()],
+        });
+
+        expect(contexts).toEqual([
+            {
+                name: "ci/build",
+                state: "SUCCESS",
+                description: "ok",
+                url: "https://ci.example/1",
+                startedAt: "2026-01-01T00:00:00Z",
+                completedAt: "2026-01-01T00:05:00Z",
+            },
+        ]);
+    });
+
+    it("resolves a repo-relative target url against codeberg.org", () => {
+        const [context] = mapCodebergStatusContexts({
+            state: "pending",
+            sha: "abc",
+            total_count: 1,
+            statuses: [
+                status({
+                    status: "pending",
+                    target_url: "/acme/app/actions/1",
+                }),
+            ],
+        });
+
+        expect(context?.url).toBe("https://codeberg.org/acme/app/actions/1");
+    });
+
+    it("falls back to PENDING for a missing status and [] without a report", () => {
+        const [context] = mapCodebergStatusContexts({
+            state: "pending",
+            sha: "abc",
+            total_count: 0,
+            statuses: [status({ status: null })],
+        });
+
+        expect(context?.state).toBe("PENDING");
+        expect(mapCodebergStatusContexts(null)).toEqual([]);
     });
 });
