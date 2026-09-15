@@ -50,7 +50,7 @@ vi.mock("~/components/diff/file-diff", () => ({
     ),
 }));
 
-vi.mock("./action-section/actions-section", () => ({
+vi.mock("../action-bar/action-section", () => ({
     ActionSection: () => null,
 }));
 

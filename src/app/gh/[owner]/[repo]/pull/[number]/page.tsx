@@ -18,7 +18,7 @@ import {
     type PullsGetResponseData,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
-import { HeaderActionBar } from "./_components/action-section/header-action-bar";
+import { HeaderActionBar } from "./_components/action-bar/header-action-bar";
 import { PullRequestDescriptionSection } from "./_components/description";
 import { PullRequestContent } from "./_components/pull-request-content";
 

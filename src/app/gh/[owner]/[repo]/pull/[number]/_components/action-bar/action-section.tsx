@@ -25,8 +25,8 @@ import type {
 import type { PullRequestMergeState } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
-import { ConflictedFiles } from "../conflicted-files";
 import { AutoMergeToggle } from "./auto-merge-toggle";
+import { ConflictedFiles } from "./conflicted-files";
 import { DisableAutoMergeButton } from "./disable-auto-merge-button";
 import { resolveMergeOptions } from "./merge-options";
 import { MergeStatusBar } from "./merge-status-bar";

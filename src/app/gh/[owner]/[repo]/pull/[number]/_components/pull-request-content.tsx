@@ -12,7 +12,7 @@ import {
     HoverCardTrigger,
 } from "~/components/ui/hover-card";
 import { api } from "~/trpc/react";
-import { ReportTabsBar } from "./report-tabs-bar";
+import { ReportTabsBar } from "./files/report-tabs-bar";
 
 interface PullRequestContentProps {
     owner: string;

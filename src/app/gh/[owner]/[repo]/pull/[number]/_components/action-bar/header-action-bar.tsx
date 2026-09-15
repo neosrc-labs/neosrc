@@ -9,7 +9,7 @@ import { Async } from "~/components/async";
 import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
-import { ActionSection } from "./actions-section";
+import { ActionSection } from "./action-section";
 
 interface HeaderActionBarProps {
     owner: string;
