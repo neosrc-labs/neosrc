@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { RepoBlobPage } from "~/app/[owner]/[repo]/_components/repo-blob-page";
+import { RepoBlobPage } from "~/components/repo/repo-blob-page";
 
 interface BlobParams {
     owner: string;
