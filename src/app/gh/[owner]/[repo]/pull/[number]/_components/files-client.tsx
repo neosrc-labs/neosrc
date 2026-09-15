@@ -24,6 +24,7 @@ import FileDiff from "~/components/file-diff";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
+import { StackBadge } from "~/components/pull/stack/stack-popover";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -51,7 +52,6 @@ import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
 import { ActionSection } from "./action-section/actions-section";
 import { AdditionsDeletionsBadge } from "./additions-deletions-badge";
 import { Branches } from "./description";
-import { StackBadge } from "./stack-popover";
 
 function FileDiffSkeleton() {
     return (

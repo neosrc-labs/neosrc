@@ -23,7 +23,7 @@ import {
 import { UserLink } from "~/components/user-link";
 import { cn } from "~/lib/utils";
 import { formatRelativeTime } from "~/utils";
-import { StackBadge } from "../../pull/[number]/_components/stack-popover";
+import { StackBadge } from "./stack/stack-popover";
 
 export interface PrRowData {
     id: number;

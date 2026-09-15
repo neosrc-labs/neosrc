@@ -1,7 +1,7 @@
 "use client";
 
-import { ghConfig } from "~/app/[owner]/[repo]/pulls/_components/pull-request-list-config";
-import { PullRequestListShared } from "~/app/[owner]/[repo]/pulls/_components/pull-request-list-shared";
+import { ghConfig } from "~/components/pull/pull-request-list-config";
+import { PullRequestListShared } from "~/components/pull/pull-request-list-shared";
 
 export function PullRequestList({
     owner,
