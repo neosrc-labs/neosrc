@@ -2,6 +2,7 @@ import { actionsRouter } from "~/server/api/routers/actions";
 import { apiKeysRouter } from "~/server/api/routers/api-keys";
 import { checksRouter } from "~/server/api/routers/checks";
 import { commitsRouter } from "~/server/api/routers/commits";
+import { dashboardRouter } from "~/server/api/routers/dashboard";
 import { issuesRouter } from "~/server/api/routers/issues";
 import { onboardingRouter } from "~/server/api/routers/onboarding";
 import { pullsRouter } from "~/server/api/routers/pulls";
@@ -23,6 +24,7 @@ export const appRouter = createTRPCRouter({
     apiKeys: apiKeysRouter,
     checks: checksRouter,
     commits: commitsRouter,
+    dashboard: dashboardRouter,
     issues: issuesRouter,
     onboarding: onboardingRouter,
     pulls: pullsRouter,

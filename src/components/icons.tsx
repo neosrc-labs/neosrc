@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { cn } from "~/utils/helpers";
 
 export function GitHubIcon({ className }: { className?: string }) {
@@ -13,12 +12,13 @@ export function GitHubIcon({ className }: { className?: string }) {
     );
 }
 
-export function CodebergIcon() {
+export function CodebergIcon({ className }: { className?: string }) {
     return (
-        <Image
+        // biome-ignore lint/performance/noImgElement: local static SVG; the Next image optimizer refuses SVG sources
+        <img
             src="/logo-codeberg.svg"
             alt=""
-            className="size-[18px] invert dark:invert-0"
+            className={cn("size-[18px] invert dark:invert-0", className)}
             width={18}
             height={18}
             aria-hidden="true"

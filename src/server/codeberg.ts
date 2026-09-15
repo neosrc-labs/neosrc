@@ -1176,6 +1176,32 @@ export type CodebergIssue = {
     } | null;
 };
 
+export type CodebergRepoMeta = {
+    id: number;
+    name: string;
+    owner: string;
+    full_name: string;
+};
+
+/**
+ * Item of `/repos/issues/search`, the cross-repo search endpoint. Unlike the
+ * repo-scoped list it names the repository and sends labels as bare names
+ * instead of label objects.
+ */
+export type CodebergSearchIssue = Omit<
+    CodebergIssue,
+    "labels" | "pull_request"
+> & {
+    labels: string[] | null;
+    repository: CodebergRepoMeta | null;
+    pull_request: {
+        merged?: boolean;
+        merged_at?: string | null;
+        draft?: boolean;
+        html_url?: string;
+    } | null;
+};
+
 export type CodebergIssueSort =
     | "oldest"
     | "recentupdate"
@@ -1354,6 +1380,48 @@ export const searchIssues = cache(
                 type: "issue" as const,
                 user: issue.user ? { login: issue.user.login } : null,
             }));
+    },
+);
+
+export type CodebergSearchParams = {
+    type: "issues" | "pulls";
+    state?: "open" | "closed" | "all";
+    /** Keep only items the authenticated user created. */
+    created?: boolean;
+    sort?: CodebergIssueSort;
+    limit?: number;
+};
+
+/**
+ * Issues or pulls across every repository the token can read. Each item names
+ * its repository, which is what the home page lists need.
+ */
+export const searchIssuesAcrossRepos = cache(
+    async (accessToken: string, params: CodebergSearchParams) => {
+        const searchParams = new URLSearchParams({ type: params.type });
+        if (params.state) searchParams.set("state", params.state);
+        if (params.created) searchParams.set("created", "true");
+        if (params.sort) searchParams.set("sort", params.sort);
+        if (params.limit) searchParams.set("limit", String(params.limit));
+
+        const res = await fetch(
+            `${CODEBERG_API}/api/v1/repos/issues/search?${searchParams}`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
+            },
+        );
+        if (!res.ok) return [];
+
+        const items = (await res.json()) as CodebergSearchIssue[];
+        // `type` is not always honored, so drop the other kind explicitly.
+        return items.filter((issue) =>
+            params.type === "pulls"
+                ? issue.pull_request != null
+                : issue.pull_request == null,
+        );
     },
 );
 

@@ -4,6 +4,10 @@ export function domain(provider: Provider): string {
     return provider === "cb" ? "codeberg.org" : "github.com";
 }
 
+export function providerLabel(provider: Provider): string {
+    return provider === "cb" ? "Codeberg" : "GitHub";
+}
+
 export function repoUrl(
     provider: Provider,
     owner: string,
