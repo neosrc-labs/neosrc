@@ -2,8 +2,8 @@
 
 import { Check, Circle } from "lucide-react";
 import { use, useRef, useState } from "react";
-import { MetadataSection } from "~/app/[owner]/[repo]/_components/metadata-section";
 import { StatusCheckIcon } from "~/components/ci-status";
+import { MetadataSection } from "~/components/metadata/metadata-section";
 import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import {
     Tooltip,
