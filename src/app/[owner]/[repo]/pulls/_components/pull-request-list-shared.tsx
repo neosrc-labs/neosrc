@@ -2,15 +2,15 @@
 
 import { GitPullRequest } from "lucide-react";
 import { useMemo } from "react";
-import { ListSearchBar } from "~/app/[owner]/[repo]/_components/list/list-search-bar";
-import { ListSkeleton } from "~/app/[owner]/[repo]/_components/list/list-skeleton";
-import { rowQualifierFilters } from "~/app/[owner]/[repo]/_components/list/row-qualifier-filters";
-import { SearchListLayout } from "~/app/[owner]/[repo]/_components/list/search-list-layout";
 import { RecentlyPushedBanner } from "~/app/[owner]/[repo]/_components/recently-pushed-banner";
-import { useSearchList } from "~/app/[owner]/[repo]/_components/use-search-list";
 import type { PrRowData } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
 import { PullRequestRow } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
 import { computeStatusState } from "~/components/ci-status";
+import { ListSearchBar } from "~/components/list/list-search-bar";
+import { ListSkeleton } from "~/components/list/list-skeleton";
+import { rowQualifierFilters } from "~/components/list/row-qualifier-filters";
+import { SearchListLayout } from "~/components/list/search-list-layout";
+import { useSearchList } from "~/components/list/use-search-list";
 import type { PrSearchItem } from "~/server/api/routers/pulls/types";
 import { api } from "~/trpc/react";
 import { PullRequestEmptyState } from "./pull-request-empty-state";

@@ -2,11 +2,11 @@
 
 import { Plus } from "lucide-react";
 import { useMemo } from "react";
-import { ListSearchBar } from "~/app/[owner]/[repo]/_components/list/list-search-bar";
-import { ListSkeleton } from "~/app/[owner]/[repo]/_components/list/list-skeleton";
-import { rowQualifierFilters } from "~/app/[owner]/[repo]/_components/list/row-qualifier-filters";
-import { SearchListLayout } from "~/app/[owner]/[repo]/_components/list/search-list-layout";
-import { useSearchList } from "~/app/[owner]/[repo]/_components/use-search-list";
+import { ListSearchBar } from "~/components/list/list-search-bar";
+import { ListSkeleton } from "~/components/list/list-skeleton";
+import { rowQualifierFilters } from "~/components/list/row-qualifier-filters";
+import { SearchListLayout } from "~/components/list/search-list-layout";
+import { useSearchList } from "~/components/list/use-search-list";
 import { booleanSearchHint } from "~/lib/search-syntax";
 import type { IssueSearchItem } from "~/server/api/routers/issues/types";
 import { api } from "~/trpc/react";

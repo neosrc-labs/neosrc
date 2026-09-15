@@ -1,7 +1,7 @@
 "use client";
 
 import { RefSelector } from "~/app/[owner]/[repo]/_components/ref-selector";
-import { AuthorDropdown } from "~/app/[owner]/[repo]/_components/search/author-dropdown";
+import { AuthorDropdown } from "~/components/search/author-dropdown";
 
 interface CommitsToolbarProps {
     owner: string;
