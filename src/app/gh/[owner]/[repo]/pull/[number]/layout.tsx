@@ -15,7 +15,7 @@ import {
     type PullsGetResponseData,
 } from "~/server/github";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
-import LeftSidebar from "./_components/left-sidebar";
+import LeftSidebar from "./_components/files/left-sidebar";
 import RightSidebar from "./_components/right-sidebar";
 import { PullRequestClientLayout } from "./layout-client";
 

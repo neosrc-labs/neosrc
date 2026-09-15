@@ -15,7 +15,7 @@ import { NavItem, NavMenu } from "~/components/ui/nav-menu";
 import { useFiles } from "~/hooks/files";
 import type { PullsGetResponseData } from "~/server/github";
 import { NULL_PROMISE } from "~/utils/promise";
-import { ReviewThreadsSection } from "./review-threads-section";
+import { ReviewThreadsSection } from "../review/review-threads-section";
 
 interface LeftSidebarContentSectionProps {
     owner: string;

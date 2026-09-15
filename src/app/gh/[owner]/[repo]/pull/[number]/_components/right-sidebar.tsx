@@ -14,9 +14,9 @@ import type { IssueMetadata } from "~/server/api/routers/issues/types";
 import type { CheckRun, PullsGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { computeChecksPollingInterval } from "~/utils/checks-polling";
-import { checkBreakdown } from "./check-groups";
-import { ChecksSection } from "./checks-section";
-import { CommitsSection } from "./commits-section";
+import { checkBreakdown } from "./checks/check-groups";
+import { ChecksSection } from "./checks/checks-section";
+import { CommitsSection } from "./commits/commits-section";
 
 interface RightSidebarProps {
     pullRequestPromise: Promise<PullsGetResponseData> | null;

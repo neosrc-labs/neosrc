@@ -49,9 +49,9 @@ import type {
 import { api } from "~/trpc/react";
 import { EMPTY_ARRAY_PROMISE } from "~/utils/promise";
 import { getStoredSet, getViewedKey } from "~/utils/viewed-files";
-import { ActionSection } from "./action-section/actions-section";
+import { ActionSection } from "../action-bar/action-section";
+import { Branches } from "../description";
 import { AdditionsDeletionsBadge } from "./additions-deletions-badge";
-import { Branches } from "./description";
 
 function FileDiffSkeleton() {
     return (

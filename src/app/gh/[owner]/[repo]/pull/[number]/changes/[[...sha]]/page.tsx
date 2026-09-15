@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import {
+    CommitHeader,
+    CommitHeaderSkeleton,
+} from "~/app/gh/[owner]/[repo]/pull/[number]/_components/commits/commit-header";
+import { FilesSection } from "~/app/gh/[owner]/[repo]/pull/[number]/_components/files/files-client";
 import { getIssuePermissionContext } from "~/components/permissions/permissions-server";
 import { getSession, githubAccessToken } from "~/server/auth";
 import {
@@ -15,11 +20,6 @@ import {
     getAllPullRequestCommitsGraphQL,
 } from "~/server/github-graphql";
 import { generatePRMetadata } from "~/server/metadata";
-import {
-    CommitHeader,
-    CommitHeaderSkeleton,
-} from "../../_components/commit-header";
-import { FilesSection } from "../../_components/files-client";
 
 interface ChangesPageProps {
     params: Promise<{
