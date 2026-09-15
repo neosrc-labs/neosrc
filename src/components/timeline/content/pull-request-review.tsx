@@ -10,7 +10,7 @@ import {
     SquarePen,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { ReviewComments } from "~/app/[owner]/[repo]/_components/review-comments";
+import { ReviewComments } from "~/components/comment/review-comments";
 import { CommentCard } from "~/components/comment-card";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import {

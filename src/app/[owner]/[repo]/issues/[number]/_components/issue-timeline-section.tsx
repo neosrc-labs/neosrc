@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { CommentForm } from "~/app/[owner]/[repo]/_components/comment-form";
+import { CommentForm } from "~/components/comment/comment-form";
 import {
     canEdit,
     type PullRequestPermissionContext,

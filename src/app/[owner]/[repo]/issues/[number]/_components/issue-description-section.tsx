@@ -2,9 +2,9 @@
 
 import { Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
 import { useCallback, useState } from "react";
-import { AuthorLabel } from "~/app/[owner]/[repo]/_components/author-label";
-import { ReactionFooter } from "~/app/[owner]/[repo]/_components/reaction-footer";
 import { Async } from "~/components/async";
+import { AuthorLabel } from "~/components/comment/author-label";
+import { ReactionFooter } from "~/components/comment/reaction-footer";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { MarkdownEditor } from "~/components/markdown/markdown-editor";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
