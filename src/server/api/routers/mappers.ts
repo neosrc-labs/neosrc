@@ -1,4 +1,9 @@
-import type { CodebergIssue, CodebergReaction } from "~/server/codeberg";
+import type { StatusContext } from "~/components/ci-status";
+import type {
+    CodebergCombinedStatus,
+    CodebergIssue,
+    CodebergReaction,
+} from "~/server/codeberg";
 import type {
     IssueGetResponseData,
     PullsGetResponseData,
@@ -268,4 +273,21 @@ export function mapCbReactionCounts(
         }
     }
     return counts;
+}
+
+/** Forgejo combined commit status to the shared check contexts. */
+export function mapCodebergStatusContexts(
+    combinedStatus: CodebergCombinedStatus | null | undefined,
+): StatusContext[] {
+    if (!combinedStatus?.statuses) return [];
+    return combinedStatus.statuses.map((s) => ({
+        name: s.context,
+        state: s.status != null ? s.status.toUpperCase() : "PENDING",
+        description: s.description,
+        url: s.target_url?.startsWith("/")
+            ? `https://codeberg.org${s.target_url}`
+            : s.target_url,
+        startedAt: s.created_at,
+        completedAt: s.updated_at,
+    }));
 }

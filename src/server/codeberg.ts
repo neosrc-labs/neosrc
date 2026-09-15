@@ -1052,16 +1052,16 @@ export const listRecentIssueAuthors = cache(
     },
 );
 
-type GiteaCommitStatus = {
+export type GiteaCommitStatus = {
     context: string;
-    status: string;
+    status: string | null;
     description: string | null;
     target_url: string | null;
     created_at: string;
     updated_at: string;
 };
 
-type GiteaCombinedStatus = {
+export type CodebergCombinedStatus = {
     state: string;
     sha: string;
     total_count: number;
@@ -1072,7 +1072,7 @@ export async function getCommitCombinedStatus(
     owner: string,
     repo: string,
     sha: string,
-): Promise<GiteaCombinedStatus | null> {
+): Promise<CodebergCombinedStatus | null> {
     const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits/${sha}/status`;
     const res = await fetch(url, {
         headers: {
@@ -1086,7 +1086,7 @@ export async function getCommitCombinedStatus(
             `Failed to fetch commit status for ${owner}/${repo}/${sha}: ${res.status}`,
         );
     }
-    const data = (await res.json()) as GiteaCombinedStatus;
+    const data = (await res.json()) as CodebergCombinedStatus;
     return {
         ...data,
         statuses: data.statuses ?? [],
