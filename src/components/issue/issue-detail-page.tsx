@@ -10,11 +10,11 @@ import {
     githubAccessToken,
 } from "~/server/auth";
 import type { Provider } from "~/utils/provider-url";
-import { IssueDescriptionSection } from "./_components/issue-description-section";
+import { IssueDescriptionSection } from "./issue-description-section";
 import {
     IssueTimelineSection,
     TimelineSkeleton,
-} from "./_components/issue-timeline-section";
+} from "./issue-timeline-section";
 import { loadIssueForRoute } from "./load-issue";
 
 interface IssueDetailPageProps {

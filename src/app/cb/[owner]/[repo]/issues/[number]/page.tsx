@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IssueDetailPage } from "~/app/[owner]/[repo]/issues/[number]/issue-detail-page";
+import { IssueDetailPage } from "~/components/issue/issue-detail-page";
 import { generateIssueMetadata } from "~/server/metadata";
 
 interface PageProps {

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IssueList } from "~/app/[owner]/[repo]/issues/_components/issue-list";
+import { IssueList } from "~/components/issue/issue-list";
 
 export async function generateMetadata({
     params,

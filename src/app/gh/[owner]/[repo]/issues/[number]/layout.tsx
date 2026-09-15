@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { IssueLayout } from "~/app/[owner]/[repo]/issues/[number]/issue-layout";
+import { IssueLayout } from "~/components/issue/issue-layout";
 
 interface LayoutProps {
     children: ReactNode;

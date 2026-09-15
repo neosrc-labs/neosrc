@@ -86,7 +86,7 @@ vi.mock("~/trpc/react", () => ({
     },
 }));
 
-import { IssueList } from "~/app/[owner]/[repo]/issues/_components/issue-list";
+import { IssueList } from "~/components/issue/issue-list";
 
 // --- Helpers ---
 
