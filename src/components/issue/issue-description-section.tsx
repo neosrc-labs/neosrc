@@ -13,13 +13,13 @@ import {
     canInteract,
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
-import { RoleBadge } from "~/components/role-badge";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
 import { StatusPill } from "~/components/ui/status-pill";
+import { RoleBadge } from "~/components/user/role-badge";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTaskToggle } from "~/hooks/use-task-toggle";
 import type { IssueDetail } from "~/server/api/routers/issues/types";

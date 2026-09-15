@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CheckRunIcon } from "~/components/ci-status";
-import { UserLink } from "~/components/user-link";
+import { UserLink } from "~/components/user/user-link";
 import type { WorkflowRunItem } from "~/server/api/routers/actions/types";
 import {
     runDurationLabel,

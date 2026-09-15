@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { isGeneratedFile } from "~/utils/generated-files";
 import { getStoredSet, getViewedKey, setStoredSet } from "~/utils/viewed-files";
-import type { DiffCommentTarget } from "./diff/types";
+import type { DiffCommentTarget } from "./types";
 
 export function useFileDiffState({
     owner,

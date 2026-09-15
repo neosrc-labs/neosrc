@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentProps } from "react";
-import { UserLink } from "~/components/user-link";
+import { UserLink } from "~/components/user/user-link";
 import { formatDateTime, formatRelativeTime } from "~/utils";
 import type { Provider } from "~/utils/provider-url";
 import { EventRow } from "../event";

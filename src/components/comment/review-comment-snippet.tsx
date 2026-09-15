@@ -4,9 +4,9 @@ import { useTheme } from "next-themes";
 import { useMemo, useRef } from "react";
 import { useFileContent } from "~/hooks/use-file-content";
 import type { ReviewCommentBase } from "~/server/github";
-import { DiffTable } from "./diff/diff-table";
-import { getDiffLanguage } from "./diff/model";
-import { useDiffSyntaxHighlighting } from "./diff/use-diff-syntax-highlighting";
+import { DiffTable } from "../diff/diff-table";
+import { getDiffLanguage } from "../diff/model";
+import { useDiffSyntaxHighlighting } from "../diff/use-diff-syntax-highlighting";
 import {
     fileSnippetRows,
     hunkSnippetRows,

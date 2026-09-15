@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ReviewCommentReplyComposer } from "./review-comment-reply-composer";
 
-vi.mock("./markdown/markdown-editor", () => ({
+vi.mock("../markdown/markdown-editor", () => ({
     MarkdownEditor: (props: {
         value: string;
         onChange: (value: string) => void;

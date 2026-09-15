@@ -21,7 +21,6 @@ import { CreateStackDialog } from "~/components/pull/stack/create-stack-dialog";
 import { StackBanner } from "~/components/pull/stack/stack-banner";
 import { StackCreateBadge } from "~/components/pull/stack/stack-create-badge";
 import { StackBadge } from "~/components/pull/stack/stack-popover";
-import { RoleBadge } from "~/components/role-badge";
 import {
     Popover,
     PopoverContent,
@@ -31,6 +30,7 @@ import {
     extractPullRequestState,
     StatusPill,
 } from "~/components/ui/status-pill";
+import { RoleBadge } from "~/components/user/role-badge";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useLocalStorage } from "~/hooks/use-local-storage";
 import { useTaskToggle } from "~/hooks/use-task-toggle";

@@ -1,6 +1,6 @@
 "use client";
 
-import { MarkdownEditor } from "./markdown/markdown-editor";
+import { MarkdownEditor } from "../markdown/markdown-editor";
 
 export interface ReviewCommentReplyComposerProps {
     value: string;

@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CommitAuthors } from "~/components/commit-authors";
-import { CommitSubject } from "~/components/commit-subject";
+import { CommitAuthors } from "~/components/commit/commit-authors";
+import { CommitSubject } from "~/components/commit/commit-subject";
 import {
     LazyHoverCard,
     useLazyHoverCardState,
 } from "~/components/hovercards/hover-card-shared";
-import { VerifiedBadgeInline } from "~/components/verified-badge";
+import { VerifiedBadgeInline } from "~/components/user/verified-badge";
 import type { GQLCommitWithAuthors } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils";

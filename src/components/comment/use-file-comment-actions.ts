@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { api } from "~/trpc/react";
-import type { DiffCommentTarget } from "./diff/types";
+import type { DiffCommentTarget } from "../diff/types";
 import {
     createReviewCommentStub,
     findAuthorAssociation,

@@ -30,7 +30,7 @@ vi.mock("~/trpc/react", () => ({
     },
 }));
 
-vi.mock("~/components/file-diff", () => ({
+vi.mock("~/components/diff/file-diff", () => ({
     default: ({
         file,
         diffView,

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CommitAuthors } from "~/components/commit-authors";
-import { CommitSubject } from "~/components/commit-subject";
+import { CommitAuthors } from "~/components/commit/commit-authors";
+import { CommitSubject } from "~/components/commit/commit-subject";
 import {
     Popover,
     PopoverContent,

@@ -2,8 +2,8 @@
 
 import { Plus } from "lucide-react";
 import { Fragment, useCallback } from "react";
-import { InlineCommentThread } from "../inline-comment-thread";
-import { groupReviewCommentThreads } from "../review-comment-threads";
+import { InlineCommentThread } from "../comment/inline-comment-thread";
+import { groupReviewCommentThreads } from "../comment/review-comment-threads";
 import type { BlockRowsSharedProps } from "./diff-block-rows";
 import { DiffLineCommentEditor } from "./diff-line-comment-editor";
 import { DiffLineRow } from "./diff-line-row";

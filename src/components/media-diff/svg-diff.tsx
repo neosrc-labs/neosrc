@@ -2,10 +2,10 @@
 
 import { Code, Eye } from "lucide-react";
 import { useState } from "react";
-import { DiffModeToggle } from "./diff-mode-toggle";
-import { type DiffCommentProps, DiffView } from "./diff-view";
-import { SvgPreview } from "./media-diff/svg-preview";
-import { useSvgContents } from "./media-diff/use-svg-contents";
+import { DiffModeToggle } from "../diff/diff-mode-toggle";
+import { type DiffCommentProps, DiffView } from "../diff/diff-view";
+import { SvgPreview } from "./svg-preview";
+import { useSvgContents } from "./use-svg-contents";
 
 type ViewMode = "rendered" | "code";
 

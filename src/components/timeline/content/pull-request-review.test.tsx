@@ -87,21 +87,21 @@ vi.mock("next/link", () => ({
     ),
 }));
 
-vi.mock("~/components/comment-card", () => mockCommentCard());
+vi.mock("~/components/comment/comment-card", () => mockCommentCard());
 
 vi.mock("~/components/markdown/markdown-renderer", () =>
     mockMarkdownRenderer("markdown"),
 );
 
-vi.mock("~/components/reaction-bar", () => mockReactionBar());
+vi.mock("~/components/reaction/reaction-bar", () => mockReactionBar());
 
-vi.mock("~/components/reaction-picker", () => mockReactionPicker());
+vi.mock("~/components/reaction/reaction-picker", () => mockReactionPicker());
 
 vi.mock("~/components/ui/popover", () => mockPopover());
 
 vi.mock("~/components/ui/dialog", () => mockDialog(["dialog"]));
 
-vi.mock("~/components/user-link", () => ({
+vi.mock("~/components/user/user-link", () => ({
     UserLink: ({ actor }: { actor: { login: string } | null }) => (
         <span data-testid="user-link">{actor?.login ?? "unknown"}</span>
     ),

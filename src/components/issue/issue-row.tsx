@@ -3,7 +3,7 @@ import Image from "next/image";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { Label } from "~/components/ui/label";
-import { UserLink } from "~/components/user-link";
+import { UserLink } from "~/components/user/user-link";
 import { formatRelativeTime } from "~/utils";
 
 export interface IssueRowData {

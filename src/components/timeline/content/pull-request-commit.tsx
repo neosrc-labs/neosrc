@@ -1,9 +1,9 @@
 "use client";
 
 import NextLink from "next/link";
-import { CommitAuthors } from "~/components/commit-authors";
-import { CommitSubject } from "~/components/commit-subject";
-import { VerifiedBadge } from "~/components/verified-badge";
+import { CommitAuthors } from "~/components/commit/commit-authors";
+import { CommitSubject } from "~/components/commit/commit-subject";
+import { VerifiedBadge } from "~/components/user/verified-badge";
 import type { GQLPullRequestCommit } from "~/server/github-graphql";
 import type { Provider } from "~/utils/provider-url";
 

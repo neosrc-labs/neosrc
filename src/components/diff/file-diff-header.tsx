@@ -7,7 +7,7 @@ import {
     MessageSquare,
     UnfoldVertical,
 } from "lucide-react";
-import { CopyButton } from "./ui/copy-button";
+import { CopyButton } from "../ui/copy-button";
 
 export function FileDiffHeader({
     file,

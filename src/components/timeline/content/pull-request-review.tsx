@@ -10,16 +10,16 @@ import {
     SquarePen,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { CommentCard } from "~/components/comment/comment-card";
 import { ReviewComments } from "~/components/comment/review-comments";
-import { CommentCard } from "~/components/comment-card";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import {
     canEdit,
     canInteract,
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
-import { ReactionBar } from "~/components/reaction-bar";
-import { ReactionPicker } from "~/components/reaction-picker";
+import { ReactionBar } from "~/components/reaction/reaction-bar";
+import { ReactionPicker } from "~/components/reaction/reaction-picker";
 import { Button } from "~/components/ui/button";
 import {
     Dialog,
@@ -34,7 +34,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
-import { UserLink } from "~/components/user-link";
+import { UserLink } from "~/components/user/user-link";
 import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
 import type { ReactionContent } from "~/lib/reactions";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";

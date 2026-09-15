@@ -4,7 +4,7 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { MarkdownEditor } from "~/components/markdown/markdown-editor";
-import { RoleBadge } from "~/components/role-badge";
+import { RoleBadge } from "~/components/user/role-badge";
 import { formatDateTime, formatRelativeTime } from "~/utils";
 import type { Provider } from "~/utils/provider-url";
 

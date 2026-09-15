@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ReviewCommentBase } from "~/server/github";
 import { ReviewCommentItem } from "./review-comment-item";
 
-vi.mock("~/components/comment-card", () => ({
+vi.mock("./comment-card", () => ({
     CommentCard: (props: {
         children: React.ReactNode;
         headerActions?: React.ReactNode;
@@ -21,10 +21,10 @@ vi.mock("~/components/comment-card", () => ({
 vi.mock("~/components/markdown/markdown-renderer", () => ({
     MarkdownRenderer: ({ content }: { content: string }) => <p>{content}</p>,
 }));
-vi.mock("~/components/reaction-picker", () => ({
+vi.mock("~/components/reaction/reaction-picker", () => ({
     ReactionPicker: () => <button type="button">Pick reaction</button>,
 }));
-vi.mock("~/components/reaction-bar", () => ({
+vi.mock("~/components/reaction/reaction-bar", () => ({
     ReactionBar: () => <span>Reactions</span>,
 }));
 vi.mock("~/components/ui/popover", () => ({

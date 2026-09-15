@@ -9,15 +9,15 @@ import {
     Trash2,
 } from "lucide-react";
 import { useCallback, useState } from "react";
-import { CommentCard } from "~/components/comment-card";
+import { CommentCard } from "~/components/comment/comment-card";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import {
     canEdit,
     canInteract,
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
-import { ReactionBar } from "~/components/reaction-bar";
-import { ReactionPicker } from "~/components/reaction-picker";
+import { ReactionBar } from "~/components/reaction/reaction-bar";
+import { ReactionPicker } from "~/components/reaction/reaction-picker";
 import { Button } from "~/components/ui/button";
 import {
     Dialog,

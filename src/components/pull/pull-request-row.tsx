@@ -20,7 +20,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { UserLink } from "~/components/user-link";
+import { UserLink } from "~/components/user/user-link";
 import { cn } from "~/lib/utils";
 import { formatRelativeTime } from "~/utils";
 import { StackBadge } from "./stack/stack-popover";

@@ -1,7 +1,7 @@
 "use client";
 
-import type { FooterAction } from "./markdown/markdown-editor";
-import { MarkdownEditor } from "./markdown/markdown-editor";
+import type { FooterAction } from "../markdown/markdown-editor";
+import { MarkdownEditor } from "../markdown/markdown-editor";
 
 export function FileCommentEditor({
     open,

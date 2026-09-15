@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { DiffCommentTarget } from "./diff/types";
+import type { DiffCommentTarget } from "../diff/types";
 import { useFileCommentActions } from "./use-file-comment-actions";
 
 /**

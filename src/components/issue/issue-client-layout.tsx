@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ResizableLayout } from "~/components/resizable-layout";
+import { ResizableLayout } from "~/components/layout/resizable-layout";
 
 export type IssueClientLayoutProps = {
     leftSidebar: ReactNode;
