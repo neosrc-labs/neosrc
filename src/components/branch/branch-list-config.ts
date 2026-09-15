@@ -32,3 +32,12 @@ export const cbBranchConfig: BranchListConfig = {
     rulesLabel: "Branch protection settings",
     rulesForEveryone: false,
 };
+
+/**
+ * A config carries a `rulesUrl` function, so a page passes the provider and
+ * the client resolves the config instead of crossing the server boundary
+ * with it.
+ */
+export function branchConfig(provider: Provider): BranchListConfig {
+    return provider === "cb" ? cbBranchConfig : ghBranchConfig;
+}

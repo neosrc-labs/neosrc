@@ -6,8 +6,9 @@ import { useState } from "react";
 import { StateTabs } from "~/components/list/state-tabs";
 import { Pagination } from "~/components/ui/pagination";
 import { api } from "~/trpc/react";
+import type { Provider } from "~/utils/provider-url";
 import { BranchEmptyState } from "./branch-empty-state";
-import { BRANCH_TABS, type BranchListConfig } from "./branch-list-config";
+import { BRANCH_TABS, branchConfig } from "./branch-list-config";
 import { BranchTable } from "./branch-table";
 import { BranchTableSkeleton } from "./branch-table-skeleton";
 import { useBranchList } from "./use-branch-list";
@@ -66,12 +67,13 @@ function BranchSearchBar({
 export function BranchListShared({
     owner,
     repo,
-    config,
+    provider,
 }: {
     owner: string;
     repo: string;
-    config: BranchListConfig;
+    provider: Provider;
 }) {
+    const config = branchConfig(provider);
     const { tab, query, page, data, isLoading, setParams } = useBranchList({
         owner,
         repo,
@@ -130,54 +132,71 @@ export function BranchListShared({
 
                 {isLoading || !data ? (
                     <BranchTableSkeleton />
-                ) : tab === "overview" ? (
-                    <>
-                        {data.defaultBranchRow && (
-                            <>
-                                <SectionHeading>Default</SectionHeading>
-                                {table([data.defaultBranchRow])}
-                            </>
-                        )}
-                        <SectionHeading>Active branches</SectionHeading>
-                        {data.items.length === 0 ? (
-                            <BranchEmptyState
-                                searchQuery={query}
-                                activeTab={tab}
-                            />
-                        ) : (
-                            <>
-                                {table(data.items)}
-                                <div className="px-4 py-3">
-                                    <Link
-                                        href={allHref}
-                                        prefetch={false}
-                                        className="cursor-pointer text-blue-600 text-sm hover:underline dark:text-blue-400"
-                                    >
-                                        View more branches
-                                    </Link>
-                                </div>
-                            </>
-                        )}
-                    </>
                 ) : (
                     <>
-                        {data.items.length === 0 ? (
-                            <BranchEmptyState
-                                searchQuery={query}
-                                activeTab={tab}
-                            />
-                        ) : (
-                            table(data.items)
+                        {data.scanLimit && (
+                            <p className="border-border-subtle border-b px-4 py-2 text-text-tertiary text-xs">
+                                Active and Stale are filtered from the first{" "}
+                                {data.scanLimit.scanned} of{" "}
+                                {data.scanLimit.total} branches. All lists every
+                                branch.
+                            </p>
                         )}
-                        <Pagination
-                            currentPage={page}
-                            totalPages={Math.ceil(data.totalCount / PAGE_SIZE)}
-                            onPageChange={(next) =>
-                                setParams({
-                                    page: next === 1 ? null : String(next),
-                                })
-                            }
-                        />
+                        {tab === "overview" ? (
+                            <>
+                                {data.defaultBranchRow && (
+                                    <>
+                                        <SectionHeading>Default</SectionHeading>
+                                        {table([data.defaultBranchRow])}
+                                    </>
+                                )}
+                                <SectionHeading>Active branches</SectionHeading>
+                                {data.items.length === 0 ? (
+                                    <BranchEmptyState
+                                        searchQuery={query}
+                                        activeTab={tab}
+                                    />
+                                ) : (
+                                    <>
+                                        {table(data.items)}
+                                        <div className="px-4 py-3">
+                                            <Link
+                                                href={allHref}
+                                                prefetch={false}
+                                                className="cursor-pointer text-blue-600 text-sm hover:underline dark:text-blue-400"
+                                            >
+                                                View more branches
+                                            </Link>
+                                        </div>
+                                    </>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                {data.items.length === 0 ? (
+                                    <BranchEmptyState
+                                        searchQuery={query}
+                                        activeTab={tab}
+                                    />
+                                ) : (
+                                    table(data.items)
+                                )}
+                                <Pagination
+                                    currentPage={page}
+                                    totalPages={Math.ceil(
+                                        data.totalCount / PAGE_SIZE,
+                                    )}
+                                    onPageChange={(next) =>
+                                        setParams({
+                                            page:
+                                                next === 1
+                                                    ? null
+                                                    : String(next),
+                                        })
+                                    }
+                                />
+                            </>
+                        )}
                     </>
                 )}
             </div>

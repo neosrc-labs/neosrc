@@ -107,6 +107,9 @@ export const codebergBranchProvider: BranchProvider = {
             defaultBranchRow: defaultBranchRow
                 ? enrich(defaultBranchRow, pageRows.length - 1)
                 : null,
+            // Forgejo's listing ignores search and sort, so every branch was
+            // considered.
+            scanLimit: null,
         };
     },
 };
