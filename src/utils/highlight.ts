@@ -101,27 +101,56 @@ function renderToken(token: {
  * the whole text in one pass is what keeps multi-line constructs (block
  * comments, template literals) intact. Every token carries both themes'
  * colours as CSS variables, so the active theme is chosen in CSS and a theme
- * switch never re-highlights. Returns null when the tag has no grammar.
+ * switch never re-highlights. Resolves to null when the tag has no grammar;
+ * rejects when the highlighter or a chunk cannot be loaded.
  */
-export async function highlightLines(
+async function highlightUncached(
     code: string,
     tag: string,
 ): Promise<string[] | null> {
     const language = LANGUAGE_ALIASES[tag] ?? tag;
-    try {
-        const highlighter = await loadHighlighter();
-        if (!(await ensureLanguage(highlighter, language))) return null;
-        const { tokens } = highlighter.codeToTokens(code, {
-            lang: language as BundledLanguage,
-            themes: {
-                light: HIGHLIGHT_THEMES.light,
-                dark: HIGHLIGHT_THEMES.dark,
-            },
-            defaultColor: false,
-        });
-        return tokens.map((line) => line.map(renderToken).join(""));
-    } catch {
-        // A missing wasm or grammar chunk degrades to plain text.
-        return null;
+    const highlighter = await loadHighlighter();
+    if (!(await ensureLanguage(highlighter, language))) return null;
+    const { tokens } = highlighter.codeToTokens(code, {
+        lang: language as BundledLanguage,
+        themes: {
+            light: HIGHLIGHT_THEMES.light,
+            dark: HIGHLIGHT_THEMES.dark,
+        },
+        defaultColor: false,
+    });
+    return tokens.map((line) => line.map(renderToken).join(""));
+}
+
+// Re-highlighting the same file is common (tab toggles, ref switches), and the
+// result is pure for a given (code, tag).
+const HIGHLIGHT_CACHE_LIMIT = 8;
+const highlightCache = new Map<string, string[] | null>();
+
+/**
+ * Cached {@link highlightUncached}. Only resolved results are stored, so a
+ * failed highlight degrades this render to plain text instead of latching
+ * null into the cache.
+ */
+export function highlightLines(
+    code: string,
+    tag: string,
+): Promise<string[] | null> {
+    const key = `${tag}\u0000${code}`;
+    if (highlightCache.has(key)) {
+        return Promise.resolve(highlightCache.get(key) ?? null);
     }
+
+    return highlightUncached(code, tag).then(
+        (result) => {
+            highlightCache.set(key, result);
+            while (highlightCache.size > HIGHLIGHT_CACHE_LIMIT) {
+                const oldest = highlightCache.keys().next().value;
+                if (oldest === undefined) break;
+                highlightCache.delete(oldest);
+            }
+            return result;
+        },
+        () => null,
+    );
 }
