@@ -8,6 +8,12 @@ export const BRANCH_TABS: readonly { key: BranchTab; label: string }[] = [
     { key: "all", label: "All" },
 ];
 
+/** Rows per page; mirrors the router's list page size. */
+export const BRANCH_PAGE_SIZE = 30;
+
+/** Rows the overview previews; mirrors the router's overview cap. */
+export const OVERVIEW_PREVIEW_SIZE = 5;
+
 export interface BranchListConfig {
     provider: Provider;
     /** Provider page describing the rules protecting a branch. */

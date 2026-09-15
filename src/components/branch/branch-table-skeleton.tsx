@@ -1,32 +1,85 @@
-// Row geometry mirrors a loaded branch row (40px, 5 columns) so the table
-// does not jump when the branches arrive.
-const SKELETON_ROWS = ["sk1", "sk2", "sk3", "sk4", "sk5"];
-const SKELETON_COLUMNS = ["branch", "updated", "checks", "pull", "actions"];
+"use client";
 
-export function BranchTableSkeleton() {
-    return (
-        <div>
-            <div className="flex h-8 items-center gap-4 border-border border-b bg-surface-elevated px-4">
-                {SKELETON_COLUMNS.map((column) => (
+import type { BranchTab } from "~/server/api/routers/branches/types";
+import { BRANCH_PAGE_SIZE, OVERVIEW_PREVIEW_SIZE } from "./branch-list-config";
+import { BranchSection } from "./branch-section";
+import { BranchTableShell } from "./branch-table-shell";
+
+/** Top spacing between two stacked sections, matching the loaded ones. */
+const SECTION_SPACING = "pt-6";
+
+/**
+ * Row geometry mirrors a loaded branch row exactly: same 40px row, same
+ * header, same section headings and the same count of rows as the tab it
+ * stands in for, so nothing moves when the data arrives.
+ */
+function SkeletonRows({ count }: { count: number }) {
+    return Array.from({ length: count }, (_, i) => `row-${i}`).map((key) => (
+        <tr key={key} className="h-10 border-border-subtle border-b">
+            {COLUMNS.map((column) => (
+                <td key={column} className="px-4 py-2">
                     <div
-                        key={`head-${column}`}
-                        className="h-3 w-16 animate-pulse rounded bg-surface-selected"
+                        className={`animate-pulse rounded bg-surface-selected ${BAR_CLASS[column]}`}
                     />
-                ))}
-            </div>
-            {SKELETON_ROWS.map((row) => (
-                <div
-                    key={row}
-                    className="flex h-10 items-center gap-4 border-border-subtle border-b px-4"
-                >
-                    {SKELETON_COLUMNS.map((column) => (
-                        <div
-                            key={`${row}-${column}`}
-                            className="h-3 w-24 animate-pulse rounded bg-surface-selected"
-                        />
-                    ))}
-                </div>
+                </td>
             ))}
+        </tr>
+    ));
+}
+
+const COLUMNS = ["branch", "updated", "checks", "pull", "actions"] as const;
+
+// The action bar is 24px because the loaded action cell holds two 24px
+// buttons, which is what sets a loaded row's content height.
+const BAR_CLASS: Record<(typeof COLUMNS)[number], string> = {
+    branch: "h-4 w-48",
+    updated: "h-4 w-28",
+    checks: "h-4 w-16",
+    pull: "h-4 w-12",
+    actions: "size-6",
+};
+
+/** Pagination control placeholder: the nav strip is 57px loaded. */
+function PaginationSkeleton() {
+    return (
+        <div className="flex items-center justify-center gap-2 border-border-subtle border-t px-4 py-3">
+            <div className="h-8 w-24 animate-pulse rounded bg-surface-selected" />
+            <div className="h-8 w-32 animate-pulse rounded bg-surface-selected" />
+            <div className="h-8 w-24 animate-pulse rounded bg-surface-selected" />
         </div>
+    );
+}
+
+export function BranchTableSkeleton({ tab }: { tab: BranchTab }) {
+    if (tab === "overview") {
+        return (
+            <>
+                <BranchSection title="Default">
+                    <BranchTableShell>
+                        <SkeletonRows count={1} />
+                    </BranchTableShell>
+                </BranchSection>
+                <BranchSection
+                    title="Active branches"
+                    className={SECTION_SPACING}
+                >
+                    <BranchTableShell>
+                        <SkeletonRows count={OVERVIEW_PREVIEW_SIZE} />
+                    </BranchTableShell>
+                </BranchSection>
+                <div className="px-4 py-3">
+                    <div className="h-5 w-32 animate-pulse rounded bg-surface-selected" />
+                </div>
+            </>
+        );
+    }
+
+    return (
+        <>
+            <BranchTableShell>
+                <SkeletonRows count={BRANCH_PAGE_SIZE} />
+            </BranchTableShell>
+            <PaginationSkeleton />
+        </>
     );
 }
