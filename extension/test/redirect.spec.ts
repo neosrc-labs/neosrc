@@ -191,6 +191,10 @@ test("covers the pages Neosrc serves and keeps the rest on GitHub", async () => 
             "https://github.com/acme/widget/blob/main/README.md",
             "https://neosrc.dev/gh/acme/widget/blob/main/README.md",
         ],
+        [
+            "https://github.com/acme/widget/blame/main/README.md",
+            "https://neosrc.dev/gh/acme/widget/blame/main/README.md",
+        ],
     ];
 
     for (const [url, target] of covered) {

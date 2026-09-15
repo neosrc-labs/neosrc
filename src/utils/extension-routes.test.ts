@@ -51,6 +51,10 @@ describe("matchExternalPath", () => {
             matchExternalPath("github.com", "/acme/widget/blob/main/README.md")
                 ?.rule.id,
         ).toBe("gh-blob");
+        expect(
+            matchExternalPath("github.com", "/acme/widget/blame/main/README.md")
+                ?.rule.id,
+        ).toBe("gh-blame");
     });
 
     it("keeps pages Neosrc cannot render on GitHub", () => {
@@ -142,6 +146,9 @@ describe("externalUrlForNeosrcPath", () => {
         expect(externalUrlForNeosrcPath("/gh/acme/widget/blob/main/a.ts")).toBe(
             "https://github.com/acme/widget/blob/main/a.ts",
         );
+        expect(
+            externalUrlForNeosrcPath("/gh/acme/widget/blame/main/a.ts"),
+        ).toBe("https://github.com/acme/widget/blame/main/a.ts");
     });
 
     it("returns null for pages with no host equivalent", () => {

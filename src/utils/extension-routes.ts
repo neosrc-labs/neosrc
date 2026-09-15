@@ -236,6 +236,15 @@ export const EXTENSION_ROUTE_RULES: ExtensionRouteRule[] = [
         external: "/$1/$2/blob/$3/$4",
         tailGroup: 4,
     },
+    {
+        id: "gh-blame",
+        host: "github.com",
+        provider: "gh",
+        pattern: "^/([^/]+)/([^/]+)/blame/([^/?#]+)/(.+)$",
+        to: "/gh/$1/$2/blame/$3/$4",
+        external: "/$1/$2/blame/$3/$4",
+        tailGroup: 4,
+    },
 ];
 
 export interface ExtensionRouteTable {
