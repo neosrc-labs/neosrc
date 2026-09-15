@@ -11,7 +11,7 @@ import { CommitSubject } from "~/components/commit/commit-subject";
 import type { PullsGetResponseData } from "~/server/github";
 import type { GQLCommitWithAuthors } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
-import { formatRelativeTime } from "~/utils";
+import { formatRelativeTime } from "~/utils/format-time";
 
 const COMMIT_ITEM_HEIGHT = 52;
 

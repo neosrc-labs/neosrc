@@ -9,7 +9,7 @@ import {
 } from "~/components/ui/popover";
 import type { CommitData } from "~/server/github";
 import type { GQLCommitWithAuthors } from "~/server/github-graphql";
-import { formatRelativeTime } from "~/utils";
+import { formatRelativeTime } from "~/utils/format-time";
 
 interface CommitHeaderProps {
     commitPromise: Promise<CommitData> | null;

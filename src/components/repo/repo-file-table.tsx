@@ -6,7 +6,7 @@ import type {
     FileLatestCommit,
     RepoContentItem,
 } from "~/server/github";
-import { formatRelativeTime } from "~/utils";
+import { formatRelativeTime } from "~/utils/format-time";
 import { getFileIconName, getFolderIconName } from "~/utils/icons";
 import {
     blobHref,

@@ -11,7 +11,7 @@ import {
 import { VerifiedBadgeInline } from "~/components/user/verified-badge";
 import type { GQLCommitWithAuthors } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
-import { formatRelativeTime } from "~/utils";
+import { formatRelativeTime } from "~/utils/format-time";
 
 function CommitHoverCardContent({
     commit,

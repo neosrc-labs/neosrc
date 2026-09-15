@@ -14,7 +14,7 @@ import {
     HoverCardTrigger,
 } from "~/components/ui/hover-card";
 import { api } from "~/trpc/react";
-import { formatRelativeTime } from "~/utils";
+import { formatRelativeTime } from "~/utils/format-time";
 
 function UserHoverCardContent({
     login,

@@ -2,7 +2,7 @@
 
 import type { ComponentProps } from "react";
 import { UserLink } from "~/components/user/user-link";
-import { formatDateTime, formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils/format-time";
 import type { Provider } from "~/utils/provider-url";
 import { EventRow } from "../event";
 

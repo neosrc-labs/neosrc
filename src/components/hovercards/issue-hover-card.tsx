@@ -15,7 +15,7 @@ import {
 } from "~/components/ui/status-pill";
 import type { IssueGetResponseData } from "~/server/github";
 import { api } from "~/trpc/react";
-import { formatRelativeTime } from "~/utils";
+import { formatRelativeTime } from "~/utils/format-time";
 
 function IssueHoverCardContent({
     issue,

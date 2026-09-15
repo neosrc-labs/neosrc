@@ -37,7 +37,7 @@ import type {
     GQLReactionNode,
     GQLTimelineEvent,
 } from "~/server/github-graphql";
-import { formatDateTime, formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils/format-time";
 import type { Provider } from "~/utils/provider-url";
 import type { ReactionContent } from "~/utils/reactions";
 import { AssignedEventContent } from "./content/assigned-event";

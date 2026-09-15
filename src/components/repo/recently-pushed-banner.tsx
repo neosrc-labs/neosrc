@@ -3,7 +3,7 @@
 import { GitBranch, GitPullRequestArrow } from "lucide-react";
 import Link from "next/link";
 import { api } from "~/trpc/react";
-import { formatRelativeTime } from "~/utils";
+import { formatRelativeTime } from "~/utils/format-time";
 
 /**
  * Mirrors GitHub's "recent pushes" banner: the branch the signed-in user

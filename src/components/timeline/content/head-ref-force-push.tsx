@@ -3,7 +3,7 @@
 import NextLink from "next/link";
 import { UserLink } from "~/components/user/user-link";
 import type { GQLHeadRefForcePushedEvent } from "~/server/github-graphql";
-import { formatDateTime, formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils/format-time";
 import { domain, type Provider } from "~/utils/provider-url";
 import { EventRow } from "../event";
 

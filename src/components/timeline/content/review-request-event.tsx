@@ -7,7 +7,7 @@ import type {
     GQLReviewRequestedEvent,
     GQLReviewRequestRemovedEvent,
 } from "~/server/github-graphql";
-import { formatDateTime, formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils/format-time";
 import type { Provider } from "~/utils/provider-url";
 
 export function ReviewRequestEventContent({

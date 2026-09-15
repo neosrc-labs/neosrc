@@ -24,7 +24,7 @@ import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTaskToggle } from "~/hooks/use-task-toggle";
 import type { IssueDetail } from "~/server/api/routers/issues/types";
 import { api } from "~/trpc/react";
-import { formatDateTime, formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils/format-time";
 import type { Provider } from "~/utils/provider-url";
 
 interface IssueDescriptionSectionProps {

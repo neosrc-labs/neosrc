@@ -36,7 +36,7 @@ import { useLocalStorage } from "~/hooks/use-local-storage";
 import { useTaskToggle } from "~/hooks/use-task-toggle";
 import type { PullsGetResponseData, StackSuggestion } from "~/server/github";
 import { api } from "~/trpc/react";
-import { formatDateTime, formatRelativeTime } from "~/utils";
+import { formatDateTime, formatRelativeTime } from "~/utils/format-time";
 import { AdditionsDeletionsBadge } from "./additions-deletions-badge";
 import { AutoMergeBannerSection } from "./auto-merge-banner-section";
 import { ConflictedFiles } from "./conflicted-files";
