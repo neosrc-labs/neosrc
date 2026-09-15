@@ -48,9 +48,10 @@ function withDetails(
 
 /**
  * GitHub's refs connection returns branches in name order (its only RefOrder
- * value is honoured for tags), so a date tab can only classify a prefix of the
- * list and `direction` only picks which prefix. The scan reports how much of
- * the list it saw; `all` pages the whole list in that order.
+ * value is honoured for tags), so a date tab cannot be computed over the whole
+ * list: 2600 branches cost 26 requests. The date tabs therefore classify a
+ * sample of both ends of the name order, and report how much of the list they
+ * saw so the page can say so. `all` pages the entire list.
  */
 export const githubBranchProvider: BranchProvider = {
     async list({ accessToken, owner, repo, tab, query, page }) {
@@ -85,40 +86,53 @@ export const githubBranchProvider: BranchProvider = {
                 defaultBranchRow: null,
             };
         } else {
-            const refsPage = await getBranchRefs(accessToken, owner, repo, {
-                query: scanQuery,
-                direction: "ASC",
-                pages: MAX_REF_SCAN_PAGES,
-            });
-            const scanRows = refsPage.refs.map(scanRow);
+            const [oldestNames, newestNames] = await Promise.all([
+                getBranchRefs(accessToken, owner, repo, {
+                    query: scanQuery,
+                    direction: "ASC",
+                    pages: MAX_REF_SCAN_PAGES,
+                }),
+                getBranchRefs(accessToken, owner, repo, {
+                    query: scanQuery,
+                    direction: "DESC",
+                    pages: MAX_REF_SCAN_PAGES,
+                }),
+            ]);
+            const seen = new Set<string>();
+            const scanRows: BranchRow[] = [];
+            for (const ref of [...oldestNames.refs, ...newestNames.refs]) {
+                if (seen.has(ref.name)) continue;
+                seen.add(ref.name);
+                scanRows.push(scanRow(ref));
+            }
             const paged = paginateRows(
                 selectTabRows(scanRows, {
                     tab,
                     query,
-                    defaultBranch: refsPage.defaultBranch,
+                    defaultBranch: oldestNames.defaultBranch,
                     now: Date.now(),
                 }),
                 page,
                 BRANCH_PAGE_SIZE,
             );
-            if (refsPage.refs.length < refsPage.totalCount) {
+            if (scanRows.length < oldestNames.totalCount) {
                 scanLimit = {
-                    scanned: refsPage.refs.length,
-                    total: refsPage.totalCount,
+                    scanned: scanRows.length,
+                    total: oldestNames.totalCount,
                 };
             }
             result = {
                 items: paged.items,
                 totalCount: paged.totalCount,
                 hasNextPage: paged.hasNextPage,
-                defaultBranch: refsPage.defaultBranch,
+                defaultBranch: oldestNames.defaultBranch,
                 defaultBranchRow:
-                    tab === "overview" && refsPage.defaultBranch
+                    tab === "overview" && oldestNames.defaultBranch
                         ? (scanRows.find(
-                              (row) => row.name === refsPage.defaultBranch,
+                              (row) => row.name === oldestNames.defaultBranch,
                           ) ??
                           scanRow({
-                              name: refsPage.defaultBranch,
+                              name: oldestNames.defaultBranch,
                               committedDate: "",
                           }))
                         : null,

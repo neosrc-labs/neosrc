@@ -569,13 +569,26 @@ describe("branches router", () => {
 
     it("reports a partial ref scan for the date tabs but not for all", async () => {
         const { branches } = await callerFor(null);
-        vi.mocked(github.getBranchRefs).mockResolvedValue({
-            refs: [{ name: "main", committedDate: "2026-09-01T00:00:00Z" }],
-            totalCount: 2593,
-            hasNextPage: true,
-            endCursor: "cursor-1",
-            defaultBranch: "main",
-        } as never);
+        const ref = (name: string) => ({
+            name,
+            committedDate: "2026-09-01T00:00:00Z",
+        });
+        vi.mocked(github.getBranchRefs).mockImplementation(((
+            _token: string,
+            _owner: string,
+            _repo: string,
+            opts: { direction: string },
+        ) =>
+            Promise.resolve({
+                refs:
+                    opts.direction === "ASC"
+                        ? [ref("aaa"), ref("shared")]
+                        : [ref("zzz"), ref("shared")],
+                totalCount: 2593,
+                hasNextPage: true,
+                endCursor: "cursor-1",
+                defaultBranch: "main",
+            })) as never);
         vi.mocked(github.getBranchDetails).mockResolvedValue([] as never);
         vi.mocked(github.getBranchProtectionMap).mockResolvedValue({} as never);
 
@@ -590,7 +603,14 @@ describe("branches router", () => {
             tab: "all",
         });
 
-        expect(active.scanLimit).toEqual({ scanned: 1, total: 2593 });
+        // Both ends of the name order are sampled and deduplicated.
+        expect(active.scanLimit).toEqual({ scanned: 3, total: 2593 });
+        expect(github.getBranchRefs).toHaveBeenCalledWith(
+            "gh-token",
+            "acme",
+            "api",
+            expect.objectContaining({ direction: "DESC" }),
+        );
         expect(all.scanLimit).toBeNull();
         expect(all.hasNextPage).toBe(true);
     });

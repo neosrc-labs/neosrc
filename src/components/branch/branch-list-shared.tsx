@@ -136,7 +136,7 @@ export function BranchListShared({
                     <>
                         {data.scanLimit && (
                             <p className="border-border-subtle border-b px-4 py-2 text-text-tertiary text-xs">
-                                Active and Stale are filtered from the first{" "}
+                                Active and Stale are computed from{" "}
                                 {data.scanLimit.scanned} of{" "}
                                 {data.scanLimit.total} branches. All lists every
                                 branch.
