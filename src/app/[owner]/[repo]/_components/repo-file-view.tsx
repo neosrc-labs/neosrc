@@ -122,6 +122,13 @@ export function RepoFileView({
     const name = path.split("/").pop() ?? path;
     const raw = rawUrl(provider, owner, repo, selectedRef, path);
     const content = fileData?.content ?? null;
+    // "Binary file" only holds once the content request has answered.
+    const contentLabel =
+        content !== null
+            ? `${content.split("\n").length.toLocaleString()} lines`
+            : fileData === undefined
+              ? ""
+              : "Binary file";
 
     return (
         <>
@@ -145,9 +152,7 @@ export function RepoFileView({
             <div className={cn(busy && "pointer-events-none opacity-60")}>
                 <div className="flex min-h-10 items-center justify-between border-border border-b bg-surface-elevated px-4 py-1.5">
                     <span className="text-text-tertiary text-xs">
-                        {content === null
-                            ? "Binary file"
-                            : `${content.split("\n").length.toLocaleString()} lines`}
+                        {contentLabel}
                     </span>
                     <div className="flex items-center gap-1">
                         {content !== null && (
@@ -177,7 +182,20 @@ export function RepoFileView({
                     </div>
                 </div>
 
-                {fileData === undefined ? (
+                {contentQuery.error !== null ? (
+                    <div className="px-6 py-12 text-center">
+                        <p className="font-medium text-base text-text-primary">
+                            Couldn&apos;t load this file.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => contentQuery.refetch()}
+                            className="mt-2 cursor-pointer text-blue-600 text-sm hover:underline dark:text-blue-400"
+                        >
+                            Try again
+                        </button>
+                    </div>
+                ) : fileData === undefined ? (
                     <FileBodySkeleton />
                 ) : content === null ? (
                     <div className="px-6 py-12 text-center">

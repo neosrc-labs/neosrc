@@ -107,9 +107,9 @@ export function RepoPathBrowse({
         }
     }, [isFile, router, provider, owner, repo, selectedRef, path]);
 
-    const pathMissing =
-        contentsError !== null ||
-        (!stale && contents !== undefined && sortedContents.length === 0);
+    // A provider errors for a path it does not have; an empty listing is a
+    // directory that exists and holds nothing.
+    const pathMissing = contentsError !== null;
 
     if (pathMissing) {
         return (

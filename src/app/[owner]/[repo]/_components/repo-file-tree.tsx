@@ -36,6 +36,7 @@ function toNodes(
     dirPath: string,
     listings: Record<string, RepoContentItem[]>,
     isExpanded: (path: string) => boolean,
+    failed: Set<string>,
 ): FileNode[] {
     const rows = listings[dirPath];
     if (!rows) return [];
@@ -47,13 +48,27 @@ function toNodes(
             return { name: row.name, path: row.path, isFile: false };
         }
         const loaded = listings[row.path];
+        if (loaded) {
+            return {
+                name: row.name,
+                path: row.path,
+                isFile: false,
+                children: toNodes(row.path, listings, isExpanded, failed),
+            };
+        }
         return {
             name: row.name,
             path: row.path,
             isFile: false,
-            children: loaded
-                ? toNodes(row.path, listings, isExpanded)
-                : [{ name: "Loading...", path: row.path, isLoading: true }],
+            children: [
+                failed.has(row.path)
+                    ? {
+                          name: "Couldn't load",
+                          path: row.path,
+                          isFailed: true,
+                      }
+                    : { name: "Loading...", path: row.path, isLoading: true },
+            ],
         };
     });
 }
@@ -81,13 +96,15 @@ export function RepoFileTree({
     const [failed, setFailed] = useState<Set<string>>(new Set());
     const requested = useRef(new Set<string>());
 
-    // A new ref invalidates every cached listing.
-    // biome-ignore lint/correctness/useExhaustiveDependencies: the ref is the trigger, the effect body does not read it
+    // A new provider, repository or ref invalidates every cached listing.
+    const scope = `${provider}/${owner}/${repo}/${selectedRef}`;
+    const scopeRef = useRef(scope);
     useEffect(() => {
+        scopeRef.current = scope;
         requested.current = new Set();
         setListings({});
         setFailed(new Set());
-    }, [selectedRef]);
+    }, [scope]);
 
     useEffect(() => {
         setExpanded((previous) => {
@@ -98,6 +115,7 @@ export function RepoFileTree({
     }, [path]);
 
     useEffect(() => {
+        const current = scopeRef.current;
         for (const dir of expanded) {
             if (requested.current.has(dir)) continue;
             requested.current.add(dir);
@@ -110,12 +128,17 @@ export function RepoFileTree({
                     path: dir || undefined,
                 })
                 .then((rows) => {
+                    // A response from an earlier ref must not land in this one.
+                    if (scopeRef.current !== current) return;
                     setListings((previous) => ({
                         ...previous,
                         [dir]: sortRepoContents(rows),
                     }));
                 })
                 .catch(() => {
+                    if (scopeRef.current !== current) return;
+                    // The next expand of this directory retries.
+                    requested.current.delete(dir);
                     setFailed((previous) => new Set(previous).add(dir));
                 });
         }
@@ -136,8 +159,8 @@ export function RepoFileTree({
     }, []);
 
     const nodes = useMemo(
-        () => toNodes("", listings, isExpanded),
-        [listings, isExpanded],
+        () => toNodes("", listings, isExpanded, failed),
+        [listings, isExpanded, failed],
     );
 
     if (listings[""] === undefined) {
