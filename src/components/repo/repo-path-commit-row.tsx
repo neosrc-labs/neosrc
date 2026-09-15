@@ -4,6 +4,7 @@ import { type ReactNode, useEffect } from "react";
 import { api } from "~/trpc/react";
 import { cn } from "~/utils/helpers";
 import {
+    blameHref,
     blobHref,
     historyUrl,
     type Provider,
@@ -20,7 +21,7 @@ interface RepoPathCommitRowProps {
     /** File or directory the row describes. */
     path: string;
     /** Route the previous-commit button opens for the same path. */
-    view: "blob" | "tree";
+    view: "blob" | "tree" | "blame";
     /** After the date, e.g. a file size. */
     trailing?: ReactNode;
 }
@@ -62,9 +63,11 @@ export function RepoPathCommitRow({
     const latest = commits?.[0] ?? null;
     const previous = commits?.[1] ?? null;
     const previousHref = previous
-        ? view === "blob"
-            ? blobHref(provider, owner, repo, previous.sha, path)
-            : treeHref(provider, owner, repo, previous.sha, path)
+        ? view === "tree"
+            ? treeHref(provider, owner, repo, previous.sha, path)
+            : view === "blame"
+              ? blameHref(provider, owner, repo, previous.sha, path)
+              : blobHref(provider, owner, repo, previous.sha, path)
         : undefined;
 
     return (

@@ -6,8 +6,8 @@ export function isChangesPage(pathname: string): boolean {
 }
 
 export interface RepoBrowsePath {
-    /** "tree" lists a directory; "blob" renders a file. */
-    view: "tree" | "blob";
+    /** "tree" lists a directory; "blob" renders a file; "blame" its authorship. */
+    view: "tree" | "blob" | "blame";
     /** Branch or tag from the URL. */
     ref: string;
     /** Repo-relative path; "" for the branch root. */
@@ -36,7 +36,7 @@ export function parseRepoBrowsePath(
     if (!pathname.startsWith(prefix)) return null;
 
     const [view, ref, ...rest] = pathname.slice(prefix.length).split("/");
-    if (view !== "tree" && view !== "blob") return null;
+    if (view !== "tree" && view !== "blob" && view !== "blame") return null;
     if (!ref) return null;
 
     return {
