@@ -197,14 +197,14 @@ describe("BranchListShared", () => {
         listData = listResult({
             items: [row({ name: "feat/x" })],
             totalCount: 1,
-            scanLimit: { scanned: 300, total: 2593 },
+            scanLimit: { scanned: 600, total: 2593 },
         });
 
         renderList();
 
         expect(
             screen.getByText(
-                "Active and Stale are filtered from the first 300 of 2593 branches. All lists every branch.",
+                "Active and Stale are computed from 600 of 2593 branches. All lists every branch.",
             ),
         ).toBeInTheDocument();
     });
