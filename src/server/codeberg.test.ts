@@ -372,6 +372,13 @@ describe("getBranches", () => {
                         author: { name: "Bob", username: null },
                     },
                 }),
+                branch(51, {
+                    commit: {
+                        id: "sha51",
+                        timestamp: "2025-06-02T10:00:00Z",
+                        author: { name: "", username: "renovate-bot" },
+                    },
+                }),
             ],
         ]);
 
@@ -379,7 +386,7 @@ describe("getBranches", () => {
 
         expect(mock).toHaveBeenCalledTimes(2);
         expect(String(mock.mock.calls[1]?.[0])).toContain("page=2");
-        expect(result).toHaveLength(51);
+        expect(result).toHaveLength(52);
         expect(result[0]).toMatchObject({
             name: "b0",
             sha: "sha0",
@@ -395,6 +402,10 @@ describe("getBranches", () => {
             updatedAt: "2025-06-01T10:00:00Z",
             authorName: "Bob",
             authorUsername: null,
+        });
+        expect(result[51]).toMatchObject({
+            authorName: "renovate-bot",
+            authorUsername: "renovate-bot",
         });
     });
 
