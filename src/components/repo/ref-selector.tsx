@@ -7,6 +7,7 @@ import {
     SearchIcon,
     XIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
     Popover,
@@ -15,7 +16,7 @@ import {
 } from "~/components/ui/popover";
 import { api } from "~/trpc/react";
 import { cn } from "~/utils/helpers";
-import type { Provider } from "~/utils/provider-url";
+import { branchesHref, type Provider } from "~/utils/provider-url";
 
 interface RefSelectorProps {
     owner: string;
@@ -189,6 +190,15 @@ export function RefSelector({
                         ))
                     )}
                 </div>
+                {tab === "branches" && (
+                    <Link
+                        href={branchesHref(provider, owner, repo)}
+                        prefetch={false}
+                        className="block border-border border-t px-3 py-2 text-center text-sm text-text-primary transition-colors hover:bg-surface-secondary"
+                    >
+                        View all branches
+                    </Link>
+                )}
             </PopoverContent>
         </Popover>
     );

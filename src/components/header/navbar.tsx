@@ -107,7 +107,7 @@ export function useTabs({
                 label: "Code",
                 path: `/${provider}/${owner}/${repo}`,
                 show: true,
-                isActive: pathType === "REPO",
+                isActive: pathType === "REPO" || pathType === "BRANCHES_LIST",
                 icon: Code2,
             },
             {
