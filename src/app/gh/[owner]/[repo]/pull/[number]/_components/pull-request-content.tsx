@@ -4,7 +4,7 @@ import { ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Async } from "~/components/async";
-import { CommitSubject } from "~/components/commit-subject";
+import { CommitSubject } from "~/components/commit/commit-subject";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import {
     HoverCard,

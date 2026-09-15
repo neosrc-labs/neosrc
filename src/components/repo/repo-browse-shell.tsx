@@ -2,8 +2,8 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
-import { ResizableLayout } from "~/components/resizable-layout";
-import { useSidebar } from "~/components/sidebar-context";
+import { ResizableLayout } from "~/components/layout/resizable-layout";
+import { useSidebar } from "~/components/layout/sidebar-context";
 import { blobHref, type Provider, treeHref } from "~/utils/provider-url";
 import { parseRepoBrowsePath } from "~/utils/route";
 import { RefSelector } from "./ref-selector";

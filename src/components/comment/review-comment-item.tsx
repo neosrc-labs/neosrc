@@ -10,11 +10,10 @@ import {
 } from "~/components/permissions/permissions-utils";
 import type { ReactionContent } from "~/lib/reactions";
 import type { ReviewCommentBase } from "~/server/github";
-import { CommentCard } from "./comment-card";
-import { MarkdownRenderer } from "./markdown/markdown-renderer";
-import { ReactionBar } from "./reaction-bar";
-import { ReactionPicker } from "./reaction-picker";
-import { Button } from "./ui/button";
+import { MarkdownRenderer } from "../markdown/markdown-renderer";
+import { ReactionBar } from "../reaction/reaction-bar";
+import { ReactionPicker } from "../reaction/reaction-picker";
+import { Button } from "../ui/button";
 import {
     Dialog,
     DialogContent,
@@ -22,8 +21,9 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from "./ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+} from "../ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { CommentCard } from "./comment-card";
 
 type Reaction = components["schemas"]["reaction"];
 

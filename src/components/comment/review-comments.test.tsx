@@ -59,21 +59,21 @@ vi.mock("~/hooks/use-review-thread-operations", () =>
     mockUseReviewThreadOperations(),
 );
 
-vi.mock("~/components/comment-card", () => mockCommentCard());
+vi.mock("./comment-card", () => mockCommentCard());
 
 vi.mock("~/components/markdown/markdown-renderer", () =>
     mockMarkdownRenderer(),
 );
 
-vi.mock("~/components/reaction-bar", () => mockReactionBar());
+vi.mock("~/components/reaction/reaction-bar", () => mockReactionBar());
 
-vi.mock("~/components/reaction-picker", () => mockReactionPicker());
+vi.mock("~/components/reaction/reaction-picker", () => mockReactionPicker());
 
-vi.mock("~/components/inline-comment-thread", () => ({
+vi.mock("./inline-comment-thread", () => ({
     ReplyTextboxButton: () => <button type="button">Reply...</button>,
 }));
 
-vi.mock("~/components/resolved-thread-banner", () => ({
+vi.mock("./resolved-thread-banner", () => ({
     ResolveButton: () => <button type="button">Resolve</button>,
 }));
 

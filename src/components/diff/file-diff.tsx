@@ -5,20 +5,23 @@ import type { PullRequestPermissionContext } from "~/components/permissions/perm
 import { useInView } from "~/hooks/use-in-view";
 import type { ReviewComment } from "~/server/github";
 import type { DiffViewMode } from "~/utils/diff-view";
+import { FileCommentEditor as FileCommentEditorView } from "../comment/file-comment-editor";
+import { FileCommentThreads as FileCommentThreadsView } from "../comment/file-comment-threads";
+import {
+    isFileComment,
+    isLineComment,
+} from "../comment/review-comment-threads";
+import { useFileCommentActions } from "../comment/use-file-comment-actions";
+import type { FooterAction } from "../markdown/markdown-editor";
+import ImageDiff from "../media-diff/image-diff";
+import SvgDiff from "../media-diff/svg-diff";
 import { type DiffCommentTarget, DiffView } from "./diff-view";
-import { FileCommentEditor as FileCommentEditorView } from "./file-comment-editor";
-import { FileCommentThreads as FileCommentThreadsView } from "./file-comment-threads";
 import { FileDiffHeader as FileDiffHeaderView } from "./file-diff-header";
 import {
     buildRawContentUrls,
     resolveFileDiffPresentation,
 } from "./file-diff-source";
 import { HiddenDiffNotice as HiddenDiffNoticeView } from "./hidden-diff-notice";
-import ImageDiff from "./image-diff";
-import type { FooterAction } from "./markdown/markdown-editor";
-import { isFileComment, isLineComment } from "./review-comment-threads";
-import SvgDiff from "./svg-diff";
-import { useFileCommentActions } from "./use-file-comment-actions";
 import { useFileDiffState } from "./use-file-diff-state";
 
 interface FileDiffProps {

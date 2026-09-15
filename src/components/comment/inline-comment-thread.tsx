@@ -6,16 +6,6 @@ import {
     canResolveReviewThread,
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
-import {
-    CollapseButton,
-    ResolveButton,
-    ResolvedThreadBanner,
-} from "~/components/resolved-thread-banner";
-import { ReviewCommentItem } from "~/components/review-comment-item";
-import {
-    ReplyTextboxButton,
-    ReviewCommentReplyComposer,
-} from "~/components/review-comment-reply-composer";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
 import { useReviewCommentEdit } from "~/hooks/use-review-comment-edit";
@@ -28,6 +18,16 @@ import type { ReactionContent } from "~/lib/reactions";
 import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
+import {
+    CollapseButton,
+    ResolveButton,
+    ResolvedThreadBanner,
+} from "./resolved-thread-banner";
+import { ReviewCommentItem } from "./review-comment-item";
+import {
+    ReplyTextboxButton,
+    ReviewCommentReplyComposer,
+} from "./review-comment-reply-composer";
 
 // Cache for preserving in-progress reply state across stub -> real comment
 // transitions. When a new comment is posted with optimistic update, the stub

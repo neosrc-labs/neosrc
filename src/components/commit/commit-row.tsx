@@ -8,16 +8,16 @@ import {
     StatusContextRow,
     statusHeadline,
 } from "~/components/ci-status";
-import { CommitSubject } from "~/components/commit-subject";
 import {
     HoverCard,
     HoverCardContent,
     HoverCardTrigger,
 } from "~/components/ui/hover-card";
-import { UserLink } from "~/components/user-link";
-import { VerifiedBadge } from "~/components/verified-badge";
+import { UserLink } from "~/components/user/user-link";
+import { VerifiedBadge } from "~/components/user/verified-badge";
 import type { CommitListItem } from "~/server/api/routers/commits/types";
 import { formatRelativeTime } from "~/utils";
+import { CommitSubject } from "./commit-subject";
 
 interface CommitRowProps {
     commit: CommitListItem;

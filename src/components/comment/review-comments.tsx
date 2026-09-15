@@ -8,13 +8,6 @@ import {
     canResolveReviewThread,
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
-import { ResolveButton } from "~/components/resolved-thread-banner";
-import { ReviewCommentItem } from "~/components/review-comment-item";
-import {
-    ReplyTextboxButton,
-    ReviewCommentReplyComposer,
-} from "~/components/review-comment-reply-composer";
-import { ReviewCommentSnippet } from "~/components/review-comment-snippet";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
 import { useReviewCommentEdit } from "~/hooks/use-review-comment-edit";
@@ -29,6 +22,13 @@ import { removeCommentFromFlatList } from "~/lib/review-comment-cache-utils";
 import { TIMELINE_PAGE_SIZE } from "~/lib/timeline-constants";
 import type { ReviewCommentBase } from "~/server/github";
 import { api } from "~/trpc/react";
+import { ResolveButton } from "./resolved-thread-banner";
+import { ReviewCommentItem } from "./review-comment-item";
+import {
+    ReplyTextboxButton,
+    ReviewCommentReplyComposer,
+} from "./review-comment-reply-composer";
+import { ReviewCommentSnippet } from "./review-comment-snippet";
 
 type Reaction = components["schemas"]["reaction"];
 

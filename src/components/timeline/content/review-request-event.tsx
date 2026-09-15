@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
-import { UserLink } from "~/components/user-link";
+import { UserLink } from "~/components/user/user-link";
 import type {
     GQLReviewRequestedEvent,
     GQLReviewRequestRemovedEvent,

@@ -35,7 +35,7 @@ vi.mock("~/hooks/use-file-content", () => ({
     })),
 }));
 
-vi.mock("~/components/inline-comment-thread", () => ({
+vi.mock("~/components/comment/inline-comment-thread", () => ({
     InlineCommentThread: (props: { parentComment: { id: number } }) => (
         <div
             data-testid="inline-comment-thread"
@@ -66,7 +66,7 @@ vi.mock("lucide-react", () => ({
     MessageSquareOff: () => <div data-testid="message-square-off" />,
 }));
 
-import { type DiffCommentTarget, DiffView } from "~/components/diff-view";
+import { type DiffCommentTarget, DiffView } from "~/components/diff/diff-view";
 import type { ReviewComment } from "~/server/github";
 
 // --- Helpers ---

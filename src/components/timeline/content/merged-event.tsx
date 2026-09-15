@@ -1,6 +1,6 @@
 "use client";
 
-import { UserLink } from "~/components/user-link";
+import { UserLink } from "~/components/user/user-link";
 import type { GQLMergedEvent } from "~/server/github-graphql";
 import { formatDateTime, formatRelativeTime } from "~/utils";
 import { domain, type Provider } from "~/utils/provider-url";

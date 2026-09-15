@@ -3,8 +3,8 @@
 import { ArrowLeftRight, Columns2, Layers } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DiffModeToggle } from "./diff-mode-toggle";
-import { ImageWithFallback } from "./media-diff/image-with-fallback";
+import { DiffModeToggle } from "../diff/diff-mode-toggle";
+import { ImageWithFallback } from "./image-with-fallback";
 
 type DiffMode = "2up" | "swipe" | "onion";
 

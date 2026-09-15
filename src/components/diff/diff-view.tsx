@@ -8,8 +8,9 @@ import type { ReviewComment } from "~/server/github";
 import type { DiffViewMode } from "~/utils/diff-view";
 import { filenameHash } from "~/utils/filename-hash";
 import { scheduleIdle } from "~/utils/schedule-idle";
-import { DiffTable } from "./diff/diff-table";
-import { DiffTableBody } from "./diff/diff-table-body";
+import type { FooterAction } from "../markdown/markdown-editor";
+import { DiffTable } from "./diff-table";
+import { DiffTableBody } from "./diff-table-body";
 import {
     addGapRange,
     buildDiffPositionMap,
@@ -20,20 +21,19 @@ import {
     mergeGapRanges,
     parseDiffPatch,
     resolveDiffCommentAnchor,
-} from "./diff/model";
+} from "./model";
 import type {
     DiffAnchor,
     DiffCommentTarget,
     DiffRowCommentProps,
     GapRange,
-} from "./diff/types";
-import { useDiffCommentSelection } from "./diff/use-diff-comment-selection";
-import { useDiffHashNavigation } from "./diff/use-diff-hash-navigation";
-import { useDiffLineSelection } from "./diff/use-diff-line-selection";
-import { useDiffSyntaxHighlighting } from "./diff/use-diff-syntax-highlighting";
-import type { FooterAction } from "./markdown/markdown-editor";
+} from "./types";
+import { useDiffCommentSelection } from "./use-diff-comment-selection";
+import { useDiffHashNavigation } from "./use-diff-hash-navigation";
+import { useDiffLineSelection } from "./use-diff-line-selection";
+import { useDiffSyntaxHighlighting } from "./use-diff-syntax-highlighting";
 
-export type { DiffCommentTarget } from "./diff/types";
+export type { DiffCommentTarget } from "./types";
 
 // Breathing room between the sticky bars and the line a permalink scrolls to.
 const SCROLL_TARGET_PADDING = 12;

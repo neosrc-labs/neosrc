@@ -3,7 +3,7 @@
 import NextLink from "next/link";
 import type { PullRequestState } from "~/components/ui/status-pill";
 import { StatusPill } from "~/components/ui/status-pill";
-import { UserLink } from "~/components/user-link";
+import { UserLink } from "~/components/user/user-link";
 import type { GQLCrossReferencedEvent } from "~/server/github-graphql";
 import { formatDateTime, formatRelativeTime } from "~/utils";
 import type { Provider } from "~/utils/provider-url";

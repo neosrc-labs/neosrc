@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import {
     createReviewCommentStub,
     findAuthorAssociation,
-} from "~/components/review-comment-utils";
+} from "~/components/comment/review-comment-utils";
 import type { ReviewCommentBase } from "~/server/github";
 import { api } from "~/trpc/react";
 

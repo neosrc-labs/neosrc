@@ -31,7 +31,7 @@ import { useState } from "react";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import { Label } from "~/components/ui/label";
-import { UserLink } from "~/components/user-link";
+import { UserLink } from "~/components/user/user-link";
 import type { ReactionContent } from "~/lib/reactions";
 import type { ReviewComment } from "~/server/github";
 import type {

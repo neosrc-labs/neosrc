@@ -1,9 +1,9 @@
 import { TriangleAlert } from "lucide-react";
-import { CommitTypeBadge } from "~/components/commit-type-badge";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { cn } from "~/lib/utils";
 import { parseCommitMessage } from "~/utils/commit-message";
 import type { Provider } from "~/utils/provider-url";
+import { CommitTypeBadge } from "./commit-type-badge";
 
 export function CommitSubject({
     provider,

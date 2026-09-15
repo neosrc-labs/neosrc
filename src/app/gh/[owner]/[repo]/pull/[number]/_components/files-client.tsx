@@ -20,7 +20,7 @@ import {
     ActionErrorProvider,
 } from "~/components/action-errors";
 import { Async } from "~/components/async";
-import FileDiff from "~/components/file-diff";
+import FileDiff from "~/components/diff/file-diff";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";

@@ -5,8 +5,8 @@ import {
     canInteract,
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
-import { ReactionBar } from "~/components/reaction-bar";
-import { ReactionPicker } from "~/components/reaction-picker";
+import { ReactionBar } from "~/components/reaction/reaction-bar";
+import { ReactionPicker } from "~/components/reaction/reaction-picker";
 import type { ReactionContent } from "~/lib/reactions";
 import type { GQLPullRequestReactions } from "~/server/github-graphql";
 import { api } from "~/trpc/react";

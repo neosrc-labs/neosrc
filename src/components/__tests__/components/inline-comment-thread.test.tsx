@@ -19,7 +19,7 @@ import {
     reviewThreadsApi,
 } from "~/__tests__/helpers/trpc-mocks";
 
-import { InlineCommentThread } from "~/components/inline-comment-thread";
+import { InlineCommentThread } from "~/components/comment/inline-comment-thread";
 
 const mockThreadsQuery = vi.hoisted(() =>
     vi.fn<() => { data: unknown; isPending?: boolean }>(() => ({
@@ -52,9 +52,9 @@ vi.mock("~/hooks/use-review-thread-operations", () =>
     mockUseReviewThreadOperations(),
 );
 
-vi.mock("~/components/comment-card", () => mockCommentCard());
+vi.mock("~/components/comment/comment-card", () => mockCommentCard());
 
-vi.mock("~/components/resolved-thread-banner", () => ({
+vi.mock("~/components/comment/resolved-thread-banner", () => ({
     ResolvedThreadBanner: ({
         onShow,
         resolver,
@@ -98,9 +98,9 @@ vi.mock("~/components/resolved-thread-banner", () => ({
     ),
 }));
 
-vi.mock("~/components/reaction-bar", () => mockReactionBar());
+vi.mock("~/components/reaction/reaction-bar", () => mockReactionBar());
 
-vi.mock("~/components/reaction-picker", () => mockReactionPicker());
+vi.mock("~/components/reaction/reaction-picker", () => mockReactionPicker());
 
 vi.mock("~/components/markdown/markdown-renderer", () =>
     mockMarkdownRenderer(),
