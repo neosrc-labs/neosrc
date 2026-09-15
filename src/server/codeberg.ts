@@ -452,6 +452,66 @@ export const getBranches = cache(
     },
 );
 
+/** Forgejo answers a rejected write with `{message}`; fall back to the status. */
+async function forgejoErrorMessage(
+    res: Response,
+    fallback: string,
+): Promise<string> {
+    const body = (await res.json().catch(() => null)) as {
+        message?: string;
+    } | null;
+    return body?.message ?? `${fallback}: ${res.status}`;
+}
+
+export async function deleteBranch(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    branch: string,
+): Promise<void> {
+    const res = await fetch(
+        `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`,
+        {
+            method: "DELETE",
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        },
+    );
+    if (!res.ok) {
+        throw new Error(
+            await forgejoErrorMessage(res, `Failed to delete ${branch}`),
+        );
+    }
+}
+
+export async function renameBranch(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    branch: string,
+    newName: string,
+): Promise<void> {
+    const res = await fetch(
+        `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`,
+        {
+            method: "PATCH",
+            headers: {
+                Authorization: `token ${accessToken}`,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            body: JSON.stringify({ name: newName }),
+        },
+    );
+    if (!res.ok) {
+        throw new Error(
+            await forgejoErrorMessage(res, `Failed to rename ${branch}`),
+        );
+    }
+}
+
 type CodebergTagRaw = {
     name: string;
     commit: { sha: string };
