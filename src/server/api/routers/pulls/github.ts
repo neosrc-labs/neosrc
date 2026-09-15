@@ -8,11 +8,11 @@ import {
     listRepoActivity,
 } from "~/server/github";
 import { searchPullRequestsWithStatus } from "~/server/github-graphql";
+import { compareUrl } from "~/utils/provider-url";
 import type { PullRequestProvider } from "./provider";
 import {
     bestEffortBanner,
     fromGitHubActivity,
-    githubCompareUrl,
     PR_LOOKUP_LIMIT,
     type RecentlyPushedBranch,
     rankRecentPushes,
@@ -86,7 +86,8 @@ export function getGitHubRecentlyPushedBranch(
             return {
                 branch: match.branch,
                 pushedAt: match.pushedAt,
-                compareUrl: githubCompareUrl(
+                compareUrl: compareUrl(
+                    "gh",
                     owner,
                     repo,
                     match.branch,
