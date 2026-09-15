@@ -2,8 +2,6 @@
 
 import { GitPullRequest } from "lucide-react";
 import { useMemo } from "react";
-import type { PrRowData } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
-import { PullRequestRow } from "~/app/gh/[owner]/[repo]/pulls/_components/pull-request-row";
 import { computeStatusState } from "~/components/ci-status";
 import { ListSearchBar } from "~/components/list/list-search-bar";
 import { ListSkeleton } from "~/components/list/list-skeleton";
@@ -18,6 +16,8 @@ import type {
     FilterState,
     PullRequestListConfig,
 } from "./pull-request-list-config";
+import type { PrRowData } from "./pull-request-row";
+import { PullRequestRow } from "./pull-request-row";
 import { PullRequestToolbar } from "./pull-request-toolbar";
 
 function normalizeSearchItem(item: PrSearchItem): PrRowData {

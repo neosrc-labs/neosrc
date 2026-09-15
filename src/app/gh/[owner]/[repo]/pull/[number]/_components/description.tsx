@@ -17,6 +17,10 @@ import {
     canInteract,
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
+import { CreateStackDialog } from "~/components/pull/stack/create-stack-dialog";
+import { StackBanner } from "~/components/pull/stack/stack-banner";
+import { StackCreateBadge } from "~/components/pull/stack/stack-create-badge";
+import { StackBadge } from "~/components/pull/stack/stack-popover";
 import { RoleBadge } from "~/components/role-badge";
 import {
     Popover,
@@ -36,10 +40,6 @@ import { formatDateTime, formatRelativeTime } from "~/utils";
 import { AdditionsDeletionsBadge } from "./additions-deletions-badge";
 import { AutoMergeBannerSection } from "./auto-merge-banner-section";
 import { ConflictedFiles } from "./conflicted-files";
-import { CreateStackDialog } from "./create-stack-dialog";
-import { StackBanner } from "./stack-banner";
-import { StackCreateBadge } from "./stack-create-badge";
-import { StackBadge } from "./stack-popover";
 
 interface PullRequestDescriptionSectionProps {
     owner: string;
