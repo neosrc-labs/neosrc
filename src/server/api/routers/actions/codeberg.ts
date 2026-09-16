@@ -123,7 +123,7 @@ export class CodebergActionsProvider implements ActionsProvider {
     }
 
     async listFilterOptions(): Promise<ActionsFilterOptions> {
-        const [branches, { runs }] = await Promise.all([
+        const [{ branches }, { runs }] = await Promise.all([
             getBranches(this.accessToken, this.owner, this.repo),
             this.sampleRuns(),
         ]);

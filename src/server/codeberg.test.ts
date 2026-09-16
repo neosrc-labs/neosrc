@@ -382,11 +382,16 @@ describe("getBranches", () => {
             ],
         ]);
 
-        const result = await getBranches("tok", "own", "repo");
+        const { branches: result, totalCount } = await getBranches(
+            "tok",
+            "own",
+            "repo",
+        );
 
         expect(mock).toHaveBeenCalledTimes(2);
         expect(String(mock.mock.calls[1]?.[0])).toContain("page=2");
         expect(result).toHaveLength(52);
+        expect(totalCount).toBe(52);
         expect(result[0]).toMatchObject({
             name: "b0",
             sha: "sha0",
@@ -409,18 +414,20 @@ describe("getBranches", () => {
         });
     });
 
-    it("returns [] when the listing fails", async () => {
+    it("rejects with the provider message when the listing fails", async () => {
         vi.stubGlobal(
             "fetch",
             vi.fn(async () => ({
                 ok: false,
                 status: 403,
-                json: async () => ({}),
+                json: async () => ({ message: "token does not have access" }),
                 headers: { get: () => null },
             })),
         );
 
-        await expect(getBranches("tok", "own", "repo")).resolves.toEqual([]);
+        await expect(getBranches("tok", "own", "repo")).rejects.toThrow(
+            "token does not have access",
+        );
     });
 });
 
@@ -464,5 +471,28 @@ describe("branch mutations", () => {
             "https://codeberg.org/api/v1/repos/own/repo/branches/old",
         );
         expect(init?.method).toBe("DELETE");
+    });
+});
+
+describe("getBranches truncation", () => {
+    it("reports the repository total from X-Total-Count", async () => {
+        const mock = vi.fn(async (_url: string) => ({
+            ok: true,
+            status: 200,
+            json: async () => [branch(0), branch(1)],
+            headers: { get: () => "120" },
+        }));
+        vi.stubGlobal("fetch", mock);
+
+        const { branches, totalCount } = await getBranches(
+            "tok",
+            "own",
+            "repo",
+        );
+
+        expect(branches).toHaveLength(2);
+        // The walk stopped at a short page, so the reported total is what says
+        // the list is incomplete.
+        expect(totalCount).toBe(120);
     });
 });

@@ -38,11 +38,16 @@ export function RenameBranchDialog({
         },
     });
 
+    // Dismissing mid-flight would hide a failure the user needs to see.
+    const handleClose = () => {
+        if (!mutation.isPending) onClose();
+    };
+
     return (
         <Dialog
             open
             onOpenChange={(open) => {
-                if (!open) onClose();
+                if (!open) handleClose();
             }}
         >
             <DialogContent>
@@ -61,7 +66,11 @@ export function RenameBranchDialog({
                     </p>
                 )}
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>
+                    <Button
+                        variant="outline"
+                        disabled={mutation.isPending}
+                        onClick={handleClose}
+                    >
                         Cancel
                     </Button>
                     <Button

@@ -26,7 +26,9 @@ async function avatarsByLogin(
         ),
     ];
     const users = await Promise.all(
-        logins.map((login) => getUserByUsername(accessToken, login)),
+        logins.map((login) =>
+            getUserByUsername(accessToken, login).catch(() => null),
+        ),
     );
 
     const avatars = new Map<string, string>();
@@ -40,10 +42,11 @@ async function avatarsByLogin(
 
 export const codebergBranchProvider: BranchProvider = {
     async list({ accessToken, owner, repo, tab, query, page }) {
-        const [branches, repoInfo] = await Promise.all([
-            getBranches(accessToken, owner, repo),
-            getCachedRepo(accessToken, owner, repo),
-        ]);
+        const [{ branches, totalCount: branchTotal }, repoInfo] =
+            await Promise.all([
+                getBranches(accessToken, owner, repo),
+                getCachedRepo(accessToken, owner, repo),
+            ]);
         const defaultBranch = repoInfo.default_branch;
 
         const rows: BranchRow[] = branches.map((branch) => ({
@@ -75,14 +78,20 @@ export const codebergBranchProvider: BranchProvider = {
                 ? (rows.find((row) => row.name === defaultBranch) ?? null)
                 : null;
 
-        // Only the returned page costs a status request.
+        // Only the returned page costs a status request. Checks are decoration,
+        // so a provider failure on one row must not fail the whole page.
         const pageRows = defaultBranchRow
             ? [...paged.items, defaultBranchRow]
             : paged.items;
         const [statuses, avatars] = await Promise.all([
             Promise.all(
                 pageRows.map((row) =>
-                    getCommitCombinedStatus(accessToken, owner, repo, row.sha),
+                    getCommitCombinedStatus(
+                        accessToken,
+                        owner,
+                        repo,
+                        row.sha,
+                    ).catch(() => null),
                 ),
             ),
             avatarsByLogin(accessToken, pageRows),
@@ -107,9 +116,12 @@ export const codebergBranchProvider: BranchProvider = {
             defaultBranchRow: defaultBranchRow
                 ? enrich(defaultBranchRow, pageRows.length - 1)
                 : null,
-            // Forgejo's listing ignores search and sort, so every branch was
-            // considered.
-            scanLimit: null,
+            // Forgejo's listing ignores search and sort, so every branch the
+            // walk reached was considered; say so when it stopped short.
+            scanLimit:
+                branchTotal > branches.length
+                    ? { scanned: branches.length, total: branchTotal }
+                    : null,
         };
     },
 };

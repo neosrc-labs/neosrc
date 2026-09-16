@@ -74,10 +74,16 @@ export const githubBranchProvider: BranchProvider = {
             const items = refsPage.refs
                 .slice(start, start + BRANCH_PAGE_SIZE)
                 .map(scanRow);
-            const totalCount =
-                refsPage.hasNextPage && pages === MAX_REF_WALK_PAGES
-                    ? MAX_REF_WALK_PAGES * REF_SCAN_PAGE_SIZE
-                    : refsPage.totalCount;
+            const walkBound = MAX_REF_WALK_PAGES * REF_SCAN_PAGE_SIZE;
+            const clamped =
+                refsPage.hasNextPage && pages === MAX_REF_WALK_PAGES;
+            const totalCount = clamped ? walkBound : refsPage.totalCount;
+            if (clamped) {
+                scanLimit = {
+                    scanned: refsPage.refs.length,
+                    total: refsPage.totalCount,
+                };
+            }
             result = {
                 items,
                 totalCount,

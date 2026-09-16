@@ -122,13 +122,17 @@ export function BranchTableRow({
                                 </span>
                             </>
                         )}
-                        <a
-                            href={`https://${host}/${owner}/${repo}/commit/${branch.sha}`}
-                            title={formatDateTime(branch.updatedAt)}
-                            className="shrink-0 whitespace-nowrap text-text-tertiary hover:text-text-secondary"
-                        >
-                            {formatRelativeTime(branch.updatedAt)}
-                        </a>
+                        {branch.updatedAt === "" ? (
+                            <span className="text-text-tertiary">—</span>
+                        ) : (
+                            <a
+                                href={`https://${host}/${owner}/${repo}/commit/${branch.sha}`}
+                                title={formatDateTime(branch.updatedAt)}
+                                className="shrink-0 whitespace-nowrap text-text-tertiary hover:text-text-secondary"
+                            >
+                                {formatRelativeTime(branch.updatedAt)}
+                            </a>
+                        )}
                     </div>
                 </td>
 
@@ -219,22 +223,18 @@ export function BranchTableRow({
                                         </a>
                                     </DropdownMenuItem>
                                 )}
-                                {canManage && (
+                                {canManage && !isDefault && (
                                     <>
                                         <DropdownMenuItem
                                             onSelect={() => setDialog("rename")}
                                         >
                                             Rename branch…
                                         </DropdownMenuItem>
-                                        {!isDefault && (
-                                            <DropdownMenuItem
-                                                onSelect={() =>
-                                                    setDialog("delete")
-                                                }
-                                            >
-                                                Delete branch
-                                            </DropdownMenuItem>
-                                        )}
+                                        <DropdownMenuItem
+                                            onSelect={() => setDialog("delete")}
+                                        >
+                                            Delete branch
+                                        </DropdownMenuItem>
                                     </>
                                 )}
                             </DropdownMenuContent>
