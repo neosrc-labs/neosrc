@@ -233,7 +233,10 @@ describe("provider-aware procedures (repos router)", () => {
 
     it("read dispatches to the Codeberg handler when provider is cb", async () => {
         const { repos } = await callerFor({ user: { id: "user-1" } });
-        vi.mocked(codeberg.getBranches).mockResolvedValue(["main"] as never);
+        vi.mocked(codeberg.getBranches).mockResolvedValue({
+            branches: [{ name: "main" }],
+            totalCount: 1,
+        } as never);
 
         await expect(
             repos.getBranches({
@@ -241,7 +244,7 @@ describe("provider-aware procedures (repos router)", () => {
                 owner: "acme",
                 repo: "api",
             }),
-        ).resolves.toEqual(["main"]);
+        ).resolves.toEqual([{ name: "main" }]);
 
         expect(getCodebergTokenMock).toHaveBeenCalledWith({}, "user-1");
         expect(codeberg.getBranches).toHaveBeenCalledWith(
@@ -617,16 +620,19 @@ describe("branches router", () => {
 
     it("lists through the Codeberg handler when provider is cb", async () => {
         const { branches } = await callerFor({ user: { id: "user-1" } });
-        vi.mocked(codeberg.getBranches).mockResolvedValue([
-            {
-                name: "main",
-                sha: "s1",
-                isProtected: true,
-                updatedAt: "2026-09-01T00:00:00Z",
-                authorName: "Alice",
-                authorUsername: "alice",
-            },
-        ] as never);
+        vi.mocked(codeberg.getBranches).mockResolvedValue({
+            branches: [
+                {
+                    name: "main",
+                    sha: "s1",
+                    isProtected: true,
+                    updatedAt: "2026-09-01T00:00:00Z",
+                    authorName: "Alice",
+                    authorUsername: "alice",
+                },
+            ],
+            totalCount: 1,
+        } as never);
         vi.mocked(codeberg.getCachedRepo).mockResolvedValue({
             default_branch: "main",
         } as never);
@@ -653,6 +659,74 @@ describe("branches router", () => {
                 avatarUrl: "https://codeberg.org/avatars/alice",
             },
         });
+    });
+
+    it("reports truncation when the Codeberg walk stops short", async () => {
+        const { branches } = await callerFor({ user: { id: "user-1" } });
+        vi.mocked(codeberg.getBranches).mockResolvedValue({
+            branches: [
+                {
+                    name: "main",
+                    sha: "s1",
+                    isProtected: false,
+                    updatedAt: "2026-09-01T00:00:00Z",
+                    authorName: "Alice",
+                    authorUsername: "alice",
+                },
+            ],
+            totalCount: 3000,
+        } as never);
+        vi.mocked(codeberg.getCachedRepo).mockResolvedValue({
+            default_branch: "main",
+        } as never);
+        vi.mocked(codeberg.getCommitCombinedStatus).mockResolvedValue(null);
+        vi.mocked(codeberg.getUserByUsername).mockResolvedValue(null);
+
+        const result = await branches.list({
+            provider: "cb",
+            owner: "acme",
+            repo: "api",
+            tab: "all",
+        });
+
+        expect(result.scanLimit).toEqual({ scanned: 1, total: 3000 });
+    });
+
+    it("keeps the Codeberg page when a status or avatar lookup fails", async () => {
+        const { branches } = await callerFor({ user: { id: "user-1" } });
+        vi.mocked(codeberg.getBranches).mockResolvedValue({
+            branches: [
+                {
+                    name: "main",
+                    sha: "s1",
+                    isProtected: false,
+                    updatedAt: "2026-09-01T00:00:00Z",
+                    authorName: "Alice",
+                    authorUsername: "alice",
+                },
+            ],
+            totalCount: 1,
+        } as never);
+        vi.mocked(codeberg.getCachedRepo).mockResolvedValue({
+            default_branch: "main",
+        } as never);
+        vi.mocked(codeberg.getCommitCombinedStatus).mockRejectedValue(
+            new Error("Failed to fetch commit status: 500"),
+        );
+        vi.mocked(codeberg.getUserByUsername).mockRejectedValue(
+            new Error("Failed to fetch user: 500"),
+        );
+
+        const result = await branches.list({
+            provider: "cb",
+            owner: "acme",
+            repo: "api",
+            tab: "all",
+        });
+
+        expect(result.items).toHaveLength(1);
+        expect(result.items[0]?.checks).toEqual([]);
+        expect(result.items[0]?.author).toMatchObject({ avatarUrl: null });
     });
 
     it("refuses to delete or rename the default branch", async () => {

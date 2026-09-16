@@ -25,6 +25,10 @@ let listData: BranchListResult | undefined;
 let repoPermissions = { write: false, admin: false };
 const deleteMutate = vi.fn();
 const renameMutate = vi.fn();
+const refetchList = vi.fn();
+const deleteClose = vi.fn();
+let listError: { message: string } | null = null;
+let mutationPending = false;
 
 vi.mock("~/trpc/react", () => ({
     api: {
@@ -37,19 +41,25 @@ vi.mock("~/trpc/react", () => ({
         }),
         branches: {
             list: {
-                useQuery: () => ({ data: listData, isLoading: false }),
+                useQuery: () => ({
+                    data: listData,
+                    isLoading: false,
+                    isError: listError !== null,
+                    error: listError,
+                    refetch: refetchList,
+                }),
             },
             deleteBranch: {
                 useMutation: () => ({
                     mutate: deleteMutate,
-                    isPending: false,
+                    isPending: mutationPending,
                     error: null,
                 }),
             },
             renameBranch: {
                 useMutation: () => ({
                     mutate: renameMutate,
-                    isPending: false,
+                    isPending: mutationPending,
                     error: null,
                 }),
             },
@@ -74,6 +84,7 @@ import {
 } from "./branch-list-config";
 import { BranchListShared } from "./branch-list-shared";
 import { BranchTableSkeleton } from "./branch-table-skeleton";
+import { DeleteBranchDialog } from "./delete-branch-dialog";
 import { RenameBranchDialog } from "./rename-branch-dialog";
 
 function row(overrides: Partial<BranchRow> = {}): BranchRow {
@@ -125,6 +136,10 @@ beforeEach(() => {
     mockPush.mockClear();
     deleteMutate.mockClear();
     renameMutate.mockClear();
+    refetchList.mockClear();
+    deleteClose.mockClear();
+    listError = null;
+    mutationPending = false;
     listData = undefined;
     repoPermissions = { write: false, admin: false };
 });
@@ -209,8 +224,82 @@ describe("BranchListShared", () => {
 
         expect(
             screen.getByText(
-                "Active and Stale are computed from 600 of 2593 branches. All lists every branch.",
+                "Active and Stale are computed from 600 of 2593 branches.",
             ),
+        ).toBeInTheDocument();
+    });
+
+    it("shows the query error with a retry instead of the skeleton", async () => {
+        const user = userEvent.setup();
+        listError = { message: "Codeberg account not connected" };
+
+        renderList();
+
+        expect(screen.getByText("Couldn't load branches.")).toBeInTheDocument();
+        expect(
+            screen.getByText("Codeberg account not connected"),
+        ).toBeInTheDocument();
+        expect(document.querySelectorAll(".animate-pulse")).toHaveLength(0);
+
+        await user.click(screen.getByRole("button", { name: "Try again" }));
+        expect(refetchList).toHaveBeenCalled();
+    });
+
+    it("follows the URL query in the search input", () => {
+        paramsState = new URLSearchParams("query=feat");
+        listData = listResult({ items: [row({ name: "feat/x" })] });
+
+        const { rerender } = renderList();
+        expect(screen.getByLabelText("Search branches")).toHaveValue("feat");
+
+        paramsState = new URLSearchParams("query=other");
+        rerender(
+            <BranchListShared
+                owner="test-owner"
+                repo="test-repo"
+                provider="gh"
+            />,
+        );
+
+        expect(screen.getByLabelText("Search branches")).toHaveValue("other");
+    });
+
+    it("renders a dash instead of a malformed date", () => {
+        paramsState = new URLSearchParams("tab=all");
+        listData = listResult({
+            items: [row({ name: "undated", updatedAt: "" })],
+            totalCount: 1,
+        });
+
+        renderList();
+
+        const cells = screen.getAllByRole("cell");
+        expect(cells[1]).toHaveTextContent("—");
+        expect(cells[1]?.textContent).not.toMatch(/NaN|Invalid Date/);
+    });
+
+    it("offers no rename or delete for the default branch", async () => {
+        const user = userEvent.setup();
+        paramsState = new URLSearchParams("tab=all");
+        repoPermissions = { write: true, admin: false };
+        listData = listResult({
+            items: [row({ name: "main" }), row({ name: "feat/x" })],
+            totalCount: 2,
+        });
+
+        renderList();
+        await user.click(
+            screen.getByRole("button", { name: "Branch actions for main" }),
+        );
+
+        expect(
+            screen.queryByRole("menuitem", { name: "Rename branch…" }),
+        ).toBeNull();
+        expect(
+            screen.queryByRole("menuitem", { name: "Delete branch" }),
+        ).toBeNull();
+        expect(
+            screen.getByRole("menuitem", { name: "Compare" }),
         ).toBeInTheDocument();
     });
 
@@ -321,5 +410,27 @@ describe("BranchTableSkeleton", () => {
         expect(container.querySelectorAll("tbody tr")).toHaveLength(
             BRANCH_PAGE_SIZE,
         );
+    });
+});
+
+describe("DeleteBranchDialog", () => {
+    it("cannot be dismissed while the mutation is pending", async () => {
+        const user = userEvent.setup();
+        mutationPending = true;
+
+        render(
+            <DeleteBranchDialog
+                owner="test-owner"
+                repo="test-repo"
+                branch="feat/x"
+                config={ghBranchConfig}
+                onClose={deleteClose}
+            />,
+        );
+
+        const cancel = screen.getByRole("button", { name: "Cancel" });
+        expect(cancel).toBeDisabled();
+        await user.click(cancel);
+        expect(deleteClose).not.toHaveBeenCalled();
     });
 });

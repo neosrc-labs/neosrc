@@ -416,13 +416,20 @@ const BRANCH_PAGE_LIMIT = 50;
 /** Safety bound for the page walk: 2000 branches. */
 const MAX_BRANCH_PAGES = 40;
 
+export interface CodebergBranchPage {
+    branches: CodebergBranch[];
+    /** Branches the repository reports, which the walk may not have reached. */
+    totalCount: number;
+}
+
 export const getBranches = cache(
     async (
         accessToken: string,
         owner: string,
         repo: string,
-    ): Promise<CodebergBranch[]> => {
+    ): Promise<CodebergBranchPage> => {
         const branches: CodebergBranch[] = [];
+        let totalCount = 0;
         for (let page = 1; page <= MAX_BRANCH_PAGES; page++) {
             const res = await fetch(
                 `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches?limit=${BRANCH_PAGE_LIMIT}&page=${page}`,
@@ -433,7 +440,22 @@ export const getBranches = cache(
                     },
                 },
             );
-            if (!res.ok) return [];
+            // Reporting "no branches" for an auth or provider failure would be
+            // a lie, and it would drop the pages already read.
+            if (!res.ok) {
+                throw new Error(
+                    await forgejoErrorMessage(
+                        res,
+                        `Failed to list branches for ${owner}/${repo}`,
+                    ),
+                );
+            }
+            const reported = Number.parseInt(
+                res.headers.get("X-Total-Count") ?? "",
+                10,
+            );
+            if (Number.isFinite(reported)) totalCount = reported;
+
             const body = (await res.json()) as CodebergBranchRaw[];
             const batch = Array.isArray(body) ? body : [];
             for (const b of batch) {
@@ -453,7 +475,7 @@ export const getBranches = cache(
             }
             if (batch.length < BRANCH_PAGE_LIMIT) break;
         }
-        return branches;
+        return { branches, totalCount: Math.max(totalCount, branches.length) };
     },
 );
 

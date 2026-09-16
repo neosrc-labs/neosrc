@@ -158,6 +158,7 @@ describe("CodebergActionsProvider.listFilterOptions", () => {
                     String(input).includes("/branches")
                         ? [{ name: "main", commit: { id: "abc" } }]
                         : { total_count: 1, workflow_runs: [run()] },
+                headers: { get: () => null },
             })),
         );
 

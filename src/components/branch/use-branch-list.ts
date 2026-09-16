@@ -24,14 +24,15 @@ export function useBranchList(args: {
     const parsedPage = Number.parseInt(searchParams.get("page") ?? "1", 10);
     const page = Number.isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage;
 
-    const { data, isLoading } = api.branches.list.useQuery({
-        provider: config.provider,
-        owner,
-        repo,
-        tab,
-        query,
-        page,
-    });
+    const { data, isLoading, isError, error, refetch } =
+        api.branches.list.useQuery({
+            provider: config.provider,
+            owner,
+            repo,
+            tab,
+            query,
+            page,
+        });
 
     const setParams = useCallback(
         (changes: Record<string, string | null>) => {
@@ -51,5 +52,15 @@ export function useBranchList(args: {
         [config.provider, owner, repo, router, searchParams],
     );
 
-    return { tab, query, page, data, isLoading, setParams };
+    return {
+        tab,
+        query,
+        page,
+        data,
+        isLoading,
+        isError,
+        error,
+        refetch,
+        setParams,
+    };
 }

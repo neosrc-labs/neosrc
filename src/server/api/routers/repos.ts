@@ -276,8 +276,9 @@ export const reposRouter = createTRPCRouter({
             owner: z.string(),
             repo: z.string(),
         }),
-        cb: ({ accessToken, input }) =>
-            getCodebergBranches(accessToken, input.owner, input.repo),
+        cb: async ({ accessToken, input }) =>
+            (await getCodebergBranches(accessToken, input.owner, input.repo))
+                .branches,
         gh: ({ accessToken, input }) =>
             getRepoBranches(accessToken, input.owner, input.repo),
     }),

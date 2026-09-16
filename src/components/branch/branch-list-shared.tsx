@@ -2,7 +2,7 @@
 
 import { Search, X } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StateTabs } from "~/components/list/state-tabs";
 import { Pagination } from "~/components/ui/pagination";
 import { api } from "~/trpc/react";
@@ -27,6 +27,12 @@ function BranchSearchBar({
     onSubmit: (value: string) => void;
 }) {
     const [value, setValue] = useState(query);
+
+    // Browser back/forward and the "View more branches" link change the query
+    // without remounting this input.
+    useEffect(() => {
+        setValue(query);
+    }, [query]);
 
     return (
         <form
@@ -76,11 +82,17 @@ export function BranchListShared({
     provider: Provider;
 }) {
     const config = branchConfig(provider);
-    const { tab, query, page, data, isLoading, setParams } = useBranchList({
-        owner,
-        repo,
-        config,
-    });
+    const {
+        tab,
+        query,
+        page,
+        data,
+        isLoading,
+        isError,
+        error,
+        refetch,
+        setParams,
+    } = useBranchList({ owner, repo, config });
     const { data: repoInfo } = api.repos.getByOwnerAndRepo.useQuery({
         provider: config.provider,
         owner,
@@ -94,10 +106,12 @@ export function BranchListShared({
         query === ""
             ? "?tab=all"
             : `?tab=all&query=${encodeURIComponent(query)}`;
-    // GitHub's date tabs only see part of the ref list; say so next to the
-    // tabs, where it costs no layout.
+    // A provider that cannot read every branch says so next to the tabs, where
+    // it costs no layout.
     const scanNote = data?.scanLimit
-        ? `Active and Stale are computed from ${data.scanLimit.scanned} of ${data.scanLimit.total} branches. All lists every branch.`
+        ? tab === "all"
+            ? `Showing the first ${data.scanLimit.scanned} of ${data.scanLimit.total} branches.`
+            : `Active and Stale are computed from ${data.scanLimit.scanned} of ${data.scanLimit.total} branches.`
         : null;
 
     const table = (rows: NonNullable<typeof data>["items"]) => (
@@ -144,7 +158,25 @@ export function BranchListShared({
                     }
                 />
 
-                {isLoading || !data ? (
+                {isError ? (
+                    <div className="px-6 py-12 text-center">
+                        <p className="font-medium text-base text-text-primary">
+                            Couldn&apos;t load branches.
+                        </p>
+                        {error?.message && (
+                            <p className="mt-1 text-sm text-text-tertiary">
+                                {error.message}
+                            </p>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => void refetch()}
+                            className="mt-2 cursor-pointer text-blue-600 text-sm hover:underline dark:text-blue-400"
+                        >
+                            Try again
+                        </button>
+                    </div>
+                ) : isLoading || !data ? (
                     <BranchTableSkeleton tab={tab} />
                 ) : tab === "overview" ? (
                     <>
