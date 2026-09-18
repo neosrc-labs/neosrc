@@ -177,7 +177,7 @@ export function BranchTableRow({
                                 <Trash2 className="size-4" />
                             </button>
                         )}
-                        <DropdownMenu>
+                        <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
                                 <button
                                     type="button"
