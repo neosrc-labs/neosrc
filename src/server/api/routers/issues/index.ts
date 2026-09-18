@@ -9,6 +9,7 @@ import {
     providerQuery,
 } from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
+import { fetchAndCache, readCache, searchCacheKey } from "~/server/cache";
 import {
     createIssueComment as createCodebergIssueComment,
     getIssue as getCodebergIssue,
@@ -35,6 +36,17 @@ import {
 import { GitHubIssueProvider } from "./github";
 import type { IssueProvider } from "./provider";
 import type { IssueSearchResult } from "./types";
+
+const searchInput = providerInput({
+    owner: z.string(),
+    repo: z.string(),
+    query: z.string(),
+    page: z.number().optional(),
+    after: z.string().optional(),
+    first: z.number().optional(),
+    sort: z.enum(["created", "updated", "comments"]).optional(),
+    order: z.enum(["asc", "desc"]).optional(),
+});
 
 export const issuesRouter = createTRPCRouter({
     getByNumber: protectedProcedure
@@ -68,30 +80,32 @@ export const issuesRouter = createTRPCRouter({
             );
         }),
 
+    searchCached: protectedProcedure
+        .input(searchInput)
+        .query(
+            ({ ctx, input }): Promise<IssueSearchResult | null> =>
+                readCache<IssueSearchResult>(
+                    searchCacheKey("issues", ctx.session?.user?.id, input),
+                ),
+        ),
+
     search: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-                query: z.string(),
-                page: z.number().optional(),
-                after: z.string().optional(),
-                first: z.number().optional(),
-                sort: z.enum(["created", "updated", "comments"]).optional(),
-                order: z.enum(["asc", "desc"]).optional(),
-            }),
-        )
+        .input(searchInput)
         .query(async ({ ctx, input }): Promise<IssueSearchResult> => {
             const provider: IssueProvider =
                 input.provider === "cb"
                     ? new CodebergIssueProvider()
                     : new GitHubIssueProvider();
 
-            return await provider.search({
-                ...input,
-                ctx: { db: ctx.db, session: ctx.session },
-            });
+            return fetchAndCache(
+                searchCacheKey("issues", ctx.session?.user?.id, input),
+                () =>
+                    provider.search({
+                        ...input,
+                        ctx: { db: ctx.db, session: ctx.session },
+                    }),
+                { staleAfter: 0, deleteAfter: 24 * 60 * 60 * 1000 },
+            );
         }),
 
     searchAutocomplete: protectedProcedure

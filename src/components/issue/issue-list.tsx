@@ -1,12 +1,15 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { ListSearchBar } from "~/components/list/list-search-bar";
 import { ListSkeleton } from "~/components/list/list-skeleton";
 import { rowQualifierFilters } from "~/components/list/row-qualifier-filters";
 import { SearchListLayout } from "~/components/list/search-list-layout";
-import { useSearchList } from "~/components/list/use-search-list";
+import {
+    type SearchArgs,
+    useSearchList,
+} from "~/components/list/use-search-list";
 import type { IssueSearchItem } from "~/server/api/routers/issues/types";
 import { api } from "~/trpc/react";
 import { booleanSearchHint } from "~/utils/search-syntax";
@@ -45,6 +48,30 @@ function normalizeSearchItem(item: IssueSearchItem): IssueRowData {
     };
 }
 
+function useIssueSearchQuery(args: SearchArgs, opts?: { enabled?: boolean }) {
+    const live = api.issues.search.useQuery(args, {
+        ...opts,
+        staleTime: 0,
+        refetchOnMount: "always",
+        placeholderData: () => undefined,
+    });
+    const cached = api.issues.searchCached.useQuery(args, {
+        ...opts,
+        staleTime: 0,
+        refetchOnMount: "always",
+        placeholderData: () => undefined,
+    });
+
+    return {
+        data: live.data,
+        cachedData: cached.data,
+        isLoading: live.isLoading,
+        isFetching: live.isFetching,
+        isError: live.isError,
+        isPaused: live.isPaused,
+    };
+}
+
 export function IssueList({
     provider = "gh",
     owner,
@@ -57,6 +84,10 @@ export function IssueList({
     defaultState: "open" | "closed";
 }) {
     const utils = api.useUtils();
+    const searchFetch = useCallback(
+        (args: SearchArgs) => utils.issues.search.fetch(args),
+        [utils],
+    );
     const config = buildIssueConfig(provider, owner, repo);
 
     const list = useSearchList<IssueSearchItem>(
@@ -67,8 +98,8 @@ export function IssueList({
             defaultState,
         },
         {
-            useSearchQuery: api.issues.search.useQuery,
-            searchFetch: (args) => utils.issues.search.fetch(args),
+            useSearchQuery: useIssueSearchQuery,
+            searchFetch,
         },
     );
 
@@ -124,6 +155,7 @@ export function IssueList({
                 />
             }
             showLoading={list.showLoading}
+            refreshStatus={list.refreshStatus}
             isEmpty={items.length === 0}
             skeleton={<ListSkeleton />}
             emptyState={

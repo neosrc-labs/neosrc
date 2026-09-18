@@ -60,6 +60,9 @@ vi.mock("~/trpc/react", () => ({
                     isLoading: false,
                 })),
             },
+            searchCached: {
+                useQuery: vi.fn(() => ({ data: null })),
+            },
         },
         pulls: {
             listLabels: {
