@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { UserLink } from "~/components/user/user-link";
 import type { BlameAuthor, BlameCommit, BlameRange } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -17,6 +17,7 @@ import { RepoFileActions, RepoFileToolbar } from "./repo-file-toolbar";
 import { RepoPathCommitRow } from "./repo-path-commit-row";
 import { RepoPathNotFound } from "./repo-path-not-found";
 import { blamePrevious } from "./repo-previous-data";
+import { RepoSourceLine, useSourceLineSelection } from "./repo-source-line";
 
 interface RepoBlameViewProps {
     owner: string;
@@ -62,6 +63,20 @@ export function RepoBlameView({
 
     const name = path.split("/").pop() ?? path;
     const highlightedLines = useHighlightedLines(name, file.content ?? "");
+    const sourceLines = useMemo(
+        () => (file.content === null ? [] : file.content.split("\n")),
+        [file.content],
+    );
+    const { selectedLine, selectLine } = useSourceLineSelection(
+        queryKey,
+        sourceLines,
+        !file.pathMissing &&
+            !file.contentFailed &&
+            !file.busy &&
+            file.content !== null &&
+            blameQuery.data != null &&
+            !blameQuery.isPlaceholderData,
+    );
 
     if (file.pathMissing) {
         return (
@@ -188,7 +203,7 @@ export function RepoBlameView({
                 ) : (
                     <div
                         className={cn(
-                            "overflow-x-auto font-mono text-xs leading-5",
+                            "scroll-pl-[304px] overflow-x-auto font-mono text-xs leading-5",
                             blameQuery.isPlaceholderData &&
                                 "pointer-events-none opacity-60",
                         )}
@@ -204,11 +219,11 @@ export function RepoBlameView({
                                     repo={repo}
                                     range={range}
                                     commit={blame.commits[range.sha]}
-                                    sourceLines={
-                                        file.content?.split("\n") ?? []
-                                    }
+                                    sourceLines={sourceLines}
                                     highlightedLines={highlightedLines}
                                     lineNumberWidth={lineNumberWidth}
+                                    selectedLine={selectedLine}
+                                    onSelectLine={selectLine}
                                 />
                             ))}
                         </div>
@@ -227,6 +242,8 @@ function BlameRangeRow({
     sourceLines,
     highlightedLines,
     lineNumberWidth,
+    selectedLine,
+    onSelectLine,
 }: {
     owner: string;
     repo: string;
@@ -236,6 +253,8 @@ function BlameRangeRow({
     highlightedLines: string[] | null;
     /** Shared width of the line-number column, sized to the file's digits. */
     lineNumberWidth: string;
+    selectedLine: number | null;
+    onSelectLine: (line: number) => void;
 }) {
     const lineNumbers: number[] = [];
     for (let line = range.startLine; line <= range.endLine; line++) {
@@ -251,7 +270,7 @@ function BlameRangeRow({
                         backgroundColor: `var(--color-blame-age-${ageColorIndex(range.age)})`,
                     }}
                 />
-                <div className="flex w-[300px] items-center gap-2 px-2 py-0.5">
+                <div className="flex w-[300px] items-center gap-2 px-2">
                     {commit ? (
                         <>
                             <span className="w-[100px] shrink-0 whitespace-nowrap text-text-tertiary">
@@ -270,37 +289,18 @@ function BlameRangeRow({
                     ) : null}
                 </div>
             </div>
-            <div className="flex min-w-0 flex-1">
-                <div
-                    aria-hidden
-                    // + 1.5rem is the px-3 gutter, + 1px the right border:
-                    // border-box would otherwise squeeze the digits.
-                    className="shrink-0 select-none border-border border-r bg-surface-elevated px-3 text-right text-text-muted"
-                    style={{ width: `calc(${lineNumberWidth} + 1.5rem + 1px)` }}
-                >
-                    {lineNumbers.map((line) => (
-                        <div key={line}>{line}</div>
-                    ))}
-                </div>
-                <code className="min-w-0 flex-1 whitespace-pre px-3">
-                    {lineNumbers.map((line) => {
-                        const html = highlightedLines?.[line - 1];
-                        if (html === undefined) {
-                            return (
-                                <div key={line}>
-                                    {sourceLines[line - 1] ?? ""}
-                                </div>
-                            );
-                        }
-                        return (
-                            <div
-                                key={line}
-                                // biome-ignore lint/security/noDangerouslySetInnerHtml: shiki escapes the source before emitting token markup
-                                dangerouslySetInnerHTML={{ __html: html }}
-                            />
-                        );
-                    })}
-                </code>
+            <div className="min-w-0 flex-1">
+                {lineNumbers.map((line) => (
+                    <RepoSourceLine
+                        key={line}
+                        lineNumber={line}
+                        sourceLine={sourceLines[line - 1]}
+                        html={highlightedLines?.[line - 1]}
+                        gutterWidth={`calc(${lineNumberWidth} + 1.5rem + 1px)`}
+                        selected={selectedLine === line}
+                        onSelect={onSelectLine}
+                    />
+                ))}
             </div>
         </div>
     );
