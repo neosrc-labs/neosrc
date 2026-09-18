@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { eq, like, lt } from "drizzle-orm";
 import { after } from "next/server";
 import { db } from "./db";
@@ -15,7 +16,7 @@ export interface CacheOptions {
 //
 // The sweep runs at most once per process per hour, scheduled lazily from the
 // request path instead of with a global timer (no setInterval): the first
-// withStaleWhileRevalidate call in a window schedules the DELETE via Next's
+// cache fetch call in a window schedules the DELETE via Next's
 // `after()`, so it runs after the response without ever blocking a request.
 // Only rows past deleteAt are removed; stale-but-not-deleted rows are kept.
 const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
@@ -34,9 +35,7 @@ function maybeScheduleExpiredCacheSweep(): void {
     if (now - lastSweepAt < SWEEP_INTERVAL_MS) return;
     lastSweepAt = now;
     try {
-        after(() => {
-            void deleteExpiredCacheRows();
-        });
+        after(deleteExpiredCacheRows);
     } catch {
         // Not in a request scope (e.g. build/test), so skip the sweep this window.
     }
@@ -80,6 +79,21 @@ export async function withStaleWhileRevalidate<T>(
         await persistCache(key, fresh, options);
     } catch {
         // Swallow: cache write failure shouldn't break the response
+    }
+    return fresh;
+}
+
+export async function fetchAndCache<T>(
+    key: string,
+    fetcher: () => Promise<T>,
+    options: CacheOptions,
+): Promise<T> {
+    maybeScheduleExpiredCacheSweep();
+    const fresh = await fetcher();
+    try {
+        await persistCache(key, fresh, options);
+    } catch {
+        // The live result must remain usable when the cache is unavailable.
     }
     return fresh;
 }
@@ -132,6 +146,22 @@ async function revalidate<T>(
     } catch {
         // Background revalidation failed; stale data remains, try again next time
     }
+}
+
+export function searchCacheKey(
+    resource: "pulls" | "issues",
+    userId: string | undefined,
+    input: Record<string, string | number | undefined>,
+): string {
+    const identity = userId === undefined ? ["anonymous"] : ["user", userId];
+    const fields = Object.entries(input)
+        .filter(([, value]) => value !== undefined)
+        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
+    const namespace = `${resource}:search:v1`;
+    const hash = createHash("sha256")
+        .update(JSON.stringify([namespace, identity, fields]))
+        .digest("hex");
+    return `${namespace}:${hash}`;
 }
 
 export function prCacheKey(

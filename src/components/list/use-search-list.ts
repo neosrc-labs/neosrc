@@ -52,6 +52,7 @@ export interface SearchListResult<TItem> {
     currentOrder: string;
     apiQuery: string;
     showLoading: boolean;
+    refreshStatus: "refreshing" | "error" | "paused" | undefined;
     stateCounts: Record<string, number> | undefined;
     totalPages: number;
     data: SearchResultData<TItem> | undefined;
@@ -82,7 +83,11 @@ export function useSearchList<TItem>(
             opts?: { enabled?: boolean },
         ) => {
             data?: SearchResultData<TItem>;
+            cachedData?: SearchResultData<TItem> | null;
             isLoading: boolean;
+            isFetching?: boolean;
+            isError?: boolean;
+            isPaused?: boolean;
         };
         searchFetch: (args: SearchArgs) => Promise<SearchResultData<TItem>>;
     },
@@ -161,8 +166,19 @@ export function useSearchList<TItem>(
     const searchResult = procedures.useSearchQuery(searchArgs, {
         enabled: !isResolving,
     });
-    const { data, isLoading } = searchResult;
-    const showLoading = isLoading || isResolving;
+    // A successful live response wins even when empty or when the snapshot
+    // arrives later. Both results must belong to the current search args.
+    const data = searchResult.data ?? searchResult.cachedData ?? undefined;
+    const showLoading =
+        data === undefined &&
+        (searchResult.isLoading || isResolving || !!searchResult.isPaused);
+    const refreshStatus = searchResult.isPaused
+        ? "paused"
+        : searchResult.isError
+          ? "error"
+          : data !== undefined && (searchResult.isFetching || isResolving)
+            ? "refreshing"
+            : undefined;
 
     useEffect(() => {
         const cursor = data?.endCursor;
@@ -403,6 +419,7 @@ export function useSearchList<TItem>(
         currentOrder,
         apiQuery,
         showLoading,
+        refreshStatus,
         stateCounts,
         totalPages,
         data,

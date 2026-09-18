@@ -1,4 +1,9 @@
 // @vitest-environment jsdom
+import {
+    QueryClient,
+    QueryClientProvider,
+    useQuery,
+} from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -60,6 +65,9 @@ vi.mock("~/trpc/react", () => ({
                     isLoading: false,
                 })),
             },
+            searchCached: {
+                useQuery: vi.fn(() => ({ data: null, isLoading: false })),
+            },
             listLabels: {
                 useQuery: vi.fn(() => ({ data: [], isLoading: false })),
             },
@@ -93,6 +101,7 @@ vi.mock("~/trpc/react", () => ({
 
 import { ghConfig } from "~/components/pull/pull-request-list-config";
 import { PullRequestListShared } from "~/components/pull/pull-request-list-shared";
+import type { PrSearchResult } from "~/server/api/routers/pulls/types";
 import { api } from "~/trpc/react";
 
 // --- Helpers ---
@@ -630,5 +639,96 @@ describe("PullRequestList", () => {
 
         await openDropdownAndSelectMilestone(user, "v1.0");
         expect(getSearchInput().value).toBe("");
+    });
+});
+
+describe("PullRequestList cached queries", () => {
+    it("shows cached rows and refresh status without carrying rows across repositories", async () => {
+        paramsState = new URLSearchParams();
+        const snapshot: PrSearchResult = {
+            items: [
+                {
+                    id: 1,
+                    number: 1,
+                    title: "Cached pull",
+                    state: "OPEN",
+                    isDraft: false,
+                    createdAt: "2026-01-01T00:00:00Z",
+                    mergedAt: null,
+                    author: null,
+                    labels: [],
+                    assignees: [],
+                    comments: 0,
+                    reviewDecision: null,
+                    stack: null,
+                },
+            ],
+            totalCount: 1,
+            hasNextPage: false,
+            endCursor: null,
+            stateCounts: { open: 1, closed: 0, merged: 0 },
+        };
+        const live = new Promise<PrSearchResult>(() => undefined);
+        let resolveCached!: (value: PrSearchResult | null) => void;
+        const cached = new Promise<PrSearchResult | null>((resolve) => {
+            resolveCached = resolve;
+        });
+        const client = new QueryClient({
+            defaultOptions: { queries: { retry: false } },
+        });
+        vi.mocked(api.pulls.search.useQuery).mockImplementation(
+            (args, opts) =>
+                useQuery({
+                    ...opts,
+                    queryKey: ["live", args],
+                    queryFn: () => live,
+                }) as never,
+        );
+        vi.mocked(api.pulls.searchCached.useQuery).mockImplementation(
+            (args, opts) =>
+                useQuery({
+                    ...opts,
+                    queryKey: ["cached", args],
+                    queryFn: async () => snapshot,
+                }) as never,
+        );
+        function list(repo: string) {
+            return (
+                <QueryClientProvider client={client}>
+                    <PullRequestListShared
+                        owner="test-owner"
+                        repo={repo}
+                        defaultState="open"
+                        config={ghConfig}
+                    />
+                </QueryClientProvider>
+            );
+        }
+        const view = render(list("test-repo"));
+        expect(await screen.findByText("Cached pull")).toBeInTheDocument();
+        expect(screen.getByRole("status")).toHaveTextContent(/refreshing/i);
+
+        vi.mocked(api.pulls.searchCached.useQuery).mockImplementation(
+            (args, opts) =>
+                useQuery({
+                    ...opts,
+                    queryKey: ["cached", args],
+                    queryFn: () => cached,
+                }) as never,
+        );
+        view.rerender(list("another-repo"));
+        expect(screen.queryByText("Cached pull")).not.toBeInTheDocument();
+        resolveCached({
+            ...snapshot,
+            items: snapshot.items.map((item) => ({
+                ...item,
+                title: "Other repository pull",
+            })),
+        });
+        expect(
+            await screen.findByText("Other repository pull"),
+        ).toBeInTheDocument();
+        view.unmount();
+        client.clear();
     });
 });

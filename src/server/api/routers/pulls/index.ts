@@ -20,7 +20,13 @@ import {
     providerQuery,
 } from "~/server/api/trpc";
 import { getGitHubToken, getGithubUsername } from "~/server/auth";
-import { deleteCache, prCacheKey, readCache } from "~/server/cache";
+import {
+    deleteCache,
+    fetchAndCache,
+    prCacheKey,
+    readCache,
+    searchCacheKey,
+} from "~/server/cache";
 import {
     deleteIssueComment as deleteCodebergIssueComment,
     listAssignees as listCodebergAssignees,
@@ -82,6 +88,17 @@ import {
     getGitHubRecentlyPushedBranch,
 } from "./github";
 import type { PrSearchResult } from "./types";
+
+const searchInput = providerInput({
+    owner: z.string(),
+    repo: z.string(),
+    query: z.string(),
+    page: z.number().optional(),
+    after: z.string().optional(),
+    first: z.number().optional(),
+    sort: z.enum(["created", "updated", "comments"]).optional(),
+    order: z.enum(["asc", "desc"]).optional(),
+});
 
 const evictPullRequests = async (
     owner: string,
@@ -765,20 +782,16 @@ export const pullsRouter = createTRPCRouter({
             ),
     }),
 
+    searchCached: protectedProcedure
+        .input(searchInput)
+        .query(({ ctx, input }): Promise<PrSearchResult | null> => {
+            return readCache<PrSearchResult>(
+                searchCacheKey("pulls", ctx.session?.user?.id, input),
+            );
+        }),
+
     search: protectedProcedure
-        .input(
-            z.object({
-                provider: z.enum(["gh", "cb"]).default("gh"),
-                owner: z.string(),
-                repo: z.string(),
-                query: z.string(),
-                page: z.number().optional(),
-                after: z.string().optional(),
-                first: z.number().optional(),
-                sort: z.enum(["created", "updated", "comments"]).optional(),
-                order: z.enum(["asc", "desc"]).optional(),
-            }),
-        )
+        .input(searchInput)
         .query(async ({ ctx, input }): Promise<PrSearchResult> => {
             const providerCtx: Ctx = {
                 db: ctx.db,
@@ -790,10 +803,11 @@ export const pullsRouter = createTRPCRouter({
                     ? new CodebergPullRequestProvider()
                     : new GitHubPullRequestProvider();
 
-            return provider.search({
-                ...input,
-                ctx: providerCtx,
-            });
+            return fetchAndCache(
+                searchCacheKey("pulls", ctx.session?.user?.id, input),
+                () => provider.search({ ...input, ctx: providerCtx }),
+                { staleAfter: 0, deleteAfter: 24 * 60 * 60 * 1000 },
+            );
         }),
 
     listDetailsByPrNumbers: protectedProcedure

@@ -91,3 +91,95 @@ describe("useSearchList page cursors", () => {
         expect(useSearchQuery.mock.calls.at(-1)?.[0].after).toBeUndefined();
     });
 });
+
+describe("useSearchList cached results", () => {
+    const cached = {
+        ...pageResult,
+        items: ["cached pull"],
+        endCursor: null,
+    };
+    const fresh = { ...cached, items: ["fresh pull"] };
+
+    function renderSearch(initial: {
+        data?: typeof cached;
+        cachedData?: typeof cached | null;
+        isLoading: boolean;
+        isFetching?: boolean;
+        isError?: boolean;
+        isPaused?: boolean;
+    }) {
+        paramsState = new URLSearchParams();
+        const searchFetch = vi.fn(async () => fresh);
+        return renderHook(
+            (state: typeof initial) =>
+                useSearchList(makeConfig("alpha"), {
+                    useSearchQuery: () => state,
+                    searchFetch,
+                }),
+            { initialProps: initial },
+        );
+    }
+
+    it("shows cached rows during refresh and replaces them with live rows", () => {
+        const { result, rerender } = renderSearch({
+            cachedData: cached,
+            isLoading: true,
+            isFetching: true,
+        });
+        expect(result.current.data?.items).toEqual(["cached pull"]);
+        expect(result.current.showLoading).toBe(false);
+        expect(result.current.refreshStatus).toBe("refreshing");
+
+        rerender({ data: fresh, cachedData: cached, isLoading: false });
+        expect(result.current.data?.items).toEqual(["fresh pull"]);
+        expect(result.current.refreshStatus).toBeUndefined();
+    });
+
+    it("retains cached rows with an error after a failed refresh", () => {
+        const { result, rerender } = renderSearch({
+            cachedData: cached,
+            isLoading: true,
+            isFetching: true,
+        });
+        rerender({ cachedData: cached, isLoading: false, isError: true });
+        expect(result.current.data?.items).toEqual(["cached pull"]);
+        expect(result.current.showLoading).toBe(false);
+        expect(result.current.refreshStatus).toBe("error");
+    });
+
+    it("keeps a successful empty live response when cached rows arrive late", () => {
+        const empty = { ...fresh, items: [], totalCount: 0 };
+        const { result, rerender } = renderSearch({
+            data: empty,
+            isLoading: false,
+        });
+        rerender({ data: empty, cachedData: cached, isLoading: false });
+        expect(result.current.data?.items).toEqual([]);
+        expect(result.current.totalPages).toBe(0);
+        expect(result.current.refreshStatus).toBeUndefined();
+    });
+
+    it("treats a cached empty result as usable while the live query is pending", () => {
+        const { result } = renderSearch({
+            cachedData: { ...cached, items: [], totalCount: 0 },
+            isLoading: true,
+            isFetching: true,
+        });
+        expect(result.current.data?.items).toEqual([]);
+        expect(result.current.showLoading).toBe(false);
+        expect(result.current.refreshStatus).toBe("refreshing");
+    });
+
+    it("keeps loading on a cache miss and marks offline cached rows as paused", () => {
+        const { result, rerender } = renderSearch({
+            cachedData: null,
+            isLoading: true,
+            isFetching: true,
+        });
+        expect(result.current.showLoading).toBe(true);
+        rerender({ cachedData: cached, isLoading: false, isPaused: true });
+        expect(result.current.data?.items).toEqual(["cached pull"]);
+        expect(result.current.showLoading).toBe(false);
+        expect(result.current.refreshStatus).toBe("paused");
+    });
+});
