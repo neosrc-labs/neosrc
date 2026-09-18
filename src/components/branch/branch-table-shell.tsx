@@ -11,7 +11,7 @@ export function BranchTableShell({ children }: { children: ReactNode }) {
     return (
         <table className="w-full table-fixed">
             <thead>
-                <tr className="border-border border-b bg-surface-elevated text-text-tertiary text-xs">
+                <tr className="border-border border-b bg-surface-secondary text-text-tertiary text-xs">
                     <th className="w-[40%] px-4 py-2 text-left font-medium">
                         Branch
                     </th>

@@ -5,9 +5,6 @@ import { BRANCH_PAGE_SIZE, OVERVIEW_PREVIEW_SIZE } from "./branch-list-config";
 import { BranchSection } from "./branch-section";
 import { BranchTableShell } from "./branch-table-shell";
 
-/** Top spacing between two stacked sections, matching the loaded ones. */
-const SECTION_SPACING = "pt-6";
-
 /**
  * Row geometry mirrors a loaded branch row exactly: same 40px row, same
  * header, same section headings and the same count of rows as the tab it
@@ -59,17 +56,14 @@ export function BranchTableSkeleton({ tab }: { tab: BranchTab }) {
                         <SkeletonRows count={1} />
                     </BranchTableShell>
                 </BranchSection>
-                <BranchSection
-                    title="Active branches"
-                    className={SECTION_SPACING}
-                >
+                <BranchSection title="Active branches">
                     <BranchTableShell>
                         <SkeletonRows count={OVERVIEW_PREVIEW_SIZE} />
                     </BranchTableShell>
+                    <div className="px-4 py-3">
+                        <div className="h-5 w-32 animate-pulse rounded bg-surface-selected" />
+                    </div>
                 </BranchSection>
-                <div className="px-4 py-3">
-                    <div className="h-5 w-32 animate-pulse rounded bg-surface-selected" />
-                </div>
             </>
         );
     }

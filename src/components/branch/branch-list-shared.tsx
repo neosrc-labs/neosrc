@@ -36,7 +36,6 @@ function BranchSearchBar({
 
     return (
         <form
-            className="border-border-subtle border-b"
             onSubmit={(event) => {
                 event.preventDefault();
                 onSubmit(value.trim());
@@ -131,32 +130,46 @@ export function BranchListShared({
             <h1 className="mb-4 font-semibold text-2xl text-text-primary">
                 Branches
             </h1>
-            <div className="overflow-hidden rounded-md border border-border-subtle">
-                <div className="flex items-center justify-between gap-2 border-border-subtle border-b">
-                    <div className="shrink-0">
-                        <StateTabs
-                            tabs={BRANCH_TABS}
-                            activeTab={tab}
-                            onTabChange={(next) =>
-                                setParams({ tab: next, page: null })
-                            }
-                        />
-                    </div>
-                    {scanNote && (
-                        <p className="min-w-0 flex-1 truncate pr-4 text-right text-text-tertiary text-xs">
-                            {scanNote}
-                        </p>
-                    )}
-                </div>
-                <BranchSearchBar
-                    query={query}
-                    onSubmit={(value) =>
-                        setParams({
-                            query: value === "" ? null : value,
-                            page: null,
-                        })
+            <div
+                className={
+                    tab === "overview"
+                        ? "space-y-6"
+                        : "overflow-hidden rounded-md border border-border-subtle"
+                }
+            >
+                <div
+                    className={
+                        tab === "overview"
+                            ? "overflow-hidden rounded-md border border-border-subtle"
+                            : "border-border-subtle border-b"
                     }
-                />
+                >
+                    <div className="flex items-center justify-between gap-2 border-border-subtle border-b">
+                        <div className="shrink-0">
+                            <StateTabs
+                                tabs={BRANCH_TABS}
+                                activeTab={tab}
+                                onTabChange={(next) =>
+                                    setParams({ tab: next, page: null })
+                                }
+                            />
+                        </div>
+                        {scanNote && (
+                            <p className="min-w-0 flex-1 truncate pr-4 text-right text-text-tertiary text-xs">
+                                {scanNote}
+                            </p>
+                        )}
+                    </div>
+                    <BranchSearchBar
+                        query={query}
+                        onSubmit={(value) =>
+                            setParams({
+                                query: value === "" ? null : value,
+                                page: null,
+                            })
+                        }
+                    />
+                </div>
 
                 {isError ? (
                     <div className="px-6 py-12 text-center">
@@ -185,7 +198,7 @@ export function BranchListShared({
                                 {table([data.defaultBranchRow])}
                             </BranchSection>
                         )}
-                        <BranchSection title="Active branches" className="pt-6">
+                        <BranchSection title="Active branches">
                             {data.items.length === 0 ? (
                                 <BranchEmptyState
                                     searchQuery={query}
