@@ -49,6 +49,15 @@ const { dbMock, afterMock, limitMock, returningMock, whereCalls } = vi.hoisted(
 
 vi.mock("next/server", () => ({ after: afterMock }));
 vi.mock("~/server/db", () => ({ db: dbMock }));
+vi.mock("~/server/github/client", () => ({
+    createOctokit: () => ({ rest: { repos: { get: getRepoMock } } }),
+}));
+vi.mock("~/server/github-graphql", () => ({}));
+vi.mock("~/server/github/contents", () => ({}));
+
+const { getRepoMock } = vi.hoisted(() => ({ getRepoMock: vi.fn() }));
+
+import { getCachedRepo } from "./github/repos";
 
 import type { CachedRepoSource } from "./repo-cache";
 import {
@@ -98,6 +107,7 @@ beforeEach(() => {
     limitMock.mockResolvedValue([]);
     returningMock.mockReset();
     returningMock.mockResolvedValue([{ id: 1 }]);
+    getRepoMock.mockReset();
 });
 
 describe("getCachedRepoData", () => {
@@ -254,6 +264,84 @@ describe("getCachedRepoData", () => {
             getCachedRepoData(makeSource({ fetcher })),
         ).rejects.toThrow("Repo not found");
         expect(dbMock.insert).not.toHaveBeenCalled();
+    });
+});
+
+describe("GitHub repository cache", () => {
+    const listedRepo = {
+        id: 7,
+        name: "repo-7",
+        private: false,
+        owner: { id: 1, login: "owner" },
+        watchers_count: 500,
+    };
+    const fullRepo = { ...listedRepo, subscribers_count: 12 };
+
+    it.each(["fresh", "stale"])(
+        "fetches the real watcher count from a %s listing cache entry",
+        async (freshness) => {
+            limitMock.mockResolvedValueOnce([
+                {
+                    repo: {
+                        rawData: listedRepo,
+                        lastSynced: new Date(
+                            Date.now() - (freshness === "stale" ? 600_000 : 0),
+                        ),
+                    },
+                    account: { username: "owner" },
+                },
+            ]);
+            getRepoMock.mockResolvedValueOnce({ data: fullRepo });
+
+            const result = await getCachedRepo("token", "owner", "repo-7");
+
+            expect(result.subscribers_count).toBe(12);
+            expect(getRepoMock).toHaveBeenCalledTimes(1);
+            expect(afterMock).not.toHaveBeenCalled();
+        },
+    );
+
+    it("serves a cached zero watcher count without fetching", async () => {
+        limitMock.mockResolvedValueOnce([
+            {
+                repo: {
+                    rawData: { ...fullRepo, subscribers_count: 0 },
+                    lastSynced: new Date(),
+                },
+                account: { username: "owner" },
+            },
+        ]);
+
+        const result = await getCachedRepo("token", "owner", "repo-7");
+
+        expect(result.subscribers_count).toBe(0);
+        expect(getRepoMock).not.toHaveBeenCalled();
+    });
+
+    it("refreshes when a concurrent sync replaces stale details with listing data", async () => {
+        limitMock.mockResolvedValueOnce([
+            {
+                repo: {
+                    rawData: fullRepo,
+                    lastSynced: new Date(Date.now() - 600_000),
+                },
+                account: { username: "owner" },
+            },
+        ]);
+        limitMock.mockResolvedValueOnce([
+            { rawData: listedRepo, lastSynced: new Date() },
+        ]);
+        getRepoMock.mockResolvedValueOnce({
+            data: { ...fullRepo, subscribers_count: 13 },
+        });
+
+        const result = await getCachedRepo("token", "owner", "repo-7");
+        expect(result.subscribers_count).toBe(12);
+
+        const revalidate = afterMock.mock.calls[0]?.[0] as () => void;
+        revalidate();
+        await vi.waitFor(() => expect(getRepoMock).toHaveBeenCalledTimes(1));
+        await vi.waitFor(() => expect(dbMock.insert).toHaveBeenCalledTimes(2));
     });
 });
 

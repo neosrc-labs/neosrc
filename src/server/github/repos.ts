@@ -177,6 +177,8 @@ export async function getCachedRepo(
         owner,
         repo,
         staleAfterMs: 5 * 60 * 1000,
+        // Permission sync caches listing payloads without subscriber counts.
+        isComplete: (payload) => typeof payload.subscribers_count === "number",
         fetcher: async () => {
             try {
                 return await getRepo(accessToken, owner, repo);

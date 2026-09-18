@@ -16,8 +16,7 @@ import { upsertAccount, upsertRepo } from "./sync/shared";
  *
  * Semantics match the generic withStaleWhileRevalidate: fresh rows are served
  * from raw_data, stale rows are served with a background revalidation, and
- * misses (no row, or a GraphQL-synced row whose raw_data is null) fetch and
- * upsert before returning.
+ * misses (missing or incomplete raw_data) fetch and upsert before returning.
  */
 
 /**
@@ -40,6 +39,8 @@ export type CachedRepoSource<T> = {
     staleAfterMs: number;
     /** Fetch the full provider payload; null when the repo does not exist. */
     fetcher: () => Promise<T | null>;
+    /** Reject partial payloads written by provider listing endpoints. */
+    isComplete?: (payload: T) => boolean;
     /** Map the payload to the canonical repo columns (see sync/mappers.ts). */
     toRepo: (payload: T) => {
         providerId: number;
@@ -94,9 +95,9 @@ export async function getCachedRepoData<T>(
 
     const cached = row?.repo;
     const observedLastSynced = cached?.lastSynced?.getTime() ?? 0;
-    if (cached?.rawData != null) {
+    if (cached && isUsable(cached.rawData)) {
         const fresh = Date.now() - observedLastSynced < staleAfterMs;
-        if (fresh) return cached.rawData as T;
+        if (fresh) return cached.rawData;
 
         // Stale: serve now, revalidate after the response is flushed. The row
         // is shared across users, so another request may refresh it between
@@ -110,10 +111,14 @@ export async function getCachedRepoData<T>(
         } catch {
             // Not in a request scope, so skip the background revalidation.
         }
-        return cached.rawData as T;
+        return cached.rawData;
     }
 
     return refresh();
+
+    function isUsable(payload: unknown): payload is T {
+        return payload != null && (source.isComplete?.(payload as T) ?? true);
+    }
 
     /** Refreshes only when no other request already refreshed this row. */
     async function refreshIfStillStale(): Promise<T> {
@@ -135,7 +140,7 @@ export async function getCachedRepoData<T>(
             .limit(1);
         const currentLastSynced = current?.lastSynced?.getTime() ?? 0;
         if (current && currentLastSynced > observedLastSynced) {
-            if (current.rawData != null) return current.rawData as T;
+            if (isUsable(current.rawData)) return current.rawData;
             return refresh();
         }
         return refresh();
