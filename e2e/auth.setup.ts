@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { chromium, type Page, test as setup } from "@playwright/test";
+import { chromium, expect, type Page, test as setup } from "@playwright/test";
 
 const AUTH_FILE = path.join(import.meta.dirname, ".auth", "user.json");
 
@@ -30,6 +30,8 @@ async function syncPermissions(page: Page) {
 }
 
 setup("authenticate", async ({ browser }) => {
+    setup.setTimeout(360_000);
+
     if (fs.existsSync(AUTH_FILE)) {
         const headless = await chromium.launch({ headless: true });
         try {
@@ -64,9 +66,25 @@ setup("authenticate", async ({ browser }) => {
     console.log("  browser window that just opened.");
     console.log("========================================\n");
 
-    await page
-        .getByRole("heading", { name: /welcome/i })
-        .waitFor({ timeout: 300_000 });
+    await expect
+        .poll(
+            async () => {
+                const response = await page.request.get(
+                    "/api/auth/get-session",
+                );
+                if (!response.ok()) return false;
+                const session = (await response.json()) as {
+                    user?: { id?: string };
+                } | null;
+                return Boolean(session?.user?.id);
+            },
+            {
+                message: "Waiting for a signed-in session",
+                timeout: 300_000,
+                intervals: [1_000],
+            },
+        )
+        .toBe(true);
 
     await syncPermissions(page);
 
