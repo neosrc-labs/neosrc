@@ -66,11 +66,24 @@ export function HeaderClient({
         { provider, owner: owner as string, repo: repo as string },
         { enabled: !!owner && !!repo },
     );
-    const { data: clientCounts, refetch: refetchCounts } =
-        api.repos.getCountsByOwnerAndRepo.useQuery(
+    // Cached snapshot paints the counts, the live query refreshes them.
+    const { data: cachedCounts } =
+        api.repos.getCachedCountsByOwnerAndRepo.useQuery(
             { provider, owner: owner as string, repo: repo as string },
             { enabled: !!owner && !!repo },
         );
+    const {
+        data: liveCounts,
+        isError: countsError,
+        refetch: refetchCounts,
+    } = api.repos.getCountsByOwnerAndRepo.useQuery(
+        { provider, owner: owner as string, repo: repo as string },
+        { enabled: !!owner && !!repo },
+    );
+    // A failed refresh drops the snapshot as well: the viewer may have lost
+    // access to the repo the counts were cached for.
+    const clientCounts =
+        liveCounts ?? (countsError ? null : cachedCounts) ?? null;
 
     const clientFetchedData =
         clientRepoData && clientCounts

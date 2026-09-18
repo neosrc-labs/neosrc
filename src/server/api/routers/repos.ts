@@ -8,13 +8,18 @@ import {
     providerQuery,
 } from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
-import { repoStarredCacheKey, repoSubscriptionCacheKey } from "~/server/cache";
+import {
+    readCache,
+    repoIssuePullCountsCacheKey,
+    repoStarredCacheKey,
+    repoSubscriptionCacheKey,
+} from "~/server/cache";
 import {
     deleteRepoSubscription as deleteCodebergRepoSubscription,
+    fetchRepoCounts,
     getCachedRepo as getCachedCodebergRepo,
     getCachedRepoStarred as getCachedCodebergRepoStarred,
     getCachedRepoSubscription as getCachedCodebergRepoSubscription,
-    getCachedRepoCounts,
     getBranches as getCodebergBranches,
     getFileContent as getCodebergFileContent,
     getFileLatestCommit as getCodebergFileLatestCommit,
@@ -34,12 +39,12 @@ import {
 import type { ForkComparison } from "~/server/github";
 import {
     deleteRepoSubscription,
+    fetchRepoIssuePullCounts,
     getCachedFileBlame,
     getCachedFileContent,
     getCachedRepo,
     getCachedRepoContributors,
     getCachedRepoDocFileNames,
-    getCachedRepoIssuePullCounts,
     getCachedRepoLanguages,
     getCachedRepoStarred,
     getCachedRepoSubscription,
@@ -119,6 +124,11 @@ export type RepositoryInfo = {
     isFork: boolean;
     parentFullName: string | null;
     parentDefaultBranch: string | null;
+};
+
+type RepoIssuePullCounts = {
+    openIssuesCount: number;
+    openPullRequestsCount: number;
 };
 
 export const reposRouter = createTRPCRouter({
@@ -258,13 +268,39 @@ export const reposRouter = createTRPCRouter({
         }),
         userId: "anonymous",
         cb: ({ accessToken, userId, input }) =>
-            getCachedRepoCounts(accessToken, userId, input.owner, input.repo),
+            fetchRepoCounts(accessToken, userId, input.owner, input.repo),
         gh: ({ accessToken, userId, input }) =>
-            getCachedRepoIssuePullCounts(
+            fetchRepoIssuePullCounts(
                 accessToken,
                 userId,
                 input.owner,
                 input.repo,
+            ),
+    }),
+    // Paints last-known counts while getCountsByOwnerAndRepo refreshes them.
+    getCachedCountsByOwnerAndRepo: providerQuery({
+        input: providerInput({
+            owner: z.string(),
+            repo: z.string(),
+        }),
+        userId: "anonymous",
+        cb: ({ userId, input }) =>
+            readCache<RepoIssuePullCounts>(
+                repoIssuePullCountsCacheKey(
+                    "cb",
+                    userId,
+                    input.owner,
+                    input.repo,
+                ),
+            ),
+        gh: ({ userId, input }) =>
+            readCache<RepoIssuePullCounts>(
+                repoIssuePullCountsCacheKey(
+                    "gh",
+                    userId,
+                    input.owner,
+                    input.repo,
+                ),
             ),
     }),
     getTopRepos: protectedProcedure.query(async ({ ctx }) => {

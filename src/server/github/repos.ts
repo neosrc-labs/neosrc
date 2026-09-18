@@ -1,6 +1,7 @@
 import type { RestEndpointMethodTypes } from "@octokit/rest";
 import { cache } from "react";
 import {
+    fetchAndCache,
     repoContributorsCacheKey,
     repoDocFilesCacheKey,
     repoIssuePullCountsCacheKey,
@@ -240,6 +241,13 @@ query GetRepoIssuePullCounts($owner: String!, $repo: String!) {
     },
 );
 
+// Nav counts tolerate a few seconds of staleness, they only back the cached
+// read that paints before the refresh lands.
+const REPO_COUNTS_CACHE_OPTIONS = {
+    staleAfter: 3_000,
+    deleteAfter: 24 * 60 * 60 * 1000,
+};
+
 export async function getCachedRepoIssuePullCounts(
     accessToken: string,
     userId: string,
@@ -249,7 +257,22 @@ export async function getCachedRepoIssuePullCounts(
     return withStaleWhileRevalidate(
         repoIssuePullCountsCacheKey("gh", userId, owner, repo),
         () => getRepoIssuePullCounts(accessToken, owner, repo),
-        { staleAfter: 3_000, deleteAfter: 24 * 60 * 60 * 1000 },
+        REPO_COUNTS_CACHE_OPTIONS,
+    );
+}
+
+// Header refresh path: always reads the provider and replaces the snapshot, so
+// a client that painted the stale counts has fresh ones to swap in.
+export async function fetchRepoIssuePullCounts(
+    accessToken: string,
+    userId: string,
+    owner: string,
+    repo: string,
+): Promise<{ openIssuesCount: number; openPullRequestsCount: number } | null> {
+    return fetchAndCache(
+        repoIssuePullCountsCacheKey("gh", userId, owner, repo),
+        () => getRepoIssuePullCounts(accessToken, owner, repo),
+        REPO_COUNTS_CACHE_OPTIONS,
     );
 }
 

@@ -18,6 +18,12 @@ vi.mock("~/server/auth", () => ({
 vi.mock("~/server/cache", () => ({
     prCacheKey: (owner: string, repo: string, number: number) =>
         `pr:${owner}:${repo}:${number}`,
+    repoIssuePullCountsCacheKey: (
+        provider: string,
+        userId: string,
+        owner: string,
+        repo: string,
+    ) => `${provider}:counts:${userId}:${owner}:${repo}`,
     repoStarredCacheKey: (
         provider: string,
         userId: string,
@@ -60,6 +66,7 @@ vi.mock("~/server/github", () => ({
     MAX_REF_WALK_PAGES: 20,
     ...fns(
         "deleteRepoSubscription",
+        "fetchRepoIssuePullCounts",
         "getCachedFileContent",
         "getCachedRepo",
         "getCachedRepoContributors",
@@ -136,6 +143,7 @@ vi.mock("~/server/codeberg", () => ({
         "deleteIssueCommentReaction",
         "deleteIssueReaction",
         "deleteRepoSubscription",
+        "fetchRepoCounts",
         "getCachedRepo",
         "getCachedRepoCounts",
         "getCachedRepoStarred",
@@ -257,22 +265,58 @@ describe("provider-aware procedures (repos router)", () => {
 
     it("anonymous reads resolve the user id to 'anonymous' before token lookup", async () => {
         const { repos } = await callerFor(null);
-        vi.mocked(github.getCachedRepoIssuePullCounts).mockResolvedValue({
-            issues: 0,
-            pulls: 0,
-        } as never);
+        vi.mocked(github.fetchRepoIssuePullCounts).mockResolvedValue({
+            openIssuesCount: 0,
+            openPullRequestsCount: 0,
+        });
 
         await expect(
             repos.getCountsByOwnerAndRepo({ owner: "acme", repo: "api" }),
-        ).resolves.toEqual({ issues: 0, pulls: 0 });
+        ).resolves.toEqual({ openIssuesCount: 0, openPullRequestsCount: 0 });
 
         expect(getGitHubTokenMock).toHaveBeenCalledWith({}, "anonymous");
-        expect(github.getCachedRepoIssuePullCounts).toHaveBeenCalledWith(
+        expect(github.fetchRepoIssuePullCounts).toHaveBeenCalledWith(
             "gh-token",
             "anonymous",
             "acme",
             "api",
         );
+    });
+
+    it("cached counts read the provider-keyed snapshot without a provider call", async () => {
+        const { repos } = await callerFor(null);
+        const readCacheMock = vi.mocked(cache.readCache);
+        readCacheMock
+            .mockResolvedValueOnce({
+                openIssuesCount: 4,
+                openPullRequestsCount: 2,
+            })
+            .mockResolvedValueOnce({
+                openIssuesCount: 7,
+                openPullRequestsCount: 5,
+            });
+
+        await expect(
+            repos.getCachedCountsByOwnerAndRepo({ owner: "acme", repo: "api" }),
+        ).resolves.toEqual({ openIssuesCount: 4, openPullRequestsCount: 2 });
+        await expect(
+            repos.getCachedCountsByOwnerAndRepo({
+                provider: "cb",
+                owner: "acme",
+                repo: "api",
+            }),
+        ).resolves.toEqual({ openIssuesCount: 7, openPullRequestsCount: 5 });
+
+        expect(readCacheMock).toHaveBeenNthCalledWith(
+            1,
+            "gh:counts:anonymous:acme:api",
+        );
+        expect(readCacheMock).toHaveBeenNthCalledWith(
+            2,
+            "cb:counts:anonymous:acme:api",
+        );
+        expect(github.fetchRepoIssuePullCounts).not.toHaveBeenCalled();
+        expect(codeberg.fetchRepoCounts).not.toHaveBeenCalled();
     });
 
     it("evicting mutation stars on GitHub and evicts the keyed cache entry", async () => {

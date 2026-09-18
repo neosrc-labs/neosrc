@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { cache } from "react";
 import {
+    fetchAndCache,
     repoIssuePullCountsCacheKey,
     repoStarredCacheKey,
     repoSubscriptionCacheKey,
@@ -1934,6 +1935,13 @@ export async function getCachedRepoHeaderData(
     };
 }
 
+// Nav counts tolerate a few seconds of staleness, they only back the cached
+// read that paints before the refresh lands.
+const REPO_COUNTS_CACHE_OPTIONS = {
+    staleAfter: 3_000,
+    deleteAfter: 24 * 60 * 60 * 1000,
+};
+
 export async function getCachedRepoCounts(
     accessToken: string,
     userId: string,
@@ -1943,7 +1951,22 @@ export async function getCachedRepoCounts(
     return withStaleWhileRevalidate(
         repoIssuePullCountsCacheKey("cb", userId, owner, repo),
         () => getRepoCounts(accessToken, owner, repo),
-        { staleAfter: 3_000, deleteAfter: 24 * 60 * 60 * 1000 },
+        REPO_COUNTS_CACHE_OPTIONS,
+    );
+}
+
+// Header refresh path: always reads the provider and replaces the snapshot, so
+// a client that painted the stale counts has fresh ones to swap in.
+export async function fetchRepoCounts(
+    accessToken: string,
+    userId: string,
+    owner: string,
+    repo: string,
+): Promise<{ openIssuesCount: number; openPullRequestsCount: number }> {
+    return fetchAndCache(
+        repoIssuePullCountsCacheKey("cb", userId, owner, repo),
+        () => getRepoCounts(accessToken, owner, repo),
+        REPO_COUNTS_CACHE_OPTIONS,
     );
 }
 
