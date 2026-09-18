@@ -20,6 +20,7 @@ import {
     type StackCandidate,
     type StackSuggestion,
 } from "~/server/stack-suggestion";
+import { getPullRequestArchive, type PullRequestArchive } from "./archive";
 import { getCachedCommit, getCommit } from "./checks";
 import { createOctokit } from "./client";
 
@@ -63,20 +64,40 @@ export type ReviewCommentBase = Omit<
 };
 export type PullRequestFile =
     RestEndpointMethodTypes["pulls"]["listFiles"]["response"]["data"][number];
+/**
+ * Pull request payload plus the archive state, which only the issue events feed
+ * reports. See ./archive.
+ */
+export type PullRequestDetail = PullsGetResponseData & PullRequestArchive;
 export const getPullRequest = cache(
     async (
         accessToken: string,
         owner: string,
         repo: string,
         pullNumber: number,
-    ): Promise<PullsGetResponseData> => {
+    ): Promise<PullRequestDetail> => {
         const octokit = createOctokit(accessToken);
         const response = await octokit.pulls.get({
             owner,
             repo,
             pull_number: pullNumber,
         });
-        return response.data;
+
+        // Archiving closes and locks a pull request, so anything else cannot be
+        // archived and does not need the extra lookup.
+        if (response.data.state !== "closed" || !response.data.locked) {
+            return { ...response.data, archived: false, archiveEvents: [] };
+        }
+
+        return {
+            ...response.data,
+            ...(await getPullRequestArchive(
+                accessToken,
+                owner,
+                repo,
+                pullNumber,
+            )),
+        };
     },
 );
 
@@ -86,7 +107,7 @@ export async function getCachedPullRequest(
     repo: string,
     pullNumber: number,
     userId?: string | null,
-): Promise<PullsGetResponseData> {
+): Promise<PullRequestDetail> {
     const getOrThrow = async () => {
         try {
             return await getPullRequest(accessToken, owner, repo, pullNumber);

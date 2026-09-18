@@ -1,6 +1,12 @@
 "use client";
 
-import { Lock, MoreVertical, SmilePlus, SquarePen } from "lucide-react";
+import {
+    Archive,
+    Lock,
+    MoreVertical,
+    SmilePlus,
+    SquarePen,
+} from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import {
     ActionErrorBanner,
@@ -34,7 +40,11 @@ import { RoleBadge } from "~/components/user/role-badge";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useLocalStorage } from "~/hooks/use-local-storage";
 import { useTaskToggle } from "~/hooks/use-task-toggle";
-import type { PullsGetResponseData, StackSuggestion } from "~/server/github";
+import type {
+    PullRequestDetail,
+    PullsGetResponseData,
+    StackSuggestion,
+} from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatRelativeTime } from "~/utils/format-time";
 import { AutoMergeBannerSection } from "./action-bar/auto-merge-banner-section";
@@ -45,7 +55,7 @@ interface PullRequestDescriptionSectionProps {
     owner: string;
     repo: string;
     number: number;
-    pullRequestPromise: Promise<PullsGetResponseData>;
+    pullRequestPromise: Promise<PullRequestDetail>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     actionSection?: ReactNode;
     conflictedFilesPromise?: Promise<string[]> | null;
@@ -389,7 +399,7 @@ function TitleRow({
     owner: string;
     repo: string;
     number: number;
-    pullRequestPromise: Promise<PullsGetResponseData>;
+    pullRequestPromise: Promise<PullRequestDetail>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
 }) {
     const titleKey = `pr-autosave:desc-title:${owner}:${repo}:${number}`;
@@ -442,6 +452,12 @@ function TitleRow({
                     return (
                         <>
                             <StatusPill state={state} />
+                            {pullRequest.archived && (
+                                <span className="flex items-center gap-1 rounded-md border border-border bg-surface-secondary px-2 py-0.5 text-text-tertiary text-xs">
+                                    <Archive size={12} />
+                                    Archived
+                                </span>
+                            )}
                             {pullRequest.locked && (
                                 <span className="flex items-center gap-1 rounded-md border border-border bg-surface-secondary px-2 py-0.5 text-text-tertiary text-xs">
                                     <Lock size={12} />

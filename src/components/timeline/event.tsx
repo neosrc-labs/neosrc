@@ -1,6 +1,8 @@
 "use client";
 
 import {
+    Archive,
+    ArchiveRestore,
     ArrowUp,
     Check,
     CheckCheck,
@@ -40,6 +42,7 @@ import type {
 import { formatDateTime, formatRelativeTime } from "~/utils/format-time";
 import type { Provider } from "~/utils/provider-url";
 import type { ReactionContent } from "~/utils/reactions";
+import { ArchiveEventContent } from "./content/archive-event";
 import { AssignedEventContent } from "./content/assigned-event";
 import { AutoMergeEventContent } from "./content/auto-merge-event";
 import { BaseRefChangedContent } from "./content/base-ref-changed";
@@ -328,6 +331,8 @@ function TimelineIcon({
         RenamedTitleEvent: <Pencil size={ICON_SIZE} />,
         LockedEvent: <Lock size={ICON_SIZE} />,
         UnlockedEvent: <LockOpen size={ICON_SIZE} />,
+        ArchivedEvent: <Archive size={ICON_SIZE} />,
+        UnarchivedEvent: <ArchiveRestore size={ICON_SIZE} />,
         MilestonedEvent: <Target size={ICON_SIZE} />,
         DemilestonedEvent: <Target size={ICON_SIZE} />,
         CrossReferencedEvent: <Link size={ICON_SIZE} />,
@@ -643,6 +648,10 @@ function EventContent({
         case "LockedEvent":
         case "UnlockedEvent":
             return <LockedEventContent event={event} provider={provider} />;
+
+        case "ArchivedEvent":
+        case "UnarchivedEvent":
+            return <ArchiveEventContent event={event} provider={provider} />;
 
         case "ReviewRequestedEvent":
         case "ReviewRequestRemovedEvent":

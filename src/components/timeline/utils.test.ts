@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { GQLTimelineEvent } from "~/server/github-graphql";
-import { aggregateEvents, approvalHasWriteAccess } from "./utils";
+import type {
+    GQLArchiveEvent,
+    GQLTimelineEvent,
+} from "~/server/github-graphql";
+import {
+    aggregateEvents,
+    approvalHasWriteAccess,
+    mergeArchiveEvents,
+} from "./utils";
 
 const ANN = {
     __typename: "User",
@@ -80,5 +87,62 @@ describe("approvalHasWriteAccess", () => {
 
     it("keeps the green check when the permission is unknown", () => {
         expect(approvalHasWriteAccess(undefined)).toBe(true);
+    });
+});
+
+function closedAt(createdAt: string): GQLTimelineEvent {
+    return {
+        __typename: "ClosedEvent",
+        id: `closed-${createdAt}`,
+        actor: ANN,
+        createdAt,
+    };
+}
+
+function archivedAt(createdAt: string): GQLArchiveEvent {
+    return {
+        __typename: "ArchivedEvent",
+        id: `archived-${createdAt}`,
+        actor: ANN,
+        createdAt,
+    };
+}
+
+describe("mergeArchiveEvents", () => {
+    it("splices an archive event in by timestamp", () => {
+        const merged = mergeArchiveEvents(
+            [
+                closedAt("2026-01-01T10:00:00Z"),
+                closedAt("2026-01-01T10:30:00Z"),
+            ],
+            [archivedAt("2026-01-01T10:10:00Z")],
+        );
+
+        expect(merged.map((event) => event.id)).toEqual([
+            "closed-2026-01-01T10:00:00Z",
+            "archived-2026-01-01T10:10:00Z",
+            "closed-2026-01-01T10:30:00Z",
+        ]);
+    });
+
+    it("keeps events sharing the archive timestamp ahead of it", () => {
+        const merged = mergeArchiveEvents(
+            [closedAt("2026-01-01T10:00:00Z")],
+            [archivedAt("2026-01-01T10:00:00Z")],
+        );
+
+        expect(merged.map((event) => event.id)).toEqual([
+            "closed-2026-01-01T10:00:00Z",
+            "archived-2026-01-01T10:00:00Z",
+        ]);
+    });
+
+    it("returns the timeline untouched without archive events", () => {
+        const events = [
+            closedAt("2026-01-01T10:00:00Z"),
+            archivedAt("2026-01-01T11:00:00Z"),
+        ] as GQLTimelineEvent[];
+
+        expect(mergeArchiveEvents(events, [])).toEqual(events);
     });
 });

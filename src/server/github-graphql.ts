@@ -825,6 +825,21 @@ export type GQLUnlockedEvent = GQLEventBase & {
     __typename: "UnlockedEvent";
 };
 
+/**
+ * Archived pull requests only report these on the REST issue events feed, so
+ * the timeline maps them from there instead of the GraphQL query. See
+ * server/github/archive.ts.
+ */
+export type GQLArchivedEvent = GQLEventBase & {
+    __typename: "ArchivedEvent";
+};
+
+export type GQLUnarchivedEvent = GQLEventBase & {
+    __typename: "UnarchivedEvent";
+};
+
+export type GQLArchiveEvent = GQLArchivedEvent | GQLUnarchivedEvent;
+
 export type GQLMilestonedEvent = GQLEventBase & {
     __typename: "MilestonedEvent";
     milestoneTitle: string | null;
@@ -1032,6 +1047,8 @@ export type GQLTimelineEvent =
     | GQLRenamedTitleEvent
     | GQLLockedEvent
     | GQLUnlockedEvent
+    | GQLArchivedEvent
+    | GQLUnarchivedEvent
     | GQLMilestonedEvent
     | GQLDemilestonedEvent
     | GQLReviewRequestedEvent

@@ -1,4 +1,5 @@
 import type {
+    GQLArchiveEvent,
     GQLPullRequestReview,
     GQLTimelineEvent,
 } from "~/server/github-graphql";
@@ -134,4 +135,29 @@ export function approvalHasWriteAccess(
     return permission !== "read" && permission !== "none";
 }
 
-export { aggregateEvents, filterTimelineEvents };
+/**
+ * Archive events come from the REST issue events feed rather than the GraphQL
+ * timeline, so they are spliced in by timestamp. Later events with an equal
+ * timestamp keep their place ahead of an archive entry, and commit entries
+ * carry no timestamp of their own so they never sort past one.
+ */
+function mergeArchiveEvents(
+    events: GQLTimelineEvent[],
+    archiveEvents: GQLArchiveEvent[],
+): GQLTimelineEvent[] {
+    if (archiveEvents.length === 0) return events;
+
+    const merged = [...events];
+    for (const archiveEvent of archiveEvents) {
+        const createdAt = Date.parse(archiveEvent.createdAt);
+        const index = merged.findIndex((event) => {
+            const eventTime =
+                "createdAt" in event ? Date.parse(event.createdAt) : Number.NaN;
+            return eventTime > createdAt;
+        });
+        merged.splice(index === -1 ? merged.length : index, 0, archiveEvent);
+    }
+    return merged;
+}
+
+export { aggregateEvents, filterTimelineEvents, mergeArchiveEvents };

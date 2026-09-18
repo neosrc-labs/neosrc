@@ -15,7 +15,7 @@ import {
     getChecksForCommit,
     getConflictedFiles,
     getStackSuggestion,
-    type PullsGetResponseData,
+    type PullRequestDetail,
 } from "~/server/github";
 import { generatePRMetadata } from "~/server/metadata";
 import { HeaderActionBar } from "./_components/action-bar/header-action-bar";
@@ -180,7 +180,7 @@ function TimelineSectionWithCanInteract({
     number: number;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     branchExistsPromise: Promise<boolean>;
-    pullRequestPromise: Promise<PullsGetResponseData>;
+    pullRequestPromise: Promise<PullRequestDetail>;
 }) {
     const permissionContext = use(permissionContextPromise);
     const pullRequest = use(pullRequestPromise);
@@ -194,6 +194,7 @@ function TimelineSectionWithCanInteract({
 
     return (
         <TimelineSection
+            archiveEvents={pullRequest.archiveEvents}
             permissionContext={permissionContext}
             number={number}
             owner={owner}

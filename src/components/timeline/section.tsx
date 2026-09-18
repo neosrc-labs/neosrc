@@ -8,6 +8,7 @@ import {
 } from "~/components/permissions/permissions-utils";
 import { UserLink } from "~/components/user/user-link";
 import type {
+    GQLArchiveEvent,
     GQLMergeQueueEntry,
     GQLMergeQueueEntryState,
 } from "~/server/github-graphql";
@@ -20,7 +21,11 @@ import {
     useTimelineBottomScroll,
     useTimelineHashScroll,
 } from "./use-timeline-view";
-import { aggregateEvents, filterTimelineEvents } from "./utils";
+import {
+    aggregateEvents,
+    filterTimelineEvents,
+    mergeArchiveEvents,
+} from "./utils";
 
 export function TimelineSkeleton() {
     const items = [
@@ -65,6 +70,7 @@ interface TimelineSectionProps {
     pullRequestBranchExists: boolean;
     pullRequestBranchHref: string;
     pullRequestBranchLabel: string;
+    archiveEvents: GQLArchiveEvent[];
 }
 export function TimelineSection({
     owner,
@@ -76,6 +82,7 @@ export function TimelineSection({
     pullRequestBranchExists,
     pullRequestBranchHref,
     pullRequestBranchLabel,
+    archiveEvents,
 }: TimelineSectionProps) {
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
         api.timeline.list.useInfiniteQuery(
@@ -192,7 +199,9 @@ export function TimelineSection({
     }
 
     const mergeQueueEntry = data?.pages[0]?.mergeQueueEntry ?? null;
-    const filteredEvents = filterTimelineEvents(allEvents);
+    const filteredEvents = filterTimelineEvents(
+        mergeArchiveEvents(allEvents, archiveEvents),
+    );
 
     const revertedBy = (() => {
         const revertRe = /^Reverts\s+([\w.-]+\/[\w.-]+)#(\d+)\b/i;
