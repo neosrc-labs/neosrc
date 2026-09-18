@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { cn } from "~/utils/helpers";
 import { highlightLines } from "~/utils/highlight";
+import { RepoSourceLine, useSourceLineSelection } from "./repo-source-line";
 
 /** Lowercased extension used as a highlight grammar tag; "" when there is none. */
 function fileExtension(name: string): string {
@@ -43,96 +43,26 @@ export function CodeView({ name, content }: { name: string; content: string }) {
     const lines = useHighlightedLines(name, content);
     const sourceLines = useMemo(() => content.split("\n"), [content]);
     const gutterWidth = `calc(${String(sourceLines.length).length}ch + 1.5rem + 1px)`;
-    const [selectedLine, setSelectedLine] = useState<number | null>(null);
-
-    // biome-ignore lint/correctness/useExhaustiveDependencies: a different file must resync even when its content is identical
-    useEffect(() => {
-        function syncLineFromHash(): void {
-            const match = /^#L([1-9]\d*)$/.exec(window.location.hash);
-            const line = match ? Number(match[1]) : null;
-            const validLine =
-                line !== null &&
-                Number.isSafeInteger(line) &&
-                line <= sourceLines.length
-                    ? line
-                    : null;
-            setSelectedLine(validLine);
-            if (validLine !== null) {
-                document.getElementById(`L${validLine}`)?.scrollIntoView({
-                    block: "center",
-                    inline: "nearest",
-                });
-            }
-        }
-
-        syncLineFromHash();
-        window.addEventListener("hashchange", syncLineFromHash);
-        return () => window.removeEventListener("hashchange", syncLineFromHash);
-    }, [name, sourceLines]);
+    const { selectedLine, selectLine } = useSourceLineSelection(
+        name,
+        sourceLines,
+    );
 
     return (
         <div className="overflow-x-auto font-mono text-xs leading-5">
             <div className="w-max min-w-full pb-2">
                 {sourceLines.map((sourceLine, index) => {
                     const lineNumber = index + 1;
-                    const html = lines?.[index];
-                    const selected = selectedLine === lineNumber;
                     return (
-                        <div
+                        <RepoSourceLine
                             key={lineNumber}
-                            id={`L${lineNumber}`}
-                            className={cn(
-                                "flex",
-                                selected && "bg-[rgba(251,146,60,0.2)]",
-                            )}
-                        >
-                            <a
-                                href={`#L${lineNumber}`}
-                                onClick={(event) => {
-                                    if (
-                                        event.button !== 0 ||
-                                        event.metaKey ||
-                                        event.ctrlKey ||
-                                        event.shiftKey ||
-                                        event.altKey
-                                    ) {
-                                        return;
-                                    }
-                                    event.preventDefault();
-                                    const hash = `#L${lineNumber}`;
-                                    if (window.location.hash !== hash) {
-                                        window.history.pushState(
-                                            null,
-                                            "",
-                                            hash,
-                                        );
-                                    }
-                                    setSelectedLine(lineNumber);
-                                }}
-                                aria-label={`Line ${lineNumber}`}
-                                aria-current={selected ? "location" : undefined}
-                                className={cn(
-                                    "block shrink-0 select-none border-border border-r px-3 text-right text-text-muted outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-                                    selected
-                                        ? "bg-transparent"
-                                        : "bg-surface-elevated",
-                                )}
-                                style={{ width: gutterWidth }}
-                            >
-                                {lineNumber}
-                            </a>
-                            {html === undefined ? (
-                                <code className="block min-h-5 flex-1 whitespace-pre px-3">
-                                    {sourceLine}
-                                </code>
-                            ) : (
-                                <code
-                                    className="block min-h-5 flex-1 whitespace-pre px-3"
-                                    // biome-ignore lint/security/noDangerouslySetInnerHtml: shiki escapes the source before emitting token markup
-                                    dangerouslySetInnerHTML={{ __html: html }}
-                                />
-                            )}
-                        </div>
+                            lineNumber={lineNumber}
+                            sourceLine={sourceLine}
+                            html={lines?.[index]}
+                            gutterWidth={gutterWidth}
+                            selected={selectedLine === lineNumber}
+                            onSelect={selectLine}
+                        />
                     );
                 })}
             </div>
