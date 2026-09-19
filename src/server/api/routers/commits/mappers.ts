@@ -4,7 +4,7 @@ import type {
     CodebergCombinedStatus,
     CodebergCommitRaw,
 } from "~/server/codeberg";
-import type { BranchCommitsResult } from "~/server/github-graphql";
+import type { ReferenceCommitsResult } from "~/server/github-graphql";
 import type { CommitListItem } from "./types";
 
 type GQLCheckNode = {
@@ -29,7 +29,7 @@ function isCheckRunNode(
 }
 
 export function mapGQLCommit(
-    c: BranchCommitsResult["commits"][number],
+    c: ReferenceCommitsResult["commits"][number],
 ): CommitListItem {
     const authorNode = c.authors[0];
     const author = authorNode?.user

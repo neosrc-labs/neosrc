@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Provider } from "~/utils/provider-url";
 import {
     browseDirectory,
@@ -6,12 +6,21 @@ import {
     type UndecoratedDirectoryEntry,
 } from "./directory-browse";
 
+const cacheKeys = vi.hoisted(() => [] as string[]);
+
 vi.mock("~/server/cache", () => ({
     withStaleWhileRevalidate: async <T>(
-        _key: string,
+        key: string,
         fetcher: () => Promise<T>,
-    ): Promise<T> => fetcher(),
+    ): Promise<T> => {
+        cacheKeys.push(key);
+        return fetcher();
+    },
 }));
+
+beforeEach(() => {
+    cacheKeys.length = 0;
+});
 
 const FILE: UndecoratedDirectoryEntry = {
     kind: "file",
@@ -99,6 +108,29 @@ describe.each(["gh", "cb"] as const)(
                     },
                 ],
             });
+        });
+
+        it("separates branch and tag cache entries with the same object", async () => {
+            const adapter = adapterFor(provider);
+            const baseInput = {
+                provider,
+                repository: REPOSITORY,
+                path: "docs",
+            } as const;
+
+            await browseDirectory(adapter, EXECUTION, {
+                ...baseInput,
+                reference: { kind: "branch", value: "release" },
+            });
+            await browseDirectory(adapter, EXECUTION, {
+                ...baseInput,
+                reference: { kind: "tag", value: "release" },
+            });
+
+            expect(cacheKeys).toEqual([
+                `directory-browse:v1:${provider}:user:acme:project:branch:release:resolved-object:docs`,
+                `directory-browse:v1:${provider}:user:acme:project:tag:release:resolved-object:docs`,
+            ]);
         });
 
         it("returns missing without attempting decorations", async () => {

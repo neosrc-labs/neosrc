@@ -1180,19 +1180,19 @@ export async function getCommitCombinedStatus(
         statuses: data.statuses ?? [],
     };
 }
-export const listBranchCommits = cache(
+export const listReferenceCommits = cache(
     async (
         accessToken: string,
         owner: string,
         repo: string,
-        branch: string,
+        reference: string,
         opts: { page?: number; limit?: number; author?: string },
     ): Promise<{
         commits: CodebergCommitRaw[];
         totalCount: number;
     }> => {
         const params = new URLSearchParams({
-            sha: branch,
+            sha: reference,
             limit: String(opts.limit ?? 35),
             page: String(opts.page ?? 1),
         });
@@ -1206,11 +1206,11 @@ export const listBranchCommits = cache(
         if (!res.ok) {
             if (res.status === 404) {
                 throw new Error(
-                    `Branch ${branch} not found in ${owner}/${repo}`,
+                    `Reference ${reference} not found in ${owner}/${repo}`,
                 );
             }
             throw new Error(
-                `Failed to list commits for ${owner}/${repo}/${branch}: ${res.status}`,
+                `Failed to list commits for ${owner}/${repo}/${reference}: ${res.status}`,
             );
         }
         const commits = (await res.json()) as CodebergCommitRaw[];

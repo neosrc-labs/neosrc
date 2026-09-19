@@ -99,7 +99,7 @@ function cacheKey(
     provider: Provider,
     userId: string,
     repository: RepositoryIdentity,
-    objectId: string,
+    reference: ResolvedRepositoryReference,
     path: string,
 ): string {
     return [
@@ -108,7 +108,9 @@ function cacheKey(
         userId,
         repository.owner,
         repository.repo,
-        objectId,
+        reference.reference.kind ?? "native",
+        encodeURIComponent(reference.reference.value),
+        reference.objectId,
         encodeURIComponent(path),
     ].join(":");
 }
@@ -148,7 +150,7 @@ export async function browseDirectory(
             input.provider,
             execution.userId,
             input.repository,
-            reference.objectId,
+            reference,
             path,
         ),
         async () => {

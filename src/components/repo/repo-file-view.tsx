@@ -4,6 +4,7 @@ import { cn, formatFileSize } from "~/utils/helpers";
 import {
     type Provider,
     type RepositoryReference,
+    rawContentReference,
     rawUrl,
 } from "~/utils/provider-url";
 import { RepoBusyBar } from "./repo-busy-bar";
@@ -53,7 +54,13 @@ export function RepoFileView({
     }
 
     const name = path.split("/").pop() ?? path;
-    const raw = rawUrl(provider, owner, repo, reference.value, path);
+    const raw = rawUrl(
+        provider,
+        owner,
+        repo,
+        rawContentReference(reference, objectId),
+        path,
+    );
 
     return (
         <>

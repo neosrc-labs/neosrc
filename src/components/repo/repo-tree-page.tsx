@@ -5,6 +5,7 @@ import { pickDocFileNames } from "~/utils/doc-files";
 import {
     type Provider,
     type RepositoryReference,
+    rawContentReference,
     treeHref,
 } from "~/utils/provider-url";
 import { RepoBrowse, RepoBrowseSkeleton } from "./repo-browse";
@@ -63,7 +64,11 @@ export function RepoTreePage({
                             owner={owner}
                             repo={repo}
                             provider={provider}
-                            ref={resolvedObjectId ?? reference.value}
+                            contentRef={resolvedObjectId ?? reference.value}
+                            rawReference={rawContentReference(
+                                reference,
+                                resolvedObjectId,
+                            )}
                             fileNames={pickDocFileNames(contents)}
                             hideEmpty
                         />

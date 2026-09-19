@@ -2,24 +2,25 @@
 
 import { RefSelector } from "~/components/repo/ref-selector";
 import { AuthorDropdown } from "~/components/search/author-dropdown";
+import type { RepositoryReference } from "~/utils/provider-url";
 
 interface CommitsToolbarProps {
     owner: string;
     repo: string;
-    branch: string;
+    reference: RepositoryReference;
     provider: "gh" | "cb";
     author: string | undefined;
-    onBranchChange: (branch: string) => void;
+    onReferenceChange: (reference: RepositoryReference) => void;
     onAuthorToggle: (key: string, value: string) => void;
 }
 
 export function CommitsToolbar({
     owner,
     repo,
-    branch,
+    reference,
     provider,
     author,
-    onBranchChange,
+    onReferenceChange,
     onAuthorToggle,
 }: CommitsToolbarProps) {
     return (
@@ -28,8 +29,8 @@ export function CommitsToolbar({
                 owner={owner}
                 repo={repo}
                 provider={provider}
-                reference={{ kind: null, value: branch }}
-                onSelect={(reference) => onBranchChange(reference.value)}
+                reference={reference}
+                onSelect={onReferenceChange}
             />
 
             <div className="flex items-center gap-2">

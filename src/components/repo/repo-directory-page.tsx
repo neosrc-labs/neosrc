@@ -1,7 +1,11 @@
 "use client";
 
 import { pickDocFileNames } from "~/utils/doc-files";
-import type { Provider, RepositoryReference } from "~/utils/provider-url";
+import {
+    type Provider,
+    type RepositoryReference,
+    rawContentReference,
+} from "~/utils/provider-url";
 import { RepoDocFiles } from "./repo-doc-files";
 import { RepoPathBrowse } from "./repo-path-browse";
 
@@ -39,7 +43,11 @@ export function RepoDirectoryPage({
                     owner={owner}
                     repo={repo}
                     provider={provider}
-                    ref={resolvedObjectId ?? reference.value}
+                    contentRef={resolvedObjectId ?? reference.value}
+                    rawReference={rawContentReference(
+                        reference,
+                        resolvedObjectId,
+                    )}
                     fileNames={pickDocFileNames(contents)}
                     hideEmpty
                 />

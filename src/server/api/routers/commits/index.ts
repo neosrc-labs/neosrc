@@ -3,11 +3,16 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
-import { getCommitCombinedStatus, listBranchCommits } from "~/server/codeberg";
 import {
-    getBranchCommitsGraphQL,
+    getCommitCombinedStatus,
+    listReferenceCommits,
+} from "~/server/codeberg";
+import { codebergDirectoryBrowseAdapter } from "~/server/codeberg/directory-browse";
+import { githubDirectoryBrowseAdapter } from "~/server/github/directory-browse";
+import {
     getCommitGraphQL,
     getPullRequestCommitsGraphQL,
+    getReferenceCommitsGraphQL,
     resolveUserNodeId,
 } from "~/server/github-graphql";
 import { mapCodebergCommit, mapGQLCommit } from "./mappers";
@@ -75,7 +80,11 @@ export const commitsRouter = createTRPCRouter({
                 provider: z.enum(["gh", "cb"]),
                 owner: z.string(),
                 repo: z.string(),
-                branch: z.string(),
+                ref: z.string(),
+                refKind: z
+                    .enum(["branch", "tag", "commit"])
+                    .nullable()
+                    .optional(),
                 perPage: z.number().min(1).max(35).default(35),
                 author: z.string().optional(),
                 pagination: z.discriminatedUnion("provider", [
@@ -98,17 +107,26 @@ export const commitsRouter = createTRPCRouter({
                         ctx.db,
                         ctx.session?.user?.id,
                     );
+                    const resolved =
+                        await codebergDirectoryBrowseAdapter.resolveReference(
+                            accessToken,
+                            { owner: input.owner, repo: input.repo },
+                            {
+                                kind: input.refKind ?? null,
+                                value: input.ref,
+                            },
+                        );
 
                     const page =
                         input.pagination.provider === "cb"
                             ? input.pagination.page
                             : 1;
 
-                    const { commits, totalCount } = await listBranchCommits(
+                    const { commits, totalCount } = await listReferenceCommits(
                         accessToken,
                         input.owner,
                         input.repo,
-                        input.branch,
+                        resolved.objectId,
                         {
                             page,
                             limit: input.perPage,
@@ -146,6 +164,15 @@ export const commitsRouter = createTRPCRouter({
                     ctx.db,
                     ctx.session?.user?.id,
                 );
+                const resolved =
+                    await githubDirectoryBrowseAdapter.resolveReference(
+                        accessToken,
+                        { owner: input.owner, repo: input.repo },
+                        {
+                            kind: input.refKind ?? null,
+                            value: input.ref,
+                        },
+                    );
 
                 let authorId: string | undefined;
                 if (input.author) {
@@ -175,11 +202,11 @@ export const commitsRouter = createTRPCRouter({
                         ? input.pagination.beforeCursor
                         : undefined;
 
-                const result = await getBranchCommitsGraphQL(
+                const result = await getReferenceCommitsGraphQL(
                     accessToken,
                     input.owner,
                     input.repo,
-                    input.branch,
+                    resolved.objectId,
                     {
                         after: after,
                         before: before,

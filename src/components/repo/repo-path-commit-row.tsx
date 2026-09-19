@@ -9,6 +9,7 @@ import {
     historyUrl,
     type Provider,
     type RepositoryReference,
+    rawContentReference,
     treeHref,
 } from "~/utils/provider-url";
 import { RepoCommitRow } from "./repo-commit-row";
@@ -110,7 +111,7 @@ export function RepoPathCommitRow({
                     provider,
                     owner,
                     repo,
-                    reference.value,
+                    rawContentReference(reference, resolvedObjectId),
                     path,
                 )}
                 previousHref={previousHref}
