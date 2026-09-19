@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { Suspense, useCallback, useMemo, useState } from "react";
 import { api } from "~/trpc/react";
+import { commitsHref, type RepositoryReference } from "~/utils/provider-url";
 import { CommitsGroupedList } from "./commits-grouped-list";
 import type { CommitsListConfig } from "./commits-list-config";
 import { CommitsPaginationFooter } from "./commits-pagination-footer";
@@ -13,28 +14,28 @@ import { CommitsToolbar } from "./commits-toolbar";
 interface CommitsListProps {
     owner: string;
     repo: string;
-    branch: string;
+    reference: RepositoryReference;
     config: CommitsListConfig;
 }
 
-function BranchNotFoundError({
+function ReferenceNotFoundError({
     error,
     owner,
     repo,
-    branch,
+    reference,
     config,
 }: {
     error: unknown;
     owner: string;
     repo: string;
-    branch: string;
+    reference: RepositoryReference;
     config: CommitsListConfig;
 }) {
-    const isBranchNotFound =
+    const isReferenceNotFound =
         (error as { data?: { code?: string } })?.data?.code === "NOT_FOUND" ||
         (error instanceof Error && /not found/i.test(error.message));
 
-    if (!isBranchNotFound) {
+    if (!isReferenceNotFound) {
         return (
             <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-950">
                 <p className="text-red-600 dark:text-red-400">
@@ -49,12 +50,12 @@ function BranchNotFoundError({
     return (
         <div className="rounded-lg border border-border-subtle bg-surface p-12 text-center">
             <p className="font-semibold text-lg text-text-primary">
-                Branch not found
+                Reference not found
             </p>
             <p className="mt-2 text-text-secondary">
-                The branch{" "}
+                The {reference.kind ?? "reference"}{" "}
                 <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-sm dark:bg-zinc-700">
-                    {branch}
+                    {reference.value}
                 </code>{" "}
                 does not exist in{" "}
                 <Link
@@ -117,7 +118,12 @@ export function CommitsList(props: CommitsListProps) {
     );
 }
 
-function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
+function CommitsListInner({
+    owner,
+    repo,
+    reference,
+    config,
+}: CommitsListProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -149,7 +155,8 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
                 provider: config.provider,
                 owner,
                 repo,
-                branch,
+                ref: reference.value,
+                refKind: reference.kind,
                 perPage: 35,
                 author: author ?? undefined,
                 pagination:
@@ -225,14 +232,14 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
         updateParams,
     ]);
 
-    const handleBranchChange = useCallback(
-        (newBranch: string) => {
+    const handleReferenceChange = useCallback(
+        (nextReference: RepositoryReference) => {
             setNav({ page: 1 });
             router.push(
-                `${config.basePath}/${owner}/${repo}/commits/${newBranch}`,
+                commitsHref(config.provider, owner, repo, nextReference),
             );
         },
-        [config.basePath, owner, repo, router],
+        [config.provider, owner, repo, router],
     );
 
     const handleAuthorToggle = useCallback(
@@ -278,21 +285,21 @@ function CommitsListInner({ owner, repo, branch, config }: CommitsListProps) {
             <CommitsToolbar
                 owner={owner}
                 repo={repo}
-                branch={branch}
+                reference={reference}
                 provider={config.provider}
                 author={author}
-                onBranchChange={handleBranchChange}
+                onReferenceChange={handleReferenceChange}
                 onAuthorToggle={handleAuthorToggle}
             />
 
             {isLoading && <SkeletonList />}
 
             {isError && (
-                <BranchNotFoundError
+                <ReferenceNotFoundError
                     error={error}
                     owner={owner}
                     repo={repo}
-                    branch={branch}
+                    reference={reference}
                     config={config}
                 />
             )}

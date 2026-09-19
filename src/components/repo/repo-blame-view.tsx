@@ -12,6 +12,7 @@ import {
     blobHref,
     type Provider,
     type RepositoryReference,
+    rawContentReference,
     rawUrl,
 } from "~/utils/provider-url";
 import { RepoBusyBar } from "./repo-busy-bar";
@@ -103,7 +104,13 @@ export function RepoBlameView({
         );
     }
 
-    const raw = rawUrl(provider, owner, repo, reference.value, path);
+    const raw = rawUrl(
+        provider,
+        owner,
+        repo,
+        rawContentReference(reference, file.objectId),
+        path,
+    );
     const blame = blameQuery.data;
     const busy = file.busy || blameQuery.isPlaceholderData;
 

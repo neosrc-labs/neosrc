@@ -74,6 +74,17 @@ export function branchesHref(
     return `/${provider}/${owner}/${repo}/branches`;
 }
 
+/** In-app commit-history URL for a repository reference. */
+export function commitsHref(
+    provider: Provider,
+    owner: string,
+    repo: string,
+    reference: RepositoryReference,
+): string {
+    const href = `/${provider}/${owner}/${repo}/commits/${encodeURIComponent(reference.value)}`;
+    return withReferenceKind(href, reference);
+}
+
 /** In-app file URL for a repository reference and path. */
 export function blobHref(
     provider: Provider,
@@ -98,18 +109,18 @@ export function blameHref(
     return withReferenceKind(href, reference);
 }
 
-/** The provider's commit-history page for `path` at `ref`. */
+/** The provider's commit-history page for `path` at `reference`. */
 export function historyUrl(
     provider: Provider,
     owner: string,
     repo: string,
-    ref: string,
+    reference: RepositoryReference,
     path: string,
 ): string {
     const encodedPath = encodeRepoPath(path);
-    const encodedRef = encodeURIComponent(ref);
+    const encodedRef = encodeURIComponent(reference.value);
     return provider === "cb"
-        ? `https://codeberg.org/${owner}/${repo}/commits/branch/${encodedRef}/${encodedPath}`
+        ? `https://codeberg.org/${owner}/${repo}/commits/${reference.kind ?? "branch"}/${encodedRef}/${encodedPath}`
         : `https://github.com/${owner}/${repo}/commits/${encodedRef}/${encodedPath}`;
 }
 
@@ -133,17 +144,35 @@ export function compareUrl(
         : `https://github.com/${owner}/${repo}/compare/${range}?expand=1`;
 }
 
-/** The provider's raw blob URL (githubusercontent / codeberg raw). */
+/**
+ * Keeps named branch/tag raw links readable while pinning native or commit
+ * references to the resolved object.
+ */
+export function rawContentReference(
+    reference: RepositoryReference,
+    resolvedObjectId: string | null,
+): RepositoryReference {
+    if (reference.kind === "branch" || reference.kind === "tag") {
+        return reference;
+    }
+    return {
+        kind: "commit",
+        value: resolvedObjectId ?? reference.value,
+    };
+}
+
+/** The provider's raw blob URL. */
 export function rawUrl(
     provider: Provider,
     owner: string,
     repo: string,
-    ref: string,
+    reference: RepositoryReference,
     path: string,
 ): string {
     const encoded = encodeRepoPath(path);
     const suffix = encoded ? `/${encoded}` : "";
+    const encodedRef = encodeURIComponent(reference.value);
     return provider === "cb"
-        ? `https://codeberg.org/${owner}/${repo}/raw/branch/${ref}${suffix}`
-        : `https://raw.githubusercontent.com/${owner}/${repo}/${ref}${suffix}`;
+        ? `https://codeberg.org/${owner}/${repo}/raw/${reference.kind ?? "branch"}/${encodedRef}${suffix}`
+        : `https://raw.githubusercontent.com/${owner}/${repo}/${reference.value}${suffix}`;
 }

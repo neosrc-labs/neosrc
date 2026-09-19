@@ -29,7 +29,8 @@ describe("RepoDocFiles", () => {
             <RepoDocFiles
                 owner="o"
                 repo="r"
-                ref="master"
+                contentRef="master"
+                rawReference={{ kind: "branch", value: "master" }}
                 provider="gh"
                 fileNames={[{ name: "LICENSE", path: "LICENSE" }]}
                 hideEmpty
@@ -44,7 +45,8 @@ describe("RepoDocFiles", () => {
             <RepoDocFiles
                 owner="o"
                 repo="r"
-                ref="master"
+                contentRef="master"
+                rawReference={{ kind: "branch", value: "master" }}
                 provider="gh"
                 fileNames={[{ name: "COPYING", path: "COPYING" }]}
                 hideEmpty

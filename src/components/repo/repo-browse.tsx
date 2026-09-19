@@ -14,6 +14,7 @@ import { api } from "~/trpc/react";
 import {
     blobHref,
     branchesHref,
+    commitsHref,
     type Provider,
     type RepositoryReference,
     repoUrl,
@@ -173,7 +174,7 @@ export function RepoBrowse({
                                 owner={owner}
                                 repo={repo}
                                 provider={provider}
-                                selectedRef={reference.value}
+                                reference={reference}
                                 latestCommit={latestCommit}
                             />
                             {browseQuery.isPending ? (
@@ -436,13 +437,13 @@ function ListingCommitRow({
     owner,
     repo,
     provider,
-    selectedRef,
+    reference,
     latestCommit,
 }: {
     owner: string;
     repo: string;
     provider: Provider;
-    selectedRef: string;
+    reference: RepositoryReference;
     latestCommit: RepoLatestCommit | undefined;
 }) {
     const { data: checks, isFetching: checksFetching } =
@@ -465,7 +466,7 @@ function ListingCommitRow({
             provider={provider}
             commit={latestCommit ?? null}
             author={latestCommit?.author ?? null}
-            historyHref={`/${provider}/${owner}/${repo}/commits/${encodeURIComponent(selectedRef)}`}
+            historyHref={commitsHref(provider, owner, repo, reference)}
             historyLabel={
                 latestCommit
                     ? `${commitCount.toLocaleString()} ${

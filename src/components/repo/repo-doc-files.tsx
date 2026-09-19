@@ -6,12 +6,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import { api } from "~/trpc/react";
 import { getDocFileDisplayName, getDocFileHashName } from "~/utils/doc-files";
-import { type Provider, rawUrl } from "~/utils/provider-url";
+import {
+    type Provider,
+    type RepositoryReference,
+    rawUrl,
+} from "~/utils/provider-url";
 
 interface RepoDocFilesProps {
     owner: string;
     repo: string;
-    ref: string;
+    contentRef: string;
+    rawReference: RepositoryReference;
     provider?: Provider;
     fileNames?: { name: string; path: string }[];
     /** Render nothing instead of the "add a README" card when empty. */
@@ -21,7 +26,8 @@ interface RepoDocFilesProps {
 export function RepoDocFiles({
     owner,
     repo,
-    ref,
+    contentRef,
+    rawReference,
     provider,
     fileNames = [],
     hideEmpty = false,
@@ -35,7 +41,6 @@ export function RepoDocFiles({
     const [loadingPath, setLoadingPath] = useState<string | null>(null);
     const fileContentsRef = useRef(fileContents);
     fileContentsRef.current = fileContents;
-    const contentRef = useRef<HTMLDivElement>(null);
 
     const trpcUtils = api.useUtils();
     // Bumped on every load so a slower, superseded request can't clobber
@@ -51,7 +56,7 @@ export function RepoDocFiles({
                 const data = await trpcUtils.repos.getFileContent.fetch({
                     owner,
                     repo,
-                    ref,
+                    ref: contentRef,
                     path,
                     provider: provider ?? "gh",
                 });
@@ -66,7 +71,7 @@ export function RepoDocFiles({
                 if (version === loadVersionRef.current) setLoadingPath(null);
             }
         },
-        [owner, repo, ref, provider, trpcUtils],
+        [owner, repo, contentRef, provider, trpcUtils],
     );
 
     const activeFile = useMemo(() => {
@@ -118,7 +123,7 @@ export function RepoDocFiles({
     const docDir = activeFile?.path.includes("/")
         ? activeFile.path.slice(0, activeFile.path.lastIndexOf("/"))
         : "";
-    const imageBaseUrl = `${rawUrl(provider ?? "gh", owner, repo, ref, "")}${docDir ? `/${docDir}` : ""}`;
+    const imageBaseUrl = `${rawUrl(provider ?? "gh", owner, repo, rawReference, "")}${docDir ? `/${docDir}` : ""}`;
 
     return (
         <div
@@ -143,7 +148,7 @@ export function RepoDocFiles({
                     ))}
                 </div>
             </div>
-            <div ref={contentRef}>
+            <div>
                 {loadingPath !== null ? (
                     <DocContentSkeleton />
                 ) : currentContent != null ? (

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { blameHref, blobHref, compareUrl, treeHref } from "./provider-url";
+import {
+    blameHref,
+    blobHref,
+    commitsHref,
+    compareUrl,
+    historyUrl,
+    rawContentReference,
+    rawUrl,
+    treeHref,
+} from "./provider-url";
 
 describe("compareUrl", () => {
     it("builds a GitHub compare url with the form pre-expanded", () => {
@@ -45,5 +54,75 @@ describe("repository browse links", () => {
         expect(blameHref("gh", "acme", "app", reference, "src/a.ts")).toBe(
             "/gh/acme/app/blame/abc123/src/a.ts?refKind=commit",
         );
+    });
+
+    it("carries explicit reference kinds into commit history links", () => {
+        const reference = { kind: "tag", value: "release/1.0" } as const;
+
+        expect(commitsHref("cb", "acme", "app", reference)).toBe(
+            "/cb/acme/app/commits/release%2F1.0?refKind=tag",
+        );
+    });
+});
+
+describe("provider content links", () => {
+    it("uses Codeberg routes for each explicit reference kind", () => {
+        expect(
+            rawUrl(
+                "cb",
+                "acme",
+                "app",
+                { kind: "branch", value: "main" },
+                "docs/a b.md",
+            ),
+        ).toBe("https://codeberg.org/acme/app/raw/branch/main/docs/a%20b.md");
+        expect(
+            rawUrl(
+                "cb",
+                "acme",
+                "app",
+                { kind: "tag", value: "v1.0.0" },
+                "README.md",
+            ),
+        ).toBe("https://codeberg.org/acme/app/raw/tag/v1.0.0/README.md");
+        expect(
+            rawUrl(
+                "cb",
+                "acme",
+                "app",
+                { kind: "commit", value: "abc123" },
+                "README.md",
+            ),
+        ).toBe("https://codeberg.org/acme/app/raw/commit/abc123/README.md");
+    });
+
+    it("uses the reference kind in Codeberg path history links", () => {
+        expect(
+            historyUrl(
+                "cb",
+                "acme",
+                "app",
+                { kind: "tag", value: "v1.0.0" },
+                "src/index.ts",
+            ),
+        ).toBe("https://codeberg.org/acme/app/commits/tag/v1.0.0/src/index.ts");
+    });
+
+    it("pins native and commit content while preserving named refs", () => {
+        const tag = { kind: "tag", value: "v1.0.0" } as const;
+
+        expect(rawContentReference(tag, "tag-object")).toBe(tag);
+        expect(
+            rawContentReference(
+                { kind: null, value: "main" },
+                "resolved-object",
+            ),
+        ).toEqual({ kind: "commit", value: "resolved-object" });
+        expect(
+            rawContentReference(
+                { kind: "commit", value: "short-sha" },
+                "full-object",
+            ),
+        ).toEqual({ kind: "commit", value: "full-object" });
     });
 });

@@ -85,6 +85,8 @@ export function RefSelector({
         setOpen(false);
     };
 
+    const tabReferenceKind = tab === "branches" ? "branch" : "tag";
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -176,18 +178,26 @@ export function RefSelector({
                             <button
                                 key={item.name}
                                 type="button"
+                                aria-current={
+                                    item.name === reference.value &&
+                                    reference.kind === tabReferenceKind
+                                        ? "true"
+                                        : undefined
+                                }
                                 className={cn(
                                     "flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-surface-secondary",
-                                    item.name === reference.value
+                                    item.name === reference.value &&
+                                        reference.kind === tabReferenceKind
                                         ? "bg-surface-secondary"
                                         : "text-text-primary",
                                 )}
                                 onClick={() => handleSelect(item.name)}
                             >
                                 <span className="flex w-4 shrink-0 items-center justify-center">
-                                    {item.name === reference.value && (
-                                        <CheckIcon className="h-3.5 w-3.5 text-text-label" />
-                                    )}
+                                    {item.name === reference.value &&
+                                        reference.kind === tabReferenceKind && (
+                                            <CheckIcon className="h-3.5 w-3.5 text-text-label" />
+                                        )}
                                 </span>
                                 <span className="truncate">{item.name}</span>
                             </button>

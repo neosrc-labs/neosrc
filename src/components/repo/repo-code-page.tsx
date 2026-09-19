@@ -64,7 +64,11 @@ export function RepoCodePage({
                             <RepoDocFiles
                                 owner={owner}
                                 repo={repo}
-                                ref={repoDataForDocs.defaultBranch}
+                                contentRef={repoDataForDocs.defaultBranch}
+                                rawReference={{
+                                    kind: "branch",
+                                    value: repoDataForDocs.defaultBranch,
+                                }}
                                 fileNames={docFileNames}
                                 provider={provider}
                             />

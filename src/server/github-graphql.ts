@@ -642,13 +642,13 @@ query CommitByOid($owner: String!, $repo: String!, $oid: GitObjectID!) {
 	}
 }
 `;
-const BRANCH_COMMITS_QUERY = `
+const REFERENCE_COMMITS_QUERY = `
 ${SIMPLE_USER_FRAGMENT}
 
-query BranchCommits(
+query ReferenceCommits(
 	$owner: String!
 	$repo: String!
-	$branch: String!
+	$expression: String!
 	$first: Int
 	$last: Int
 	$after: String
@@ -656,20 +656,18 @@ query BranchCommits(
 	$author: CommitAuthor
 ) {
 	repository(owner: $owner, name: $repo) {
-		ref(qualifiedName: $branch) {
-			target {
-				... on Commit {
-					history(first: $first, last: $last, after: $after, before: $before, author: $author) {
-						totalCount
-						pageInfo { hasNextPage, hasPreviousPage, startCursor, endCursor }
-						nodes {
-							oid
-							message
-							committedDate
-							authors(first: 10) { nodes { name, email, avatarUrl, user { ...SimpleUser } } }
-							statusCheckRollup { state, contexts(first: 50) { nodes { ... on StatusContext { state, targetUrl, description, context, createdAt } ... on CheckRun { name, conclusion, status, detailsUrl, startedAt, completedAt } } } }
-							signature { __typename ... on GpgSignature { isValid, keyId, state } ... on SshSignature { isValid, state } ... on SmimeSignature { isValid, state } }
-						}
+		object(expression: $expression) {
+			... on Commit {
+				history(first: $first, last: $last, after: $after, before: $before, author: $author) {
+					totalCount
+					pageInfo { hasNextPage, hasPreviousPage, startCursor, endCursor }
+					nodes {
+						oid
+						message
+						committedDate
+						authors(first: 10) { nodes { name, email, avatarUrl, user { ...SimpleUser } } }
+						statusCheckRollup { state, contexts(first: 50) { nodes { ... on StatusContext { state, targetUrl, description, context, createdAt } ... on CheckRun { name, conclusion, status, detailsUrl, startedAt, completedAt } } } }
+						signature { __typename ... on GpgSignature { isValid, keyId, state } ... on SshSignature { isValid, state } ... on SmimeSignature { isValid, state } }
 					}
 				}
 			}
@@ -2582,7 +2580,7 @@ export async function getCommitGraphQL(
     };
 }
 
-export interface BranchCommitsResult {
+export interface ReferenceCommitsResult {
     commits: (Omit<GQLCommitWithAuthors, "signature"> & {
         signature?: GQLGitSignatureSummary | null;
         statusCheckRollup: {
@@ -2614,11 +2612,11 @@ export interface BranchCommitsResult {
     };
 }
 
-export async function getBranchCommitsGraphQL(
+export async function getReferenceCommitsGraphQL(
     accessToken: string,
     owner: string,
     repo: string,
-    branch: string,
+    reference: string,
     opts: {
         first?: number;
         last?: number;
@@ -2626,66 +2624,64 @@ export async function getBranchCommitsGraphQL(
         before?: string;
         authorId?: string;
     },
-): Promise<BranchCommitsResult> {
+): Promise<ReferenceCommitsResult> {
     const graphql = createGraphql(accessToken);
 
     const result = await graphql<{
         repository: {
-            ref: {
-                target: {
-                    history: {
-                        totalCount: number;
-                        pageInfo: {
-                            hasNextPage: boolean;
-                            hasPreviousPage: boolean;
-                            startCursor: string | null;
-                            endCursor: string | null;
-                        };
-                        nodes: Array<{
-                            oid: string;
-                            message: string;
-                            committedDate: string;
-                            authors: {
-                                nodes: Array<{
-                                    name: string;
-                                    avatarUrl: string;
-                                    user: {
-                                        __typename: string;
-                                        login: string;
-                                        avatarUrl: string;
-                                        url: string;
-                                    } | null;
-                                } | null>;
-                            };
-                            statusCheckRollup: {
-                                state: string;
-                                contexts: {
-                                    nodes: Array<{
-                                        __typename?: string;
-                                        state?: string;
-                                        targetUrl?: string | null;
-                                        description?: string | null;
-                                        context?: string;
-                                        name?: string;
-                                        status?: string;
-                                        conclusion?: string | null;
-                                        detailsUrl?: string | null;
-                                        createdAt?: string;
-                                        startedAt?: string;
-                                        completedAt?: string;
-                                    } | null> | null;
-                                };
-                            } | null;
-                            signature: GQLGitSignatureSummary | null;
-                        }>;
+            object: {
+                history: {
+                    totalCount: number;
+                    pageInfo: {
+                        hasNextPage: boolean;
+                        hasPreviousPage: boolean;
+                        startCursor: string | null;
+                        endCursor: string | null;
                     };
-                } | null;
+                    nodes: Array<{
+                        oid: string;
+                        message: string;
+                        committedDate: string;
+                        authors: {
+                            nodes: Array<{
+                                name: string;
+                                avatarUrl: string;
+                                user: {
+                                    __typename: string;
+                                    login: string;
+                                    avatarUrl: string;
+                                    url: string;
+                                } | null;
+                            } | null>;
+                        };
+                        statusCheckRollup: {
+                            state: string;
+                            contexts: {
+                                nodes: Array<{
+                                    __typename?: string;
+                                    state?: string;
+                                    targetUrl?: string | null;
+                                    description?: string | null;
+                                    context?: string;
+                                    name?: string;
+                                    status?: string;
+                                    conclusion?: string | null;
+                                    detailsUrl?: string | null;
+                                    createdAt?: string;
+                                    startedAt?: string;
+                                    completedAt?: string;
+                                } | null> | null;
+                            };
+                        } | null;
+                        signature: GQLGitSignatureSummary | null;
+                    }>;
+                };
             } | null;
         };
-    }>(BRANCH_COMMITS_QUERY, {
+    }>(REFERENCE_COMMITS_QUERY, {
         owner,
         repo,
-        branch,
+        expression: reference,
         first: opts.first,
         last: opts.last,
         after: opts.after,
@@ -2693,15 +2689,11 @@ export async function getBranchCommitsGraphQL(
         author: opts.authorId ? { id: opts.authorId } : null,
     });
 
-    const ref = result.repository.ref;
-    if (!ref) {
-        throw new Error(`Branch ${branch} not found in ${owner}/${repo}`);
+    const commit = result.repository.object;
+    if (!commit) {
+        throw new Error(`Reference ${reference} not found in ${owner}/${repo}`);
     }
-    const target = ref.target;
-    if (!target) {
-        throw new Error(`Branch ${branch} not found in ${owner}/${repo}`);
-    }
-    const history = target.history;
+    const history = commit.history;
 
     return {
         commits: history.nodes.map((node) => ({
