@@ -14,6 +14,11 @@ export default async function Home({
 }) {
     const session = await getSession();
     const params = await searchParams;
+    const errorCode = Array.isArray(params.error)
+        ? params.error[0]
+        : params.error;
+    const authError =
+        params.authError || errorCode ? (errorCode ?? "sign_in_failed") : null;
 
     if (session) {
         const accounts = await getLinkedAccounts(db, session.user.id);
@@ -38,9 +43,7 @@ export default async function Home({
 
     return (
         <HydrateClient>
-            <LandingPage
-                hasAuthError={Boolean(params.authError || params.error)}
-            />
+            <LandingPage authError={authError} />
         </HydrateClient>
     );
 }

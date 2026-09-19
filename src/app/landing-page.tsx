@@ -25,17 +25,18 @@ function Step({
     );
 }
 
-export function LandingPage({ hasAuthError }: { hasAuthError: boolean }) {
+export function LandingPage({ authError }: { authError: string | null }) {
     return (
         <main className="mx-auto min-h-[calc(100svh-var(--header-height))] max-w-3xl px-6 py-16">
             <div className="flex flex-col gap-16">
-                {hasAuthError && (
+                {authError && (
                     <p
                         className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-red-800 text-sm dark:border-red-800 dark:bg-red-950 dark:text-red-300"
                         role="alert"
                     >
-                        Sign-in failed. Try again, or verify the provider
-                        connection settings.
+                        {authError === "account_not_linked"
+                            ? "An account already uses this email. Sign in with the provider you used originally, then connect GitHub from your profile."
+                            : "Sign-in failed. Try again, or verify the provider connection settings."}
                     </p>
                 )}
                 <section className="flex flex-col items-center gap-6 text-center">
