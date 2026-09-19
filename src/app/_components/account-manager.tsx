@@ -140,8 +140,7 @@ export function AccountManager({
                                     <button
                                         type="button"
                                         disabled={
-                                            loading === provider.providerId ||
-                                            onlyOneLinked
+                                            loading !== null || onlyOneLinked
                                         }
                                         onClick={() => handleUnlink(account)}
                                         className="cursor-pointer rounded-md border border-red-300 px-3 py-1 text-red-600 text-xs transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
@@ -165,9 +164,7 @@ export function AccountManager({
                                     )}
                                     <button
                                         type="button"
-                                        disabled={
-                                            loading === provider.providerId
-                                        }
+                                        disabled={loading !== null}
                                         onClick={() =>
                                             handleLink(provider.providerId)
                                         }

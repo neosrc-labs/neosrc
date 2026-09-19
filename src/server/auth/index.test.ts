@@ -42,6 +42,7 @@ type AccountRow = {
     accessTokenExpiresAt: Date | null;
     refreshToken: string | null;
     refreshTokenExpiresAt: Date | null;
+    lastRefreshedAt?: Date | null;
     lastAuthError?: string | null;
 };
 
@@ -49,6 +50,7 @@ function createFakeDb(rows: AccountRow[]) {
     const state = {
         rows,
         updates: [] as Array<Record<string, unknown>>,
+        inTransaction: false,
     };
     let transactionTail = Promise.resolve();
     const fakeDb: Record<string, unknown> = {};
@@ -57,9 +59,11 @@ function createFakeDb(rows: AccountRow[]) {
         from: () => ({
             where: () => ({
                 limit: () => {
-                    const result = Promise.resolve(state.rows);
+                    const snapshot = () =>
+                        state.rows.map((row) => ({ ...row }));
+                    const result = Promise.resolve(snapshot());
                     return Object.assign(result, {
-                        for: async () => state.rows,
+                        for: async () => snapshot(),
                     });
                 },
             }),
@@ -88,9 +92,11 @@ function createFakeDb(rows: AccountRow[]) {
         const previous = transactionTail;
         transactionTail = current;
         await previous;
+        state.inTransaction = true;
         try {
             return await run(fakeDb);
         } finally {
+            state.inTransaction = false;
             release();
         }
     };
@@ -274,6 +280,39 @@ describe("getGitHubToken", () => {
         ]);
 
         expect(tokens.map(String)).toEqual(["fresh-access", "fresh-access"]);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not hold a database transaction during provider refresh", async () => {
+        const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
+        let refreshedInsideTransaction: boolean | undefined;
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async () => {
+                refreshedInsideTransaction = state.inTransaction;
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => REFRESHED_BODY,
+                };
+            }),
+        );
+
+        await getGitHubToken(fakeDb, "user-1");
+
+        expect(refreshedInsideTransaction).toBe(false);
+    });
+
+    it("backs off after a transient refresh failure", async () => {
+        const { fakeDb } = createFakeDb([expiredGitHubAccount()]);
+        const fetchMock = mockFetch({ ok: false, status: 502, body: {} });
+
+        await expect(getGitHubToken(fakeDb, "user-1")).rejects.toThrow(
+            "GitHub token refresh failed",
+        );
+        await expect(getGitHubToken(fakeDb, "user-1")).rejects.toThrow(
+            "GitHub token refresh temporarily unavailable",
+        );
         expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 

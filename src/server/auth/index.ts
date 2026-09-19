@@ -338,6 +338,8 @@ async function findAccountByProvider(
             accessTokenExpiresAt: betterAuthAccount.accessTokenExpiresAt,
             refreshToken: betterAuthAccount.refreshToken,
             refreshTokenExpiresAt: betterAuthAccount.refreshTokenExpiresAt,
+            lastRefreshedAt: betterAuthAccount.lastRefreshedAt,
+            lastAuthError: betterAuthAccount.lastAuthError,
         })
         .from(betterAuthAccount)
         .where(
@@ -355,7 +357,11 @@ type ProviderAccount = NonNullable<
     Awaited<ReturnType<typeof findAccountByProvider>>
 >;
 
+type ProviderTokenResult = { token: string } | { error: Error };
+
 const ACCESS_TOKEN_REFRESH_LEEWAY_MS = 30 * 60 * 1000;
+const REFRESH_FAILURE_COOLDOWN_MS = 30 * 1000;
+const providerRefreshes = new Map<string, Promise<string>>();
 
 function isAccessTokenDue(expiresAt: Date | null | undefined): boolean {
     if (!expiresAt) return false;
@@ -364,6 +370,15 @@ function isAccessTokenDue(expiresAt: Date | null | undefined): boolean {
 
 function isAccessTokenExpired(expiresAt: Date | null | undefined): boolean {
     return Boolean(expiresAt && expiresAt.getTime() <= Date.now());
+}
+
+function isRefreshCoolingDown(account: ProviderAccount): boolean {
+    return Boolean(
+        account.lastAuthError &&
+            account.lastRefreshedAt &&
+            Date.now() - account.lastRefreshedAt.getTime() <
+                REFRESH_FAILURE_COOLDOWN_MS,
+    );
 }
 
 function providerName(providerId: ProviderId): string {
@@ -379,6 +394,51 @@ function accessTokenFrom(account: ProviderAccount): string | null {
     }
 }
 
+function accountStateError(
+    account: ProviderAccount | undefined,
+    name: string,
+): Error | null {
+    if (!account) {
+        return new ProviderAccountNotConnectedError(
+            `${name} account not connected`,
+        );
+    }
+    if (account.connectionStatus === "reauth_required") {
+        return new ProviderReauthenticationRequiredError(
+            `${name} account requires reconnection`,
+        );
+    }
+    return null;
+}
+
+function credentialsChanged(
+    current: ProviderAccount,
+    observed: ProviderAccount,
+): boolean {
+    return (
+        current.credentialVersion !== observed.credentialVersion ||
+        current.accessToken !== observed.accessToken ||
+        current.refreshToken !== observed.refreshToken
+    );
+}
+
+function concurrentCredentialResult(
+    account: ProviderAccount,
+    name: string,
+): ProviderTokenResult {
+    const error = accountStateError(account, name);
+    if (error) return { error };
+    const token = accessTokenFrom(account);
+    if (token && !isAccessTokenExpired(account.accessTokenExpiresAt)) {
+        return { token };
+    }
+    return {
+        error: new ProviderTokenUnavailableError(
+            `${name} credentials are unavailable`,
+        ),
+    };
+}
+
 async function recordRefreshFailure(
     database: typeof db,
     account: ProviderAccount,
@@ -388,7 +448,10 @@ async function recordRefreshFailure(
         error instanceof Error ? error.message.slice(0, 500) : "Refresh failed";
     await database
         .update(betterAuthAccount)
-        .set({ lastAuthError: message })
+        .set({
+            lastRefreshedAt: new Date(),
+            lastAuthError: message,
+        })
         .where(eq(betterAuthAccount.id, account.id));
 }
 
@@ -407,19 +470,18 @@ async function markReauthenticationRequired(
             idToken: null,
             accessTokenExpiresAt: null,
             refreshTokenExpiresAt: null,
+            lastRefreshedAt: new Date(),
             lastAuthError: error.code || error.message.slice(0, 500),
         })
         .where(eq(betterAuthAccount.id, account.id));
 }
 
-async function refreshAndStoreToken(
+async function storeRefreshedToken(
     database: typeof db,
     account: ProviderAccount,
-    refreshToken: string,
-    refresh: (refreshToken: string) => Promise<RefreshedToken>,
-): Promise<string> {
-    const issuedAt = Date.now();
-    const refreshed = await refresh(refreshToken);
+    refreshed: RefreshedToken,
+    issuedAt: number,
+): Promise<void> {
     await database
         .update(betterAuthAccount)
         .set({
@@ -439,7 +501,171 @@ async function refreshAndStoreToken(
             lastAuthError: null,
         })
         .where(eq(betterAuthAccount.id, account.id));
-    return refreshed.access_token;
+}
+
+async function settleRefreshFailure(
+    database: typeof db,
+    observed: ProviderAccount,
+    providerId: ProviderId,
+    error: unknown,
+    force: boolean,
+): Promise<ProviderTokenResult> {
+    return database.transaction(async (transaction) => {
+        const tx = transaction as unknown as typeof db;
+        const current = await findAccountByProvider(
+            tx,
+            observed.userId,
+            providerId,
+            true,
+        );
+        const name = providerName(providerId);
+        const stateError = accountStateError(current, name);
+        if (stateError || !current) {
+            return {
+                error:
+                    stateError ??
+                    new ProviderAccountNotConnectedError(
+                        `${name} account not connected`,
+                    ),
+            };
+        }
+        if (credentialsChanged(current, observed)) {
+            return concurrentCredentialResult(current, name);
+        }
+        if (error instanceof RefreshTokenRejectedError) {
+            await markReauthenticationRequired(tx, current, error);
+            return {
+                error: new ProviderReauthenticationRequiredError(
+                    `${name} account requires reconnection`,
+                ),
+            };
+        }
+
+        await recordRefreshFailure(tx, current, error);
+        const token = accessTokenFrom(current);
+        if (
+            token &&
+            !force &&
+            !isAccessTokenExpired(current.accessTokenExpiresAt)
+        ) {
+            return { token };
+        }
+        return {
+            error: new ProviderTokenUnavailableError(
+                `${name} token refresh failed`,
+            ),
+        };
+    });
+}
+
+async function refreshProviderTokenOnce(
+    database: typeof db,
+    userId: string,
+    providerId: ProviderId,
+    expectedAccessToken: string | null,
+    refresh: (refreshToken: string) => Promise<RefreshedToken>,
+    force: boolean,
+): Promise<string> {
+    const account = await findAccountByProvider(database, userId, providerId);
+    const name = providerName(providerId);
+    const stateError = accountStateError(account, name);
+    if (stateError || !account) {
+        throw (
+            stateError ??
+            new ProviderAccountNotConnectedError(
+                `${name} account not connected`,
+            )
+        );
+    }
+
+    const accessToken = accessTokenFrom(account);
+    const tokenChanged = account.accessToken !== expectedAccessToken;
+    if (
+        accessToken &&
+        ((!force && !isAccessTokenDue(account.accessTokenExpiresAt)) ||
+            (force &&
+                tokenChanged &&
+                !isAccessTokenDue(account.accessTokenExpiresAt)))
+    ) {
+        return accessToken;
+    }
+    if (isRefreshCoolingDown(account)) {
+        if (
+            accessToken &&
+            !force &&
+            !isAccessTokenExpired(account.accessTokenExpiresAt)
+        ) {
+            return accessToken;
+        }
+        throw new ProviderTokenUnavailableError(
+            `${name} token refresh temporarily unavailable`,
+        );
+    }
+
+    let refreshToken: string | null = null;
+    try {
+        refreshToken = account.refreshToken
+            ? decrypt(account.refreshToken)
+            : null;
+    } catch {
+        refreshToken = null;
+    }
+
+    if (!refreshToken) {
+        const result = await settleRefreshFailure(
+            database,
+            account,
+            providerId,
+            new Error("Refresh token is unavailable"),
+            force,
+        );
+        if ("error" in result) throw result.error;
+        return result.token;
+    }
+
+    const issuedAt = Date.now();
+    let refreshed: RefreshedToken;
+    try {
+        refreshed = await refresh(refreshToken);
+    } catch (error) {
+        const result = await settleRefreshFailure(
+            database,
+            account,
+            providerId,
+            error,
+            force,
+        );
+        if ("error" in result) throw result.error;
+        return result.token;
+    }
+
+    const result = await database.transaction(async (transaction) => {
+        const tx = transaction as unknown as typeof db;
+        const current = await findAccountByProvider(
+            tx,
+            userId,
+            providerId,
+            true,
+        );
+        const currentStateError = accountStateError(current, name);
+        if (currentStateError || !current) {
+            return {
+                error:
+                    currentStateError ??
+                    new ProviderAccountNotConnectedError(
+                        `${name} account not connected`,
+                    ),
+            } satisfies ProviderTokenResult;
+        }
+        if (credentialsChanged(current, account)) {
+            return concurrentCredentialResult(current, name);
+        }
+
+        await storeRefreshedToken(tx, current, refreshed, issuedAt);
+        return { token: refreshed.access_token } satisfies ProviderTokenResult;
+    });
+    if ("error" in result) throw result.error;
+    return result.token;
 }
 
 async function refreshProviderToken(
@@ -450,104 +676,26 @@ async function refreshProviderToken(
     refresh: (refreshToken: string) => Promise<RefreshedToken>,
     force: boolean,
 ): Promise<string> {
-    const result = await database.transaction(async (transaction) => {
-        const tx = transaction as unknown as typeof db;
-        const account = await findAccountByProvider(
-            tx,
-            userId,
-            providerId,
-            true,
-        );
-        const name = providerName(providerId);
-        if (!account) {
-            throw new ProviderAccountNotConnectedError(
-                `${name} account not connected`,
-            );
-        }
-        if (account.connectionStatus === "reauth_required") {
-            throw new ProviderReauthenticationRequiredError(
-                `${name} account requires reconnection`,
-            );
-        }
+    const key = `${userId}\0${providerId}`;
+    const existing = providerRefreshes.get(key);
+    if (existing) return existing;
 
-        const accessToken = accessTokenFrom(account);
-        const tokenChanged = account.accessToken !== expectedAccessToken;
-        if (
-            accessToken &&
-            ((!force && !isAccessTokenDue(account.accessTokenExpiresAt)) ||
-                (force &&
-                    tokenChanged &&
-                    !isAccessTokenDue(account.accessTokenExpiresAt)))
-        ) {
-            return { token: accessToken };
+    const pending = refreshProviderTokenOnce(
+        database,
+        userId,
+        providerId,
+        expectedAccessToken,
+        refresh,
+        force,
+    );
+    providerRefreshes.set(key, pending);
+    try {
+        return await pending;
+    } finally {
+        if (providerRefreshes.get(key) === pending) {
+            providerRefreshes.delete(key);
         }
-
-        let refreshToken: string | null = null;
-        try {
-            refreshToken = account.refreshToken
-                ? decrypt(account.refreshToken)
-                : null;
-        } catch {
-            refreshToken = null;
-        }
-
-        if (!refreshToken) {
-            await recordRefreshFailure(
-                tx,
-                account,
-                new Error("Refresh token is unavailable"),
-            );
-            if (
-                accessToken &&
-                !force &&
-                !isAccessTokenExpired(account.accessTokenExpiresAt)
-            ) {
-                return { token: accessToken };
-            }
-            return {
-                error: new ProviderTokenUnavailableError(
-                    `${name} credentials are unavailable`,
-                ),
-            };
-        }
-
-        try {
-            return {
-                token: await refreshAndStoreToken(
-                    tx,
-                    account,
-                    refreshToken,
-                    refresh,
-                ),
-            };
-        } catch (error) {
-            if (error instanceof RefreshTokenRejectedError) {
-                await markReauthenticationRequired(tx, account, error);
-                return {
-                    error: new ProviderReauthenticationRequiredError(
-                        `${name} account requires reconnection`,
-                    ),
-                };
-            }
-
-            await recordRefreshFailure(tx, account, error);
-            if (
-                accessToken &&
-                !force &&
-                !isAccessTokenExpired(account.accessTokenExpiresAt)
-            ) {
-                return { token: accessToken };
-            }
-            return {
-                error: new ProviderTokenUnavailableError(
-                    `${name} token refresh failed`,
-                ),
-            };
-        }
-    });
-
-    if ("error" in result) throw result.error;
-    return result.token;
+    }
 }
 
 async function getProviderToken(
