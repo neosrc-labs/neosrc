@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+    getLinkedAccount: vi.fn(),
     getSession: vi.fn(),
     isAnonymousToken: vi.fn(),
     getUserRepoPermission: vi.fn(),
@@ -8,9 +9,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("~/server/auth", () => ({
+    getLinkedAccount: mocks.getLinkedAccount,
     getSession: mocks.getSession,
     isAnonymousToken: mocks.isAnonymousToken,
 }));
+vi.mock("~/server/db", () => ({ db: {} }));
 vi.mock("~/server/github", () => ({
     getUserRepoPermission: mocks.getUserRepoPermission,
 }));
@@ -43,7 +46,11 @@ function context(
 beforeEach(() => {
     vi.clearAllMocks();
     mocks.getSession.mockResolvedValue({
-        user: { id: USER_ID, githubUsername: "ranger-ross" },
+        user: { id: USER_ID },
+    });
+    mocks.getLinkedAccount.mockResolvedValue({
+        providerId: "github",
+        username: "ranger-ross",
     });
     mocks.isAnonymousToken.mockReturnValue(false);
 });
@@ -108,8 +115,7 @@ describe("GitHub viewer permission", () => {
     });
 
     it("treats an unlinked session as anonymous without calling GitHub", async () => {
-        mocks.getSession.mockResolvedValue({ user: { id: USER_ID } });
-
+        mocks.getLinkedAccount.mockResolvedValue(undefined);
         const permissionContext = await context();
 
         expect(permissionContext).toEqual({
@@ -123,9 +129,6 @@ describe("GitHub viewer permission", () => {
     });
 
     it("still resolves the author flag when the permission lookup fails", async () => {
-        mocks.getSession.mockResolvedValue({
-            user: { id: USER_ID, githubUsername: "ranger-ross" },
-        });
         mocks.getUserRepoPermission.mockRejectedValue(new Error("boom"));
         mocks.getRepoPermissionForUser.mockResolvedValue(null);
 

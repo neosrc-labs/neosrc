@@ -4,7 +4,7 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
     getCodebergToken,
     getGitHubToken,
-    getGithubUsername,
+    getLinkedAccount,
     isAnonymousToken,
 } from "~/server/auth";
 import {
@@ -62,28 +62,18 @@ export const usersRouter = createTRPCRouter({
                 }
             }
 
-            const githubUsername = ctx.session?.user?.githubUsername;
-            const avatarUrl = ctx.session?.user?.image;
-
-            if (githubUsername && avatarUrl) {
-                return { login: githubUsername, avatarUrl };
-            }
-
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
+            const userId = ctx.session?.user?.id;
+            const accessToken = await getGitHubToken(ctx.db, userId);
             if (isAnonymousToken(accessToken)) return null;
-            const user = await getAuthenticatedUser(accessToken);
+
+            const [user, account] = await Promise.all([
+                getAuthenticatedUser(accessToken),
+                userId ? getLinkedAccount(ctx.db, userId, "github") : undefined,
+            ]);
 
             return {
-                login:
-                    githubUsername ??
-                    (await getGithubUsername(
-                        ctx.session?.user?.id ?? null,
-                        accessToken,
-                    )),
-                avatarUrl: avatarUrl ?? user.avatar_url,
+                login: account?.username ?? user.login,
+                avatarUrl: user.avatar_url,
             };
         }),
     getByUsername: protectedProcedure

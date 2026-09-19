@@ -2,7 +2,12 @@ import { z } from "zod";
 
 import { log } from "~/logging";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { getCodebergToken, getGitHubToken } from "~/server/auth";
+import {
+    getCodebergToken,
+    getGitHubToken,
+    getLinkedAccounts,
+    type LinkedProviderAccount,
+} from "~/server/auth";
 import type { db } from "~/server/db";
 import {
     fetchViewerCodebergIssues,
@@ -59,21 +64,15 @@ export async function mergeViewerItems<T extends { updatedAt: string }>(
     };
 }
 
-/**
- * Providers the viewer has an account for.
- *
- * A linked account is required: without one the token getters fall back to the
- * deployment's shared browsing token, and that account's own activity is not
- * the viewer's. Codeberg has no fallback at all.
- */
-export function viewerProviders(user: {
-    githubUsername: string | null;
-    codebergUsername: string | null;
-}): ViewerItemProvider[] {
-    const providers: ViewerItemProvider[] = [];
-    if (user.githubUsername) providers.push("gh");
-    if (user.codebergUsername) providers.push("cb");
-    return providers;
+/** Providers the viewer has an account for. */
+export function viewerProviders(
+    accounts: Pick<LinkedProviderAccount, "providerId">[],
+): ViewerItemProvider[] {
+    return (["github", "codeberg"] as const).flatMap((providerId) =>
+        accounts.some((account) => account.providerId === providerId)
+            ? [providerId === "github" ? "gh" : "cb"]
+            : [],
+    );
 }
 
 /** One load per provider the viewer can be queried as. */
@@ -104,16 +103,12 @@ function viewerItemLoads<T>(args: {
 
 /** Requested providers that the viewer can actually be queried as. */
 function requestedProviders(
-    user: {
-        githubUsername?: string | null;
-        codebergUsername?: string | null;
-    },
+    accounts: Pick<LinkedProviderAccount, "providerId">[],
     filter: ProviderFilter,
 ): ViewerItemProvider[] {
-    return viewerProviders({
-        githubUsername: user.githubUsername ?? null,
-        codebergUsername: user.codebergUsername ?? null,
-    }).filter((provider) => filter === "all" || provider === filter);
+    return viewerProviders(accounts).filter(
+        (provider) => filter === "all" || provider === filter,
+    );
 }
 
 const listInput = {
@@ -128,12 +123,13 @@ export const dashboardRouter = createTRPCRouter({
             async ({ ctx, input }): Promise<ViewerItemList<ViewerPullItem>> => {
                 const user = ctx.session?.user;
                 if (!user) return { items: [], unavailable: [] };
+                const accounts = await getLinkedAccounts(ctx.db, user.id);
 
                 return mergeViewerItems(
                     viewerItemLoads({
                         db: ctx.db,
                         userId: user.id,
-                        providers: requestedProviders(user, input.provider),
+                        providers: requestedProviders(accounts, input.provider),
                         limit: input.limit,
                         github: fetchViewerPulls,
                         codeberg: fetchViewerCodebergPulls,
@@ -152,12 +148,13 @@ export const dashboardRouter = createTRPCRouter({
             }): Promise<ViewerItemList<ViewerIssueItem>> => {
                 const user = ctx.session?.user;
                 if (!user) return { items: [], unavailable: [] };
+                const accounts = await getLinkedAccounts(ctx.db, user.id);
 
                 return mergeViewerItems(
                     viewerItemLoads({
                         db: ctx.db,
                         userId: user.id,
-                        providers: requestedProviders(user, input.provider),
+                        providers: requestedProviders(accounts, input.provider),
                         limit: input.limit,
                         github: fetchViewerIssues,
                         codeberg: fetchViewerCodebergIssues,

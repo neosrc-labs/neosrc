@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 
-import { getSession } from "~/server/auth";
+import { getLinkedAccount, getSession } from "~/server/auth";
 import { githubAppInstallUrl } from "~/server/auth/github-app";
+import { db } from "~/server/db";
 import { api } from "~/trpc/server";
 import { OnboardingView } from "./_components/onboarding-view";
 
@@ -15,8 +16,8 @@ export default async function OnboardingPage() {
     const session = await getSession();
     if (!session?.user) redirect("/");
 
-    const user = session.user as { id: string; githubUsername?: string };
-    if (!user.githubUsername) redirect("/");
+    const githubAccount = await getLinkedAccount(db, session.user.id, "github");
+    if (!githubAccount) redirect("/");
 
     const installations = await api.onboarding.getGitHubAppInstallations();
     if (installations.some((i) => i.suspended_at === null)) redirect("/");

@@ -22,6 +22,7 @@ vi.mock("~/server/auth", () => ({
     getSession: vi.fn(),
     getGitHubToken: vi.fn(),
     getCodebergToken: vi.fn(),
+    getLinkedAccounts: vi.fn(),
 }));
 
 const graphqlMock = vi.hoisted(() => vi.fn());
@@ -35,13 +36,19 @@ vi.mock("~/server/codeberg", () => ({
 }));
 
 import { createCallerFactory, createTRPCContext } from "~/server/api/trpc";
-import { getCodebergToken, getGitHubToken, getSession } from "~/server/auth";
+import {
+    getCodebergToken,
+    getGitHubToken,
+    getLinkedAccounts,
+    getSession,
+} from "~/server/auth";
 import { dashboardRouter } from "./index";
 import { RECENT_ITEM_LIMIT } from "./types";
 
 const getSessionMock = vi.mocked(getSession);
 const getGitHubTokenMock = vi.mocked(getGitHubToken);
 const getCodebergTokenMock = vi.mocked(getCodebergToken);
+const getLinkedAccountsMock = vi.mocked(getLinkedAccounts);
 
 type GqlVars = { searchQuery: string; first: number };
 
@@ -84,8 +91,21 @@ function ghResponse(typename: "PullRequest" | "Issue") {
     };
 }
 
-async function callerFor(session: unknown) {
+async function callerFor(
+    session: unknown,
+    providerIds: ("github" | "codeberg")[] = session
+        ? ["github", "codeberg"]
+        : [],
+) {
     getSessionMock.mockResolvedValue(session as never);
+    getLinkedAccountsMock.mockResolvedValue(
+        providerIds.map((providerId) => ({
+            id: `${providerId}-account`,
+            accountId: `${providerId}-user`,
+            providerId,
+            username: "octocat",
+        })),
+    );
     const ctx = await createTRPCContext({ headers: new Headers() });
     return createCallerFactory(dashboardRouter)(ctx);
 }
@@ -93,8 +113,6 @@ async function callerFor(session: unknown) {
 const bothLinked = {
     user: {
         id: "user-1",
-        githubUsername: "octocat",
-        codebergUsername: "octocat",
     },
 };
 
@@ -186,9 +204,9 @@ describe("dashboard router", () => {
     });
 
     it("skips Codeberg when the viewer has no Codeberg account", async () => {
-        const dashboard = await callerFor({
-            user: { id: "user-1", githubUsername: "octocat" },
-        });
+        const dashboard = await callerFor({ user: { id: "user-1" } }, [
+            "github",
+        ]);
 
         const result = await dashboard.recentPulls({});
 
@@ -198,7 +216,7 @@ describe("dashboard router", () => {
     });
 
     it("skips GitHub when the viewer has no GitHub account", async () => {
-        const dashboard = await callerFor({ user: { id: "user-1" } });
+        const dashboard = await callerFor({ user: { id: "user-1" } }, []);
 
         const result = await dashboard.recentPulls({});
 

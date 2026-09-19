@@ -7,7 +7,11 @@ import {
     providerMutation,
     providerQuery,
 } from "~/server/api/trpc";
-import { getCodebergToken, getGitHubToken } from "~/server/auth";
+import {
+    getCodebergToken,
+    getGitHubToken,
+    getLinkedAccount,
+} from "~/server/auth";
 import {
     readCache,
     repoIssuePullCountsCacheKey,
@@ -139,7 +143,15 @@ export const reposRouter = createTRPCRouter({
         }),
         userId: "anonymous",
         cb: async ({ ctx, input, accessToken }): Promise<RepositoryInfo> => {
-            const username = ctx.session?.user?.codebergUsername ?? null;
+            const username = ctx.session?.user
+                ? ((
+                      await getLinkedAccount(
+                          ctx.db,
+                          ctx.session.user.id,
+                          "codeberg",
+                      )
+                  )?.username ?? null)
+                : null;
             const [data, permission] = await Promise.all([
                 repoNotFoundAsTrpc(
                     getCachedCodebergRepo(accessToken, input.owner, input.repo),
@@ -200,7 +212,15 @@ export const reposRouter = createTRPCRouter({
             } satisfies RepositoryInfo;
         },
         gh: async ({ ctx, input, accessToken }): Promise<RepositoryInfo> => {
-            const username = ctx.session?.user?.githubUsername ?? null;
+            const username = ctx.session?.user
+                ? ((
+                      await getLinkedAccount(
+                          ctx.db,
+                          ctx.session.user.id,
+                          "github",
+                      )
+                  )?.username ?? null)
+                : null;
             const [data, permission] = await Promise.all([
                 repoNotFoundAsTrpc(
                     getCachedRepo(accessToken, input.owner, input.repo),
