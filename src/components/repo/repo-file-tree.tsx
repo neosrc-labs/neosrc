@@ -6,16 +6,20 @@ import {
     FileTree,
     FileTreeSkeleton,
 } from "~/components/file-tree";
-import type { RepoContentItem } from "~/server/github";
+import type { DirectoryEntry } from "~/server/repository/directory-browse";
 import { api } from "~/trpc/react";
-import { blobHref, type Provider, treeHref } from "~/utils/provider-url";
-import { sortRepoContents } from "./repo-contents";
+import {
+    blobHref,
+    type Provider,
+    type RepositoryReference,
+    treeHref,
+} from "~/utils/provider-url";
 
 interface RepoFileTreeProps {
     owner: string;
     repo: string;
     provider: Provider;
-    selectedRef: string;
+    reference: RepositoryReference;
     /** Path the main view shows; its ancestors start expanded and highlighted. */
     path: string;
 }
@@ -34,14 +38,14 @@ function expandedFor(path: string): string[] {
 /** Nodes for one listing; expanded directories carry their loaded children. */
 function toNodes(
     dirPath: string,
-    listings: Record<string, RepoContentItem[]>,
+    listings: Record<string, DirectoryEntry[]>,
     isExpanded: (path: string) => boolean,
     failed: Set<string>,
 ): FileNode[] {
     const rows = listings[dirPath];
     if (!rows) return [];
     return rows.map((row) => {
-        if (row.type !== "dir") {
+        if (row.kind !== "directory") {
             return { name: row.name, path: row.path, isFile: true };
         }
         if (!isExpanded(row.path)) {
@@ -82,7 +86,7 @@ export function RepoFileTree({
     owner,
     repo,
     provider,
-    selectedRef,
+    reference,
     path,
 }: RepoFileTreeProps) {
     const utils = api.useUtils();
@@ -90,14 +94,14 @@ export function RepoFileTree({
     const [expanded, setExpanded] = useState<Set<string>>(
         () => new Set(expandedFor(path)),
     );
-    const [listings, setListings] = useState<Record<string, RepoContentItem[]>>(
+    const [listings, setListings] = useState<Record<string, DirectoryEntry[]>>(
         {},
     );
     const [failed, setFailed] = useState<Set<string>>(new Set());
     const requested = useRef(new Set<string>());
 
     // A new provider, repository or ref invalidates every cached listing.
-    const scope = `${provider}/${owner}/${repo}/${selectedRef}`;
+    const scope = `${provider}/${owner}/${repo}/${reference.kind ?? "native"}/${reference.value}`;
     const scopeRef = useRef(scope);
     useEffect(() => {
         scopeRef.current = scope;
@@ -119,20 +123,28 @@ export function RepoFileTree({
         for (const dir of expanded) {
             if (requested.current.has(dir)) continue;
             requested.current.add(dir);
-            utils.repos.getContents
+            utils.repos.browseDirectory
                 .fetch({
                     provider,
                     owner,
                     repo,
-                    ref: selectedRef,
-                    path: dir || undefined,
+                    ref: reference.value,
+                    refKind: reference.kind,
+                    path: dir,
                 })
-                .then((rows) => {
-                    // A response from an earlier ref must not land in this one.
+                .then((result) => {
                     if (scopeRef.current !== current) return;
+                    if (
+                        result.outcome !== "found" ||
+                        result.classification.kind !== "directory"
+                    ) {
+                        throw new Error(
+                            `Directory ${dir || "/"} is unavailable`,
+                        );
+                    }
                     setListings((previous) => ({
                         ...previous,
-                        [dir]: sortRepoContents(rows),
+                        [dir]: result.entries,
                     }));
                 })
                 .catch(() => {
@@ -142,7 +154,7 @@ export function RepoFileTree({
                     setFailed((previous) => new Set(previous).add(dir));
                 });
         }
-    }, [expanded, utils, provider, owner, repo, selectedRef]);
+    }, [expanded, utils, provider, owner, repo, reference]);
 
     const isExpanded = useCallback(
         (nodePath: string) => expanded.has(nodePath),
@@ -186,10 +198,10 @@ export function RepoFileTree({
             <FileTree
                 activePath={path}
                 dirHref={(node) =>
-                    treeHref(provider, owner, repo, selectedRef, node.path)
+                    treeHref(provider, owner, repo, reference, node.path)
                 }
                 fileHref={(node) =>
-                    blobHref(provider, owner, repo, selectedRef, node.path)
+                    blobHref(provider, owner, repo, reference, node.path)
                 }
                 fileLink="route"
                 isExpanded={isExpanded}

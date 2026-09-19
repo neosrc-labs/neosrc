@@ -2,15 +2,23 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import type { RepoContentItem } from "~/server/github";
+import type { UndecoratedDirectoryEntry } from "~/server/repository/directory-browse";
 import { api } from "~/trpc/react";
-import { type Provider, treeHref } from "~/utils/provider-url";
-import { isFileEntry } from "./repo-contents";
-import { contentsPrevious, fileContentPrevious } from "./repo-previous-data";
+import {
+    type Provider,
+    type RepositoryReference,
+    treeHref,
+} from "~/utils/provider-url";
+import {
+    directoryBrowsePrevious,
+    fileContentPrevious,
+} from "./repo-previous-data";
 
 export interface RepoFileData {
     /** The path's entry, or null when it is not a file at this ref. */
-    entry: RepoContentItem | null;
+    entry: UndecoratedDirectoryEntry | null;
+    /** Immutable object used by follow-up file and history requests. */
+    objectId: string | null;
     /** File body; null for binary or too-large files. */
     content: string | null;
     /** "12 lines", "Binary file", or "" while the body is unknown. */
@@ -34,55 +42,64 @@ export function useRepoFileData({
     provider,
     owner,
     repo,
-    selectedRef,
+    reference,
     path,
 }: {
     provider: Provider;
     owner: string;
     repo: string;
-    selectedRef: string;
+    reference: RepositoryReference;
     path: string;
 }): RepoFileData {
     const router = useRouter();
-    const queryKey = `${provider}/${owner}/${repo}/${selectedRef}/${path}`;
+    const queryKey = `${provider}/${owner}/${repo}/${reference.kind ?? "native"}/${reference.value}/${path}`;
 
-    const contentsQuery = api.repos.getContents.useQuery(
+    const browseQuery = api.repos.browseDirectory.useQuery(
         {
             provider,
             owner,
             repo,
-            ref: selectedRef,
+            ref: reference.value,
+            refKind: reference.kind,
             path,
         },
-        { placeholderData: () => contentsPrevious.previous(queryKey) },
+        { placeholderData: () => directoryBrowsePrevious.previous(queryKey) },
     );
-    const contents = contentsQuery.data;
-    const contentsError = contentsQuery.error;
-    // The listing on screen still belongs to the path the user just left.
-    const contentsStale = contentsQuery.isPlaceholderData;
+    const browse = browseQuery.data;
+    const browseStale = browseQuery.isPlaceholderData;
 
     useEffect(() => {
-        if (!contentsStale && contents !== undefined && contents.length > 0) {
-            contentsPrevious.remember(queryKey, contents);
+        if (!browseStale && browse !== undefined) {
+            directoryBrowsePrevious.remember(queryKey, browse);
         }
-    }, [contentsStale, contents, queryKey]);
+    }, [browseStale, browse, queryKey]);
 
-    // Only a page that showed a file itself can supply a plausible body; a
-    // directory listing means the remembered body is from an older page.
-    const previousContents = contentsPrevious.previous(queryKey);
+    const previousBrowse = directoryBrowsePrevious.previous(queryKey);
     const previousWasFile =
-        previousContents?.length === 1 &&
-        isFileEntry(previousContents, previousContents[0]?.path ?? "");
+        previousBrowse?.outcome === "found" &&
+        previousBrowse.classification.kind !== "directory";
+    const classification =
+        browse?.outcome === "found" ? browse.classification : null;
+    const isFile =
+        !browseStale &&
+        classification !== null &&
+        classification.kind !== "directory";
+    const shouldFetchContent = isFile;
+    const resolvedObjectId =
+        !browseStale && browse?.outcome === "found"
+            ? browse.reference.objectId
+            : null;
 
     const contentQuery = api.repos.getFileContent.useQuery(
         {
             provider,
             owner,
             repo,
-            ref: selectedRef,
+            ref: resolvedObjectId ?? reference.value,
             path,
         },
         {
+            enabled: shouldFetchContent,
             placeholderData: previousWasFile
                 ? () => fileContentPrevious.previous(queryKey)
                 : undefined,
@@ -96,31 +113,31 @@ export function useRepoFileData({
         }
     }, [contentQuery.isPlaceholderData, fileData, queryKey]);
 
-    const isFile = !contentsStale && isFileEntry(contents, path);
-    const entry = isFile ? (contents?.[0] ?? null) : null;
-    // Any other non-empty listing is the directory's children.
-    const isDirectory =
-        !contentsStale &&
-        contents !== undefined &&
-        contents.length > 0 &&
-        !isFile;
+    const isDirectory = !browseStale && classification?.kind === "directory";
 
     useEffect(() => {
         if (isDirectory) {
-            router.replace(treeHref(provider, owner, repo, selectedRef, path));
+            router.replace(treeHref(provider, owner, repo, reference, path));
         }
-    }, [isDirectory, router, provider, owner, repo, selectedRef, path]);
+    }, [isDirectory, router, provider, owner, repo, reference, path]);
 
-    const pathMissing =
-        contentsError !== null ||
-        (!contentsStale && contents !== undefined && contents.length === 0);
+    if (!browseStale && browseQuery.error !== null) {
+        throw browseQuery.error;
+    }
 
+    const entry =
+        !browseStale &&
+        classification !== null &&
+        classification.kind !== "directory"
+            ? classification.entry
+            : null;
+    const pathMissing = !browseStale && browse?.outcome === "missing";
     const content = fileData?.content ?? null;
 
     return {
+        objectId: resolvedObjectId,
         entry,
         content,
-        // "Binary file" only holds once the content request has answered.
         contentLabel:
             content !== null
                 ? `${content.split("\n").length.toLocaleString()} lines`
@@ -129,10 +146,11 @@ export function useRepoFileData({
                   : "Binary file",
         pathMissing,
         busy:
-            contentsStale ||
+            browseQuery.isPending ||
+            browseStale ||
             contentQuery.isPlaceholderData ||
-            (!contentsQuery.isPending && contentQuery.isFetching),
-        contentFailed: contentQuery.error !== null,
-        retryContent: () => void contentQuery.refetch(),
+            (isFile && contentQuery.isFetching),
+        contentFailed: isFile && contentQuery.error !== null,
+        retryContent: contentQuery.refetch,
     };
 }

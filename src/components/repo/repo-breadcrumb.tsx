@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { type Provider, treeHref } from "~/utils/provider-url";
+import {
+    type Provider,
+    type RepositoryReference,
+    treeHref,
+} from "~/utils/provider-url";
 
 /**
  * `owner / repo / segments` trail above a directory listing. Every crumb links
@@ -10,13 +14,13 @@ import { type Provider, treeHref } from "~/utils/provider-url";
 export function RepoBreadcrumb({
     owner,
     repo,
-    selectedRef,
+    reference,
     provider,
     path,
 }: {
     owner: string;
     repo: string;
-    selectedRef: string;
+    reference: RepositoryReference;
     provider: Provider;
     path: string;
 }) {
@@ -57,7 +61,7 @@ export function RepoBreadcrumb({
                                     provider,
                                     owner,
                                     repo,
-                                    selectedRef,
+                                    reference,
                                     crumb.path,
                                 )}
                                 className="text-blue-600 hover:underline dark:text-blue-400"

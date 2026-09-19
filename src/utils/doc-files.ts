@@ -57,12 +57,17 @@ export function getDocFileHashName(name: string): string {
 
 /** Doc files among a directory listing, in display order. */
 export function pickDocFileNames(
-    items: { name: string; path: string; type: string }[],
+    items: (
+        | { name: string; path: string; type: string }
+        | { name: string; path: string; kind: string }
+    )[],
 ): DocFileName[] {
     return items
         .filter(
             (item) =>
-                item.type === "file" &&
+                ("kind" in item
+                    ? item.kind === "file"
+                    : item.type === "file") &&
                 DOC_FILE_PATTERNS.some((p) => p.test(item.name)),
         )
         .map((item) => ({

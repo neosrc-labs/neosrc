@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { RepoBlamePage } from "~/components/repo/repo-blame-page";
+import { parseRepositoryReference } from "~/utils/provider-url";
 
 interface BlameParams {
     owner: string;
@@ -20,17 +22,21 @@ export async function generateMetadata({
 
 export default async function BlamePage({
     params,
+    searchParams,
 }: {
     params: Promise<BlameParams>;
+    searchParams: Promise<{ refKind?: string | string[] }>;
 }) {
     const { owner, repo, branch, path } = await params;
-
+    const query = await searchParams;
+    const reference = parseRepositoryReference(branch, query.refKind);
+    if (!reference) notFound();
     return (
         <RepoBlamePage
             provider="gh"
             owner={owner}
             repo={repo}
-            selectedRef={branch}
+            reference={reference}
             path={(path ?? []).join("/")}
         />
     );

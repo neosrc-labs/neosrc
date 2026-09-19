@@ -1,7 +1,6 @@
 import type { RouterOutputs } from "~/trpc/react";
 
-type ContentsData = RouterOutputs["repos"]["getContents"];
-type FileCommitsData = RouterOutputs["repos"]["getFileLatestCommits"];
+type DirectoryBrowseData = RouterOutputs["repos"]["browseDirectory"];
 type PathCommitsData = RouterOutputs["repos"]["getPathCommits"];
 type FileContentData = RouterOutputs["repos"]["getFileContent"];
 type BlameData = RouterOutputs["repos"]["getBlame"];
@@ -27,8 +26,8 @@ function createPreviousValue<T>() {
     };
 }
 
-export const contentsPrevious = createPreviousValue<ContentsData>();
-export const fileCommitsPrevious = createPreviousValue<FileCommitsData>();
+export const directoryBrowsePrevious =
+    createPreviousValue<DirectoryBrowseData>();
 export const pathCommitsPrevious = createPreviousValue<PathCommitsData>();
 export const fileContentPrevious = createPreviousValue<FileContentData>();
 export const blamePrevious = createPreviousValue<BlameData>();

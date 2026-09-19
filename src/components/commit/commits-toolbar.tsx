@@ -28,8 +28,8 @@ export function CommitsToolbar({
                 owner={owner}
                 repo={repo}
                 provider={provider}
-                selectedRef={branch}
-                onSelect={onBranchChange}
+                reference={{ kind: null, value: branch }}
+                onSelect={(reference) => onBranchChange(reference.value)}
             />
 
             <div className="flex items-center gap-2">

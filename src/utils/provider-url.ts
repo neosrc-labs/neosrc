@@ -1,5 +1,36 @@
 export type Provider = "gh" | "cb";
 
+export type ReferenceKind = "branch" | "tag" | "commit";
+
+export interface RepositoryReference {
+    kind: ReferenceKind | null;
+    value: string;
+}
+
+export function parseRepositoryReference(
+    value: string,
+    kind: string | string[] | null | undefined,
+): RepositoryReference | null {
+    const normalizedKind = kind ?? null;
+    if (
+        Array.isArray(normalizedKind) ||
+        (normalizedKind !== null &&
+            normalizedKind !== "branch" &&
+            normalizedKind !== "tag" &&
+            normalizedKind !== "commit")
+    ) {
+        return null;
+    }
+    return { kind: normalizedKind, value };
+}
+
+function withReferenceKind(
+    href: string,
+    reference: RepositoryReference,
+): string {
+    return reference.kind ? `${href}?refKind=${reference.kind}` : href;
+}
+
 export function domain(provider: Provider): string {
     return provider === "cb" ? "codeberg.org" : "github.com";
 }
@@ -21,16 +52,17 @@ export function encodeRepoPath(path: string): string {
     return path.split("/").filter(Boolean).map(encodeURIComponent).join("/");
 }
 
-/** In-app tree URL for `ref` + `path`; `path` "" is the repo root. */
+/** In-app tree URL for a reference and path; path "" is the repo root. */
 export function treeHref(
     provider: Provider,
     owner: string,
     repo: string,
-    ref: string,
+    reference: RepositoryReference,
     path?: string,
 ): string {
-    const base = `/${provider}/${owner}/${repo}/tree/${encodeURIComponent(ref)}`;
-    return path ? `${base}/${encodeRepoPath(path)}` : base;
+    const base = `/${provider}/${owner}/${repo}/tree/${encodeURIComponent(reference.value)}`;
+    const href = path ? `${base}/${encodeRepoPath(path)}` : base;
+    return withReferenceKind(href, reference);
 }
 
 /** In-app branch-list URL. */
@@ -42,26 +74,28 @@ export function branchesHref(
     return `/${provider}/${owner}/${repo}/branches`;
 }
 
-/** In-app file URL for `ref` + `path`. */
+/** In-app file URL for a repository reference and path. */
 export function blobHref(
     provider: Provider,
     owner: string,
     repo: string,
-    ref: string,
+    reference: RepositoryReference,
     path: string,
 ): string {
-    return `/${provider}/${owner}/${repo}/blob/${encodeURIComponent(ref)}/${encodeRepoPath(path)}`;
+    const href = `/${provider}/${owner}/${repo}/blob/${encodeURIComponent(reference.value)}/${encodeRepoPath(path)}`;
+    return withReferenceKind(href, reference);
 }
 
-/** In-app blame URL for `ref` + `path`. */
+/** In-app blame URL for a repository reference and path. */
 export function blameHref(
     provider: Provider,
     owner: string,
     repo: string,
-    ref: string,
+    reference: RepositoryReference,
     path: string,
 ): string {
-    return `/${provider}/${owner}/${repo}/blame/${encodeURIComponent(ref)}/${encodeRepoPath(path)}`;
+    const href = `/${provider}/${owner}/${repo}/blame/${encodeURIComponent(reference.value)}/${encodeRepoPath(path)}`;
+    return withReferenceKind(href, reference);
 }
 
 /** The provider's commit-history page for `path` at `ref`. */

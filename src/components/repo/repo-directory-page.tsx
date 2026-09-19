@@ -1,7 +1,7 @@
 "use client";
 
 import { pickDocFileNames } from "~/utils/doc-files";
-import type { Provider } from "~/utils/provider-url";
+import type { Provider, RepositoryReference } from "~/utils/provider-url";
 import { RepoDocFiles } from "./repo-doc-files";
 import { RepoPathBrowse } from "./repo-path-browse";
 
@@ -10,7 +10,7 @@ interface RepoDirectoryPageProps {
     repo: string;
     provider: Provider;
     /** Branch or tag taken from the URL. */
-    selectedRef: string;
+    reference: RepositoryReference;
     /** Repo-relative directory path; never "" on this page. */
     path: string;
 }
@@ -23,7 +23,7 @@ export function RepoDirectoryPage({
     owner,
     repo,
     provider,
-    selectedRef,
+    reference,
     path,
 }: RepoDirectoryPageProps) {
     return (
@@ -31,15 +31,15 @@ export function RepoDirectoryPage({
             owner={owner}
             repo={repo}
             provider={provider}
-            selectedRef={selectedRef}
+            reference={reference}
             path={path}
         >
-            {(contents) => (
+            {(contents, resolvedObjectId) => (
                 <RepoDocFiles
                     owner={owner}
                     repo={repo}
                     provider={provider}
-                    ref={selectedRef}
+                    ref={resolvedObjectId ?? reference.value}
                     fileNames={pickDocFileNames(contents)}
                     hideEmpty
                 />

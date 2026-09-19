@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { blameHref, blobHref, type Provider } from "~/utils/provider-url";
+import {
+    blameHref,
+    blobHref,
+    type Provider,
+    type RepositoryReference,
+} from "~/utils/provider-url";
 
 interface RepoFileTabsProps {
     provider: Provider;
     owner: string;
     repo: string;
-    selectedRef: string;
+    reference: RepositoryReference;
     path: string;
     active: "blob" | "blame";
 }
@@ -25,7 +30,7 @@ export function RepoFileTabs({
     provider,
     owner,
     repo,
-    selectedRef,
+    reference,
     path,
     active,
 }: RepoFileTabsProps) {
@@ -35,14 +40,14 @@ export function RepoFileTabs({
     return (
         <div className="flex items-center rounded-md border border-border p-0.5 text-xs">
             <Link
-                href={blobHref(provider, owner, repo, selectedRef, path)}
+                href={blobHref(provider, owner, repo, reference, path)}
                 aria-current={active === "blob" ? "page" : undefined}
                 className={active === "blob" ? ACTIVE_CLASS : INACTIVE_CLASS}
             >
                 Code
             </Link>
             <Link
-                href={blameHref(provider, owner, repo, selectedRef, path)}
+                href={blameHref(provider, owner, repo, reference, path)}
                 aria-current={active === "blame" ? "page" : undefined}
                 className={active === "blame" ? ACTIVE_CLASS : INACTIVE_CLASS}
             >

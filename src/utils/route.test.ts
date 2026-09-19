@@ -38,95 +38,100 @@ describe("isChangesPage", () => {
 describe("parseRepoBrowsePath", () => {
     const base = "/gh/o/r";
 
-    it("parses a tree path", () => {
+    it("parses marker-free tree, blob, and blame paths", () => {
         expect(
-            parseRepoBrowsePath(`${base}/tree/master/doc/book`, base),
-        ).toEqual({ view: "tree", ref: "master", path: "doc/book" });
-    });
-
-    it("parses a blob path", () => {
-        expect(parseRepoBrowsePath(`${base}/blob/master/a/b.md`, base)).toEqual(
-            {
-                view: "blob",
-                ref: "master",
-                path: "a/b.md",
-            },
-        );
-    });
-
-    it("parses a blame path", () => {
+            parseRepoBrowsePath(`${base}/tree/master/doc/book`, base, null),
+        ).toEqual({
+            view: "tree",
+            reference: { kind: null, value: "master" },
+            path: "doc/book",
+        });
         expect(
-            parseRepoBrowsePath(`${base}/blame/master/a/b.md`, base),
+            parseRepoBrowsePath(`${base}/blob/master/a/b.md`, base, null),
+        ).toEqual({
+            view: "blob",
+            reference: { kind: null, value: "master" },
+            path: "a/b.md",
+        });
+        expect(
+            parseRepoBrowsePath(`${base}/blame/master/a/b.md`, base, null),
         ).toEqual({
             view: "blame",
-            ref: "master",
+            reference: { kind: null, value: "master" },
             path: "a/b.md",
         });
     });
 
-    it("parses the branch root with an empty path", () => {
-        expect(parseRepoBrowsePath(`${base}/tree/master`, base)).toEqual({
+    it("preserves explicit branch, tag, and commit kinds", () => {
+        for (const kind of ["branch", "tag", "commit"] as const) {
+            expect(
+                parseRepoBrowsePath(`${base}/tree/release/doc`, base, kind),
+            ).toEqual({
+                view: "tree",
+                reference: { kind, value: "release" },
+                path: "doc",
+            });
+        }
+    });
+
+    it("parses the reference root with an empty path", () => {
+        expect(parseRepoBrowsePath(`${base}/tree/master`, base, null)).toEqual({
             view: "tree",
-            ref: "master",
+            reference: { kind: null, value: "master" },
             path: "",
         });
     });
 
-    it("decodes an encoded ref", () => {
+    it("decodes encoded reference and path segments", () => {
         expect(
-            parseRepoBrowsePath(`${base}/tree/renovate%2Fgix-0.x/doc`, base),
+            parseRepoBrowsePath(
+                `${base}/tree/renovate%2Fgix-0.x/my%20dir/a%20b.md`,
+                base,
+                "branch",
+            ),
         ).toEqual({
             view: "tree",
-            ref: "renovate/gix-0.x",
-            path: "doc",
-        });
-    });
-
-    it("decodes an encoded path segment", () => {
-        expect(
-            parseRepoBrowsePath(`${base}/blob/master/my%20dir/a%20b.md`, base),
-        ).toEqual({
-            view: "blob",
-            ref: "master",
+            reference: { kind: "branch", value: "renovate/gix-0.x" },
             path: "my dir/a b.md",
         });
     });
 
-    it("keeps a malformed segment raw", () => {
-        expect(parseRepoBrowsePath(`${base}/tree/master/a%zz`, base)).toEqual({
+    it("keeps a malformed path segment raw", () => {
+        expect(
+            parseRepoBrowsePath(`${base}/tree/master/a%zz`, base, null),
+        ).toEqual({
             view: "tree",
-            ref: "master",
+            reference: { kind: null, value: "master" },
             path: "a%zz",
         });
     });
 
     it("ignores a trailing slash", () => {
-        expect(parseRepoBrowsePath(`${base}/tree/master/doc/`, base)).toEqual({
+        expect(
+            parseRepoBrowsePath(`${base}/tree/master/doc/`, base, null),
+        ).toEqual({
             view: "tree",
-            ref: "master",
+            reference: { kind: null, value: "master" },
             path: "doc",
         });
     });
 
-    it("returns null for the repo root", () => {
-        expect(parseRepoBrowsePath(base, base)).toBeNull();
-    });
-
-    it("returns null for other repo routes", () => {
-        expect(parseRepoBrowsePath(`${base}/pulls`, base)).toBeNull();
-        expect(parseRepoBrowsePath(`${base}/pull/12/changes`, base)).toBeNull();
-    });
-
-    it("returns null for a view that is not tree or blob", () => {
-        expect(parseRepoBrowsePath(`${base}/commits/master`, base)).toBeNull();
-    });
-
-    it("returns null for a missing ref", () => {
-        expect(parseRepoBrowsePath(`${base}/tree`, base)).toBeNull();
-        expect(parseRepoBrowsePath(`${base}/tree/`, base)).toBeNull();
-    });
-
-    it("returns null for another repo's URL", () => {
-        expect(parseRepoBrowsePath("/cb/o/r/tree/master", base)).toBeNull();
+    it("rejects invalid markers and non-browse paths", () => {
+        expect(
+            parseRepoBrowsePath(`${base}/tree/master`, base, "release"),
+        ).toBeNull();
+        expect(parseRepoBrowsePath(base, base, null)).toBeNull();
+        expect(parseRepoBrowsePath(`${base}/pulls`, base, null)).toBeNull();
+        expect(
+            parseRepoBrowsePath(`${base}/pull/12/changes`, base, null),
+        ).toBeNull();
+        expect(
+            parseRepoBrowsePath(`${base}/commits/master`, base, null),
+        ).toBeNull();
+        expect(parseRepoBrowsePath(`${base}/tree`, base, null)).toBeNull();
+        expect(parseRepoBrowsePath(`${base}/tree/`, base, null)).toBeNull();
+        expect(
+            parseRepoBrowsePath("/cb/o/r/tree/master", base, null),
+        ).toBeNull();
     });
 });

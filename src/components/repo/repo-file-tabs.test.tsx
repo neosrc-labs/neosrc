@@ -9,7 +9,7 @@ function renderTabs(active: "blob" | "blame", provider: "gh" | "cb" = "gh") {
             provider={provider}
             owner="o"
             repo="r"
-            selectedRef="main"
+            reference={{ kind: null, value: "main" }}
             path="a.txt"
             active={active}
         />,

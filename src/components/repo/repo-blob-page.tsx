@@ -1,6 +1,6 @@
 "use client";
 
-import type { Provider } from "~/utils/provider-url";
+import type { Provider, RepositoryReference } from "~/utils/provider-url";
 import { RepoBreadcrumb } from "./repo-breadcrumb";
 import { RepoContentCard } from "./repo-content-card";
 import { RepoFileView } from "./repo-file-view";
@@ -10,7 +10,7 @@ interface RepoBlobPageProps {
     repo: string;
     provider: Provider;
     /** Branch or tag taken from the URL. */
-    selectedRef: string;
+    reference: RepositoryReference;
     /** Repo-relative file path. */
     path: string;
 }
@@ -23,7 +23,7 @@ export function RepoBlobPage({
     owner,
     repo,
     provider,
-    selectedRef,
+    reference,
     path,
 }: RepoBlobPageProps) {
     return (
@@ -31,7 +31,7 @@ export function RepoBlobPage({
             <RepoBreadcrumb
                 owner={owner}
                 repo={repo}
-                selectedRef={selectedRef}
+                reference={reference}
                 provider={provider}
                 path={path}
             />
@@ -40,7 +40,7 @@ export function RepoBlobPage({
                     owner={owner}
                     repo={repo}
                     provider={provider}
-                    selectedRef={selectedRef}
+                    reference={reference}
                     path={path}
                 />
             </RepoContentCard>

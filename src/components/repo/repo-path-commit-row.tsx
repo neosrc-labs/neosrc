@@ -8,6 +8,7 @@ import {
     blobHref,
     historyUrl,
     type Provider,
+    type RepositoryReference,
     treeHref,
 } from "~/utils/provider-url";
 import { RepoCommitRow } from "./repo-commit-row";
@@ -17,7 +18,8 @@ interface RepoPathCommitRowProps {
     owner: string;
     repo: string;
     provider: Provider;
-    selectedRef: string;
+    reference: RepositoryReference;
+    resolvedObjectId: string | null;
     /** File or directory the row describes. */
     path: string;
     /** Route the previous-commit button opens for the same path. */
@@ -34,12 +36,13 @@ export function RepoPathCommitRow({
     owner,
     repo,
     provider,
-    selectedRef,
+    reference,
+    resolvedObjectId,
     path,
     view,
     trailing,
 }: RepoPathCommitRowProps) {
-    const queryKey = `${provider}/${owner}/${repo}/${selectedRef}/${path}`;
+    const queryKey = `${provider}/${owner}/${repo}/${reference.kind ?? "native"}/${reference.value}/${path}`;
 
     const { data: commits, isPlaceholderData } =
         api.repos.getPathCommits.useQuery(
@@ -47,11 +50,14 @@ export function RepoPathCommitRow({
                 provider,
                 owner,
                 repo,
-                ref: selectedRef,
+                ref: resolvedObjectId ?? reference.value,
                 path,
                 limit: 2,
             },
-            { placeholderData: () => pathCommitsPrevious.previous(queryKey) },
+            {
+                enabled: resolvedObjectId !== null,
+                placeholderData: () => pathCommitsPrevious.previous(queryKey),
+            },
         );
 
     useEffect(() => {
@@ -64,10 +70,28 @@ export function RepoPathCommitRow({
     const previous = commits?.[1] ?? null;
     const previousHref = previous
         ? view === "tree"
-            ? treeHref(provider, owner, repo, previous.sha, path)
+            ? treeHref(
+                  provider,
+                  owner,
+                  repo,
+                  { kind: "commit", value: previous.sha },
+                  path,
+              )
             : view === "blame"
-              ? blameHref(provider, owner, repo, previous.sha, path)
-              : blobHref(provider, owner, repo, previous.sha, path)
+              ? blameHref(
+                    provider,
+                    owner,
+                    repo,
+                    { kind: "commit", value: previous.sha },
+                    path,
+                )
+              : blobHref(
+                    provider,
+                    owner,
+                    repo,
+                    { kind: "commit", value: previous.sha },
+                    path,
+                )
         : undefined;
 
     return (
@@ -86,7 +110,7 @@ export function RepoPathCommitRow({
                     provider,
                     owner,
                     repo,
-                    selectedRef,
+                    reference.value,
                     path,
                 )}
                 previousHref={previousHref}
