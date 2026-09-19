@@ -51,6 +51,7 @@ beforeEach(() => {
     mocks.getLinkedAccount.mockResolvedValue({
         providerId: "github",
         username: "ranger-ross",
+        connectionStatus: "active",
     });
     mocks.isAnonymousToken.mockReturnValue(false);
 });
@@ -126,6 +127,26 @@ describe("GitHub viewer permission", () => {
             provider: "gh",
         });
         expect(mocks.getUserRepoPermission).not.toHaveBeenCalled();
+    });
+
+    it("treats an account requiring reauthentication as unlinked", async () => {
+        mocks.getLinkedAccount.mockResolvedValue({
+            providerId: "github",
+            username: "ranger-ross",
+            connectionStatus: "reauth_required",
+        });
+
+        const permissionContext = await context();
+
+        expect(permissionContext).toEqual({
+            currentUser: null,
+            repoPermission: null,
+            isPullRequestLocked: false,
+            isPullRequestAuthor: false,
+            provider: "gh",
+        });
+        expect(mocks.getUserRepoPermission).not.toHaveBeenCalled();
+        expect(mocks.getRepoPermissionForUser).not.toHaveBeenCalled();
     });
 
     it("still resolves the author flag when the permission lookup fails", async () => {

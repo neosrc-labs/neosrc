@@ -17,8 +17,10 @@ export default async function Home({
     const errorCode = Array.isArray(params.error)
         ? params.error[0]
         : params.error;
-    const authError =
-        params.authError || errorCode ? (errorCode ?? "sign_in_failed") : null;
+    const rawAuthError = Array.isArray(params.authError)
+        ? params.authError[0]
+        : params.authError;
+    const authError = errorCode ?? rawAuthError ?? null;
 
     if (session) {
         const accounts = await getLinkedAccounts(db, session.user.id);

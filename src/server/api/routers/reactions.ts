@@ -54,6 +54,51 @@ const reactionContentSchema = z.enum([
     "eyes",
 ]);
 
+const REVIEW_COMMENT_REACTION_LIMIT = 100;
+const REVIEW_COMMENT_REACTION_CONCURRENCY = 8;
+
+async function getReviewCommentReactionMap({
+    accessToken,
+    owner,
+    repo,
+    commentIds,
+}: {
+    accessToken: string;
+    owner: string;
+    repo: string;
+    commentIds: number[];
+}) {
+    const uniqueIds = [...new Set(commentIds)];
+    const reactionMap: Record<
+        number,
+        Awaited<ReturnType<typeof getPullRequestReviewCommentReactions>>
+    > = {};
+    let nextIndex = 0;
+    const workers = Array.from(
+        {
+            length: Math.min(
+                REVIEW_COMMENT_REACTION_CONCURRENCY,
+                uniqueIds.length,
+            ),
+        },
+        async () => {
+            for (;;) {
+                const commentId = uniqueIds[nextIndex++];
+                if (commentId === undefined) return;
+                reactionMap[commentId] =
+                    await getPullRequestReviewCommentReactions(
+                        accessToken,
+                        owner,
+                        repo,
+                        commentId,
+                    ).catch(() => []);
+            }
+        },
+    );
+    await Promise.all(workers);
+    return reactionMap;
+}
+
 export const reactionsRouter = createTRPCRouter({
     get: viewerProcedure
         .input(
@@ -338,7 +383,9 @@ export const reactionsRouter = createTRPCRouter({
             z.object({
                 owner: z.string(),
                 repo: z.string(),
-                commentIds: z.array(z.number()),
+                commentIds: z
+                    .array(z.number().int().positive())
+                    .max(REVIEW_COMMENT_REACTION_LIMIT),
             }),
         )
         .query(async ({ ctx, input }) => {
@@ -347,30 +394,12 @@ export const reactionsRouter = createTRPCRouter({
                 ctx.session?.user?.id,
             );
 
-            const token = accessToken;
-
-            const results = await Promise.all(
-                input.commentIds.map((commentId) =>
-                    getPullRequestReviewCommentReactions(
-                        token,
-                        input.owner,
-                        input.repo,
-                        commentId,
-                    ).catch(() => []),
-                ),
-            );
-
-            const reactionMap: Record<
-                number,
-                Awaited<ReturnType<typeof getPullRequestReviewCommentReactions>>
-            > = {};
-            input.commentIds.forEach((id, i) => {
-                reactionMap[id] = results[i] as Awaited<
-                    ReturnType<typeof getPullRequestReviewCommentReactions>
-                >;
+            return getReviewCommentReactionMap({
+                accessToken,
+                owner: input.owner,
+                repo: input.repo,
+                commentIds: input.commentIds,
             });
-
-            return reactionMap;
         }),
 
     toggleIssue: providerMutation({

@@ -134,6 +134,13 @@
       "when": 1789821949835,
       "tag": "0018_flaky_lockheed",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1789826034352,
+      "tag": "0019_prevent_last_account_unlink",
+      "breakpoints": true
     }
   ]
 }

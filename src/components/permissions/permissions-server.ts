@@ -34,13 +34,17 @@ export async function getIssuePermissionContext({
     userId: string | undefined;
 }): Promise<PullRequestPermissionContext> {
     const session = await getSession();
-    const account = session?.user
+    const linkedAccount = session?.user
         ? await getLinkedAccount(
               db,
               session.user.id,
               provider === "gh" ? "github" : "codeberg",
           )
         : undefined;
+    const account =
+        linkedAccount?.connectionStatus === "active"
+            ? linkedAccount
+            : undefined;
 
     if (provider === "cb") {
         const currentUser = account?.username ?? null;
