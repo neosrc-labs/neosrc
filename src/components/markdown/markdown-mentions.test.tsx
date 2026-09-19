@@ -1,10 +1,19 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MarkdownRenderer } from "./markdown-renderer";
+
+const mocks = vi.hoisted(() => ({
+    currentLogin: "bob",
+}));
 
 vi.mock("~/trpc/react", () => ({
     api: {
         users: {
+            currentUser: {
+                useQuery: () => ({
+                    data: { login: mocks.currentLogin },
+                }),
+            },
             getByUsername: {
                 useQuery: () => ({
                     data: {
@@ -36,6 +45,10 @@ vi.mock("next/image", () => ({
 }));
 
 describe("markdown mention rendering", () => {
+    beforeEach(() => {
+        mocks.currentLogin = "bob";
+    });
+
     it("renders the user's avatar beside a user mention", () => {
         render(<MarkdownRenderer content="Thanks @alice" />);
 
@@ -46,6 +59,17 @@ describe("markdown mention rendering", () => {
             "https://avatars.githubusercontent.com/u/1?v=4",
         );
         expect(mention.querySelector("img")).toHaveAttribute("alt", "");
+        expect(mention).toHaveClass("font-bold", "text-text-primary");
+    });
+
+    it("highlights the current user's mention", () => {
+        mocks.currentLogin = "Alice";
+        render(<MarkdownRenderer content="Thanks @alice" />);
+
+        expect(screen.getByRole("link", { name: "@alice" })).toHaveClass(
+            "font-bold",
+            "text-mention-current",
+        );
     });
 
     it("does not add an avatar to a regular profile link", () => {

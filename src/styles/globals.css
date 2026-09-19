@@ -53,6 +53,7 @@
     --color-action-foreground: #ffffff;
     --color-link: #1d4ed8;
     --color-link-hover: #1e40af;
+    --color-mention-current: #a16207;
     --color-focus: #2563eb;
     --color-inverse-surface: #111827;
     --color-inverse-text: #ffffff;
@@ -146,6 +147,7 @@
     --color-action-foreground: #ffffff;
     --color-link: #60a5fa;
     --color-link-hover: #93c5fd;
+    --color-mention-current: #fbbf24;
     --color-focus: #60a5fa;
     --color-inverse-surface: #e4e4e7;
     --color-inverse-text: #18181b;

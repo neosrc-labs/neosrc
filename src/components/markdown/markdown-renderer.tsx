@@ -592,12 +592,21 @@ function UserMentionLink({
         { provider: "gh", username: login },
         { staleTime: 5 * 60 * 1000 },
     );
+    const { data: currentUser } = api.users.currentUser.useQuery(
+        { provider: "gh" },
+        { staleTime: 5 * 60 * 1000 },
+    );
+    const isCurrentUser =
+        currentUser?.login.toLowerCase() === login.toLowerCase();
 
     return (
         <UserHoverCard login={login}>
             <a
                 className={cn(
-                    "inline-flex items-center gap-1 align-baseline",
+                    "inline-flex items-center gap-1 align-baseline font-bold",
+                    isCurrentUser
+                        ? "text-mention-current hover:text-mention-current"
+                        : "text-text-primary hover:text-text-primary",
                     className,
                 )}
                 href={href}
