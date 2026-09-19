@@ -14,6 +14,8 @@ ba_account = "ba_account"
 ba_verification = "ba_verification"
 ba_session_userId_idx = "ba_session_userId_idx"
 ba_account_userId_idx = "ba_account_userId_idx"
+ba_account_userId_providerId_unique = "ba_account_userId_providerId_unique"
+ba_account_providerId_accountId_unique = "ba_account_providerId_accountId_unique"
 
 [default.extend-words]
 # Esy package manager (https://esy.sh)
