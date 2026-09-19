@@ -1361,7 +1361,11 @@ export type GQLPullRequestReactions = {
         node_id: string;
         content: string;
         created_at: string;
-        user: { login: string } | null;
+        user: {
+            login: string;
+            avatarUrl?: string;
+            avatar_url?: string;
+        } | null;
     }>;
     counts: {
         total_count: number;
@@ -1398,7 +1402,7 @@ export async function getPullRequestReactionsGraphQL(
                         id: string;
                         content: string;
                         createdAt: string;
-                        user: { login: string } | null;
+                        user: { login: string; avatarUrl: string } | null;
                     } | null)[];
                 } | null;
                 reactionGroups: Array<{
@@ -1418,7 +1422,7 @@ export async function getPullRequestReactionsGraphQL(
 							id
 							content
 							createdAt
-							user { login }
+							user { login avatarUrl }
 						}
 					}
 					reactionGroups {
@@ -1443,7 +1447,7 @@ export async function getPullRequestReactionsGraphQL(
                 id: string;
                 content: string;
                 createdAt: string;
-                user: { login: string } | null;
+                user: { login: string; avatarUrl: string } | null;
             } => r !== null,
         )
         .map((r) => ({
