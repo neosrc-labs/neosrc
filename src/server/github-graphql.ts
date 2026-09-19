@@ -1507,7 +1507,7 @@ export async function getIssueReactionsGraphQL(
                         id: string;
                         content: string;
                         createdAt: string;
-                        user: { login: string } | null;
+                        user: { login: string; avatarUrl: string } | null;
                     } | null)[];
                 } | null;
                 reactionGroups: Array<{
@@ -1527,7 +1527,7 @@ export async function getIssueReactionsGraphQL(
 							id
 							content
 							createdAt
-							user { login }
+							user { login avatarUrl }
 						}
 					}
 					reactionGroups {
@@ -1552,7 +1552,7 @@ export async function getIssueReactionsGraphQL(
                 id: string;
                 content: string;
                 createdAt: string;
-                user: { login: string } | null;
+                user: { login: string; avatarUrl: string } | null;
             } => r !== null,
         )
         .map((r) => ({
