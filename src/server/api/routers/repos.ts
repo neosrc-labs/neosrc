@@ -6,6 +6,7 @@ import {
     providerInput,
     providerMutation,
     providerQuery,
+    viewerProcedure,
 } from "~/server/api/trpc";
 import {
     getCodebergToken,
@@ -323,7 +324,7 @@ export const reposRouter = createTRPCRouter({
                 ),
             ),
     }),
-    getTopRepos: protectedProcedure.query(async ({ ctx }) => {
+    getTopRepos: viewerProcedure.query(async ({ ctx }) => {
         if (ctx.isAnonymous) return [];
         const accessToken = await getGitHubToken(ctx.db, ctx.session?.user?.id);
         return getTopRepositories(accessToken);
@@ -654,7 +655,7 @@ export const reposRouter = createTRPCRouter({
         gh: ({ accessToken, input }) =>
             getLatestRelease(accessToken, input.owner, input.repo),
     }),
-    getStarred: protectedProcedure
+    getStarred: viewerProcedure
         .input(
             z.object({
                 provider: z.enum(["gh", "cb"]).default("gh"),

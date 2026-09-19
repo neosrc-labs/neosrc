@@ -169,12 +169,17 @@ export function ProfileView({
     name,
     image,
     accounts,
+    accountMessage,
     githubAppInstallationUrl,
     codebergEnabled,
 }: {
     name: string;
     image: string | null;
     accounts: LinkedAccount[];
+    accountMessage: {
+        tone: "success" | "error";
+        text: string;
+    } | null;
     githubAppInstallationUrl: string | null;
     codebergEnabled: boolean;
 }) {
@@ -192,9 +197,10 @@ export function ProfileView({
     const handleLogout = useCallback(async () => {
         setLoggingOut(true);
         await authClient.signOut();
+        router.replace("/");
+        router.refresh();
         setLoggingOut(false);
-        router.push("/");
-    }, [router.push]);
+    }, [router]);
 
     return (
         <div className="flex flex-col gap-8">
@@ -216,6 +222,19 @@ export function ProfileView({
                     <h1 className="text-text-primary">{name}</h1>
                 </div>
             </div>
+
+            {accountMessage && (
+                <p
+                    className={
+                        accountMessage.tone === "success"
+                            ? "rounded-md border border-green-300 bg-green-50 px-4 py-3 text-green-800 text-sm dark:border-green-800 dark:bg-green-950 dark:text-green-300"
+                            : "rounded-md border border-red-300 bg-red-50 px-4 py-3 text-red-800 text-sm dark:border-red-800 dark:bg-red-950 dark:text-red-300"
+                    }
+                    role={accountMessage.tone === "error" ? "alert" : "status"}
+                >
+                    {accountMessage.text}
+                </p>
+            )}
 
             <div className="flex flex-col gap-6">
                 {accounts.map((account) =>

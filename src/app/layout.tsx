@@ -3,6 +3,7 @@ import "~/styles/github-alert.css";
 
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { SessionRefresh } from "~/app/_components/session-refresh";
 import { Header } from "~/components/header/header";
 import { Footer } from "~/components/layout/footer";
 import { SidebarProvider } from "~/components/layout/sidebar-context";
@@ -35,6 +36,7 @@ export default function RootLayout({
                     >
                         <SidebarProvider>
                             <TRPCReactProvider>
+                                <SessionRefresh />
                                 <Header />
                                 <div className="flex min-w-0 flex-1 flex-col">
                                     {children}

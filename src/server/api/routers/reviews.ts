@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
     createTRPCRouter,
     protectedMutation,
-    protectedProcedure,
+    viewerProcedure,
 } from "~/server/api/trpc";
 import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import { deleteCache, prCacheKey } from "~/server/cache";
@@ -27,7 +27,7 @@ export type PendingReview = {
 };
 
 export const reviewsRouter = createTRPCRouter({
-    getPending: protectedProcedure
+    getPending: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),

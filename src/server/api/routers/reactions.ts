@@ -3,10 +3,10 @@ import { z } from "zod";
 import {
     createTRPCRouter,
     protectedMutation,
-    protectedProcedure,
     providerInput,
     providerMutation,
     providerQuery,
+    viewerProcedure,
 } from "~/server/api/trpc";
 import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import {
@@ -55,7 +55,7 @@ const reactionContentSchema = z.enum([
 ]);
 
 export const reactionsRouter = createTRPCRouter({
-    get: protectedProcedure
+    get: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),
@@ -333,7 +333,7 @@ export const reactionsRouter = createTRPCRouter({
             return { action: "added" as const };
         }),
 
-    getForReviewComments: protectedProcedure
+    getForReviewComments: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),

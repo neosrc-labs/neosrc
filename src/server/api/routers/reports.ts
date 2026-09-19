@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, viewerProcedure } from "~/server/api/trpc";
 import { getReportsByPullRequest } from "~/server/db/reports";
 
 export const reportsRouter = createTRPCRouter({
-    getReportsByPullRequest: protectedProcedure
+    getReportsByPullRequest: viewerProcedure
         .input(
             z.object({
                 provider: z.enum(["gh", "cb"]),

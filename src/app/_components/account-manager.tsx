@@ -52,10 +52,12 @@ export function AccountManager({
                     ? await authClient.linkSocial({
                           provider: "github",
                           callbackURL: "/profile?account=linked",
+                          errorCallbackURL: "/profile?authError=link",
                       })
                     : await authClient.oauth2.link({
                           providerId: "codeberg",
                           callbackURL: "/profile?account=linked",
+                          errorCallbackURL: "/profile?authError=link",
                       });
             if (result.error) {
                 setError(

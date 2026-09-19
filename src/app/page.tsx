@@ -7,8 +7,13 @@ import { api, HydrateClient } from "~/trpc/server";
 import { HomePage } from "./home-page";
 import { LandingPage } from "./landing-page";
 
-export default async function Home() {
+export default async function Home({
+    searchParams,
+}: {
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
     const session = await getSession();
+    const params = await searchParams;
 
     if (session) {
         const accounts = await getLinkedAccounts(db, session.user.id);
@@ -33,7 +38,9 @@ export default async function Home() {
 
     return (
         <HydrateClient>
-            <LandingPage />
+            <LandingPage
+                hasAuthError={Boolean(params.authError || params.error)}
+            />
         </HydrateClient>
     );
 }

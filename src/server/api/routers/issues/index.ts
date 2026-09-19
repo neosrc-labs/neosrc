@@ -3,10 +3,10 @@ import { z } from "zod";
 
 import {
     createTRPCRouter,
-    protectedProcedure,
     providerInput,
     providerMutation,
     providerQuery,
+    viewerProcedure,
 } from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
 import { fetchAndCache, readCache, searchCacheKey } from "~/server/cache";
@@ -55,7 +55,7 @@ function issueProvider(provider: "gh" | "cb"): IssueProvider {
 }
 
 export const issuesRouter = createTRPCRouter({
-    getByNumber: protectedProcedure
+    getByNumber: viewerProcedure
         .input(
             z.object({
                 provider: z.enum(["gh", "cb"]).default("gh"),
@@ -86,7 +86,7 @@ export const issuesRouter = createTRPCRouter({
             );
         }),
 
-    pinned: protectedProcedure
+    pinned: viewerProcedure
         .input(
             providerInput({
                 owner: z.string(),
@@ -101,7 +101,7 @@ export const issuesRouter = createTRPCRouter({
             }),
         ),
 
-    searchCached: protectedProcedure
+    searchCached: viewerProcedure
         .input(searchInput)
         .query(
             ({ ctx, input }): Promise<IssueSearchResult | null> =>
@@ -110,7 +110,7 @@ export const issuesRouter = createTRPCRouter({
                 ),
         ),
 
-    search: protectedProcedure
+    search: viewerProcedure
         .input(searchInput)
         .query(async ({ ctx, input }): Promise<IssueSearchResult> => {
             const provider = issueProvider(input.provider);
@@ -126,7 +126,7 @@ export const issuesRouter = createTRPCRouter({
             );
         }),
 
-    searchAutocomplete: protectedProcedure
+    searchAutocomplete: viewerProcedure
         .input(
             z.object({
                 provider: z.enum(["gh", "cb"]).default("gh"),
