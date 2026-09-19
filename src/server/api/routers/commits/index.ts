@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, viewerProcedure } from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
 import {
     getCommitCombinedStatus,
@@ -19,7 +19,7 @@ import { mapCodebergCommit, mapGQLCommit } from "./mappers";
 import type { ListCommitsResult } from "./types";
 
 export const commitsRouter = createTRPCRouter({
-    getBySha: protectedProcedure
+    getBySha: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),
@@ -43,7 +43,7 @@ export const commitsRouter = createTRPCRouter({
             return { commit };
         }),
 
-    listForPullRequest: protectedProcedure
+    listForPullRequest: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),
@@ -74,7 +74,7 @@ export const commitsRouter = createTRPCRouter({
             };
         }),
 
-    listCommits: protectedProcedure
+    listCommits: viewerProcedure
         .input(
             z.object({
                 provider: z.enum(["gh", "cb"]),

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, viewerProcedure } from "~/server/api/trpc";
 import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import {
     getRepoCollaboratorPermissions,
@@ -29,7 +29,7 @@ export type TimelineResult = {
 };
 
 export const timelineRouter = createTRPCRouter({
-    list: protectedProcedure
+    list: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),

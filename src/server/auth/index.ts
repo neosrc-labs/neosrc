@@ -52,10 +52,7 @@ type RefreshedToken = {
     refresh_token_expires_in?: number;
 };
 
-export {
-    getProviderTokenRefresh,
-    registerProviderTokenRefresh,
-} from "~/server/auth/token-registry";
+export { getProviderTokenRefresh } from "~/server/auth/token-registry";
 
 function parseRefreshedToken(body: Record<string, unknown>): RefreshedToken {
     if (
@@ -202,6 +199,8 @@ async function syncAccountUsername(account: {
     }
 }
 
+export const AUTH_SESSION_FRESH_AGE_SECONDS = 15 * 60;
+
 export const auth = betterAuth({
     database: drizzleAdapter(db, {
         provider: "pg",
@@ -212,6 +211,12 @@ export const auth = betterAuth({
             verification: betterAuthVerification,
         },
     }),
+    session: {
+        expiresIn: 7 * 24 * 60 * 60,
+        updateAge: 24 * 60 * 60,
+        freshAge: AUTH_SESSION_FRESH_AGE_SECONDS,
+        deferSessionRefresh: true,
+    },
     account: {
         additionalFields: {
             username: {

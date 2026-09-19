@@ -2,7 +2,11 @@ import { TRPCError } from "@trpc/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+    createTRPCRouter,
+    protectedMutation,
+    protectedProcedure,
+} from "~/server/api/trpc";
 import { generateApiKey } from "~/server/api-keys";
 import {
     getCodebergToken,
@@ -70,7 +74,7 @@ export const apiKeysRouter = createTRPCRouter({
         }));
     }),
 
-    create: protectedProcedure
+    create: protectedMutation
         .input(
             z.object({
                 name: z.string().min(1).max(255),
@@ -222,7 +226,7 @@ export const apiKeysRouter = createTRPCRouter({
             return { rawKey, key: inserted };
         }),
 
-    revoke: protectedProcedure
+    revoke: protectedMutation
         .input(z.object({ id: z.number() }))
         .mutation(async ({ ctx, input }) => {
             if (!ctx.session?.user)

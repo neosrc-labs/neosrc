@@ -25,10 +25,19 @@ function Step({
     );
 }
 
-export function LandingPage() {
+export function LandingPage({ hasAuthError }: { hasAuthError: boolean }) {
     return (
         <main className="mx-auto min-h-[calc(100svh-var(--header-height))] max-w-3xl px-6 py-16">
             <div className="flex flex-col gap-16">
+                {hasAuthError && (
+                    <p
+                        className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-red-800 text-sm dark:border-red-800 dark:bg-red-950 dark:text-red-300"
+                        role="alert"
+                    >
+                        Sign-in failed. Try again, or verify the provider
+                        connection settings.
+                    </p>
+                )}
                 <section className="flex flex-col items-center gap-6 text-center">
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 dark:bg-blue-500">
                         <GitPullRequest className="h-8 w-8 text-white" />
@@ -80,6 +89,7 @@ export function LandingPage() {
                                     body: {
                                         provider: "github",
                                         callbackURL: "/onboarding",
+                                        errorCallbackURL: "/?authError=sign-in",
                                     },
                                 });
                                 if (!res.url) {
@@ -106,6 +116,8 @@ export function LandingPage() {
                                             body: {
                                                 providerId: "codeberg",
                                                 callbackURL: "/onboarding",
+                                                errorCallbackURL:
+                                                    "/?authError=sign-in",
                                             },
                                         },
                                     );

@@ -20,13 +20,15 @@ import {
     createTRPCRouter,
     protectedMutation,
     protectedProcedure,
+    viewerProcedure,
 } from "~/server/api/trpc";
 import { getSession } from "~/server/auth";
 
 const getSessionMock = vi.mocked(getSession);
 
 const router = createTRPCRouter({
-    read: protectedProcedure.query(() => "ok"),
+    read: viewerProcedure.query(() => "ok"),
+    account: protectedProcedure.query(({ ctx }) => ctx.session.user.id),
     write: protectedMutation.mutation(async ({ ctx }) => ({
         userId: ctx.session?.user?.id,
     })),
@@ -48,10 +50,24 @@ describe("requireSession", () => {
         });
     });
 
+    it("rejects protected queries for anonymous visitors", async () => {
+        const caller = await createCaller(null);
+
+        await expect(caller.account()).rejects.toMatchObject({
+            code: "UNAUTHORIZED",
+        });
+    });
+
     it("allows mutations for logged-in users", async () => {
         const caller = await createCaller({ user: { id: "user-1" } });
 
         await expect(caller.write()).resolves.toEqual({ userId: "user-1" });
+    });
+
+    it("allows protected queries for logged-in users", async () => {
+        const caller = await createCaller({ user: { id: "user-1" } });
+
+        await expect(caller.account()).resolves.toBe("user-1");
     });
 
     it("keeps anonymous reads working when GITHUB_ANONYMOUS_TOKEN is set", async () => {

@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
     createTRPCRouter,
     protectedMutation,
-    protectedProcedure,
+    viewerProcedure,
 } from "~/server/api/trpc";
 import { getGitHubToken, isAnonymousToken } from "~/server/auth";
 import { deleteCache, prCacheKey } from "~/server/cache";
@@ -28,7 +28,7 @@ import {
 } from "~/server/github";
 
 export const reviewCommentsRouter = createTRPCRouter({
-    list: protectedProcedure
+    list: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),
@@ -52,7 +52,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             return comments;
         }),
 
-    byReviewId: protectedProcedure
+    byReviewId: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),
@@ -267,7 +267,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             return { success: true as const, id: comment.id };
         }),
 
-    threads: protectedProcedure
+    threads: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),
@@ -289,7 +289,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             );
         }),
 
-    threadsPage: protectedProcedure
+    threadsPage: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),
@@ -380,7 +380,7 @@ export const reviewCommentsRouter = createTRPCRouter({
             return { success: true as const };
         }),
 
-    suggestionPatch: protectedProcedure
+    suggestionPatch: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),

@@ -121,14 +121,12 @@ export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure.use(loggingMiddleware);
 
 /**
- * Protected (authenticated) procedure
+ * Viewer procedure.
  *
- * If you want a query or mutation to ONLY be accessible to logged in users, use this. It verifies
- * the session is valid and guarantees `ctx.session.user` is not null.
- *
- * @see https://trpc.io/docs/procedures
+ * Allows a real session or the configured anonymous GitHub token. Use this
+ * only for read operations that support anonymous browsing.
  */
-export const protectedProcedure = t.procedure
+export const viewerProcedure = t.procedure
     .use(loggingMiddleware)
     .use(({ ctx, next }) => {
         if (!ctx.session?.user && !env.GITHUB_ANONYMOUS_TOKEN) {
@@ -144,27 +142,31 @@ export const protectedProcedure = t.procedure
     });
 
 /**
- * Session-required middleware.
- *
- * Throws UNAUTHORIZED when there is no real logged-in session, so anonymous
- * visitors (who may browse with the shared GITHUB_ANONYMOUS_TOKEN) cannot
- * perform write operations.
+ * Requires a real signed-in session.
  */
 export const requireSession = t.middleware(({ ctx, next }) => {
     if (!ctx.session?.user?.id) {
         throw new TRPCError({ code: "UNAUTHORIZED" });
     }
-    return next();
+    return next({
+        ctx: {
+            session: {
+                ...ctx.session,
+                user: ctx.session.user,
+            },
+        },
+    });
 });
 
 /**
- * Protected mutation procedure: requires a real logged-in session.
- *
- * Anonymous visitors can still read through `protectedProcedure`, but every
- * write path goes through this procedure so mutations always run as a real
- * user (never with the shared anonymous token).
+ * Procedure for operations that require a real signed-in user.
  */
-export const protectedMutation = protectedProcedure.use(requireSession);
+export const protectedProcedure = viewerProcedure.use(requireSession);
+
+/**
+ * Mutation alias that makes write boundaries explicit at call sites.
+ */
+export const protectedMutation = protectedProcedure;
 
 /**
  * Provider-aware procedure builders.
@@ -226,35 +228,33 @@ export function providerQuery<
         gh: ProviderHandler<z.output<S>, ResolvedUserId<Mode>, R>;
     } & CodebergSide<z.output<S>, ResolvedUserId<Mode>, R>,
 ) {
-    return protectedProcedure
-        .input(config.input)
-        .query(async ({ ctx, input }) => {
-            const userId = (
-                config.userId === "anonymous"
-                    ? (ctx.session?.user?.id ?? "anonymous")
-                    : ctx.session?.user?.id
-            ) as ResolvedUserId<Mode>;
-            if (input.provider === "cb") {
-                if (!config.cb) return config.cbFallback();
-                const accessToken = await getCodebergToken(ctx.db, userId);
-                return config.cb({
-                    ctx,
-                    // After .input() parsing the runtime value is exactly
-                    // z.output<S>; tRPC's conditional parser type cannot
-                    // prove it.
-                    input: input as z.output<S>,
-                    accessToken,
-                    userId,
-                });
-            }
-            const accessToken = await getGitHubToken(ctx.db, userId);
-            return config.gh({
+    return viewerProcedure.input(config.input).query(async ({ ctx, input }) => {
+        const userId = (
+            config.userId === "anonymous"
+                ? (ctx.session?.user?.id ?? "anonymous")
+                : ctx.session?.user?.id
+        ) as ResolvedUserId<Mode>;
+        if (input.provider === "cb") {
+            if (!config.cb) return config.cbFallback();
+            const accessToken = await getCodebergToken(ctx.db, userId);
+            return config.cb({
                 ctx,
+                // After .input() parsing the runtime value is exactly
+                // z.output<S>; tRPC's conditional parser type cannot
+                // prove it.
                 input: input as z.output<S>,
                 accessToken,
                 userId,
             });
+        }
+        const accessToken = await getGitHubToken(ctx.db, userId);
+        return config.gh({
+            ctx,
+            input: input as z.output<S>,
+            accessToken,
+            userId,
         });
+    });
 }
 
 /**
@@ -329,19 +329,14 @@ export function githubQuery<S extends z.ZodType, R>(config: {
     input: S;
     run: (args: GitHubArgs<z.output<S>>) => Promise<R>;
 }) {
-    return protectedProcedure
-        .input(config.input)
-        .query(async ({ ctx, input }) => {
-            const accessToken = await getGitHubToken(
-                ctx.db,
-                ctx.session?.user?.id,
-            );
-            return config.run({
-                ctx,
-                input: input as z.output<S>,
-                accessToken,
-            });
+    return viewerProcedure.input(config.input).query(async ({ ctx, input }) => {
+        const accessToken = await getGitHubToken(ctx.db, ctx.session?.user?.id);
+        return config.run({
+            ctx,
+            input: input as z.output<S>,
+            accessToken,
         });
+    });
 }
 
 const prRefSchema = z.object({

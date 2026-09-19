@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, viewerProcedure } from "~/server/api/trpc";
 import { getGitHubToken } from "~/server/auth";
 import { getChecksForCommit } from "~/server/github";
 
@@ -134,7 +134,7 @@ export interface PrDetailsEntry {
 }
 
 export const checksRouter = createTRPCRouter({
-    list: protectedProcedure
+    list: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),

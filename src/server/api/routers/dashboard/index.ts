@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { log } from "~/logging";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, viewerProcedure } from "~/server/api/trpc";
 import {
     getCodebergToken,
     getGitHubToken,
@@ -121,7 +121,7 @@ const listInput = {
 };
 
 export const dashboardRouter = createTRPCRouter({
-    recentPulls: protectedProcedure
+    recentPulls: viewerProcedure
         .input(z.object(listInput))
         .query(
             async ({ ctx, input }): Promise<ViewerItemList<ViewerPullItem>> => {
@@ -143,7 +143,7 @@ export const dashboardRouter = createTRPCRouter({
             },
         ),
 
-    recentIssues: protectedProcedure
+    recentIssues: viewerProcedure
         .input(z.object(listInput))
         .query(
             async ({

@@ -14,10 +14,10 @@ import {
     githubMutation,
     githubQuery,
     protectedMutation,
-    protectedProcedure,
     providerInput,
     providerMutation,
     providerQuery,
+    viewerProcedure,
 } from "~/server/api/trpc";
 import {
     getGitHubToken,
@@ -786,7 +786,7 @@ export const pullsRouter = createTRPCRouter({
             ),
     }),
 
-    searchCached: protectedProcedure
+    searchCached: viewerProcedure
         .input(searchInput)
         .query(({ ctx, input }): Promise<PrSearchResult | null> => {
             return readCache<PrSearchResult>(
@@ -794,7 +794,7 @@ export const pullsRouter = createTRPCRouter({
             );
         }),
 
-    search: protectedProcedure
+    search: viewerProcedure
         .input(searchInput)
         .query(async ({ ctx, input }): Promise<PrSearchResult> => {
             const providerCtx: Ctx = {
@@ -814,7 +814,7 @@ export const pullsRouter = createTRPCRouter({
             );
         }),
 
-    listDetailsByPrNumbers: protectedProcedure
+    listDetailsByPrNumbers: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),
@@ -868,7 +868,7 @@ export const pullsRouter = createTRPCRouter({
             return Object.assign({}, ...batches);
         }),
 
-    headSha: protectedProcedure
+    headSha: viewerProcedure
         .input(
             z.object({
                 owner: z.string(),

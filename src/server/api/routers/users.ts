@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, viewerProcedure } from "~/server/api/trpc";
 import {
     getCodebergToken,
     getGitHubToken,
@@ -32,7 +32,7 @@ export type UserProfile = {
 };
 
 export const usersRouter = createTRPCRouter({
-    currentUser: protectedProcedure
+    currentUser: viewerProcedure
         .input(
             z
                 .object({ provider: z.enum(["gh", "cb"]).default("gh") })
@@ -76,7 +76,7 @@ export const usersRouter = createTRPCRouter({
                 avatarUrl: user.avatar_url,
             };
         }),
-    getByUsername: protectedProcedure
+    getByUsername: viewerProcedure
         .input(
             z.object({
                 provider: z.enum(["gh", "cb"]).default("gh"),
@@ -122,7 +122,7 @@ export const usersRouter = createTRPCRouter({
                 return { user };
             },
         ),
-    getByTeamSlug: protectedProcedure
+    getByTeamSlug: viewerProcedure
         .input(
             z.object({
                 org: z.string(),
