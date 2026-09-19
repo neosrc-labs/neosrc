@@ -181,10 +181,12 @@ export function ProfileView({
     const [loggingOut, setLoggingOut] = useState(false);
     const router = useRouter();
     const githubAccount = accounts.find(
-        ({ providerId }) => providerId === "github",
+        ({ providerId, connectionStatus }) =>
+            providerId === "github" && connectionStatus === "active",
     );
     const codebergAccount = accounts.find(
-        ({ providerId }) => providerId === "codeberg",
+        ({ providerId, connectionStatus }) =>
+            providerId === "codeberg" && connectionStatus === "active",
     );
 
     const handleLogout = useCallback(async () => {
@@ -217,6 +219,7 @@ export function ProfileView({
 
             <div className="flex flex-col gap-6">
                 {accounts.map((account) =>
+                    account.connectionStatus === "active" &&
                     account.username ? (
                         <ProviderProfileCard
                             key={account.providerId}

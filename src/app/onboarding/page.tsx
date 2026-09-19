@@ -17,7 +17,7 @@ export default async function OnboardingPage() {
     if (!session?.user) redirect("/");
 
     const githubAccount = await getLinkedAccount(db, session.user.id, "github");
-    if (!githubAccount) redirect("/");
+    if (githubAccount?.connectionStatus !== "active") redirect("/");
 
     const installations = await api.onboarding.getGitHubAppInstallations();
     if (installations.some((i) => i.suspended_at === null)) redirect("/");

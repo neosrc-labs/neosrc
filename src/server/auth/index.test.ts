@@ -25,49 +25,74 @@ vi.mock("~/server/db", () => ({ db: {} }));
 
 import type { db } from "~/server/db";
 import { decrypt, encrypt } from "./encryption";
-import { getCodebergToken, getGitHubToken } from "./index";
-
-// ---------------------------------------------------------------------------
-// Fake database
-// The getters only touch a small slice of the drizzle query builder: select
-// the account row, update it after a refresh, delete it on unlink.
-// ---------------------------------------------------------------------------
+import {
+    getCodebergToken,
+    getGitHubToken,
+    getProviderTokenRefresh,
+} from "./index";
 
 type AccountRow = {
     id: string;
     userId: string;
+    connectionStatus: "active" | "reauth_required";
+    credentialVersion: number;
     accessToken: string | null;
     accessTokenExpiresAt: Date | null;
     refreshToken: string | null;
+    refreshTokenExpiresAt: Date | null;
+    lastAuthError?: string | null;
 };
 
 function createFakeDb(rows: AccountRow[]) {
     const state = {
         rows,
         updates: [] as Array<Record<string, unknown>>,
-        deletedAccountIds: [] as string[],
     };
-    const fakeDb = {
-        select: () => ({
-            from: () => ({
-                where: () => ({
-                    limit: async () => state.rows,
-                }),
-            }),
-        }),
-        update: () => ({
-            set: (data: Record<string, unknown>) => ({
-                where: async () => {
-                    state.updates.push(data);
+    let transactionTail = Promise.resolve();
+    const fakeDb: Record<string, unknown> = {};
+
+    fakeDb.select = () => ({
+        from: () => ({
+            where: () => ({
+                limit: () => {
+                    const result = Promise.resolve(state.rows);
+                    return Object.assign(result, {
+                        for: async () => state.rows,
+                    });
                 },
             }),
         }),
-        delete: () => ({
+    });
+    fakeDb.update = () => ({
+        set: (data: Record<string, unknown>) => ({
             where: async () => {
-                state.deletedAccountIds.push(state.rows[0]?.id ?? "unknown");
+                const row = state.rows[0];
+                const applied = { ...data };
+                if (row && "credentialVersion" in applied) {
+                    applied.credentialVersion = row.credentialVersion + 1;
+                }
+                if (row) Object.assign(row, applied);
+                state.updates.push(applied);
             },
         }),
+    });
+    fakeDb.transaction = async (
+        run: (transaction: unknown) => Promise<unknown>,
+    ) => {
+        let release = () => {};
+        const current = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        const previous = transactionTail;
+        transactionTail = current;
+        await previous;
+        try {
+            return await run(fakeDb);
+        } finally {
+            release();
+        }
     };
+
     return { fakeDb: fakeDb as unknown as typeof db, state };
 }
 
@@ -92,9 +117,12 @@ function expiredGitHubAccount(overrides: Partial<AccountRow> = {}): AccountRow {
     return {
         id: "acct-1",
         userId: "user-1",
+        connectionStatus: "active",
+        credentialVersion: 0,
         accessToken: encrypt("stale-access"),
         accessTokenExpiresAt: new Date(Date.now() - 60_000),
         refreshToken: encrypt("stale-refresh"),
+        refreshTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         ...overrides,
     };
 }
@@ -110,6 +138,7 @@ const REFRESHED_BODY = {
 
 beforeEach(() => {
     vi.unstubAllGlobals();
+    envState.GITHUB_ANONYMOUS_TOKEN = undefined;
 });
 
 describe("getGitHubToken", () => {
@@ -180,17 +209,26 @@ describe("getGitHubToken", () => {
         ).toBe(15_897_600_000 - 28_800_000);
     });
 
-    it("clears refreshTokenExpiresAt when the provider omits refresh_token_expires_in", async () => {
-        const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
+    it("preserves refresh credentials when the provider omits replacements", async () => {
+        const originalExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const { fakeDb, state } = createFakeDb([
+            expiredGitHubAccount({ refreshTokenExpiresAt: originalExpiry }),
+        ]);
         mockFetch({
             ok: true,
             status: 200,
-            body: { ...REFRESHED_BODY, refresh_token_expires_in: undefined },
+            body: {
+                access_token: "fresh-access",
+                expires_in: 28_800,
+            },
         });
 
         await getGitHubToken(fakeDb, "user-1");
 
-        expect(state.updates[0]?.refreshTokenExpiresAt).toBeNull();
+        expect(decrypt(state.rows[0]?.refreshToken ?? "")).toBe(
+            "stale-refresh",
+        );
+        expect(state.rows[0]?.refreshTokenExpiresAt).toEqual(originalExpiry);
     });
 
     it("throws for a user with no connected account", async () => {
@@ -201,40 +239,40 @@ describe("getGitHubToken", () => {
         );
     });
 
-    it("falls back to the stored token when the refresh fails transiently", async () => {
-        const { fakeDb } = createFakeDb([expiredGitHubAccount()]);
-        mockFetch({ ok: false, status: 502, body: {} });
+    it("does not downgrade a signed-in user to the anonymous token", async () => {
+        const { fakeDb } = createFakeDb([]);
+        envState.GITHUB_ANONYMOUS_TOKEN = "shared-token";
 
-        // A failed refresh must not fail the request.
-        await expect(
-            getGitHubToken(fakeDb, "user-1").then((t) => String(t)),
-        ).resolves.toBe("stale-access");
+        await expect(getGitHubToken(fakeDb, "user-1")).rejects.toThrow(
+            "GitHub account not connected",
+        );
     });
 
-    it("uses the concurrently refreshed token when the refresh races and loses", async () => {
+    it("does not return an expired token after a transient refresh failure", async () => {
         const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
-        // Refresh fails because a concurrent request already rotated the
-        // token; the loser re-reads the row and finds the winner's tokens.
-        const fetchMock = vi.fn(async (_input: string | URL | Request) => {
-            state.rows[0] = {
-                ...state.rows[0]!,
-                accessToken: encrypt("winner-access"),
-                accessTokenExpiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000),
-                refreshToken: encrypt("winner-refresh"),
-            };
-            return {
-                ok: false,
-                status: 400,
-                json: async () => ({ error: "bad_verification_code" }),
-            };
+        mockFetch({ ok: false, status: 502, body: {} });
+
+        await expect(getGitHubToken(fakeDb, "user-1")).rejects.toThrow(
+            "GitHub token refresh failed",
+        );
+        expect(state.rows[0]?.lastAuthError).toContain("502");
+    });
+
+    it("serializes concurrent refreshes for the same account", async () => {
+        const { fakeDb } = createFakeDb([expiredGitHubAccount()]);
+        const fetchMock = mockFetch({
+            ok: true,
+            status: 200,
+            body: REFRESHED_BODY,
         });
-        vi.stubGlobal("fetch", fetchMock);
 
-        const token = await getGitHubToken(fakeDb, "user-1");
+        const tokens = await Promise.all([
+            getGitHubToken(fakeDb, "user-1"),
+            getGitHubToken(fakeDb, "user-1"),
+        ]);
 
-        expect(String(token)).toBe("winner-access");
-        // The loser must not overwrite the winner's row.
-        expect(state.updates).toHaveLength(0);
+        expect(tokens.map(String)).toEqual(["fresh-access", "fresh-access"]);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
     it("refreshes a corrupted stored access token", async () => {
@@ -304,20 +342,19 @@ describe("getGitHubToken", () => {
             body: REFRESHED_BODY,
         });
 
-        const token = (await getGitHubToken(fakeDb, "user-1")) as string & {
-            refresh: () => Promise<string>;
-        };
-        expect(String(token)).toBe("dead-access");
+        const token = await getGitHubToken(fakeDb, "user-1");
+        expect(token).toBe("dead-access");
         expect(fetchMock).not.toHaveBeenCalled();
 
-        const fresh = await token.refresh();
+        const refresh = getProviderTokenRefresh(token);
+        const fresh = await refresh?.();
 
         expect(String(fresh)).toBe("fresh-access");
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(state.updates).toHaveLength(1);
     });
 
-    it("unlinks the account when the refresh token is rejected and not rotated", async () => {
+    it("keeps the identity and requires reauthentication after terminal rejection", async () => {
         const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
         mockFetch({
             ok: false,
@@ -329,12 +366,19 @@ describe("getGitHubToken", () => {
         });
 
         await expect(getGitHubToken(fakeDb, "user-1")).rejects.toThrow(
-            "GitHub account not connected (session expired)",
+            "GitHub account requires reconnection",
         );
-        expect(state.deletedAccountIds).toEqual(["acct-1"]);
+        expect(state.rows).toHaveLength(1);
+        expect(state.rows[0]).toMatchObject({
+            id: "acct-1",
+            connectionStatus: "reauth_required",
+            accessToken: null,
+            refreshToken: null,
+            lastAuthError: "bad_verification_code",
+        });
     });
 
-    it("unlinks the account when GitHub rejects with bad_refresh_token", async () => {
+    it("recognizes GitHub bad_refresh_token as terminal", async () => {
         const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
         mockFetch({
             ok: false,
@@ -347,35 +391,27 @@ describe("getGitHubToken", () => {
         });
 
         await expect(getGitHubToken(fakeDb, "user-1")).rejects.toThrow(
-            "GitHub account not connected (session expired)",
+            "GitHub account requires reconnection",
         );
-        expect(state.deletedAccountIds).toEqual(["acct-1"]);
+        expect(state.rows[0]?.connectionStatus).toBe("reauth_required");
     });
 
-    it("keeps the account when a rejected refresh was actually a rotation race", async () => {
-        const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
-        const fetchMock = vi.fn(async (_input: string | URL | Request) => {
-            state.rows[0] = {
-                ...state.rows[0]!,
-                accessToken: encrypt("winner-access"),
-                accessTokenExpiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000),
-                refreshToken: encrypt("winner-refresh"),
-            };
-            return {
-                ok: false,
-                status: 400,
-                json: async () => ({
-                    error: "bad_verification_code",
-                    error_description: "The refresh_token provided is expired",
-                }),
-            };
+    it("does not use credentials already marked for reauthentication", async () => {
+        const { fakeDb, state } = createFakeDb([
+            expiredGitHubAccount({
+                connectionStatus: "reauth_required",
+            }),
+        ]);
+        const fetchMock = mockFetch({
+            ok: true,
+            status: 200,
+            body: REFRESHED_BODY,
         });
-        vi.stubGlobal("fetch", fetchMock);
 
-        const token = await getGitHubToken(fakeDb, "user-1");
-
-        expect(String(token)).toBe("winner-access");
-        expect(state.deletedAccountIds).toHaveLength(0);
+        await expect(getGitHubToken(fakeDb, "user-1")).rejects.toThrow(
+            "GitHub account requires reconnection",
+        );
+        expect(fetchMock).not.toHaveBeenCalled();
         expect(state.updates).toHaveLength(0);
     });
 });
@@ -398,7 +434,7 @@ describe("getCodebergToken", () => {
         expect(state.updates).toHaveLength(1);
     });
 
-    it("unlinks a codeberg account whose refresh token is rejected", async () => {
+    it("preserves a codeberg identity after terminal rejection", async () => {
         const { fakeDb, state } = createFakeDb([expiredGitHubAccount()]);
         mockFetch({
             ok: false,
@@ -407,8 +443,10 @@ describe("getCodebergToken", () => {
         });
 
         await expect(getCodebergToken(fakeDb, "user-1")).rejects.toThrow(
-            "Codeberg account not connected (session expired)",
+            "Codeberg account requires reconnection",
         );
-        expect(state.deletedAccountIds).toEqual(["acct-1"]);
+        expect(state.rows).toHaveLength(1);
+        expect(state.rows[0]?.connectionStatus).toBe("reauth_required");
+        expect(state.rows[0]?.lastAuthError).toBe("invalid_grant");
     });
 });

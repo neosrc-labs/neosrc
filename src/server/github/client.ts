@@ -1,20 +1,20 @@
 import { Octokit, type RestEndpointMethodTypes } from "@octokit/rest";
 import { cache } from "react";
-import type { RefreshableAuth } from "~/server/auth";
+import { getProviderTokenRefresh } from "~/server/auth/token-registry";
 import { isUnauthorizedError } from "~/server/github-graphql";
 
 export type TeamGetByNameResponseData =
     RestEndpointMethodTypes["teams"]["getByName"]["response"]["data"];
-export function createOctokit(auth: string | RefreshableAuth) {
-    const refresh = (auth as RefreshableAuth).refresh;
-    if (typeof refresh !== "function") {
-        return new Octokit({ auth: String(auth) });
+export function createOctokit(auth: string) {
+    const refresh = getProviderTokenRefresh(auth);
+    if (!refresh) {
+        return new Octokit({ auth });
     }
 
     // The stored token may be dead while accessTokenExpiresAt still looks
     // valid (revoked or manually replaced token). Swap in a fresh token and
     // retry once when GitHub rejects the current one with a 401.
-    let token = String(auth);
+    let token = auth;
     let didRefresh = false;
     return new Octokit({
         authStrategy: (authOptions: {
@@ -53,7 +53,7 @@ export function createOctokit(auth: string | RefreshableAuth) {
                 }
             },
         }),
-        auth: { token: String(auth), refresh },
+        auth: { token: auth, refresh },
     });
 }
 export const getAuthenticatedUser = cache(async (accessToken: string) => {

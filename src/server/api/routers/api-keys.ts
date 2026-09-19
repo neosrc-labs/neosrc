@@ -83,13 +83,16 @@ export const apiKeysRouter = createTRPCRouter({
                 throw new TRPCError({ code: "UNAUTHORIZED" });
             const userId = ctx.session.user.id;
             const accounts = await getLinkedAccounts(ctx.db, userId);
-            const githubAccount = accounts.find(
+            const activeAccounts = accounts.filter(
+                ({ connectionStatus }) => connectionStatus === "active",
+            );
+            const githubAccount = activeAccounts.find(
                 ({ providerId }) => providerId === "github",
             );
-            const codebergAccount = accounts.find(
+            const codebergAccount = activeAccounts.find(
                 ({ providerId }) => providerId === "codeberg",
             );
-            const linkedProviders = accounts.flatMap((account) =>
+            const linkedProviders = activeAccounts.flatMap((account) =>
                 account.username
                     ? [
                           {
@@ -100,7 +103,7 @@ export const apiKeysRouter = createTRPCRouter({
                     : [],
             );
 
-            if (accounts.length === 0) {
+            if (activeAccounts.length === 0) {
                 throw new Error(
                     "No linked accounts found. Link GitHub or Codeberg first.",
                 );

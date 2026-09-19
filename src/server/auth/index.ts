@@ -2,11 +2,12 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { type GenericOAuthConfig, genericOAuth } from "better-auth/plugins";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { env } from "~/env";
 import { decrypt, encrypt } from "~/server/auth/encryption";
+import { registerProviderTokenRefresh } from "~/server/auth/token-registry";
 import { db } from "~/server/db";
 import {
     betterAuthAccount,
@@ -21,72 +22,109 @@ const CODEBERG_TOKEN_URL = "https://codeberg.org/login/oauth/access_token";
 
 const GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token";
 
-/** Raised when a provider rejects the refresh token as expired or invalid. */
-class RefreshTokenRejectedError extends Error {}
+const TOKEN_REQUEST_TIMEOUT_MS = 10_000;
 
-/** Provider error codes meaning the refresh token itself is dead. */
 const REJECTED_REFRESH_ERROR_CODES: Record<string, true> = {
-    bad_verification_code: true, // GitHub: expired/revoked/malformed refresh token
-    bad_refresh_token: true, // GitHub Apps: refresh token expired or already used
+    bad_verification_code: true,
+    bad_refresh_token: true,
     invalid_grant: true,
     invalid_token: true,
     refresh_token_expired: true,
 };
 
-/**
- * A provider access token that can replace itself when the provider rejects
- * it with a 401. The stored expiry timestamp can lie (revoked tokens,
- * manually replaced tokens), so API layers swap in a fresh token via
- * `refresh()` and retry the request instead of trusting the timestamp.
- */
-export type RefreshableAuth = string & { refresh: () => Promise<string> };
-
-function withRefresh(
-    token: string,
-    refresh: () => Promise<string>,
-): RefreshableAuth {
-    return Object.assign(new String(token), {
-        refresh,
-    }) as unknown as RefreshableAuth;
+class RefreshTokenRejectedError extends Error {
+    constructor(
+        message: string,
+        readonly code: string,
+    ) {
+        super(message);
+    }
 }
 
-async function refreshGitHubToken(refreshToken: string) {
-    const res = await fetch(GITHUB_TOKEN_URL, {
+export class ProviderAccountNotConnectedError extends Error {}
+export class ProviderReauthenticationRequiredError extends Error {}
+export class ProviderTokenUnavailableError extends Error {}
+
+type RefreshedToken = {
+    access_token: string;
+    refresh_token?: string;
+    expires_in: number;
+    refresh_token_expires_in?: number;
+};
+
+export {
+    getProviderTokenRefresh,
+    registerProviderTokenRefresh,
+} from "~/server/auth/token-registry";
+
+function parseRefreshedToken(body: Record<string, unknown>): RefreshedToken {
+    if (
+        typeof body.access_token !== "string" ||
+        !body.access_token ||
+        typeof body.expires_in !== "number" ||
+        !Number.isFinite(body.expires_in) ||
+        body.expires_in <= 0 ||
+        (body.refresh_token !== undefined &&
+            typeof body.refresh_token !== "string") ||
+        (body.refresh_token_expires_in !== undefined &&
+            (typeof body.refresh_token_expires_in !== "number" ||
+                !Number.isFinite(body.refresh_token_expires_in) ||
+                body.refresh_token_expires_in <= 0))
+    ) {
+        throw new Error("Provider returned an invalid token response");
+    }
+
+    return body as RefreshedToken;
+}
+
+async function requestRefreshedToken(
+    url: string,
+    body: Record<string, string | undefined>,
+): Promise<RefreshedToken> {
+    const response = await fetch(url, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
         },
-        body: JSON.stringify({
-            client_id: env.GITHUB_CLIENT_ID,
-            client_secret: env.GITHUB_CLIENT_SECRET,
-            grant_type: "refresh_token",
-            refresh_token: refreshToken,
-        }),
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(TOKEN_REQUEST_TIMEOUT_MS),
     });
-
-    const body = (await res.json().catch(() => null)) as Record<
+    const responseBody = (await response.json().catch(() => null)) as Record<
         string,
         unknown
     > | null;
 
-    if (!res.ok || body?.error) {
-        const code = typeof body?.error === "string" ? body.error : "";
+    if (!response.ok || responseBody?.error) {
+        const code =
+            typeof responseBody?.error === "string" ? responseBody.error : "";
         const description =
-            typeof body?.error_description === "string"
-                ? body.error_description
+            typeof responseBody?.error_description === "string"
+                ? responseBody.error_description
                 : "";
         if (REJECTED_REFRESH_ERROR_CODES[code]) {
             throw new RefreshTokenRejectedError(
                 description || "Refresh token expired",
+                code,
             );
         }
         throw new Error(
-            description || `Failed to refresh token (${res.status})`,
+            description || `Failed to refresh token (${response.status})`,
         );
     }
+    if (!responseBody) {
+        throw new Error("Provider returned an empty token response");
+    }
+    return parseRefreshedToken(responseBody);
+}
 
-    return body as RefreshedToken;
+function refreshGitHubToken(refreshToken: string) {
+    return requestRefreshedToken(GITHUB_TOKEN_URL, {
+        client_id: env.GITHUB_CLIENT_ID,
+        client_secret: env.GITHUB_CLIENT_SECRET,
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+    });
 }
 
 /**
@@ -250,7 +288,17 @@ export const auth = betterAuth({
                     }
                     return { data: { ...data, ...encrypted } };
                 },
-                after: syncAccountUsername,
+                after: async (account) => {
+                    await db
+                        .update(betterAuthAccount)
+                        .set({
+                            connectionStatus: "active",
+                            credentialVersion: sql`${betterAuthAccount.credentialVersion} + 1`,
+                            lastAuthError: null,
+                        })
+                        .where(eq(betterAuthAccount.id, account.id));
+                    await syncAccountUsername(account);
+                },
             },
             delete: {},
         },
@@ -267,29 +315,24 @@ const getUserId = async (userId?: string) => {
     return session?.user?.id ?? null;
 };
 
-type RefreshedToken = {
-    access_token: string;
-    refresh_token: string;
-    expires_in: number;
-    refresh_token_expires_in?: number;
-};
+type ProviderId = "github" | "codeberg";
 
-/**
- * Loads the stored account row for a provider, including the encrypted token
- * fields needed for refresh decisions.
- */
 async function findAccountByProvider(
     database: typeof db,
     userId: string,
-    providerId: string,
+    providerId: ProviderId,
+    lock = false,
 ) {
-    const [account] = await database
+    const query = database
         .select({
             id: betterAuthAccount.id,
             userId: betterAuthAccount.userId,
+            connectionStatus: betterAuthAccount.connectionStatus,
+            credentialVersion: betterAuthAccount.credentialVersion,
             accessToken: betterAuthAccount.accessToken,
             accessTokenExpiresAt: betterAuthAccount.accessTokenExpiresAt,
             refreshToken: betterAuthAccount.refreshToken,
+            refreshTokenExpiresAt: betterAuthAccount.refreshTokenExpiresAt,
         })
         .from(betterAuthAccount)
         .where(
@@ -299,160 +342,261 @@ async function findAccountByProvider(
             ),
         )
         .limit(1);
-
+    const [account] = lock ? await query.for("update") : await query;
     return account;
 }
 
-/**
- * Refresh the access token when it expires within this window, before it
- * actually dies mid-request.
- */
-const ACCESS_TOKEN_REFRESH_LEEWAY_MS = 30 * 60 * 1000; // 30 minutes
+type ProviderAccount = NonNullable<
+    Awaited<ReturnType<typeof findAccountByProvider>>
+>;
 
-/**
- * True when the access token is expired or due for refresh. Null expiry
- * (pre-expiry-tracking accounts) means never expires.
- */
+const ACCESS_TOKEN_REFRESH_LEEWAY_MS = 30 * 60 * 1000;
+
 function isAccessTokenDue(expiresAt: Date | null | undefined): boolean {
     if (!expiresAt) return false;
     return expiresAt.getTime() - Date.now() <= ACCESS_TOKEN_REFRESH_LEEWAY_MS;
 }
 
-/**
- * Refreshes a token with the provider, stores the new encrypted tokens on the
- * account row, and returns the fresh access token.
- */
+function isAccessTokenExpired(expiresAt: Date | null | undefined): boolean {
+    return Boolean(expiresAt && expiresAt.getTime() <= Date.now());
+}
+
+function providerName(providerId: ProviderId): string {
+    return providerId === "github" ? "GitHub" : "Codeberg";
+}
+
+function accessTokenFrom(account: ProviderAccount): string | null {
+    if (!account.accessToken) return null;
+    try {
+        return decrypt(account.accessToken);
+    } catch {
+        return null;
+    }
+}
+
+async function recordRefreshFailure(
+    database: typeof db,
+    account: ProviderAccount,
+    error: unknown,
+): Promise<void> {
+    const message =
+        error instanceof Error ? error.message.slice(0, 500) : "Refresh failed";
+    await database
+        .update(betterAuthAccount)
+        .set({ lastAuthError: message })
+        .where(eq(betterAuthAccount.id, account.id));
+}
+
+async function markReauthenticationRequired(
+    database: typeof db,
+    account: ProviderAccount,
+    error: RefreshTokenRejectedError,
+): Promise<void> {
+    await database
+        .update(betterAuthAccount)
+        .set({
+            connectionStatus: "reauth_required",
+            credentialVersion: sql`${betterAuthAccount.credentialVersion} + 1`,
+            accessToken: null,
+            refreshToken: null,
+            idToken: null,
+            accessTokenExpiresAt: null,
+            refreshTokenExpiresAt: null,
+            lastAuthError: error.code || error.message.slice(0, 500),
+        })
+        .where(eq(betterAuthAccount.id, account.id));
+}
+
 async function refreshAndStoreToken(
     database: typeof db,
-    accountId: string,
+    account: ProviderAccount,
     refreshToken: string,
     refresh: (refreshToken: string) => Promise<RefreshedToken>,
 ): Promise<string> {
-    // expires_in counts from token issuance, so base the expiry on the request
-    // start; deriving it from response receipt skews it later than the
-    // provider's true expiry.
     const issuedAt = Date.now();
     const refreshed = await refresh(refreshToken);
     await database
         .update(betterAuthAccount)
         .set({
+            connectionStatus: "active",
+            credentialVersion: sql`${betterAuthAccount.credentialVersion} + 1`,
             accessToken: encrypt(refreshed.access_token),
-            refreshToken: encrypt(refreshed.refresh_token),
+            refreshToken: refreshed.refresh_token
+                ? encrypt(refreshed.refresh_token)
+                : account.refreshToken,
             accessTokenExpiresAt: new Date(
                 issuedAt + refreshed.expires_in * 1000,
             ),
             refreshTokenExpiresAt: refreshed.refresh_token_expires_in
                 ? new Date(issuedAt + refreshed.refresh_token_expires_in * 1000)
-                : null,
+                : account.refreshTokenExpiresAt,
+            lastRefreshedAt: new Date(),
+            lastAuthError: null,
         })
-        .where(eq(betterAuthAccount.id, accountId));
+        .where(eq(betterAuthAccount.id, account.id));
     return refreshed.access_token;
 }
 
-/**
- * Returns a usable access token for a provider account, refreshing when due.
- *
- * Refresh failures never fail the request: if a concurrent request rotated the
- * refresh token, the freshly stored token is used; otherwise the stored token
- * is returned best-effort. The account row is the only coordination point;
- * there is no shared in-flight state.
- *
- * The returned token carries a `refresh()` that forces a rotation. API layers
- * call it when the provider rejects the token with a 401: the stored expiry
- * can lie (revoked or manually replaced token), so a dead token must not be
- * trusted just because the timestamp looks valid.
- */
-async function getProviderToken(
+async function refreshProviderToken(
     database: typeof db,
-    userId: string | null | undefined,
-    providerId: "github" | "codeberg",
+    userId: string,
+    providerId: ProviderId,
+    expectedAccessToken: string | null,
     refresh: (refreshToken: string) => Promise<RefreshedToken>,
-    options?: { force?: boolean },
-): Promise<RefreshableAuth> {
-    const providerName = providerId === "github" ? "GitHub" : "Codeberg";
-    if (!userId) throw new Error(`${providerName} account not connected`);
-
-    const account = await findAccountByProvider(database, userId, providerId);
-    if (!account?.accessToken) {
-        throw new Error(`${providerName} account not connected`);
-    }
-
-    const refreshable = (token: string) =>
-        withRefresh(token, () =>
-            getProviderToken(database, userId, providerId, refresh, {
-                force: true,
-            }),
+    force: boolean,
+): Promise<string> {
+    const result = await database.transaction(async (transaction) => {
+        const tx = transaction as unknown as typeof db;
+        const account = await findAccountByProvider(
+            tx,
+            userId,
+            providerId,
+            true,
         );
-
-    // A stored token that is still valid is used as-is.
-    if (!options?.force && !isAccessTokenDue(account.accessTokenExpiresAt)) {
-        try {
-            return refreshable(decrypt(account.accessToken));
-        } catch {
-            // Corrupted token: fall through and let the refresh replace it.
+        const name = providerName(providerId);
+        if (!account) {
+            throw new ProviderAccountNotConnectedError(
+                `${name} account not connected`,
+            );
         }
-    }
+        if (account.connectionStatus === "reauth_required") {
+            throw new ProviderReauthenticationRequiredError(
+                `${name} account requires reconnection`,
+            );
+        }
 
-    let refreshToken: string | null = null;
-    try {
-        refreshToken = account.refreshToken
-            ? decrypt(account.refreshToken)
-            : null;
-    } catch {
-        // Corrupted refresh token: nothing to refresh with.
-    }
+        const accessToken = accessTokenFrom(account);
+        const tokenChanged = account.accessToken !== expectedAccessToken;
+        if (
+            accessToken &&
+            ((!force && !isAccessTokenDue(account.accessTokenExpiresAt)) ||
+                (force &&
+                    tokenChanged &&
+                    !isAccessTokenDue(account.accessTokenExpiresAt)))
+        ) {
+            return { token: accessToken };
+        }
 
-    if (refreshToken) {
+        let refreshToken: string | null = null;
         try {
-            return refreshable(
-                await refreshAndStoreToken(
-                    database,
-                    account.id,
+            refreshToken = account.refreshToken
+                ? decrypt(account.refreshToken)
+                : null;
+        } catch {
+            refreshToken = null;
+        }
+
+        if (!refreshToken) {
+            await recordRefreshFailure(
+                tx,
+                account,
+                new Error("Refresh token is unavailable"),
+            );
+            if (
+                accessToken &&
+                !force &&
+                !isAccessTokenExpired(account.accessTokenExpiresAt)
+            ) {
+                return { token: accessToken };
+            }
+            return {
+                error: new ProviderTokenUnavailableError(
+                    `${name} credentials are unavailable`,
+                ),
+            };
+        }
+
+        try {
+            return {
+                token: await refreshAndStoreToken(
+                    tx,
+                    account,
                     refreshToken,
                     refresh,
                 ),
-            );
+            };
         } catch (error) {
-            // Refresh failed: a concurrent request may have rotated the token;
-            // re-read the row and use what's stored now.
-            const latest = await findAccountByProvider(
+            if (error instanceof RefreshTokenRejectedError) {
+                await markReauthenticationRequired(tx, account, error);
+                return {
+                    error: new ProviderReauthenticationRequiredError(
+                        `${name} account requires reconnection`,
+                    ),
+                };
+            }
+
+            await recordRefreshFailure(tx, account, error);
+            if (
+                accessToken &&
+                !force &&
+                !isAccessTokenExpired(account.accessTokenExpiresAt)
+            ) {
+                return { token: accessToken };
+            }
+            return {
+                error: new ProviderTokenUnavailableError(
+                    `${name} token refresh failed`,
+                ),
+            };
+        }
+    });
+
+    if ("error" in result) throw result.error;
+    return result.token;
+}
+
+async function getProviderToken(
+    database: typeof db,
+    userId: string | null | undefined,
+    providerId: ProviderId,
+    refresh: (refreshToken: string) => Promise<RefreshedToken>,
+): Promise<string> {
+    const name = providerName(providerId);
+    if (!userId) {
+        throw new ProviderAccountNotConnectedError(
+            `${name} account not connected`,
+        );
+    }
+
+    const account = await findAccountByProvider(database, userId, providerId);
+    if (!account) {
+        throw new ProviderAccountNotConnectedError(
+            `${name} account not connected`,
+        );
+    }
+    if (account.connectionStatus === "reauth_required") {
+        throw new ProviderReauthenticationRequiredError(
+            `${name} account requires reconnection`,
+        );
+    }
+
+    const refreshable = (token: string) =>
+        registerProviderTokenRefresh(token, async () => {
+            await refreshProviderToken(
                 database,
                 userId,
                 providerId,
+                account.accessToken,
+                refresh,
+                true,
             );
-            const rotated =
-                latest?.refreshToken !== undefined &&
-                latest.refreshToken !== account.refreshToken;
-            if (
-                latest?.accessToken &&
-                rotated &&
-                !isAccessTokenDue(latest.accessTokenExpiresAt)
-            ) {
-                return refreshable(decrypt(latest.accessToken));
-            }
-
-            if (error instanceof RefreshTokenRejectedError) {
-                await unlinkProviderAccount(database, account.id);
-                throw new Error(
-                    `${providerName} account not connected (session expired)`,
-                );
-            }
-        }
+            return getProviderToken(database, userId, providerId, refresh);
+        });
+    const accessToken = accessTokenFrom(account);
+    if (accessToken && !isAccessTokenDue(account.accessTokenExpiresAt)) {
+        return refreshable(accessToken);
     }
 
-    // Best effort: return the stored token (even if expired); the caller
-    // surfaces provider rejection.
-    return refreshable(decrypt(account.accessToken));
-}
-
-/** Removes a provider account whose refresh token was rejected. */
-async function unlinkProviderAccount(
-    database: typeof db,
-    accountId: string,
-): Promise<void> {
-    await database
-        .delete(betterAuthAccount)
-        .where(eq(betterAuthAccount.id, accountId));
+    return refreshable(
+        await refreshProviderToken(
+            database,
+            userId,
+            providerId,
+            account.accessToken,
+            refresh,
+            false,
+        ),
+    );
 }
 
 export const getGitHubToken = cache(
@@ -462,30 +606,24 @@ export const getGitHubToken = cache(
     ): Promise<string> => {
         if (!userId) {
             if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
-            throw new Error("GitHub account not connected");
-        }
-        try {
-            return await getProviderToken(
-                database,
-                userId,
-                "github",
-                refreshGitHubToken,
+            throw new ProviderAccountNotConnectedError(
+                "GitHub account not connected",
             );
-        } catch (error) {
-            // No usable account: fall back to anonymous browsing when enabled.
-            if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
-            throw error;
         }
+        return getProviderToken(database, userId, "github", refreshGitHubToken);
     },
 );
 
 export const githubAccessToken = cache(async (): Promise<string | null> => {
-    const uid = await getUserId();
+    const userId = await getUserId();
+    if (!userId) return env.GITHUB_ANONYMOUS_TOKEN ?? null;
     try {
-        return await getProviderToken(db, uid, "github", refreshGitHubToken);
+        return await getProviderToken(db, userId, "github", refreshGitHubToken);
     } catch (error) {
-        if (env.GITHUB_ANONYMOUS_TOKEN) return env.GITHUB_ANONYMOUS_TOKEN;
-        if (error instanceof Error && error.message.includes("not connected")) {
+        if (
+            error instanceof ProviderAccountNotConnectedError ||
+            error instanceof ProviderReauthenticationRequiredError
+        ) {
             return null;
         }
         throw error;
@@ -501,60 +639,33 @@ export const getCodebergToken = cache(
 );
 
 export const codebergAccessToken = cache(async (): Promise<string | null> => {
-    const uid = await getUserId();
-    if (!uid) return null;
+    const userId = await getUserId();
+    if (!userId) return null;
     try {
         return await getProviderToken(
             db,
-            uid,
+            userId,
             "codeberg",
             refreshCodebergToken,
         );
     } catch (error) {
-        if (error instanceof Error && error.message.includes("not connected")) {
+        if (
+            error instanceof ProviderAccountNotConnectedError ||
+            error instanceof ProviderReauthenticationRequiredError
+        ) {
             return null;
         }
         throw error;
     }
 });
 
-async function refreshCodebergToken(refreshToken: string) {
-    const res = await fetch(CODEBERG_TOKEN_URL, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-        },
-        body: JSON.stringify({
-            client_id: env.CODEBERG_CLIENT_ID,
-            client_secret: env.CODEBERG_CLIENT_SECRET,
-            grant_type: "refresh_token",
-            refresh_token: refreshToken,
-        }),
+function refreshCodebergToken(refreshToken: string) {
+    return requestRefreshedToken(CODEBERG_TOKEN_URL, {
+        client_id: env.CODEBERG_CLIENT_ID,
+        client_secret: env.CODEBERG_CLIENT_SECRET,
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
     });
-
-    const body = (await res.json().catch(() => null)) as Record<
-        string,
-        unknown
-    > | null;
-
-    if (!res.ok || body?.error) {
-        const code = typeof body?.error === "string" ? body.error : "";
-        const description =
-            typeof body?.error_description === "string"
-                ? body.error_description
-                : "";
-        if (REJECTED_REFRESH_ERROR_CODES[code]) {
-            throw new RefreshTokenRejectedError(
-                description || "Refresh token expired",
-            );
-        }
-        throw new Error(
-            description || `Failed to refresh Codeberg token (${res.status})`,
-        );
-    }
-
-    return body as RefreshedToken;
 }
 
 export type AuthProviderId = "github" | "codeberg";
@@ -564,6 +675,7 @@ export type LinkedProviderAccount = {
     accountId: string;
     providerId: AuthProviderId;
     username: string | null;
+    connectionStatus: "active" | "reauth_required";
 };
 
 export async function getLinkedAccounts(
@@ -576,6 +688,7 @@ export async function getLinkedAccounts(
             accountId: betterAuthAccount.accountId,
             providerId: betterAuthAccount.providerId,
             username: betterAuthAccount.username,
+            connectionStatus: betterAuthAccount.connectionStatus,
         })
         .from(betterAuthAccount)
         .where(eq(betterAuthAccount.userId, userId));
@@ -598,6 +711,7 @@ export async function getLinkedAccount(
             accountId: betterAuthAccount.accountId,
             providerId: betterAuthAccount.providerId,
             username: betterAuthAccount.username,
+            connectionStatus: betterAuthAccount.connectionStatus,
         })
         .from(betterAuthAccount)
         .where(

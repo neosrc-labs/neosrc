@@ -47,6 +47,11 @@ export const repoVisibilityEnum = pgEnum("repo_visibility", [
 
 export const accountTypeEnum = pgEnum("account_type", ["user", "org"]);
 
+export const authConnectionStatusEnum = pgEnum("auth_connection_status", [
+    "active",
+    "reauth_required",
+]);
+
 export const permissionLevelEnum = pgEnum("permission_level", [
     "read",
     "triage",
@@ -97,6 +102,15 @@ export const betterAuthAccount = createTable(
             .notNull()
             .references(() => betterAuthUser.id, { onDelete: "cascade" }),
         username: d.text(),
+        connectionStatus: authConnectionStatusEnum()
+            .default("active")
+            .notNull(),
+        credentialVersion: d.integer().default(0).notNull(),
+        lastRefreshedAt: d.timestamp({
+            withTimezone: true,
+            mode: "date",
+        }),
+        lastAuthError: d.text(),
         accessToken: d.text(),
         refreshToken: d.text(),
         idToken: d.text(),
