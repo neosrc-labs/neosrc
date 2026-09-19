@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Copy, Link as LinkIcon } from "lucide-react";
+import Image from "next/image";
 import {
     Children,
     createContext,
@@ -22,6 +23,7 @@ import { IssueHoverCard } from "~/components/hovercards/issue-hover-card";
 import { TeamHoverCard } from "~/components/hovercards/team-hover-card";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CopyButton } from "~/components/ui/copy-button";
+import { api } from "~/trpc/react";
 import { cn } from "~/utils/helpers";
 import { highlightLines } from "~/utils/highlight";
 import { SuggestionBlock } from "./accessories/suggestion-block";
@@ -165,7 +167,7 @@ export function MarkdownRenderer({
                               ),
                           } as Record<string, unknown>)
                         : {}),
-                    a({ href, children, ...props }) {
+                    a({ href, children, node: _node, ...props }) {
                         const issueMatch = href?.match(
                             /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/(?:issues|pull)\/(\d+)$/,
                         );
@@ -235,8 +237,20 @@ export function MarkdownRenderer({
                             /^https:\/\/github\.com\/([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)$/,
                         );
                         if (userMatch?.[1]) {
+                            const login = userMatch[1];
+                            if (getPlainText(children) === `@${login}`) {
+                                return (
+                                    <UserMentionLink
+                                        href={userMatch[0]}
+                                        login={login}
+                                        {...props}
+                                    >
+                                        {children}
+                                    </UserMentionLink>
+                                );
+                            }
                             return (
-                                <UserHoverCard login={userMatch[1]}>
+                                <UserHoverCard login={login}>
                                     <a href={href} {...props}>
                                         {children}
                                     </a>
@@ -562,6 +576,48 @@ function getPlainText(children: ReactNode): string {
     if (typeof children === "number") return String(children);
     if (Array.isArray(children)) return children.map(getPlainText).join("");
     return "";
+}
+
+function UserMentionLink({
+    children,
+    className,
+    href,
+    login,
+    ...props
+}: Omit<React.ComponentPropsWithoutRef<"a">, "href"> & {
+    href: string;
+    login: string;
+}) {
+    const { data } = api.users.getByUsername.useQuery(
+        { provider: "gh", username: login },
+        { staleTime: 5 * 60 * 1000 },
+    );
+
+    return (
+        <UserHoverCard login={login}>
+            <a
+                className={cn(
+                    "inline-flex items-center gap-1 align-baseline",
+                    className,
+                )}
+                href={href}
+                {...props}
+            >
+                <span className="inline-flex size-4 shrink-0 overflow-hidden rounded-full bg-surface-selected">
+                    {data?.user?.avatar_url && (
+                        <Image
+                            alt=""
+                            className="my-0 size-4 object-cover"
+                            height={16}
+                            src={data.user.avatar_url}
+                            width={16}
+                        />
+                    )}
+                </span>
+                {children}
+            </a>
+        </UserHoverCard>
+    );
 }
 
 function headingAnchorSlug(text: string): string {
