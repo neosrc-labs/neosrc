@@ -230,6 +230,7 @@ beforeEach(() => {
             accountId: `${providerId}-user`,
             providerId,
             username: "ranger-ross",
+            connectionStatus: "active",
         }),
     );
 });

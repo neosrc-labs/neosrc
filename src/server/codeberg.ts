@@ -7,6 +7,7 @@ import {
     repoSubscriptionCacheKey,
     withStaleWhileRevalidate,
 } from "~/server/cache";
+import { codebergFetch } from "~/server/codeberg/fetch";
 import {
     getCachedRepoData,
     getRepoPermissionForUser,
@@ -148,7 +149,7 @@ export const listPullRequests = cache(
 
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/pulls?${searchParams}`;
 
-        const res = await fetch(url, {
+        const res = await codebergFetch(accessToken, url, {
             headers: {
                 Authorization: `token ${accessToken}`,
                 Accept: "application/json",
@@ -197,12 +198,16 @@ export const listPullRequests = cache(
 
 export const getUser = cache(
     async (accessToken: string): Promise<CodebergUser | null> => {
-        const res = await fetch(`${CODEBERG_API}/api/v1/user`, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
+        const res = await codebergFetch(
+            accessToken,
+            `${CODEBERG_API}/api/v1/user`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
             },
-        });
+        );
         if (!res.ok) return null;
         return res.json();
     },
@@ -220,7 +225,8 @@ export const listLabels = async (
     owner: string,
     repo: string,
 ): Promise<CodebergLabel[]> => {
-    const res = await fetch(
+    const res = await codebergFetch(
+        accessToken,
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/labels`,
         {
             headers: {
@@ -248,7 +254,8 @@ export const listMilestones = cache(
         owner: string,
         repo: string,
     ): Promise<CodebergMilestone[]> => {
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/milestones?state=open`,
             {
                 headers: {
@@ -274,7 +281,8 @@ export const listAssignees = cache(
         owner: string,
         repo: string,
     ): Promise<CodebergAssignee[]> => {
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/assignees`,
             {
                 headers: {
@@ -306,12 +314,16 @@ export const getUserByUsername = cache(
         accessToken: string,
         username: string,
     ): Promise<CodebergUserByUsername | null> => {
-        const res = await fetch(`${CODEBERG_API}/api/v1/users/${username}`, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
+        const res = await codebergFetch(
+            accessToken,
+            `${CODEBERG_API}/api/v1/users/${username}`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
             },
-        });
+        );
         if (!res.ok) return null;
         return res.json();
     },
@@ -360,7 +372,8 @@ export const getRepo = cache(
         owner: string,
         repo: string,
     ): Promise<CodebergRepo | null> => {
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}`,
             {
                 headers: {
@@ -432,7 +445,8 @@ export const getBranches = cache(
         const branches: CodebergBranch[] = [];
         let totalCount = 0;
         for (let page = 1; page <= MAX_BRANCH_PAGES; page++) {
-            const res = await fetch(
+            const res = await codebergFetch(
+                accessToken,
                 `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches?limit=${BRANCH_PAGE_LIMIT}&page=${page}`,
                 {
                     headers: {
@@ -497,7 +511,8 @@ export async function deleteBranch(
     repo: string,
     branch: string,
 ): Promise<void> {
-    const res = await fetch(
+    const res = await codebergFetch(
+        accessToken,
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`,
         {
             method: "DELETE",
@@ -521,7 +536,8 @@ export async function renameBranch(
     branch: string,
     newName: string,
 ): Promise<void> {
-    const res = await fetch(
+    const res = await codebergFetch(
+        accessToken,
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`,
         {
             method: "PATCH",
@@ -645,7 +661,8 @@ export const listWorkflowRuns = cache(
         if (params.ref) query.set("ref", params.ref);
         if (params.workflowId) query.set("workflow_id", params.workflowId);
 
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/actions/runs?${query}`,
             {
                 // Public repositories are readable without a token, and
@@ -711,7 +728,8 @@ export const listRepoActivity = cache(
         repo: string,
         limit = 50,
     ): Promise<CodebergActivity[]> => {
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/activities/feeds?limit=${limit}`,
             {
                 headers: {
@@ -743,7 +761,8 @@ export async function findPullRequestForBranches(
     base: string,
     head: string,
 ): Promise<{ number: number; state: string; merged: boolean } | null> {
-    const res = await fetch(
+    const res = await codebergFetch(
+        accessToken,
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/pulls/${encodeURIComponent(base)}/${head
             .split("/")
             .map(encodeURIComponent)
@@ -770,7 +789,8 @@ export async function findPullRequestForBranches(
 
 export const getTags = cache(
     async (accessToken: string, owner: string, repo: string) => {
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/tags`,
             {
                 headers: {
@@ -791,7 +811,8 @@ export async function getRefCounts(
     repo: string,
 ): Promise<{ branchCount: number; tagCount: number }> {
     const [branchesRes, tagsRes] = await Promise.all([
-        fetch(
+        codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches?limit=1`,
             {
                 headers: {
@@ -800,12 +821,16 @@ export async function getRefCounts(
                 },
             },
         ),
-        fetch(`${CODEBERG_API}/api/v1/repos/${owner}/${repo}/tags?limit=1`, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
+        codebergFetch(
+            accessToken,
+            `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/tags?limit=1`,
+            {
+                headers: {
+                    Authorization: `token ${accessToken}`,
+                    Accept: "application/json",
+                },
             },
-        }),
+        ),
     ]);
 
     const parsePageCount = (res: Response): number => {
@@ -832,7 +857,7 @@ export const getLatestCommit = cache(
 
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`;
 
-        const res = await fetch(url, {
+        const res = await codebergFetch(accessToken, url, {
             headers: {
                 Authorization: `token ${accessToken}`,
                 Accept: "application/json",
@@ -891,7 +916,7 @@ export const getPathCommits = cache(
 
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`;
 
-        const res = await fetch(url, {
+        const res = await codebergFetch(accessToken, url, {
             headers: {
                 Authorization: `token ${accessToken}`,
                 Accept: "application/json",
@@ -933,7 +958,7 @@ export const getRepoContents = cache(
         const query = params.toString();
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/contents${urlPath}${query ? `?${query}` : ""}`;
 
-        const res = await fetch(url, {
+        const res = await codebergFetch(accessToken, url, {
             headers: {
                 Authorization: `token ${accessToken}`,
                 Accept: "application/json",
@@ -961,7 +986,7 @@ export const getFileTree = cache(
     async (accessToken: string, owner: string, repo: string, ref: string) => {
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
 
-        const res = await fetch(url, {
+        const res = await codebergFetch(accessToken, url, {
             headers: {
                 Authorization: `token ${accessToken}`,
                 Accept: "application/json",
@@ -996,7 +1021,7 @@ export const getFileContent = cache(
 
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/contents/${path}?${params}`;
 
-        const res = await fetch(url, {
+        const res = await codebergFetch(accessToken, url, {
             headers: {
                 Authorization: `token ${accessToken}`,
                 Accept: "application/json",
@@ -1022,7 +1047,8 @@ export const getFileContent = cache(
 
 export const getRepoLanguages = cache(
     async (accessToken: string, owner: string, repo: string) => {
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/languages`,
             {
                 headers: {
@@ -1038,7 +1064,8 @@ export const getRepoLanguages = cache(
 
 export const getLatestRelease = cache(
     async (accessToken: string, owner: string, repo: string) => {
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/releases?limit=1`,
             {
                 headers: {
@@ -1067,7 +1094,8 @@ const getRepoCounts = cache(
         repo: string,
     ): Promise<{ openIssuesCount: number; openPullRequestsCount: number }> => {
         const [issues, pulls] = await Promise.all([
-            fetch(
+            codebergFetch(
+                accessToken,
                 `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?state=open&limit=1&type=issues`,
                 {
                     headers: {
@@ -1076,7 +1104,8 @@ const getRepoCounts = cache(
                     },
                 },
             ),
-            fetch(
+            codebergFetch(
+                accessToken,
                 `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/pulls?state=open&limit=1`,
                 {
                     headers: {
@@ -1112,7 +1141,8 @@ const getRepoCounts = cache(
 
 export const listRecentIssueAuthors = cache(
     async (accessToken: string, owner: string, repo: string) => {
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?state=all&sort=created&direction=desc&limit=100`,
             {
                 headers: {
@@ -1162,7 +1192,7 @@ export async function getCommitCombinedStatus(
     sha: string,
 ): Promise<CodebergCombinedStatus | null> {
     const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits/${sha}/status`;
-    const res = await fetch(url, {
+    const res = await codebergFetch(accessToken, url, {
         headers: {
             Authorization: `token ${accessToken}`,
             Accept: "application/json",
@@ -1197,7 +1227,7 @@ export const listReferenceCommits = cache(
             page: String(opts.page ?? 1),
         });
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`;
-        const res = await fetch(url, {
+        const res = await codebergFetch(accessToken, url, {
             headers: {
                 Authorization: `token ${accessToken}`,
                 Accept: "application/json",
@@ -1271,7 +1301,7 @@ export const listPinnedIssues = cache(
         repo: string,
     ): Promise<CodebergIssue[]> => {
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/pinned`;
-        const res = await fetch(url, {
+        const res = await codebergFetch(accessToken, url, {
             headers: {
                 Authorization: `token ${accessToken}`,
                 Accept: "application/json",
@@ -1359,7 +1389,7 @@ export const listIssues = cache(
 
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?${searchParams}`;
 
-        const res = await fetch(url, {
+        const res = await codebergFetch(accessToken, url, {
             headers: {
                 Authorization: `token ${accessToken}`,
                 Accept: "application/json",
@@ -1434,7 +1464,8 @@ export const getIssue = cache(
         repo: string,
         issueNumber: number,
     ) => {
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/${issueNumber}`,
             {
                 headers: {
@@ -1466,7 +1497,8 @@ export const searchIssues = cache(
         searchParams.set("limit", "5");
         if (query) searchParams.set("q", query);
 
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?${searchParams}`,
             {
                 headers: {
@@ -1510,7 +1542,8 @@ export const searchIssuesAcrossRepos = cache(
         if (params.sort) searchParams.set("sort", params.sort);
         if (params.limit) searchParams.set("limit", String(params.limit));
 
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/issues/search?${searchParams}`,
             {
                 headers: {
@@ -1588,15 +1621,19 @@ async function forgejoWrite(
     body: unknown,
     failure: string,
 ): Promise<Response> {
-    const res = await fetch(`${CODEBERG_API}/api/v1${path}`, {
-        method,
-        headers: {
-            Authorization: `token ${accessToken}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
+    const res = await codebergFetch(
+        accessToken,
+        `${CODEBERG_API}/api/v1${path}`,
+        {
+            method,
+            headers: {
+                Authorization: `token ${accessToken}`,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
+    );
     if (!res.ok) {
         throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
@@ -1619,7 +1656,8 @@ export const listIssueTimeline = cache(
         limit: number,
     ): Promise<{ items: CodebergTimelineEntry[]; hasNextPage: boolean }> => {
         const effectiveLimit = Math.min(limit, TIMELINE_MAX_LIMIT);
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/${issueNumber}/timeline?page=${page}&limit=${effectiveLimit}`,
             {
                 headers: {
@@ -1723,7 +1761,8 @@ export const listIssueReactions = cache(
         repo: string,
         issueNumber: number,
     ): Promise<CodebergReaction[]> => {
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/${issueNumber}/reactions`,
             {
                 headers: {
@@ -1759,7 +1798,8 @@ export const listIssueCommentReactions = cache(
         repo: string,
         commentId: number,
     ): Promise<CodebergReaction[]> => {
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/comments/${commentId}/reactions`,
             {
                 headers: {
@@ -1968,7 +2008,8 @@ export async function getUserRepos(
     const limit = 50;
 
     for (;;) {
-        const res = await fetch(
+        const res = await codebergFetch(
+            accessToken,
             `${CODEBERG_API}/api/v1/user/repos?limit=${limit}&page=${page}`,
             {
                 headers: {
@@ -2010,7 +2051,8 @@ export async function checkRepoStarred(
     owner: string,
     repo: string,
 ): Promise<boolean> {
-    const res = await fetch(
+    const res = await codebergFetch(
+        accessToken,
         `${CODEBERG_API}/api/v1/user/starred/${owner}/${repo}`,
         {
             headers: {
@@ -2027,7 +2069,8 @@ export async function starRepo(
     owner: string,
     repo: string,
 ): Promise<void> {
-    const res = await fetch(
+    const res = await codebergFetch(
+        accessToken,
         `${CODEBERG_API}/api/v1/user/starred/${owner}/${repo}`,
         {
             method: "PUT",
@@ -2048,7 +2091,8 @@ export async function unstarRepo(
     owner: string,
     repo: string,
 ): Promise<void> {
-    const res = await fetch(
+    const res = await codebergFetch(
+        accessToken,
         `${CODEBERG_API}/api/v1/user/starred/${owner}/${repo}`,
         {
             method: "DELETE",
@@ -2071,7 +2115,8 @@ export async function getRepoSubscription(
     owner: string,
     repo: string,
 ): Promise<RepoSubscription | null> {
-    const res = await fetch(
+    const res = await codebergFetch(
+        accessToken,
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/subscription`,
         {
             headers: {
@@ -2095,7 +2140,8 @@ export async function setRepoSubscription(
     subscribed: boolean,
     ignored: boolean,
 ): Promise<void> {
-    const res = await fetch(
+    const res = await codebergFetch(
+        accessToken,
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/subscription`,
         {
             method: "PUT",
@@ -2119,7 +2165,8 @@ export async function deleteRepoSubscription(
     owner: string,
     repo: string,
 ): Promise<void> {
-    const res = await fetch(
+    const res = await codebergFetch(
+        accessToken,
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/subscription`,
         {
             method: "DELETE",

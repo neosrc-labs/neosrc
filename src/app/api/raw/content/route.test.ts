@@ -17,13 +17,6 @@ vi.mock("~/server/github", () => ({
 
 import { GET } from "./route";
 
-/** Mirrors the boxed token RefreshableAuth getters actually return. */
-function refreshableToken(value: string) {
-    return Object.assign(new String(value), {
-        refresh: vi.fn().mockResolvedValue("ghu_refreshed"),
-    }) as unknown as string;
-}
-
 describe("GET /api/raw/content", () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -34,8 +27,8 @@ describe("GET /api/raw/content", () => {
         }));
     });
 
-    it("returns file content for a RefreshableAuth boxed token", async () => {
-        mockGetToken.mockResolvedValue(refreshableToken("ghu_boxed"));
+    it("returns file content for an authenticated token", async () => {
+        mockGetToken.mockResolvedValue("ghu_plain");
         mockGetContent.mockResolvedValue({
             data: {
                 content: Buffer.from("line1\nline2\n").toString("base64"),
@@ -77,7 +70,7 @@ describe("GET /api/raw/content", () => {
     });
 
     it("500 when GitHub content fetch fails", async () => {
-        mockGetToken.mockResolvedValue(refreshableToken("ghu_boxed"));
+        mockGetToken.mockResolvedValue("ghu_plain");
         mockGetContent.mockRejectedValue(new Error("boom"));
         const res = await GET(
             new Request(

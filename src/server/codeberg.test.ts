@@ -3,10 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // Stub the db module so importing the Codeberg client does not require env.
 vi.mock("~/server/db", () => ({ db: {} }));
 
+import { registerProviderTokenRefresh } from "~/server/auth/token-registry";
 import {
     createIssueComment,
     deleteBranch,
     getBranches,
+    getUser,
     listIssueCommentReactions,
     listIssueReactions,
     listIssues,
@@ -66,6 +68,43 @@ describe("listPinnedIssues", () => {
                     Accept: "application/json",
                 },
             },
+        );
+    });
+});
+
+describe("Codeberg authentication retry", () => {
+    it("refreshes once after a 401 and retries with the replacement token", async () => {
+        const profile = {
+            id: 1,
+            login: "ross",
+            username: "ross",
+            full_name: "Ross",
+            email: "ross@example.com",
+            avatar_url: "https://codeberg.org/avatars/ross",
+        };
+        const fetchMock = vi
+            .fn()
+            .mockResolvedValueOnce({
+                ok: false,
+                status: 401,
+                json: async () => ({ message: "Unauthorized" }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => profile,
+            });
+        vi.stubGlobal("fetch", fetchMock);
+        const refresh = vi.fn().mockResolvedValue("fresh-token");
+        const token = registerProviderTokenRefresh("expired-token", refresh);
+
+        await expect(getUser(token)).resolves.toEqual(profile);
+
+        expect(refresh).toHaveBeenCalledTimes(1);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        const retryInit = fetchMock.mock.calls[1]?.[1] as RequestInit;
+        expect(new Headers(retryInit.headers).get("Authorization")).toBe(
+            "token fresh-token",
         );
     });
 });

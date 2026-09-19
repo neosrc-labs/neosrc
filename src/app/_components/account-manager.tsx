@@ -8,6 +8,7 @@ export type LinkedAccount = {
     accountId: string;
     providerId: "github" | "codeberg";
     username: string | null;
+    connectionStatus: "active" | "reauth_required";
 };
 
 type ProviderId = LinkedAccount["providerId"];
@@ -107,7 +108,9 @@ export function AccountManager({
         [router],
     );
 
-    const onlyOneLinked = accounts.length <= 1;
+    const onlyOneLinked =
+        accounts.filter(({ connectionStatus }) => connectionStatus === "active")
+            .length <= 1;
 
     return (
         <div className="flex flex-col items-center gap-3">
@@ -125,7 +128,7 @@ export function AccountManager({
                             <span className="font-medium text-sm text-text-label">
                                 {provider.label}
                             </span>
-                            {account ? (
+                            {account?.connectionStatus === "active" ? (
                                 <>
                                     <span className="text-text-tertiary text-xs">
                                         {account.username
@@ -152,18 +155,31 @@ export function AccountManager({
                                     </button>
                                 </>
                             ) : (
-                                <button
-                                    type="button"
-                                    disabled={loading === provider.providerId}
-                                    onClick={() =>
-                                        handleLink(provider.providerId)
-                                    }
-                                    className="cursor-pointer rounded-md border border-gray-300 px-3 py-1 text-text-label text-xs transition-colors hover:bg-surface-tertiary disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700"
-                                >
-                                    {loading === provider.providerId
-                                        ? "Linking..."
-                                        : "Link"}
-                                </button>
+                                <>
+                                    {account && (
+                                        <span className="text-amber-600 text-xs dark:text-amber-400">
+                                            Reconnect required
+                                        </span>
+                                    )}
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            loading === provider.providerId
+                                        }
+                                        onClick={() =>
+                                            handleLink(provider.providerId)
+                                        }
+                                        className="cursor-pointer rounded-md border border-gray-300 px-3 py-1 text-text-label text-xs transition-colors hover:bg-surface-tertiary disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700"
+                                    >
+                                        {loading === provider.providerId
+                                            ? account
+                                                ? "Reconnecting..."
+                                                : "Linking..."
+                                            : account
+                                              ? "Reconnect"
+                                              : "Link"}
+                                    </button>
+                                </>
                             )}
                         </div>
                     );

@@ -2,7 +2,7 @@ import {
     GraphqlResponseError,
     graphql as octokitGraphql,
 } from "@octokit/graphql";
-import type { RefreshableAuth } from "~/server/auth";
+import { getProviderTokenRefresh } from "~/server/auth/token-registry";
 
 // NOTE: The itemType filter is an explicit whitelist because of https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/about-oauth-app-access-restrictions
 // Some event types ADDED_TO_PROJECT_V2_EVENT and PROJECT_V2_ITEM_STATUS_CHANGED_EVENT (and maybe others) will
@@ -25,14 +25,14 @@ export function isUnauthorizedError(error: unknown): boolean {
  * GraphQL client that swaps in a fresh token and retries once when the token
  * is rejected (401), mirroring createOctokit's behavior for REST.
  */
-export function createGraphql(auth: string | RefreshableAuth) {
-    const refresh = (auth as RefreshableAuth).refresh;
+export function createGraphql(auth: string) {
+    const refresh = getProviderTokenRefresh(auth);
     const graphql = octokitGraphql.defaults({
-        headers: { authorization: `bearer ${String(auth)}` },
+        headers: { authorization: `bearer ${auth}` },
     });
-    if (typeof refresh !== "function") return graphql;
+    if (!refresh) return graphql;
 
-    let token = String(auth);
+    let token = auth;
     let didRefresh = false;
     return (async (query: string, parameters?: Record<string, unknown>) => {
         try {

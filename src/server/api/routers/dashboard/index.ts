@@ -66,10 +66,14 @@ export async function mergeViewerItems<T extends { updatedAt: string }>(
 
 /** Providers the viewer has an account for. */
 export function viewerProviders(
-    accounts: Pick<LinkedProviderAccount, "providerId">[],
+    accounts: Pick<LinkedProviderAccount, "providerId" | "connectionStatus">[],
 ): ViewerItemProvider[] {
     return (["github", "codeberg"] as const).flatMap((providerId) =>
-        accounts.some((account) => account.providerId === providerId)
+        accounts.some(
+            (account) =>
+                account.providerId === providerId &&
+                account.connectionStatus === "active",
+        )
             ? [providerId === "github" ? "gh" : "cb"]
             : [],
     );
@@ -103,7 +107,7 @@ function viewerItemLoads<T>(args: {
 
 /** Requested providers that the viewer can actually be queried as. */
 function requestedProviders(
-    accounts: Pick<LinkedProviderAccount, "providerId">[],
+    accounts: Pick<LinkedProviderAccount, "providerId" | "connectionStatus">[],
     filter: ProviderFilter,
 ): ViewerItemProvider[] {
     return viewerProviders(accounts).filter(

@@ -16,9 +16,8 @@ vi.mock("~/env", () => ({
     },
 }));
 
+import { registerProviderTokenRefresh } from "~/server/auth/token-registry";
 import { createOctokit } from "~/server/github";
-
-type RefreshableAuth = string & { refresh: () => Promise<string> };
 
 function jsonResponse(body: unknown, status: number): Response {
     return new Response(JSON.stringify(body), {
@@ -30,9 +29,7 @@ function jsonResponse(body: unknown, status: number): Response {
 describe("createOctokit", () => {
     it("refreshes the token and retries once when GitHub rejects it with 401", async () => {
         const refresh = vi.fn(async () => "fresh-token");
-        const auth = Object.assign(new String("dead-token"), {
-            refresh,
-        }) as unknown as RefreshableAuth;
+        const auth = registerProviderTokenRefresh("dead-token", refresh);
 
         const fetchMock = vi.fn(async (input: string | URL | Request) => {
             const url = String(input);
@@ -80,9 +77,7 @@ describe("createOctokit", () => {
 
     it("retries at most once per client even if the fresh token is also rejected", async () => {
         const refresh = vi.fn(async () => "also-dead-token");
-        const auth = Object.assign(new String("dead-token"), {
-            refresh,
-        }) as unknown as RefreshableAuth;
+        const auth = registerProviderTokenRefresh("dead-token", refresh);
 
         const fetchMock = vi.fn(async (_input: string | URL | Request) =>
             jsonResponse({ message: "Bad credentials" }, 401),

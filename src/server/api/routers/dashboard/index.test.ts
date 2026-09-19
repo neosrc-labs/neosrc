@@ -23,6 +23,7 @@ vi.mock("~/server/auth", () => ({
     getGitHubToken: vi.fn(),
     getCodebergToken: vi.fn(),
     getLinkedAccounts: vi.fn(),
+    getProviderTokenRefresh: vi.fn(() => undefined),
 }));
 
 const graphqlMock = vi.hoisted(() => vi.fn());
@@ -104,6 +105,7 @@ async function callerFor(
             accountId: `${providerId}-user`,
             providerId,
             username: "octocat",
+            connectionStatus: "active" as const,
         })),
     );
     const ctx = await createTRPCContext({ headers: new Headers() });
