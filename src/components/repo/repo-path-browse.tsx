@@ -1,30 +1,35 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useMemo } from "react";
-import type { RepoContentItem } from "~/server/github";
+import { type ReactNode, useEffect } from "react";
+import type { DirectoryEntry } from "~/server/repository/directory-browse";
 import { api } from "~/trpc/react";
 import { cn } from "~/utils/helpers";
-import { blobHref, type Provider } from "~/utils/provider-url";
+import {
+    blobHref,
+    type Provider,
+    type RepositoryReference,
+} from "~/utils/provider-url";
 import { RepoBreadcrumb } from "./repo-breadcrumb";
 import { RepoBusyBar } from "./repo-busy-bar";
 import { RepoContentCard } from "./repo-content-card";
-import { isFileEntry, sortRepoContents } from "./repo-contents";
 import { RepoFileTable, RepoFileTableSkeleton } from "./repo-file-table";
 import { RepoPathCommitRow } from "./repo-path-commit-row";
 import { RepoPathNotFound } from "./repo-path-not-found";
-import { contentsPrevious, fileCommitsPrevious } from "./repo-previous-data";
+import { directoryBrowsePrevious } from "./repo-previous-data";
 
 interface RepoPathBrowseProps {
     owner: string;
     repo: string;
     provider: Provider;
-    selectedRef: string;
+    reference: RepositoryReference;
     /** Repo-relative directory path; never "" on a directory page. */
     path: string;
-    children?: (contents: RepoContentItem[]) => ReactNode;
+    children?: (
+        contents: DirectoryEntry[],
+        resolvedObjectId: string | null,
+    ) => ReactNode;
 }
-
 /**
  * Directory page body: the breadcrumb, the commit bar for the directory and
  * its listing, with no branch picker or search bar of its own. Those live in
@@ -37,79 +42,54 @@ export function RepoPathBrowse({
     owner,
     repo,
     provider,
-    selectedRef,
+    reference,
     path,
     children,
 }: RepoPathBrowseProps) {
     const router = useRouter();
-    const queryKey = `${provider}/${owner}/${repo}/${selectedRef}/${path}`;
+    const queryKey = `${provider}/${owner}/${repo}/${reference.kind ?? "native"}/${reference.value}/${path}`;
 
-    const contentsQuery = api.repos.getContents.useQuery(
+    const browseQuery = api.repos.browseDirectory.useQuery(
         {
             provider,
             owner,
             repo,
-            ref: selectedRef,
+            ref: reference.value,
+            refKind: reference.kind,
             path,
         },
-        { placeholderData: () => contentsPrevious.previous(queryKey) },
+        { placeholderData: () => directoryBrowsePrevious.previous(queryKey) },
     );
-    const contents = contentsQuery.data;
-    const contentsError = contentsQuery.error;
-    // The rows on screen still belong to the path the user just left.
-    const stale = contentsQuery.isPlaceholderData;
+    const browse = browseQuery.data;
+    const browseStale = browseQuery.isPlaceholderData;
 
     useEffect(() => {
-        if (!stale && contents !== undefined && contents.length > 0) {
-            contentsPrevious.remember(queryKey, contents);
+        if (!browseStale && browse !== undefined) {
+            directoryBrowsePrevious.remember(queryKey, browse);
         }
-    }, [stale, contents, queryKey]);
+    }, [browseStale, browse, queryKey]);
 
-    const sortedContents = useMemo(
-        () => sortRepoContents(contents ?? []),
-        [contents],
-    );
+    const isFile =
+        !browseStale &&
+        browse?.outcome === "found" &&
+        browse.classification.kind !== "directory";
 
-    const paths = useMemo(
-        () => sortedContents.map((item) => item.path),
-        [sortedContents],
-    );
-
-    const commitsQuery = api.repos.getFileLatestCommits.useQuery(
-        {
-            provider,
-            owner,
-            repo,
-            ref: selectedRef,
-            paths,
-        },
-        {
-            // Stale rows would fetch the previous directory's commits.
-            enabled: !stale && paths.length > 0,
-            placeholderData: () => fileCommitsPrevious.previous(queryKey),
-        },
-    );
-    const fileCommits = commitsQuery.data;
-
-    useEffect(() => {
-        if (!commitsQuery.isPlaceholderData && fileCommits !== undefined) {
-            fileCommitsPrevious.remember(queryKey, fileCommits);
-        }
-    }, [commitsQuery.isPlaceholderData, fileCommits, queryKey]);
-
-    const busy = stale || (!contentsQuery.isPending && commitsQuery.isFetching);
-
-    // A tree URL that names a file lands on the file page, as on GitHub.
-    const isFile = !stale && isFileEntry(sortedContents, path);
     useEffect(() => {
         if (isFile) {
-            router.replace(blobHref(provider, owner, repo, selectedRef, path));
+            router.replace(blobHref(provider, owner, repo, reference, path));
         }
-    }, [isFile, router, provider, owner, repo, selectedRef, path]);
+    }, [isFile, router, provider, owner, repo, reference, path]);
 
-    // A provider errors for a path it does not have; an empty listing is a
-    // directory that exists and holds nothing.
-    const pathMissing = contentsError !== null;
+    if (!browseStale && browseQuery.error !== null) {
+        throw browseQuery.error;
+    }
+
+    const pathMissing = !browseStale && browse?.outcome === "missing";
+    const contents =
+        browse?.outcome === "found" &&
+        browse.classification.kind === "directory"
+            ? browse.entries
+            : [];
 
     if (pathMissing) {
         return (
@@ -117,7 +97,7 @@ export function RepoPathBrowse({
                 <RepoBreadcrumb
                     owner={owner}
                     repo={repo}
-                    selectedRef={selectedRef}
+                    reference={reference}
                     provider={provider}
                     path={path}
                 />
@@ -126,19 +106,21 @@ export function RepoPathBrowse({
                         provider={provider}
                         owner={owner}
                         repo={repo}
-                        selectedRef={selectedRef}
+                        selectedRef={reference.value}
                     />
                 </RepoContentCard>
             </>
         );
     }
 
+    const busy = browseQuery.isPending || browseStale;
+
     return (
         <>
             <RepoBreadcrumb
                 owner={owner}
                 repo={repo}
-                selectedRef={selectedRef}
+                reference={reference}
                 provider={provider}
                 path={path}
             />
@@ -148,14 +130,19 @@ export function RepoPathBrowse({
                     owner={owner}
                     repo={repo}
                     provider={provider}
-                    selectedRef={selectedRef}
+                    reference={reference}
+                    resolvedObjectId={
+                        browse?.outcome === "found"
+                            ? browse.reference.objectId
+                            : null
+                    }
                     path={path}
                     view="tree"
                 />
                 <div className={cn(busy && "pointer-events-none opacity-60")}>
-                    {contentsQuery.isPending ? (
+                    {browse === undefined ? (
                         <RepoFileTableSkeleton />
-                    ) : sortedContents.length === 0 ? (
+                    ) : contents.length === 0 ? (
                         <div className="p-8 text-center text-sm text-text-tertiary">
                             This directory is empty.
                         </div>
@@ -164,16 +151,20 @@ export function RepoPathBrowse({
                             owner={owner}
                             repo={repo}
                             provider={provider}
-                            selectedRef={selectedRef}
-                            sortedContents={sortedContents}
-                            fileCommits={fileCommits}
+                            reference={reference}
+                            entries={contents}
                         />
                     )}
                 </div>
             </RepoContentCard>
             {children ? (
                 <div className={cn(busy && "pointer-events-none opacity-60")}>
-                    {children(sortedContents)}
+                    {children(
+                        contents,
+                        browse?.outcome === "found"
+                            ? browse.reference.objectId
+                            : null,
+                    )}
                 </div>
             ) : null}
         </>

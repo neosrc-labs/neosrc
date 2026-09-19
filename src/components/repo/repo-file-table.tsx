@@ -1,16 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import type {
-    CodeSearchResultItem,
-    FileLatestCommit,
-    RepoContentItem,
-} from "~/server/github";
+import type { CodeSearchResultItem } from "~/server/github";
+import type { DirectoryEntry } from "~/server/repository/directory-browse";
 import { formatRelativeTime } from "~/utils/format-time";
 import { getFileIconName, getFolderIconName } from "~/utils/icons";
 import {
     blobHref,
     type Provider,
+    type RepositoryReference,
     repoUrl,
     treeHref,
 } from "~/utils/provider-url";
@@ -21,16 +19,14 @@ export function RepoFileTable({
     owner,
     repo,
     provider,
-    selectedRef,
-    sortedContents,
-    fileCommits,
+    reference,
+    entries,
 }: {
     owner: string;
     repo: string;
     provider: Provider;
-    selectedRef: string;
-    sortedContents: RepoContentItem[];
-    fileCommits: Record<string, FileLatestCommit | null> | undefined;
+    reference: RepositoryReference;
+    entries: DirectoryEntry[];
 }) {
     return (
         <table className="w-full">
@@ -48,28 +44,16 @@ export function RepoFileTable({
                 </tr>
             </thead>
             <tbody>
-                {sortedContents.map((item) => {
-                    const isDir = item.type === "dir";
+                {entries.map((item) => {
+                    const isDir = item.kind === "directory";
                     const href = isDir
-                        ? treeHref(
-                              provider,
-                              owner,
-                              repo,
-                              selectedRef,
-                              item.path,
-                          )
-                        : blobHref(
-                              provider,
-                              owner,
-                              repo,
-                              selectedRef,
-                              item.path,
-                          );
+                        ? treeHref(provider, owner, repo, reference, item.path)
+                        : blobHref(provider, owner, repo, reference, item.path);
                     const iconName = isDir
                         ? getFolderIconName(item.name)
                         : getFileIconName(item.name);
 
-                    const commit = fileCommits?.[item.path] ?? null;
+                    const commit = item.commit;
 
                     return (
                         <tr
@@ -92,7 +76,7 @@ export function RepoFileTable({
                             <td className="px-4 py-2">
                                 {commit ? (
                                     <a
-                                        href={`${repoUrl(provider, owner, repo)}/commit/${commit.sha}`}
+                                        href={`${repoUrl(provider, owner, repo)}/commit/${commit.objectId}`}
                                         className="block min-w-0 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
                                     >
                                         {commit.message}
@@ -100,16 +84,14 @@ export function RepoFileTable({
                                 ) : null}
                             </td>
                             <td className="whitespace-nowrap px-4 py-2 text-right">
-                                {commit?.committedDate ? (
+                                {commit?.committedAt ? (
                                     <span
                                         className="shrink-0 text-sm text-text-tertiary"
                                         title={new Date(
-                                            commit.committedDate,
+                                            commit.committedAt,
                                         ).toLocaleString()}
                                     >
-                                        {formatRelativeTime(
-                                            commit.committedDate,
-                                        )}
+                                        {formatRelativeTime(commit.committedAt)}
                                     </span>
                                 ) : null}
                             </td>
@@ -127,13 +109,13 @@ export function RepoSearchResultsTable({
     owner,
     repo,
     provider,
-    selectedRef,
+    reference,
 }: {
     searchResults: CodeSearchResultItem[];
     owner: string;
     repo: string;
     provider: Provider;
-    selectedRef: string;
+    reference: RepositoryReference;
 }) {
     return (
         <table className="w-full">
@@ -156,14 +138,14 @@ export function RepoSearchResultsTable({
                                                   provider,
                                                   owner,
                                                   repo,
-                                                  selectedRef,
+                                                  reference,
                                                   item.path,
                                               )
                                             : blobHref(
                                                   provider,
                                                   owner,
                                                   repo,
-                                                  selectedRef,
+                                                  reference,
                                                   item.path,
                                               )
                                     }

@@ -8,7 +8,12 @@ import type { BlameAuthor, BlameCommit, BlameRange } from "~/server/github";
 import { api } from "~/trpc/react";
 import { formatRelativeTime } from "~/utils/format-time";
 import { cn, formatFileSize } from "~/utils/helpers";
-import { blobHref, type Provider, rawUrl } from "~/utils/provider-url";
+import {
+    blobHref,
+    type Provider,
+    type RepositoryReference,
+    rawUrl,
+} from "~/utils/provider-url";
 import { RepoBusyBar } from "./repo-busy-bar";
 import { FileBodySkeleton, useHighlightedLines } from "./repo-code-view";
 import { useRepoFileData } from "./repo-file-data";
@@ -23,7 +28,7 @@ interface RepoBlameViewProps {
     owner: string;
     repo: string;
     provider: Provider;
-    selectedRef: string;
+    reference: RepositoryReference;
     /** Repo-relative file path. */
     path: string;
 }
@@ -44,15 +49,24 @@ export function RepoBlameView({
     owner,
     repo,
     provider,
-    selectedRef,
+    reference,
     path,
 }: RepoBlameViewProps) {
-    const file = useRepoFileData({ provider, owner, repo, selectedRef, path });
-    const queryKey = `${provider}/${owner}/${repo}/${selectedRef}/${path}`;
+    const file = useRepoFileData({ provider, owner, repo, reference, path });
+    const queryKey = `${provider}/${owner}/${repo}/${reference.kind ?? "native"}/${reference.value}/${path}`;
 
     const blameQuery = api.repos.getBlame.useQuery(
-        { provider, owner, repo, ref: selectedRef, path },
-        { placeholderData: () => blamePrevious.previous(queryKey) },
+        {
+            provider,
+            owner,
+            repo,
+            ref: file.objectId ?? reference.value,
+            path,
+        },
+        {
+            enabled: file.objectId !== null,
+            placeholderData: () => blamePrevious.previous(queryKey),
+        },
     );
 
     useEffect(() => {
@@ -84,12 +98,12 @@ export function RepoBlameView({
                 provider={provider}
                 owner={owner}
                 repo={repo}
-                selectedRef={selectedRef}
+                selectedRef={reference.value}
             />
         );
     }
 
-    const raw = rawUrl(provider, owner, repo, selectedRef, path);
+    const raw = rawUrl(provider, owner, repo, reference.value, path);
     const blame = blameQuery.data;
     const busy = file.busy || blameQuery.isPlaceholderData;
 
@@ -107,7 +121,8 @@ export function RepoBlameView({
                 owner={owner}
                 repo={repo}
                 provider={provider}
-                selectedRef={selectedRef}
+                reference={reference}
+                resolvedObjectId={file.objectId}
                 path={path}
                 view="blame"
                 trailing={
@@ -124,7 +139,7 @@ export function RepoBlameView({
                             provider={provider}
                             owner={owner}
                             repo={repo}
-                            selectedRef={selectedRef}
+                            reference={reference}
                             path={path}
                             active="blame"
                         />
@@ -192,7 +207,7 @@ export function RepoBlameView({
                                 provider,
                                 owner,
                                 repo,
-                                selectedRef,
+                                reference,
                                 path,
                             )}
                             className="mt-2 inline-block text-blue-600 text-sm hover:underline dark:text-blue-400"

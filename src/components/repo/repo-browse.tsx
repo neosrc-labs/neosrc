@@ -8,12 +8,14 @@ import {
     mapChecksListToStatusContexts,
     StatusChecksHoverCard,
 } from "~/components/ci-status";
-import type { RepoContentItem, RepoLatestCommit } from "~/server/github";
+import type { RepoLatestCommit } from "~/server/github";
+import type { DirectoryEntry } from "~/server/repository/directory-browse";
 import { api } from "~/trpc/react";
 import {
     blobHref,
     branchesHref,
     type Provider,
+    type RepositoryReference,
     repoUrl,
 } from "~/utils/provider-url";
 import { ClonePopover } from "./clone-popover";
@@ -22,7 +24,7 @@ import { RefSelector } from "./ref-selector";
 import { RepoBreadcrumb } from "./repo-breadcrumb";
 import { RepoCommitRow, RepoCommitRowSkeleton } from "./repo-commit-row";
 import { RepoContentCard } from "./repo-content-card";
-import { isFileEntry, sortRepoContents } from "./repo-contents";
+
 import {
     RepoFileTable,
     RepoFileTableSkeleton,
@@ -35,22 +37,25 @@ interface RepoBrowseProps {
     repo: string;
     provider: Provider;
     /** Branch or tag being listed. Controlled by the caller. */
-    selectedRef: string;
+    reference: RepositoryReference;
     /** Repo-relative directory path; "" is the repo root. */
     path: string;
-    onSelectRef: (ref: string) => void;
+    onSelectRef: (reference: RepositoryReference) => void;
     isFork?: boolean;
     parentFullName?: string | null;
     parentDefaultBranch?: string | null;
     /** Rendered below the card once the listing resolves. */
-    children?: (contents: RepoContentItem[]) => ReactNode;
+    children?: (
+        contents: DirectoryEntry[],
+        resolvedObjectId: string | null,
+    ) => ReactNode;
 }
 
 export function RepoBrowse({
     owner,
     repo,
     provider,
-    selectedRef,
+    reference,
     path,
     onSelectRef,
     isFork,
@@ -62,68 +67,52 @@ export function RepoBrowse({
     const [searchQuery, setSearchQuery] = useState("");
     const [hasRequestedTree, setHasRequestedTree] = useState(false);
 
-    const { data: latestCommit } = api.repos.getLatestCommit.useQuery({
+    const browseQuery = api.repos.browseDirectory.useQuery({
         provider,
         owner,
         repo,
-        ref: selectedRef,
+        ref: reference.value,
+        refKind: reference.kind,
+        path,
     });
-
-    const {
-        data: contents,
-        isLoading: contentsLoading,
-        error: contentsError,
-    } = api.repos.getContents.useQuery({
-        provider,
-        owner,
-        repo,
-        ref: selectedRef,
-        path: path || undefined,
-    });
-
-    const sortedContents = useMemo(
-        () => sortRepoContents(contents ?? []),
-        [contents],
+    const browse = browseQuery.data;
+    const contents =
+        browse?.outcome === "found" &&
+        browse.classification.kind === "directory"
+            ? browse.entries
+            : [];
+    const { data: latestCommit } = api.repos.getLatestCommit.useQuery(
+        {
+            provider,
+            owner,
+            repo,
+            ref:
+                browse?.outcome === "found"
+                    ? browse.reference.objectId
+                    : reference.value,
+        },
+        { enabled: browse?.outcome === "found" },
     );
-
-    const paths = useMemo(
-        () => sortedContents.map((c) => c.path),
-        [sortedContents],
-    );
-
-    const { data: fileCommits, isLoading: fileCommitsLoading } =
-        api.repos.getFileLatestCommits.useQuery(
-            {
-                provider,
-                owner,
-                repo,
-                ref: selectedRef,
-                paths,
-            },
-            { enabled: paths.length > 0 },
-        );
 
     const isSearchActive = searchQuery.length > 0;
+    const pathMissing = browse?.outcome === "missing";
+    const isFile =
+        browse?.outcome === "found" &&
+        browse.classification.kind !== "directory";
 
-    // Git cannot store empty directories, so an empty listing below the repo
-    // root means the path does not exist.
-    const pathMissing =
-        contentsError !== null || (path !== "" && sortedContents.length === 0);
-
-    // A tree URL that names a file lands on the file page, as on GitHub.
-    const isFile = isFileEntry(sortedContents, path);
     useEffect(() => {
         if (isFile) {
-            router.replace(blobHref(provider, owner, repo, selectedRef, path));
+            router.replace(blobHref(provider, owner, repo, reference, path));
         }
-    }, [isFile, router, provider, owner, repo, selectedRef, path]);
+    }, [isFile, router, provider, owner, repo, reference, path]);
 
     const { data: fileTree } = api.repos.getFileTree.useQuery(
         {
             provider,
             owner,
             repo,
-            ref: selectedRef,
+            ref: reference.value,
+            refKind: reference.kind,
         },
         { enabled: hasRequestedTree },
     );
@@ -136,8 +125,12 @@ export function RepoBrowse({
             limit: 50,
         });
 
-        return fzf.find(searchQuery).map((r) => r.item);
+        return fzf.find(searchQuery).map((result) => result.item);
     }, [fileTree, searchQuery, isSearchActive]);
+
+    if (browseQuery.error !== null) {
+        throw browseQuery.error;
+    }
 
     return (
         <>
@@ -146,8 +139,8 @@ export function RepoBrowse({
                     owner={owner}
                     repo={repo}
                     provider={provider}
-                    selectedRef={selectedRef}
-                    setSelectedRef={onSelectRef}
+                    reference={reference}
+                    setReference={onSelectRef}
                     searchQuery={searchQuery}
                     setSearchQuery={setSearchQuery}
                     setHasRequestedTree={setHasRequestedTree}
@@ -164,7 +157,7 @@ export function RepoBrowse({
                                 owner={owner}
                                 repo={repo}
                                 provider={provider}
-                                selectedRef={selectedRef}
+                                reference={reference}
                             />
                         )
                     ) : (
@@ -172,7 +165,7 @@ export function RepoBrowse({
                             <RepoBreadcrumb
                                 owner={owner}
                                 repo={repo}
-                                selectedRef={selectedRef}
+                                reference={reference}
                                 provider={provider}
                                 path={path}
                             />
@@ -180,19 +173,19 @@ export function RepoBrowse({
                                 owner={owner}
                                 repo={repo}
                                 provider={provider}
-                                selectedRef={selectedRef}
+                                selectedRef={reference.value}
                                 latestCommit={latestCommit}
                             />
-                            {contentsLoading || fileCommitsLoading ? (
+                            {browseQuery.isPending ? (
                                 <RepoFileTableSkeleton />
                             ) : pathMissing ? (
                                 <RepoPathNotFound
                                     provider={provider}
                                     owner={owner}
                                     repo={repo}
-                                    selectedRef={selectedRef}
+                                    selectedRef={reference.value}
                                 />
-                            ) : sortedContents.length === 0 ? (
+                            ) : contents.length === 0 ? (
                                 <div className="p-8 text-center text-sm text-text-tertiary">
                                     This directory is empty.
                                 </div>
@@ -206,7 +199,7 @@ export function RepoBrowse({
                                                 owner={owner}
                                                 repo={repo}
                                                 parentFullName={parentFullName}
-                                                defaultBranch={selectedRef}
+                                                defaultBranch={reference.value}
                                                 parentDefaultBranch={
                                                     parentDefaultBranch
                                                 }
@@ -216,9 +209,8 @@ export function RepoBrowse({
                                         owner={owner}
                                         repo={repo}
                                         provider={provider}
-                                        selectedRef={selectedRef}
-                                        sortedContents={sortedContents}
-                                        fileCommits={fileCommits}
+                                        reference={reference}
+                                        entries={contents}
                                     />
                                 </>
                             )}
@@ -226,7 +218,10 @@ export function RepoBrowse({
                     )}
                 </div>
             </RepoContentCard>
-            {children?.(sortedContents)}
+            {children?.(
+                contents,
+                browse?.outcome === "found" ? browse.reference.objectId : null,
+            )}
         </>
     );
 }
@@ -254,10 +249,13 @@ export function RepoBrowseRoot({
     parentFullName,
     parentDefaultBranch,
 }: RepoBrowseRootProps) {
-    const [ref, setRef] = useState(defaultBranch);
+    const [reference, setReference] = useState<RepositoryReference>(() => ({
+        kind: "branch",
+        value: defaultBranch,
+    }));
 
     useEffect(() => {
-        setRef(defaultBranch);
+        setReference({ kind: "branch", value: defaultBranch });
     }, [defaultBranch]);
 
     return (
@@ -265,9 +263,9 @@ export function RepoBrowseRoot({
             owner={owner}
             repo={repo}
             provider={provider}
-            selectedRef={ref}
+            reference={reference}
             path=""
-            onSelectRef={setRef}
+            onSelectRef={setReference}
             isFork={isFork}
             parentFullName={parentFullName}
             parentDefaultBranch={parentDefaultBranch}
@@ -343,8 +341,8 @@ function FileTableHeader({
     owner,
     repo,
     provider,
-    selectedRef,
-    setSelectedRef,
+    reference,
+    setReference,
     searchQuery,
     setSearchQuery,
     setHasRequestedTree,
@@ -352,8 +350,8 @@ function FileTableHeader({
     owner: string;
     repo: string;
     provider: Provider;
-    selectedRef: string;
-    setSelectedRef: (b: string) => void;
+    reference: RepositoryReference;
+    setReference: (reference: RepositoryReference) => void;
     searchQuery: string;
     setSearchQuery: (b: string) => void;
     setHasRequestedTree: (o: boolean) => void;
@@ -373,8 +371,8 @@ function FileTableHeader({
                     owner={owner}
                     repo={repo}
                     provider={provider}
-                    selectedRef={selectedRef}
-                    onSelect={setSelectedRef}
+                    reference={reference}
+                    onSelect={setReference}
                 />
                 {refCounts ? (
                     <span className="inline-flex items-center gap-1 text-sm text-text-tertiary">

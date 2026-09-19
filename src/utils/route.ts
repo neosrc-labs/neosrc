@@ -1,3 +1,7 @@
+import {
+    parseRepositoryReference,
+    type RepositoryReference,
+} from "./provider-url";
 export function isChangesPage(pathname: string): boolean {
     return (
         pathname?.includes("/pull/") &&
@@ -8,9 +12,8 @@ export function isChangesPage(pathname: string): boolean {
 export interface RepoBrowsePath {
     /** "tree" lists a directory; "blob" renders a file; "blame" its authorship. */
     view: "tree" | "blob" | "blame";
-    /** Branch or tag from the URL. */
-    ref: string;
-    /** Repo-relative path; "" for the branch root. */
+    reference: RepositoryReference;
+    /** Repo-relative path; "" for the reference root. */
     path: string;
 }
 
@@ -31,6 +34,7 @@ function decodeSegment(segment: string): string {
 export function parseRepoBrowsePath(
     pathname: string,
     repoBase: string,
+    refKind: string | null,
 ): RepoBrowsePath | null {
     const prefix = `${repoBase}/`;
     if (!pathname.startsWith(prefix)) return null;
@@ -38,10 +42,12 @@ export function parseRepoBrowsePath(
     const [view, ref, ...rest] = pathname.slice(prefix.length).split("/");
     if (view !== "tree" && view !== "blob" && view !== "blame") return null;
     if (!ref) return null;
+    const reference = parseRepositoryReference(decodeSegment(ref), refKind);
+    if (!reference) return null;
 
     return {
         view,
-        ref: decodeSegment(ref),
+        reference,
         path: rest
             .filter((segment) => segment !== "")
             .map(decodeSegment)

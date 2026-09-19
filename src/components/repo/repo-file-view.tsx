@@ -1,7 +1,11 @@
 "use client";
 
 import { cn, formatFileSize } from "~/utils/helpers";
-import { type Provider, rawUrl } from "~/utils/provider-url";
+import {
+    type Provider,
+    type RepositoryReference,
+    rawUrl,
+} from "~/utils/provider-url";
 import { RepoBusyBar } from "./repo-busy-bar";
 import { CodeView, FileBodySkeleton } from "./repo-code-view";
 import { useRepoFileData } from "./repo-file-data";
@@ -14,7 +18,7 @@ interface RepoFileViewProps {
     owner: string;
     repo: string;
     provider: Provider;
-    selectedRef: string;
+    reference: RepositoryReference;
     /** Repo-relative file path. */
     path: string;
 }
@@ -23,10 +27,11 @@ export function RepoFileView({
     owner,
     repo,
     provider,
-    selectedRef,
+    reference,
     path,
 }: RepoFileViewProps) {
     const {
+        objectId,
         entry,
         content,
         contentLabel,
@@ -34,7 +39,7 @@ export function RepoFileView({
         busy,
         contentFailed,
         retryContent,
-    } = useRepoFileData({ provider, owner, repo, selectedRef, path });
+    } = useRepoFileData({ provider, owner, repo, reference, path });
 
     if (pathMissing) {
         return (
@@ -42,13 +47,13 @@ export function RepoFileView({
                 provider={provider}
                 owner={owner}
                 repo={repo}
-                selectedRef={selectedRef}
+                selectedRef={reference.value}
             />
         );
     }
 
     const name = path.split("/").pop() ?? path;
-    const raw = rawUrl(provider, owner, repo, selectedRef, path);
+    const raw = rawUrl(provider, owner, repo, reference.value, path);
 
     return (
         <>
@@ -57,11 +62,12 @@ export function RepoFileView({
                 owner={owner}
                 repo={repo}
                 provider={provider}
-                selectedRef={selectedRef}
+                reference={reference}
+                resolvedObjectId={objectId}
                 path={path}
                 view="blob"
                 trailing={
-                    entry?.type === "file" ? (
+                    entry?.kind === "file" ? (
                         <span className="shrink-0 text-text-tertiary text-xs">
                             {formatFileSize(entry.size)}
                         </span>
@@ -76,7 +82,7 @@ export function RepoFileView({
                             provider={provider}
                             owner={owner}
                             repo={repo}
-                            selectedRef={selectedRef}
+                            reference={reference}
                             path={path}
                             active="blob"
                         />

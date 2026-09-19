@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { RepoDirectoryPage } from "~/components/repo/repo-directory-page";
 import { loadRepoPageData } from "~/components/repo/repo-page-data";
 import { RepoTreePage } from "~/components/repo/repo-tree-page";
+import { parseRepositoryReference } from "~/utils/provider-url";
 
 interface TreeParams {
     owner: string;
@@ -21,12 +23,17 @@ export async function generateMetadata({
     };
 }
 
-export default async function CodebergTreePage({
+export default async function TreePage({
     params,
+    searchParams,
 }: {
     params: Promise<TreeParams>;
+    searchParams: Promise<{ refKind?: string | string[] }>;
 }) {
     const { owner, repo, branch, path } = await params;
+    const query = await searchParams;
+    const reference = parseRepositoryReference(branch, query.refKind);
+    if (!reference) notFound();
     const repoPath = (path ?? []).join("/");
 
     // The branch root is the repo root view; a path inside it is a directory
@@ -37,7 +44,7 @@ export default async function CodebergTreePage({
                 provider="cb"
                 owner={owner}
                 repo={repo}
-                selectedRef={branch}
+                reference={reference}
                 path={repoPath}
             />
         );
@@ -48,7 +55,7 @@ export default async function CodebergTreePage({
             provider="cb"
             owner={owner}
             repo={repo}
-            selectedRef={branch}
+            reference={reference}
             {...loadRepoPageData("cb", owner, repo)}
         />
     );

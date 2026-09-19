@@ -16,14 +16,18 @@ import {
 } from "~/components/ui/popover";
 import { api } from "~/trpc/react";
 import { cn } from "~/utils/helpers";
-import { branchesHref, type Provider } from "~/utils/provider-url";
+import {
+    branchesHref,
+    type Provider,
+    type RepositoryReference,
+} from "~/utils/provider-url";
 
 interface RefSelectorProps {
     owner: string;
     repo: string;
     provider: Provider;
-    selectedRef: string;
-    onSelect: (ref: string) => void;
+    reference: RepositoryReference;
+    onSelect: (reference: RepositoryReference) => void;
     /** `rail` fills its container, e.g. the file tree header. */
     variant?: "default" | "rail";
 }
@@ -38,7 +42,7 @@ export function RefSelector({
     owner,
     repo,
     provider,
-    selectedRef,
+    reference,
     onSelect,
     variant = "default",
 }: RefSelectorProps) {
@@ -77,7 +81,7 @@ export function RefSelector({
     }, [open]);
 
     const handleSelect = (name: string) => {
-        onSelect(name);
+        onSelect({ kind: tab === "branches" ? "branch" : "tag", value: name });
         setOpen(false);
     };
 
@@ -103,7 +107,7 @@ export function RefSelector({
                                 : "max-w-[200px]",
                         )}
                     >
-                        {selectedRef}
+                        {reference.value}
                     </span>
                     <ChevronDownIcon className="h-3 w-3 shrink-0 text-text-tertiary" />
                 </button>
@@ -174,14 +178,14 @@ export function RefSelector({
                                 type="button"
                                 className={cn(
                                     "flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-surface-secondary",
-                                    item.name === selectedRef
+                                    item.name === reference.value
                                         ? "bg-surface-secondary"
                                         : "text-text-primary",
                                 )}
                                 onClick={() => handleSelect(item.name)}
                             >
                                 <span className="flex w-4 shrink-0 items-center justify-center">
-                                    {item.name === selectedRef && (
+                                    {item.name === reference.value && (
                                         <CheckIcon className="h-3.5 w-3.5 text-text-label" />
                                     )}
                                 </span>

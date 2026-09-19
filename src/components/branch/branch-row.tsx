@@ -68,7 +68,10 @@ export function BranchTableRow({
                 <td className="px-4 py-2">
                     <div className="flex min-w-0 items-center gap-2">
                         <Link
-                            href={treeHref(provider, owner, repo, branch.name)}
+                            href={treeHref(provider, owner, repo, {
+                                kind: "branch",
+                                value: branch.name,
+                            })}
                             prefetch={false}
                             title={branch.name}
                             className="min-w-0 truncate font-mono text-blue-600 text-sm hover:underline dark:text-blue-400"

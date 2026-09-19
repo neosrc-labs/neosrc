@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const queries = vi.hoisted(() => ({
     blame: vi.fn(),
-    contents: vi.fn(),
+    browse: vi.fn(),
     fileContent: vi.fn(),
     pathCommits: vi.fn(),
 }));
@@ -22,7 +22,7 @@ vi.mock("~/trpc/react", () => ({
     api: {
         repos: {
             getBlame: { useQuery: queries.blame },
-            getContents: { useQuery: queries.contents },
+            browseDirectory: { useQuery: queries.browse },
             getFileContent: { useQuery: queries.fileContent },
             getPathCommits: { useQuery: queries.pathCommits },
         },
@@ -35,21 +35,28 @@ const CONTENT = "one\ntwo\nthree\nfour";
 
 /** A file entry, so the view renders a body rather than a not-found page. */
 const FILE_ENTRY = {
-    type: "file",
+    kind: "file" as const,
     name: "a.txt",
     path: "a.txt",
-    sha: "s",
+    objectId: "s",
     size: 18,
-    htmlUrl: null,
 };
 
 function resolveQueries(blame: unknown) {
-    queries.contents.mockReturnValue({
-        data: [FILE_ENTRY],
+    queries.browse.mockReturnValue({
+        data: {
+            outcome: "found",
+            reference: {
+                requested: { kind: null, value: "main" },
+                objectId: "s",
+            },
+            path: "a.txt",
+            classification: { kind: "file", entry: FILE_ENTRY },
+            entries: [],
+        },
         error: null,
         isPlaceholderData: false,
         isPending: false,
-        isFetching: false,
     });
     queries.fileContent.mockReturnValue({
         data: { content: CONTENT },
@@ -71,7 +78,7 @@ function renderView() {
             provider="gh"
             owner="o"
             repo="r"
-            selectedRef="main"
+            reference={{ kind: null, value: "main" }}
             path="a.txt"
         />,
     );

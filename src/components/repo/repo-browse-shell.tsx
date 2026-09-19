@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
 import { ResizableLayout } from "~/components/layout/resizable-layout";
 import { useSidebar } from "~/components/layout/sidebar-context";
@@ -34,12 +34,14 @@ export function RepoBrowseShell({
     children,
 }: RepoBrowseShellProps) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const router = useRouter();
     const { setLeftOpen, setRightOpen } = useSidebar();
 
     const location = parseRepoBrowsePath(
         pathname,
         `/${provider}/${owner}/${repo}`,
+        searchParams.get("refKind"),
     );
     // The branch root renders its own main column with the repo name header and
     // the About column, so the shell stays out of its way.
@@ -54,7 +56,7 @@ export function RepoBrowseShell({
 
     if (!location || location.path === "") return <>{children}</>;
 
-    const { view, ref: selectedRef, path } = location;
+    const { view, reference, path } = location;
 
     return (
         <ResizableLayout
@@ -70,7 +72,7 @@ export function RepoBrowseShell({
                             owner={owner}
                             repo={repo}
                             provider={provider}
-                            selectedRef={selectedRef}
+                            reference={reference}
                             onSelect={(next) =>
                                 router.push(
                                     view === "tree"
@@ -104,7 +106,7 @@ export function RepoBrowseShell({
                             owner={owner}
                             repo={repo}
                             provider={provider}
-                            selectedRef={selectedRef}
+                            reference={reference}
                         />
                     </div>
                     <div className="min-h-0 flex-1">
@@ -112,7 +114,7 @@ export function RepoBrowseShell({
                             owner={owner}
                             repo={repo}
                             provider={provider}
-                            selectedRef={selectedRef}
+                            reference={reference}
                             path={path}
                         />
                     </div>

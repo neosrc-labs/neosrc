@@ -2,7 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { pickDocFileNames } from "~/utils/doc-files";
-import { type Provider, treeHref } from "~/utils/provider-url";
+import {
+    type Provider,
+    type RepositoryReference,
+    treeHref,
+} from "~/utils/provider-url";
 import { RepoBrowse, RepoBrowseSkeleton } from "./repo-browse";
 import { RepoDocFiles } from "./repo-doc-files";
 import { RepoPageBody } from "./repo-page-body";
@@ -13,7 +17,7 @@ interface RepoTreePageProps extends RepoPageData {
     repo: string;
     provider: Provider;
     /** Branch or tag taken from the URL. */
-    selectedRef: string;
+    reference: RepositoryReference;
 }
 
 /**
@@ -24,7 +28,7 @@ export function RepoTreePage({
     owner,
     repo,
     provider,
-    selectedRef,
+    reference,
     ...data
 }: RepoTreePageProps) {
     const router = useRouter();
@@ -48,18 +52,18 @@ export function RepoTreePage({
                     owner={owner}
                     repo={repo}
                     provider={provider}
-                    selectedRef={selectedRef}
+                    reference={reference}
                     path=""
                     onSelectRef={(next) =>
                         router.push(treeHref(provider, owner, repo, next))
                     }
                 >
-                    {(contents) => (
+                    {(contents, resolvedObjectId) => (
                         <RepoDocFiles
                             owner={owner}
                             repo={repo}
                             provider={provider}
-                            ref={selectedRef}
+                            ref={resolvedObjectId ?? reference.value}
                             fileNames={pickDocFileNames(contents)}
                             hideEmpty
                         />

@@ -27,13 +27,11 @@ function buildFileCommitsBatchQuery(paths: string[]): string {
             `    f${i}: history(first: 1, path: ${JSON.stringify(path)}) {\n      nodes {\n        oid\n        messageHeadline\n        committedDate\n      }\n    }`,
     );
 
-    return `query BatchFileCommits($owner: String!, $repo: String!, $qualifiedRef: String!) {
+    return `query BatchFileCommits($owner: String!, $repo: String!, $expression: String!) {
   repository(owner: $owner, name: $repo) {
-    ref(qualifiedName: $qualifiedRef) {
-      target {
-        ... on Commit {
+    object(expression: $expression) {
+      ... on Commit {
 ${aliases.join("\n")}
-        }
       }
     }
   }
@@ -81,7 +79,7 @@ async function fetchFileCommits(
 ): Promise<Record<string, FileLatestCommit | null>> {
     const graphql = createGraphql(accessToken);
 
-    const qualifiedRef = `refs/heads/${ref}`;
+    const expression = ref;
     const record: Record<string, FileLatestCommit | null> = {};
 
     for (let i = 0; i < paths.length; i += FILE_COMMITS_CHUNK_SIZE) {
@@ -90,20 +88,18 @@ async function fetchFileCommits(
 
         const result = await graphql<{
             repository?: {
-                ref?: {
-                    target?: Record<
-                        string,
-                        { nodes?: GqlFileCommitNode[] } | null
-                    > | null;
-                };
+                object?: Record<
+                    string,
+                    { nodes?: GqlFileCommitNode[] } | null
+                > | null;
             };
         }>(query, {
             owner,
             repo,
-            qualifiedRef,
+            expression,
         });
 
-        const target = result.repository?.ref?.target ?? null;
+        const target = result.repository?.object ?? null;
 
         for (let j = 0; j < chunk.length; j++) {
             const path = chunk[j];
@@ -233,16 +229,10 @@ export async function getRepoFileTree(
 ): Promise<CodeSearchResultItem[]> {
     const octokit = createOctokit(accessToken);
 
-    const { data: refData } = await octokit.rest.git.getRef({
-        owner,
-        repo,
-        ref: `heads/${ref}`,
-    });
-
     const { data: commitData } = await octokit.rest.git.getCommit({
         owner,
         repo,
-        commit_sha: refData.object.sha,
+        commit_sha: ref,
     });
 
     const { data: treeData } = await octokit.rest.git.getTree({

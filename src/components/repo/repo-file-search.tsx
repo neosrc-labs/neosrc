@@ -8,13 +8,18 @@ import { useMemo, useState } from "react";
 import type { CodeSearchResultItem } from "~/server/github";
 import { api } from "~/trpc/react";
 import { cn } from "~/utils/helpers";
-import { blobHref, type Provider, treeHref } from "~/utils/provider-url";
+import {
+    blobHref,
+    type Provider,
+    type RepositoryReference,
+    treeHref,
+} from "~/utils/provider-url";
 
 interface RepoFileSearchProps {
     owner: string;
     repo: string;
     provider: Provider;
-    selectedRef: string;
+    reference: RepositoryReference;
 }
 
 const MAX_RESULTS = 20;
@@ -28,7 +33,7 @@ export function RepoFileSearch({
     owner,
     repo,
     provider,
-    selectedRef,
+    reference,
 }: RepoFileSearchProps) {
     const router = useRouter();
     const [query, setQuery] = useState("");
@@ -36,7 +41,13 @@ export function RepoFileSearch({
     const [activeIndex, setActiveIndex] = useState(0);
 
     const { data: fileTree, isFetching } = api.repos.getFileTree.useQuery(
-        { provider, owner, repo, ref: selectedRef },
+        {
+            provider,
+            owner,
+            repo,
+            ref: reference.value,
+            refKind: reference.kind,
+        },
         { enabled: query.length > 0 },
     );
 
@@ -51,8 +62,8 @@ export function RepoFileSearch({
 
     const hrefFor = (item: CodeSearchResultItem) =>
         item.type === "tree"
-            ? treeHref(provider, owner, repo, selectedRef, item.path)
-            : blobHref(provider, owner, repo, selectedRef, item.path);
+            ? treeHref(provider, owner, repo, reference, item.path)
+            : blobHref(provider, owner, repo, reference, item.path);
 
     const close = () => setOpen(false);
 

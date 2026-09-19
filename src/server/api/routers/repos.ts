@@ -22,7 +22,6 @@ import {
     getCachedRepoSubscription as getCachedCodebergRepoSubscription,
     getBranches as getCodebergBranches,
     getFileContent as getCodebergFileContent,
-    getFileLatestCommit as getCodebergFileLatestCommit,
     getFileTree as getCodebergFileTree,
     getLatestCommit as getCodebergLatestCommit,
     getLatestRelease as getCodebergLatestRelease,
@@ -36,6 +35,7 @@ import {
     starRepo as starCodebergRepo,
     unstarRepo as unstarCodebergRepo,
 } from "~/server/codeberg";
+import { codebergDirectoryBrowseAdapter } from "~/server/codeberg/directory-browse";
 import type { ForkComparison } from "~/server/github";
 import {
     deleteRepoSubscription,
@@ -48,13 +48,11 @@ import {
     getCachedRepoLanguages,
     getCachedRepoStarred,
     getCachedRepoSubscription,
-    getFileLatestCommits,
     getForkComparison,
     getUserRepos as getGitHubUserRepos,
     getLatestRelease,
     getPathCommits,
     getRepoBranches,
-    getRepoContents,
     getRepoDeployments,
     getRepoDocFiles,
     getRepoFileTree,
@@ -66,12 +64,14 @@ import {
     starRepo,
     unstarRepo,
 } from "~/server/github";
+import { githubDirectoryBrowseAdapter } from "~/server/github/directory-browse";
 import { getTopRepositories } from "~/server/github-graphql";
 import {
     getRepoPermissionForUser,
     RepoNotFoundError,
     viewerRepoAccess,
 } from "~/server/repo-cache";
+import { browseDirectory as browseDirectoryOperation } from "~/server/repository/directory-browse";
 import { pickDocFileNames } from "~/utils/doc-files";
 
 /**
@@ -426,66 +426,42 @@ export const reposRouter = createTRPCRouter({
                 input.limit ?? 2,
             ),
     }),
-    getFileLatestCommits: providerQuery({
+    browseDirectory: providerQuery({
+        userId: "anonymous",
         input: providerInput({
             owner: z.string(),
             repo: z.string(),
-            ref: z.string(),
-            paths: z.array(z.string()),
+            ref: z.string().min(1),
+            refKind: z.enum(["branch", "tag", "commit"]).nullable().optional(),
+            path: z.string().default(""),
         }),
-        cb: async ({ input, accessToken }) => {
-            const result: Record<
-                string,
+        cb: ({ accessToken, userId, input }) =>
+            browseDirectoryOperation(
+                codebergDirectoryBrowseAdapter,
+                { accessToken, userId },
                 {
-                    sha: string;
-                    message: string;
-                    committedDate: string;
-                } | null
-            > = {};
-            const promises = input.paths.map(async (p) => {
-                result[p] = await getCodebergFileLatestCommit(
-                    accessToken,
-                    input.owner,
-                    input.repo,
-                    input.ref,
-                    p,
-                );
-            });
-            await Promise.all(promises);
-            return result;
-        },
+                    provider: "cb",
+                    repository: { owner: input.owner, repo: input.repo },
+                    reference: {
+                        kind: input.refKind ?? null,
+                        value: input.ref,
+                    },
+                    path: input.path,
+                },
+            ),
         gh: ({ accessToken, userId, input }) =>
-            getFileLatestCommits(
-                accessToken,
-                userId ?? "anonymous",
-                input.owner,
-                input.repo,
-                input.ref,
-                input.paths,
-            ),
-    }),
-    getContents: providerQuery({
-        input: providerInput({
-            owner: z.string(),
-            repo: z.string(),
-            path: z.string().optional(),
-            ref: z.string().optional(),
-        }),
-        cb: ({ accessToken, input }) =>
-            getCodebergRepoContents(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.path,
-                input.ref,
-            ),
-        gh: ({ accessToken, input }) =>
-            getRepoContents(
-                accessToken,
-                input.owner,
-                input.repo,
-                input.path,
-                input.ref,
+            browseDirectoryOperation(
+                githubDirectoryBrowseAdapter,
+                { accessToken, userId },
+                {
+                    provider: "gh",
+                    repository: { owner: input.owner, repo: input.repo },
+                    reference: {
+                        kind: input.refKind ?? null,
+                        value: input.ref,
+                    },
+                    path: input.path,
+                },
             ),
     }),
     getFileTree: providerQuery({
@@ -493,16 +469,42 @@ export const reposRouter = createTRPCRouter({
             owner: z.string(),
             repo: z.string(),
             ref: z.string(),
+            refKind: z.enum(["branch", "tag", "commit"]).nullable().optional(),
         }),
-        cb: ({ accessToken, input }) =>
-            getCodebergFileTree(
+        cb: async ({ accessToken, input }) => {
+            const resolved =
+                await codebergDirectoryBrowseAdapter.resolveReference(
+                    accessToken,
+                    { owner: input.owner, repo: input.repo },
+                    {
+                        kind: input.refKind ?? null,
+                        value: input.ref,
+                    },
+                );
+            return getCodebergFileTree(
                 accessToken,
                 input.owner,
                 input.repo,
-                input.ref,
-            ),
-        gh: ({ accessToken, input }) =>
-            getRepoFileTree(accessToken, input.owner, input.repo, input.ref),
+                resolved.objectId,
+            );
+        },
+        gh: async ({ accessToken, input }) => {
+            const resolved =
+                await githubDirectoryBrowseAdapter.resolveReference(
+                    accessToken,
+                    { owner: input.owner, repo: input.repo },
+                    {
+                        kind: input.refKind ?? null,
+                        value: input.ref,
+                    },
+                );
+            return getRepoFileTree(
+                accessToken,
+                input.owner,
+                input.repo,
+                resolved.objectId,
+            );
+        },
     }),
     getDocFileNames: providerQuery({
         input: providerInput({
