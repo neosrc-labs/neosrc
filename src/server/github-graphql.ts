@@ -2275,6 +2275,51 @@ export interface GqlIssueSearchItem {
     comments: { totalCount: number };
 }
 
+const PINNED_ISSUES_QUERY = `
+query PinnedIssues($owner: String!, $repo: String!) {
+  repository(owner: $owner, name: $repo) {
+    pinnedIssues(first: 3) {
+      nodes {
+        issue {
+          databaseId
+          number
+          title
+          state
+          createdAt
+          updatedAt
+          closedAt
+          author { login avatarUrl url }
+          labels(first: 10) {
+            nodes { id name color description }
+          }
+          assignees(first: 5) {
+            nodes { login avatarUrl }
+          }
+          comments { totalCount }
+        }
+      }
+    }
+  }
+}
+`;
+
+export async function getPinnedIssuesGraphQL(
+    accessToken: string,
+    owner: string,
+    repo: string,
+): Promise<GqlIssueSearchItem[]> {
+    const graphql = createGraphql(accessToken);
+    const data = await graphql<{
+        repository: {
+            pinnedIssues: {
+                nodes: Array<{ issue: GqlIssueSearchItem }>;
+            };
+        } | null;
+    }>(PINNED_ISSUES_QUERY, { owner, repo });
+
+    return data.repository?.pinnedIssues.nodes.map((node) => node.issue) ?? [];
+}
+
 const ISSUE_SEARCH_QUERY = `
 query SearchIssues($searchQuery: String!, $first: Int!, $after: String) {
   search(query: $searchQuery, type: ISSUE, first: $first, after: $after) {

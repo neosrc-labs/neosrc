@@ -1,4 +1,10 @@
-import type { SearchProvider } from "../provider";
-import type { IssueSearchResult } from "./types";
+import type { Ctx, SearchProvider } from "../provider";
+import type { IssueSearchItem, IssueSearchResult } from "./types";
 
-export type IssueProvider = SearchProvider<IssueSearchResult>;
+export interface IssueProvider extends SearchProvider<IssueSearchResult> {
+    pinned(params: {
+        owner: string;
+        repo: string;
+        ctx: Ctx;
+    }): Promise<IssueSearchItem[]>;
+}

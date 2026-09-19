@@ -11,6 +11,7 @@ import {
     listIssueReactions,
     listIssues,
     listIssueTimeline,
+    listPinnedIssues,
     renameBranch,
     updateIssue,
 } from "~/server/codeberg";
@@ -48,6 +49,26 @@ function numbers(items: Array<{ number: number }>) {
 }
 
 afterEach(() => vi.unstubAllGlobals());
+
+describe("listPinnedIssues", () => {
+    it("loads the repository's pinned issue endpoint", async () => {
+        const pinned = [issue({ number: 7 }), issue({ number: 8 })];
+        const mock = stubFetch(pinned);
+
+        await expect(listPinnedIssues("tok", "own", "repo")).resolves.toEqual(
+            pinned,
+        );
+        expect(mock).toHaveBeenCalledWith(
+            "https://codeberg.org/api/v1/repos/own/repo/issues/pinned",
+            {
+                headers: {
+                    Authorization: "token tok",
+                    Accept: "application/json",
+                },
+            },
+        );
+    });
+});
 
 describe("listIssues presence filter", () => {
     it("keeps only unassigned issues for no:assignee", async () => {

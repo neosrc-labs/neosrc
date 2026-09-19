@@ -48,6 +48,12 @@ const searchInput = providerInput({
     order: z.enum(["asc", "desc"]).optional(),
 });
 
+function issueProvider(provider: "gh" | "cb"): IssueProvider {
+    return provider === "cb"
+        ? new CodebergIssueProvider()
+        : new GitHubIssueProvider();
+}
+
 export const issuesRouter = createTRPCRouter({
     getByNumber: protectedProcedure
         .input(
@@ -80,6 +86,21 @@ export const issuesRouter = createTRPCRouter({
             );
         }),
 
+    pinned: protectedProcedure
+        .input(
+            providerInput({
+                owner: z.string(),
+                repo: z.string(),
+            }),
+        )
+        .query(({ ctx, input }) =>
+            issueProvider(input.provider).pinned({
+                owner: input.owner,
+                repo: input.repo,
+                ctx: { db: ctx.db, session: ctx.session },
+            }),
+        ),
+
     searchCached: protectedProcedure
         .input(searchInput)
         .query(
@@ -92,10 +113,7 @@ export const issuesRouter = createTRPCRouter({
     search: protectedProcedure
         .input(searchInput)
         .query(async ({ ctx, input }): Promise<IssueSearchResult> => {
-            const provider: IssueProvider =
-                input.provider === "cb"
-                    ? new CodebergIssueProvider()
-                    : new GitHubIssueProvider();
+            const provider = issueProvider(input.provider);
 
             return fetchAndCache(
                 searchCacheKey("issues", ctx.session?.user?.id, input),

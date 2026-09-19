@@ -18,11 +18,64 @@ import {
     addReaction,
     disablePullRequestAutoMergeGraphQL,
     enablePullRequestAutoMergeGraphQL,
+    getPinnedIssuesGraphQL,
     getPullRequestMergeStateGraphQL,
     getPullRequestReactionsGraphQL,
     isOrgRestrictionError,
     resolveCommitAuthor,
 } from "~/server/github-graphql";
+
+describe("getPinnedIssuesGraphQL", () => {
+    beforeEach(() => {
+        mockGraphql.mockReset();
+    });
+
+    it("returns pinned issues in repository pin order", async () => {
+        const issues = [
+            {
+                databaseId: 101,
+                number: 7,
+                title: "Pinned first",
+                state: "OPEN",
+                createdAt: "2026-09-01T00:00:00Z",
+                updatedAt: "2026-09-02T00:00:00Z",
+                closedAt: null,
+                author: null,
+                labels: { nodes: [] },
+                assignees: { nodes: [] },
+                comments: { totalCount: 2 },
+            },
+            {
+                databaseId: 102,
+                number: 8,
+                title: "Pinned second",
+                state: "CLOSED",
+                createdAt: "2026-08-01T00:00:00Z",
+                updatedAt: "2026-08-02T00:00:00Z",
+                closedAt: "2026-08-03T00:00:00Z",
+                author: null,
+                labels: { nodes: [] },
+                assignees: { nodes: [] },
+                comments: { totalCount: 0 },
+            },
+        ];
+        mockGraphql.mockResolvedValue({
+            repository: {
+                pinnedIssues: {
+                    nodes: issues.map((issue) => ({ issue })),
+                },
+            },
+        });
+
+        await expect(
+            getPinnedIssuesGraphQL("token", "owner", "repo"),
+        ).resolves.toEqual(issues);
+        expect(mockGraphql).toHaveBeenCalledWith(
+            expect.stringContaining("pinnedIssues(first: 3)"),
+            { owner: "owner", repo: "repo" },
+        );
+    });
+});
 
 describe("getPullRequestReactionsGraphQL", () => {
     beforeEach(() => {

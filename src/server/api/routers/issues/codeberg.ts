@@ -15,6 +15,7 @@ import {
     type CodebergIssue,
     type CodebergIssueListParams,
     listIssues,
+    listPinnedIssues,
 } from "~/server/codeberg";
 import { translateForgejoKeywords } from "~/utils/search-syntax";
 import type { IssueProvider } from "./provider";
@@ -80,6 +81,23 @@ export class CodebergIssueProvider implements IssueProvider {
             endCursor: result.hasNextPage ? String(page + 1) : null,
             stateCounts: counts,
         };
+    }
+
+    async pinned({
+        owner,
+        repo,
+        ctx,
+    }: {
+        owner: string;
+        repo: string;
+        ctx: Ctx;
+    }): Promise<IssueSearchItem[]> {
+        const accessToken = await getCodebergToken(
+            ctx.db,
+            ctx.session?.user?.id,
+        );
+        const issues = await listPinnedIssues(accessToken, owner, repo);
+        return issues.map(mapCodebergIssue);
     }
 }
 

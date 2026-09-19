@@ -1303,6 +1303,24 @@ export type CodebergIssue = {
     } | null;
 };
 
+export const listPinnedIssues = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+    ): Promise<CodebergIssue[]> => {
+        const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/pinned`;
+        const res = await fetch(url, {
+            headers: {
+                Authorization: `token ${accessToken}`,
+                Accept: "application/json",
+            },
+        });
+        if (!res.ok) return [];
+        return (await res.json()) as CodebergIssue[];
+    },
+);
+
 export type CodebergRepoMeta = {
     id: number;
     name: string;

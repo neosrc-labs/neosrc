@@ -2,9 +2,12 @@ import { searchGqlItems } from "~/server/api/routers/github-search";
 import { mapGqlIssueSearchItem } from "~/server/api/routers/mappers";
 import type { Ctx, SearchParams } from "~/server/api/routers/provider";
 import { getGitHubToken } from "~/server/auth";
-import { searchIssuesWithMetadata } from "~/server/github-graphql";
+import {
+    getPinnedIssuesGraphQL,
+    searchIssuesWithMetadata,
+} from "~/server/github-graphql";
 import type { IssueProvider } from "./provider";
-import type { IssueSearchResult } from "./types";
+import type { IssueSearchItem, IssueSearchResult } from "./types";
 
 export class GitHubIssueProvider implements IssueProvider {
     async search(
@@ -29,5 +32,19 @@ export class GitHubIssueProvider implements IssueProvider {
             }),
             mapItem: mapGqlIssueSearchItem,
         });
+    }
+
+    async pinned({
+        owner,
+        repo,
+        ctx,
+    }: {
+        owner: string;
+        repo: string;
+        ctx: Ctx;
+    }): Promise<IssueSearchItem[]> {
+        const accessToken = await getGitHubToken(ctx.db, ctx.session?.user?.id);
+        const issues = await getPinnedIssuesGraphQL(accessToken, owner, repo);
+        return issues.map(mapGqlIssueSearchItem);
     }
 }

@@ -60,6 +60,9 @@ vi.mock("~/trpc/react", () => ({
                     isLoading: false,
                 })),
             },
+            pinned: {
+                useQuery: vi.fn(() => ({ data: [] })),
+            },
             searchCached: {
                 useQuery: vi.fn(() => ({ data: null })),
             },
@@ -90,6 +93,7 @@ vi.mock("~/trpc/react", () => ({
 }));
 
 import { IssueList } from "~/components/issue/issue-list";
+import { api } from "~/trpc/react";
 
 // --- Helpers ---
 
@@ -260,6 +264,41 @@ describe("IssueList", () => {
         expect(
             screen.queryByRole("link", { name: /new pull request/i }),
         ).not.toBeInTheDocument();
+    });
+
+    it("renders pinned issues above the issue list", async () => {
+        const pinnedQuery = vi.mocked(api.issues.pinned.useQuery);
+        pinnedQuery.mockReturnValueOnce({
+            data: [
+                {
+                    number: 42,
+                    title: "Important issue",
+                    state: "OPEN",
+                    createdAt: "2026-09-01T00:00:00Z",
+                    closedAt: null,
+                    author: {
+                        login: "octocat",
+                        avatarUrl: "https://example.com/avatar.png",
+                        url: "https://github.com/octocat",
+                    },
+                    labels: [],
+                    assignees: [],
+                    comments: 3,
+                },
+            ],
+        } as never);
+
+        renderList();
+
+        expect(
+            screen.getByRole("heading", { name: "Pinned issues" }),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByRole("link", { name: "Important issue" }),
+        ).toHaveAttribute("href", "/gh/test-owner/test-repo/issues/42");
+        expect(
+            screen.getByRole("link", { name: "3 comments" }),
+        ).toBeInTheDocument();
     });
 
     it("submits search on Enter key", async () => {

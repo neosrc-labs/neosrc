@@ -18,6 +18,7 @@ import { buildIssueConfig } from "./issue-list-config";
 import type { IssueRowData } from "./issue-row";
 import { IssueRow } from "./issue-row";
 import { IssueToolbar } from "./issue-toolbar";
+import { PinnedIssues } from "./pinned-issues";
 
 function normalizeSearchItem(item: IssueSearchItem): IssueRowData {
     const assigneeNode = item.assignees[0];
@@ -89,6 +90,7 @@ export function IssueList({
         [utils],
     );
     const config = buildIssueConfig(provider, owner, repo);
+    const pinned = api.issues.pinned.useQuery({ provider, owner, repo });
 
     const list = useSearchList<IssueSearchItem>(
         {
@@ -112,77 +114,85 @@ export function IssueList({
     const booleanHint = booleanSearchHint(provider, list.searchQuery);
 
     return (
-        <SearchListLayout
-            searchBar={
-                <ListSearchBar
-                    searchInput={list.searchInput}
-                    setSearchInput={list.setSearchInput}
-                    cursorPos={list.cursorPos}
-                    setCursorPos={list.setCursorPos}
-                    inputRef={list.inputRef}
-                    searchBarRef={list.searchBarRef}
-                    autocompleteRef={list.autocompleteRef}
-                    provider={config.provider}
-                    qualifiers={config.qualifiers}
-                    autocompleteOptions={config.autocompleteOptions}
-                    owner={owner}
-                    repo={repo}
-                    placeholder="Search issues by title, body, or comments"
-                    urls={config.externalUrls}
-                    newItemIcon={<Plus className="size-4" />}
-                    newItemLabel="New Issue"
-                    onSearch={list.handleSearch}
-                    onClear={list.handleClearSearch}
-                    onAutocompleteSelect={list.handleAutocompleteSelect}
-                    booleanHint={booleanHint}
-                />
-            }
-            toolbar={
-                <IssueToolbar
-                    activeTab={list.activeTab}
-                    searchQuery={list.searchQuery}
-                    setSearchInput={list.setSearchInput}
-                    currentSort={list.currentSort}
-                    currentOrder={list.currentOrder}
-                    provider={config.provider}
-                    owner={owner}
-                    repo={repo}
-                    stateCounts={list.stateCounts}
-                    onTabChange={list.setTab}
-                    onNavigate={list.navigate}
-                    onAddQualifier={list.handleAddQualifier}
-                    onRemoveQualifier={list.handleRemoveQualifier}
-                />
-            }
-            showLoading={list.showLoading}
-            refreshStatus={list.refreshStatus}
-            isEmpty={items.length === 0}
-            skeleton={<ListSkeleton />}
-            emptyState={
-                <IssueEmptyState
-                    searchQuery={list.searchQuery}
-                    activeTab={list.activeTab}
-                />
-            }
-            rows={
-                <div>
-                    {items.map((issue) => (
-                        <IssueRow
-                            key={issue.number}
-                            issue={issue}
-                            provider={provider}
-                            owner={owner}
-                            repo={repo}
-                            onLabelFilter={filters.onLabelFilter}
-                            onAuthorFilter={filters.onAuthorFilter}
-                            onAssigneesFilter={filters.onAssigneesFilter}
-                        />
-                    ))}
-                </div>
-            }
-            currentPage={list.currentPage}
-            totalPages={list.totalPages}
-            onPageChange={(page) => list.navigate({ page: String(page) })}
-        />
+        <div>
+            <PinnedIssues
+                issues={pinned.data ?? []}
+                provider={provider}
+                owner={owner}
+                repo={repo}
+            />
+            <SearchListLayout
+                searchBar={
+                    <ListSearchBar
+                        searchInput={list.searchInput}
+                        setSearchInput={list.setSearchInput}
+                        cursorPos={list.cursorPos}
+                        setCursorPos={list.setCursorPos}
+                        inputRef={list.inputRef}
+                        searchBarRef={list.searchBarRef}
+                        autocompleteRef={list.autocompleteRef}
+                        provider={config.provider}
+                        qualifiers={config.qualifiers}
+                        autocompleteOptions={config.autocompleteOptions}
+                        owner={owner}
+                        repo={repo}
+                        placeholder="Search issues by title, body, or comments"
+                        urls={config.externalUrls}
+                        newItemIcon={<Plus className="size-4" />}
+                        newItemLabel="New Issue"
+                        onSearch={list.handleSearch}
+                        onClear={list.handleClearSearch}
+                        onAutocompleteSelect={list.handleAutocompleteSelect}
+                        booleanHint={booleanHint}
+                    />
+                }
+                toolbar={
+                    <IssueToolbar
+                        activeTab={list.activeTab}
+                        searchQuery={list.searchQuery}
+                        setSearchInput={list.setSearchInput}
+                        currentSort={list.currentSort}
+                        currentOrder={list.currentOrder}
+                        provider={config.provider}
+                        owner={owner}
+                        repo={repo}
+                        stateCounts={list.stateCounts}
+                        onTabChange={list.setTab}
+                        onNavigate={list.navigate}
+                        onAddQualifier={list.handleAddQualifier}
+                        onRemoveQualifier={list.handleRemoveQualifier}
+                    />
+                }
+                showLoading={list.showLoading}
+                refreshStatus={list.refreshStatus}
+                isEmpty={items.length === 0}
+                skeleton={<ListSkeleton />}
+                emptyState={
+                    <IssueEmptyState
+                        searchQuery={list.searchQuery}
+                        activeTab={list.activeTab}
+                    />
+                }
+                rows={
+                    <div>
+                        {items.map((issue) => (
+                            <IssueRow
+                                key={issue.number}
+                                issue={issue}
+                                provider={provider}
+                                owner={owner}
+                                repo={repo}
+                                onLabelFilter={filters.onLabelFilter}
+                                onAuthorFilter={filters.onAuthorFilter}
+                                onAssigneesFilter={filters.onAssigneesFilter}
+                            />
+                        ))}
+                    </div>
+                }
+                currentPage={list.currentPage}
+                totalPages={list.totalPages}
+                onPageChange={(page) => list.navigate({ page: String(page) })}
+            />
+        </div>
     );
 }
