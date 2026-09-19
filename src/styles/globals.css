@@ -126,20 +126,20 @@
 
 .dark {
     color-scheme: dark;
-    --color-surface: #09090b;
+    --color-surface: #0d0d0f;
     --color-surface-elevated: #18181b;
-    --color-surface-secondary: #131318;
+    --color-surface-secondary: #131316;
     --color-surface-tertiary: #27272a;
     --color-surface-selected: #3f3f46;
     --color-media-canvas: #18181b;
     --color-border: #3f3f46;
     --color-border-subtle: #27272a;
     --color-ring: #71717a;
-    --color-text-primary: #fafafa;
-    --color-text-label: #e4e4e7;
+    --color-text-primary: #e4e4e7;
+    --color-text-label: #d4d4d8;
     --color-text-secondary: #b4b4bc;
     --color-text-tertiary: #a1a1aa;
-    --color-text-muted: #84848e;
+    --color-text-muted: #85858f;
 
     --color-action: #2563eb;
     --color-action-hover: #1d4ed8;
