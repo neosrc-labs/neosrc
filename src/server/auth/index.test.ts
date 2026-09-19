@@ -1,3 +1,4 @@
+import { handleOAuthUserInfo } from "better-auth/oauth2";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -26,6 +27,7 @@ vi.mock("~/server/db", () => ({ db: {} }));
 import type { db } from "~/server/db";
 import { decrypt, encrypt } from "./encryption";
 import {
+    auth,
     getCodebergToken,
     getGitHubToken,
     getProviderTokenRefresh,
@@ -448,5 +450,118 @@ describe("getCodebergToken", () => {
         expect(state.rows).toHaveLength(1);
         expect(state.rows[0]?.connectionStatus).toBe("reauth_required");
         expect(state.rows[0]?.lastAuthError).toBe("invalid_grant");
+    });
+});
+
+describe("OAuth account matching", () => {
+    async function attemptImplicitGitHubLink({
+        localEmailVerified,
+        providerEmailVerified,
+    }: {
+        localEmailVerified: boolean;
+        providerEmailVerified: boolean;
+    }) {
+        const user = {
+            id: "user-1",
+            email: "user@example.com",
+            emailVerified: localEmailVerified,
+            name: "Existing User",
+            image: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        };
+        const linkAccount = vi.fn();
+        const createSession = vi.fn().mockResolvedValue({
+            id: "session-1",
+            userId: user.id,
+        });
+
+        const result = await handleOAuthUserInfo(
+            {
+                context: {
+                    options: {
+                        account: {
+                            accountLinking:
+                                auth.options.account?.accountLinking,
+                        },
+                    },
+                    trustedProviders: [],
+                    internalAdapter: {
+                        findOAuthUser: vi.fn().mockResolvedValue({
+                            user,
+                            accounts: [],
+                            linkedAccount: null,
+                        }),
+                        linkAccount,
+                        createSession,
+                    },
+                    logger: {
+                        error: vi.fn(),
+                        warn: vi.fn(),
+                    },
+                },
+            } as never,
+            {
+                userInfo: {
+                    id: "github-user-1",
+                    email: user.email,
+                    emailVerified: providerEmailVerified,
+                    name: user.name,
+                    image: user.image,
+                },
+                account: {
+                    providerId: "github",
+                    accountId: "github-user-1",
+                    accessToken: "access-token",
+                },
+                callbackURL: "/",
+                disableSignUp: false,
+                overrideUserInfo: false,
+            },
+        );
+
+        return { createSession, linkAccount, result, user };
+    }
+
+    it("links a verified GitHub identity to an existing verified user", async () => {
+        const { createSession, linkAccount, result, user } =
+            await attemptImplicitGitHubLink({
+                localEmailVerified: true,
+                providerEmailVerified: true,
+            });
+
+        expect(result.error).toBeNull();
+        expect(linkAccount).toHaveBeenCalledWith(
+            expect.objectContaining({
+                providerId: "github",
+                accountId: "github-user-1",
+                userId: user.id,
+            }),
+        );
+        expect(createSession).toHaveBeenCalledWith(user.id);
+    });
+
+    it("rejects implicit linking from an unverified provider email", async () => {
+        const { createSession, linkAccount, result } =
+            await attemptImplicitGitHubLink({
+                localEmailVerified: true,
+                providerEmailVerified: false,
+            });
+
+        expect(result.error).toBe("account not linked");
+        expect(linkAccount).not.toHaveBeenCalled();
+        expect(createSession).not.toHaveBeenCalled();
+    });
+
+    it("rejects implicit linking to an unverified local email", async () => {
+        const { createSession, linkAccount, result } =
+            await attemptImplicitGitHubLink({
+                localEmailVerified: false,
+                providerEmailVerified: true,
+            });
+
+        expect(result.error).toBe("account not linked");
+        expect(linkAccount).not.toHaveBeenCalled();
+        expect(createSession).not.toHaveBeenCalled();
     });
 });
