@@ -1,6 +1,7 @@
 import "server-only";
 
-import { getSession, isAnonymousToken } from "~/server/auth";
+import { getLinkedAccount, getSession, isAnonymousToken } from "~/server/auth";
+import { db } from "~/server/db";
 import { getUserRepoPermission } from "~/server/github";
 import {
     getRepoPermissionForUser,
@@ -33,9 +34,16 @@ export async function getIssuePermissionContext({
     userId: string | undefined;
 }): Promise<PullRequestPermissionContext> {
     const session = await getSession();
+    const account = session?.user
+        ? await getLinkedAccount(
+              db,
+              session.user.id,
+              provider === "gh" ? "github" : "codeberg",
+          )
+        : undefined;
 
     if (provider === "cb") {
-        const currentUser = session?.user?.codebergUsername ?? null;
+        const currentUser = account?.username ?? null;
         const [subject, permission] = await Promise.all([
             subjectPromise,
             getRepoPermissionForUser("codeberg", currentUser, owner, repo),
@@ -49,7 +57,7 @@ export async function getIssuePermissionContext({
         };
     }
 
-    const currentUser = session?.user.githubUsername;
+    const currentUser = account?.username;
     if (!currentUser || !userId) {
         const subject = await subjectPromise;
         return {

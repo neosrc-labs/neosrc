@@ -1,6 +1,7 @@
 import { viewerProviders } from "~/server/api/routers/dashboard";
 import { RECENT_ITEM_LIMIT } from "~/server/api/routers/dashboard/types";
-import { getSession } from "~/server/auth";
+import { getLinkedAccounts, getSession } from "~/server/auth";
+import { db } from "~/server/db";
 import { api, HydrateClient } from "~/trpc/server";
 
 import { HomePage } from "./home-page";
@@ -10,16 +11,8 @@ export default async function Home() {
     const session = await getSession();
 
     if (session) {
-        const user = session.user as {
-            githubUsername?: string | null;
-            codebergUsername?: string | null;
-        };
-        // Same rule the router applies, so the filter always matches the
-        // providers the lists are actually loaded from.
-        const providers = viewerProviders({
-            githubUsername: user.githubUsername ?? null,
-            codebergUsername: user.codebergUsername ?? null,
-        });
+        const accounts = await getLinkedAccounts(db, session.user.id);
+        const providers = viewerProviders(accounts);
 
         void api.repos.getTopRepos.prefetch();
         void api.dashboard.recentPulls.prefetch({

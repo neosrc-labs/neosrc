@@ -11,7 +11,10 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
-import { AccountManager } from "~/app/_components/account-manager";
+import {
+    AccountManager,
+    type LinkedAccount,
+} from "~/app/_components/account-manager";
 import { api } from "~/trpc/react";
 import { authClient } from "~/utils/auth-client";
 import { formatRelativeTime } from "~/utils/format-time";
@@ -165,20 +168,24 @@ function SectionHeading({ provider }: { provider: "gh" | "cb" }) {
 export function ProfileView({
     name,
     image,
-    githubUsername,
-    codebergUsername,
+    accounts,
     githubAppInstallationUrl,
     codebergEnabled,
 }: {
     name: string;
     image: string | null;
-    githubUsername: string | null;
-    codebergUsername: string | null;
+    accounts: LinkedAccount[];
     githubAppInstallationUrl: string | null;
     codebergEnabled: boolean;
 }) {
     const [loggingOut, setLoggingOut] = useState(false);
     const router = useRouter();
+    const githubAccount = accounts.find(
+        ({ providerId }) => providerId === "github",
+    );
+    const codebergAccount = accounts.find(
+        ({ providerId }) => providerId === "codeberg",
+    );
 
     const handleLogout = useCallback(async () => {
         setLoggingOut(true);
@@ -209,19 +216,18 @@ export function ProfileView({
             </div>
 
             <div className="flex flex-col gap-6">
-                {githubUsername && (
-                    <ProviderProfileCard
-                        provider="gh"
-                        username={githubUsername}
-                    />
+                {accounts.map((account) =>
+                    account.username ? (
+                        <ProviderProfileCard
+                            key={account.providerId}
+                            provider={
+                                account.providerId === "github" ? "gh" : "cb"
+                            }
+                            username={account.username}
+                        />
+                    ) : null,
                 )}
-                {codebergUsername && (
-                    <ProviderProfileCard
-                        provider="cb"
-                        username={codebergUsername}
-                    />
-                )}
-                {!githubUsername && !codebergUsername && (
+                {accounts.length === 0 && (
                     <p className="text-sm text-text-tertiary">
                         No accounts linked yet. Use the section below to connect
                         GitHub or Codeberg.
@@ -230,15 +236,14 @@ export function ProfileView({
             </div>
 
             <GithubAppSection
-                githubUsername={githubUsername}
+                hasGithub={Boolean(githubAccount)}
                 githubAppInstallationUrl={githubAppInstallationUrl}
             />
 
             <section>
                 <h2 className="mb-4 text-text-primary">Linked Accounts</h2>
                 <AccountManager
-                    githubUsername={githubUsername}
-                    codebergUsername={codebergUsername}
+                    accounts={accounts}
                     codebergEnabled={codebergEnabled}
                 />
             </section>
@@ -246,8 +251,8 @@ export function ProfileView({
             <section>
                 <h2 className="mb-4 text-text-primary">Sync</h2>
                 <SyncSection
-                    hasGithub={!!githubUsername}
-                    hasCodeberg={!!codebergUsername}
+                    hasGithub={Boolean(githubAccount)}
+                    hasCodeberg={Boolean(codebergAccount)}
                 />
             </section>
 

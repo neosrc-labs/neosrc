@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import {
     codebergAccessToken,
+    getLinkedAccount,
     getSession,
     githubAccessToken,
 } from "~/server/auth";
@@ -8,6 +9,7 @@ import {
     getCachedRepoHeaderData as getCachedCodebergRepoHeaderData,
     getCachedRepoCounts,
 } from "~/server/codeberg";
+import { db } from "~/server/db";
 import {
     getAuthenticatedUser,
     getCachedRepoHeaderData,
@@ -42,9 +44,12 @@ async function getCurrentUser(
 ): Promise<{ login: string; avatarUrl: string } | null> {
     const session = await getSession();
     if (!session?.user) return null;
-    const login = session.user.name;
-    const avatarUrl = session.user.image;
-    if (login && avatarUrl) return { login, avatarUrl };
+    const account = await getLinkedAccount(
+        db,
+        session.user.id,
+        provider === "gh" ? "github" : "codeberg",
+    );
+    if (!account) return null;
 
     if (provider === "cb") {
         const token = await codebergAccessToken();
@@ -70,14 +75,20 @@ async function getRepoData(
 
     const session = await getSession();
     const userId = session?.user?.id ?? "anonymous";
-
+    const account = session?.user
+        ? await getLinkedAccount(
+              db,
+              session.user.id,
+              provider === "gh" ? "github" : "codeberg",
+          )
+        : undefined;
     if (provider === "cb") {
         const token = await codebergAccessToken();
         if (!token) return null;
         const [headerData, counts] = await Promise.all([
             getCachedCodebergRepoHeaderData(
                 token,
-                session?.user?.codebergUsername ?? null,
+                account?.username ?? null,
                 owner,
                 repo,
             ),
@@ -95,12 +106,7 @@ async function getRepoData(
     const token = await githubAccessToken();
     if (!token) return null;
     const [headerData, counts] = await Promise.all([
-        getCachedRepoHeaderData(
-            token,
-            session?.user?.githubUsername ?? null,
-            owner,
-            repo,
-        ),
+        getCachedRepoHeaderData(token, account?.username ?? null, owner, repo),
         getCachedRepoIssuePullCounts(token, userId, owner, repo),
     ]);
     if (!headerData) return null;

@@ -178,8 +178,6 @@ export const protectedMutation = protectedProcedure.use(requireSession);
 
 type BuilderUser = {
     id: string;
-    githubUsername?: string | null;
-    codebergUsername?: string | null;
 };
 
 type HandlerCtx = {

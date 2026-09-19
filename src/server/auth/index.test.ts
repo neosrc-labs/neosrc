@@ -331,10 +331,7 @@ describe("getGitHubToken", () => {
         await expect(getGitHubToken(fakeDb, "user-1")).rejects.toThrow(
             "GitHub account not connected (session expired)",
         );
-        // Account row deleted and the mirrored username cleared, so the
-        // existing UI shows the re-link flow.
         expect(state.deletedAccountIds).toEqual(["acct-1"]);
-        expect(state.updates).toContainEqual({ githubUsername: null });
     });
 
     it("unlinks the account when GitHub rejects with bad_refresh_token", async () => {
@@ -353,7 +350,6 @@ describe("getGitHubToken", () => {
             "GitHub account not connected (session expired)",
         );
         expect(state.deletedAccountIds).toEqual(["acct-1"]);
-        expect(state.updates).toContainEqual({ githubUsername: null });
     });
 
     it("keeps the account when a rejected refresh was actually a rotation race", async () => {
@@ -414,6 +410,5 @@ describe("getCodebergToken", () => {
             "Codeberg account not connected (session expired)",
         );
         expect(state.deletedAccountIds).toEqual(["acct-1"]);
-        expect(state.updates).toContainEqual({ codebergUsername: null });
     });
 });

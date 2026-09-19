@@ -5,18 +5,18 @@ import { installationAccountName } from "~/app/onboarding/_components/onboarding
 import { api } from "~/trpc/react";
 
 export function GithubAppSection({
-    githubUsername,
+    hasGithub,
     githubAppInstallationUrl,
 }: {
-    githubUsername: string | null;
+    hasGithub: boolean;
     githubAppInstallationUrl: string | null;
 }) {
     const { data: installations, isLoading } =
         api.onboarding.getGitHubAppInstallations.useQuery(undefined, {
-            enabled: !!githubUsername,
+            enabled: hasGithub,
         });
 
-    if (!githubUsername) return null;
+    if (!hasGithub) return null;
 
     if (isLoading) {
         return (

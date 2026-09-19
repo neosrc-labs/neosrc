@@ -19,7 +19,11 @@ import {
     providerMutation,
     providerQuery,
 } from "~/server/api/trpc";
-import { getGitHubToken, getGithubUsername } from "~/server/auth";
+import {
+    getGitHubToken,
+    getGithubUsername,
+    getLinkedAccount,
+} from "~/server/auth";
 import {
     deleteCache,
     fetchAndCache,
@@ -1075,9 +1079,7 @@ export const pullsRouter = createTRPCRouter({
             const userId = ctx.session?.user?.id;
             if (!userId) return null;
             const viewerLogin =
-                ctx.session?.user?.githubUsername ??
-                (await getGithubUsername(userId, accessToken)) ??
-                null;
+                (await getGithubUsername(userId, accessToken)) ?? null;
             return getGitHubRecentlyPushedBranch(
                 accessToken,
                 input.owner,
@@ -1085,12 +1087,20 @@ export const pullsRouter = createTRPCRouter({
                 viewerLogin,
             );
         },
-        cb: ({ ctx, input, accessToken }) =>
+        cb: async ({ ctx, input, accessToken }) =>
             getCodebergRecentlyPushedBranch(
                 accessToken,
                 input.owner,
                 input.repo,
-                ctx.session?.user?.codebergUsername ?? null,
+                ctx.session?.user
+                    ? ((
+                          await getLinkedAccount(
+                              ctx.db,
+                              ctx.session.user.id,
+                              "codeberg",
+                          )
+                      )?.username ?? null)
+                    : null,
             ),
     }),
 });

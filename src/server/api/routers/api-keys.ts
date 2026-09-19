@@ -4,9 +4,13 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { generateApiKey } from "~/server/api-keys";
-import { getCodebergToken, getGitHubToken } from "~/server/auth";
+import {
+    getCodebergToken,
+    getGitHubToken,
+    getLinkedAccounts,
+} from "~/server/auth";
 import { getRepo as getCodebergRepo } from "~/server/codeberg";
-import { apiKey, apiKeyPermission, betterAuthUser } from "~/server/db/schema";
+import { apiKey, apiKeyPermission } from "~/server/db/schema";
 import { getRepo as getGitHubRepo } from "~/server/github";
 
 const permissionSchema = z.discriminatedUnion("kind", [
@@ -78,37 +82,32 @@ export const apiKeysRouter = createTRPCRouter({
             if (!ctx.session?.user)
                 throw new TRPCError({ code: "UNAUTHORIZED" });
             const userId = ctx.session.user.id;
-            const [user] = await ctx.db
-                .select({
-                    githubUsername: betterAuthUser.githubUsername,
-                    codebergUsername: betterAuthUser.codebergUsername,
-                })
-                .from(betterAuthUser)
-                .where(eq(betterAuthUser.id, userId))
-                .limit(1);
+            const accounts = await getLinkedAccounts(ctx.db, userId);
+            const githubAccount = accounts.find(
+                ({ providerId }) => providerId === "github",
+            );
+            const codebergAccount = accounts.find(
+                ({ providerId }) => providerId === "codeberg",
+            );
+            const linkedProviders = accounts.flatMap((account) =>
+                account.username
+                    ? [
+                          {
+                              provider: account.providerId,
+                              username: account.username,
+                          },
+                      ]
+                    : [],
+            );
 
-            if (!user) {
-                throw new Error("User not found");
-            }
-
-            const linkedProviders: { provider: string; username: string }[] =
-                [];
-            if (user.githubUsername) {
-                linkedProviders.push({
-                    provider: "github",
-                    username: user.githubUsername,
-                });
-            }
-            if (user.codebergUsername) {
-                linkedProviders.push({
-                    provider: "codeberg",
-                    username: user.codebergUsername,
-                });
-            }
-
-            if (linkedProviders.length === 0) {
+            if (accounts.length === 0) {
                 throw new Error(
                     "No linked accounts found. Link GitHub or Codeberg first.",
+                );
+            }
+            if (linkedProviders.length === 0) {
+                throw new Error(
+                    "Linked account profile unavailable. Reconnect the account.",
                 );
             }
 
@@ -136,7 +135,7 @@ export const apiKeysRouter = createTRPCRouter({
                     }
 
                     if (rtProvider === "github") {
-                        if (!user.githubUsername) {
+                        if (!githubAccount?.username) {
                             throw new Error("GitHub account not linked");
                         }
                         const ghToken = await getGitHubToken(ctx.db, userId);
@@ -147,14 +146,14 @@ export const apiKeysRouter = createTRPCRouter({
                         );
                         if (
                             !ghRepo ||
-                            ghRepo.owner.login !== user.githubUsername
+                            ghRepo.owner.login !== githubAccount.username
                         ) {
                             throw new Error(
                                 `Repository "${rtName}" not found or not owned by you on GitHub`,
                             );
                         }
                     } else {
-                        if (!user.codebergUsername) {
+                        if (!codebergAccount?.username) {
                             throw new Error("Codeberg account not linked");
                         }
                         const cbToken = await getCodebergToken(ctx.db, userId);
@@ -165,7 +164,7 @@ export const apiKeysRouter = createTRPCRouter({
                         );
                         if (
                             !cbRepo ||
-                            cbRepo.owner.login !== user.codebergUsername
+                            cbRepo.owner.login !== codebergAccount.username
                         ) {
                             throw new Error(
                                 `Repository "${rtName}" not found or not owned by you on Codeberg`,

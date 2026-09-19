@@ -121,7 +121,7 @@ function codebergOAuthConfigs(): GenericOAuthConfig[] {
                 "read:issue",
                 "write:issue",
             ],
-            overrideUserInfo: true,
+            overrideUserInfo: false,
             getUserInfo: async (tokens) => {
                 if (!tokens.accessToken) return null;
                 const profile = await getCodebergUser(tokens.accessToken);
@@ -131,12 +131,37 @@ function codebergOAuthConfigs(): GenericOAuthConfig[] {
                     name: profile.full_name || profile.login,
                     email: profile.email,
                     image: profile.avatar_url,
-                    emailVerified: true,
-                    codebergUsername: profile.username,
+                    emailVerified: false,
                 };
             },
         },
     ];
+}
+
+async function syncAccountUsername(account: {
+    id: string;
+    providerId: string;
+    accessToken?: string | null;
+}) {
+    if (!account.accessToken) return;
+
+    try {
+        const accessToken = decrypt(account.accessToken);
+        const username =
+            account.providerId === "github"
+                ? (await getAuthenticatedUser(accessToken)).login
+                : account.providerId === "codeberg"
+                  ? (await getCodebergUser(accessToken))?.username
+                  : undefined;
+        if (!username) return;
+
+        await db
+            .update(betterAuthAccount)
+            .set({ username })
+            .where(eq(betterAuthAccount.id, account.id));
+    } catch {
+        // Account linkage remains valid when profile synchronization fails.
+    }
 }
 
 export const auth = betterAuth({
@@ -150,25 +175,18 @@ export const auth = betterAuth({
         },
     }),
     account: {
+        additionalFields: {
+            username: {
+                type: "string",
+                required: false,
+                returned: true,
+            },
+        },
         accountLinking: {
             enabled: true,
-            trustedProviders: ["github", "codeberg"],
+            disableImplicitLinking: true,
             allowDifferentEmails: true,
-            updateUserInfoOnLink: true,
-        },
-    },
-    user: {
-        additionalFields: {
-            githubUsername: {
-                type: "string",
-                required: false,
-                returned: true,
-            },
-            codebergUsername: {
-                type: "string",
-                required: false,
-                returned: true,
-            },
+            updateUserInfoOnLink: false,
         },
     },
     socialProviders: {
@@ -186,12 +204,7 @@ export const auth = betterAuth({
                 "workflow",
             ],
             redirectURI: `${env.BETTER_AUTH_URL}/api/auth/callback/github`,
-            overrideUserInfoOnSignIn: true,
-            mapProfileToUser: (profile) => {
-                return {
-                    githubUsername: profile.login,
-                };
-            },
+            overrideUserInfoOnSignIn: false,
         },
     },
     plugins: [genericOAuth({ config: codebergOAuthConfigs() }), nextCookies()],
@@ -214,47 +227,7 @@ export const auth = betterAuth({
                         },
                     };
                 },
-                after: async (account) => {
-                    if (
-                        account.providerId === "codeberg" &&
-                        account.accessToken
-                    ) {
-                        try {
-                            const accessToken = decrypt(account.accessToken);
-                            const profile = await getCodebergUser(accessToken);
-                            if (profile) {
-                                await db
-                                    .update(betterAuthUser)
-                                    .set({
-                                        codebergUsername: profile.username,
-                                    })
-                                    .where(
-                                        eq(betterAuthUser.id, account.userId),
-                                    );
-                            }
-                        } catch {
-                            // silently fail; username will be fetched on demand
-                        }
-                    }
-                    if (
-                        account.providerId === "github" &&
-                        account.accessToken
-                    ) {
-                        try {
-                            const accessToken = decrypt(account.accessToken);
-                            const profile =
-                                await getAuthenticatedUser(accessToken);
-                            await db
-                                .update(betterAuthUser)
-                                .set({
-                                    githubUsername: profile.login,
-                                })
-                                .where(eq(betterAuthUser.id, account.userId));
-                        } catch {
-                            // silently fail; username will be fetched on demand
-                        }
-                    }
-                },
+                after: syncAccountUsername,
             },
             update: {
                 before: async (data) => {
@@ -277,23 +250,9 @@ export const auth = betterAuth({
                     }
                     return { data: { ...data, ...encrypted } };
                 },
+                after: syncAccountUsername,
             },
-            delete: {
-                after: async (account) => {
-                    if (account.providerId === "codeberg") {
-                        await db
-                            .update(betterAuthUser)
-                            .set({ codebergUsername: null })
-                            .where(eq(betterAuthUser.id, account.userId));
-                    }
-                    if (account.providerId === "github") {
-                        await db
-                            .update(betterAuthUser)
-                            .set({ githubUsername: null })
-                            .where(eq(betterAuthUser.id, account.userId));
-                    }
-                },
-            },
+            delete: {},
         },
     },
 });
@@ -473,14 +432,7 @@ async function getProviderToken(
             }
 
             if (error instanceof RefreshTokenRejectedError) {
-                // The refresh token is genuinely dead: unlink so the user
-                // re-authenticates instead of failing every request.
-                await unlinkProviderAccount(
-                    database,
-                    account.id,
-                    account.userId,
-                    providerId,
-                );
+                await unlinkProviderAccount(database, account.id);
                 throw new Error(
                     `${providerName} account not connected (session expired)`,
                 );
@@ -493,24 +445,11 @@ async function getProviderToken(
     return refreshable(decrypt(account.accessToken));
 }
 
-/**
- * Removes a provider account whose refresh token was rejected, dropping the
- * user back to the existing not-connected state and re-link flow.
- */
+/** Removes a provider account whose refresh token was rejected. */
 async function unlinkProviderAccount(
     database: typeof db,
     accountId: string,
-    userId: string,
-    providerId: "github" | "codeberg",
 ): Promise<void> {
-    await database
-        .update(betterAuthUser)
-        .set(
-            providerId === "github"
-                ? { githubUsername: null }
-                : { codebergUsername: null },
-        )
-        .where(eq(betterAuthUser.id, userId));
     await database
         .delete(betterAuthAccount)
         .where(eq(betterAuthAccount.id, accountId));
@@ -618,27 +557,78 @@ async function refreshCodebergToken(refreshToken: string) {
     return body as RefreshedToken;
 }
 
-export async function getUser(userId: string) {
-    const [user] = await db
-        .select({ githubUsername: betterAuthUser.githubUsername })
-        .from(betterAuthUser)
-        .where(eq(betterAuthUser.id, userId))
-        .limit(1);
+export type AuthProviderId = "github" | "codeberg";
 
-    return user;
+export type LinkedProviderAccount = {
+    id: string;
+    accountId: string;
+    providerId: AuthProviderId;
+    username: string | null;
+};
+
+export async function getLinkedAccounts(
+    database: typeof db,
+    userId: string,
+): Promise<LinkedProviderAccount[]> {
+    const accounts = await database
+        .select({
+            id: betterAuthAccount.id,
+            accountId: betterAuthAccount.accountId,
+            providerId: betterAuthAccount.providerId,
+            username: betterAuthAccount.username,
+        })
+        .from(betterAuthAccount)
+        .where(eq(betterAuthAccount.userId, userId));
+
+    return accounts.flatMap((account) =>
+        account.providerId === "github" || account.providerId === "codeberg"
+            ? [{ ...account, providerId: account.providerId }]
+            : [],
+    );
 }
 
+export async function getLinkedAccount(
+    database: typeof db,
+    userId: string,
+    providerId: AuthProviderId,
+): Promise<LinkedProviderAccount | undefined> {
+    const [account] = await database
+        .select({
+            id: betterAuthAccount.id,
+            accountId: betterAuthAccount.accountId,
+            providerId: betterAuthAccount.providerId,
+            username: betterAuthAccount.username,
+        })
+        .from(betterAuthAccount)
+        .where(
+            and(
+                eq(betterAuthAccount.userId, userId),
+                eq(betterAuthAccount.providerId, providerId),
+            ),
+        )
+        .limit(1);
+
+    return account
+        ? {
+              ...account,
+              providerId,
+          }
+        : undefined;
+}
 export async function getGithubUsername(
     userId: string | null,
     accessToken: string,
 ): Promise<string | undefined> {
     if (accessToken === env.GITHUB_ANONYMOUS_TOKEN) return undefined;
-    // Try to get the username from the database since it's probably
-    // faster, but fallback to github if its missing.
+    const account = userId
+        ? (await getLinkedAccounts(db, userId)).find(
+              ({ providerId }) => providerId === "github",
+          )
+        : null;
+
     return (
-        (userId
-            ? (await getUser(userId))?.githubUsername
-            : (await getAuthenticatedUser(accessToken)).login) ?? undefined
+        account?.username ??
+        (!userId ? (await getAuthenticatedUser(accessToken)).login : undefined)
     );
 }
 

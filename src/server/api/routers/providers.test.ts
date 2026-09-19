@@ -14,6 +14,7 @@ vi.mock("~/server/auth", () => ({
     getSession: vi.fn(),
     getGitHubToken: vi.fn(),
     getCodebergToken: vi.fn(),
+    getLinkedAccount: vi.fn(),
 }));
 vi.mock("~/server/cache", () => ({
     prCacheKey: (owner: string, repo: string, number: number) =>
@@ -191,7 +192,12 @@ import { pullsRouter } from "~/server/api/routers/pulls";
 import { reposRouter } from "~/server/api/routers/repos";
 import { usersRouter } from "~/server/api/routers/users";
 import { createCallerFactory, createTRPCContext } from "~/server/api/trpc";
-import { getCodebergToken, getGitHubToken, getSession } from "~/server/auth";
+import {
+    getCodebergToken,
+    getGitHubToken,
+    getLinkedAccount,
+    getSession,
+} from "~/server/auth";
 import * as cache from "~/server/cache";
 import * as codeberg from "~/server/codeberg";
 import * as github from "~/server/github";
@@ -199,6 +205,7 @@ import * as github from "~/server/github";
 const getSessionMock = vi.mocked(getSession);
 const getGitHubTokenMock = vi.mocked(getGitHubToken);
 const getCodebergTokenMock = vi.mocked(getCodebergToken);
+const getLinkedAccountMock = vi.mocked(getLinkedAccount);
 const deleteCacheMock = vi.mocked(cache.deleteCache);
 
 async function callerFor(session: unknown) {
@@ -217,6 +224,14 @@ beforeEach(() => {
     vi.clearAllMocks();
     getGitHubTokenMock.mockResolvedValue("gh-token");
     getCodebergTokenMock.mockResolvedValue("cb-token");
+    getLinkedAccountMock.mockImplementation(
+        async (_db, _userId, providerId) => ({
+            id: `${providerId}-account`,
+            accountId: `${providerId}-user`,
+            providerId,
+            username: "ranger-ross",
+        }),
+    );
 });
 
 describe("provider-aware procedures (repos router)", () => {
@@ -514,7 +529,6 @@ describe("users.currentUser (Codeberg)", () => {
         const { users } = await callerFor({
             user: {
                 id: "user-1",
-                codebergUsername: "ranger-ross",
                 image: "https://github.com/avatars/ranger-ross.png",
             },
         });

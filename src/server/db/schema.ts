@@ -61,8 +61,6 @@ export const betterAuthUser = createTable("ba_user", (d) => ({
     email: d.text().notNull().unique(),
     emailVerified: d.boolean().notNull(),
     image: d.text(),
-    githubUsername: d.text(),
-    codebergUsername: d.text(),
     createdAt: d.timestamp({ withTimezone: true, mode: "date" }).notNull(),
     updatedAt: d.timestamp({ withTimezone: true, mode: "date" }).notNull(),
 }));
@@ -97,7 +95,8 @@ export const betterAuthAccount = createTable(
         userId: d
             .text()
             .notNull()
-            .references(() => betterAuthUser.id),
+            .references(() => betterAuthUser.id, { onDelete: "cascade" }),
+        username: d.text(),
         accessToken: d.text(),
         refreshToken: d.text(),
         idToken: d.text(),
@@ -112,8 +111,14 @@ export const betterAuthAccount = createTable(
         updatedAt: d.timestamp({ withTimezone: true, mode: "date" }).notNull(),
     }),
     (t) => [
-        // getGitHubToken filters by userId + providerId on every authenticated request.
-        index("ba_account_userId_idx").on(t.userId),
+        unique("ba_account_userId_providerId_unique").on(
+            t.userId,
+            t.providerId,
+        ),
+        unique("ba_account_providerId_accountId_unique").on(
+            t.providerId,
+            t.accountId,
+        ),
     ],
 );
 
