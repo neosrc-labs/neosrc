@@ -11,7 +11,7 @@ concurrency:
 
 env:
   SKIP_ENV_VALIDATION: "true"
-  NODE_VERSION: "22"
+  NODE_VERSION: "26.9.0"
 
 permissions:
   contents: read
