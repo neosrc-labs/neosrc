@@ -111,7 +111,11 @@ export function TimelineEvent({
 
     return (
         <div className="relative mb-8 ml-14">
-            <TimelineIcon event={wrapper.event} provider={provider} />
+            <TimelineIcon
+                event={wrapper.event}
+                provider={provider}
+                isIssue={issueNumber !== undefined}
+            />
 
             <div
                 // content-visibility: auto implies paint containment, which clips
@@ -285,12 +289,51 @@ export function EventRow({ children }: { children: React.ReactNode }) {
     );
 }
 
+function IssueCompletedTimelineIcon() {
+    return (
+        <svg
+            aria-hidden="true"
+            className="size-4 fill-current"
+            viewBox="0 0 16 16"
+        >
+            <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm1.5 0a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm10.28-1.72-4.5 4.5a.75.75 0 0 1-1.06 0l-2-2a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018l1.47 1.47 3.97-3.97a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042Z" />
+        </svg>
+    );
+}
+
+function IssueInactiveTimelineIcon() {
+    return (
+        <svg
+            aria-hidden="true"
+            className="size-4 fill-current"
+            viewBox="0 0 16 16"
+        >
+            <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM3.965 13.096a6.5 6.5 0 0 0 9.131-9.131ZM1.5 8a6.474 6.474 0 0 0 1.404 4.035l9.131-9.131A6.499 6.499 0 0 0 1.5 8Z" />
+        </svg>
+    );
+}
+
+function IssueReopenedTimelineIcon() {
+    return (
+        <svg
+            aria-hidden="true"
+            className="size-4 fill-current"
+            viewBox="0 0 16 16"
+        >
+            <path d="M5.029 2.217a6.5 6.5 0 0 1 9.437 5.11.75.75 0 1 0 1.492-.154 8 8 0 0 0-14.315-4.03L.427 1.927A.25.25 0 0 0 0 2.104V5.75A.25.25 0 0 0 .25 6h3.646a.25.25 0 0 0 .177-.427L2.715 4.215a6.491 6.491 0 0 1 2.314-1.998ZM1.262 8.169a.75.75 0 0 0-1.22.658 8.001 8.001 0 0 0 14.315 4.03l1.216 1.216a.25.25 0 0 0 .427-.177V10.25a.25.25 0 0 0-.25-.25h-3.646a.25.25 0 0 0-.177.427l1.358 1.358a6.501 6.501 0 0 1-11.751-3.11.75.75 0 0 0-.272-.506Z" />
+            <path d="M9.06 9.06a1.5 1.5 0 1 1-2.12-2.12 1.5 1.5 0 0 1 2.12 2.12Z" />
+        </svg>
+    );
+}
+
 function TimelineIcon({
     event,
     provider,
+    isIssue,
 }: {
     event: GQLTimelineEvent;
     provider: Provider;
+    isIssue: boolean;
 }) {
     if (event.__typename === "IssueComment" && event.author) {
         return (
@@ -311,15 +354,29 @@ function TimelineIcon({
         );
     }
 
+    const closedReason =
+        event.__typename === "ClosedEvent" ? event.stateReason : null;
+    const isInactiveIssueClose =
+        isIssue &&
+        (closedReason === "NOT_PLANNED" || closedReason === "DUPLICATE");
+
     const iconMap: Record<string, React.ReactNode> = {
         PullRequestReview: <Eye size={ICON_SIZE} />,
-        ClosedEvent: (
+        ClosedEvent: isIssue ? (
+            isInactiveIssueClose ? (
+                <IssueInactiveTimelineIcon />
+            ) : (
+                <IssueCompletedTimelineIcon />
+            )
+        ) : (
             <GitPullRequestClosed
                 className="text-state-solid-foreground"
                 size={ICON_SIZE}
             />
         ),
-        ReopenedEvent: (
+        ReopenedEvent: isIssue ? (
+            <IssueReopenedTimelineIcon />
+        ) : (
             <GitPullRequestArrow
                 className="text-state-solid-foreground"
                 size={ICON_SIZE}
@@ -389,9 +446,17 @@ function TimelineIcon({
         : isChangesRequested
           ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-closed-solid"
           : isClosed
-            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-closed-solid"
+            ? isIssue
+                ? isInactiveIssueClose
+                    ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-issue-inactive text-state-solid-foreground"
+                    : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-issue-completed text-state-solid-foreground"
+                : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-closed-solid"
             : isReopened
-              ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-open-solid"
+              ? `absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full ${
+                    isIssue
+                        ? "bg-state-issue-open text-state-solid-foreground"
+                        : "bg-state-open-solid"
+                }`
               : isMerged
                 ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-merged-solid"
                 : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-surface ring-1 ring-border";

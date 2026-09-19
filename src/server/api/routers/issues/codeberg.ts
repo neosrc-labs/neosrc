@@ -106,6 +106,7 @@ function mapCodebergIssue(issue: CodebergIssue): IssueSearchItem {
         number: issue.number,
         title: issue.title,
         state: issue.state.toUpperCase() as IssueSearchItem["state"],
+        stateReason: null,
         createdAt: issue.created_at,
         closedAt: issue.closed_at,
         author: mapCbAuthor(issue.user),

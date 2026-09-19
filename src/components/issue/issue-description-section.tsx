@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { Async } from "~/components/async";
 import { AuthorLabel } from "~/components/comment/author-label";
 import { ReactionFooter } from "~/components/comment/reaction-footer";
+import { IssueStatusPill } from "~/components/issue/issue-status-pill";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { MarkdownEditor } from "~/components/markdown/markdown-editor";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
@@ -18,7 +19,6 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
-import { StatusPill } from "~/components/ui/status-pill";
 import { RoleBadge } from "~/components/user/role-badge";
 import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTaskToggle } from "~/hooks/use-task-toggle";
@@ -358,7 +358,10 @@ function IssueTitleRow({
             >
                 {(issue) => (
                     <>
-                        <StatusPill state={issue.state} />
+                        <IssueStatusPill
+                            state={issue.state}
+                            stateReason={issue.stateReason}
+                        />
                         {issue.locked && (
                             <span className="flex items-center gap-1 rounded-md border border-border bg-surface-secondary px-2 py-0.5 text-text-tertiary text-xs">
                                 <Lock size={12} />

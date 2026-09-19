@@ -25,7 +25,8 @@ function normalizeSearchItem(item: IssueSearchItem): IssueRowData {
     return {
         number: item.number,
         title: item.title,
-        state: item.state.toLowerCase(),
+        state: item.state === "OPEN" ? "open" : "closed",
+        stateReason: item.stateReason ?? null,
         user: item.author
             ? {
                   login: item.author.login,

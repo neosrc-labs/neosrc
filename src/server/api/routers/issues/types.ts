@@ -4,6 +4,7 @@ export interface IssueSearchItem {
     number: number;
     title: string;
     state: "OPEN" | "CLOSED";
+    stateReason: IssueStateReason | null;
     createdAt: string;
     closedAt: string | null;
     author: Author | null;
@@ -32,12 +33,14 @@ export type IssueAuthor = {
 /** `id` is the provider-local identifier its write API expects: GitHub uses
  *  the issue milestone number, Codeberg the milestone id. */
 export type IssueMilestone = { id: string; title: string; htmlUrl: string };
+export type IssueStateReason = "completed" | "not_planned" | "duplicate";
 
 export interface IssueDetail {
     number: number;
     title: string;
     body: string;
     state: "open" | "closed";
+    stateReason: IssueStateReason | null;
     /** True when the provider locks the conversation to write access. */
     locked: boolean;
     comments: number;

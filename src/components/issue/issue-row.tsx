@@ -1,6 +1,11 @@
-import { Circle, CircleCheck, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import Image from "next/image";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import {
+    IssueStateIcon,
+    issueStateIconColor,
+    issueStateLabel,
+} from "~/components/issue/issue-status-pill";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { Label } from "~/components/ui/label";
 import { UserLink } from "~/components/user/user-link";
@@ -9,7 +14,8 @@ import { formatRelativeTime } from "~/utils/format-time";
 export interface IssueRowData {
     number: number;
     title: string;
-    state: string;
+    state: "open" | "closed";
+    stateReason: "completed" | "not_planned" | "duplicate" | null;
     user: { login: string; avatar_url: string } | null;
     assignee: { login: string; avatar_url: string } | null;
     labels: Array<{
@@ -42,11 +48,16 @@ export function IssueRow({
     return (
         <div className="flex items-start gap-3 border-border-subtle border-b px-4 py-3 transition-colors hover:bg-surface-secondary">
             <div className="mt-0.5 shrink-0">
-                {issue.state === "open" ? (
-                    <CircleCheck className="size-4 text-state-open" />
-                ) : (
-                    <Circle className="size-4 text-state-closed" />
-                )}
+                <IssueStateIcon
+                    aria-label={issueStateLabel(issue.state, issue.stateReason)}
+                    className={issueStateIconColor(
+                        issue.state,
+                        issue.stateReason,
+                    )}
+                    role="img"
+                    state={issue.state}
+                    stateReason={issue.stateReason}
+                />
             </div>
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">

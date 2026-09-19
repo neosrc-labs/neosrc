@@ -93,6 +93,10 @@ vi.mock("~/trpc/react", () => ({
 }));
 
 import { IssueList } from "~/components/issue/issue-list";
+import type {
+    IssueSearchItem,
+    IssueStateReason,
+} from "~/server/api/routers/issues/types";
 import { api } from "~/trpc/react";
 
 // --- Helpers ---
@@ -276,6 +280,7 @@ describe("IssueList", () => {
                     state: "OPEN",
                     createdAt: "2026-09-01T00:00:00Z",
                     closedAt: null,
+                    stateReason: null,
                     author: {
                         login: "octocat",
                         avatarUrl: "https://example.com/avatar.png",
@@ -299,6 +304,57 @@ describe("IssueList", () => {
         expect(
             screen.getByRole("link", { name: "3 comments" }),
         ).toBeInTheDocument();
+    });
+    it("matches GitHub issue icons for each state reason", () => {
+        const searchItem = (
+            number: number,
+            state: IssueSearchItem["state"],
+            stateReason: IssueStateReason | null,
+        ): IssueSearchItem => ({
+            number,
+            title: `Issue ${number}`,
+            state,
+            stateReason,
+            createdAt: "2026-09-01T00:00:00Z",
+            closedAt: state === "CLOSED" ? "2026-09-02T00:00:00Z" : null,
+            author: null,
+            labels: [],
+            assignees: [],
+            comments: 0,
+        });
+        const searchQuery = vi.mocked(api.issues.search.useQuery);
+        searchQuery.mockReturnValueOnce({
+            data: {
+                items: [
+                    searchItem(1, "OPEN", null),
+                    searchItem(2, "CLOSED", "completed"),
+                    searchItem(3, "CLOSED", "not_planned"),
+                    searchItem(4, "CLOSED", "duplicate"),
+                ],
+                totalCount: 4,
+                hasNextPage: false,
+                endCursor: null,
+                stateCounts: { open: 1, closed: 3 },
+            },
+            isLoading: false,
+        } as never);
+
+        renderList();
+
+        expect(screen.getByRole("img", { name: "Open issue" })).toHaveClass(
+            "text-state-issue-open",
+        );
+        expect(screen.getByRole("img", { name: "Closed issue" })).toHaveClass(
+            "text-state-issue-completed",
+        );
+        expect(
+            screen.getByRole("img", {
+                name: "Issue closed as not planned",
+            }),
+        ).toHaveClass("text-state-issue-inactive");
+        expect(
+            screen.getByRole("img", { name: "Issue closed as duplicate" }),
+        ).toHaveClass("text-state-issue-inactive");
     });
 
     it("submits search on Enter key", async () => {

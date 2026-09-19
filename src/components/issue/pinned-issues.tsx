@@ -1,5 +1,10 @@
-import { CircleCheck, CircleDot, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
+import {
+    IssueStateIcon,
+    issueStateIconColor,
+    issueStateLabel,
+} from "~/components/issue/issue-status-pill";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import type { IssueSearchItem } from "~/server/api/routers/issues/types";
 import { formatRelativeTime } from "~/utils/format-time";
@@ -32,17 +37,19 @@ export function PinnedIssues({
                     className="flex min-h-24 min-w-0 flex-col rounded-md border border-border-subtle bg-surface px-4 py-3"
                 >
                     <div className="flex min-w-0 items-start gap-2">
-                        {issue.state === "OPEN" ? (
-                            <CircleDot
-                                aria-label="Open issue"
-                                className="mt-0.5 size-4 shrink-0 text-state-open"
-                            />
-                        ) : (
-                            <CircleCheck
-                                aria-label="Closed issue"
-                                className="mt-0.5 size-4 shrink-0 text-state-closed"
-                            />
-                        )}
+                        <IssueStateIcon
+                            aria-label={issueStateLabel(
+                                issue.state === "OPEN" ? "open" : "closed",
+                                issue.stateReason,
+                            )}
+                            className={`mt-0.5 ${issueStateIconColor(
+                                issue.state === "OPEN" ? "open" : "closed",
+                                issue.stateReason,
+                            )}`}
+                            role="img"
+                            state={issue.state === "OPEN" ? "open" : "closed"}
+                            stateReason={issue.stateReason}
+                        />
                         <a
                             href={`/${provider}/${owner}/${repo}/issues/${issue.number}`}
                             className="line-clamp-2 font-semibold text-sm text-text-primary leading-5 hover:text-link"

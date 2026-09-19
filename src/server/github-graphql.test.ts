@@ -37,6 +37,7 @@ describe("getPinnedIssuesGraphQL", () => {
                 number: 7,
                 title: "Pinned first",
                 state: "OPEN",
+                stateReason: null,
                 createdAt: "2026-09-01T00:00:00Z",
                 updatedAt: "2026-09-02T00:00:00Z",
                 closedAt: null,
@@ -50,6 +51,7 @@ describe("getPinnedIssuesGraphQL", () => {
                 number: 8,
                 title: "Pinned second",
                 state: "CLOSED",
+                stateReason: "COMPLETED",
                 createdAt: "2026-08-01T00:00:00Z",
                 updatedAt: "2026-08-02T00:00:00Z",
                 closedAt: "2026-08-03T00:00:00Z",
@@ -72,6 +74,10 @@ describe("getPinnedIssuesGraphQL", () => {
         ).resolves.toEqual(issues);
         expect(mockGraphql).toHaveBeenCalledWith(
             expect.stringContaining("pinnedIssues(first: 3)"),
+            { owner: "owner", repo: "repo" },
+        );
+        expect(mockGraphql).toHaveBeenCalledWith(
+            expect.stringContaining("stateReason"),
             { owner: "owner", repo: "repo" },
         );
     });

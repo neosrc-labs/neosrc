@@ -20,6 +20,7 @@ import type {
     IssueDetail,
     IssueMetadata,
     IssueSearchItem,
+    IssueStateReason,
 } from "./issues/types";
 import type { PrSearchItem } from "./pulls/types";
 
@@ -115,6 +116,21 @@ export function mapGqlPrSearchItem(item: GqlPrSearchItem): PrSearchItem {
     };
 }
 
+function mapGqlIssueStateReason(
+    stateReason: GqlIssueSearchItem["stateReason"],
+): IssueStateReason | null {
+    switch (stateReason) {
+        case "COMPLETED":
+            return "completed";
+        case "DUPLICATE":
+            return "duplicate";
+        case "NOT_PLANNED":
+            return "not_planned";
+        default:
+            return null;
+    }
+}
+
 export function mapGqlIssueSearchItem(
     item: GqlIssueSearchItem,
 ): IssueSearchItem {
@@ -122,6 +138,7 @@ export function mapGqlIssueSearchItem(
         number: item.number,
         title: item.title,
         state: item.state as IssueSearchItem["state"],
+        stateReason: mapGqlIssueStateReason(item.stateReason),
         createdAt: item.createdAt,
         closedAt: item.closedAt,
         author: mapGqlAuthor(item.author),
@@ -163,6 +180,13 @@ export function mapGitHubIssueDetail(issue: IssueGetResponseData): IssueDetail {
         title: issue.title,
         body: issue.body ?? "",
         state: issue.state === "closed" ? "closed" : "open",
+        stateReason:
+            issue.state === "closed" &&
+            (issue.state_reason === "completed" ||
+                issue.state_reason === "not_planned" ||
+                issue.state_reason === "duplicate")
+                ? issue.state_reason
+                : null,
         locked: issue.locked,
         comments: issue.comments,
         createdAt: issue.created_at,
@@ -212,6 +236,7 @@ export function mapCodebergIssueDetail(
         title: issue.title,
         body: issue.body,
         state: issue.state,
+        stateReason: null,
         locked: issue.is_locked ?? false,
         comments: issue.comments ?? 0,
         createdAt: issue.created_at,

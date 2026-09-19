@@ -255,10 +255,11 @@ function codebergIssue(overrides: Record<string, unknown> = {}): CodebergIssue {
 }
 
 describe("mapGitHubIssueDetail", () => {
-    it("maps author association, state, author and milestone", () => {
+    it("maps author association, state reason, author and milestone", () => {
         const result = mapGitHubIssueDetail(
             githubIssue({
                 state: "closed",
+                state_reason: "duplicate",
                 milestone: {
                     number: 7,
                     title: "v2",
@@ -268,6 +269,7 @@ describe("mapGitHubIssueDetail", () => {
         );
 
         expect(result.state).toBe("closed");
+        expect(result.stateReason).toBe("duplicate");
         expect(result.authorAssociation).toBe("MEMBER");
         expect(result.author).toEqual({
             login: "alice",
@@ -300,6 +302,7 @@ describe("mapCodebergIssueDetail", () => {
         expect(result.comments).toBe(0);
         expect(result.locked).toBe(false);
         expect(result.authorAssociation).toBeNull();
+        expect(result.stateReason).toBeNull();
     });
 
     it("carries the provider lock state through", () => {

@@ -245,6 +245,7 @@ query PullRequestTimeline(
 						id
 						actor { ...SimpleUser }
 						createdAt
+						stateReason
 					}
 					... on ReopenedEvent {
 						id
@@ -524,6 +525,7 @@ query IssueTimeline(
 						id
 						actor { ...SimpleUser }
 						createdAt
+						stateReason
 					}
 					... on ReopenedEvent {
 						id
@@ -782,7 +784,10 @@ export type GQLUnassignedEvent = GQLEventBase & {
     assignee: GQLActor | null;
 };
 
-export type GQLClosedEvent = GQLEventBase & { __typename: "ClosedEvent" };
+export type GQLClosedEvent = GQLEventBase & {
+    __typename: "ClosedEvent";
+    stateReason?: "COMPLETED" | "DUPLICATE" | "NOT_PLANNED" | null;
+};
 
 export type GQLReopenedEvent = GQLEventBase & { __typename: "ReopenedEvent" };
 
@@ -2261,6 +2266,7 @@ export interface GqlIssueSearchItem {
     number: number;
     title: string;
     state: string;
+    stateReason: "COMPLETED" | "DUPLICATE" | "NOT_PLANNED" | null;
     createdAt: string;
     updatedAt: string;
     closedAt: string | null;
@@ -2287,6 +2293,7 @@ query PinnedIssues($owner: String!, $repo: String!) {
           number
           title
           state
+          stateReason
           createdAt
           updatedAt
           closedAt
@@ -2337,6 +2344,7 @@ query SearchIssues($searchQuery: String!, $first: Int!, $after: String) {
         number
         title
         state
+        stateReason
         createdAt
         updatedAt
         closedAt

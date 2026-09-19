@@ -86,6 +86,9 @@
     --color-state-open-solid: #15803d;
     --color-state-closed: #dc2626;
     --color-state-closed-solid: #dc2626;
+    --color-state-issue-open: #1f883d;
+    --color-state-issue-completed: #8250df;
+    --color-state-issue-inactive: #59636e;
     --color-state-draft: #71717a;
     --color-state-queued: #a16207;
     --color-state-unknown: #374151;
@@ -177,6 +180,9 @@
     --color-state-open-solid: #15803d;
     --color-state-closed: #ef4444;
     --color-state-closed-solid: #dc2626;
+    --color-state-issue-open: #238636;
+    --color-state-issue-completed: #8957e5;
+    --color-state-issue-inactive: #656c76;
     --color-state-draft: #a1a1aa;
     --color-state-queued: #facc15;
     --color-state-unknown: #a1a1aa;
