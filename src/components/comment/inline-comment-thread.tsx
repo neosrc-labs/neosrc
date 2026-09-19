@@ -329,10 +329,7 @@ export function InlineCommentThread({
             />
 
             {replies.map((comment) => (
-                <div
-                    className="bg-surface-secondary dark:bg-zinc-950"
-                    key={comment.id}
-                >
+                <div className="bg-surface-secondary" key={comment.id}>
                     <ReviewCommentItem
                         comment={comment}
                         isPending={

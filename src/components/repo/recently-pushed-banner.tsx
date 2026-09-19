@@ -36,7 +36,7 @@ export function RecentlyPushedBanner({
     const branchHref = `/${provider}/${owner}/${repo}/commits/${encodeURIComponent(data.branch)}`;
 
     return (
-        <div className="mb-3 flex h-12 items-center justify-between gap-3 rounded-lg border border-yellow-800/50 bg-yellow-50 px-4 text-yellow-800 dark:border-yellow-700/50 dark:bg-yellow-950 dark:text-yellow-200">
+        <div className="mb-3 flex h-12 items-center justify-between gap-3 rounded-lg border border-warning-border bg-warning-surface px-4 text-warning-text">
             <div className="flex min-w-0 items-center gap-2 text-sm">
                 <GitBranch className="size-4 shrink-0" />
                 <span className="min-w-0 truncate">
@@ -57,7 +57,7 @@ export function RecentlyPushedBanner({
                 href={data.compareUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md border border-green-600 bg-green-600 px-2.5 py-1.5 font-medium text-sm text-white transition-colors hover:bg-green-700 dark:border-green-500 dark:bg-green-600 dark:hover:bg-green-700"
+                className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md border border-action bg-action px-2.5 py-1.5 font-medium text-action-foreground text-sm transition-colors hover:bg-action-hover"
             >
                 <GitPullRequestArrow className="size-4" />
                 Compare &amp; pull request

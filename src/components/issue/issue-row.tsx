@@ -40,7 +40,7 @@ export function IssueRow({
     onLabelFilter?: (name: string) => void;
 }) {
     return (
-        <div className="flex items-start gap-3 border-border-subtle border-b px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-zinc-900/50">
+        <div className="flex items-start gap-3 border-border-subtle border-b px-4 py-3 transition-colors hover:bg-surface-secondary">
             <div className="mt-0.5 shrink-0">
                 {issue.state === "open" ? (
                     <CircleCheck className="size-4 text-state-open" />
@@ -52,7 +52,7 @@ export function IssueRow({
                 <div className="flex items-center gap-2">
                     <a
                         href={`/${provider}/${owner}/${repo}/issues/${issue.number}`}
-                        className="font-medium text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+                        className="font-medium text-text-primary hover:text-link"
                     >
                         <CodeTitle
                             provider={provider}
@@ -136,7 +136,7 @@ export function IssueRow({
                 {issue.comments_count > 0 ? (
                     <a
                         href={`/${provider}/${owner}/${repo}/issues/${issue.number}`}
-                        className="flex items-center gap-1 text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
+                        className="flex items-center gap-1 text-sm text-text-tertiary hover:text-link"
                     >
                         <MessageSquare className="size-4" />
                         <span>{issue.comments_count}</span>

@@ -112,7 +112,7 @@ export function RepoFileView({
                         <button
                             type="button"
                             onClick={retryContent}
-                            className="mt-2 cursor-pointer text-blue-600 text-sm hover:underline dark:text-blue-400"
+                            className="mt-2 cursor-pointer text-link text-sm hover:text-link-hover hover:underline"
                         >
                             Try again
                         </button>
@@ -126,7 +126,7 @@ export function RepoFileView({
                         </p>
                         <a
                             href={raw}
-                            className="mt-2 inline-block text-blue-600 text-sm hover:underline dark:text-blue-400"
+                            className="mt-2 inline-block text-link text-sm hover:text-link-hover hover:underline"
                         >
                             View raw
                         </a>

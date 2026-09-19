@@ -239,7 +239,7 @@ describe("IssueList", () => {
     it("shows Open as the default active tab", () => {
         renderList();
         const openTab = screen.getByRole("button", { name: /open/i });
-        expect(openTab.className).toContain("border-blue-500");
+        expect(openTab).toHaveAttribute("aria-pressed", "true");
     });
 
     it("navigates when a tab is clicked", async () => {
@@ -337,7 +337,7 @@ describe("IssueList", () => {
         paramsState.set("state", "closed");
         renderList();
         const closedTab = screen.getByRole("button", { name: /closed/i });
-        expect(closedTab.className).toContain("border-blue-500");
+        expect(closedTab).toHaveAttribute("aria-pressed", "true");
     });
 
     it("typing 'is:c' and pressing Enter selects 'is:closed' from autocomplete and switches to Closed tab", async () => {
@@ -367,7 +367,7 @@ describe("IssueList", () => {
         );
 
         const closedTab = screen.getByRole("button", { name: /closed/i });
-        expect(closedTab.className).toContain("border-blue-500");
+        expect(closedTab).toHaveAttribute("aria-pressed", "true");
     });
 
     it("clicking the Closed tab adds 'is:closed ' to the search bar", async () => {

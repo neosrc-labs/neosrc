@@ -102,7 +102,7 @@ export function ListSearchBar({
             <div className="flex items-center gap-1 px-4 py-2">
                 <div
                     ref={searchBarRef}
-                    className="relative flex flex-1 items-center"
+                    className="relative flex flex-1 items-center rounded-md bg-surface-elevated"
                 >
                     <div
                         className="pointer-events-none absolute inset-0 flex items-center px-3 py-1.5 text-sm"
@@ -115,7 +115,7 @@ export function ListSearchBar({
                                     return seg.isQualifier ? (
                                         <span
                                             key={key}
-                                            className="rounded bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300"
+                                            className="rounded bg-info-surface text-info-text"
                                         >
                                             {seg.text}
                                         </span>
@@ -183,7 +183,7 @@ export function ListSearchBar({
                             setCursorPos(e.currentTarget.selectionStart ?? 0);
                         }}
                         placeholder={placeholder}
-                        className="relative w-full rounded-md border border-gray-300 bg-transparent px-3 py-1.5 pr-12 text-sm text-transparent placeholder-gray-500 caret-gray-900 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:placeholder-zinc-500 dark:caret-zinc-100 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+                        className="relative w-full rounded-md border border-border bg-transparent px-3 py-1.5 pr-12 text-sm text-transparent caret-text-primary outline-hidden placeholder:text-text-muted focus:border-focus focus:ring-1 focus:ring-focus"
                     />
                     {autocompleteMatch && (
                         <SearchAutocomplete
@@ -203,7 +203,7 @@ export function ListSearchBar({
                             <button
                                 type="button"
                                 onClick={onClear}
-                                className="flex size-4 cursor-pointer items-center justify-center rounded-full text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
+                                className="flex size-4 cursor-pointer items-center justify-center rounded-full text-text-muted hover:text-text-secondary"
                             >
                                 <X className="size-3" />
                             </button>
@@ -212,7 +212,7 @@ export function ListSearchBar({
                             type="button"
                             aria-label="Search"
                             onClick={onSearch}
-                            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-text-muted hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-text-muted hover:bg-surface-tertiary hover:text-text-secondary"
                         >
                             <Search className="size-4" />
                         </button>
@@ -221,7 +221,7 @@ export function ListSearchBar({
 
                 <a
                     href={urls.labels}
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary"
                 >
                     <Tag className="size-4" />
                     Labels
@@ -229,7 +229,7 @@ export function ListSearchBar({
 
                 <a
                     href={urls.milestones}
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary"
                 >
                     <Milestone className="size-4" />
                     Milestones
@@ -237,7 +237,7 @@ export function ListSearchBar({
 
                 <a
                     href={urls.newItem}
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-green-600 bg-green-600 px-2.5 py-1.5 font-medium text-sm text-white transition-colors hover:bg-green-700 dark:border-green-500 dark:bg-green-600 dark:hover:bg-green-700"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-action bg-action px-2.5 py-1.5 font-medium text-action-foreground text-sm transition-colors hover:bg-action-hover"
                 >
                     {newItemIcon}
                     {newItemLabel}
@@ -247,7 +247,7 @@ export function ListSearchBar({
             {booleanHint && (
                 <p
                     role="status"
-                    className="px-4 pb-2 text-amber-700 text-xs dark:text-amber-500"
+                    className="px-4 pb-2 text-warning-text text-xs"
                 >
                     {booleanHint}
                 </p>

@@ -113,7 +113,7 @@ function ThreadCard({ thread }: ThreadCardProps) {
                 )}
                 <div className="mt-0.5 flex items-center gap-2">
                     {thread.isResolved ? (
-                        <CheckCircle className="size-3 text-green-500" />
+                        <CheckCircle className="size-3 text-success-emphasis" />
                     ) : (
                         <Circle className="size-3 text-text-muted" />
                     )}
@@ -122,7 +122,7 @@ function ThreadCard({ thread }: ThreadCardProps) {
                         {thread.commentCount}
                     </span>
                     {thread.isOutdated && (
-                        <span className="whitespace-nowrap rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-[10px] text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                        <span className="whitespace-nowrap rounded-full bg-warning-surface px-1.5 py-0.5 font-medium text-[10px] text-warning-text">
                             Outdated
                         </span>
                     )}

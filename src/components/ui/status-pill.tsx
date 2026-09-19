@@ -19,28 +19,28 @@ export function StatusPill({
     switch (state) {
         case "merged":
             statusText = "Merged";
-            statusColor = "bg-state-merged text-white";
+            statusColor = "bg-state-merged-solid text-state-solid-foreground";
             break;
         case "open":
             statusText = "Open";
-            statusColor = "bg-state-open text-white";
+            statusColor = "bg-state-open text-state-foreground";
             break;
         case "draft":
             statusText = "Draft";
-            statusColor = "bg-state-draft text-white";
+            statusColor = "bg-state-draft text-state-foreground";
             break;
         case "closed":
             statusText = "Closed";
-            statusColor = "bg-state-closed text-white";
+            statusColor = "bg-state-closed text-state-foreground";
             break;
         case "queued":
             statusText = "Queued";
-            statusColor = "bg-state-queued text-white";
+            statusColor = "bg-state-queued text-state-foreground";
             break;
         default:
             console.warn("unsupported state: ", state);
             statusText = "Unknown";
-            statusColor = "bg-state-unknown text-white";
+            statusColor = "bg-state-unknown text-state-foreground";
             break;
     }
     return (

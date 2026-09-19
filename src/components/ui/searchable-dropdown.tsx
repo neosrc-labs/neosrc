@@ -108,7 +108,7 @@ export function SearchableDropdown<T>({
                 <div onClick={() => setOpen(!open)}>{trigger}</div>
             ) : (
                 <button
-                    className="cursor-pointer rounded p-0.5 text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
+                    className="cursor-pointer rounded p-0.5 text-text-muted hover:text-text-secondary"
                     onClick={() => setOpen(!open)}
                     type="button"
                     aria-label={ariaLabel}
@@ -120,7 +120,7 @@ export function SearchableDropdown<T>({
                 <div className="absolute right-0 z-20 mt-1 w-64 rounded-lg border border-border bg-surface-elevated shadow-lg">
                     <input
                         autoFocus
-                        className="w-full border-border border-b px-3 py-2 text-sm outline-none placeholder:text-text-muted dark:bg-zinc-900 dark:text-zinc-100"
+                        className="w-full border-border border-b bg-surface-elevated px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-muted"
                         onChange={(e) => {
                             setSearch(e.target.value);
                             setSelectedIndex(0);
@@ -178,7 +178,7 @@ export function SearchableDropdown<T>({
                                             className={cn(
                                                 "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-surface-tertiary",
                                                 selected &&
-                                                    "bg-blue-50 dark:bg-blue-950/30",
+                                                    "bg-info-surface text-info-text",
                                                 idx === selectedIndex &&
                                                     !selected &&
                                                     "bg-surface-tertiary",

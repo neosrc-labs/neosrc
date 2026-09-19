@@ -192,7 +192,7 @@ function LabelSectionSettings({
                             {l.name}
                         </LabelComponent>
                         {selected && (
-                            <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                            <span className="shrink-0 text-link text-xs">
                                 &#10003;
                             </span>
                         )}

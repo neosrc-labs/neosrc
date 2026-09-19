@@ -55,11 +55,11 @@ export function IssueAutocomplete({
     if (error) {
         return (
             <div
-                className="absolute z-50 w-96 rounded-lg border border-red-200 bg-surface-elevated shadow-lg dark:border-red-800"
+                className="absolute z-50 w-96 rounded-lg border border-danger-border bg-surface-elevated shadow-lg"
                 data-autocomplete="true"
                 style={style}
             >
-                <div className="px-3 py-2 text-red-600 text-sm dark:text-red-400">
+                <div className="px-3 py-2 text-danger-text text-sm">
                     Error: {error}
                 </div>
             </div>
@@ -91,7 +91,7 @@ export function IssueAutocomplete({
                     <li
                         className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm ${
                             index === selectedIndex
-                                ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                ? "bg-info-surface text-info-text"
                                 : "text-text-label hover:bg-surface-tertiary"
                         }`}
                         key={issue.number}
@@ -100,7 +100,7 @@ export function IssueAutocomplete({
                     >
                         {issue.type === "pull_request" ? (
                             <svg
-                                className="shrink-0 text-green-600 dark:text-green-400"
+                                className="shrink-0 text-success-emphasis"
                                 width="16"
                                 height="16"
                                 viewBox="0 0 16 16"
@@ -111,7 +111,7 @@ export function IssueAutocomplete({
                             </svg>
                         ) : (
                             <svg
-                                className="shrink-0 text-blue-600 dark:text-blue-400"
+                                className="shrink-0 text-link"
                                 width="16"
                                 height="16"
                                 viewBox="0 0 16 16"
@@ -122,7 +122,7 @@ export function IssueAutocomplete({
                                 <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Z" />
                             </svg>
                         )}
-                        <span className="font-medium text-blue-600 dark:text-blue-400">
+                        <span className="font-medium text-link">
                             #{issue.number}
                         </span>{" "}
                         <CodeTitle>{issue.title}</CodeTitle>

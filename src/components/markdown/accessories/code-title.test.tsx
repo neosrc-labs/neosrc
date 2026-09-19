@@ -83,7 +83,7 @@ describe("CodeTitle", () => {
         const user = userEvent.setup();
 
         render(
-            <a href="/commit" className="hover:text-blue-600 hover:underline">
+            <a href="/commit" className="hover:text-link hover:underline">
                 <CodeTitle provider="gh" owner="acme" repo="widgets">
                     fix #123 crash
                 </CodeTitle>

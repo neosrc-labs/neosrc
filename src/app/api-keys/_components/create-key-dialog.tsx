@@ -29,7 +29,7 @@ export function PermissionBadge({
     const { provider, name } = parseTarget(permission.target);
     const prefix = permission.kind === "UPLOAD_REPORT_OWNER" ? "Owner" : "Repo";
     return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 font-medium text-blue-800 text-xs dark:bg-blue-900 dark:text-blue-200">
+        <span className="inline-flex items-center gap-1 rounded-full bg-info-surface px-2 py-0.5 font-medium text-info-text text-xs">
             {prefix}: {provider && <ProviderIcon provider={provider} />} {name}
         </span>
     );
@@ -164,7 +164,7 @@ export function CreateKeyDialog({
                         <button
                             type="button"
                             onClick={() => setShowKey(!showKey)}
-                            className="cursor-pointer p-1 text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                            className="cursor-pointer p-1 text-text-tertiary hover:text-text-label"
                             aria-label={showKey ? "Hide key" : "Show key"}
                         >
                             {showKey ? (
@@ -175,7 +175,7 @@ export function CreateKeyDialog({
                         </button>
                         <CopyButton
                             text={createdKey}
-                            className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-text-tertiary text-xs transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                            className="inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-text-tertiary text-xs transition-colors hover:bg-surface-tertiary hover:text-text-label"
                         >
                             {(copied) =>
                                 copied ? (
@@ -195,7 +195,7 @@ export function CreateKeyDialog({
                     <button
                         type="button"
                         onClick={handleDone}
-                        className="w-full cursor-pointer rounded-lg bg-gray-900 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-gray-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                        className="w-full cursor-pointer rounded-lg bg-action px-4 py-2 font-medium text-action-foreground text-sm transition-colors hover:bg-action-hover"
                     >
                         Done
                     </button>
@@ -222,7 +222,7 @@ export function CreateKeyDialog({
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="My API Key"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-text-primary placeholder-gray-400 focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:placeholder-zinc-500"
+                        className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-focus focus:ring-1 focus:ring-focus"
                     />
                 </div>
 
@@ -246,7 +246,7 @@ export function CreateKeyDialog({
                                                 e.target.value,
                                             )
                                         }
-                                        className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                                        className="rounded-lg border border-border bg-surface-elevated px-2 py-2 text-sm text-text-primary focus:border-focus focus:outline-none focus:ring-1 focus:ring-focus"
                                     >
                                         <option value="UPLOAD_REPORT_OWNER">
                                             Upload Report (Owner)
@@ -307,7 +307,7 @@ export function CreateKeyDialog({
                                                 emptyText="No repos found"
                                                 ariaLabel="Select a repository"
                                                 trigger={
-                                                    <div className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 text-sm text-text-primary hover:border-gray-400 dark:border-zinc-700 dark:hover:border-zinc-600">
+                                                    <div className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-border px-3 text-sm text-text-primary hover:border-ring">
                                                         {perm.target ? (
                                                             <span className="flex items-center gap-1.5 text-sm text-text-primary">
                                                                 <ProviderIcon
@@ -340,7 +340,7 @@ export function CreateKeyDialog({
                                             onClick={() =>
                                                 handleRemovePermission(perm.id)
                                             }
-                                            className="cursor-pointer p-1 text-text-muted hover:text-red-500"
+                                            className="cursor-pointer p-1 text-text-muted hover:text-danger-text"
                                             aria-label="Remove permission"
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -352,7 +352,7 @@ export function CreateKeyDialog({
                         <button
                             type="button"
                             onClick={handleAddPermission}
-                            className="mt-2 cursor-pointer text-blue-600 text-sm hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                            className="mt-2 cursor-pointer text-link text-sm hover:text-link-hover"
                         >
                             + Add permission
                         </button>
@@ -371,7 +371,7 @@ export function CreateKeyDialog({
                         type="datetime-local"
                         value={expiration}
                         onChange={(e) => setExpiration(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                        className="w-full rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-text-primary focus:border-focus focus:outline-none focus:ring-1 focus:ring-focus"
                     />
                 </div>
 
@@ -379,7 +379,7 @@ export function CreateKeyDialog({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 cursor-pointer rounded-lg border border-gray-300 px-4 py-2 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
+                        className="flex-1 cursor-pointer rounded-lg border border-border px-4 py-2 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary"
                     >
                         Cancel
                     </button>
@@ -395,13 +395,13 @@ export function CreateKeyDialog({
                             ) ||
                             createKey.isPending
                         }
-                        className="flex-1 cursor-pointer rounded-lg bg-blue-600 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+                        className="flex-1 cursor-pointer rounded-lg bg-action px-4 py-2 font-medium text-action-foreground text-sm transition-colors hover:bg-action-hover disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {createKey.isPending ? "Creating..." : "Create"}
                     </button>
                 </div>
                 {createKey.error && (
-                    <p className="mt-2 text-red-600 text-xs dark:text-red-400">
+                    <p className="mt-2 text-danger-text text-xs">
                         {createKey.error.message}
                     </p>
                 )}

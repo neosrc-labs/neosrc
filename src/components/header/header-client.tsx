@@ -287,7 +287,7 @@ function HeaderContent({
             </header>
 
             {resolvedRepoData?.archived && (
-                <div className="relative z-40 border-yellow-800/50 border-b bg-yellow-50 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-700/50 dark:bg-yellow-950 dark:text-yellow-200">
+                <div className="relative z-40 border-warning-border border-b bg-warning-surface px-4 py-2 text-sm text-warning-text">
                     <div className="flex items-center gap-2 px-2 sm:px-4 lg:px-6">
                         <Archive className="size-4 shrink-0" />
                         <span>
@@ -340,7 +340,7 @@ function RepoName({
                 )}
             </a>
             <a
-                className="font-medium text-sm text-text-secondary hover:text-text-primary dark:hover:text-zinc-100"
+                className="font-medium text-sm text-text-secondary hover:text-text-primary"
                 href={`https://${domain(provider)}/${owner}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -349,7 +349,7 @@ function RepoName({
             </a>
             <span className="text-sm text-text-muted">/</span>
             <a
-                className="font-medium text-sm text-text-secondary hover:text-text-primary dark:hover:text-zinc-100"
+                className="font-medium text-sm text-text-secondary hover:text-text-primary"
                 href={repoUrl(provider, owner, repo)}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -377,7 +377,7 @@ function ProviderIcon({
 }) {
     return (
         <a
-            className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
+            className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label"
             href={
                 pathType === "PULL_REQUEST"
                     ? `https://${domain(provider)}/${owner}/${repo}/pull/${pullRequestNumber}?neosrc_exit=1`
@@ -414,7 +414,7 @@ function UserIcon({
 }) {
     return (
         <Link
-            className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
+            className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label"
             href="/profile"
         >
             {avatarUrl ? (
@@ -470,7 +470,7 @@ function PullRequestSidebarToggles({
             {!isLeftOpen && (
                 <button
                     ref={leftToggleRef}
-                    className="fixed left-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-r-md bg-surface text-text-tertiary shadow-sm transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                    className="fixed left-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-r-md bg-surface text-text-tertiary shadow-sm transition-colors hover:bg-surface-tertiary hover:text-text-label"
                     style={{ top: "var(--header-height)" }}
                     onClick={toggleLeft}
                     title="Open left sidebar"
@@ -482,7 +482,7 @@ function PullRequestSidebarToggles({
 
             <button
                 ref={rightToggleRef}
-                className="fixed right-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-l-md bg-surface text-text-tertiary shadow-sm transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                className="fixed right-0 z-40 flex h-7 w-7 cursor-pointer items-center justify-center rounded-l-md bg-surface text-text-tertiary shadow-sm transition-colors hover:bg-surface-tertiary hover:text-text-label"
                 style={{ top: "var(--header-height)" }}
                 onClick={toggleRight}
                 title={

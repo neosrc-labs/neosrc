@@ -44,7 +44,8 @@ export function ThemeToggle() {
     return (
         <div className="relative" ref={menuRef}>
             <button
-                className="flex cursor-pointer items-center justify-center rounded-md p-2 text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                aria-label={mounted ? `Theme: ${selected.label}` : "Theme"}
+                className="flex cursor-pointer items-center justify-center rounded-md p-2 text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-primary"
                 onClick={() => setOpen(!open)}
                 type="button"
                 title={mounted ? `Theme: ${selected.label}` : undefined}
@@ -63,7 +64,7 @@ export function ThemeToggle() {
                             className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm transition-colors ${
                                 theme === key
                                     ? "bg-surface-tertiary text-text-primary"
-                                    : "text-text-secondary hover:bg-surface-tertiary hover:text-text-primary dark:hover:text-zinc-200"
+                                    : "text-text-secondary hover:bg-surface-tertiary hover:text-text-primary"
                             }`}
                             key={key}
                             onClick={() => {

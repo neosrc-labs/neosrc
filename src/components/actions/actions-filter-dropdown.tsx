@@ -59,7 +59,7 @@ export function ActionsFilterDropdown({
             isLoading={isLoading}
             trigger={
                 <button
-                    className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary dark:hover:text-zinc-100"
+                    className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-sm text-text-secondary hover:bg-surface-tertiary hover:text-text-primary"
                     type="button"
                 >
                     {selectedLabel ? `${label}: ${selectedLabel}` : label}

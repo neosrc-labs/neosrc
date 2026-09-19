@@ -64,7 +64,7 @@ export function RepoBreadcrumb({
                                     reference,
                                     crumb.path,
                                 )}
-                                className="text-blue-600 hover:underline dark:text-blue-400"
+                                className="text-link hover:text-link-hover hover:underline"
                             >
                                 {crumb.label}
                             </Link>

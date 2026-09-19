@@ -30,31 +30,68 @@
         var(--font-inter-sans), ui-sans-serif, system-ui, sans-serif,
         "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
         "Noto Color Emoji";
+
+    /* Neutral surfaces and text */
     --color-surface: #ffffff;
     --color-surface-elevated: #ffffff;
-    --color-surface-secondary: #f9fafb;
-    --color-surface-tertiary: #f3f4f6;
-    --color-surface-selected: #e5e7eb;
-    --color-border: #e5e7eb;
-    --color-border-subtle: #e5e7eb;
-    --color-ring: #d1d5db;
-    --color-text-primary: #111827;
-    --color-text-secondary: #4b5563;
-    --color-text-tertiary: #6b7280;
-    --color-text-muted: #9ca3af;
-    --color-text-label: #374151;
-    --color-destructive: #ef4444;
+    --color-surface-secondary: #f8fafc;
+    --color-surface-tertiary: #f1f5f9;
+    --color-surface-selected: #e2e8f0;
+    --color-media-canvas: #f0f0f0;
+    --color-border: #cbd5e1;
+    --color-border-subtle: #e2e8f0;
+    --color-ring: #94a3b8;
+    --color-text-primary: #0f172a;
+    --color-text-label: #334155;
+    --color-text-secondary: #475569;
+    --color-text-tertiary: #596579;
+    --color-text-muted: #64748b;
+
+    /* Interactive colors */
+    --color-action: #2563eb;
+    --color-action-hover: #1d4ed8;
+    --color-action-foreground: #ffffff;
+    --color-link: #1d4ed8;
+    --color-link-hover: #1e40af;
+    --color-focus: #2563eb;
+    --color-inverse-surface: #111827;
+    --color-inverse-text: #ffffff;
+
+    /* Feedback colors */
+    --color-destructive: #dc2626;
+    --color-destructive-hover: #b91c1c;
     --color-destructive-foreground: #ffffff;
+    --color-danger-surface: #fef2f2;
+    --color-danger-border: #fca5a5;
+    --color-danger-text: #991b1b;
+    --color-danger-emphasis: #b91c1c;
+    --color-success-surface: #f0fdf4;
+    --color-success-border: #86efac;
+    --color-success-text: #166534;
+    --color-success-emphasis: #15803d;
+    --color-warning-surface: #fffbeb;
+    --color-warning-border: #fcd34d;
+    --color-warning-text: #92400e;
+    --color-warning-emphasis: #a16207;
+    --color-info-surface: #eff6ff;
+    --color-info-border: #93c5fd;
+    --color-info-text: #1e40af;
+    --color-info-emphasis: #1d4ed8;
 
-    /* Merge/issue state colors */
-    --color-state-merged: #7c3aed; /* violet-600 */
-    --color-state-open: #16a34a; /* green-600 */
-    --color-state-closed: #dc2626; /* red-600 */
-    --color-state-draft: #71717a; /* zinc-500 */
-    --color-state-queued: #a16207; /* yellow-700 */
-    --color-state-unknown: #374151; /* gray-700 */
+    /* Merge and issue states */
+    --color-state-merged: #7c3aed;
+    --color-state-merged-solid: #7c3aed;
+    --color-state-open: #15803d;
+    --color-state-open-solid: #15803d;
+    --color-state-closed: #dc2626;
+    --color-state-closed-solid: #dc2626;
+    --color-state-draft: #71717a;
+    --color-state-queued: #a16207;
+    --color-state-unknown: #374151;
+    --color-state-foreground: #ffffff;
+    --color-state-solid-foreground: #ffffff;
 
-    /* Blame age scale, oldest (0) to newest (9). GitHub's orange display scale. */
+    /* Blame age scale, oldest (0) to newest (9). */
     --color-blame-age-0: #ffe7d1;
     --color-blame-age-1: #fecfaa;
     --color-blame-age-2: #fbaf74;
@@ -88,21 +125,61 @@
 }
 
 .dark {
+    color-scheme: dark;
     --color-surface: #09090b;
     --color-surface-elevated: #18181b;
     --color-surface-secondary: #131318;
     --color-surface-tertiary: #27272a;
     --color-surface-selected: #3f3f46;
+    --color-media-canvas: #18181b;
     --color-border: #3f3f46;
     --color-border-subtle: #27272a;
-    --color-ring: #52525b;
-    --color-text-primary: #f4f4f5;
-    --color-text-secondary: #a1a1aa;
+    --color-ring: #71717a;
+    --color-text-primary: #fafafa;
+    --color-text-label: #e4e4e7;
+    --color-text-secondary: #b4b4bc;
     --color-text-tertiary: #a1a1aa;
-    --color-text-muted: #71717a;
-    --color-text-label: #d4d4d8;
-    --color-destructive: #ef4444;
-    --color-destructive-foreground: #ffffff;
+    --color-text-muted: #84848e;
+
+    --color-action: #2563eb;
+    --color-action-hover: #1d4ed8;
+    --color-action-foreground: #ffffff;
+    --color-link: #60a5fa;
+    --color-link-hover: #93c5fd;
+    --color-focus: #60a5fa;
+    --color-inverse-surface: #e4e4e7;
+    --color-inverse-text: #18181b;
+
+    --color-destructive: #dc2626;
+    --color-destructive-hover: #b91c1c;
+    --color-danger-surface: #450a0a;
+    --color-danger-border: #991b1b;
+    --color-danger-text: #fca5a5;
+    --color-danger-emphasis: #ef4444;
+    --color-success-surface: #052e16;
+    --color-success-border: #166534;
+    --color-success-text: #86efac;
+    --color-success-emphasis: #22c55e;
+    --color-warning-surface: #451a03;
+    --color-warning-border: #92400e;
+    --color-warning-text: #fcd34d;
+    --color-warning-emphasis: #f59e0b;
+    --color-info-surface: #172554;
+    --color-info-border: #1e40af;
+    --color-info-text: #93c5fd;
+    --color-info-emphasis: #3b82f6;
+
+    --color-state-merged: #8b5cf6;
+    --color-state-merged-solid: #7c3aed;
+    --color-state-open: #22c55e;
+    --color-state-open-solid: #15803d;
+    --color-state-closed: #ef4444;
+    --color-state-closed-solid: #dc2626;
+    --color-state-draft: #a1a1aa;
+    --color-state-queued: #facc15;
+    --color-state-unknown: #a1a1aa;
+    --color-state-foreground: #09090b;
+    --color-state-solid-foreground: #ffffff;
 
     --color-blame-age-0: #311708;
     --color-blame-age-1: #43200a;
@@ -117,22 +194,27 @@
 }
 
 html {
+    color-scheme: light;
     scrollbar-gutter: stable;
     --header-height: 103px;
 }
 
-/* Prose dark mode */
-.dark .prose {
-    --tw-prose-body: #d1d5db;
-    --tw-prose-headings: #f9fafb;
-    --tw-prose-links: #60a5fa;
-    --tw-prose-bold: #f3f4f6;
-    --tw-prose-code: #f3f4f6;
-    --tw-prose-quotes: #d1d5db;
-    --tw-prose-quote-borders: #4b5563;
-    --tw-prose-hr: #374151;
-    --tw-prose-th-borders: #4b5563;
-    --tw-prose-td-borders: #374151;
+body {
+    color: var(--color-text-primary);
+}
+
+/* Keep rendered markdown on the same palette as application chrome. */
+.prose {
+    --tw-prose-body: var(--color-text-secondary);
+    --tw-prose-headings: var(--color-text-primary);
+    --tw-prose-links: var(--color-link);
+    --tw-prose-bold: var(--color-text-label);
+    --tw-prose-code: var(--color-text-label);
+    --tw-prose-quotes: var(--color-text-secondary);
+    --tw-prose-quote-borders: var(--color-border);
+    --tw-prose-hr: var(--color-border-subtle);
+    --tw-prose-th-borders: var(--color-border);
+    --tw-prose-td-borders: var(--color-border-subtle);
 }
 
 .prose th,

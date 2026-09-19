@@ -104,7 +104,7 @@ export function ReportTabsBar({
         `cursor-pointer rounded-t-md px-3 py-1.5 font-medium text-sm transition-colors whitespace-nowrap ${
             isActive
                 ? "border-border border-x border-t bg-surface-elevated text-text-primary"
-                : "text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                : "text-text-tertiary hover:text-text-label"
         }`;
 
     return (
@@ -133,7 +133,7 @@ export function ReportTabsBar({
                             className={`cursor-pointer whitespace-nowrap rounded-t-md px-3 py-1.5 font-medium text-sm transition-colors ${
                                 activeOverflowed
                                     ? "border-border border-x border-t bg-surface-elevated text-text-primary"
-                                    : "text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
+                                    : "text-text-muted hover:text-text-secondary"
                             }`}
                         >
                             <span className="flex items-center gap-0.5">

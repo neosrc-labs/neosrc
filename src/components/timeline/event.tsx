@@ -314,12 +314,23 @@ function TimelineIcon({
     const iconMap: Record<string, React.ReactNode> = {
         PullRequestReview: <Eye size={ICON_SIZE} />,
         ClosedEvent: (
-            <GitPullRequestClosed className="text-white" size={ICON_SIZE} />
+            <GitPullRequestClosed
+                className="text-state-solid-foreground"
+                size={ICON_SIZE}
+            />
         ),
         ReopenedEvent: (
-            <GitPullRequestArrow className="text-white" size={ICON_SIZE} />
+            <GitPullRequestArrow
+                className="text-state-solid-foreground"
+                size={ICON_SIZE}
+            />
         ),
-        MergedEvent: <GitMerge className="text-white" size={ICON_SIZE} />,
+        MergedEvent: (
+            <GitMerge
+                className="text-state-solid-foreground"
+                size={ICON_SIZE}
+            />
+        ),
         LabeledEvent: <Tag size={ICON_SIZE} />,
         UnlabeledEvent: <Tag size={ICON_SIZE} />,
         AssignedEvent: <User size={ICON_SIZE} />,
@@ -344,7 +355,9 @@ function TimelineIcon({
         HeadRefForcePushedEvent: <ArrowUp size={ICON_SIZE} />,
         AddedToProjectV2Event: <ClipboardList size={ICON_SIZE} />,
         ProjectV2ItemStatusChangedEvent: <RefreshCw size={ICON_SIZE} />,
-        DeployedEvent: <Rocket className="text-blue-500" size={ICON_SIZE} />,
+        DeployedEvent: (
+            <Rocket className="text-info-emphasis" size={ICON_SIZE} />
+        ),
         AutoMergeEnabledEvent: <GitPullRequestArrow size={ICON_SIZE} />,
         AutoSquashEnabledEvent: <GitPullRequestArrow size={ICON_SIZE} />,
         AutoRebaseEnabledEvent: <GitPullRequestArrow size={ICON_SIZE} />,
@@ -371,16 +384,16 @@ function TimelineIcon({
 
     const circleClass = isApproved
         ? approvalHasWriteAccess(event.authorPermission)
-            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-open"
+            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-open-solid"
             : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-surface ring-1 ring-border"
         : isChangesRequested
-          ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-closed"
+          ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-closed-solid"
           : isClosed
-            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-closed"
+            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-closed-solid"
             : isReopened
-              ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-open"
+              ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-open-solid"
               : isMerged
-                ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-merged"
+                ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-merged-solid"
                 : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-surface ring-1 ring-border";
 
     let icon = iconMap[typename] ?? <Circle size={ICON_SIZE} />;
@@ -388,13 +401,21 @@ function TimelineIcon({
     if (typename === "PullRequestReview") {
         if (event.state === "APPROVED") {
             icon = approvalHasWriteAccess(event.authorPermission) ? (
-                <Check className="text-white" size={ICON_SIZE} />
+                <Check
+                    className="text-state-solid-foreground"
+                    size={ICON_SIZE}
+                />
             ) : (
                 <Check className="text-text-muted" size={ICON_SIZE} />
             );
         }
         if (event.state === "CHANGES_REQUESTED")
-            icon = <FileText className="text-white" size={ICON_SIZE} />;
+            icon = (
+                <FileText
+                    className="text-state-solid-foreground"
+                    size={ICON_SIZE}
+                />
+            );
     }
 
     return (

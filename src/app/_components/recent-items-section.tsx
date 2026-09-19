@@ -72,7 +72,7 @@ export function RecentItemRow({
     const href = `/${item.provider}/${item.repo}/${kind === "pull" ? "pull" : "issues"}/${item.number}`;
 
     return (
-        <div className="flex items-start gap-3 border-border-subtle border-b px-4 py-3 transition-colors last:border-b-0 hover:bg-gray-50 dark:hover:bg-zinc-900/50">
+        <div className="flex items-start gap-3 border-border-subtle border-b px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-secondary">
             <Tooltip>
                 <TooltipTrigger asChild>
                     <Icon className={cn("mt-0.5 size-4 shrink-0", color)} />
@@ -83,7 +83,7 @@ export function RecentItemRow({
             <div className="min-w-0 flex-1">
                 <Link
                     href={href}
-                    className="break-words font-medium text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+                    className="break-words font-medium text-text-primary hover:text-link"
                 >
                     {item.title}
                 </Link>

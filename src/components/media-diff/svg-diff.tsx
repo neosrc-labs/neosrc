@@ -82,14 +82,14 @@ export default function SvgDiff({
             ) : (
                 <div>
                     {loading && (
-                        <div className="flex items-center justify-center bg-[#f0f0f0] px-4 py-12 dark:bg-zinc-900">
+                        <div className="flex items-center justify-center bg-media-canvas px-4 py-12">
                             <span className="text-sm text-text-tertiary">
                                 Loading SVG...
                             </span>
                         </div>
                     )}
                     {!loading && !hasBoth && newContent != null && (
-                        <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
+                        <div className="flex items-center justify-center bg-media-canvas p-4">
                             {newError ? (
                                 <span className="text-sm text-text-tertiary">
                                     Failed to load SVG
@@ -100,7 +100,7 @@ export default function SvgDiff({
                         </div>
                     )}
                     {!loading && !hasBoth && oldContent != null && (
-                        <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
+                        <div className="flex items-center justify-center bg-media-canvas p-4">
                             {oldError ? (
                                 <span className="text-sm text-text-tertiary">
                                     Failed to load SVG
@@ -113,10 +113,10 @@ export default function SvgDiff({
                     {!loading && hasBoth && (
                         <div className="flex flex-col md:flex-row">
                             <div className="flex flex-1 flex-col border-border border-b md:border-r md:border-b-0">
-                                <div className="border-border border-b bg-surface-secondary px-3 py-1.5 text-center font-medium text-red-600 text-xs uppercase tracking-wide dark:text-red-400">
+                                <div className="border-border border-b bg-surface-secondary px-3 py-1.5 text-center font-medium text-danger-emphasis text-xs uppercase tracking-wide">
                                     Deleted
                                 </div>
-                                <div className="flex flex-1 items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
+                                <div className="flex flex-1 items-center justify-center bg-media-canvas p-4">
                                     {oldError ? (
                                         <span className="text-sm text-text-tertiary">
                                             Failed to load SVG
@@ -130,10 +130,10 @@ export default function SvgDiff({
                                 </div>
                             </div>
                             <div className="flex flex-1 flex-col">
-                                <div className="border-border border-b bg-surface-secondary px-3 py-1.5 text-center font-medium text-green-600 text-xs uppercase tracking-wide dark:text-green-400">
+                                <div className="border-border border-b bg-surface-secondary px-3 py-1.5 text-center font-medium text-success-emphasis text-xs uppercase tracking-wide">
                                     Added
                                 </div>
-                                <div className="flex flex-1 items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
+                                <div className="flex flex-1 items-center justify-center bg-media-canvas p-4">
                                     {newError ? (
                                         <span className="text-sm text-text-tertiary">
                                             Failed to load SVG

@@ -37,7 +37,7 @@ export function DiffLineCommentEditor({
                 footerActions={footerActions}
             />
             {isError && (
-                <p className="mt-1 text-red-600 text-xs">
+                <p className="mt-1 text-danger-text text-xs">
                     Failed to post comment. Please try again.
                 </p>
             )}

@@ -83,7 +83,7 @@ function ChecksTabIcon({ checks }: { checks: CheckRun[] }) {
     } else if (checks.some((c) => c.status !== "completed")) {
         icon = <StatusCheckIcon state="QUEUED" className="size-3.5" />;
     } else if (checks.every((c) => c.conclusion === "success")) {
-        icon = <Check className="size-3.5 text-green-600" />;
+        icon = <Check className="size-3.5 text-success-emphasis" />;
     } else {
         icon = <ChecksRing checks={checks} className="size-3.5" />;
     }
@@ -225,7 +225,7 @@ export default function RightSidebar({
                             className={`flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 font-medium text-sm transition-colors ${
                                 tab === key
                                     ? "bg-surface-tertiary text-text-primary"
-                                    : "text-text-secondary hover:bg-surface-tertiary hover:text-text-primary dark:hover:text-zinc-100"
+                                    : "text-text-secondary hover:bg-surface-tertiary hover:text-text-primary"
                             }`}
                         >
                             {icon}

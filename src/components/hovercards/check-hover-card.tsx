@@ -59,20 +59,20 @@ function StatusIcon({ check }: { check: CheckRun }) {
 }
 
 const statusColors: Record<string, string> = {
-    success: "text-green-600",
-    failure: "text-red-600",
-    neutral: "text-gray-600",
+    success: "text-success-emphasis",
+    failure: "text-danger-emphasis",
+    neutral: "text-text-tertiary",
     cancelled: "text-text-tertiary",
     skipped: "text-text-tertiary",
-    timed_out: "text-red-600",
-    action_required: "text-yellow-600",
+    timed_out: "text-danger-emphasis",
+    action_required: "text-warning-emphasis",
 };
 
 function CheckHoverCardContent({ check }: { check: CheckRun }) {
     const labelColor =
         check.conclusion && statusColors[check.conclusion]
             ? statusColors[check.conclusion]
-            : "text-gray-600";
+            : "text-text-tertiary";
 
     return (
         <div>
@@ -116,7 +116,7 @@ function CheckHoverCardContent({ check }: { check: CheckRun }) {
                 )}
                 {check.html_url && (
                     <a
-                        className="mt-1 text-blue-600 text-xs hover:text-blue-800 hover:underline dark:text-blue-400"
+                        className="mt-1 text-link text-xs hover:text-link-hover hover:underline"
                         href={check.html_url}
                         rel="noopener noreferrer"
                         target="_blank"

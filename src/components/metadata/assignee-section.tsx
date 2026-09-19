@@ -190,7 +190,7 @@ function AssigneeSectionSettings({
                         {a.login}
                     </span>
                     {selected && (
-                        <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                        <span className="shrink-0 text-link text-xs">
                             &#10003;
                         </span>
                     )}
@@ -249,7 +249,7 @@ function AssigneeSectionContent({
                     </UserHoverCard>
                     {canEdit && (
                         <button
-                            className="ml-auto inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded text-text-muted opacity-0 hover:text-text-secondary group-hover:opacity-100 dark:hover:text-zinc-300"
+                            className="ml-auto inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded text-text-muted opacity-0 hover:text-text-secondary group-hover:opacity-100"
                             onClick={() => onRemoveAssignee(assignee)}
                             type="button"
                             aria-label={`Remove ${assignee.login}`}

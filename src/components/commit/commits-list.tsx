@@ -37,8 +37,8 @@ function ReferenceNotFoundError({
 
     if (!isReferenceNotFound) {
         return (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-950">
-                <p className="text-red-600 dark:text-red-400">
+            <div className="rounded-lg border border-danger-border bg-danger-surface p-6 text-center">
+                <p className="text-danger-text">
                     {(error as Error)?.message ?? "Failed to load commits"}
                 </p>
             </div>
@@ -54,13 +54,13 @@ function ReferenceNotFoundError({
             </p>
             <p className="mt-2 text-text-secondary">
                 The {reference.kind ?? "reference"}{" "}
-                <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-sm dark:bg-zinc-700">
+                <code className="rounded bg-surface-tertiary px-1.5 py-0.5 font-mono text-sm">
                     {reference.value}
                 </code>{" "}
                 does not exist in{" "}
                 <Link
                     href={repoUrl}
-                    className="text-blue-600 hover:underline dark:text-blue-400"
+                    className="text-link hover:text-link-hover hover:underline"
                 >
                     {owner}/{repo}
                 </Link>

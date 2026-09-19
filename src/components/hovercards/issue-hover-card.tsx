@@ -121,7 +121,7 @@ function IssueHoverCardContent({
                     )}
                 </div>
                 <Link
-                    className="text-blue-600 text-xs hover:text-blue-800 hover:underline dark:text-blue-400"
+                    className="text-link text-xs hover:text-link-hover hover:underline"
                     href={`/${owner}/${repo}/${issue.pull_request ? "pull" : "issues"}/${issueNumber}`}
                 >
                     View &rarr;

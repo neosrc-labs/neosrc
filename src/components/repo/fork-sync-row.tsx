@@ -16,7 +16,7 @@ function BranchLink({ href, children }: { href: string; children: ReactNode }) {
     return (
         <a
             href={href}
-            className="font-semibold text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
+            className="font-semibold text-text-tertiary hover:text-link"
         >
             {children}
         </a>
@@ -161,7 +161,7 @@ export function ForkSyncRow({
                             </span>
                             <button
                                 type="button"
-                                className="cursor-pointer rounded-md bg-blue-600 px-2.5 py-1 font-medium text-white text-xs hover:bg-blue-700"
+                                className="cursor-pointer rounded-md bg-action px-2.5 py-1 font-medium text-action-foreground text-xs hover:bg-action-hover"
                                 onClick={() =>
                                     syncMutation.mutate({
                                         owner,
@@ -185,13 +185,13 @@ export function ForkSyncRow({
                     ) : (
                         <>
                             {syncMutation.isError && (
-                                <span className="text-red-600 text-xs">
+                                <span className="text-danger-text text-xs">
                                     {syncMutation.error.message ??
                                         "Sync failed"}
                                 </span>
                             )}
                             {syncMutation.isSuccess && (
-                                <span className="text-green-600 text-xs">
+                                <span className="text-success-text text-xs">
                                     {syncMutation.data.message ??
                                         "Branch synced"}
                                 </span>

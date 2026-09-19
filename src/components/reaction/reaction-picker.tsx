@@ -52,7 +52,7 @@ export function ReactionPicker({
                     type="button"
                     aria-label="Add reaction"
                     tabIndex={canInteract ? 0 : -1}
-                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
                 >
                     <SmilePlus size={14} />
                 </button>

@@ -25,10 +25,10 @@ export function EditorFooter({
 }: EditorFooterProps) {
     if (!footerActions && !onCancel) return null;
     return (
-        <div className="flex items-center justify-between gap-2 border-gray-300 border-t bg-surface-secondary px-3 py-2 dark:border-zinc-600">
+        <div className="flex items-center justify-between gap-2 border-border border-t bg-surface-secondary px-3 py-2">
             {onCancel ? (
                 <button
-                    className="cursor-pointer rounded-md border border-gray-300 px-4 py-1.5 font-medium text-sm text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                    className="cursor-pointer rounded-md border border-border px-4 py-1.5 font-medium text-sm text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={disabled}
                     onClick={onCancel}
                     type="button"
@@ -51,12 +51,12 @@ export function EditorFooter({
                             <button
                                 className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-4 py-1.5 font-medium text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                                     action.variant === "approve"
-                                        ? "bg-[#2da44e] text-white enabled:hover:bg-[#218838]"
+                                        ? "bg-state-open-solid text-state-solid-foreground enabled:hover:bg-state-open-solid/90"
                                         : action.variant === "danger"
-                                          ? "bg-[#cf222e] text-white enabled:hover:bg-[#b91c23]"
+                                          ? "bg-destructive text-destructive-foreground enabled:hover:bg-destructive-hover"
                                           : action.variant === "outline"
-                                            ? "bg-surface-elevated text-text-label ring-1 ring-ring enabled:hover:bg-gray-50 dark:enabled:hover:bg-zinc-700"
-                                            : "bg-neutral-200 text-black enabled:hover:bg-neutral-300"
+                                            ? "bg-surface-elevated text-text-label ring-1 ring-ring enabled:hover:bg-surface-tertiary"
+                                            : "bg-surface-tertiary text-text-label enabled:hover:bg-surface-selected"
                                 }`}
                                 disabled={actionDisabled}
                                 onClick={action.onClick}

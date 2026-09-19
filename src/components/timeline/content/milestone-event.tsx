@@ -24,7 +24,7 @@ export function MilestoneEventContent({
             <UserLink actor={event.actor} provider={provider} />
             <p>
                 {isAdded ? " added the milestone " : " removed the milestone "}
-                <span className="font-medium text-gray-800 dark:text-zinc-200">
+                <span className="font-medium text-text-label">
                     {event.milestoneTitle}
                 </span>
                 <span title={fullDate}>{` ${timestamp}`}</span>

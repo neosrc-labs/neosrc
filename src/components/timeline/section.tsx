@@ -150,7 +150,7 @@ export function TimelineSection({
         LOCKED: {
             bg: "bg-surface-secondary border-border /30",
             text: "text-text-secondary",
-            dot: "bg-gray-400",
+            dot: "bg-text-muted",
         },
     };
 

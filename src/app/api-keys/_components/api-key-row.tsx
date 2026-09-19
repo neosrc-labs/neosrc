@@ -56,7 +56,7 @@ export function ApiKeyRow({
                         {apiKey.expirationTimestamp &&
                             new Date(apiKey.expirationTimestamp) <
                                 new Date() && (
-                                <span className="text-red-600 dark:text-red-400">
+                                <span className="text-danger-text">
                                     Expired
                                 </span>
                             )}
@@ -67,14 +67,14 @@ export function ApiKeyRow({
                         <button
                             type="button"
                             onClick={onCancelRevoke}
-                            className="cursor-pointer rounded px-2 py-1 text-text-secondary text-xs hover:text-text-primary dark:hover:text-zinc-200"
+                            className="cursor-pointer rounded px-2 py-1 text-text-secondary text-xs hover:text-text-primary"
                         >
                             Cancel
                         </button>
                         <button
                             type="button"
                             onClick={onConfirmRevoke}
-                            className="cursor-pointer rounded bg-red-600 px-2 py-1 text-white text-xs hover:bg-red-700"
+                            className="cursor-pointer rounded bg-destructive px-2 py-1 text-destructive-foreground text-xs hover:bg-destructive-hover"
                         >
                             {isRevoking ? "..." : "Confirm"}
                         </button>
@@ -83,7 +83,7 @@ export function ApiKeyRow({
                     <button
                         type="button"
                         onClick={onRevoke}
-                        className="cursor-pointer rounded p-1.5 text-text-muted transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
+                        className="cursor-pointer rounded p-1.5 text-text-muted transition-colors hover:bg-danger-surface hover:text-danger-text"
                         title="Revoke key"
                     >
                         <Trash2 className="h-4 w-4" />

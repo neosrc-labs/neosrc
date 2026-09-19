@@ -185,7 +185,7 @@ export function RepoBlameView({
                         <button
                             type="button"
                             onClick={file.retryContent}
-                            className="mt-2 cursor-pointer text-blue-600 text-sm hover:underline dark:text-blue-400"
+                            className="mt-2 cursor-pointer text-link text-sm hover:text-link-hover hover:underline"
                         >
                             Try again
                         </button>
@@ -199,7 +199,7 @@ export function RepoBlameView({
                         </p>
                         <a
                             href={raw}
-                            className="mt-2 inline-block text-blue-600 text-sm hover:underline dark:text-blue-400"
+                            className="mt-2 inline-block text-link text-sm hover:text-link-hover hover:underline"
                         >
                             View raw
                         </a>
@@ -217,7 +217,7 @@ export function RepoBlameView({
                                 reference,
                                 path,
                             )}
-                            className="mt-2 inline-block text-blue-600 text-sm hover:underline dark:text-blue-400"
+                            className="mt-2 inline-block text-link text-sm hover:text-link-hover hover:underline"
                         >
                             View the file
                         </Link>
@@ -303,7 +303,7 @@ function BlameRangeRow({
                             <BlameAuthorAvatar author={commit.author} />
                             <a
                                 href={`https://github.com/${owner}/${repo}/commit/${range.sha}`}
-                                className="min-w-0 flex-1 truncate text-text-secondary hover:text-blue-600 dark:hover:text-blue-400"
+                                className="min-w-0 flex-1 truncate text-text-secondary hover:text-link"
                             >
                                 {commit.message}
                             </a>

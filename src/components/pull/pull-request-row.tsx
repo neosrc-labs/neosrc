@@ -97,20 +97,20 @@ export function PullRequestRow({
             : `https://codeberg.org/${owner}/${repo}/pulls/${pr.number}`;
 
     return (
-        <div className="flex items-start gap-3 border-border-subtle border-b px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-zinc-900/50">
+        <div className="flex items-start gap-3 border-border-subtle border-b px-4 py-3 transition-colors hover:bg-surface-secondary">
             <div className="mt-0.5 shrink-0">
                 <StatusIcon className={cn("size-4 cursor-pointer", color)} />
             </div>
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                     {pr.draft && (
-                        <span className="inline-flex items-center rounded-full border border-gray-300 px-2 py-0.5 font-medium text-[10px] text-state-draft uppercase tracking-wide dark:border-zinc-600">
+                        <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 font-medium text-[10px] text-state-draft uppercase tracking-wide">
                             Draft
                         </span>
                     )}
                     <Link
                         href={prHref}
-                        className="font-medium text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+                        className="font-medium text-text-primary hover:text-link"
                     >
                         <CodeTitle
                             provider={provider}
@@ -127,7 +127,7 @@ export function PullRequestRow({
                                     href={prHref}
                                     className="flex items-center"
                                 >
-                                    <TriangleAlert className="size-4 text-amber-500" />
+                                    <TriangleAlert className="size-4 text-warning-emphasis" />
                                 </Link>
                             </TooltipTrigger>
                             <TooltipContent side="top">
@@ -166,19 +166,19 @@ export function PullRequestRow({
                         <span>by unknown</span>
                     )}
                     {pr.review_decision === "APPROVED" && (
-                        <span className="flex items-center gap-0.5 text-green-600 text-xs dark:text-green-500">
+                        <span className="flex items-center gap-0.5 text-success-emphasis text-xs">
                             <Check className="size-3.5" />
                             Approved
                         </span>
                     )}
                     {pr.review_decision === "CHANGES_REQUESTED" && (
-                        <span className="flex items-center gap-0.5 text-red-600 text-xs dark:text-red-500">
+                        <span className="flex items-center gap-0.5 text-danger-emphasis text-xs">
                             <XCircle className="size-3.5" />
                             Changes requested
                         </span>
                     )}
                     {pr.review_decision === "REVIEW_REQUIRED" && (
-                        <span className="text-amber-600 text-xs dark:text-amber-500">
+                        <span className="text-warning-emphasis text-xs">
                             Review required
                         </span>
                     )}
@@ -244,7 +244,7 @@ export function PullRequestRow({
                 {pr.comments_count > 0 ? (
                     <a
                         href={`${prHref}#issuecomment`}
-                        className="flex items-center gap-1 text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
+                        className="flex items-center gap-1 text-sm text-text-tertiary hover:text-link"
                     >
                         <MessageSquare className="size-4" />
                         <span>{pr.comments_count}</span>

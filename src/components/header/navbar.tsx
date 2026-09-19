@@ -37,8 +37,8 @@ export function RepoNavbar({ tabs }: { tabs: Tab[] }) {
                           const className = cn(
                               "flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 font-medium text-sm transition-colors",
                               tab.isActive
-                                  ? "border-blue-500 text-text-primary"
-                                  : "border-transparent text-text-secondary hover:border-gray-300 hover:text-text-primary dark:hover:border-zinc-600 dark:hover:text-zinc-100",
+                                  ? "border-action text-text-primary"
+                                  : "border-transparent text-text-secondary hover:border-border hover:text-text-primary",
                           );
                           const children = (
                               <>

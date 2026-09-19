@@ -14,7 +14,7 @@ function Step({
 }) {
     return (
         <div className="flex gap-4">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 font-semibold text-sm text-white dark:bg-blue-500">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-action font-semibold text-action-foreground text-sm">
                 {number}
             </div>
             <div>
@@ -31,7 +31,7 @@ export function LandingPage({ authError }: { authError: string | null }) {
             <div className="flex flex-col gap-16">
                 {authError && (
                     <p
-                        className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-red-800 text-sm dark:border-red-800 dark:bg-red-950 dark:text-red-300"
+                        className="rounded-md border border-danger-border bg-danger-surface px-4 py-3 text-danger-text text-sm"
                         role="alert"
                     >
                         {authError === "account_not_linked"
@@ -40,8 +40,8 @@ export function LandingPage({ authError }: { authError: string | null }) {
                     </p>
                 )}
                 <section className="flex flex-col items-center gap-6 text-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 dark:bg-blue-500">
-                        <GitPullRequest className="h-8 w-8 text-white" />
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-action">
+                        <GitPullRequest className="h-8 w-8 text-action-foreground" />
                     </div>
                     <h1 className="text-4xl text-text-primary sm:text-5xl">
                         Review pull requests,
@@ -82,7 +82,7 @@ export function LandingPage({ authError }: { authError: string | null }) {
                 <div className="flex flex-col items-center gap-4">
                     <form>
                         <button
-                            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-action px-6 py-3 font-semibold text-action-foreground transition hover:bg-action-hover"
                             type="submit"
                             formAction={async () => {
                                 "use server";
@@ -108,7 +108,7 @@ export function LandingPage({ authError }: { authError: string | null }) {
                     {isCodebergConfigured() && (
                         <form>
                             <button
-                                className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-teal-700 px-6 py-3 font-semibold text-white transition hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-700"
+                                className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-action px-6 py-3 font-semibold text-action-foreground transition hover:bg-action-hover"
                                 type="submit"
                                 formAction={async () => {
                                     "use server";

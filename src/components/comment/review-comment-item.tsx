@@ -111,7 +111,7 @@ export function ReviewCommentItem({
                                 <button
                                     type="button"
                                     aria-label="Edit comment"
-                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
                                     onClick={onStartEdit}
                                 >
                                     <SquarePen size={14} />
@@ -123,7 +123,7 @@ export function ReviewCommentItem({
                                     <button
                                         type="button"
                                         aria-label="More options"
-                                        className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                        className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
                                     >
                                         <MoreVertical size={14} />
                                     </button>
@@ -138,7 +138,7 @@ export function ReviewCommentItem({
                                             setMenuOpen(false);
                                             setDeleteConfirmOpen(true);
                                         }}
-                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
+                                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-danger-surface hover:text-danger-text"
                                     >
                                         <Trash2 size={14} />
                                         Delete comment

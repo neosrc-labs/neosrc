@@ -16,7 +16,7 @@ interface CommitsPaginationFooterProps {
 const btnBase =
     "inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 font-medium text-sm transition-colors";
 const btnActive =
-    "cursor-pointer text-text-label hover:bg-surface-tertiary hover:text-text-primary dark:hover:text-zinc-100";
+    "cursor-pointer text-text-label hover:bg-surface-tertiary hover:text-text-primary";
 const btnDisabled = "cursor-not-allowed text-text-muted opacity-50";
 
 export function CommitsPaginationFooter({

@@ -34,7 +34,7 @@ function CommitHoverCardContent({
                         </code>
                         {commit.signature && (
                             <VerifiedBadgeInline signature={commit.signature}>
-                                <span className="text-green-600 text-xs dark:text-green-400">
+                                <span className="text-success-emphasis text-xs">
                                     ✓
                                 </span>
                             </VerifiedBadgeInline>
@@ -65,7 +65,7 @@ function CommitHoverCardContent({
                     </p>
                 )}
                 <Link
-                    className="mt-1 text-blue-600 text-xs hover:text-blue-800 hover:underline dark:text-blue-400"
+                    className="mt-1 text-link text-xs hover:text-link-hover hover:underline"
                     href={`${baseUrl}/${commit.oid}`}
                 >
                     View →

@@ -93,7 +93,7 @@ function UserHoverCardContent({
                     <div className="flex items-center gap-2 text-text-secondary text-xs">
                         <LinkIcon className="h-3.5 w-3.5 shrink-0" />
                         <a
-                            className="truncate text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400"
+                            className="truncate text-link hover:text-link-hover hover:underline"
                             href={
                                 user.blog.startsWith("http")
                                     ? user.blog

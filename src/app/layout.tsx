@@ -27,7 +27,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
     return (
         <html className={`${font.variable}`} lang="en" suppressHydrationWarning>
-            <body className="flex min-h-svh flex-col bg-surface">
+            <body className="flex min-h-svh flex-col bg-surface text-text-primary">
                 <TooltipProvider>
                     <ThemeProvider
                         attribute="class"

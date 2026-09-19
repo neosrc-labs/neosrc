@@ -6,7 +6,7 @@ import { api } from "~/trpc/react";
 import { TIMELINE_PAGE_SIZE } from "~/utils/timeline-constants";
 
 const branchLinkClassName =
-    "rounded bg-blue-100 px-1.5 py-0.5 font-mono text-xs text-blue-800 hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30";
+    "rounded bg-info-surface px-1.5 py-0.5 font-mono text-info-text text-xs hover:bg-info-border/20";
 
 export function DeleteBranchSection({
     branchHref,
@@ -72,7 +72,7 @@ export function DeleteBranchSection({
                 {canDelete && (
                     <button
                         type="button"
-                        className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md bg-surface-elevated px-4 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors enabled:hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:enabled:hover:bg-zinc-700"
+                        className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md bg-surface-elevated px-4 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors enabled:hover:bg-surface-tertiary disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={deleteBranch.isPending}
                         onClick={() =>
                             deleteBranch.mutate({ owner, repo, number })

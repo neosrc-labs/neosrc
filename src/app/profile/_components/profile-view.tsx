@@ -132,7 +132,7 @@ function ProviderProfileCard({
                         <span className="inline-flex items-center gap-1.5">
                             <LinkIcon className="h-3.5 w-3.5 shrink-0" />
                             <a
-                                className="truncate text-blue-600 hover:text-blue-800 hover:underline dark:text-blue-400"
+                                className="truncate text-link hover:text-link-hover hover:underline"
                                 href={
                                     user.blog.startsWith("http")
                                         ? user.blog
@@ -227,8 +227,8 @@ export function ProfileView({
                 <p
                     className={
                         accountMessage.tone === "success"
-                            ? "rounded-md border border-green-300 bg-green-50 px-4 py-3 text-green-800 text-sm dark:border-green-800 dark:bg-green-950 dark:text-green-300"
-                            : "rounded-md border border-red-300 bg-red-50 px-4 py-3 text-red-800 text-sm dark:border-red-800 dark:bg-red-950 dark:text-red-300"
+                            ? "rounded-md border border-success-border bg-success-surface px-4 py-3 text-sm text-success-text"
+                            : "rounded-md border border-danger-border bg-danger-surface px-4 py-3 text-danger-text text-sm"
                     }
                     role={accountMessage.tone === "error" ? "alert" : "status"}
                 >
@@ -283,7 +283,7 @@ export function ProfileView({
                     type="button"
                     disabled={loggingOut}
                     onClick={handleLogout}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-red-300 px-4 py-2 text-red-600 text-sm transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-danger-border px-4 py-2 text-danger-text text-sm transition-colors hover:bg-danger-surface disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     <LogOut className="h-4 w-4" />
                     {loggingOut ? "Signing out..." : "Sign out"}

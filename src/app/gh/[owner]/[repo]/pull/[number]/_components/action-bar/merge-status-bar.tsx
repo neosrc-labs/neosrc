@@ -102,7 +102,7 @@ export function MergeStatusBar({
     if (isMergeStatusLoading) {
         return (
             <CannotMerge noWrapper>
-                <div className="h-3 w-20 animate-pulse rounded bg-zinc-300 dark:bg-zinc-600" />
+                <div className="h-3 w-20 animate-pulse rounded bg-surface-selected" />
             </CannotMerge>
         );
     }
@@ -180,7 +180,7 @@ export function MergeStatusBar({
     return (
         <div className="flex items-stretch">
             <button
-                className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-l-md bg-[#2da44e] px-1.5 py-2 font-medium text-white text-xs transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
+                className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-l-md bg-state-open px-1.5 py-2 font-medium text-state-foreground text-xs transition-colors hover:bg-state-open/90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
                 disabled={isMerging}
                 onClick={onMerge}
                 title={buttonText}
@@ -196,7 +196,7 @@ export function MergeStatusBar({
             >
                 <button
                     suppressHydrationWarning
-                    className="flex cursor-pointer items-center rounded-r-md border-[#1a7f37] border-l bg-[#2da44e] px-2.5 text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex cursor-pointer items-center rounded-r-md border-state-open/70 border-l bg-state-open px-2.5 text-state-foreground transition-colors hover:bg-state-open/90 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={isMerging}
                     type="button"
                     title="Merge options"
@@ -273,11 +273,11 @@ function MergeRequirementRowItem({ row }: { row: MergeRequirementRow }) {
     const content = (
         <>
             {row.status === "failing" ? (
-                <X className="size-3.5 shrink-0 text-red-600" />
+                <X className="size-3.5 shrink-0 text-danger-emphasis" />
             ) : row.status === "pending" ? (
                 <CheckQueuedIcon className="size-3.5 shrink-0" />
             ) : (
-                <Check className="size-3.5 shrink-0 text-green-600" />
+                <Check className="size-3.5 shrink-0 text-success-emphasis" />
             )}
             <span className="truncate font-medium text-text-primary">
                 {row.label}
@@ -345,12 +345,12 @@ export function MergeModeDropdown({
                             <span
                                 className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
                                     effectiveMergeMode === option.value
-                                        ? "border-[#2da44e]"
-                                        : "border-gray-300 dark:border-zinc-600"
+                                        ? "border-state-open"
+                                        : "border-border"
                                 }`}
                             >
                                 {effectiveMergeMode === option.value && (
-                                    <span className="flex h-2 w-2 rounded-full bg-[#2da44e]" />
+                                    <span className="flex h-2 w-2 rounded-full bg-state-open" />
                                 )}
                             </span>
                             <div>
@@ -385,7 +385,7 @@ function CannotMerge({
     children: ReactNode | string;
 }) {
     return (
-        <div className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-surface-secondary px-1.5 py-2 sm:px-3 dark:border-zinc-600">
+        <div className="flex items-center gap-1.5 rounded-md border border-border bg-surface-secondary px-1.5 py-2 sm:px-3">
             <GitPullRequestArrow
                 size={14}
                 className={

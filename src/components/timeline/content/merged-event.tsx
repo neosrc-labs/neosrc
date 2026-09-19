@@ -31,7 +31,7 @@ export function MergedEventContent({
                         href={commitUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-mono text-xs hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                        className="font-mono text-xs hover:text-link hover:underline"
                     >
                         {sha}
                     </a>
@@ -43,7 +43,7 @@ export function MergedEventContent({
                     href={`https://${domain(provider)}/${owner}/${repo}/tree/${event.mergeRefName}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="font-medium hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                    className="font-medium hover:text-link hover:underline"
                 >
                     {event.mergeRefName}
                 </a>

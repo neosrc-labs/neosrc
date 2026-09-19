@@ -32,7 +32,7 @@ export function PullRequestCommitContent({
                 )}
                 <NextLink
                     href={`/${provider}/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
-                    className="truncate hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                    className="truncate hover:text-link hover:underline"
                 >
                     <CommitSubject
                         message={commit?.message ?? ""}
@@ -49,7 +49,7 @@ export function PullRequestCommitContent({
                 )}
                 <NextLink
                     href={`/${provider}/${owner}/${repo}/pull/${number}/changes/${commit?.oid}`}
-                    className="font-mono text-text-secondary text-xs hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                    className="font-mono text-text-secondary text-xs hover:text-link hover:underline"
                 >
                     {commit?.oid.slice(0, 7)}
                 </NextLink>

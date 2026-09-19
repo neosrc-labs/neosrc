@@ -187,7 +187,7 @@ export function ResizableLayout({
                                 {leftSidebar}
                             </div>
                             <div
-                                className="fixed z-10 w-1 cursor-col-resize bg-surface-selected transition-colors hover:bg-blue-500 active:bg-blue-600"
+                                className="fixed z-10 w-1 cursor-col-resize bg-surface-selected transition-colors hover:bg-focus active:bg-action"
                                 style={{
                                     left: leftWidth - 4,
                                     top: sidebarTop,
@@ -232,7 +232,7 @@ export function ResizableLayout({
                                 {rightSidebar}
                             </div>
                             <div
-                                className="fixed z-10 w-1 cursor-col-resize bg-surface-selected transition-colors hover:bg-blue-500 active:bg-blue-600"
+                                className="fixed z-10 w-1 cursor-col-resize bg-surface-selected transition-colors hover:bg-focus active:bg-action"
                                 style={{
                                     right: rightWidth - 4,
                                     top: sidebarTop,

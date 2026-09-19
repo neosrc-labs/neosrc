@@ -284,7 +284,7 @@ describe("PullRequestList", () => {
     it("shows Open as the default active tab", () => {
         renderList();
         const openTab = screen.getByRole("button", { name: /open/i });
-        expect(openTab.className).toContain("border-blue-500");
+        expect(openTab).toHaveAttribute("aria-pressed", "true");
     });
 
     it("navigates when a tab is clicked", async () => {
@@ -347,7 +347,7 @@ describe("PullRequestList", () => {
         paramsState.set("state", "closed");
         renderList();
         const closedTab = screen.getByRole("button", { name: /closed/i });
-        expect(closedTab.className).toContain("border-blue-500");
+        expect(closedTab).toHaveAttribute("aria-pressed", "true");
     });
 
     it("adds a trailing space when clicking at the end of an existing query", async () => {
@@ -462,7 +462,7 @@ describe("PullRequestList", () => {
         );
 
         const mergedTab = screen.getByRole("button", { name: /merged/i });
-        expect(mergedTab.className).toContain("border-blue-500");
+        expect(mergedTab).toHaveAttribute("aria-pressed", "true");
     });
 
     it("clicking the Merged tab adds 'is:merged ' to the search bar", async () => {
@@ -505,7 +505,7 @@ describe("PullRequestList", () => {
         );
 
         const closedTab = screen.getByRole("button", { name: /closed/i });
-        expect(closedTab.className).toContain("border-blue-500");
+        expect(closedTab).toHaveAttribute("aria-pressed", "true");
     });
 
     it("clicking the Closed tab adds 'is:closed ' to the search bar", async () => {

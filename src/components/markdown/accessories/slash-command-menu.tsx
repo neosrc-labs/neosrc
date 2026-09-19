@@ -143,7 +143,7 @@ export function SlashCommandMenu({
         return (
             <div className={baseStyle} data-autocomplete="true" style={style}>
                 <div className="flex items-center justify-between px-3 py-2">
-                    <span className="font-medium text-sm text-text-label dark:text-zinc-200">
+                    <span className="font-medium text-sm text-text-label">
                         Insert table
                     </span>
                     <span className="font-medium text-text-tertiary text-xs tabular-nums">
@@ -192,8 +192,8 @@ export function SlashCommandMenu({
                                     <button
                                         className={`h-4 w-4 rounded-sm border transition-colors ${
                                             active
-                                                ? "border-blue-500 bg-blue-500/20 dark:border-blue-400 dark:bg-blue-400/20"
-                                                : "border-gray-300 bg-surface-elevated hover:border-gray-400 dark:border-zinc-600 dark:hover:border-zinc-500"
+                                                ? "border-action bg-info-surface"
+                                                : "border-border bg-surface-elevated hover:border-ring"
                                         }`}
                                         // biome-ignore lint/suspicious/noArrayIndexKey: grid is static
                                         key={`${r}-${c}`}
@@ -213,7 +213,7 @@ export function SlashCommandMenu({
                 </div>
                 <div className="flex items-center justify-between border-border border-t px-3 py-2">
                     <button
-                        className="cursor-pointer text-text-tertiary text-xs hover:text-text-label dark:hover:text-zinc-200"
+                        className="cursor-pointer text-text-tertiary text-xs hover:text-text-label"
                         onClick={onBackToMenu}
                         type="button"
                     >
@@ -237,7 +237,7 @@ export function SlashCommandMenu({
                 }}
                 style={style}
             >
-                <div className="px-3 py-2 font-medium text-sm text-text-label dark:text-zinc-200">
+                <div className="px-3 py-2 font-medium text-sm text-text-label">
                     Choose alert type
                 </div>
                 <ul ref={listRef} className="max-h-60 overflow-y-auto py-1">
@@ -245,7 +245,7 @@ export function SlashCommandMenu({
                         <li
                             className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm ${
                                 type === selectedAlertType
-                                    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                    ? "bg-info-surface text-info-text"
                                     : "text-text-label hover:bg-surface-tertiary"
                             }`}
                             key={type}
@@ -258,7 +258,7 @@ export function SlashCommandMenu({
                 </ul>
                 <div className="border-border border-t px-3 py-2">
                     <button
-                        className="cursor-pointer text-text-tertiary text-xs hover:text-text-label dark:hover:text-zinc-200"
+                        className="cursor-pointer text-text-tertiary text-xs hover:text-text-label"
                         onClick={onBackToMenu}
                         type="button"
                     >
@@ -275,7 +275,7 @@ export function SlashCommandMenu({
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-text-muted" />
                 <input
                     autoFocus
-                    className="w-full bg-transparent px-3 py-2.5 pl-9 text-sm outline-none placeholder:text-text-muted dark:text-zinc-100"
+                    className="w-full bg-transparent px-3 py-2.5 pl-9 text-sm text-text-primary outline-none placeholder:text-text-muted"
                     onChange={(e) => {
                         setSearch(e.target.value);
                         setSelectedIndex(0);
@@ -299,7 +299,7 @@ export function SlashCommandMenu({
                             <li
                                 className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm ${
                                     index === selectedIndex
-                                        ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                        ? "bg-info-surface text-info-text"
                                         : "text-text-label hover:bg-surface-tertiary"
                                 }`}
                                 key={item.id}

@@ -19,7 +19,7 @@ function Avatar({
     return (
         <Image
             alt={name ?? "Author"}
-            className="shrink-0 rounded-full ring-2 ring-white dark:ring-zinc-950"
+            className="shrink-0 rounded-full ring-2 ring-surface"
             src={avatarUrl}
             width={size}
             height={size}
@@ -36,7 +36,7 @@ function PlaceholderAvatar({
 }) {
     return (
         <div
-            className="flex shrink-0 items-center justify-center rounded-full bg-surface-selected text-text-tertiary ring-2 ring-white dark:ring-zinc-950"
+            className="flex shrink-0 items-center justify-center rounded-full bg-surface-selected text-text-tertiary ring-2 ring-surface"
             style={{ width: size, height: size }}
             title={name ?? "Co-author"}
         >
@@ -103,7 +103,7 @@ export function CommitAuthors({ authors, size = 20 }: CommitAuthorsProps) {
             })}
             {overflow > 0 && (
                 <div
-                    className="ml-[-8px] flex shrink-0 items-center justify-center rounded-full bg-gray-100 font-medium text-text-tertiary text-xs ring-2 ring-white dark:bg-zinc-700 dark:ring-zinc-950"
+                    className="ml-[-8px] flex shrink-0 items-center justify-center rounded-full bg-surface-tertiary font-medium text-text-tertiary text-xs ring-2 ring-surface"
                     style={{ width: size, height: size, zIndex: 0 }}
                 >
                     +{overflow}

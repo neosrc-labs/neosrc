@@ -50,7 +50,7 @@ function BranchSearchBar({
                         value={value}
                         onChange={(event) => setValue(event.target.value)}
                         placeholder="Search branches..."
-                        className="w-full rounded-md border border-gray-300 bg-transparent py-1.5 pr-8 pl-9 text-sm text-text-primary placeholder-gray-500 focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:placeholder-zinc-500 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+                        className="w-full rounded-md border border-border bg-surface-elevated py-1.5 pr-8 pl-9 text-sm text-text-primary outline-hidden placeholder:text-text-muted focus:border-focus focus:ring-1 focus:ring-focus"
                     />
                     {value !== "" && (
                         <button
@@ -60,7 +60,7 @@ function BranchSearchBar({
                                 setValue("");
                                 onSubmit("");
                             }}
-                            className="absolute right-2 flex size-4 cursor-pointer items-center justify-center rounded-full text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
+                            className="absolute right-2 flex size-4 cursor-pointer items-center justify-center rounded-full text-text-muted hover:text-text-secondary"
                         >
                             <X className="size-3" />
                         </button>
@@ -184,7 +184,7 @@ export function BranchListShared({
                         <button
                             type="button"
                             onClick={() => void refetch()}
-                            className="mt-2 cursor-pointer text-blue-600 text-sm hover:underline dark:text-blue-400"
+                            className="mt-2 cursor-pointer text-link text-sm hover:text-link-hover hover:underline"
                         >
                             Try again
                         </button>
@@ -211,7 +211,7 @@ export function BranchListShared({
                                         <Link
                                             href={allHref}
                                             prefetch={false}
-                                            className="block cursor-pointer text-blue-600 text-sm hover:underline dark:text-blue-400"
+                                            className="block cursor-pointer text-link text-sm hover:text-link-hover hover:underline"
                                         >
                                             View more branches
                                         </Link>

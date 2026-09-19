@@ -46,7 +46,7 @@ export function CrossReferencedEventContent({
     const inner = (
         <>
             <span className="flex min-w-0 items-center gap-1.5 hover:underline">
-                <span className="truncate font-medium text-gray-800 dark:text-zinc-200">
+                <span className="truncate font-medium text-text-label">
                     {sourceTitle}
                 </span>
                 {sourceRef && (

@@ -258,7 +258,7 @@ export function PullRequestDescriptionSection({
                                                         <button
                                                             type="button"
                                                             aria-label="More options"
-                                                            className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                                            className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
                                                         >
                                                             <MoreVertical
                                                                 size={14}
@@ -486,7 +486,7 @@ function TitleRow({
                                         onChange={(e) =>
                                             setEditTitle(e.target.value)
                                         }
-                                        className="flex-1 border-blue-500 border-b-2 bg-transparent font-bold text-2xl text-text-primary outline-none"
+                                        className="flex-1 border-focus border-b-2 bg-transparent font-bold text-2xl text-text-primary outline-none"
                                         autoFocus
                                         onKeyDown={(e) => {
                                             if (e.key === "Enter")
@@ -496,14 +496,14 @@ function TitleRow({
                                         }}
                                     />
                                     <button
-                                        className="cursor-pointer rounded bg-green-600 px-2 py-1 text-white text-xs hover:bg-green-700"
+                                        className="cursor-pointer rounded bg-action px-2 py-1 text-action-foreground text-xs hover:bg-action-hover"
                                         onClick={handleSaveTitle}
                                         type="button"
                                     >
                                         Save
                                     </button>
                                     <button
-                                        className="cursor-pointer text-text-muted text-xs hover:text-text-secondary dark:hover:text-zinc-300"
+                                        className="cursor-pointer text-text-muted text-xs hover:text-text-secondary"
                                         onClick={handleCancelTitle}
                                         type="button"
                                     >
@@ -531,7 +531,7 @@ function TitleRow({
                                         {(permissionContext) =>
                                             canInteract(permissionContext) ? (
                                                 <button
-                                                    className="cursor-pointer text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
+                                                    className="cursor-pointer text-text-muted hover:text-text-secondary"
                                                     onClick={() =>
                                                         handleStartEditTitle(
                                                             displayTitle,
@@ -644,7 +644,7 @@ export function Branches({
         headRepo === baseRepo ? pullRequest.head.ref : pullRequest.head.label;
 
     const branchLinkClassName =
-        "rounded bg-blue-100 px-1.5 py-0.5 font-mono text-xs text-blue-800 hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30";
+        "rounded bg-info-surface px-1.5 py-0.5 font-mono text-info-text text-xs hover:bg-info-border/20";
 
     return (
         <div className="text-sm text-text-secondary">

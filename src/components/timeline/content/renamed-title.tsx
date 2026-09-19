@@ -20,11 +20,11 @@ export function RenamedTitleContent({
             <UserLink actor={event.actor} provider={provider} />
             <p>
                 {" renamed this "}
-                <span className="font-medium text-gray-800 line-through dark:text-zinc-200">
+                <span className="font-medium text-text-label line-through">
                     {event.previousTitle}
                 </span>
                 {" → "}
-                <span className="font-medium text-gray-800 dark:text-zinc-200">
+                <span className="font-medium text-text-label">
                     {event.currentTitle}
                 </span>{" "}
                 <span title={fullDate}>{timestamp}</span>

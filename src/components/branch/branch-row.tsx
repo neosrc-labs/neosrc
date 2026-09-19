@@ -74,14 +74,14 @@ export function BranchTableRow({
                             })}
                             prefetch={false}
                             title={branch.name}
-                            className="min-w-0 truncate font-mono text-blue-600 text-sm hover:underline dark:text-blue-400"
+                            className="min-w-0 truncate font-mono text-link text-sm hover:text-link-hover hover:underline"
                         >
                             {branch.name}
                         </Link>
                         <CopyButton
                             text={branch.name}
                             title="Copy branch name"
-                            className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-text-muted hover:text-text-secondary dark:hover:text-zinc-300"
+                            className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-text-muted hover:text-text-secondary"
                         >
                             {(copied) =>
                                 copied ? (
@@ -160,7 +160,7 @@ export function BranchTableRow({
                         <Link
                             href={`/${provider}/${owner}/${repo}/pull/${branch.pullRequestNumber}`}
                             prefetch={false}
-                            className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-blue-600 dark:hover:text-blue-400"
+                            className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-link"
                         >
                             <GitPullRequest className="size-4" />#
                             {branch.pullRequestNumber}
@@ -175,7 +175,7 @@ export function BranchTableRow({
                                 type="button"
                                 aria-label={`Delete branch ${branch.name}`}
                                 onClick={() => setDialog("delete")}
-                                className="flex size-6 cursor-pointer items-center justify-center rounded text-text-muted hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                className="flex size-6 cursor-pointer items-center justify-center rounded text-text-muted hover:bg-surface-tertiary hover:text-text-secondary"
                             >
                                 <Trash2 className="size-4" />
                             </button>
@@ -185,7 +185,7 @@ export function BranchTableRow({
                                 <button
                                     type="button"
                                     aria-label={`Branch actions for ${branch.name}`}
-                                    className="flex size-6 cursor-pointer items-center justify-center rounded text-text-muted hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                    className="flex size-6 cursor-pointer items-center justify-center rounded text-text-muted hover:bg-surface-tertiary hover:text-text-secondary"
                                 >
                                     <MoreHorizontal className="size-4" />
                                 </button>

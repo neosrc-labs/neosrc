@@ -99,7 +99,7 @@ export function RepoSidebar({
                 {homepage && (
                     <a
                         href={homepage}
-                        className="mb-3 inline-flex items-center gap-1.5 text-blue-600 text-sm hover:underline dark:text-blue-400"
+                        className="mb-3 inline-flex items-center gap-1.5 text-link text-sm hover:text-link-hover hover:underline"
                     >
                         <ExternalLinkIcon className="h-3.5 w-3.5" />
                         {homepage.replace(/^https?:\/\//, "")}
@@ -111,7 +111,7 @@ export function RepoSidebar({
                         {topics.map((topic) => (
                             <span
                                 key={topic}
-                                className="inline-block rounded-full bg-blue-500/10 px-2.5 py-0.5 text-blue-600 text-xs dark:bg-blue-400/10 dark:text-blue-400"
+                                className="inline-block rounded-full bg-info-surface px-2.5 py-0.5 text-info-text text-xs"
                             >
                                 {topic}
                             </span>
@@ -194,7 +194,7 @@ export function RepoSidebar({
                                 <span className="truncate font-semibold text-text-primary">
                                     {latestRelease.name}
                                 </span>
-                                <span className="inline-block shrink-0 rounded-full bg-green-500/10 px-2 py-0.5 text-green-600 text-xs no-underline">
+                                <span className="inline-block shrink-0 rounded-full bg-success-surface px-2 py-0.5 text-success-text text-xs no-underline">
                                     Latest
                                 </span>
                             </div>
@@ -337,10 +337,10 @@ function DeployStatusIcon({
     className?: string;
 }) {
     if (state === "success" || state === "active") {
-        return <Check className={cn(className, "text-green-600")} />;
+        return <Check className={cn(className, "text-success-emphasis")} />;
     }
     if (state === "failure" || state === "error") {
-        return <XCircle className={cn(className, "text-red-600")} />;
+        return <XCircle className={cn(className, "text-danger-emphasis")} />;
     }
     if (state === "in_progress") {
         return <StatusCheckIcon state="IN_PROGRESS" className={className} />;

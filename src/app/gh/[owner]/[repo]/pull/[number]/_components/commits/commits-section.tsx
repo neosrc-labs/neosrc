@@ -157,7 +157,7 @@ function CommitsList({
                             <div
                                 className={`flex items-start gap-2 rounded-md px-2 py-1 text-sm transition-colors hover:bg-surface-tertiary ${
                                     isCurrent
-                                        ? "border-blue-500 border-l-2 bg-blue-50 dark:bg-blue-950"
+                                        ? "border-action border-l-2 bg-info-surface"
                                         : ""
                                 }`}
                             >
@@ -216,7 +216,7 @@ function CommitsSkeleton() {
                     className="flex items-start gap-2"
                     key={`commit-skeleton-${i}`}
                 >
-                    <div className="mt-0.5 h-5 w-5 shrink-0 animate-pulse rounded-full bg-gray-200" />
+                    <div className="mt-0.5 h-5 w-5 shrink-0 animate-pulse rounded-full bg-surface-selected" />
                     <div className="min-w-0 flex-1">
                         <div className="h-4 w-3/4 animate-pulse rounded bg-surface-selected" />
                         <div className="mt-1.5 h-3 w-1/3 animate-pulse rounded bg-surface-selected" />

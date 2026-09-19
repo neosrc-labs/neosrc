@@ -326,7 +326,7 @@ export function ReviewComments({
                             )}
                             <div className="flex items-center gap-2">
                                 {thread?.isOutdated && (
-                                    <span className="whitespace-nowrap rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-[10px] text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                                    <span className="whitespace-nowrap rounded-full bg-warning-surface px-1.5 py-0.5 font-medium text-[10px] text-warning-text">
                                         Outdated
                                     </span>
                                 )}
@@ -335,7 +335,7 @@ export function ReviewComments({
                                         type="button"
                                         aria-expanded={isExpanded}
                                         onClick={toggleExpanded}
-                                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label dark:hover:text-zinc-300"
+                                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label"
                                     >
                                         <ChevronDown
                                             size={14}
@@ -481,7 +481,7 @@ function CommentBlock({
     return (
         <div
             id={`review-thread-${comment.id}`}
-            className="bg-surface-secondary dark:bg-zinc-950"
+            className="bg-surface-secondary"
         >
             <ReviewCommentSnippet comment={comment} owner={owner} repo={repo} />
             <ReviewCommentItem
@@ -508,10 +508,7 @@ function CommentBlock({
                 onToggleTask={onToggleParentTask}
             />
             {replies.map((reply) => (
-                <div
-                    key={reply.id}
-                    className="bg-surface-secondary dark:bg-zinc-950"
-                >
+                <div key={reply.id} className="bg-surface-secondary">
                     <ReviewCommentItem
                         comment={reply}
                         placement="reply"

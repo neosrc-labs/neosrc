@@ -29,16 +29,13 @@ export function RevertedBanner({ revert }: { revert: RevertedByEntry }) {
           : "A revert pull request was closed without merging in";
 
     return (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
+        <div className="mb-4 rounded-lg border border-warning-border bg-warning-surface px-4 py-3">
             <div className="flex items-center gap-2">
-                <Undo2
-                    className="text-amber-600 dark:text-amber-400"
-                    size={14}
-                />
-                <span className="font-medium text-amber-700 text-sm dark:text-amber-300">
+                <Undo2 className="text-warning-text" size={14} />
+                <span className="font-medium text-sm text-warning-text">
                     {message}{" "}
                     <Link
-                        className="font-medium underline hover:text-amber-800 dark:hover:text-amber-200"
+                        className="font-medium underline hover:text-link-hover"
                         href={href}
                     >
                         #{revert.number}
@@ -49,7 +46,7 @@ export function RevertedBanner({ revert }: { revert: RevertedByEntry }) {
             <div className="mt-1 ml-6 flex w-fit items-center gap-2">
                 <StatusPill state={pillState} />
                 <Link
-                    className="block truncate text-amber-600 text-xs hover:underline dark:text-amber-400"
+                    className="block truncate text-warning-text text-xs hover:underline"
                     href={href}
                     title={revert.title}
                 >

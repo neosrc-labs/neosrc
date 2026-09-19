@@ -66,8 +66,8 @@ function DiffSnippet({ patch }: { patch: string }) {
                                 key={`${row.oldN}-${row.newN}-${row.text}`}
                                 className={
                                     isDel
-                                        ? "bg-red-50 dark:bg-red-950"
-                                        : "bg-green-50 dark:bg-green-950"
+                                        ? "bg-danger-surface"
+                                        : "bg-success-surface"
                                 }
                             >
                                 <td className="w-9 select-none pr-1 text-right text-text-muted">
@@ -77,7 +77,7 @@ function DiffSnippet({ patch }: { patch: string }) {
                                     {row.newN}
                                 </td>
                                 <td
-                                    className={`pl-2 ${isDel ? "text-red-800 dark:text-red-300" : "text-green-900 dark:text-green-200"}`}
+                                    className={`pl-2 ${isDel ? "text-danger-text" : "text-success-text"}`}
                                 >
                                     <div className="flex">
                                         <span className="w-4 flex-shrink-0 select-none">
@@ -201,8 +201,8 @@ export function SuggestionBlock({
                         disabled={isPending || applied}
                         className={`flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 font-medium text-xs transition-colors ${
                             applied
-                                ? "border-gray-300 bg-surface-selected text-text-tertiary dark:border-zinc-600"
-                                : "border-gray-300 bg-white text-text-label hover:bg-surface-tertiary dark:border-zinc-600 dark:hover:bg-zinc-700"
+                                ? "border-border bg-surface-selected text-text-tertiary"
+                                : "border-border bg-surface-elevated text-text-label hover:bg-surface-tertiary"
                         }`}
                     >
                         {applied ? (
@@ -221,7 +221,7 @@ export function SuggestionBlock({
             {patch ? (
                 <DiffSnippet patch={patch} />
             ) : (
-                <div className="overflow-x-auto bg-zinc-50 p-2 font-mono text-[10px] dark:bg-zinc-900">
+                <div className="overflow-x-auto bg-surface-secondary p-2 font-mono text-[10px]">
                     {code || "No code"}
                 </div>
             )}

@@ -169,7 +169,7 @@ function MilestoneSectionSettings({
                         </span>
                     )}
                     {selected && (
-                        <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                        <span className="shrink-0 text-link text-xs">
                             &#10003;
                         </span>
                     )}
@@ -183,7 +183,7 @@ function MilestoneSectionSettings({
                 <li
                     className={cn(
                         "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-surface-tertiary",
-                        currentId === null && "bg-blue-50 dark:bg-blue-950/30",
+                        currentId === null && "bg-info-surface",
                     )}
                     onClick={() => {
                         if (currentId !== null) {
@@ -197,7 +197,7 @@ function MilestoneSectionSettings({
                         No milestone
                     </span>
                     {currentId === null && (
-                        <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                        <span className="shrink-0 text-link text-xs">
                             &#10003;
                         </span>
                     )}

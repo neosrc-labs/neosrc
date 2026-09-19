@@ -25,9 +25,7 @@ export function HeadRefEventContent({
             <UserLink actor={event.actor} provider={provider} />
             <p>
                 {` ${verb} the `}
-                <span className="font-medium text-gray-800 dark:text-zinc-200">
-                    branch
-                </span>
+                <span className="font-medium text-text-label">branch</span>
                 <span title={fullDate}>{` ${timestamp}`}</span>
             </p>
         </EventRow>

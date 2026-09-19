@@ -71,7 +71,7 @@ export function DismissReviewDialog({
                     onChange={(event) => setMessage(event.target.value)}
                     placeholder="Reason for dismissing this review"
                     rows={4}
-                    className="w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-ring dark:placeholder-zinc-500"
+                    className="w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-ring"
                 />
                 {dismissMutation.isError && (
                     <p className="text-destructive text-sm">

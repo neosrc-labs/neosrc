@@ -139,7 +139,7 @@ export function RepoDocFiles({
                             onClick={() => handleTabClick(file)}
                             className={`relative -mb-px cursor-pointer px-3 py-1.5 font-medium text-xs transition-colors ${
                                 activeTab === file.name
-                                    ? "border-blue-500 border-b-2 text-text-primary"
+                                    ? "border-action border-b-2 text-text-primary"
                                     : "text-text-secondary hover:text-text-primary"
                             }`}
                         >

@@ -155,8 +155,8 @@ describe("BranchListShared", () => {
         renderList();
 
         expect(
-            screen.getByRole("button", { name: "Overview" }).className,
-        ).toContain("border-blue-500");
+            screen.getByRole("button", { name: "Overview" }),
+        ).toHaveAttribute("aria-pressed", "true");
         expect(
             screen.getByRole("heading", { name: "Default" }),
         ).toBeInTheDocument();

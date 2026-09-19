@@ -85,7 +85,7 @@ function CompactConflictedFiles({
                 className="flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-surface-secondary px-2.5 py-1.5 text-xs"
                 onClick={() => setOpen(!open)}
             >
-                <AlertTriangle size={14} className="text-amber-500" />
+                <AlertTriangle size={14} className="text-warning-emphasis" />
                 <span className="font-medium text-text-label">
                     Conflicting files
                 </span>
@@ -190,7 +190,10 @@ export function ConflictedFiles({
         <div className="space-y-2 rounded-lg border border-border bg-surface-secondary p-3">
             <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 font-medium text-sm text-text-label">
-                    <AlertTriangle size={16} className="text-amber-500" />
+                    <AlertTriangle
+                        size={16}
+                        className="text-warning-emphasis"
+                    />
                     Conflicting files
                 </span>
                 {hasResolve && (

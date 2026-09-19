@@ -72,7 +72,7 @@ export function ReactionBar({
                                 onClick={() => !disabled && onReact(content)}
                                 className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 font-medium text-xs transition-colors ${
                                     isActive
-                                        ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
+                                        ? "border-info-border bg-info-surface text-info-text hover:bg-info-border/20"
                                         : "border-border bg-surface-tertiary text-text-secondary hover:bg-surface-selected"
                                 }`}
                             >
@@ -99,7 +99,7 @@ export function ReactionBar({
                                                 key={r.id ?? r.databaseId}
                                                 src={avatarUrl}
                                                 alt={r.user?.login ?? ""}
-                                                className={`h-4 w-4 rounded-full ring-1 ring-white dark:ring-zinc-800 ${
+                                                className={`h-4 w-4 rounded-full ring-1 ring-surface-elevated ${
                                                     i === 0
                                                         ? "ml-0.5"
                                                         : "-ml-1.5"

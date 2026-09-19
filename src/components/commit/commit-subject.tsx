@@ -42,7 +42,7 @@ export function CommitSubject({
                 <span title="Breaking change">
                     <TriangleAlert
                         aria-label="Breaking change"
-                        className="size-3.5 shrink-0 text-red-600 dark:text-red-400"
+                        className="size-3.5 shrink-0 text-danger-emphasis"
                     />
                 </span>
             )}

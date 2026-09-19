@@ -29,7 +29,7 @@ export function ApiKeysView() {
                 <button
                     type="button"
                     onClick={() => setShowCreate(true)}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-action px-4 py-2 font-medium text-action-foreground text-sm transition-colors hover:bg-action-hover"
                 >
                     <Plus className="h-4 w-4" />
                     New Key
@@ -46,7 +46,7 @@ export function ApiKeysView() {
                     ))}
                 </div>
             ) : keys?.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 rounded-lg border border-gray-300 border-dashed p-12 dark:border-zinc-700">
+                <div className="flex flex-col items-center gap-3 rounded-lg border border-border border-dashed p-12">
                     <Key className="h-8 w-8 text-text-muted" />
                     <p className="text-sm text-text-tertiary">
                         No API keys yet. Create one to get started.

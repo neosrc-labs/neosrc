@@ -45,7 +45,7 @@ export function WorkflowRunRow({
             />
             <div className="min-w-0 flex-1">
                 <a
-                    className="block truncate font-medium text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+                    className="block truncate font-medium text-sm text-text-primary hover:text-link"
                     href={run.htmlUrl}
                     target="_blank"
                     rel="noreferrer"

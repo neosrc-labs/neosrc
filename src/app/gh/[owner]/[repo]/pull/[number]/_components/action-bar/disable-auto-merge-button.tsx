@@ -39,7 +39,7 @@ export function DisableAutoMergeButton({
         <div className="flex items-center gap-2">
             <button
                 suppressHydrationWarning
-                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-1.5 py-2.5 text-text-secondary text-xs transition-colors hover:bg-surface-tertiary sm:px-3 dark:border-zinc-600"
+                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border px-1.5 py-2.5 text-text-secondary text-xs transition-colors hover:bg-surface-tertiary sm:px-3"
                 disabled={disableMutation.isPending}
                 onClick={() => disableMutation.mutate({ owner, repo, number })}
                 type="button"

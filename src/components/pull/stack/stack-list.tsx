@@ -70,7 +70,7 @@ export function StackList({
                 </div>
                 <a
                     href={`https://github.com/${owner}/${repo}/tree/${baseRef}`}
-                    className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-blue-800 text-xs hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30"
+                    className="rounded bg-info-surface px-1.5 py-0.5 font-mono text-info-text text-xs hover:bg-info-border/20"
                 >
                     {baseRef}
                 </a>

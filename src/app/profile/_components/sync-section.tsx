@@ -72,7 +72,7 @@ export function SyncSection({
                             type="button"
                             disabled={syncCurrentUser.isPending}
                             onClick={() => syncCurrentUser.mutate()}
-                            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-action px-4 py-2 font-medium text-action-foreground text-sm transition-colors hover:bg-action-hover disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <RefreshCw
                                 className={`h-4 w-4 ${
@@ -86,7 +86,7 @@ export function SyncSection({
                                 : "Sync permissions"}
                         </button>
                         {syncCurrentUser.error && (
-                            <p className="text-red-600 text-xs dark:text-red-400">
+                            <p className="text-danger-text text-xs">
                                 {syncCurrentUser.error.message}
                             </p>
                         )}
@@ -109,7 +109,7 @@ export function SyncSection({
                         </ul>
                     )}
                     {poll.error && (
-                        <p className="text-red-600 text-xs dark:text-red-400">
+                        <p className="text-danger-text text-xs">
                             Sync check failed: {poll.error.message}
                         </p>
                     )}
@@ -143,7 +143,7 @@ export function SyncSection({
                                 );
                                 refreshOwnerRepos.reset();
                             }}
-                            className="rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                            className="rounded-lg border border-border bg-surface-elevated px-2 py-2 text-sm text-text-primary focus:border-focus focus:outline-none focus:ring-1 focus:ring-focus"
                         >
                             {hasGithub && (
                                 <option value="github">GitHub</option>
@@ -159,7 +159,7 @@ export function SyncSection({
                                 refreshOwnerRepos.reset();
                             }}
                             placeholder="Owner (user or org)"
-                            className="w-56 rounded-md border border-gray-300 bg-surface-elevated px-3 py-2 text-sm text-text-primary outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-zinc-600"
+                            className="w-56 rounded-md border border-border bg-surface-elevated px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-focus focus:ring-1 focus:ring-focus"
                         />
                         <button
                             type="button"
@@ -172,7 +172,7 @@ export function SyncSection({
                                     owner: owner.trim(),
                                 })
                             }
-                            className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700"
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border px-4 py-2 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <RotateCcw
                                 className={`h-4 w-4 ${
@@ -187,7 +187,7 @@ export function SyncSection({
                         </button>
                     </div>
                     {refreshOwnerRepos.error && (
-                        <p className="text-red-600 text-xs dark:text-red-400">
+                        <p className="text-danger-text text-xs">
                             {refreshOwnerRepos.error.message}
                         </p>
                     )}

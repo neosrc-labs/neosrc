@@ -62,10 +62,8 @@ export function ClonePopover({
                 <button
                     type="button"
                     className={cn(
-                        "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs transition",
-                        open
-                            ? "border-blue-600 bg-blue-600 text-white dark:border-blue-500 dark:bg-blue-500"
-                            : "border-blue-600 bg-blue-600 text-white hover:bg-blue-700 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600",
+                        "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-action bg-action px-3 py-1.5 text-action-foreground text-xs transition hover:bg-action-hover",
+                        open && "bg-action-hover",
                     )}
                 >
                     <Code2Icon className="h-3.5 w-3.5" />
@@ -108,7 +106,7 @@ export function ClonePopover({
                             {(copied) =>
                                 copied ? (
                                     <>
-                                        <CheckIcon className="h-3 w-3 text-green-600" />
+                                        <CheckIcon className="h-3 w-3 text-success-emphasis" />
                                         <span>Copied</span>
                                     </>
                                 ) : (

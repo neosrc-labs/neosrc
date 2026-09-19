@@ -61,7 +61,7 @@ export function RenameBranchDialog({
                     className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-hidden focus:ring-1 focus:ring-ring"
                 />
                 {mutation.error && (
-                    <p className="text-red-600 text-sm">
+                    <p className="text-danger-text text-sm">
                         {mutation.error.message}
                     </p>
                 )}

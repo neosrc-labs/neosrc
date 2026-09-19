@@ -118,17 +118,17 @@ export function ActionErrorRow({
     return (
         <div
             className={cn(
-                "flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 dark:border-red-500/20 dark:bg-red-500/10",
+                "flex items-start gap-3 rounded-lg border border-danger-border bg-danger-surface px-4 py-2.5",
                 className,
             )}
             role="alert"
         >
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" />
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger-text" />
             <div className="min-w-0 space-y-1">
                 {visible.map((message) => (
                     <p
                         key={message}
-                        className="break-words font-medium text-red-700 text-sm dark:text-red-300"
+                        className="break-words font-medium text-danger-text text-sm"
                     >
                         {message}
                     </p>

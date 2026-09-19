@@ -79,7 +79,7 @@ export function RepoFileSearch({
             <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
             <input
                 aria-label="Go to file"
-                className="h-8 w-full rounded-md border border-border bg-transparent py-1 pr-7 pl-8 text-sm text-text-primary placeholder-text-tertiary focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                className="h-8 w-full rounded-md border border-border bg-transparent py-1 pr-7 pl-8 text-sm text-text-primary outline-hidden placeholder:text-text-tertiary focus:border-focus focus:ring-1 focus:ring-focus"
                 placeholder="Go to file"
                 value={query}
                 onChange={(event) => {

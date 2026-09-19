@@ -101,7 +101,7 @@ export function RepoHeader({
                                 forked from{" "}
                                 <a
                                     href={`/${provider}/${repoData.parentFullName}`}
-                                    className="text-blue-600 hover:underline dark:text-blue-400"
+                                    className="text-link hover:text-link-hover hover:underline"
                                 >
                                     {repoData.parentFullName}
                                 </a>
@@ -446,7 +446,9 @@ function StarButton({
             <StarIcon
                 className={cn(
                     "h-3.5 w-3.5",
-                    starred && !disabled && "fill-[#e3b341] stroke-[#e3b341]",
+                    starred &&
+                        !disabled &&
+                        "fill-warning-text stroke-warning-text",
                 )}
             />
             <span

@@ -63,7 +63,7 @@ export function CommitRow({
                     href={externalCommitUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="min-w-0 truncate font-medium text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+                    className="min-w-0 truncate font-medium text-sm text-text-primary hover:text-link"
                 >
                     <CommitSubject
                         message={commit.message}
@@ -178,7 +178,7 @@ export function CommitRow({
                     aria-label="Copy full SHA"
                 >
                     {copied ? (
-                        <Check className="text-green-500" size={16} />
+                        <Check className="text-success-emphasis" size={16} />
                     ) : (
                         <Copy size={16} />
                     )}

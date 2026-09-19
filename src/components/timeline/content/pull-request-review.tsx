@@ -286,7 +286,7 @@ export function PullRequestReviewContent({
                         onClick={() =>
                             onToggleMinimized(event.databaseId, true)
                         }
-                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label dark:hover:text-zinc-300"
+                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label"
                     >
                         <ChevronDown size={14} />
                         Show review
@@ -342,7 +342,7 @@ export function PullRequestReviewContent({
                                             <button
                                                 type="button"
                                                 aria-label="More options"
-                                                className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                                className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
                                             >
                                                 <MoreVertical size={14} />
                                             </button>

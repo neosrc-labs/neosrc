@@ -107,7 +107,7 @@ function RunningCheckIcon({ className }: { className?: string }) {
             aria-hidden="true"
             className={cn(
                 className,
-                "animate-spin text-yellow-500 motion-reduce:animate-none",
+                "animate-spin text-warning-emphasis motion-reduce:animate-none",
             )}
         >
             <circle cx="12" cy="12" r="3.5" fill="currentColor" />
@@ -145,10 +145,10 @@ export function StatusCheckIcon({
     className?: string;
 }) {
     if (state === "SUCCESS") {
-        return <Check className={cn(className, "text-green-600")} />;
+        return <Check className={cn(className, "text-success-emphasis")} />;
     }
     if (state === "FAILURE" || state === "ERROR" || state === "TIMED_OUT") {
-        return <X className={cn(className, "text-red-600")} />;
+        return <X className={cn(className, "text-danger-emphasis")} />;
     }
     if (state === "CANCELLED") {
         return <CircleX className={cn(className, "text-text-muted")} />;
@@ -163,7 +163,9 @@ export function StatusCheckIcon({
         return <CheckQueuedIcon className={className} />;
     }
     if (state === "ACTION_REQUIRED") {
-        return <TriangleAlert className={cn(className, "text-yellow-500")} />;
+        return (
+            <TriangleAlert className={cn(className, "text-warning-emphasis")} />
+        );
     }
     return <Circle className={cn(className, "text-text-muted")} />;
 }

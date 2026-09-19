@@ -48,7 +48,7 @@ export function ReviewCommentReplyComposer({
                 ]}
             />
             {isError && (
-                <p className="mt-1 text-red-600 text-xs">
+                <p className="mt-1 text-danger-text text-xs">
                     Failed to post reply. Please try again.
                 </p>
             )}
@@ -60,7 +60,7 @@ export function ReplyTextboxButton({ onClick }: { onClick: () => void }) {
     return (
         <button
             type="button"
-            className="flex w-full cursor-text items-center rounded-md border border-gray-200 bg-surface-elevated px-3 py-1.5 text-text-muted text-xs transition-colors duration-200 hover:border-gray-400 dark:border-zinc-600 dark:hover:border-zinc-400"
+            className="flex w-full cursor-text items-center rounded-md border border-border bg-surface-elevated px-3 py-1.5 text-text-muted text-xs transition-colors duration-200 hover:border-ring"
             onClick={onClick}
         >
             Reply...

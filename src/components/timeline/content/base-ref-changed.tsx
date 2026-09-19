@@ -20,11 +20,11 @@ export function BaseRefChangedContent({
             <UserLink actor={event.actor} provider={provider} />
             <p>
                 {" changed the base branch from "}
-                <span className="font-medium text-gray-800 line-through dark:text-zinc-200">
+                <span className="font-medium text-text-label line-through">
                     {event.previousRefName}
                 </span>
                 {" → "}
-                <span className="font-medium text-gray-800 dark:text-zinc-200">
+                <span className="font-medium text-text-label">
                     {event.currentRefName}
                 </span>{" "}
                 <span title={fullDate}>{timestamp}</span>

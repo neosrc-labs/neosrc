@@ -22,13 +22,13 @@ export function DeployedEventContent({
             <UserLink actor={event.actor} provider={provider} />
             <p>
                 {" deployed to "}
-                <span className="font-medium text-gray-800 dark:text-zinc-200">
+                <span className="font-medium text-text-label">
                     {environment}
                 </span>
                 {refName ? (
                     <>
                         {" ("}
-                        <span className="font-medium text-gray-800 dark:text-zinc-200">
+                        <span className="font-medium text-text-label">
                             {refName}
                         </span>
                         {")"}

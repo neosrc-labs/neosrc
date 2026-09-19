@@ -18,7 +18,7 @@ export function StackCreateBadge({ onClick }: StackCreateBadgeProps) {
                 <button
                     type="button"
                     aria-label="Create stack"
-                    className="flex cursor-pointer items-center rounded px-1 py-0.5 text-text-secondary transition-colors hover:bg-surface-selected hover:text-text"
+                    className="flex cursor-pointer items-center rounded px-1 py-0.5 text-text-secondary transition-colors hover:bg-surface-selected hover:text-text-primary"
                     onClick={onClick}
                 >
                     <LayersPlus className="size-3.5" />

@@ -14,8 +14,8 @@ export function OnboardingView({ installUrl }: { installUrl: string }) {
     return (
         <main className="mx-auto flex min-h-[calc(100svh-var(--header-height))] max-w-3xl flex-col px-6 py-16">
             <div className="flex flex-col items-center gap-6 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 dark:bg-blue-500">
-                    <GitPullRequest className="h-8 w-8 text-white" />
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-action">
+                    <GitPullRequest className="h-8 w-8 text-action-foreground" />
                 </div>
                 <h1 className="text-4xl text-text-primary sm:text-5xl">
                     Bring your private repositories to Neosrc
@@ -35,7 +35,7 @@ export function OnboardingView({ installUrl }: { installUrl: string }) {
                             className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle px-4 py-3 text-sm"
                         >
                             <span className="flex min-w-0 items-center gap-2">
-                                <CircleCheck className="h-4 w-4 shrink-0 text-green-600 dark:text-green-500" />
+                                <CircleCheck className="h-4 w-4 shrink-0 text-success-emphasis" />
                                 <span className="truncate text-text-primary">
                                     {installationAccountName(installation)}
                                 </span>
@@ -47,7 +47,7 @@ export function OnboardingView({ installUrl }: { installUrl: string }) {
                                 href={`https://github.com/settings/installations/${installation.id}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex shrink-0 items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
+                                className="inline-flex shrink-0 items-center gap-1 text-link hover:text-link-hover hover:underline"
                             >
                                 Manage
                                 <ExternalLink className="h-3 w-3" />
@@ -60,7 +60,7 @@ export function OnboardingView({ installUrl }: { installUrl: string }) {
             <div className="mt-12 flex flex-col items-center gap-4">
                 <a
                     href={installUrl}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-action px-6 py-3 font-semibold text-action-foreground transition hover:bg-action-hover"
                 >
                     {installations.length === 0
                         ? "Install GitHub App"

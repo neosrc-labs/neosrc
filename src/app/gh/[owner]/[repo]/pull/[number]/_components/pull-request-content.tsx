@@ -72,7 +72,7 @@ export function PullRequestContent({
                         {isManuallyOutdated && (
                             <HoverCard>
                                 <HoverCardTrigger asChild>
-                                    <span className="cursor-default rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700 text-xs dark:bg-amber-900/30 dark:text-amber-400">
+                                    <span className="cursor-default rounded-full bg-warning-surface px-2 py-0.5 font-medium text-warning-text text-xs">
                                         Outdated
                                     </span>
                                 </HoverCardTrigger>
@@ -94,7 +94,7 @@ export function PullRequestContent({
                                     return (
                                         <HoverCard>
                                             <HoverCardTrigger asChild>
-                                                <span className="cursor-default rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700 text-xs dark:bg-amber-900/30 dark:text-amber-400">
+                                                <span className="cursor-default rounded-full bg-warning-surface px-2 py-0.5 font-medium text-warning-text text-xs">
                                                     Outdated
                                                 </span>
                                             </HoverCardTrigger>
@@ -158,7 +158,7 @@ export function PullRequestContent({
                                 href={activeReport.sourceUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-text-tertiary text-xs hover:text-text-label dark:hover:text-zinc-200"
+                                className="inline-flex items-center gap-1 text-text-tertiary text-xs hover:text-text-label"
                             >
                                 <ExternalLink className="size-3" />
                                 Source

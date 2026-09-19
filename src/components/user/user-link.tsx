@@ -42,12 +42,12 @@ export function UserLink({
                     height={20}
                 />
                 {showUsername && (
-                    <span className="font-medium text-gray-800 dark:text-zinc-200">
+                    <span className="font-medium text-text-label">
                         {actor.login}
                     </span>
                 )}
                 {isBot && (
-                    <span className="rounded bg-zinc-200 px-1 font-medium text-[10px] text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400">
+                    <span className="rounded bg-surface-selected px-1 font-medium text-[10px] text-text-secondary">
                         bot
                     </span>
                 )}

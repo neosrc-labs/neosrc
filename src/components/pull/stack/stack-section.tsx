@@ -37,7 +37,7 @@ export function StackSection({ owner, repo, prNumber }: StackSectionProps) {
     const mergeabilityByNumber = computeMergeabilityMap(entries);
 
     return (
-        <div className="flex flex-shrink-0 flex-col border-gray-200 border-t pt-3 dark:border-zinc-700">
+        <div className="flex flex-shrink-0 flex-col border-border border-t pt-3">
             <div className="flex items-center gap-2 px-3 pb-2">
                 <Layers className="size-4 text-text-secondary" />
                 <span className="font-semibold text-text-secondary text-xs uppercase tracking-wide">
@@ -97,7 +97,7 @@ export function StackSection({ owner, repo, prNumber }: StackSectionProps) {
                     </div>
                     <a
                         href={`https://github.com/${owner}/${repo}/tree/${stackData.baseRef}`}
-                        className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-blue-800 text-xs hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30"
+                        className="rounded bg-info-surface px-1.5 py-0.5 font-mono text-info-text text-xs hover:bg-info-border/20"
                     >
                         {stackData.baseRef}
                     </a>
@@ -156,38 +156,38 @@ const BADGE_STYLES: Record<
 > = {
     merged: {
         label: "Merged",
-        bg: "bg-purple-50 dark:bg-purple-500/10",
-        border: "border-purple-200 dark:border-purple-500/30",
-        text: "text-purple-700 dark:text-purple-300",
+        bg: "bg-state-merged/10",
+        border: "border-state-merged/30",
+        text: "text-state-merged",
     },
     closed: {
         label: "Closed",
-        bg: "bg-red-50 dark:bg-red-500/10",
-        border: "border-red-200 dark:border-red-500/30",
-        text: "text-red-700 dark:text-red-300",
+        bg: "bg-danger-surface",
+        border: "border-danger-border",
+        text: "text-danger-text",
     },
     draft: {
         label: "Draft",
-        bg: "bg-zinc-100 dark:bg-zinc-500/10",
-        border: "border-zinc-200 dark:border-zinc-500/30",
-        text: "text-zinc-600 dark:text-zinc-400",
+        bg: "bg-surface-tertiary",
+        border: "border-border",
+        text: "text-text-secondary",
     },
     conflicts: {
         label: "Conflicts",
-        bg: "bg-red-50 dark:bg-red-500/10",
-        border: "border-red-200 dark:border-red-500/30",
-        text: "text-red-700 dark:text-red-300",
+        bg: "bg-danger-surface",
+        border: "border-danger-border",
+        text: "text-danger-text",
     },
     blocked: {
         label: "Blocked",
-        bg: "bg-amber-50 dark:bg-amber-500/10",
-        border: "border-amber-200 dark:border-amber-500/30",
-        text: "text-amber-700 dark:text-amber-300",
+        bg: "bg-warning-surface",
+        border: "border-warning-border",
+        text: "text-warning-text",
     },
     ready: {
         label: "Ready",
-        bg: "bg-green-50 dark:bg-green-500/10",
-        border: "border-green-200 dark:border-green-500/30",
-        text: "text-green-700 dark:text-green-300",
+        bg: "bg-success-surface",
+        border: "border-success-border",
+        text: "text-success-text",
     },
 };

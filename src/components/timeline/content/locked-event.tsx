@@ -34,7 +34,7 @@ export function LockedEventContent({
                 {event.lockReason && (
                     <>
                         {" (reason: "}
-                        <span className="font-medium text-gray-800 dark:text-zinc-200">
+                        <span className="font-medium text-text-label">
                             {formatReason(event.lockReason)}
                         </span>
                         {")"}

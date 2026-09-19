@@ -64,7 +64,7 @@ function VerifiedBadgeHoverContent({
     return (
         <div className="flex flex-col gap-1.5 p-3">
             <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-green-600" />
+                <ShieldCheck className="h-4 w-4 text-success-emphasis" />
                 <span className="font-semibold text-sm text-text-primary">
                     {signature.isValid ? "Verified" : "Unverified"} signature
                 </span>
@@ -78,7 +78,7 @@ function VerifiedBadgeHoverContent({
                 </div>
             )}
             {!signature.isValid && (
-                <p className="text-red-600 text-xs dark:text-red-400">
+                <p className="text-danger-text text-xs">
                     {signatureStateLabel(signature.state)}
                 </p>
             )}
@@ -96,7 +96,7 @@ export function VerifiedBadge({
     return (
         <HoverCard openDelay={300}>
             <HoverCardTrigger asChild>
-                <span className="inline-flex cursor-default items-center gap-1 text-green-600 text-xs dark:text-green-400">
+                <span className="inline-flex cursor-default items-center gap-1 text-success-emphasis text-xs">
                     <ShieldCheck className="h-3.5 w-3.5" />
                     <span className="font-medium">Verified</span>
                 </span>

@@ -32,7 +32,7 @@ export function ReadyForReviewButton({
 
     return (
         <button
-            className="flex cursor-pointer items-center gap-1.5 rounded-md bg-gray-200 px-1.5 py-2 font-medium text-gray-800 text-xs transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
+            className="flex cursor-pointer items-center gap-1.5 rounded-md bg-surface-tertiary px-1.5 py-2 font-medium text-text-label text-xs transition-colors hover:bg-surface-selected disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
             disabled={markReadyMutation.isPending}
             onClick={handleMarkReady}
             type="button"

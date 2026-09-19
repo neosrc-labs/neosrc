@@ -64,7 +64,7 @@ export function RepoFileTable({
                                 <Link
                                     href={href}
                                     prefetch={false}
-                                    className="flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+                                    className="flex items-center gap-2 text-sm text-text-primary hover:text-link"
                                 >
                                     <FileTypeIcon
                                         iconName={iconName}
@@ -77,7 +77,7 @@ export function RepoFileTable({
                                 {commit ? (
                                     <a
                                         href={`${repoUrl(provider, owner, repo)}/commit/${commit.objectId}`}
-                                        className="block min-w-0 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
+                                        className="block min-w-0 truncate text-sm text-text-tertiary hover:text-link"
                                     >
                                         {commit.message}
                                     </a>
@@ -150,7 +150,7 @@ export function RepoSearchResultsTable({
                                               )
                                     }
                                     prefetch={false}
-                                    className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+                                    className="inline-flex items-center gap-2 text-sm text-text-primary hover:text-link"
                                 >
                                     <FileTypeIcon
                                         iconName={iconName}

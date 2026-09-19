@@ -10,7 +10,7 @@ export function RepoNotFound({ signedIn = false }: { signedIn?: boolean }) {
 
     return (
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
-            <TriangleAlert className="size-12 text-amber-500" />
+            <TriangleAlert className="size-12 text-warning-emphasis" />
             <h1 className="font-semibold text-text-primary text-xl">
                 Repository not found
             </h1>
@@ -26,7 +26,7 @@ export function RepoNotFound({ signedIn = false }: { signedIn?: boolean }) {
             {!signedIn ? (
                 <a
                     href="/api/auth/signin"
-                    className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 font-medium text-sm text-white shadow-sm transition-colors hover:bg-blue-700"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-action px-4 py-2 font-medium text-action-foreground text-sm shadow-sm transition-colors hover:bg-action-hover"
                 >
                     <LogIn className="size-3.5" />
                     Sign in

@@ -132,7 +132,7 @@ export function IssueCommentContent({
                         onClick={() =>
                             onToggleMinimized(event.databaseId, true)
                         }
-                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label dark:hover:text-zinc-300"
+                        className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label"
                     >
                         <ChevronDown size={14} />
                         Show comment
@@ -181,7 +181,7 @@ export function IssueCommentContent({
                                 onClick={() =>
                                     onToggleMinimized(event.databaseId, false)
                                 }
-                                className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                className="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
                             >
                                 Hide comment
                             </button>
@@ -192,7 +192,7 @@ export function IssueCommentContent({
                                     <button
                                         type="button"
                                         aria-label="More options"
-                                        className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                                        className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
                                     >
                                         <MoreVertical size={14} />
                                     </button>
@@ -239,7 +239,7 @@ export function IssueCommentContent({
                                                 setMenuOpen(false);
                                                 setDeleteConfirmOpen(true);
                                             }}
-                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
+                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-danger-surface hover:text-danger-text"
                                         >
                                             <Trash2 size={14} />
                                             Delete comment

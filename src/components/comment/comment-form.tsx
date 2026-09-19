@@ -219,7 +219,7 @@ export function CommentForm({
     if (!canInteract(permissionContext)) {
         const { currentUser, isPullRequestLocked } = permissionContext;
         return (
-            <div className="mt-6 border-gray-200 border-t pt-6">
+            <div className="mt-6 border-border border-t pt-6">
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-secondary px-4 py-3 text-sm text-text-tertiary">
                     {isPullRequestLocked ? (
                         <Lock size={14} />
@@ -234,7 +234,7 @@ export function CommentForm({
                     {!currentUser && (
                         <a
                             href="/api/auth/signin"
-                            className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                            className="font-medium text-link hover:text-link-hover hover:underline"
                         >
                             Sign in
                         </a>
@@ -281,7 +281,7 @@ export function CommentForm({
     ];
 
     return (
-        <div className="mt-6 border-gray-200 border-t pt-6">
+        <div className="mt-6 border-border border-t pt-6">
             <h3 className="mb-3 text-text-primary">Add a comment</h3>
             <MarkdownEditor
                 disabled={

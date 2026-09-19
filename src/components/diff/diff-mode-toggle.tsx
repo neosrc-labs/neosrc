@@ -17,8 +17,8 @@ export function DiffModeToggle<T extends string>({
                     aria-label={label}
                     className={`cursor-pointer rounded px-2 py-1 font-medium text-xs transition-colors ${
                         mode === value
-                            ? "bg-surface-selected text-gray-800 dark:text-zinc-200"
-                            : "text-text-tertiary hover:bg-surface-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                            ? "bg-surface-selected text-text-primary"
+                            : "text-text-tertiary hover:bg-surface-tertiary hover:text-text-label"
                     }`}
                     key={value}
                     onClick={() => onModeChange(value)}

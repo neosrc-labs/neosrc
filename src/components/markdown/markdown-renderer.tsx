@@ -391,7 +391,7 @@ export function MarkdownRenderer({
                                 <input
                                     key={originalKey ?? "task-checkbox-input"}
                                     checked={inputEl.props.checked === true}
-                                    className="size-4 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-500 dark:bg-zinc-700 dark:focus:ring-blue-400"
+                                    className="size-4 cursor-pointer rounded border-border bg-surface-elevated text-action focus:ring-focus disabled:cursor-not-allowed disabled:opacity-60"
                                     disabled={!interactive}
                                     onChange={
                                         interactive
@@ -438,7 +438,7 @@ export function MarkdownRenderer({
                     table({ children }) {
                         return (
                             <div className="overflow-x-auto">
-                                <table className="w-full border-collapse border border-gray-300 dark:border-zinc-600">
+                                <table className="w-full border-collapse border border-border">
                                     {children}
                                 </table>
                             </div>
@@ -454,7 +454,7 @@ export function MarkdownRenderer({
                     th({ children, style, ...props }) {
                         return (
                             <th
-                                className="border border-gray-300 px-3 py-2 font-semibold dark:border-zinc-600"
+                                className="border border-border px-3 py-2 font-semibold"
                                 style={style}
                                 {...props}
                             >
@@ -465,7 +465,7 @@ export function MarkdownRenderer({
                     td({ children, style, ...props }) {
                         return (
                             <td
-                                className="border border-gray-300 px-3 py-2 dark:border-zinc-600"
+                                className="border border-border px-3 py-2"
                                 style={style}
                                 {...props}
                             >
@@ -633,7 +633,7 @@ function InlineCode({
     // the typography plugin otherwise shrinks code below the body size
     return (
         <code
-            className="rounded bg-gray-100 px-1.25 py-0.5 font-mono text-[length:1em] before:content-none after:content-none dark:bg-zinc-700"
+            className="rounded bg-surface-tertiary px-1.25 py-0.5 font-mono text-[length:1em] before:content-none after:content-none"
             {...props}
         >
             {children}
@@ -706,12 +706,12 @@ function CodeElement({
             </pre>
             <CopyButton
                 text={codeString}
-                className="absolute top-1.5 right-1.5 inline-flex cursor-pointer items-center rounded-md border border-border bg-surface-elevated p-1.5 text-text-tertiary transition-colors hover:bg-surface-secondary hover:text-text-label dark:hover:text-zinc-200"
+                className="absolute top-1.5 right-1.5 inline-flex cursor-pointer items-center rounded-md border border-border bg-surface-elevated p-1.5 text-text-tertiary transition-colors hover:bg-surface-secondary hover:text-text-label"
             >
                 {(copied) => (
                     <>
                         {copied ? (
-                            <Check className="size-3.5 text-green-600" />
+                            <Check className="size-3.5 text-success-emphasis" />
                         ) : (
                             <Copy className="size-3.5" />
                         )}

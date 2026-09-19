@@ -39,19 +39,19 @@ export function FileDiffHeader({
 }) {
     const statusColor =
         file.status === "added"
-            ? "text-green-600"
+            ? "text-success-emphasis"
             : file.status === "deleted"
-              ? "text-red-600"
+              ? "text-danger-emphasis"
               : file.status === "renamed"
-                ? "text-blue-600"
-                : "text-yellow-600";
+                ? "text-info-emphasis"
+                : "text-warning-emphasis";
     return (
         <div
             ref={headerRef}
             className="sticky top-[64px] z-[1] flex items-center gap-2 rounded-t border-border border-b bg-surface-secondary px-4 py-2"
         >
             <button
-                className="cursor-pointer text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                className="cursor-pointer text-text-tertiary hover:text-text-label"
                 onClick={onToggleCollapsed}
                 type="button"
             >
@@ -96,12 +96,15 @@ export function FileDiffHeader({
                 <CopyButton
                     text={file.filename}
                     title="Copy file path"
-                    className="flex shrink-0 cursor-pointer items-center text-text-tertiary hover:text-text-label dark:hover:text-zinc-200"
+                    className="flex shrink-0 cursor-pointer items-center text-text-tertiary hover:text-text-label"
                 >
                     {(copied) => (
                         <>
                             {copied ? (
-                                <Check className="text-green-600" size={14} />
+                                <Check
+                                    className="text-success-emphasis"
+                                    size={14}
+                                />
                             ) : (
                                 <Copy size={14} />
                             )}
@@ -130,19 +133,19 @@ export function FileDiffHeader({
                 {file.status}
             </span>
             {file.additions > 0 && (
-                <span className="font-medium text-green-600 text-xs">
+                <span className="font-medium text-success-emphasis text-xs">
                     +{file.additions}
                 </span>
             )}
             {file.deletions > 0 && (
-                <span className="font-medium text-red-600 text-xs">
+                <span className="font-medium text-danger-emphasis text-xs">
                     -{file.deletions}
                 </span>
             )}
             <label className="flex cursor-pointer items-center gap-1 text-text-secondary text-xs">
                 <input
                     checked={isViewed}
-                    className="cursor-pointer rounded border-gray-300 dark:border-zinc-600"
+                    className="cursor-pointer rounded border-border"
                     onChange={onToggleViewed}
                     type="checkbox"
                 />

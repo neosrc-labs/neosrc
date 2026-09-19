@@ -139,7 +139,7 @@ export function highlightMatch(text: string, query: string): ReactNode {
         return (
             <>
                 {text.slice(0, fullIdx)}
-                <mark className="rounded-sm bg-yellow-500/20 text-inherit">
+                <mark className="rounded-sm bg-warning-border/30 text-inherit">
                     {text.slice(fullIdx, fullIdx + query.length)}
                 </mark>
                 {text.slice(fullIdx + query.length)}
@@ -190,7 +190,7 @@ export function highlightMatch(text: string, query: string): ReactNode {
         parts.push(
             <mark
                 key={match.start}
-                className="rounded-sm bg-yellow-500/20 text-inherit"
+                className="rounded-sm bg-warning-border/30 text-inherit"
             >
                 {text.slice(match.start, match.end)}
             </mark>,
@@ -365,11 +365,11 @@ function FileTreeNode({
             .join(" ");
         const statusClass =
             node.status === "added"
-                ? "text-green-500"
+                ? "text-success-emphasis"
                 : node.status === "modified"
-                  ? "text-white"
+                  ? "text-warning-emphasis"
                   : node.status === "removed"
-                    ? "text-red-500"
+                    ? "text-danger-emphasis"
                     : undefined;
         const rowClass = cn(
             "flex items-center gap-1.5 truncate rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-surface-tertiary",

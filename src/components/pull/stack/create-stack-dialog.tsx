@@ -70,7 +70,6 @@ export function CreateStackDialog({
                         Cancel
                     </Button>
                     <Button
-                        className="bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                         disabled={createStackMutation.isPending}
                         onClick={() =>
                             createStackMutation.mutate({
@@ -89,7 +88,7 @@ export function CreateStackDialog({
                     </Button>
                 </DialogFooter>
                 {createStackMutation.isError && (
-                    <p className="text-red-600 text-xs">
+                    <p className="text-danger-text text-xs">
                         Failed to create the stack. Please try again.
                     </p>
                 )}

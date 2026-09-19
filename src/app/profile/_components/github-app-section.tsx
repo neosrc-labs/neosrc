@@ -40,7 +40,7 @@ export function GithubAppSection({
                             </p>
                             <a
                                 href={githubAppInstallationUrl}
-                                className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                                className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-action px-4 py-2 font-medium text-action-foreground text-sm transition-colors hover:bg-action-hover"
                             >
                                 Install GitHub App
                             </a>
@@ -56,7 +56,7 @@ export function GithubAppSection({
                                 className="flex items-center justify-between gap-3 text-sm"
                             >
                                 <span className="flex min-w-0 items-center gap-2">
-                                    <CircleCheck className="h-4 w-4 shrink-0 text-green-600 dark:text-green-500" />
+                                    <CircleCheck className="h-4 w-4 shrink-0 text-success-emphasis" />
                                     <span className="truncate text-text-primary">
                                         {installationAccountName(installation)}
                                     </span>
@@ -73,7 +73,7 @@ export function GithubAppSection({
                                     href={`https://github.com/settings/installations/${installation.id}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="inline-flex shrink-0 items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
+                                    className="inline-flex shrink-0 items-center gap-1 text-link hover:text-link-hover hover:underline"
                                 >
                                     Manage
                                     <ExternalLink className="h-3 w-3" />
@@ -84,7 +84,7 @@ export function GithubAppSection({
                     {githubAppInstallationUrl && (
                         <a
                             href={githubAppInstallationUrl}
-                            className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                            className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-lg bg-action px-4 py-2 font-medium text-action-foreground text-sm transition-colors hover:bg-action-hover"
                         >
                             Install on another account
                         </a>

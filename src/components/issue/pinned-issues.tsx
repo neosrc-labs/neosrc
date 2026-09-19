@@ -45,7 +45,7 @@ export function PinnedIssues({
                         )}
                         <a
                             href={`/${provider}/${owner}/${repo}/issues/${issue.number}`}
-                            className="line-clamp-2 font-semibold text-sm text-text-primary leading-5 hover:text-blue-600 dark:hover:text-blue-400"
+                            className="line-clamp-2 font-semibold text-sm text-text-primary leading-5 hover:text-link"
                         >
                             <CodeTitle
                                 provider={provider}
@@ -69,7 +69,7 @@ export function PinnedIssues({
                                             issue.author.url ||
                                             `https://${domain(provider)}/${encodeURIComponent(issue.author.login)}`
                                         }
-                                        className="font-medium text-text-secondary hover:text-blue-600 dark:hover:text-blue-400"
+                                        className="font-medium text-text-secondary hover:text-link"
                                     >
                                         {issue.author.login}
                                     </a>
@@ -93,7 +93,7 @@ export function PinnedIssues({
                             <a
                                 aria-label={`${issue.comments} comments`}
                                 href={`/${provider}/${owner}/${repo}/issues/${issue.number}`}
-                                className="flex shrink-0 items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400"
+                                className="flex shrink-0 items-center gap-1 hover:text-link"
                             >
                                 <MessageSquare className="size-3.5" />
                                 <span>{issue.comments}</span>

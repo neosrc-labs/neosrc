@@ -28,7 +28,7 @@ export default function Error({
                     reset();
                     router.refresh();
                 }}
-                className="cursor-pointer rounded-md bg-neutral-800 px-4 py-2 text-sm text-white transition-colors hover:bg-neutral-700 dark:bg-neutral-100 dark:text-black dark:hover:bg-neutral-200"
+                className="cursor-pointer rounded-md bg-action px-4 py-2 text-action-foreground text-sm transition-colors hover:bg-action-hover"
             >
                 Try again
             </button>

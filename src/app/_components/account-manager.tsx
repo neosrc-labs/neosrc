@@ -143,7 +143,7 @@ export function AccountManager({
                                             loading !== null || onlyOneLinked
                                         }
                                         onClick={() => handleUnlink(account)}
-                                        className="cursor-pointer rounded-md border border-red-300 px-3 py-1 text-red-600 text-xs transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+                                        className="cursor-pointer rounded-md border border-danger-border px-3 py-1 text-danger-text text-xs transition-colors hover:bg-danger-surface disabled:cursor-not-allowed disabled:opacity-40"
                                         title={
                                             onlyOneLinked
                                                 ? "Cannot unlink your only sign-in method"
@@ -158,7 +158,7 @@ export function AccountManager({
                             ) : (
                                 <>
                                     {account && (
-                                        <span className="text-amber-600 text-xs dark:text-amber-400">
+                                        <span className="text-warning-text text-xs">
                                             Reconnect required
                                         </span>
                                     )}
@@ -168,7 +168,7 @@ export function AccountManager({
                                         onClick={() =>
                                             handleLink(provider.providerId)
                                         }
-                                        className="cursor-pointer rounded-md border border-gray-300 px-3 py-1 text-text-label text-xs transition-colors hover:bg-surface-tertiary disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700"
+                                        className="cursor-pointer rounded-md border border-border px-3 py-1 text-text-label text-xs transition-colors hover:bg-surface-tertiary disabled:cursor-not-allowed disabled:opacity-40"
                                     >
                                         {loading === provider.providerId
                                             ? account
@@ -184,11 +184,7 @@ export function AccountManager({
                     );
                 })}
             </div>
-            {error && (
-                <p className="text-red-600 text-xs dark:text-red-400">
-                    {error}
-                </p>
-            )}
+            {error && <p className="text-danger-text text-xs">{error}</p>}
         </div>
     );
 }

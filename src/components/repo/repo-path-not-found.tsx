@@ -22,7 +22,7 @@ export function RepoPathNotFound({
             </p>
             <Link
                 href={`/${provider}/${owner}/${repo}`}
-                className="text-blue-600 text-sm hover:underline dark:text-blue-400"
+                className="text-link text-sm hover:text-link-hover hover:underline"
             >
                 Back to the repository
             </Link>

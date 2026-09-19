@@ -8,7 +8,7 @@ export function RepoBusyBar({ busy }: { busy: boolean }) {
         <div
             aria-hidden
             className={cn(
-                "h-0.5 w-full bg-blue-500/70",
+                "h-0.5 w-full bg-action/70",
                 busy ? "animate-pulse opacity-100" : "opacity-0",
             )}
         />

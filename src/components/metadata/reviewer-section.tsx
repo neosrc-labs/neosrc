@@ -415,7 +415,7 @@ function ReviewerSectionSettings({
                         {r.login}
                     </span>
                     {selected && (
-                        <span className="shrink-0 text-blue-600 text-xs dark:text-blue-400">
+                        <span className="shrink-0 text-link text-xs">
                             &#10003;
                         </span>
                     )}
@@ -545,7 +545,7 @@ function ReviewerSectionContent({
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <Check
-                                                className="text-green-600"
+                                                className="text-success-emphasis"
                                                 size={16}
                                             />
                                         </TooltipTrigger>
@@ -559,7 +559,7 @@ function ReviewerSectionContent({
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <XCircle
-                                                className="text-red-600"
+                                                className="text-danger-emphasis"
                                                 size={16}
                                             />
                                         </TooltipTrigger>
@@ -586,7 +586,7 @@ function ReviewerSectionContent({
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <Circle
-                                                className="fill-yellow-500 text-yellow-500"
+                                                className="fill-warning-emphasis text-warning-emphasis"
                                                 size={8}
                                             />
                                         </TooltipTrigger>
@@ -606,7 +606,7 @@ function ReviewerSectionContent({
                     type="button"
                     aria-expanded={showAll}
                     onClick={onToggleShowAll}
-                    className="mt-1 flex cursor-pointer items-center gap-1 rounded px-1 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label dark:hover:text-zinc-300"
+                    className="mt-1 flex cursor-pointer items-center gap-1 rounded px-1 py-1 text-text-tertiary text-xs transition-colors hover:bg-surface-selected hover:text-text-label"
                 >
                     <ChevronDown
                         size={14}
@@ -643,7 +643,7 @@ function ReviewerActionsMenu({
                 <button
                     type="button"
                     aria-label={`More options for ${login}`}
-                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                    className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
                 >
                     <MoreVertical size={14} />
                 </button>

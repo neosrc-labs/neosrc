@@ -121,7 +121,7 @@ function SidebarFileTree({
                         <input
                             ref={inputRef}
                             autoFocus
-                            className="h-6 w-32 rounded border border-border-primary bg-surface-secondary px-1.5 text-text-primary text-xs outline-none placeholder:text-text-tertiary"
+                            className="h-6 w-32 rounded border border-border bg-surface-secondary px-1.5 text-text-primary text-xs outline-none placeholder:text-text-tertiary focus:border-focus"
                             placeholder="Filter files..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -161,7 +161,7 @@ function SidebarFileTree({
             </div>
             <div className="min-h-0 flex-1">
                 {error && files.length > 0 && (
-                    <p className="mb-2 text-amber-600 text-xs dark:text-amber-400">
+                    <p className="mb-2 text-warning-text text-xs">
                         Some files may be missing: the list failed to load.
                     </p>
                 )}

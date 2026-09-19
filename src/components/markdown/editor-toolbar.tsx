@@ -159,13 +159,13 @@ export function EditorToolbar({
     ];
 
     return (
-        <div className="flex flex-wrap items-center gap-1 border-gray-300 border-b bg-surface-secondary px-3 dark:border-zinc-600">
+        <div className="flex flex-wrap items-center gap-1 border-border border-b bg-surface-secondary px-3">
             <span className="flex items-center gap-3">
                 <button
                     className={`cursor-pointer border-b-2 pt-2 pb-1.5 font-medium text-sm transition-colors ${
                         mode === "write"
-                            ? "border-gray-900 text-text-primary dark:border-zinc-100"
-                            : "border-transparent text-text-secondary hover:text-text-primary dark:hover:text-zinc-200"
+                            ? "border-action text-text-primary"
+                            : "border-transparent text-text-secondary hover:text-text-primary"
                     }`}
                     onClick={() => onModeChange("write")}
                     type="button"
@@ -175,8 +175,8 @@ export function EditorToolbar({
                 <button
                     className={`cursor-pointer border-b-2 pt-2 pb-1.5 font-medium text-sm transition-colors ${
                         mode === "preview"
-                            ? "border-gray-900 text-text-primary dark:border-zinc-100"
-                            : "border-transparent text-text-secondary hover:text-text-primary dark:hover:text-zinc-200"
+                            ? "border-action text-text-primary"
+                            : "border-transparent text-text-secondary hover:text-text-primary"
                     }`}
                     onClick={() => onModeChange("preview")}
                     type="button"
@@ -193,13 +193,13 @@ export function EditorToolbar({
                             key={gi}
                         >
                             {gi > 0 && (
-                                <span className="mx-1 w-px self-stretch bg-gray-300 dark:bg-zinc-600" />
+                                <span className="mx-1 w-px self-stretch bg-border" />
                             )}
                             {group.map((btn) => {
                                 const Icon = btn.icon;
                                 return (
                                     <button
-                                        className="inline-flex cursor-pointer items-center justify-center rounded-md p-1 text-text-secondary hover:bg-surface-selected hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:text-zinc-200"
+                                        className="inline-flex cursor-pointer items-center justify-center rounded-md p-1 text-text-secondary hover:bg-surface-selected hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
                                         disabled={disabled}
                                         key={btn.key}
                                         onMouseDown={(e) => {

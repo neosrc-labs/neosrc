@@ -324,7 +324,7 @@ export function FilesSection({
                                             {isOutdated && (
                                                 <button
                                                     type="button"
-                                                    className="flex shrink-0 cursor-pointer items-center gap-2 rounded-md bg-orange-600 px-3 py-1.5 font-medium text-sm text-white ring-1 ring-orange-700 transition-colors hover:bg-orange-700"
+                                                    className="flex shrink-0 cursor-pointer items-center gap-2 rounded-md border border-warning-border bg-warning-surface px-3 py-1.5 font-medium text-sm text-warning-text transition-colors hover:bg-warning-border/20"
                                                     onClick={handleRefresh}
                                                     title="Refresh to view the latest changes"
                                                 >
@@ -354,7 +354,7 @@ export function FilesSection({
                                     </div>
                                     <div className="h-1 w-24 overflow-hidden rounded-full bg-surface-selected">
                                         <div
-                                            className="h-full rounded-full bg-blue-400 transition-all"
+                                            className="h-full rounded-full bg-action transition-all"
                                             style={{
                                                 width: `${
                                                     allFiles.length > 0
@@ -396,7 +396,7 @@ export function FilesSection({
                                 <DropdownMenuTrigger asChild>
                                     <button
                                         aria-label="Diff settings"
-                                        className="flex cursor-pointer items-center justify-center rounded-md bg-surface-elevated p-2 text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
+                                        className="flex cursor-pointer items-center justify-center rounded-md bg-surface-elevated p-2 text-text-label ring-1 ring-ring transition-colors hover:bg-surface-tertiary"
                                         title="Diff settings"
                                         type="button"
                                     >
@@ -461,7 +461,7 @@ export function FilesSection({
                     <button
                         type="button"
                         onClick={() => window.location.reload()}
-                        className="cursor-pointer rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
+                        className="cursor-pointer rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-surface-tertiary"
                     >
                         Retry
                     </button>

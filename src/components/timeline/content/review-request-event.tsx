@@ -49,7 +49,7 @@ export function ReviewRequestEventContent({
                             provider={provider}
                         >
                             <a
-                                className="inline-flex items-center gap-1 font-medium text-gray-800 dark:text-zinc-200"
+                                className="inline-flex items-center gap-1 font-medium text-text-label"
                                 href={reviewer.url}
                             >
                                 <Image
@@ -64,7 +64,7 @@ export function ReviewRequestEventContent({
                         </UserHoverCard>
                     )}
                     {isTeam && reviewer && (
-                        <span className="font-medium text-gray-800 dark:text-zinc-200">
+                        <span className="font-medium text-text-label">
                             {reviewer.name ?? reviewer.slug}
                         </span>
                     )}

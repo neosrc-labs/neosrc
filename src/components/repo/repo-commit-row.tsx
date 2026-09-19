@@ -69,14 +69,14 @@ export function RepoCommitRow({
             )}
             <a
                 href={commitUrl}
-                className="min-w-0 flex-1 truncate text-sm text-text-tertiary hover:text-blue-600 dark:hover:text-blue-400"
+                className="min-w-0 flex-1 truncate text-sm text-text-tertiary hover:text-link"
             >
                 {commit.message}
             </a>
             {status}
             <a
                 href={commitUrl}
-                className="ml-auto shrink-0 pt-px font-mono text-text-tertiary text-xs hover:text-blue-600 dark:hover:text-blue-400"
+                className="ml-auto shrink-0 pt-px font-mono text-text-tertiary text-xs hover:text-link"
             >
                 {commit.sha.slice(0, 7)}
             </a>
@@ -101,7 +101,7 @@ export function RepoCommitRow({
             )}
             <Link
                 href={historyHref}
-                className="inline-flex shrink-0 items-center gap-1 text-sm text-text-primary hover:text-blue-600 dark:hover:text-blue-400"
+                className="inline-flex shrink-0 items-center gap-1 text-sm text-text-primary hover:text-link"
             >
                 <HistoryIcon className="h-3.5 w-3.5" />
                 {historyLabel ?? "History"}

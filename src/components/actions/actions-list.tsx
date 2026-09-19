@@ -186,7 +186,7 @@ export function ActionsList({
                     {runsQuery.isLoading ? (
                         <WorkflowRunSkeleton />
                     ) : runsQuery.isError ? (
-                        <p className="px-4 py-8 text-center text-red-600 text-sm">
+                        <p className="px-4 py-8 text-center text-danger-text text-sm">
                             Failed to load workflow runs.
                         </p>
                     ) : items.length === 0 ? (

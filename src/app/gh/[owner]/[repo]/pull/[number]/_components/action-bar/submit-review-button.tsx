@@ -142,12 +142,12 @@ export function SubmitReviewButton({
             <PopoverTrigger asChild>
                 <button
                     suppressHydrationWarning
-                    className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-md bg-[#0969da] px-1.5 py-2 font-medium text-white text-xs transition-colors hover:bg-[#0860ca] sm:px-3"
+                    className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-md bg-action px-1.5 py-2 font-medium text-action-foreground text-xs transition-colors hover:bg-action-hover sm:px-3"
                     type="button"
                 >
                     Submit Review
                     {pendingReview && pendingCommentsCount > 0 && (
-                        <span className="inline-flex items-center justify-center rounded-full bg-white/20 px-1.5 py-0.5 font-bold text-2xs leading-none">
+                        <span className="inline-flex items-center justify-center rounded-full bg-action-foreground/20 px-1.5 py-0.5 font-bold text-2xs leading-none">
                             {pendingCommentsCount}
                         </span>
                     )}
@@ -180,8 +180,8 @@ export function SubmitReviewButton({
                                 <label
                                     className={`flex items-start gap-2.5 rounded-md border px-3 py-2 transition-colors ${
                                         selected
-                                            ? "border-[#0969da] bg-[#0969da]/5"
-                                            : "border-gray-300 dark:border-zinc-600"
+                                            ? "border-focus bg-info-surface"
+                                            : "border-border"
                                     } ${
                                         disabled
                                             ? "cursor-not-allowed opacity-50"
@@ -219,7 +219,7 @@ export function SubmitReviewButton({
 
                 <div className="mt-3 flex justify-end">
                     <button
-                        className="inline-flex cursor-pointer items-center justify-center rounded-md bg-[#2da44e] px-4 py-1.5 font-medium text-sm text-white transition-colors hover:bg-[#218838] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex cursor-pointer items-center justify-center rounded-md bg-state-open px-4 py-1.5 font-medium text-sm text-state-foreground transition-colors hover:bg-state-open/90 disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={submitDisabled}
                         onClick={handleSubmit}
                         type="button"
@@ -229,7 +229,7 @@ export function SubmitReviewButton({
                 </div>
 
                 {pendingReview && (
-                    <div className="mt-3 border-gray-200 border-t pt-3 dark:border-zinc-600">
+                    <div className="mt-3 border-border border-t pt-3">
                         {showDiscardConfirm ? (
                             <div>
                                 <p className="mb-1 font-medium text-sm text-text-primary">
@@ -240,7 +240,7 @@ export function SubmitReviewButton({
                                 </p>
                                 <div className="flex justify-end gap-2">
                                     <button
-                                        className="cursor-pointer rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-text-label text-xs ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
+                                        className="cursor-pointer rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-text-label text-xs ring-1 ring-ring transition-colors hover:bg-surface-tertiary"
                                         onClick={() =>
                                             setShowDiscardConfirm(false)
                                         }
@@ -249,7 +249,7 @@ export function SubmitReviewButton({
                                         Keep editing
                                     </button>
                                     <button
-                                        className="cursor-pointer rounded-md bg-red-600 px-3 py-1.5 font-medium text-white text-xs transition-colors hover:bg-red-700"
+                                        className="cursor-pointer rounded-md bg-destructive px-3 py-1.5 font-medium text-destructive-foreground text-xs transition-colors hover:bg-destructive-hover"
                                         disabled={isDiscarding}
                                         onClick={() => {
                                             setShowDiscardConfirm(false);
@@ -265,7 +265,7 @@ export function SubmitReviewButton({
                             </div>
                         ) : (
                             <button
-                                className="cursor-pointer font-medium text-text-secondary text-xs underline decoration-dotted underline-offset-2 transition-colors hover:text-red-600"
+                                className="cursor-pointer font-medium text-text-secondary text-xs underline decoration-dotted underline-offset-2 transition-colors hover:text-danger-text"
                                 onClick={() => setShowDiscardConfirm(true)}
                                 type="button"
                             >

@@ -22,7 +22,7 @@ export function ResolvedThreadBanner({
             <button
                 type="button"
                 onClick={onShow}
-                className="flex shrink-0 cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+                className="flex shrink-0 cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
             >
                 <ChevronDown size={14} />
                 Show thread
@@ -43,7 +43,7 @@ export function CollapseButton({ onClick }: { onClick: () => void }) {
         <button
             type="button"
             onClick={onClick}
-            className="flex shrink-0 cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-surface-tertiary hover:text-text-secondary dark:hover:text-zinc-300"
+            className="flex shrink-0 cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
         >
             <ChevronUp size={14} />
             Collapse
@@ -61,7 +61,7 @@ export function ResolveButton({
             type="button"
             disabled={isPending}
             onClick={onClick}
-            className="flex shrink-0 cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-surface-tertiary hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-50 dark:hover:text-zinc-300"
+            className="flex shrink-0 cursor-pointer items-center gap-1 rounded px-2 py-1 text-text-muted text-xs transition-colors hover:bg-surface-tertiary hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
         >
             {isUnresolve ? "Unresolve" : "Resolve"}
         </button>

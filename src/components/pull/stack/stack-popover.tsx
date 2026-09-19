@@ -89,7 +89,7 @@ function StackPopoverContent({
                         <button
                             type="button"
                             aria-label="Unstack pull requests"
-                            className="flex size-6 cursor-pointer items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-selected hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+                            className="flex size-6 cursor-pointer items-center justify-center rounded text-text-secondary transition-colors hover:bg-surface-selected hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
                             disabled={unstackMutation.isPending}
                             onClick={() => setConfirmUnstack(true)}
                         >
@@ -171,8 +171,8 @@ export function StackBadge({
                 <button
                     type="button"
                     className={cn(
-                        "flex cursor-pointer items-center gap-0.5 rounded px-1 py-0.5 text-text-secondary text-xs transition-colors hover:bg-surface-selected hover:text-text",
-                        open && "bg-surface-selected text-text",
+                        "flex cursor-pointer items-center gap-0.5 rounded px-1 py-0.5 text-text-secondary text-xs transition-colors hover:bg-surface-selected hover:text-text-primary",
+                        open && "bg-surface-selected text-text-primary",
                     )}
                 >
                     <Layers className="size-3.5" />

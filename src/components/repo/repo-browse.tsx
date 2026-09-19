@@ -415,7 +415,7 @@ function FileTableHeader({
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onFocus={() => setHasRequestedTree(true)}
                         placeholder="Search files..."
-                        className="h-8 w-48 rounded-md border border-border bg-transparent py-1 pr-7 pl-8 text-sm text-text-primary placeholder-text-tertiary focus:border-blue-500 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                        className="h-8 w-48 rounded-md border border-border bg-transparent py-1 pr-7 pl-8 text-sm text-text-primary outline-hidden placeholder:text-text-tertiary focus:border-focus focus:ring-1 focus:ring-focus"
                     />
                     {searchQuery && (
                         <button

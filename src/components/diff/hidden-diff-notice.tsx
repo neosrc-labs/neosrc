@@ -9,7 +9,7 @@ export function HiddenDiffNotice({
         <div className="flex flex-col items-center gap-2 border-border border-t px-4 py-6 text-sm text-text-tertiary">
             <span>{message}</span>
             <button
-                className="cursor-pointer font-medium text-blue-600 underline underline-offset-2"
+                className="cursor-pointer font-medium text-link underline underline-offset-2"
                 onClick={onShow}
                 type="button"
             >

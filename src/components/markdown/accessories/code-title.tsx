@@ -46,7 +46,7 @@ export function CodeTitle({ children, provider, owner, repo }: CodeTitleProps) {
             elements.push(
                 <code
                     key={elements.length}
-                    className="rounded bg-gray-100 px-1.25 py-0.5 font-mono before:content-none after:content-none dark:bg-zinc-700"
+                    className="rounded bg-surface-tertiary px-1.25 py-0.5 font-mono before:content-none after:content-none"
                 >
                     {match[2]}
                 </code>,
@@ -57,7 +57,7 @@ export function CodeTitle({ children, provider, owner, repo }: CodeTitleProps) {
                 elements.push(
                     <span
                         key={elements.length}
-                        className="cursor-pointer text-blue-600 hover:underline dark:text-blue-400"
+                        className="cursor-pointer text-link hover:text-link-hover hover:underline"
                         onClick={(e) => {
                             // Keep the click from bubbling to a wrapping
                             // commit/pr link: only the issue should open.

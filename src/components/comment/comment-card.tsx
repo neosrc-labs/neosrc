@@ -81,10 +81,10 @@ export function CommentCard({
             id={id}
             className={`max-w-[800px] ${
                 variant === "default"
-                    ? "relative border-b-1 border-b-gray-200 border-solid bg-surface-elevated dark:border-b-zinc-700"
+                    ? "relative border-border border-b-1 border-solid bg-surface-elevated"
                     : variant === "standalone"
                       ? "relative rounded border-1 border-border border-solid bg-surface-elevated"
-                      : "relative bg-surface-secondary dark:bg-zinc-950"
+                      : "relative bg-surface-secondary"
             }`}
         >
             {hideAvatar && tailDirection === "left" && (
@@ -97,13 +97,13 @@ export function CommentCard({
                 >
                     <path
                         d="M 8,0 L 0,8 L 8,16"
-                        className="stroke-gray-200 dark:stroke-zinc-700"
+                        className="stroke-border"
                         fill="none"
                         strokeWidth="1"
                     />
                     <polygon
                         points="8,0 0,8 8,16"
-                        className="fill-white dark:fill-zinc-900"
+                        className="fill-surface-elevated"
                     />
                 </svg>
             )}
@@ -117,13 +117,13 @@ export function CommentCard({
                 >
                     <path
                         d="M 0,8 L 8,0 L 16,8"
-                        className="stroke-gray-200 dark:stroke-zinc-700"
+                        className="stroke-border"
                         fill="none"
                         strokeWidth="1"
                     />
                     <polygon
                         points="0,8 8,0 16,8"
-                        className="fill-white dark:fill-zinc-900"
+                        className="fill-surface-elevated"
                     />
                 </svg>
             )}
@@ -154,12 +154,12 @@ export function CommentCard({
                         {formatRelativeTime(createdAt)}
                     </span>
                     {isPending && (
-                        <span className="whitespace-nowrap rounded-full bg-yellow-100 px-2 py-0.5 font-medium text-xs text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                        <span className="whitespace-nowrap rounded-full bg-warning-surface px-2 py-0.5 font-medium text-warning-text text-xs">
                             Pending
                         </span>
                     )}
                     {isOutdated && (
-                        <span className="whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800 text-xs dark:bg-amber-900/30 dark:text-amber-400">
+                        <span className="whitespace-nowrap rounded-full bg-warning-surface px-2 py-0.5 font-medium text-warning-text text-xs">
                             Outdated
                         </span>
                     )}

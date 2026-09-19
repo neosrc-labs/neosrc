@@ -31,7 +31,7 @@ export default function ImageDiff({ oldUrl, newUrl }: ImageDiffProps) {
     return (
         <div>
             {!hasBoth && newUrl && (
-                <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
+                <div className="flex items-center justify-center bg-media-canvas p-4">
                     <ImageWithFallback
                         alt="Added version"
                         className="max-h-[600px] max-w-full object-contain"
@@ -40,7 +40,7 @@ export default function ImageDiff({ oldUrl, newUrl }: ImageDiffProps) {
                 </div>
             )}
             {!hasBoth && oldUrl && (
-                <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
+                <div className="flex items-center justify-center bg-media-canvas p-4">
                     <ImageWithFallback
                         alt="Deleted version"
                         className="max-h-[600px] max-w-full object-contain"
@@ -76,7 +76,7 @@ function MissingImageFallback({
     newUrl: string | null;
 }) {
     return (
-        <div className="flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
+        <div className="flex items-center justify-center bg-media-canvas p-4">
             {oldUrl && (
                 <ImageWithFallback
                     alt="Old version"
@@ -111,10 +111,10 @@ function TwoUpView({
         <div className="flex flex-col md:flex-row">
             {oldUrl ? (
                 <div className="flex flex-1 flex-col border-border border-b md:border-r md:border-b-0">
-                    <div className="border-border border-b bg-surface-secondary px-3 py-1.5 text-center font-medium text-red-600 text-xs uppercase tracking-wide dark:text-red-400">
+                    <div className="border-border border-b bg-surface-secondary px-3 py-1.5 text-center font-medium text-danger-emphasis text-xs uppercase tracking-wide">
                         Deleted
                     </div>
-                    <div className="flex flex-1 items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
+                    <div className="flex flex-1 items-center justify-center bg-media-canvas p-4">
                         <ImageWithFallback
                             alt="Deleted version"
                             className="max-h-[600px] max-w-full object-contain"
@@ -125,10 +125,10 @@ function TwoUpView({
             ) : null}
             {newUrl ? (
                 <div className="flex flex-1 flex-col">
-                    <div className="border-border border-b bg-surface-secondary px-3 py-1.5 text-center font-medium text-green-600 text-xs uppercase tracking-wide dark:text-green-400">
+                    <div className="border-border border-b bg-surface-secondary px-3 py-1.5 text-center font-medium text-success-emphasis text-xs uppercase tracking-wide">
                         Added
                     </div>
-                    <div className="flex flex-1 items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
+                    <div className="flex flex-1 items-center justify-center bg-media-canvas p-4">
                         <ImageWithFallback
                             alt="Added version"
                             className="max-h-[600px] max-w-full object-contain"
@@ -198,7 +198,7 @@ function SwipeView({
 
     return (
         <div
-            className="relative flex select-none items-center justify-center overflow-hidden bg-[#f0f0f0] dark:bg-zinc-900"
+            className="relative flex select-none items-center justify-center overflow-hidden bg-media-canvas"
             onMouseDown={(e) => {
                 setIsDragging(true);
                 updatePosition(e.clientX);
@@ -265,7 +265,7 @@ function OnionSkinView({
 
     return (
         <div>
-            <div className="relative flex items-center justify-center bg-[#f0f0f0] p-4 dark:bg-zinc-900">
+            <div className="relative flex items-center justify-center bg-media-canvas p-4">
                 <ImageWithFallback
                     alt="New version"
                     className="max-h-[600px] max-w-full object-contain"
@@ -288,20 +288,16 @@ function OnionSkinView({
                 />
             </div>
             <div className="flex items-center gap-3 border-border border-t bg-surface-secondary px-4 py-2">
-                <span className="text-red-600 text-xs dark:text-red-400">
-                    Deleted
-                </span>
+                <span className="text-danger-emphasis text-xs">Deleted</span>
                 <input
-                    className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-surface-selected accent-gray-500 dark:accent-zinc-400"
+                    className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-surface-selected accent-action"
                     max={100}
                     min={0}
                     onChange={(e) => setOpacity(Number(e.target.value))}
                     type="range"
                     value={opacity}
                 />
-                <span className="text-green-600 text-xs dark:text-green-400">
-                    Added
-                </span>
+                <span className="text-success-emphasis text-xs">Added</span>
             </div>
         </div>
     );

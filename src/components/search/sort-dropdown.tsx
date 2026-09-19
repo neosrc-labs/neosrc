@@ -51,7 +51,7 @@ export function SortDropdown({
             <button
                 type="button"
                 onClick={() => setOpen(!open)}
-                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary dark:border-zinc-700"
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2.5 py-1.5 font-medium text-sm text-text-label transition-colors hover:bg-surface-tertiary"
             >
                 <ListOrdered className="size-4" />
                 {currentLabel}

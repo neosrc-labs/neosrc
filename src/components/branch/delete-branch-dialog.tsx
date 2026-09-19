@@ -57,7 +57,7 @@ export function DeleteBranchDialog({
                     </DialogDescription>
                 </DialogHeader>
                 {mutation.error && (
-                    <p className="text-red-600 text-sm">
+                    <p className="text-danger-text text-sm">
                         {mutation.error.message}
                     </p>
                 )}

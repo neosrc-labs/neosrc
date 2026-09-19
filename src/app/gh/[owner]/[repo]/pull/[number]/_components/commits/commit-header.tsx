@@ -75,7 +75,7 @@ export async function CommitHeader({
                 <div className="flex items-center gap-2">
                     {prevCommit ? (
                         <a
-                            className="whitespace-nowrap rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
+                            className="whitespace-nowrap rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-surface-tertiary"
                             href={`/gh/${owner}/${repo}/pull/${number}/changes/${prevCommit.oid}`}
                         >
                             ← Previous
@@ -91,7 +91,7 @@ export async function CommitHeader({
                     )}
                     {nextCommit ? (
                         <a
-                            className="whitespace-nowrap rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-gray-50 dark:hover:bg-zinc-700"
+                            className="whitespace-nowrap rounded-md bg-surface-elevated px-3 py-1.5 font-medium text-sm text-text-label ring-1 ring-ring transition-colors hover:bg-surface-tertiary"
                             href={`/gh/${owner}/${repo}/pull/${number}/changes/${nextCommit.oid}`}
                         >
                             Next →
@@ -140,7 +140,7 @@ export async function CommitHeader({
                             rel="noopener noreferrer"
                             target="_blank"
                         >
-                            <span className="text-sm text-text-secondary hover:text-text-primary dark:hover:text-zinc-200">
+                            <span className="text-sm text-text-secondary hover:text-text-primary">
                                 {commit.author.login}
                             </span>
                         </a>
@@ -196,7 +196,7 @@ export function CommitCountList({
                             <Link
                                 className={`flex items-start gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-surface-tertiary ${
                                     isCurrent
-                                        ? "border-blue-500 border-l-2 bg-blue-50 dark:bg-blue-950"
+                                        ? "border-action border-l-2 bg-info-surface"
                                         : ""
                                 }`}
                                 href={`/gh/${owner}/${repo}/pull/${number}/changes/${commit.oid}`}
