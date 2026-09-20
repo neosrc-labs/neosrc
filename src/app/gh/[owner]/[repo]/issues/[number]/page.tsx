@@ -1,22 +1,11 @@
-import type { Metadata } from "next";
-import { IssueDetailPage } from "~/components/issue/issue-detail-page";
-import { generateIssueMetadata } from "~/server/metadata";
+import {
+    generateIssuePageMetadata,
+    type IssuePageProps,
+    ProviderIssuePage,
+} from "~/app/[owner]/[repo]/_components/provider-route-pages";
 
-interface PageProps {
-    params: Promise<{
-        owner: string;
-        repo: string;
-        number: string;
-    }>;
-}
+export { generateIssuePageMetadata as generateMetadata };
 
-export async function generateMetadata({
-    params,
-}: PageProps): Promise<Metadata> {
-    const { owner, repo, number } = await params;
-    return generateIssueMetadata(owner, repo, number);
-}
-
-export default function IssuePage({ params }: PageProps) {
-    return <IssueDetailPage provider="gh" params={params} />;
+export default function IssuePage(props: IssuePageProps) {
+    return <ProviderIssuePage provider="gh" {...props} />;
 }
