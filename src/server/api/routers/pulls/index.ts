@@ -24,13 +24,7 @@ import {
     getGithubUsername,
     getLinkedAccount,
 } from "~/server/auth";
-import {
-    deleteCache,
-    fetchAndCache,
-    prCacheKey,
-    readCache,
-    searchCacheKey,
-} from "~/server/cache";
+import { deleteCache, prCacheKey, readCache } from "~/server/cache";
 import {
     deleteIssueComment as deleteCodebergIssueComment,
     listAssignees as listCodebergAssignees,
@@ -82,7 +76,7 @@ import {
     getPullRequestHeadShaGraphQL,
     getPullRequestMergeStateGraphQL,
 } from "~/server/github-graphql";
-import type { Ctx } from "../provider";
+import { providerSearchProcedures } from "../provider-search";
 import {
     CodebergPullRequestProvider,
     getCodebergRecentlyPushedBranch,
@@ -91,18 +85,7 @@ import {
     GitHubPullRequestProvider,
     getGitHubRecentlyPushedBranch,
 } from "./github";
-import type { PrSearchResult } from "./types";
-
-const searchInput = providerInput({
-    owner: z.string(),
-    repo: z.string(),
-    query: z.string(),
-    page: z.number().optional(),
-    after: z.string().optional(),
-    first: z.number().optional(),
-    sort: z.enum(["created", "updated", "comments"]).optional(),
-    order: z.enum(["asc", "desc"]).optional(),
-});
+import type { PullRequestProvider } from "./provider";
 
 const evictPullRequests = async (
     owner: string,
@@ -113,6 +96,12 @@ const evictPullRequests = async (
         numbers.map((number) => deleteCache(prCacheKey(owner, repo, number))),
     );
 };
+
+function pullRequestProvider(provider: "gh" | "cb"): PullRequestProvider {
+    return provider === "cb"
+        ? new CodebergPullRequestProvider()
+        : new GitHubPullRequestProvider();
+}
 
 export const pullsRouter = createTRPCRouter({
     updateBody: githubMutation({
@@ -786,33 +775,7 @@ export const pullsRouter = createTRPCRouter({
             ),
     }),
 
-    searchCached: viewerProcedure
-        .input(searchInput)
-        .query(({ ctx, input }): Promise<PrSearchResult | null> => {
-            return readCache<PrSearchResult>(
-                searchCacheKey("pulls", ctx.session?.user?.id, input),
-            );
-        }),
-
-    search: viewerProcedure
-        .input(searchInput)
-        .query(async ({ ctx, input }): Promise<PrSearchResult> => {
-            const providerCtx: Ctx = {
-                db: ctx.db,
-                session: ctx.session,
-            };
-
-            const provider =
-                input.provider === "cb"
-                    ? new CodebergPullRequestProvider()
-                    : new GitHubPullRequestProvider();
-
-            return fetchAndCache(
-                searchCacheKey("pulls", ctx.session?.user?.id, input),
-                () => provider.search({ ...input, ctx: providerCtx }),
-                { staleAfter: 0, deleteAfter: 24 * 60 * 60 * 1000 },
-            );
-        }),
+    ...providerSearchProcedures("pulls", pullRequestProvider),
 
     listDetailsByPrNumbers: viewerProcedure
         .input(
