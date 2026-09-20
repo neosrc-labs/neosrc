@@ -10,10 +10,7 @@ import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
 import { useReviewCommentEdit } from "~/hooks/use-review-comment-edit";
 import { useReviewCommentReply } from "~/hooks/use-review-comment-reply";
-import {
-    applyReviewThreadOperations,
-    useReviewThreadOperations,
-} from "~/hooks/use-review-thread-operations";
+import { useReviewThreads } from "~/hooks/use-review-thread-operations";
 import type { ReviewComment } from "~/server/github";
 import { api } from "~/trpc/react";
 import type { ReactionContent } from "~/utils/reactions";
@@ -219,35 +216,18 @@ export function InlineCommentThread({
         },
     });
 
-    const { data: threads, isPending: threadsPending } =
-        api.reviewComments.threads.useQuery(
-            { owner, repo, number },
-            { staleTime: 30_000 },
-        );
-
-    const resolveOps = useReviewThreadOperations({ owner, repo, number });
-    const displayThreads = applyReviewThreadOperations(
-        threads,
-        resolveOps.operations,
-    );
-
-    const threadInfo = useMemo(() => {
-        if (!displayThreads) return null;
-        return (
-            displayThreads.find((t) =>
-                t.comments.some((c) => c.id === parentComment.id),
-            ) ?? null
-        );
-    }, [displayThreads, parentComment.id]);
+    const reviewThreads = useReviewThreads({ owner, repo, number });
+    const threadInfo =
+        reviewThreads.threadByCommentId.get(parentComment.id) ?? null;
 
     const handleResolve = useCallback(() => {
         if (!threadInfo) return;
         setExpandedResolved(false);
-        resolveOps.resolve({
+        reviewThreads.resolve({
             threadId: threadInfo.id,
             resolve: !threadInfo.isResolved,
         });
-    }, [threadInfo, resolveOps.resolve]);
+    }, [threadInfo, reviewThreads.resolve]);
 
     const handleDelete = useCallback(
         (commentId: number) => {
@@ -258,7 +238,7 @@ export function InlineCommentThread({
 
     // Never render comment bodies while thread resolution state is unknown:
     // resolved threads must not flash open while the threads query loads.
-    if (threadsPending) {
+    if (reviewThreads.isPending) {
         return <div id={`review-thread-${parentComment.id}`} />;
     }
 
@@ -400,7 +380,9 @@ export function InlineCommentThread({
                                 onClick={handleResolve}
                                 isPending={
                                     threadInfo
-                                        ? resolveOps.isPending(threadInfo.id)
+                                        ? reviewThreads.isResolving(
+                                              threadInfo.id,
+                                          )
                                         : false
                                 }
                                 isUnresolve={threadInfo?.isResolved ?? false}

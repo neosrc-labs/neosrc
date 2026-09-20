@@ -12,6 +12,7 @@ import {
     mockReactionPicker,
     mockUseReactionToggle,
     mockUseReviewThreadOperations,
+    type ReviewThreadMockData,
 } from "~/__tests__/helpers/component-mocks";
 import {
     reviewCommentReactionsUtils,
@@ -24,7 +25,9 @@ import type { ReviewComment } from "~/server/github";
 import { ReviewComments } from "./review-comments";
 
 const mockThreadsQuery = vi.hoisted(() =>
-    vi.fn<() => { data: unknown; isPending?: boolean }>(() => ({
+    vi.fn<
+        () => { data: ReviewThreadMockData[] | undefined; isPending?: boolean }
+    >(() => ({
         data: undefined,
     })),
 );
@@ -56,7 +59,7 @@ vi.mock("~/trpc/react", () => ({
 vi.mock("~/hooks/use-reaction-toggle", () => mockUseReactionToggle());
 
 vi.mock("~/hooks/use-review-thread-operations", () =>
-    mockUseReviewThreadOperations(),
+    mockUseReviewThreadOperations(mockThreadsQuery),
 );
 
 vi.mock("./comment-card", () => mockCommentCard());

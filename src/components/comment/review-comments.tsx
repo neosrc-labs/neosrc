@@ -12,10 +12,7 @@ import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useTogglePullRequestReviewCommentReaction } from "~/hooks/use-reaction-toggle";
 import { useReviewCommentEdit } from "~/hooks/use-review-comment-edit";
 import { useReviewCommentReply } from "~/hooks/use-review-comment-reply";
-import {
-    applyReviewThreadOperations,
-    useReviewThreadOperations,
-} from "~/hooks/use-review-thread-operations";
+import { useReviewThreads } from "~/hooks/use-review-thread-operations";
 import { type TaskToggleApi, useTaskToggle } from "~/hooks/use-task-toggle";
 import type { ReviewCommentBase } from "~/server/github";
 import { api } from "~/trpc/react";
@@ -68,31 +65,7 @@ export function ReviewComments({
     );
     const utils = api.useUtils();
 
-    const { data: threads, isPending: threadsPending } =
-        api.reviewComments.threads.useQuery(
-            { owner, repo, number },
-            { staleTime: 30_000 },
-        );
-
-    const resolveOps = useReviewThreadOperations({ owner, repo, number });
-    const displayThreads = applyReviewThreadOperations(
-        threads,
-        resolveOps.operations,
-    );
-
-    const threadByCommentId = useMemo(() => {
-        const map = new Map<
-            number,
-            NonNullable<typeof displayThreads>[number]
-        >();
-        if (!displayThreads) return map;
-        for (const thread of displayThreads) {
-            for (const c of thread.comments) {
-                map.set(c.id, thread);
-            }
-        }
-        return map;
-    }, [displayThreads]);
+    const reviewThreads = useReviewThreads({ owner, repo, number });
 
     const handleResolve = useCallback(
         (commentId: number, threadId: string, resolve: boolean) => {
@@ -101,12 +74,12 @@ export function ReviewComments({
                 next.delete(commentId);
                 return next;
             });
-            resolveOps.resolve({
+            reviewThreads.resolve({
                 threadId,
                 resolve,
             });
         },
-        [resolveOps.resolve],
+        [reviewThreads.resolve],
     );
 
     const allCommentIds = useMemo(() => {
@@ -288,14 +261,14 @@ export function ReviewComments({
 
     // Never render comment bodies while thread resolution state is unknown:
     // resolved threads must not flash open while the threads query loads.
-    if (threadsPending) {
+    if (reviewThreads.isPending) {
         return null;
     }
 
     return (
         <div className="max-w-[800px] pt-1">
             {topLevel.map((comment) => {
-                const thread = threadByCommentId.get(comment.id);
+                const thread = reviewThreads.threadByCommentId.get(comment.id);
                 const isResolved = thread?.isResolved ?? false;
                 const isExpanded = expandedResolvedIds.has(comment.id);
                 const toggleExpanded = () =>
@@ -364,7 +337,7 @@ export function ReviewComments({
                                 isResolved={isResolved}
                                 isExpanded={isExpanded}
                                 threadId={thread?.id ?? ""}
-                                isResolvePending={resolveOps.isPending}
+                                isResolvePending={reviewThreads.isResolving}
                                 onStartEdit={startEdit}
                                 onEditBodyChange={setEditBody}
                                 onCancelEdit={cancelEdit}
