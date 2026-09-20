@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import {
@@ -9,10 +8,11 @@ import {
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
+import { useOptimisticOperationLog } from "~/hooks/use-optimistic-operation-log";
 import type { IssueMetadata } from "~/server/api/routers/issues/types";
 import type { Assignee } from "~/server/api/routers/mappers";
 import { api } from "~/trpc/react";
-import { applyArrayOperations, opId } from "~/utils/helpers";
+import { applyArrayOperations } from "~/utils/helpers";
 import { domain, type Provider } from "~/utils/provider-url";
 import { FieldSkeleton } from "./metadata-section";
 
@@ -50,12 +50,8 @@ export function AssigneeSection({
     repo,
     number,
 }: AssigneeSectionProps) {
-    const [operations, setOperations] = useState<AssigneeOperation[]>([]);
-
-    // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the operations
-    useEffect(() => {
-        setOperations([]);
-    }, [metadataPromise]);
+    const { operations, begin } =
+        useOptimisticOperationLog<AssigneeOperation>(metadataPromise);
 
     const { data: repoAssignees } = api.pulls.listAssignees.useQuery(
         { provider, owner, repo },
@@ -71,27 +67,21 @@ export function AssigneeSection({
         );
         if (!repoAssignee) return;
 
-        const id = opId();
-        setOperations((prev) => [...prev, { id, op: "add", assignee }]);
+        const rollback = begin((id) => ({ id, op: "add", assignee }));
         addMutation.mutate(
             { owner, repo, number, assignee: assignee.login },
             {
-                onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id !== id));
-                },
+                onError: rollback,
             },
         );
     };
 
     const handleRemove = (assignee: Assignee) => {
-        const id = opId();
-        setOperations((prev) => [...prev, { id, op: "remove", assignee }]);
+        const rollback = begin((id) => ({ id, op: "remove", assignee }));
         removeMutation.mutate(
             { owner, repo, number, assignee: assignee.login },
             {
-                onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id !== id));
-                },
+                onError: rollback,
             },
         );
     };
