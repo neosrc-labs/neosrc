@@ -1,6 +1,9 @@
 import type { RestEndpointMethodTypes } from "@octokit/rest";
 import { cache } from "react";
-import { createGraphql, isOrgRestrictionError } from "~/server/github-graphql";
+import {
+    createGraphql,
+    isOrgRestrictionError,
+} from "~/server/github/graphql-client";
 import { createOctokit } from "./client";
 
 export type IssueSearchItem = {

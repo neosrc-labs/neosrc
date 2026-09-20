@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { withStaleWhileRevalidate } from "~/server/cache";
+import { createGraphql } from "~/server/github/graphql-client";
 import {
-    createGraphql,
     type GQLCommitAuthor,
     resolveCommitAuthor,
 } from "~/server/github-graphql";

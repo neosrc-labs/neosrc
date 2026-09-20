@@ -1,4 +1,5 @@
-import { createGraphql, type GQLActor } from "~/server/github-graphql";
+import { createGraphql } from "~/server/github/graphql-client";
+import type { GQLActor } from "~/server/github-graphql";
 import { createOctokit } from "./client";
 import { getPullRequest } from "./pulls";
 

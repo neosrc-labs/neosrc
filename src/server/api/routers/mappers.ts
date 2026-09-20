@@ -9,10 +9,12 @@ import type {
     PullsGetResponseData,
 } from "~/server/github";
 import type {
-    GQLPullRequestReactions,
-    GQLReactionNode,
     GqlIssueSearchItem,
     GqlPrSearchItem,
+} from "~/server/github/graphql-search";
+import type {
+    GQLPullRequestReactions,
+    GQLReactionNode,
 } from "~/server/github-graphql";
 import { domain, repoUrl } from "~/utils/provider-url";
 import { ALL_REACTIONS, type ReactionContent } from "~/utils/reactions";

@@ -1,7 +1,7 @@
 import { Octokit, type RestEndpointMethodTypes } from "@octokit/rest";
 import { cache } from "react";
 import { getProviderTokenRefresh } from "~/server/auth/token-registry";
-import { isUnauthorizedError } from "~/server/github-graphql";
+import { isUnauthorizedError } from "~/server/github/graphql-client";
 
 export type TeamGetByNameResponseData =
     RestEndpointMethodTypes["teams"]["getByName"]["response"]["data"];

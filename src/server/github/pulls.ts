@@ -6,8 +6,8 @@ import {
     readCache,
     withStaleWhileRevalidate,
 } from "~/server/cache";
+import { createGraphql } from "~/server/github/graphql-client";
 import {
-    createGraphql,
     disablePullRequestAutoMergeGraphQL,
     enablePullRequestAutoMergeGraphQL,
     getPullRequestStackGraphQL,

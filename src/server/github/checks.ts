@@ -1,10 +1,10 @@
 import type { RestEndpointMethodTypes } from "@octokit/rest";
 import { cache } from "react";
 import { readCache, withStaleWhileRevalidate } from "~/server/cache";
+import { isOrgRestrictionError } from "~/server/github/graphql-client";
 import {
     type GqlCommitChecks,
     getCommitChecksGraphQL,
-    isOrgRestrictionError,
 } from "~/server/github-graphql";
 import {
     deduplicateCommitStatuses,

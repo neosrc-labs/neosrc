@@ -7,7 +7,7 @@ import {
     getCachedRepo,
     listRepoActivity,
 } from "~/server/github";
-import { searchPullRequestsWithStatus } from "~/server/github-graphql";
+import { searchPullRequestsWithStatus } from "~/server/github/graphql-search";
 import { compareUrl } from "~/utils/provider-url";
 import type { PullRequestProvider } from "./provider";
 import {

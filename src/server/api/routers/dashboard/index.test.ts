@@ -27,7 +27,7 @@ vi.mock("~/server/auth", () => ({
 }));
 
 const graphqlMock = vi.hoisted(() => vi.fn());
-vi.mock("~/server/github-graphql", () => ({
+vi.mock("~/server/github/graphql-client", () => ({
     createGraphql: () => graphqlMock,
 }));
 

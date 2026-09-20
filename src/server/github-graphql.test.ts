@@ -14,14 +14,14 @@ vi.mock("@octokit/graphql", async (importOriginal) => {
     };
 });
 
+import { isOrgRestrictionError } from "~/server/github/graphql-client";
+import { getPinnedIssuesGraphQL } from "~/server/github/graphql-search";
 import {
     addReaction,
     disablePullRequestAutoMergeGraphQL,
     enablePullRequestAutoMergeGraphQL,
-    getPinnedIssuesGraphQL,
     getPullRequestMergeStateGraphQL,
     getPullRequestReactionsGraphQL,
-    isOrgRestrictionError,
     resolveCommitAuthor,
 } from "~/server/github-graphql";
 
