@@ -5,6 +5,21 @@ import type { ReactNode } from "react";
 import { Pagination } from "~/components/ui/pagination";
 import type { SearchListResult } from "./use-search-list";
 
+function refreshStatusMessage(
+    refreshStatus: SearchListResult<unknown>["refreshStatus"],
+) {
+    if (refreshStatus === "refreshing") {
+        return "Refreshing cached results...";
+    }
+    if (refreshStatus === "paused") {
+        return "Offline - results may be outdated";
+    }
+    if (refreshStatus === "error") {
+        return "Refresh failed - results may be outdated";
+    }
+    return null;
+}
+
 export function SearchListLayout({
     searchBar,
     toolbar,
@@ -50,13 +65,7 @@ export function SearchListLayout({
                         />
                     )}
                     <span className="truncate">
-                        {refreshStatus === "refreshing"
-                            ? "Refreshing cached results..."
-                            : refreshStatus === "paused"
-                              ? "Offline - results may be outdated"
-                              : refreshStatus === "error"
-                                ? "Refresh failed - results may be outdated"
-                                : null}
+                        {refreshStatusMessage(refreshStatus)}
                     </span>
                 </div>
                 <div className="flex w-20 shrink-0 items-center justify-center">

@@ -164,19 +164,20 @@ export function MergeStatusBar({
         );
     }
 
-    const buttonText = isMerging
-        ? "Merging..."
-        : isStackMerge
-          ? effectiveMergeMode === "squash"
-              ? "Squash and merge stack"
-              : effectiveMergeMode === "rebase"
+    let buttonText = "Merging...";
+    if (!isMerging) {
+        if (effectiveMergeMode === "squash") {
+            buttonText = isStackMerge
+                ? "Squash and merge stack"
+                : "Squash and merge";
+        } else if (effectiveMergeMode === "rebase") {
+            buttonText = isStackMerge
                 ? "Rebase and merge stack"
-                : "Merge stack"
-          : effectiveMergeMode === "squash"
-            ? "Squash and merge"
-            : effectiveMergeMode === "rebase"
-              ? "Rebase and merge"
-              : "Merge pull request";
+                : "Rebase and merge";
+        } else {
+            buttonText = isStackMerge ? "Merge stack" : "Merge pull request";
+        }
+    }
     return (
         <div className="flex items-stretch">
             <button

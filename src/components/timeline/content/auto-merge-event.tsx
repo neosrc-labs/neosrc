@@ -24,14 +24,14 @@ export function AutoMergeEventContent({
         event.__typename === "AutoMergeEnabledEvent" ||
         event.__typename === "AutoSquashEnabledEvent" ||
         event.__typename === "AutoRebaseEnabledEvent";
-    const mergeMethod =
-        event.__typename === "AutoSquashEnabledEvent"
-            ? "squash"
-            : event.__typename === "AutoRebaseEnabledEvent"
-              ? "rebase"
-              : event.__typename === "AutoMergeEnabledEvent"
-                ? "merge"
-                : null;
+    let mergeMethod: "squash" | "rebase" | "merge" | null = null;
+    if (event.__typename === "AutoSquashEnabledEvent") {
+        mergeMethod = "squash";
+    } else if (event.__typename === "AutoRebaseEnabledEvent") {
+        mergeMethod = "rebase";
+    } else if (event.__typename === "AutoMergeEnabledEvent") {
+        mergeMethod = "merge";
+    }
     return (
         <MergeEventRow
             event={event}

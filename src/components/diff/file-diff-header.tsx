@@ -37,14 +37,14 @@ export function FileDiffHeader({
     onToggleFileComment: () => void;
     isFileCommentOpen: boolean;
 }) {
-    const statusColor =
-        file.status === "added"
-            ? "text-success-emphasis"
-            : file.status === "deleted"
-              ? "text-danger-emphasis"
-              : file.status === "renamed"
-                ? "text-info-emphasis"
-                : "text-warning-emphasis";
+    let statusColor = "text-warning-emphasis";
+    if (file.status === "added") {
+        statusColor = "text-success-emphasis";
+    } else if (file.status === "deleted") {
+        statusColor = "text-danger-emphasis";
+    } else if (file.status === "renamed") {
+        statusColor = "text-info-emphasis";
+    }
     return (
         <div
             ref={headerRef}

@@ -363,14 +363,14 @@ function FileTreeNode({
         ]
             .filter(Boolean)
             .join(" ");
-        const statusClass =
-            node.status === "added"
-                ? "text-success-emphasis"
-                : node.status === "modified"
-                  ? "text-warning-emphasis"
-                  : node.status === "removed"
-                    ? "text-danger-emphasis"
-                    : undefined;
+        let statusClass: string | undefined;
+        if (node.status === "added") {
+            statusClass = "text-success-emphasis";
+        } else if (node.status === "modified") {
+            statusClass = "text-warning-emphasis";
+        } else if (node.status === "removed") {
+            statusClass = "text-danger-emphasis";
+        }
         const rowClass = cn(
             "flex items-center gap-1.5 truncate rounded px-2 py-1 text-sm text-text-label transition-colors hover:bg-surface-tertiary",
             isActive && "bg-surface-secondary",

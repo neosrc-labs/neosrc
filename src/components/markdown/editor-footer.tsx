@@ -47,17 +47,22 @@ export function EditorFooter({
                                 ? action.disabled(value)
                                 : action.disabled);
 
+                        let variantClass =
+                            "bg-surface-tertiary text-text-label enabled:hover:bg-surface-selected";
+                        if (action.variant === "approve") {
+                            variantClass =
+                                "bg-state-open-solid text-state-solid-foreground enabled:hover:bg-state-open-solid/90";
+                        } else if (action.variant === "danger") {
+                            variantClass =
+                                "bg-destructive text-destructive-foreground enabled:hover:bg-destructive-hover";
+                        } else if (action.variant === "outline") {
+                            variantClass =
+                                "bg-surface-elevated text-text-label ring-1 ring-ring enabled:hover:bg-surface-tertiary";
+                        }
+
                         const button = (
                             <button
-                                className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-4 py-1.5 font-medium text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                                    action.variant === "approve"
-                                        ? "bg-state-open-solid text-state-solid-foreground enabled:hover:bg-state-open-solid/90"
-                                        : action.variant === "danger"
-                                          ? "bg-destructive text-destructive-foreground enabled:hover:bg-destructive-hover"
-                                          : action.variant === "outline"
-                                            ? "bg-surface-elevated text-text-label ring-1 ring-ring enabled:hover:bg-surface-tertiary"
-                                            : "bg-surface-tertiary text-text-label enabled:hover:bg-surface-selected"
-                                }`}
+                                className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-4 py-1.5 font-medium text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${variantClass}`}
                                 disabled={actionDisabled}
                                 onClick={action.onClick}
                                 type="button"

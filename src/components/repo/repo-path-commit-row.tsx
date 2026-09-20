@@ -69,31 +69,38 @@ export function RepoPathCommitRow({
 
     const latest = commits?.[0] ?? null;
     const previous = commits?.[1] ?? null;
-    const previousHref = previous
-        ? view === "tree"
-            ? treeHref(
-                  provider,
-                  owner,
-                  repo,
-                  { kind: "commit", value: previous.sha },
-                  path,
-              )
-            : view === "blame"
-              ? blameHref(
-                    provider,
-                    owner,
-                    repo,
-                    { kind: "commit", value: previous.sha },
-                    path,
-                )
-              : blobHref(
-                    provider,
-                    owner,
-                    repo,
-                    { kind: "commit", value: previous.sha },
-                    path,
-                )
-        : undefined;
+    let previousHref: string | undefined;
+    if (previous) {
+        const previousReference = {
+            kind: "commit" as const,
+            value: previous.sha,
+        };
+        if (view === "tree") {
+            previousHref = treeHref(
+                provider,
+                owner,
+                repo,
+                previousReference,
+                path,
+            );
+        } else if (view === "blame") {
+            previousHref = blameHref(
+                provider,
+                owner,
+                repo,
+                previousReference,
+                path,
+            );
+        } else {
+            previousHref = blobHref(
+                provider,
+                owner,
+                repo,
+                previousReference,
+                path,
+            );
+        }
+    }
 
     return (
         <div

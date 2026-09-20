@@ -172,13 +172,14 @@ export function useSearchList<TItem>(
     const showLoading =
         data === undefined &&
         (searchResult.isLoading || isResolving || !!searchResult.isPaused);
-    const refreshStatus = searchResult.isPaused
-        ? "paused"
-        : searchResult.isError
-          ? "error"
-          : data !== undefined && (searchResult.isFetching || isResolving)
-            ? "refreshing"
-            : undefined;
+    let refreshStatus: "paused" | "error" | "refreshing" | undefined;
+    if (searchResult.isPaused) {
+        refreshStatus = "paused";
+    } else if (searchResult.isError) {
+        refreshStatus = "error";
+    } else if (data !== undefined && (searchResult.isFetching || isResolving)) {
+        refreshStatus = "refreshing";
+    }
 
     useEffect(() => {
         const cursor = data?.endCursor;

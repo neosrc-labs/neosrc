@@ -24,18 +24,19 @@ export function StateEventContent({
 }) {
     const timestamp = formatRelativeTime(event.createdAt);
     const fullDate = formatDateTime(event.createdAt);
-    const action =
-        event.__typename === "ClosedEvent"
-            ? `closed this${
-                  event.stateReason
-                      ? ` as ${event.stateReason.toLowerCase().replace(/_/g, " ")}`
-                      : ""
-              }`
-            : event.__typename === "ReopenedEvent"
-              ? "reopened this"
-              : event.__typename === "ConvertToDraftEvent"
-                ? "converted to draft this"
-                : "marked ready for review this";
+    let action: string;
+    if (event.__typename === "ClosedEvent") {
+        const reason = event.stateReason
+            ? ` as ${event.stateReason.toLowerCase().replace(/_/g, " ")}`
+            : "";
+        action = `closed this${reason}`;
+    } else if (event.__typename === "ReopenedEvent") {
+        action = "reopened this";
+    } else if (event.__typename === "ConvertToDraftEvent") {
+        action = "converted to draft this";
+    } else {
+        action = "marked ready for review this";
+    }
     return (
         <EventRow>
             <UserLink actor={event.actor} provider={provider} />

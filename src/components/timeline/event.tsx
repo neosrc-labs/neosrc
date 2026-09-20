@@ -439,27 +439,32 @@ function TimelineIcon({
     const isClosed = typename === "ClosedEvent";
     const isReopened = typename === "ReopenedEvent";
 
-    const circleClass = isApproved
-        ? approvalHasWriteAccess(event.authorPermission)
-            ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-open-solid"
-            : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-surface ring-1 ring-border"
-        : isChangesRequested
-          ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-closed-solid"
-          : isClosed
-            ? isIssue
-                ? isInactiveIssueClose
-                    ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-issue-inactive text-state-solid-foreground"
-                    : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-issue-completed text-state-solid-foreground"
-                : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-closed-solid"
-            : isReopened
-              ? `absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full ${
-                    isIssue
-                        ? "bg-state-issue-open text-state-solid-foreground"
-                        : "bg-state-open-solid"
-                }`
-              : isMerged
-                ? "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-state-merged-solid"
-                : "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full bg-surface ring-1 ring-border";
+    const circleBase =
+        "absolute -left-12 flex h-7 w-7 items-center justify-center rounded-full";
+    let circleStyle = "bg-surface ring-1 ring-border";
+    if (isApproved) {
+        if (approvalHasWriteAccess(event.authorPermission)) {
+            circleStyle = "bg-state-open-solid";
+        }
+    } else if (isChangesRequested) {
+        circleStyle = "bg-state-closed-solid";
+    } else if (isClosed) {
+        if (!isIssue) {
+            circleStyle = "bg-state-closed-solid";
+        } else if (isInactiveIssueClose) {
+            circleStyle = "bg-state-issue-inactive text-state-solid-foreground";
+        } else {
+            circleStyle =
+                "bg-state-issue-completed text-state-solid-foreground";
+        }
+    } else if (isReopened) {
+        circleStyle = isIssue
+            ? "bg-state-issue-open text-state-solid-foreground"
+            : "bg-state-open-solid";
+    } else if (isMerged) {
+        circleStyle = "bg-state-merged-solid";
+    }
+    const circleClass = `${circleBase} ${circleStyle}`;
 
     let icon = iconMap[typename] ?? <Circle size={ICON_SIZE} />;
 

@@ -393,14 +393,16 @@ export function SplitBlockRows({
             newCodeClass,
         });
 
-        const rowKey =
-            row.kind === "context"
-                ? `c-${oldNum}-${newNum}`
-                : row.kind === "paired"
-                  ? `p-${oldNum}-${newNum}`
-                  : row.kind === "del"
-                    ? `d-${oldNum}`
-                    : `a-${newNum}`;
+        let rowKey: string;
+        if (row.kind === "context") {
+            rowKey = `c-${oldNum}-${newNum}`;
+        } else if (row.kind === "paired") {
+            rowKey = `p-${oldNum}-${newNum}`;
+        } else if (row.kind === "del") {
+            rowKey = `d-${oldNum}`;
+        } else {
+            rowKey = `a-${newNum}`;
+        }
 
         const hovered = hover?.key === rowKey ? hover.side : null;
         const hoverLeft = () => setHover({ key: rowKey, side: "LEFT" });

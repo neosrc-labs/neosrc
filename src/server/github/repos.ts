@@ -107,13 +107,15 @@ export const getRepoCollaboratorPermissions = cache(
                             // The permissions hash uses the legacy base roles:
                             // maintain implies push (write) and triage implies
                             // pull (read), matching getCollaboratorPermissionLevel.
-                            permissions[collaborator.login] = p?.admin
-                                ? "admin"
-                                : p?.push
-                                  ? "write"
-                                  : p?.pull
-                                    ? "read"
-                                    : "none";
+                            if (p?.admin) {
+                                permissions[collaborator.login] = "admin";
+                            } else if (p?.push) {
+                                permissions[collaborator.login] = "write";
+                            } else if (p?.pull) {
+                                permissions[collaborator.login] = "read";
+                            } else {
+                                permissions[collaborator.login] = "none";
+                            }
                         }
                         if (response.data.length < 100) break;
                         page += 1;
