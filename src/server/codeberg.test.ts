@@ -34,7 +34,7 @@ function issue(overrides: Record<string, unknown> = {}) {
 }
 
 function stubFetch(items: unknown[]) {
-    const mock = vi.fn(async (_url: string) => ({
+    const mock = vi.fn(async (_url: string, _init?: RequestInit) => ({
         ok: true,
         json: async () => items,
         headers: { get: () => null },
@@ -60,14 +60,16 @@ describe("listPinnedIssues", () => {
         await expect(listPinnedIssues("tok", "own", "repo")).resolves.toEqual(
             pinned,
         );
-        expect(mock).toHaveBeenCalledWith(
+        expect(mock).toHaveBeenCalledTimes(1);
+        expect(mock.mock.calls[0]?.[0]).toBe(
             "https://codeberg.org/api/v1/repos/own/repo/issues/pinned",
-            {
-                headers: {
-                    Authorization: "token tok",
-                    Accept: "application/json",
-                },
-            },
+        );
+        const init = mock.mock.calls[0]?.[1] as RequestInit;
+        expect(new Headers(init.headers).get("Authorization")).toBe(
+            "token tok",
+        );
+        expect(new Headers(init.headers).get("Accept")).toBe(
+            "application/json",
         );
     });
 });
