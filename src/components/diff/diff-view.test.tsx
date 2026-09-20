@@ -354,72 +354,7 @@ describe("DiffView rendering", () => {
         });
     });
 
-    describe("comment button interactions", () => {
-        it("clicking Plus calls onStartComment with single line", () => {
-            const onStartComment = vi.fn();
-            const { firstPlus } = renderCommentButton(onStartComment);
-            expect(firstPlus).toBeTruthy();
-
-            fireEvent.click(firstPlus!);
-
-            expect(onStartComment).toHaveBeenCalledWith({
-                type: "line",
-                line: 1,
-                side: "RIGHT",
-            });
-        });
-
-        it("clicking Plus when activeComment is active toggles it off", () => {
-            const onStartComment = vi.fn();
-            const lines = [mc(" line1", 1, 1)];
-            mockParsedFile([mb(1, lines)]);
-
-            const { container } = renderDiffView({
-                showCommentButton: true,
-                onStartComment,
-                activeComment: { type: "line", line: 1, side: "RIGHT" },
-            });
-
-            const firstPlus = container.querySelector(
-                '[data-testid="square-plus"]',
-            );
-            fireEvent.click(firstPlus!);
-
-            expect(onStartComment).toHaveBeenCalledWith(null);
-        });
-
-        it("shift+click Plus with active comment extends range", () => {
-            const onStartComment = vi.fn();
-            const lines = [
-                mc(" line1", 1, 1),
-                mc("+line2", 2),
-                mc("+line3", 3),
-            ];
-            mockParsedFile([mb(1, lines)], { addedLines: 2 });
-
-            const { container } = renderDiffView({
-                showCommentButton: true,
-                onStartComment,
-                activeComment: { type: "line", line: 1, side: "RIGHT" },
-            });
-
-            const buttons = container.querySelectorAll(
-                '[data-testid="square-plus"]',
-            );
-            const thirdButton = buttons[2];
-            expect(thirdButton).toBeTruthy();
-
-            fireEvent.click(thirdButton!, { shiftKey: true });
-
-            expect(onStartComment).toHaveBeenCalledWith({
-                type: "line",
-                line: 3,
-                side: "RIGHT",
-                startLine: 1,
-                startSide: "RIGHT",
-            });
-        });
-
+    describe("comment editor integration", () => {
         it("MarkdownEditor renders when line is active", () => {
             const lines = [mc(" line1", 1, 1)];
             mockParsedFile([mb(1, lines)]);

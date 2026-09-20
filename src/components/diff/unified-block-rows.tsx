@@ -1,10 +1,10 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import { Fragment, useCallback } from "react";
 import { InlineCommentThread } from "../comment/inline-comment-thread";
 import { groupReviewCommentThreads } from "../comment/review-comment-threads";
 import type { BlockRowsSharedProps } from "./diff-block-rows";
+import { DiffCommentButton } from "./diff-comment-button";
 import { DiffLineCommentEditor } from "./diff-line-comment-editor";
 import { DiffLineRow } from "./diff-line-row";
 import { isLastLineOfRange } from "./model";
@@ -128,55 +128,18 @@ export function UnifiedBlockRows({
                             >
                                 <div className="d2h-ln-overlay absolute">
                                     {showCommentButton && onStartComment && (
-                                        <Plus
-                                            size={24}
-                                            className="absolute -right-3.5 z-10 hidden rounded-md bg-action p-0.5 text-action-foreground group-hover:block"
-                                            onMouseDown={(e) => {
-                                                e.stopPropagation();
-                                                onCommentDragStart?.(
-                                                    commentLine,
-                                                    side as "LEFT" | "RIGHT",
-                                                    {
-                                                        oldLine: oldNum,
-                                                        newLine: newNum,
-                                                    },
-                                                );
+                                        <DiffCommentButton
+                                            line={commentLine}
+                                            side={side}
+                                            rowLines={{
+                                                oldLine: oldNum,
+                                                newLine: newNum,
                                             }}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (
-                                                    e.shiftKey &&
-                                                    activeComment?.type ===
-                                                        "line" &&
-                                                    activeComment.side === side
-                                                ) {
-                                                    const start = Math.min(
-                                                        activeComment.line,
-                                                        commentLine,
-                                                    );
-                                                    const end = Math.max(
-                                                        activeComment.line,
-                                                        commentLine,
-                                                    );
-                                                    onStartComment({
-                                                        type: "line",
-                                                        line: end,
-                                                        side,
-                                                        startLine: start,
-                                                        startSide: side,
-                                                    });
-                                                } else {
-                                                    onStartComment(
-                                                        isActive
-                                                            ? null
-                                                            : {
-                                                                  type: "line",
-                                                                  line: commentLine,
-                                                                  side,
-                                                              },
-                                                    );
-                                                }
-                                            }}
+                                            isActive={isActive}
+                                            activeComment={activeComment}
+                                            onStartComment={onStartComment}
+                                            onDragStart={onCommentDragStart}
+                                            visibilityClass="hidden group-hover:block"
                                         />
                                     )}
                                     <div className="line-num1">

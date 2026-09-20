@@ -1,6 +1,5 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import { Fragment, type ReactNode, useCallback, useState } from "react";
 import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import type { ReviewComment } from "~/server/github";
@@ -8,6 +7,7 @@ import { InlineCommentThread } from "../comment/inline-comment-thread";
 import { groupReviewCommentThreads } from "../comment/review-comment-threads";
 import type { FooterAction } from "../markdown/markdown-editor";
 import type { BlockRowsSharedProps } from "./diff-block-rows";
+import { DiffCommentButton } from "./diff-comment-button";
 import { DiffLineCommentEditor } from "./diff-line-comment-editor";
 import { DiffLineRow } from "./diff-line-row";
 import type { SplitRow } from "./model";
@@ -260,47 +260,6 @@ export function SplitBlockRows({
         [onLineSelect],
     );
 
-    const renderPlusButton = (
-        visible: boolean,
-        commentLine: number,
-        side: DiffSide,
-        isActive: boolean,
-        rowLines?: DiffRowLines,
-    ) => (
-        <Plus
-            size={24}
-            className={`absolute -right-3.5 z-10 ${visible ? "block" : "hidden"} rounded-md bg-action p-0.5 text-action-foreground`}
-            onMouseDown={(e) => {
-                e.stopPropagation();
-                onCommentDragStart?.(commentLine, side, rowLines);
-            }}
-            onClick={(e) => {
-                e.stopPropagation();
-                if (
-                    e.shiftKey &&
-                    activeComment?.type === "line" &&
-                    activeComment.side === side
-                ) {
-                    const start = Math.min(activeComment.line, commentLine);
-                    const end = Math.max(activeComment.line, commentLine);
-                    onStartComment?.({
-                        type: "line",
-                        line: end,
-                        side,
-                        startLine: start,
-                        startSide: side,
-                    });
-                } else {
-                    onStartComment?.(
-                        isActive
-                            ? null
-                            : { type: "line", line: commentLine, side },
-                    );
-                }
-            }}
-        />
-    );
-
     const renderSplitRow = (row: SplitRow) => {
         const oldLine =
             row.kind === "context"
@@ -439,15 +398,32 @@ export function SplitBlockRows({
                                 {showCommentButton &&
                                     onStartComment &&
                                     oldLine != null &&
-                                    (isContext || oldLine.type === "delete") &&
-                                    renderPlusButton(
-                                        hovered === "LEFT",
-                                        isContext ? (newNum as number) : oldNum,
-                                        isContext ? "RIGHT" : "LEFT",
-                                        isContext
-                                            ? (newState?.isActive ?? false)
-                                            : (oldState?.isActive ?? false),
-                                        rowLines,
+                                    (isContext ||
+                                        oldLine.type === "delete") && (
+                                        <DiffCommentButton
+                                            line={
+                                                isContext
+                                                    ? (newNum as number)
+                                                    : oldNum
+                                            }
+                                            side={isContext ? "RIGHT" : "LEFT"}
+                                            rowLines={rowLines}
+                                            isActive={
+                                                isContext
+                                                    ? (newState?.isActive ??
+                                                      false)
+                                                    : (oldState?.isActive ??
+                                                      false)
+                                            }
+                                            activeComment={activeComment}
+                                            onStartComment={onStartComment}
+                                            onDragStart={onCommentDragStart}
+                                            visibilityClass={
+                                                hovered === "LEFT"
+                                                    ? "block"
+                                                    : "hidden"
+                                            }
+                                        />
                                     )}
                                 <span className="d2h-split-ln-num">
                                     {oldNum}
@@ -487,13 +463,24 @@ export function SplitBlockRows({
                                 {showCommentButton &&
                                     onStartComment &&
                                     newLine != null &&
-                                    (isContext || newLine.type === "insert") &&
-                                    renderPlusButton(
-                                        hovered === "RIGHT",
-                                        newNum,
-                                        "RIGHT",
-                                        newState?.isActive ?? false,
-                                        rowLines,
+                                    (isContext ||
+                                        newLine.type === "insert") && (
+                                        <DiffCommentButton
+                                            line={newNum}
+                                            side="RIGHT"
+                                            rowLines={rowLines}
+                                            isActive={
+                                                newState?.isActive ?? false
+                                            }
+                                            activeComment={activeComment}
+                                            onStartComment={onStartComment}
+                                            onDragStart={onCommentDragStart}
+                                            visibilityClass={
+                                                hovered === "RIGHT"
+                                                    ? "block"
+                                                    : "hidden"
+                                            }
+                                        />
                                     )}
                                 <span className="d2h-split-ln-num">
                                     {newNum}
