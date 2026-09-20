@@ -8,12 +8,15 @@ import type {
     Db,
     PermissionSyncInput,
     PermissionSyncSnapshot,
-    RelationRow,
-    RepoPermission,
     SyncRepo,
     SyncResult,
 } from "./shared";
-import { hashSnapshot, runPermissionSync } from "./shared";
+import {
+    buildUserRepoRelations,
+    hashSnapshot,
+    repoSnapshotEntries,
+    runPermissionSync,
+} from "./shared";
 
 /**
  * Upserts the account row for `owner` plus every repository it owns.
@@ -98,26 +101,12 @@ export async function syncCurrentUserCodeberg(
             };
         },
         async buildRelations(ctx, _result, snapshot, userAccountId) {
-            const relations: RelationRow[] = [];
-
-            for (const repo of snapshot.repos) {
-                const repoId = await ctx.ensureRepo(repo);
-                // Personal repos already grant admin via
-                // mv_user_repo_permissions.
-                if (repo.owner.login === snapshot.user.login) continue;
-                if (!repo.permissions) continue;
-                const relation = codebergRepoPermissionsToRelation(
-                    repo.permissions,
-                );
-                if (!relation) continue;
-                relations.push({
-                    resourceType: "repo",
-                    resourceId: repoId,
-                    relation,
-                    subjectType: "user",
-                    subjectId: userAccountId,
-                });
-            }
+            const relations = await buildUserRepoRelations(
+                ctx,
+                snapshot.repos,
+                snapshot.user.login,
+                userAccountId,
+            );
 
             // Forgejo does not expose org membership roles, so every
             // membership is recorded as "member"; the permission view expands
@@ -152,16 +141,7 @@ export function codebergSnapshotHash(
     orgs: { providerId: number }[],
 ): string {
     return hashSnapshot({
-        repos: repos
-            .map((repo) => ({
-                id: repo.providerId,
-                // A repo transfer changes the effective owner grant (the view
-                // grants admin via repo.account_id), so the owner must trip
-                // the hash or transfers would never re-sync.
-                owner: repo.owner.providerId,
-                permissions: repo.permissions,
-            }))
-            .sort((a, b) => a.id - b.id),
+        repos: repoSnapshotEntries(repos),
         orgs: orgs.map((org) => org.providerId).sort((a, b) => a - b),
     });
 }
@@ -255,16 +235,6 @@ export async function getUserOrgs(
         login: org.username,
         avatarUrl: org.avatar_url ?? null,
     }));
-}
-
-/** Codeberg permission flags -> relation vocabulary used by the permission view. */
-export function codebergRepoPermissionsToRelation(
-    permissions: Pick<RepoPermission, "admin" | "push" | "pull">,
-): "admin" | "writer" | "reader" | null {
-    if (permissions.admin) return "admin";
-    if (permissions.push) return "writer";
-    if (permissions.pull) return "reader";
-    return null;
 }
 
 async function fetchCodebergJson<T>(

@@ -10,13 +10,17 @@ import type {
     Db,
     PermissionSyncInput,
     PermissionSyncSnapshot,
-    RelationRow,
-    RepoPermission,
     RepoVisibility,
     SyncRepo,
     SyncResult,
 } from "./shared";
-import { hashSnapshot, runPermissionSync } from "./shared";
+import {
+    buildUserRepoRelations,
+    hashSnapshot,
+    repoPermissionsToRelation,
+    repoSnapshotEntries,
+    runPermissionSync,
+} from "./shared";
 
 export type GitHubSyncRepo = {
     providerId: number;
@@ -176,27 +180,13 @@ export async function syncCurrentUserGitHub(
             };
         },
         async buildRelations(ctx, result, snapshot, userAccountId) {
-            const relations: RelationRow[] = [];
+            const relations = await buildUserRepoRelations(
+                ctx,
+                snapshot.repos,
+                snapshot.user.login,
+                userAccountId,
+            );
             const teamIds: number[] = [];
-
-            for (const repo of snapshot.repos) {
-                const repoId = await ctx.ensureRepo(repo);
-                // Personal repos already grant admin via
-                // mv_user_repo_permissions.
-                if (repo.owner.login === snapshot.user.login) continue;
-                if (!repo.permissions) continue;
-                const relation = githubRepoPermissionsToRelation(
-                    repo.permissions,
-                );
-                if (!relation) continue;
-                relations.push({
-                    resourceType: "repo",
-                    resourceId: repoId,
-                    relation,
-                    subjectType: "user",
-                    subjectId: userAccountId,
-                });
-            }
 
             for (const membership of snapshot.memberships) {
                 const orgAccountId = await ctx.ensureAccount({
@@ -248,7 +238,7 @@ export async function syncCurrentUserGitHub(
                     []) {
                     const repoId = await ctx.ensureRepo(repo);
                     if (!repo.permissions) continue;
-                    const relation = githubRepoPermissionsToRelation(
+                    const relation = repoPermissionsToRelation(
                         repo.permissions,
                     );
                     if (!relation) continue;
@@ -283,16 +273,7 @@ export function githubSnapshotHash(
     teams: GitHubTeam[],
 ): string {
     return hashSnapshot({
-        repos: repos
-            .map((repo) => ({
-                id: repo.providerId,
-                // A repo transfer changes the effective owner grant (the view
-                // grants admin via repo.account_id), so the owner must trip
-                // the hash or transfers would never re-sync.
-                owner: repo.owner.providerId,
-                permissions: repo.permissions,
-            }))
-            .sort((a, b) => a.id - b.id),
+        repos: repoSnapshotEntries(repos),
         memberships: memberships
             .map((membership) => ({
                 id: membership.providerId,
@@ -580,16 +561,4 @@ export async function listReposForOwner(
         if (data.length < perPage) break;
     }
     return repos;
-}
-
-/** GitHub permission flags -> relation vocabulary used by the permission view. */
-export function githubRepoPermissionsToRelation(
-    permissions: RepoPermission,
-): "admin" | "maintainer" | "writer" | "triager" | "reader" | null {
-    if (permissions.admin) return "admin";
-    if (permissions.maintain) return "maintainer";
-    if (permissions.push) return "writer";
-    if (permissions.triage) return "triager";
-    if (permissions.pull) return "reader";
-    return null;
 }

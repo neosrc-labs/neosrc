@@ -147,6 +147,52 @@ export function createSyncContext(
 
     return { ensureAccount, ensureRepo };
 }
+/** Maps normalized repository permissions to the strongest relation. */
+export function repoPermissionsToRelation(
+    permissions: RepoPermission,
+): "admin" | "maintainer" | "writer" | "triager" | "reader" | null {
+    if (permissions.admin) return "admin";
+    if (permissions.maintain) return "maintainer";
+    if (permissions.push) return "writer";
+    if (permissions.triage) return "triager";
+    if (permissions.pull) return "reader";
+    return null;
+}
+
+/** Builds direct repository grants for one authenticated user. */
+export async function buildUserRepoRelations(
+    ctx: SyncContext,
+    repos: SyncRepo[],
+    userLogin: string,
+    userAccountId: number,
+): Promise<RelationRow[]> {
+    const relations: RelationRow[] = [];
+    for (const repo of repos) {
+        const repoId = await ctx.ensureRepo(repo);
+        if (repo.owner.login === userLogin || !repo.permissions) continue;
+        const relation = repoPermissionsToRelation(repo.permissions);
+        if (!relation) continue;
+        relations.push({
+            resourceType: "repo",
+            resourceId: repoId,
+            relation,
+            subjectType: "user",
+            subjectId: userAccountId,
+        });
+    }
+    return relations;
+}
+
+/** Stable repository portion of a permission snapshot. */
+export function repoSnapshotEntries(repos: SyncRepo[]) {
+    return repos
+        .map((repo) => ({
+            id: repo.providerId,
+            owner: repo.owner.providerId,
+            permissions: repo.permissions,
+        }))
+        .sort((a, b) => a.id - b.id);
+}
 
 export async function upsertAccount(
     executor: Executor,
