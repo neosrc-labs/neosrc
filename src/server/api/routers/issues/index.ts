@@ -9,7 +9,6 @@ import {
     viewerProcedure,
 } from "~/server/api/trpc";
 import { getCodebergToken, getGitHubToken } from "~/server/auth";
-import { fetchAndCache, readCache, searchCacheKey } from "~/server/cache";
 import {
     createIssueComment as createCodebergIssueComment,
     getIssue as getCodebergIssue,
@@ -27,6 +26,7 @@ import {
 } from "~/server/github";
 import { getIssueTimelineGraphQL } from "~/server/github-graphql";
 import { mapCbReaction } from "../mappers";
+import { providerSearchProcedures } from "../provider-search";
 import type { TimelineResult } from "../timeline";
 import { CodebergIssueProvider } from "./codeberg";
 import {
@@ -35,18 +35,6 @@ import {
 } from "./codeberg-timeline";
 import { GitHubIssueProvider } from "./github";
 import type { IssueProvider } from "./provider";
-import type { IssueSearchResult } from "./types";
-
-const searchInput = providerInput({
-    owner: z.string(),
-    repo: z.string(),
-    query: z.string(),
-    page: z.number().optional(),
-    after: z.string().optional(),
-    first: z.number().optional(),
-    sort: z.enum(["created", "updated", "comments"]).optional(),
-    order: z.enum(["asc", "desc"]).optional(),
-});
 
 function issueProvider(provider: "gh" | "cb"): IssueProvider {
     return provider === "cb"
@@ -101,30 +89,7 @@ export const issuesRouter = createTRPCRouter({
             }),
         ),
 
-    searchCached: viewerProcedure
-        .input(searchInput)
-        .query(
-            ({ ctx, input }): Promise<IssueSearchResult | null> =>
-                readCache<IssueSearchResult>(
-                    searchCacheKey("issues", ctx.session?.user?.id, input),
-                ),
-        ),
-
-    search: viewerProcedure
-        .input(searchInput)
-        .query(async ({ ctx, input }): Promise<IssueSearchResult> => {
-            const provider = issueProvider(input.provider);
-
-            return fetchAndCache(
-                searchCacheKey("issues", ctx.session?.user?.id, input),
-                () =>
-                    provider.search({
-                        ...input,
-                        ctx: { db: ctx.db, session: ctx.session },
-                    }),
-                { staleAfter: 0, deleteAfter: 24 * 60 * 60 * 1000 },
-            );
-        }),
+    ...providerSearchProcedures("issues", issueProvider),
 
     searchAutocomplete: viewerProcedure
         .input(
