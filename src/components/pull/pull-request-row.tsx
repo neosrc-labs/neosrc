@@ -138,6 +138,7 @@ export function PullRequestRow({
                     {pr.status_state && (
                         <StatusChecksHoverCard
                             contexts={pr.status_contexts}
+                            pullRequestNumber={pr.number}
                             className="size-4"
                         />
                     )}

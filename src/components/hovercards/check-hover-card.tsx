@@ -68,7 +68,13 @@ const statusColors: Record<string, string> = {
     action_required: "text-warning-emphasis",
 };
 
-function CheckHoverCardContent({ check }: { check: CheckRun }) {
+function CheckHoverCardContent({
+    check,
+    url,
+}: {
+    check: CheckRun;
+    url?: string;
+}) {
     const labelColor =
         check.conclusion && statusColors[check.conclusion]
             ? statusColors[check.conclusion]
@@ -114,10 +120,10 @@ function CheckHoverCardContent({ check }: { check: CheckRun }) {
                         </span>
                     </div>
                 )}
-                {check.html_url && (
+                {url && (
                     <a
                         className="mt-1 text-link text-xs hover:text-link-hover hover:underline"
-                        href={check.html_url}
+                        href={url}
                         rel="noopener noreferrer"
                         target="_blank"
                     >
@@ -131,10 +137,11 @@ function CheckHoverCardContent({ check }: { check: CheckRun }) {
 
 interface CheckHoverCardProps {
     check: CheckRun;
+    url?: string;
     children: ReactNode;
 }
 
-export function CheckHoverCard({ check, children }: CheckHoverCardProps) {
+export function CheckHoverCard({ check, url, children }: CheckHoverCardProps) {
     return (
         <HoverCard openDelay={300}>
             <HoverCardTrigger asChild>{children}</HoverCardTrigger>
@@ -143,7 +150,7 @@ export function CheckHoverCard({ check, children }: CheckHoverCardProps) {
                 side="left"
                 className="w-72 bg-surface p-0"
             >
-                <CheckHoverCardContent check={check} />
+                <CheckHoverCardContent check={check} url={url} />
             </HoverCardContent>
         </HoverCard>
     );

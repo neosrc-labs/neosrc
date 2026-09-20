@@ -14,6 +14,7 @@ import {
     HoverCardContent,
     HoverCardTrigger,
 } from "~/components/ui/hover-card";
+import { githubPullRequestCheckUrl } from "~/utils/github-check-url";
 import { cn } from "~/utils/helpers";
 
 export interface StatusContext {
@@ -191,9 +192,19 @@ export function CheckRunIcon({
     );
 }
 
-export function StatusContextRow({ context }: { context: StatusContext }) {
-    const linkProps = context.url
-        ? { href: context.url, target: "_blank", rel: "noreferrer" }
+export function StatusContextRow({
+    context,
+    pullRequestNumber,
+}: {
+    context: StatusContext;
+    pullRequestNumber?: number;
+}) {
+    const url =
+        context.url && pullRequestNumber !== undefined
+            ? githubPullRequestCheckUrl(context.url, pullRequestNumber)
+            : context.url;
+    const linkProps = url
+        ? { href: url, target: "_blank", rel: "noreferrer" }
         : {};
 
     const duration =
@@ -243,9 +254,11 @@ export function StatusContextRow({ context }: { context: StatusContext }) {
 export function StatusChecksHoverCard({
     contexts,
     className,
+    pullRequestNumber,
 }: {
     contexts: StatusContext[];
     className?: string;
+    pullRequestNumber?: number;
 }) {
     const rollup = computeStatusState(contexts);
     if (!rollup) return null;
@@ -338,6 +351,7 @@ export function StatusChecksHoverCard({
                                     <StatusContextRow
                                         key={ctx.name}
                                         context={ctx}
+                                        pullRequestNumber={pullRequestNumber}
                                     />
                                 ))}
                             </div>

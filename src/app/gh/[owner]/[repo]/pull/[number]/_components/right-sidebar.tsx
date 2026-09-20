@@ -237,7 +237,10 @@ export default function RightSidebar({
 
             <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
                 {tab === "checks" && checksPromise ? (
-                    <ChecksSection checks={displayChecks ?? []} />
+                    <ChecksSection
+                        checks={displayChecks ?? []}
+                        pullRequestNumber={number}
+                    />
                 ) : null}
                 {tab === "commits" ? (
                     <CommitsSection

@@ -24,6 +24,7 @@ describe("ChecksSection", () => {
     it("groups checks by state, most actionable group first", () => {
         render(
             <ChecksSection
+                pullRequestNumber={42}
                 checks={[
                     makeCheck({
                         name: "unit",
@@ -52,6 +53,7 @@ describe("ChecksSection", () => {
     it("keeps every check of a state under one heading", () => {
         render(
             <ChecksSection
+                pullRequestNumber={42}
                 checks={[
                     makeCheck({ name: "lint", conclusion: "failure" }),
                     makeCheck({ name: "e2e", conclusion: "failure" }),
@@ -69,6 +71,7 @@ describe("ChecksSection", () => {
     it("files states with no category under other", () => {
         render(
             <ChecksSection
+                pullRequestNumber={42}
                 checks={[makeCheck({ name: "mystery", conclusion: null })]}
             />,
         );
@@ -78,7 +81,7 @@ describe("ChecksSection", () => {
     });
 
     it("shows the empty state instead of groups when there are no checks", () => {
-        render(<ChecksSection checks={[]} />);
+        render(<ChecksSection checks={[]} pullRequestNumber={42} />);
 
         expect(screen.getByText("No checks")).toBeInTheDocument();
         expect(screen.queryAllByRole("heading")).toHaveLength(0);
@@ -87,6 +90,7 @@ describe("ChecksSection", () => {
     it("shows the run duration when a check has no description", () => {
         render(
             <ChecksSection
+                pullRequestNumber={42}
                 checks={[
                     makeCheck({
                         name: "unit",
@@ -109,6 +113,7 @@ describe("ChecksSection", () => {
     it("prefers the description over the run duration", () => {
         render(
             <ChecksSection
+                pullRequestNumber={42}
                 checks={[
                     makeCheck({
                         name: "lint",
@@ -122,5 +127,25 @@ describe("ChecksSection", () => {
 
         expect(screen.getByText(/- 2 warnings$/)).toBeInTheDocument();
         expect(screen.queryByText(/Took/)).toBeNull();
+    });
+
+    it("uses the GitHub Actions job URL for the pull request", () => {
+        render(
+            <ChecksSection
+                checks={[
+                    makeCheck({
+                        html_url: "https://github.com/o/r/runs/2",
+                        details_url:
+                            "https://github.com/o/r/actions/runs/1/job/2",
+                    }),
+                ]}
+                pullRequestNumber={42}
+            />,
+        );
+
+        expect(screen.getByRole("link", { name: /ci\/test/ })).toHaveAttribute(
+            "href",
+            "https://github.com/o/r/actions/runs/1/job/2?pr=42",
+        );
     });
 });

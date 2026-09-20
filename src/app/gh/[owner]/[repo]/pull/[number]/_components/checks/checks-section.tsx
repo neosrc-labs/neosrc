@@ -6,9 +6,16 @@ import { CheckHoverCard } from "~/components/hovercards/check-hover-card";
 import { formatDurationMs } from "~/components/hovercards/hover-card-shared";
 import { GitHubIcon } from "~/components/icons";
 import type { CheckRun } from "~/server/github";
+import { githubPullRequestCheckUrl } from "~/utils/github-check-url";
 import { bucketChecks } from "./check-groups";
 
-export function ChecksSection({ checks }: { checks: Array<CheckRun> }) {
+export function ChecksSection({
+    checks,
+    pullRequestNumber,
+}: {
+    checks: Array<CheckRun>;
+    pullRequestNumber: number;
+}) {
     if (checks.length === 0) {
         return <p className="text-sm text-text-tertiary">No checks</p>;
     }
@@ -28,6 +35,7 @@ export function ChecksSection({ checks }: { checks: Array<CheckRun> }) {
                         {group.checks.map((check) => (
                             <CheckRow
                                 check={check}
+                                pullRequestNumber={pullRequestNumber}
                                 key={check.html_url ?? check.name}
                             />
                         ))}
@@ -49,18 +57,28 @@ function runDuration(check: CheckRun): string | null {
     return formatDurationMs(diffMs);
 }
 
-function CheckRow({ check }: { check: CheckRun }) {
+function CheckRow({
+    check,
+    pullRequestNumber,
+}: {
+    check: CheckRun;
+    pullRequestNumber: number;
+}) {
     // Rows without a description fall back to how long the run took, the same
     // `Took ...` phrasing the hover card uses.
     const description = check.description?.trim();
     const duration = description ? null : runDuration(check);
     const detail = description || (duration && `Took ${duration}`);
+    const rawUrl = check.details_url ?? check.html_url;
+    const url = rawUrl
+        ? githubPullRequestCheckUrl(rawUrl, pullRequestNumber)
+        : undefined;
 
     return (
-        <CheckHoverCard check={check}>
+        <CheckHoverCard check={check} url={url}>
             <a
                 className="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-surface-tertiary"
-                href={check.html_url}
+                href={url}
                 rel="noopener noreferrer"
                 target="_blank"
             >
