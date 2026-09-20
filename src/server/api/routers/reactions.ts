@@ -31,13 +31,13 @@ import {
     getPullRequestReactionsRest,
     getPullRequestReviewCommentReactions,
 } from "~/server/github";
+import { isOrgRestrictionError } from "~/server/github/graphql-client";
 import {
     addReaction,
     type GQLPullRequestReactions,
     getIssueReactionsGraphQL,
     getPullRequestReactionsGraphQL,
     getSubjectReactions,
-    isOrgRestrictionError,
     removeReaction,
 } from "~/server/github-graphql";
 import { mapCbReactionCounts } from "./mappers";

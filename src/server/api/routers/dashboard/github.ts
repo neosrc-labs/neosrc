@@ -1,4 +1,4 @@
-import { createGraphql } from "~/server/github-graphql";
+import { createGraphql } from "~/server/github/graphql-client";
 import type { ViewerIssueItem, ViewerPullItem } from "./types";
 
 // GitHub caps a search page at 100 nodes.

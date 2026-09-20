@@ -1,6 +1,6 @@
 import type { StatusContext } from "~/components/ci-status";
 import { createOctokit } from "~/server/github/client";
-import { createGraphql } from "~/server/github-graphql";
+import { createGraphql } from "~/server/github/graphql-client";
 
 /** Refs read per cheap scan request. */
 export const REF_SCAN_PAGE_SIZE = 100;

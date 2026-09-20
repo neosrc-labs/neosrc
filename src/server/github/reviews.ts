@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { createGraphql } from "~/server/github-graphql";
+import { createGraphql } from "~/server/github/graphql-client";
 import { createOctokit } from "./client";
 import type {
     CommentForReview,

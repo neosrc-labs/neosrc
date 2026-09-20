@@ -1,5 +1,5 @@
 import { withStaleWhileRevalidate } from "~/server/cache";
-import { createGraphql } from "~/server/github-graphql";
+import { createGraphql } from "~/server/github/graphql-client";
 import {
     DOC_FILE_PATTERNS,
     type DocFileName,

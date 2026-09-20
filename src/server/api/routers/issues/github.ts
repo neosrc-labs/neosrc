@@ -5,7 +5,7 @@ import { getGitHubToken } from "~/server/auth";
 import {
     getPinnedIssuesGraphQL,
     searchIssuesWithMetadata,
-} from "~/server/github-graphql";
+} from "~/server/github/graphql-search";
 import type { IssueProvider } from "./provider";
 import type { IssueSearchItem, IssueSearchResult } from "./types";
 

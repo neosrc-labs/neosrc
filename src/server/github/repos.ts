@@ -12,9 +12,11 @@ import {
 } from "~/server/cache";
 import {
     createGraphql,
+    isOrgRestrictionError,
+} from "~/server/github/graphql-client";
+import {
     type GQLCommitAuthor,
     getArchivedAtGraphQL,
-    isOrgRestrictionError,
     resolveCommitAuthor,
 } from "~/server/github-graphql";
 import {
