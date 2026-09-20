@@ -2,6 +2,8 @@
 
 import {
     Archive,
+    Check,
+    Copy,
     PanelLeftOpen,
     PanelRightClose,
     PanelRightOpen,
@@ -14,8 +16,14 @@ import type { RefObject } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { Async } from "~/components/async";
 import { CodebergIcon, GitHubIcon } from "~/components/icons";
+import { CopyButton } from "~/components/ui/copy-button";
 import { api } from "~/trpc/react";
-import { domain, type Provider, repoUrl } from "~/utils/provider-url";
+import {
+    domain,
+    type Provider,
+    providerLabel,
+    repoUrl,
+} from "~/utils/provider-url";
 import { useSidebar } from "../layout/sidebar-context";
 import { ThemeToggle } from "../theme/theme-toggle";
 import { RepoNavbar, useTabs } from "./navbar";
@@ -224,6 +232,17 @@ function HeaderContent({
     // Always show the repo nav when loading to minimize the layout shift on repo pages.
     // We optimize for the happy path. 404 pages may have a bit of layout shift but oh well.
     const showRepoNav = !!owner && !!repo && (isLoading || resolvedRepoData);
+    const providerPageHref =
+        owner && repo && pathType
+            ? getProviderPageHref(
+                  provider,
+                  owner,
+                  repo,
+                  pathType,
+                  pullRequestNumber,
+                  issueNumber,
+              )
+            : null;
 
     const tabs = useTabs({
         repoData: resolvedRepoData,
@@ -264,15 +283,22 @@ function HeaderContent({
                         </div>
 
                         <div className="flex items-center gap-1">
-                            {!!owner && !!repo && !!pathType && (
-                                <ProviderIcon
-                                    provider={provider}
-                                    owner={owner}
-                                    repo={repo}
-                                    pullRequestNumber={pullRequestNumber}
-                                    issueNumber={issueNumber}
-                                    pathType={pathType}
-                                />
+                            {providerPageHref && pathType && (
+                                <>
+                                    <ProviderIcon
+                                        provider={provider}
+                                        href={
+                                            pathType === "PULL_REQUEST" ||
+                                            pathType === "ISSUE_DETAIL"
+                                                ? `${providerPageHref}?neosrc_exit=1`
+                                                : providerPageHref
+                                        }
+                                    />
+                                    <ProviderCopyButton
+                                        provider={provider}
+                                        href={providerPageHref}
+                                    />
+                                </>
                             )}
                             <ThemeToggle />
                             <UserIcon
@@ -362,47 +388,84 @@ function RepoName({
 
 function ProviderIcon({
     provider,
-    owner,
-    repo,
-    pullRequestNumber,
-    issueNumber,
-    pathType,
+    href,
 }: {
     provider: Provider;
-    owner: string;
-    repo: string;
-    pullRequestNumber?: number | null;
-    issueNumber?: number | null;
-    pathType: PathType;
+    href: string;
 }) {
+    const label = providerLabel(provider);
+
     return (
         <a
             className="flex size-8 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label"
-            href={
-                pathType === "PULL_REQUEST"
-                    ? `https://${domain(provider)}/${owner}/${repo}/pull/${pullRequestNumber}?neosrc_exit=1`
-                    : pathType === "ISSUE_DETAIL"
-                      ? `https://${domain(provider)}/${owner}/${repo}/issues/${issueNumber}?neosrc_exit=1`
-                      : pathType === "ISSUES_LIST"
-                        ? `https://${domain(provider)}/${owner}/${repo}/issues`
-                        : pathType === "PULLS_LIST"
-                          ? `https://${domain(provider)}/${owner}/${repo}/pulls`
-                          : pathType === "ACTIONS_LIST"
-                            ? `https://${domain(provider)}/${owner}/${repo}/actions`
-                            : pathType === "BRANCHES_LIST"
-                              ? `https://${domain(provider)}/${owner}/${repo}/branches`
-                              : `https://${domain(provider)}/${owner}/${repo}`
-            }
+            href={href}
             target="_blank"
             rel="noopener noreferrer"
-            title={`Back to ${provider === "cb" ? "Codeberg" : "GitHub"}`}
+            title={`Back to ${label}`}
         >
             {provider === "cb" ? <CodebergIcon /> : <GitHubIcon />}
-            <span className="sr-only">
-                {`Back to ${provider === "cb" ? "Codeberg" : "GitHub"}`}
-            </span>
+            <span className="sr-only">{`Back to ${label}`}</span>
         </a>
     );
+}
+
+function ProviderCopyButton({
+    provider,
+    href,
+}: {
+    provider: Provider;
+    href: string;
+}) {
+    const label = providerLabel(provider);
+
+    return (
+        <CopyButton
+            text={href}
+            title={`Copy ${label} link`}
+            className="flex size-8 cursor-pointer items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-label"
+        >
+            {(copied) => (
+                <>
+                    {copied ? (
+                        <Check className="size-4 text-success-emphasis" />
+                    ) : (
+                        <Copy className="size-4" />
+                    )}
+                    <span className="sr-only">
+                        {copied ? `${label} link copied` : `Copy ${label} link`}
+                    </span>
+                </>
+            )}
+        </CopyButton>
+    );
+}
+
+function getProviderPageHref(
+    provider: Provider,
+    owner: string,
+    repo: string,
+    pathType: PathType,
+    pullRequestNumber: number | null,
+    issueNumber: number | null,
+) {
+    const baseUrl = repoUrl(provider, owner, repo);
+
+    switch (pathType) {
+        case "PULL_REQUEST":
+            return `${baseUrl}/pull/${pullRequestNumber}`;
+        case "ISSUE_DETAIL":
+            return `${baseUrl}/issues/${issueNumber}`;
+        case "ISSUES_LIST":
+            return `${baseUrl}/issues`;
+        case "PULLS_LIST":
+            return `${baseUrl}/pulls`;
+        case "ACTIONS_LIST":
+            return `${baseUrl}/actions`;
+        case "BRANCHES_LIST":
+            return `${baseUrl}/branches`;
+        default:
+            return baseUrl;
+    }
 }
 
 function UserIcon({
