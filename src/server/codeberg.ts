@@ -149,12 +149,7 @@ export const listPullRequests = cache(
 
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/pulls?${searchParams}`;
 
-        const res = await codebergFetch(accessToken, url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
+        const res = await codebergFetch(accessToken, url);
         if (!res.ok) return { items: [], totalCount: 0 };
 
         let items = (await res.json()) as CodebergPullRequest[];
@@ -201,12 +196,6 @@ export const getUser = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/user`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) return null;
         return res.json();
@@ -228,12 +217,6 @@ export const listLabels = async (
     const res = await codebergFetch(
         accessToken,
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/labels`,
-        {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        },
     );
     if (!res.ok) return [];
     return res.json();
@@ -257,12 +240,6 @@ export const listMilestones = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/milestones?state=open`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) return [];
         return res.json();
@@ -284,12 +261,6 @@ export const listAssignees = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/assignees`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) return [];
         return res.json();
@@ -317,12 +288,6 @@ export const getUserByUsername = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/users/${username}`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) return null;
         return res.json();
@@ -375,12 +340,6 @@ export const getRepo = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) return null;
         return res.json();
@@ -448,12 +407,6 @@ export const getBranches = cache(
             const res = await codebergFetch(
                 accessToken,
                 `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches?limit=${BRANCH_PAGE_LIMIT}&page=${page}`,
-                {
-                    headers: {
-                        Authorization: `token ${accessToken}`,
-                        Accept: "application/json",
-                    },
-                },
             );
             // Reporting "no branches" for an auth or provider failure would be
             // a lie, and it would drop the pages already read.
@@ -516,10 +469,6 @@ export async function deleteBranch(
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`,
         {
             method: "DELETE",
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
         },
     );
     if (!res.ok) {
@@ -541,11 +490,7 @@ export async function renameBranch(
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`,
         {
             method: "PATCH",
-            headers: {
-                Authorization: `token ${accessToken}`,
-                "Content-Type": "application/json",
-                Accept: "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name: newName }),
         },
     );
@@ -664,16 +609,6 @@ export const listWorkflowRuns = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/actions/runs?${query}`,
-            {
-                // Public repositories are readable without a token, and
-                // Forgejo rejects an empty one.
-                headers: accessToken
-                    ? {
-                          Authorization: `token ${accessToken}`,
-                          Accept: "application/json",
-                      }
-                    : { Accept: "application/json" },
-            },
         );
         if (!res.ok) return { runs: [], totalCount: 0 };
         const body = (await res.json()) as {
@@ -731,12 +666,6 @@ export const listRepoActivity = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/activities/feeds?limit=${limit}`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) return [];
         const entries = (await res.json()) as CodebergActivityRaw[];
@@ -767,12 +696,6 @@ export async function findPullRequestForBranches(
             .split("/")
             .map(encodeURIComponent)
             .join("/")}`,
-        {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        },
     );
     if (!res.ok) return null;
     const pr = (await res.json()) as {
@@ -792,12 +715,6 @@ export const getTags = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/tags`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) return [];
         const tags = (await res.json()) as CodebergTagRaw[];
@@ -814,22 +731,10 @@ export async function getRefCounts(
         codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/branches?limit=1`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         ),
         codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/tags?limit=1`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         ),
     ]);
 
@@ -857,12 +762,7 @@ export const getLatestCommit = cache(
 
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`;
 
-        const res = await codebergFetch(accessToken, url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
+        const res = await codebergFetch(accessToken, url);
         if (!res.ok) throw new Error(`No commits found for ${owner}/${repo}`);
 
         const commits = (await res.json()) as CodebergCommitRaw[];
@@ -916,12 +816,7 @@ export const getPathCommits = cache(
 
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`;
 
-        const res = await codebergFetch(accessToken, url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
+        const res = await codebergFetch(accessToken, url);
         if (!res.ok) return [];
 
         const commits = (await res.json()) as CodebergCommitRaw[];
@@ -958,12 +853,7 @@ export const getRepoContents = cache(
         const query = params.toString();
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/contents${urlPath}${query ? `?${query}` : ""}`;
 
-        const res = await codebergFetch(accessToken, url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
+        const res = await codebergFetch(accessToken, url);
         if (!res.ok) return [];
 
         const data = (await res.json()) as
@@ -986,12 +876,7 @@ export const getFileTree = cache(
     async (accessToken: string, owner: string, repo: string, ref: string) => {
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
 
-        const res = await codebergFetch(accessToken, url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
+        const res = await codebergFetch(accessToken, url);
         if (!res.ok) return [];
 
         const data = (await res.json()) as {
@@ -1021,12 +906,7 @@ export const getFileContent = cache(
 
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/contents/${path}?${params}`;
 
-        const res = await codebergFetch(accessToken, url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
+        const res = await codebergFetch(accessToken, url);
         if (!res.ok) return { content: null };
 
         const data = (await res.json()) as {
@@ -1050,12 +930,6 @@ export const getRepoLanguages = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/languages`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) return {};
         return res.json() as Promise<Record<string, number>>;
@@ -1067,12 +941,6 @@ export const getLatestRelease = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/releases?limit=1`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) return null;
         const releases = (await res.json()) as CodebergReleaseRaw[];
@@ -1097,22 +965,10 @@ const getRepoCounts = cache(
             codebergFetch(
                 accessToken,
                 `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?state=open&limit=1&type=issues`,
-                {
-                    headers: {
-                        Authorization: `token ${accessToken}`,
-                        Accept: "application/json",
-                    },
-                },
             ),
             codebergFetch(
                 accessToken,
                 `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/pulls?state=open&limit=1`,
-                {
-                    headers: {
-                        Authorization: `token ${accessToken}`,
-                        Accept: "application/json",
-                    },
-                },
             ),
         ]);
 
@@ -1144,12 +1000,6 @@ export const listRecentIssueAuthors = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?state=all&sort=created&direction=desc&limit=100`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) return [];
         const issues = (await res.json()) as Array<{
@@ -1192,12 +1042,7 @@ export async function getCommitCombinedStatus(
     sha: string,
 ): Promise<CodebergCombinedStatus | null> {
     const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits/${sha}/status`;
-    const res = await codebergFetch(accessToken, url, {
-        headers: {
-            Authorization: `token ${accessToken}`,
-            Accept: "application/json",
-        },
-    });
+    const res = await codebergFetch(accessToken, url);
     if (!res.ok) {
         if (res.status === 404) return null;
         throw new Error(
@@ -1227,12 +1072,7 @@ export const listReferenceCommits = cache(
             page: String(opts.page ?? 1),
         });
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/commits?${params}`;
-        const res = await codebergFetch(accessToken, url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
+        const res = await codebergFetch(accessToken, url);
         if (!res.ok) {
             if (res.status === 404) {
                 throw new Error(
@@ -1301,12 +1141,7 @@ export const listPinnedIssues = cache(
         repo: string,
     ): Promise<CodebergIssue[]> => {
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/pinned`;
-        const res = await codebergFetch(accessToken, url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
+        const res = await codebergFetch(accessToken, url);
         if (!res.ok) return [];
         return (await res.json()) as CodebergIssue[];
     },
@@ -1389,12 +1224,7 @@ export const listIssues = cache(
 
         const url = `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?${searchParams}`;
 
-        const res = await codebergFetch(accessToken, url, {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
+        const res = await codebergFetch(accessToken, url);
         if (!res.ok) return { items: [], totalCount: 0 };
 
         let items = (await res.json()) as CodebergIssue[];
@@ -1467,12 +1297,6 @@ export const getIssue = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/${issueNumber}`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) {
             if (res.status === 404) {
@@ -1500,12 +1324,6 @@ export const searchIssues = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues?${searchParams}`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) return [];
         const items = (await res.json()) as CodebergIssue[];
@@ -1545,12 +1363,6 @@ export const searchIssuesAcrossRepos = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/issues/search?${searchParams}`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) return [];
 
@@ -1626,11 +1438,7 @@ async function forgejoWrite(
         `${CODEBERG_API}/api/v1${path}`,
         {
             method,
-            headers: {
-                Authorization: `token ${accessToken}`,
-                "Content-Type": "application/json",
-                Accept: "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         },
     );
@@ -1659,12 +1467,6 @@ export const listIssueTimeline = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/${issueNumber}/timeline?page=${page}&limit=${effectiveLimit}`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) {
             if (res.status === 404) {
@@ -1764,12 +1566,6 @@ export const listIssueReactions = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/${issueNumber}/reactions`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         // A failed read must not look like "no reactions": the toggle paths
         // would then add a second reaction instead of removing the existing one.
@@ -1801,12 +1597,6 @@ export const listIssueCommentReactions = cache(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/issues/comments/${commentId}/reactions`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) {
             if (res.status === 404) {
@@ -2011,12 +1801,6 @@ export async function getUserRepos(
         const res = await codebergFetch(
             accessToken,
             `${CODEBERG_API}/api/v1/user/repos?limit=${limit}&page=${page}`,
-            {
-                headers: {
-                    Authorization: `token ${accessToken}`,
-                    Accept: "application/json",
-                },
-            },
         );
         if (!res.ok) break;
         const data = (await res.json()) as {
@@ -2054,12 +1838,6 @@ export async function checkRepoStarred(
     const res = await codebergFetch(
         accessToken,
         `${CODEBERG_API}/api/v1/user/starred/${owner}/${repo}`,
-        {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        },
     );
     return res.status === 204;
 }
@@ -2074,11 +1852,7 @@ export async function starRepo(
         `${CODEBERG_API}/api/v1/user/starred/${owner}/${repo}`,
         {
             method: "PUT",
-            headers: {
-                Authorization: `token ${accessToken}`,
-                "Content-Type": "application/json",
-                Accept: "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
         },
     );
     if (!res.ok) {
@@ -2096,10 +1870,6 @@ export async function unstarRepo(
         `${CODEBERG_API}/api/v1/user/starred/${owner}/${repo}`,
         {
             method: "DELETE",
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
         },
     );
     if (!res.ok) {
@@ -2118,12 +1888,6 @@ export async function getRepoSubscription(
     const res = await codebergFetch(
         accessToken,
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/subscription`,
-        {
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
-        },
     );
     if (!res.ok) return null;
     const data = (await res.json()) as {
@@ -2145,11 +1909,7 @@ export async function setRepoSubscription(
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/subscription`,
         {
             method: "PUT",
-            headers: {
-                Authorization: `token ${accessToken}`,
-                "Content-Type": "application/json",
-                Accept: "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ subscribed, ignored }),
         },
     );
@@ -2170,10 +1930,6 @@ export async function deleteRepoSubscription(
         `${CODEBERG_API}/api/v1/repos/${owner}/${repo}/subscription`,
         {
             method: "DELETE",
-            headers: {
-                Authorization: `token ${accessToken}`,
-                Accept: "application/json",
-            },
         },
     );
     if (!res.ok) {

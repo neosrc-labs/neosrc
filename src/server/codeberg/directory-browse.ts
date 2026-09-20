@@ -26,13 +26,6 @@ interface CodebergContent {
 
 const DECORATION_CONCURRENCY = 8;
 
-function headers(accessToken: string): HeadersInit {
-    return {
-        Authorization: `token ${accessToken}`,
-        Accept: "application/json",
-    };
-}
-
 async function errorMessage(res: Response, fallback: string): Promise<string> {
     const body = (await res.json().catch(() => null)) as {
         message?: string;
@@ -45,9 +38,7 @@ async function fetchJson<T>(
     url: string,
     fallback: string,
 ): Promise<T> {
-    const res = await codebergFetch(accessToken, url, {
-        headers: headers(accessToken),
-    });
+    const res = await codebergFetch(accessToken, url);
     if (!res.ok) throw new Error(await errorMessage(res, fallback));
     return res.json() as Promise<T>;
 }
@@ -115,9 +106,7 @@ async function readEntryCommit(
         limit: "1",
     });
     const url = `${CODEBERG_API}/api/v1/repos/${repository.owner}/${repository.repo}/commits?${params}`;
-    const res = await codebergFetch(accessToken, url, {
-        headers: headers(accessToken),
-    });
+    const res = await codebergFetch(accessToken, url);
     if (!res.ok) throw new Error(`Failed to decorate ${path}: ${res.status}`);
     const commits = (await res.json()) as CodebergCommitRaw[];
     const commit = commits[0];
@@ -152,9 +141,7 @@ export const codebergDirectoryBrowseAdapter: DirectoryBrowseAdapter = {
             : "";
         const params = new URLSearchParams({ ref: objectId });
         const url = `${CODEBERG_API}/api/v1/repos/${repository.owner}/${repository.repo}/contents${urlPath}?${params}`;
-        const res = await codebergFetch(accessToken, url, {
-            headers: headers(accessToken),
-        });
+        const res = await codebergFetch(accessToken, url);
         if (res.status === 404) return { outcome: "missing" };
         if (!res.ok) {
             throw new Error(
