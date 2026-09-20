@@ -2,6 +2,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+    getSearchInput,
+    mockLabelData,
+    mockUserSearchData,
+    openDropdownAndSelectLabel,
+    openDropdownAndSelectUser,
+} from "~/__tests__/helpers/search-list";
 
 // --- Mocks ---
 
@@ -113,98 +120,6 @@ function renderList(props?: {
             defaultState={(props?.defaultState as "open" | "closed") ?? "open"}
         />,
     );
-}
-
-function getSearchInput() {
-    return screen.getByPlaceholderText(
-        "Search issues by title, body, or comments",
-    ) as HTMLInputElement;
-}
-
-async function mockLabelData(labels?: { name: string; color: string }[]) {
-    const labelList = labels ?? [
-        { name: "bug", color: "d73a4a" },
-        { name: "enhancement", color: "a2eeef" },
-    ];
-    const listLabelsMock = vi.mocked(
-        (await import("~/trpc/react")).api.pulls.listLabels.useQuery,
-    );
-    listLabelsMock.mockReturnValue({
-        data: labelList,
-        isLoading: false,
-    } as never);
-}
-
-async function openDropdownAndSelectLabel(
-    user: ReturnType<typeof userEvent.setup>,
-    labelName: string,
-) {
-    const existingInput = screen.queryByPlaceholderText("Filter labels");
-    if (!existingInput) {
-        const allButtons = screen.getAllByRole("button");
-        const labelBtn = allButtons.find(
-            (b) => b.textContent?.trim() === "Label",
-        );
-        if (!labelBtn) throw new Error("Label button not found");
-        await user.click(labelBtn);
-    }
-
-    const dropdownInput = await screen.findByPlaceholderText("Filter labels");
-    expect(dropdownInput).toBeInTheDocument();
-
-    await user.clear(dropdownInput);
-    await user.type(dropdownInput, labelName);
-
-    const option = screen.getByRole("option", {
-        name: new RegExp(`^${labelName}$`, "i"),
-    });
-    await user.click(option);
-}
-
-async function mockUserSearchData(
-    users?: { login: string; avatar_url: string }[],
-) {
-    const userList = users ?? [{ login: "testuser", avatar_url: "" }];
-    const listAssigneesMock = vi.mocked(
-        (await import("~/trpc/react")).api.pulls.listAssignees.useQuery,
-    );
-    listAssigneesMock.mockReturnValue({
-        data: userList,
-        isLoading: false,
-    } as never);
-
-    const listRecentAuthorsMock = vi.mocked(
-        (await import("~/trpc/react")).api.pulls.listRecentAuthors.useQuery,
-    );
-    listRecentAuthorsMock.mockReturnValue({
-        data: userList,
-        isLoading: false,
-    } as never);
-
-    const currentUserMock = vi.mocked(
-        (await import("~/trpc/react")).api.users.currentUser.useQuery,
-    );
-    currentUserMock.mockReturnValue({
-        data: { login: userList[0]?.login ?? "testuser", avatar_url: "" },
-        isLoading: false,
-    } as never);
-}
-
-async function openDropdownAndSelectUser(
-    user: ReturnType<typeof userEvent.setup>,
-    triggerName: RegExp,
-    searchText?: string,
-) {
-    const text = searchText ?? "testuser";
-    await user.click(screen.getByRole("button", { name: triggerName }));
-
-    const dropdownInput = screen.getByPlaceholderText("Filter users...");
-    expect(dropdownInput).toBeInTheDocument();
-
-    await user.type(dropdownInput, text);
-
-    const option = screen.getByRole("option", { name: new RegExp(text, "i") });
-    await user.click(option);
 }
 
 // --- Tests ---

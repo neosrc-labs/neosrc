@@ -1,16 +1,11 @@
 "use client";
 
 import { ChevronDown, CircleCheck, Eye } from "lucide-react";
-import { StateTabs } from "~/components/list/state-tabs";
-import { AssigneeDropdown } from "~/components/search/assignee-dropdown";
-import { AuthorDropdown } from "~/components/search/author-dropdown";
-import { LabelDropdown } from "~/components/search/label-dropdown";
-import { MilestoneDropdown } from "~/components/search/milestone-dropdown";
+import { SearchListToolbar } from "~/components/list/search-list-toolbar";
 import {
     hasQualifier,
     toggleQualifier,
 } from "~/components/search/search-utils";
-import { SortDropdown } from "~/components/search/sort-dropdown";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
 import type {
     FilterState,
@@ -46,138 +41,43 @@ export function PullRequestToolbar({
     onAddQualifier: (key: string, value: string) => void;
     onRemoveQualifier: (key: string, value: string) => void;
 }) {
+    const toggleAndNavigate = (key: string, value: string) => {
+        const newQuery = toggleQualifier(searchQuery, key, value);
+        setSearchInput(newQuery);
+        onNavigate({ q: newQuery || null, page: null });
+    };
+
     return (
-        <div className="border-border-subtle border-b">
-            <div className="flex items-center justify-between px-4">
-                <StateTabs
-                    tabs={config.tabs}
-                    activeTab={activeTab}
-                    stateCounts={stateCounts}
-                    onTabChange={(tab) => onTabChange(tab as FilterState)}
+        <SearchListToolbar
+            tabs={config.tabs}
+            activeTab={activeTab}
+            searchQuery={searchQuery}
+            setSearchInput={setSearchInput}
+            currentSort={currentSort}
+            currentOrder={currentOrder}
+            provider={config.provider}
+            owner={owner}
+            repo={repo}
+            stateCounts={stateCounts}
+            showAssigneeFilter={config.showAssigneeFilter}
+            onTabChange={(tab) => onTabChange(tab as FilterState)}
+            onNavigate={onNavigate}
+            onAddQualifier={onAddQualifier}
+            onRemoveQualifier={onRemoveQualifier}
+        >
+            {config.showStatusFilter && (
+                <StatusFilterDropdown
+                    currentQuery={searchQuery}
+                    onToggle={toggleAndNavigate}
                 />
-                <div className="flex items-center gap-2">
-                    <AuthorDropdown
-                        provider={config.provider}
-                        owner={owner}
-                        repo={repo}
-                        currentQuery={searchQuery}
-                        onToggle={(key: string, value: string) => {
-                            const newQuery = toggleQualifier(
-                                searchQuery,
-                                key,
-                                value,
-                            );
-                            setSearchInput(newQuery);
-                            onNavigate({
-                                q: newQuery || null,
-                                page: null,
-                            });
-                        }}
-                    />
-
-                    <LabelDropdown
-                        provider={config.provider}
-                        owner={owner}
-                        repo={repo}
-                        currentQuery={searchQuery}
-                        onToggle={(labelName: string) => {
-                            if (hasQualifier(searchQuery, "label", labelName)) {
-                                onRemoveQualifier("label", labelName);
-                            } else {
-                                onAddQualifier("label", labelName);
-                            }
-                        }}
-                    />
-
-                    <MilestoneDropdown
-                        provider={config.provider}
-                        owner={owner}
-                        repo={repo}
-                        currentQuery={searchQuery}
-                        onToggle={(milestone: string) => {
-                            if (
-                                hasQualifier(
-                                    searchQuery,
-                                    "milestone",
-                                    milestone,
-                                )
-                            ) {
-                                onRemoveQualifier("milestone", milestone);
-                            } else {
-                                onAddQualifier("milestone", milestone);
-                            }
-                        }}
-                    />
-
-                    {config.showAssigneeFilter && (
-                        <AssigneeDropdown
-                            provider={config.provider}
-                            owner={owner}
-                            repo={repo}
-                            currentQuery={searchQuery}
-                            onToggle={(key: string, value: string) => {
-                                const newQuery = toggleQualifier(
-                                    searchQuery,
-                                    key,
-                                    value,
-                                );
-                                setSearchInput(newQuery);
-                                onNavigate({
-                                    q: newQuery || null,
-                                    page: null,
-                                });
-                            }}
-                        />
-                    )}
-
-                    {config.showStatusFilter && (
-                        <StatusFilterDropdown
-                            currentQuery={searchQuery}
-                            onToggle={(key: string, value: string) => {
-                                const newQuery = toggleQualifier(
-                                    searchQuery,
-                                    key,
-                                    value,
-                                );
-                                setSearchInput(newQuery);
-                                onNavigate({
-                                    q: newQuery || null,
-                                    page: null,
-                                });
-                            }}
-                        />
-                    )}
-
-                    {config.showReviewFilter && (
-                        <ReviewFilterDropdown
-                            currentQuery={searchQuery}
-                            onToggle={(key: string, value: string) => {
-                                const newQuery = toggleQualifier(
-                                    searchQuery,
-                                    key,
-                                    value,
-                                );
-                                setSearchInput(newQuery);
-                                onNavigate({
-                                    q: newQuery || null,
-                                    page: null,
-                                });
-                            }}
-                        />
-                    )}
-
-                    <SortDropdown
-                        currentSort={
-                            currentSort as "created" | "updated" | "comments"
-                        }
-                        currentOrder={currentOrder as "asc" | "desc"}
-                        onSelect={(sort, order) =>
-                            onNavigate({ sort, order, page: null })
-                        }
-                    />
-                </div>
-            </div>
-        </div>
+            )}
+            {config.showReviewFilter && (
+                <ReviewFilterDropdown
+                    currentQuery={searchQuery}
+                    onToggle={toggleAndNavigate}
+                />
+            )}
+        </SearchListToolbar>
     );
 }
 
