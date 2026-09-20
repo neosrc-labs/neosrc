@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import {
     canEdit,
@@ -8,10 +7,11 @@ import {
 } from "~/components/permissions/permissions-utils";
 import { Label as LabelComponent } from "~/components/ui/label";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
+import { useOptimisticOperationLog } from "~/hooks/use-optimistic-operation-log";
 import type { IssueMetadata } from "~/server/api/routers/issues/types";
 import type { Label } from "~/server/api/routers/mappers";
 import { api } from "~/trpc/react";
-import { applyArrayOperations, opId } from "~/utils/helpers";
+import { applyArrayOperations } from "~/utils/helpers";
 import type { Provider } from "~/utils/provider-url";
 import { FieldSkeleton } from "./metadata-section";
 
@@ -52,18 +52,8 @@ export function LabelsSection({
     repo,
     number,
 }: LabelsSectionProps) {
-    // We use a list of operations made by the user to track the UI state.
-    // Instead of trying to sync the state with the server constantly, which is quite difficult,
-    // we just take the initial labels and apply the operation log to it.
-    // This allows us to optimistically update and handle users adding multiple in quick succession without racing on the server response.
-    const [operations, setOperations] = useState<LabelOperation[]>([]);
-
-    // If we reload the payload we should remove all operations the user made
-    // and assume the new data is the latest.
-    // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the operations
-    useEffect(() => {
-        setOperations([]);
-    }, [metadataPromise]);
+    const { operations, begin } =
+        useOptimisticOperationLog<LabelOperation>(metadataPromise);
 
     const { data: repoLabels } = api.pulls.listLabels.useQuery(
         { provider, owner, repo },
@@ -77,27 +67,21 @@ export function LabelsSection({
         const repoLabel = labelsData.find((l) => l.name === label.name);
         if (!repoLabel) return;
 
-        const id = opId();
-        setOperations((prev) => [...prev, { id, op: "add", label }]);
+        const rollback = begin((id) => ({ id, op: "add", label }));
         addMutation.mutate(
             { owner, repo, number, label: label.name },
             {
-                onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id !== id));
-                },
+                onError: rollback,
             },
         );
     };
 
     const handleRemove = (label: Label) => {
-        const id = opId();
-        setOperations((prev) => [...prev, { id, op: "remove", label }]);
+        const rollback = begin((id) => ({ id, op: "remove", label }));
         removeMutation.mutate(
             { owner, repo, number, label: label.name },
             {
-                onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id !== id));
-                },
+                onError: rollback,
             },
         );
     };

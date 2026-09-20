@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Async } from "~/components/async";
 import {
     canEdit,
     type PullRequestPermissionContext,
 } from "~/components/permissions/permissions-utils";
 import { SearchableDropdown } from "~/components/ui/searchable-dropdown";
+import { useOptimisticOperationLog } from "~/hooks/use-optimistic-operation-log";
 import type {
     IssueMetadata,
     IssueMilestone,
 } from "~/server/api/routers/issues/types";
 import { api } from "~/trpc/react";
-import { cn, opId } from "~/utils/helpers";
+import { cn } from "~/utils/helpers";
 import type { Provider } from "~/utils/provider-url";
 import { FieldSkeleton } from "./metadata-section";
 
@@ -55,12 +55,8 @@ export function MilestoneSection({
     repo,
     number,
 }: MilestoneSectionProps) {
-    const [operations, setOperations] = useState<MilestoneOperation[]>([]);
-
-    // biome-ignore lint/correctness/useExhaustiveDependencies: when the promise changes we reset the operations
-    useEffect(() => {
-        setOperations([]);
-    }, [metadataPromise]);
+    const { operations, begin } =
+        useOptimisticOperationLog<MilestoneOperation>(metadataPromise);
 
     const { data: repoMilestones } = api.pulls.listMilestones.useQuery(
         { provider, owner, repo },
@@ -70,8 +66,7 @@ export function MilestoneSection({
 
     const milestonesData: RepoMilestone[] = repoMilestones ?? [];
     const handleSet = (milestone: IssueMilestone | null) => {
-        const id = opId();
-        setOperations((prev) => [...prev, { id, milestone }]);
+        const rollback = begin((id) => ({ id, milestone }));
         setMutation.mutate(
             {
                 owner,
@@ -82,9 +77,7 @@ export function MilestoneSection({
                 milestone: milestone ? Number(milestone.id) : null,
             },
             {
-                onError: () => {
-                    setOperations((prev) => prev.filter((op) => op.id !== id));
-                },
+                onError: rollback,
             },
         );
     };
