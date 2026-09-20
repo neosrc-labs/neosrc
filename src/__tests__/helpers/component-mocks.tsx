@@ -163,14 +163,32 @@ export function mockUseReactionToggle() {
     };
 }
 
+export interface ReviewThreadMockData {
+    comments: { id: number }[];
+    [key: string]: unknown;
+}
 /** Factory for the use-review-thread-operations hook mock. */
-export function mockUseReviewThreadOperations() {
+export function mockUseReviewThreadOperations(
+    threadsQuery: () => {
+        data?: ReviewThreadMockData[];
+        isPending?: boolean;
+    } = () => ({ data: [] }),
+) {
     return {
-        useReviewThreadOperations: vi.fn(() => ({
-            operations: [],
-            isPending: () => false,
-            resolve: vi.fn(),
-        })),
-        applyReviewThreadOperations: vi.fn((threads: unknown) => threads),
+        useReviewThreads: vi.fn(() => {
+            const query = threadsQuery();
+            const threadByCommentId = new Map<number, ReviewThreadMockData>();
+            for (const thread of query.data ?? []) {
+                for (const comment of thread.comments) {
+                    threadByCommentId.set(comment.id, thread);
+                }
+            }
+            return {
+                isPending: query.isPending ?? false,
+                threadByCommentId,
+                resolve: vi.fn(),
+                isResolving: () => false,
+            };
+        }),
     };
 }

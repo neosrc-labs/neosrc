@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReviewThreadData } from "~/server/github";
 import { api } from "~/trpc/react";
 import { opId } from "~/utils/helpers";
@@ -101,5 +101,42 @@ export function useReviewThreadOperations({
         operations,
         resolve: resolveMutation.mutate,
         isPending: (threadId: string) => pendingThreadIds.has(threadId),
+    };
+}
+
+/** Loads review threads and overlays pending resolution changes. */
+export function useReviewThreads({
+    owner,
+    repo,
+    number,
+}: {
+    owner: string;
+    repo: string;
+    number: number;
+}) {
+    const { data: threads, isPending } = api.reviewComments.threads.useQuery(
+        { owner, repo, number },
+        { staleTime: 30_000 },
+    );
+    const operations = useReviewThreadOperations({ owner, repo, number });
+    const displayThreads = applyReviewThreadOperations(
+        threads,
+        operations.operations,
+    );
+    const threadByCommentId = useMemo(() => {
+        const map = new Map<number, ReviewThreadData>();
+        for (const thread of displayThreads ?? []) {
+            for (const comment of thread.comments) {
+                map.set(comment.id, thread);
+            }
+        }
+        return map;
+    }, [displayThreads]);
+
+    return {
+        isPending,
+        threadByCommentId,
+        resolve: operations.resolve,
+        isResolving: operations.isPending,
     };
 }
