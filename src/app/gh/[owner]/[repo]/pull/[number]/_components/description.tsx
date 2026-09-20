@@ -1,44 +1,28 @@
 "use client";
 
-import {
-    Archive,
-    Lock,
-    MoreVertical,
-    SmilePlus,
-    SquarePen,
-} from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { Archive, Lock } from "lucide-react";
+import { type ReactNode, useEffect, useState } from "react";
 import {
     ActionErrorBanner,
     ActionErrorProvider,
 } from "~/components/action-errors";
 import { Async } from "~/components/async";
 import { AuthorLabel } from "~/components/comment/author-label";
-import { ReactionFooter } from "~/components/comment/reaction-footer";
-import { CodeTitle } from "~/components/markdown/accessories/code-title";
-import { MarkdownEditor } from "~/components/markdown/markdown-editor";
-import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import {
-    canEdit,
-    canInteract,
-    type PullRequestPermissionContext,
-} from "~/components/permissions/permissions-utils";
+    EditableDescriptionCard,
+    EditableTitleRow,
+} from "~/components/description/editable-content";
+import type { PullRequestPermissionContext } from "~/components/permissions/permissions-utils";
 import { CreateStackDialog } from "~/components/pull/stack/create-stack-dialog";
 import { StackBanner } from "~/components/pull/stack/stack-banner";
 import { StackCreateBadge } from "~/components/pull/stack/stack-create-badge";
 import { StackBadge } from "~/components/pull/stack/stack-popover";
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "~/components/ui/popover";
-import {
     extractPullRequestState,
     StatusPill,
 } from "~/components/ui/status-pill";
-import { RoleBadge } from "~/components/user/role-badge";
-import { readAutosave, useAutosave } from "~/hooks/use-autosave";
 import { useLocalStorage } from "~/hooks/use-local-storage";
+import { useOptimisticTextEditor } from "~/hooks/use-optimistic-text-editor";
 import { useTaskToggle } from "~/hooks/use-task-toggle";
 import type {
     PullRequestDetail,
@@ -72,41 +56,22 @@ export function PullRequestDescriptionSection({
     conflictedFilesPromise,
     stackSuggestionPromise,
 }: PullRequestDescriptionSectionProps) {
-    const [isEditing, setIsEditing] = useState(false);
-    const descBodyKey = `pr-autosave:desc-body:${owner}:${repo}:${number}`;
-    const [editBody, setEditBody] = useState(
-        () => readAutosave(descBodyKey) ?? "",
+    const bodyEditor = useOptimisticTextEditor(
+        `pr-autosave:desc-body:${owner}:${repo}:${number}`,
     );
-    const { clear: clearDescBody } = useAutosave(descBodyKey, editBody);
-    const [savedBody, setSavedBody] = useState<string | null>(null);
     const [stackDialogOpen, setStackDialogOpen] = useState(false);
     const [stackBannerDismissed, setStackBannerDismissed] = useLocalStorage(
         `stack-banner-dismissed:${owner}:${repo}:${number}`,
         false,
     );
     const updateMutation = api.pulls.updateBody.useMutation({
-        onMutate: () => {
-            setSavedBody(editBody);
-            setIsEditing(false);
-        },
-        onError: () => {
-            setSavedBody(null);
-            setIsEditing(true);
-        },
-        onSuccess: () => {
-            clearDescBody();
-            setEditBody("");
-        },
+        onMutate: bodyEditor.applySave,
+        onError: bodyEditor.rollbackSave,
+        onSuccess: bodyEditor.finishSave,
     });
-
-    // Toggle instance for task-list checkbox clicks. Separate from
-    // `updateMutation` because its onMutate/onError contract mirrors the
-    // toggle flow rather than the edit-mode flow. Both share `savedBody` as
-    // the optimistic overlay over `pullRequest.body`; the two flows are never
-    // active at the same time (toggles only fire while `!isEditing`).
     const taskToggleMutation = api.pulls.updateBody.useMutation({
-        onMutate: ({ body }) => setSavedBody(body),
-        onError: () => setSavedBody(null),
+        onMutate: ({ body }) => bodyEditor.setSavedValue(body),
+        onError: () => bodyEditor.setSavedValue(null),
     });
     const { onToggleTask } = useTaskToggle({
         mutation: taskToggleMutation,
@@ -119,20 +84,6 @@ export function PullRequestDescriptionSection({
         { owner, repo, number },
         { staleTime: 30_000 },
     );
-
-    const handleStartEdit = useCallback((currentBody: string) => {
-        setEditBody((prev) => prev || currentBody);
-        setIsEditing(true);
-    }, []);
-
-    const handleCancel = useCallback(() => {
-        setIsEditing(false);
-        setEditBody("");
-    }, []);
-
-    const handleSave = useCallback(() => {
-        updateMutation.mutate({ owner, repo, number, body: editBody });
-    }, [editBody, owner, repo, number, updateMutation]);
 
     return (
         <div data-testid="pr-description">
@@ -231,159 +182,31 @@ export function PullRequestDescriptionSection({
                 }
                 promise={pullRequestPromise}
             >
-                {(pullRequest) => {
-                    const displayBody = savedBody ?? pullRequest.body;
-                    return (
-                        <div className="rounded-lg border border-border bg-surface-elevated">
-                            <div className="flex items-center justify-between rounded-t-lg border-border border-b bg-surface-secondary px-4 py-2">
-                                <h3 className="text-text-label">Description</h3>
-                                <div className="flex items-center gap-0.5">
-                                    <RoleBadge
-                                        authorAssociation={
-                                            pullRequest.author_association
-                                        }
-                                    />
-                                    <Async
-                                        fallback={null}
-                                        promise={permissionContextPromise}
-                                    >
-                                        {(permissionContext) =>
-                                            !isEditing &&
-                                            canInteract(permissionContext) ? (
-                                                <Popover
-                                                    open={menuOpen}
-                                                    onOpenChange={setMenuOpen}
-                                                >
-                                                    <PopoverTrigger asChild>
-                                                        <button
-                                                            type="button"
-                                                            aria-label="More options"
-                                                            className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
-                                                        >
-                                                            <MoreVertical
-                                                                size={14}
-                                                            />
-                                                        </button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent
-                                                        className="w-44 bg-surface p-1"
-                                                        align="end"
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                handleStartEdit(
-                                                                    savedBody ??
-                                                                        pullRequest.body ??
-                                                                        "",
-                                                                );
-                                                                setMenuOpen(
-                                                                    false,
-                                                                );
-                                                            }}
-                                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                                        >
-                                                            <SquarePen
-                                                                size={14}
-                                                            />
-                                                            Edit
-                                                        </button>
-                                                    </PopoverContent>
-                                                </Popover>
-                                            ) : null
-                                        }
-                                    </Async>
-                                </div>
-                            </div>
-                            <div className="p-4">
-                                {isEditing ? (
-                                    <MarkdownEditor
-                                        autoFocus
-                                        onCancel={handleCancel}
-                                        onChange={setEditBody}
-                                        value={editBody}
-                                        owner={owner}
-                                        repo={repo}
-                                        minHeight="200px"
-                                        footerActions={[
-                                            {
-                                                label: "Save",
-                                                onClick: () => handleSave(),
-                                                variant: "approve",
-                                            },
-                                        ]}
-                                    />
-                                ) : (
-                                    <div>
-                                        {displayBody ? (
-                                            <Async
-                                                fallback={
-                                                    <MarkdownRenderer
-                                                        content={displayBody}
-                                                        owner={owner}
-                                                        repo={repo}
-                                                    />
-                                                }
-                                                promise={
-                                                    permissionContextPromise
-                                                }
-                                            >
-                                                {(permissionContext) => (
-                                                    <MarkdownRenderer
-                                                        canToggleTasks={canEdit(
-                                                            permissionContext,
-                                                        )}
-                                                        content={displayBody}
-                                                        onToggleTask={
-                                                            onToggleTask
-                                                        }
-                                                        owner={owner}
-                                                        repo={repo}
-                                                    />
-                                                )}
-                                            </Async>
-                                        ) : (
-                                            <p className="text-text-tertiary italic">
-                                                No description provided.
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                            {!isEditing && (
-                                <Async
-                                    fallback={
-                                        <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
-                                            <button
-                                                type="button"
-                                                aria-hidden="true"
-                                                tabIndex={-1}
-                                                className="rounded p-1 opacity-0"
-                                            >
-                                                <SmilePlus size={14} />
-                                            </button>
-                                        </div>
-                                    }
-                                    promise={permissionContextPromise}
-                                >
-                                    {(permissionContext) => (
-                                        <ReactionFooter
-                                            owner={owner}
-                                            repo={repo}
-                                            number={number}
-                                            kind="pull"
-                                            provider="gh"
-                                            reactionsData={reactionsData}
-                                            permissionContext={
-                                                permissionContext
-                                            }
-                                        />
-                                    )}
-                                </Async>
-                            )}
-                        </div>
-                    );
-                }}
+                {(pullRequest) => (
+                    <EditableDescriptionCard
+                        owner={owner}
+                        repo={repo}
+                        number={number}
+                        provider="gh"
+                        kind="pull"
+                        body={pullRequest.body}
+                        authorAssociation={pullRequest.author_association}
+                        permissionContextPromise={permissionContextPromise}
+                        reactionsData={reactionsData}
+                        editor={bodyEditor}
+                        menuOpen={menuOpen}
+                        onMenuOpenChange={setMenuOpen}
+                        onSave={() =>
+                            updateMutation.mutate({
+                                owner,
+                                repo,
+                                number,
+                                body: bodyEditor.editValue,
+                            })
+                        }
+                        onToggleTask={onToggleTask}
+                    />
+                )}
             </Async>
         </div>
     );
@@ -402,160 +225,57 @@ function TitleRow({
     pullRequestPromise: Promise<PullRequestDetail>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
 }) {
-    const titleKey = `pr-autosave:desc-title:${owner}:${repo}:${number}`;
-    const [isEditingTitle, setIsEditingTitle] = useState(false);
-    const [editTitle, setEditTitle] = useState(
-        () => readAutosave(titleKey) ?? "",
+    const editor = useOptimisticTextEditor(
+        `pr-autosave:desc-title:${owner}:${repo}:${number}`,
     );
-    const [savedTitle, setSavedTitle] = useState<string | null>(null);
-    const { clear: clearTitle } = useAutosave(titleKey, editTitle);
-
-    const updateTitleMutation = api.pulls.updateTitle.useMutation({
-        onMutate: () => {
-            setSavedTitle(editTitle);
-            setIsEditingTitle(false);
-        },
-        onError: () => {
-            setSavedTitle(null);
-            setIsEditingTitle(true);
-        },
-        onSuccess: () => {
-            clearTitle();
-            setEditTitle("");
-        },
+    const updateMutation = api.pulls.updateTitle.useMutation({
+        onMutate: editor.applySave,
+        onError: editor.rollbackSave,
+        onSuccess: editor.finishSave,
     });
 
-    const handleStartEditTitle = useCallback((currentTitle: string) => {
-        setEditTitle((prev) => prev || currentTitle);
-        setIsEditingTitle(true);
-    }, []);
-
-    const handleCancelTitle = useCallback(() => {
-        setIsEditingTitle(false);
-        setEditTitle("");
-    }, []);
-
-    const handleSaveTitle = useCallback(() => {
-        updateTitleMutation.mutate({ owner, repo, number, title: editTitle });
-    }, [editTitle, owner, repo, number, updateTitleMutation]);
-
     return (
-        <div className="flex items-center gap-2">
-            <Async
-                fallback={
-                    <div className="h-5 w-16 animate-pulse rounded-full bg-surface-selected" />
-                }
-                promise={pullRequestPromise}
-            >
-                {(pullRequest) => {
-                    const state = extractPullRequestState(pullRequest);
-                    return (
-                        <>
-                            <StatusPill state={state} />
-                            {pullRequest.archived && (
-                                <span className="flex items-center gap-1 rounded-md border border-border bg-surface-secondary px-2 py-0.5 text-text-tertiary text-xs">
-                                    <Archive size={12} />
-                                    Archived
-                                </span>
-                            )}
-                            {pullRequest.locked && (
-                                <span className="flex items-center gap-1 rounded-md border border-border bg-surface-secondary px-2 py-0.5 text-text-tertiary text-xs">
-                                    <Lock size={12} />
-                                    Locked
-                                </span>
-                            )}
-                        </>
-                    );
-                }}
-            </Async>
-            <Async
-                fallback={
-                    <div className="h-10 w-3/4 animate-pulse rounded bg-surface-selected" />
-                }
-                promise={pullRequestPromise}
-            >
-                {(pullRequest) => {
-                    const displayTitle = savedTitle ?? pullRequest.title;
-                    return (
-                        <div className="flex w-full items-center gap-2">
-                            {isEditingTitle ? (
-                                <>
-                                    <input
-                                        type="text"
-                                        value={editTitle}
-                                        onChange={(e) =>
-                                            setEditTitle(e.target.value)
-                                        }
-                                        className="flex-1 border-focus border-b-2 bg-transparent font-bold text-2xl text-text-primary outline-none"
-                                        autoFocus
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter")
-                                                handleSaveTitle();
-                                            if (e.key === "Escape")
-                                                handleCancelTitle();
-                                        }}
-                                    />
-                                    <button
-                                        className="cursor-pointer rounded bg-action px-2 py-1 text-action-foreground text-xs hover:bg-action-hover"
-                                        onClick={handleSaveTitle}
-                                        type="button"
-                                    >
-                                        Save
-                                    </button>
-                                    <button
-                                        className="cursor-pointer text-text-muted text-xs hover:text-text-secondary"
-                                        onClick={handleCancelTitle}
-                                        type="button"
-                                    >
-                                        Cancel
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <h1 className="font-medium text-3xl text-text-primary">
-                                        <CodeTitle
-                                            provider="gh"
-                                            owner={owner}
-                                            repo={repo}
-                                        >
-                                            {displayTitle}
-                                        </CodeTitle>
-                                    </h1>
-                                    <span className="text-2xl text-text-muted">
-                                        #{number}
-                                    </span>
-                                    <Async
-                                        fallback={null}
-                                        promise={permissionContextPromise}
-                                    >
-                                        {(permissionContext) =>
-                                            canInteract(permissionContext) ? (
-                                                <button
-                                                    className="cursor-pointer text-text-muted hover:text-text-secondary"
-                                                    onClick={() =>
-                                                        handleStartEditTitle(
-                                                            displayTitle,
-                                                        )
-                                                    }
-                                                    type="button"
-                                                >
-                                                    <SquarePen size={16} />
-                                                </button>
-                                            ) : null
-                                        }
-                                    </Async>
-                                    <AdditionsDeletionsBadge
-                                        additions={pullRequest.additions}
-                                        deletions={pullRequest.deletions}
-                                        className="ml-auto"
-                                    />
-                                </>
-                            )}
-                        </div>
-                    );
-                }}
-            </Async>
-        </div>
+        <EditableTitleRow
+            owner={owner}
+            repo={repo}
+            number={number}
+            provider="gh"
+            itemPromise={pullRequestPromise}
+            permissionContextPromise={permissionContextPromise}
+            editor={editor}
+            onSave={() =>
+                updateMutation.mutate({
+                    owner,
+                    repo,
+                    number,
+                    title: editor.editValue,
+                })
+            }
+            renderStatus={(pullRequest) => (
+                <>
+                    <StatusPill state={extractPullRequestState(pullRequest)} />
+                    {pullRequest.archived && (
+                        <span className="flex items-center gap-1 rounded-md border border-border bg-surface-secondary px-2 py-0.5 text-text-tertiary text-xs">
+                            <Archive size={12} />
+                            Archived
+                        </span>
+                    )}
+                    {pullRequest.locked && (
+                        <span className="flex items-center gap-1 rounded-md border border-border bg-surface-secondary px-2 py-0.5 text-text-tertiary text-xs">
+                            <Lock size={12} />
+                            Locked
+                        </span>
+                    )}
+                </>
+            )}
+            renderTrailing={(pullRequest) => (
+                <AdditionsDeletionsBadge
+                    additions={pullRequest.additions}
+                    deletions={pullRequest.deletions}
+                    className="ml-auto"
+                />
+            )}
+        />
     );
 }
 
