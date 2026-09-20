@@ -1,27 +1,11 @@
-import type { Metadata } from "next";
-import { BranchListShared } from "~/components/branch/branch-list-shared";
+import {
+    generateBranchesMetadata,
+    ProviderBranchesPage,
+    type RepoPageProps,
+} from "~/app/[owner]/[repo]/_components/provider-route-pages";
 
-export async function generateMetadata({
-    params,
-}: {
-    params: Promise<{ owner: string; repo: string }>;
-}): Promise<Metadata> {
-    const { owner, repo } = await params;
-    return { title: `Branches - ${owner}/${repo}` };
-}
+export { generateBranchesMetadata as generateMetadata };
 
-export default async function BranchesPage({
-    params,
-}: {
-    params: Promise<{ owner: string; repo: string }>;
-}) {
-    const { owner, repo } = await params;
-
-    return (
-        <main className="min-h-[calc(100svh-var(--header-height))] min-w-0 border-border-subtle border-r bg-surface">
-            <div className="mx-auto max-w-7xl px-6 py-8">
-                <BranchListShared owner={owner} repo={repo} provider="cb" />
-            </div>
-        </main>
-    );
+export default function BranchesPage(props: RepoPageProps) {
+    return <ProviderBranchesPage provider="cb" {...props} />;
 }

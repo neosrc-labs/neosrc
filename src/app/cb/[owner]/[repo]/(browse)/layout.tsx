@@ -1,21 +1,8 @@
-import type { ReactNode } from "react";
-import { RepoBrowseShell } from "~/components/repo/repo-browse-shell";
+import {
+    ProviderBrowseLayout,
+    type ProviderLayoutProps,
+} from "~/app/[owner]/[repo]/_components/provider-route-pages";
 
-/**
- * Shell of the Codeberg file and directory routes. Owning the rail here keeps it
- * mounted, with its expansion and scroll, across tree/blob navigation.
- */
-export default async function BrowseLayout({
-    children,
-    params,
-}: {
-    children: ReactNode;
-    params: Promise<{ owner: string; repo: string }>;
-}) {
-    const { owner, repo } = await params;
-    return (
-        <RepoBrowseShell provider="cb" owner={owner} repo={repo}>
-            {children}
-        </RepoBrowseShell>
-    );
+export default function BrowseLayout(props: ProviderLayoutProps) {
+    return <ProviderBrowseLayout provider="cb" {...props} />;
 }
