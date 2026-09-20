@@ -3,9 +3,9 @@
 import { GitPullRequest } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { computeStatusState } from "~/components/ci-status";
-import { ListSearchBar } from "~/components/list/list-search-bar";
 import { ListSkeleton } from "~/components/list/list-skeleton";
 import { rowQualifierFilters } from "~/components/list/row-qualifier-filters";
+import { SearchListBar } from "~/components/list/search-list-bar";
 import { SearchListLayout } from "~/components/list/search-list-layout";
 import {
     type SearchArgs,
@@ -156,14 +156,8 @@ export function PullRequestListShared({
             />
             <SearchListLayout
                 searchBar={
-                    <ListSearchBar
-                        searchInput={list.searchInput}
-                        setSearchInput={list.setSearchInput}
-                        cursorPos={list.cursorPos}
-                        setCursorPos={list.setCursorPos}
-                        inputRef={list.inputRef}
-                        searchBarRef={list.searchBarRef}
-                        autocompleteRef={list.autocompleteRef}
+                    <SearchListBar
+                        list={list}
                         provider={config.provider}
                         qualifiers={config.qualifiers}
                         autocompleteOptions={config.autocompleteOptions}
@@ -177,9 +171,6 @@ export function PullRequestListShared({
                         )}
                         newItemIcon={<GitPullRequest className="size-4" />}
                         newItemLabel="New Pull Request"
-                        onSearch={list.handleSearch}
-                        onClear={list.handleClearSearch}
-                        onAutocompleteSelect={list.handleAutocompleteSelect}
                     />
                 }
                 toolbar={

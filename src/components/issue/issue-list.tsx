@@ -2,9 +2,9 @@
 
 import { Plus } from "lucide-react";
 import { useCallback, useMemo } from "react";
-import { ListSearchBar } from "~/components/list/list-search-bar";
 import { ListSkeleton } from "~/components/list/list-skeleton";
 import { rowQualifierFilters } from "~/components/list/row-qualifier-filters";
+import { SearchListBar } from "~/components/list/search-list-bar";
 import { SearchListLayout } from "~/components/list/search-list-layout";
 import {
     type SearchArgs,
@@ -124,14 +124,8 @@ export function IssueList({
             />
             <SearchListLayout
                 searchBar={
-                    <ListSearchBar
-                        searchInput={list.searchInput}
-                        setSearchInput={list.setSearchInput}
-                        cursorPos={list.cursorPos}
-                        setCursorPos={list.setCursorPos}
-                        inputRef={list.inputRef}
-                        searchBarRef={list.searchBarRef}
-                        autocompleteRef={list.autocompleteRef}
+                    <SearchListBar
+                        list={list}
                         provider={config.provider}
                         qualifiers={config.qualifiers}
                         autocompleteOptions={config.autocompleteOptions}
@@ -141,9 +135,6 @@ export function IssueList({
                         urls={config.externalUrls}
                         newItemIcon={<Plus className="size-4" />}
                         newItemLabel="New Issue"
-                        onSearch={list.handleSearch}
-                        onClear={list.handleClearSearch}
-                        onAutocompleteSelect={list.handleAutocompleteSelect}
                         booleanHint={booleanHint}
                     />
                 }
