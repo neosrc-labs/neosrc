@@ -232,7 +232,7 @@ function AggregatedLabel({
             <div className="absolute -left-12 flex h-8 w-8 items-center justify-center rounded-full bg-surface ring-1 ring-border">
                 <Tag size={ICON_SIZE} />
             </div>
-            <div className="flex flex-wrap items-center gap-1.5 text-sm text-text-secondary">
+            <div className="flex min-h-8 flex-wrap items-center gap-1.5 text-sm text-text-secondary">
                 <UserLink actor={actor} provider={provider} />
                 {added.length > 0 && (
                     <>
