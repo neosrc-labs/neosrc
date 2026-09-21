@@ -23,7 +23,7 @@ export function DiffLineCommentEditor({
     repo: string;
 }) {
     return (
-        <div className="max-w-[800px] p-2">
+        <div className="max-w-[880px] p-2">
             <MarkdownEditor
                 autoFocus
                 className="bg-surface"

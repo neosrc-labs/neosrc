@@ -258,7 +258,7 @@ export function InlineCommentThread({
 
     return (
         <div
-            className="my-2 ml-2 max-w-[800px] overflow-hidden rounded-lg border border-border bg-surface font-sans"
+            className="my-2 ml-2 max-w-[880px] overflow-hidden rounded-lg border border-border bg-surface font-sans"
             id={`review-thread-${parentComment.id}`}
         >
             <ReviewCommentItem

@@ -83,7 +83,7 @@ export function CommentCard({
     return (
         <div
             id={id}
-            className={`${fullWidth ? "w-full" : "max-w-[800px]"} ${
+            className={`${fullWidth ? "w-full" : "max-w-[880px]"} ${
                 variant === "default"
                     ? `relative border-b-1 border-solid bg-surface-elevated ${
                           isCurrentUser

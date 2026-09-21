@@ -266,7 +266,7 @@ export function ReviewComments({
     }
 
     return (
-        <div className="max-w-[800px] pt-1">
+        <div className="max-w-[880px] pt-1">
             {topLevel.map((comment) => {
                 const thread = reviewThreads.threadByCommentId.get(comment.id);
                 const isResolved = thread?.isResolved ?? false;
@@ -532,7 +532,7 @@ function CommentBlock({
                         placeholder="Write a reply..."
                     />
                 ) : (
-                    <div className="flex max-w-[800px] items-center gap-2 p-2">
+                    <div className="flex max-w-[880px] items-center gap-2 p-2">
                         <div className="min-w-0 flex-1">
                             <ReplyTextboxButton
                                 onClick={() => setShowReplyForm(true)}
