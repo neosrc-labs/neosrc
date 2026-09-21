@@ -1,12 +1,10 @@
 "use client";
 
-import type { ColorSchemeType } from "diff2html/lib/types";
+import { createTwoFilesPatch } from "diff";
 import { ChevronDown } from "lucide-react";
 import Image from "next/image";
-import { useTheme } from "next-themes";
 import { useMemo, useState } from "react";
 import { DiffView } from "~/components/diff/diff-view";
-import { parseDiffPatch } from "~/components/diff/model";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import { disabled } from "~/components/permissions/permissions-utils";
 import {
@@ -66,7 +64,11 @@ export function EditedIndicator({
     bodyHistory = false,
 }: EditedIndicatorProps) {
     const [menuOpen, setMenuOpen] = useState(false);
-    const [selected, setSelected] = useState<EditHistoryEntry | null>(null);
+    const [selected, setSelected] = useState<{
+        entry: EditHistoryEntry;
+        /** Content before this edit; null when no earlier version is exposed. */
+        before: string | null;
+    } | null>(null);
 
     if (!summary) return null;
 
@@ -104,9 +106,9 @@ export function EditedIndicator({
                         subject={subject}
                         commentNodeId={commentNodeId}
                         open={menuOpen}
-                        onSelect={(entry) => {
+                        onSelect={(entry, before) => {
                             setMenuOpen(false);
-                            setSelected(entry);
+                            setSelected({ entry, before });
                         }}
                     />
                 </PopoverContent>
@@ -117,17 +119,22 @@ export function EditedIndicator({
                     if (!o) setSelected(null);
                 }}
             >
-                <DialogContent className="max-w-3xl">
+                <DialogContent className="sm:max-w-4xl">
                     <DialogHeader>
                         <DialogTitle>Edit history</DialogTitle>
                         <DialogDescription>
-                            {selected?.editor?.login ?? "unknown"}
+                            {selected?.entry.editor?.login ?? "unknown"}
                             {selected
-                                ? ` · ${formatRelativeTime(selected.editedAt)}`
+                                ? ` · ${formatRelativeTime(selected.entry.editedAt)}`
                                 : ""}
                         </DialogDescription>
                     </DialogHeader>
-                    {selected?.diff && <EditDiffView diff={selected.diff} />}
+                    {selected && (
+                        <EditDiffView
+                            after={selected.entry.diff}
+                            before={selected.before}
+                        />
+                    )}
                 </DialogContent>
             </Dialog>
         </>
@@ -151,7 +158,7 @@ function EditHistoryMenu({
     subject: "issue" | "pull";
     commentNodeId?: string;
     open: boolean;
-    onSelect: (entry: EditHistoryEntry) => void;
+    onSelect: (entry: EditHistoryEntry, before: string | null) => void;
 }) {
     const query = api.issues.editHistory.useQuery(
         {
@@ -185,7 +192,7 @@ function EditHistoryMenu({
 
     return (
         <div className="flex flex-col">
-            {entries.map((entry) => (
+            {entries.map((entry, index) => (
                 <button
                     key={entry.editedAt}
                     type="button"
@@ -193,7 +200,12 @@ function EditHistoryMenu({
                     title={
                         entry.diff === null ? "No diff available" : undefined
                     }
-                    onClick={() => onSelect(entry)}
+                    // Entries are newest-first and each diff is the content at
+                    // that edit, so the previous version is the next entry's
+                    // diff; the oldest edit has no exposed earlier version.
+                    onClick={() =>
+                        onSelect(entry, entries[index + 1]?.diff ?? null)
+                    }
                     className="flex w-full cursor-pointer items-center justify-between gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary disabled:cursor-default disabled:opacity-60 disabled:hover:bg-transparent"
                 >
                     <span className="flex min-w-0 items-center gap-2">
@@ -226,39 +238,47 @@ function EditHistoryMenu({
 
 // DiffView needs a permission context even with comments disabled; the
 // disabled context keeps every interaction off.
-function EditDiffView({ diff }: { diff: string }) {
-    const { resolvedTheme } = useTheme();
-    const parsed = useMemo(
-        () =>
-            parseDiffPatch(
-                diff,
-                "comment.md",
-                (resolvedTheme === "dark"
-                    ? "dark"
-                    : "light") as ColorSchemeType,
-            ),
-        [diff, resolvedTheme],
-    );
+function EditDiffView({
+    before,
+    after,
+}: {
+    before: string | null;
+    after: string | null;
+}) {
+    const patch = useMemo(() => {
+        if (before === null || after === null) return null;
+        // jsdiff prefixes a "===" separator line; drop it so the patch starts
+        // with "---" and DiffView's normalizeDiffPatch leaves it intact.
+        return createTwoFilesPatch(
+            "a/comment.md",
+            "b/comment.md",
+            before,
+            after,
+            undefined,
+            undefined,
+            { context: 3 },
+        ).replace(/^=+\n/, "");
+    }, [before, after]);
 
-    // UserContentEdit.diff is undocumented: usually the full content snapshot
-    // at that edit, sometimes a real patch. Render whichever fits.
-    if (parsed?.blocks?.length) {
-        return (
+    // The oldest edit has no earlier version to diff against; GitHub's edit
+    // API only exposes the post-edit snapshot, so show it as markdown.
+    if (patch === null) {
+        return after === null ? null : (
             <div className="max-h-[70vh] overflow-auto">
-                <DiffView
-                    patch={diff}
-                    filename="comment.md"
-                    permissionContext={disabled()}
-                    view="unified"
-                    idleParse={false}
-                />
+                <MarkdownRenderer content={after} />
             </div>
         );
     }
 
     return (
         <div className="max-h-[70vh] overflow-auto">
-            <MarkdownRenderer content={diff} />
+            <DiffView
+                patch={patch}
+                filename="comment.md"
+                permissionContext={disabled()}
+                view="unified"
+                idleParse={false}
+            />
         </div>
     );
 }
