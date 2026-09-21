@@ -26,6 +26,7 @@ import { CopyButton } from "~/components/ui/copy-button";
 import { api } from "~/trpc/react";
 import { cn } from "~/utils/helpers";
 import { highlightLines } from "~/utils/highlight";
+import { MermaidDiagram } from "./accessories/mermaid-diagram";
 import { SuggestionBlock } from "./accessories/suggestion-block";
 import { remarkCommitPlugin } from "./plugins/remark-commit";
 import { remarkEmojiPlugin } from "./plugins/remark-emoji";
@@ -287,6 +288,12 @@ export function MarkdownRenderer({
                                     resolveThreadId={commentThreadId}
                                 />
                             );
+                        }
+                        if (className === "language-mermaid") {
+                            const codeString = Array.isArray(children)
+                                ? children.join("")
+                                : String(children ?? "");
+                            return <MermaidDiagram code={codeString.trim()} />;
                         }
                         return (
                             <CodeElement className={className}>
