@@ -130,17 +130,19 @@ export function TimelineEvent({
                     containIntrinsicSize: "200px",
                 }}
             >
-                <EventContent
-                    event={wrapper.event}
-                    provider={provider}
-                    owner={owner}
-                    repo={repo}
-                    number={number}
-                    commentReactions={commentReactions}
-                    allComments={allComments}
-                    permissionContext={permissionContext}
-                    issueNumber={issueNumber}
-                />
+                <div className="max-w-[880px]">
+                    <EventContent
+                        event={wrapper.event}
+                        provider={provider}
+                        owner={owner}
+                        repo={repo}
+                        number={number}
+                        commentReactions={commentReactions}
+                        allComments={allComments}
+                        permissionContext={permissionContext}
+                        issueNumber={issueNumber}
+                    />
+                </div>
             </div>
         </div>
     );
