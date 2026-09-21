@@ -158,7 +158,7 @@ export default async function PullRequestPage({ params }: PageProps) {
                                 <h2 className="mb-4 text-text-primary">
                                     Timeline
                                 </h2>
-                                <div className="ml-12">
+                                <div className="mr-6 ml-12">
                                     <TimelineSkeleton />
                                 </div>
                             </div>

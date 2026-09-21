@@ -119,7 +119,7 @@ export function IssueCommentContent({
 
     if (isMinimized) {
         return (
-            <div className="max-w-[880px] rounded-lg border border-border bg-surface-secondary p-3">
+            <div className="w-full rounded-lg border border-border bg-surface-secondary p-3">
                 <div className="flex items-center justify-between">
                     <p className="text-sm text-text-tertiary">
                         A comment by{" "}
@@ -156,6 +156,7 @@ export function IssueCommentContent({
             <CommentCard
                 id={`issuecomment-${event.databaseId}`}
                 provider={provider}
+                fullWidth
                 user={
                     event.author
                         ? {

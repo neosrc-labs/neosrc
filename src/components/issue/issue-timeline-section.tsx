@@ -84,7 +84,7 @@ export function IssueTimelineSection({
     const wrappers = aggregateEvents(filteredEvents);
 
     return (
-        <div className="mt-5 ml-12">
+        <div className="mt-5 mr-6 ml-12">
             <TimelineEventList
                 wrappers={wrappers}
                 provider={provider}

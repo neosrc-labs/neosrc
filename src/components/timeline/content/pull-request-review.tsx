@@ -312,6 +312,7 @@ export function PullRequestReviewContent({
                     <CommentCard
                         id={`pullrequestreview-${event.databaseId}`}
                         provider={provider}
+                        fullWidth
                         user={
                             event.author
                                 ? {
