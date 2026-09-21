@@ -10,6 +10,10 @@ import {
 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { CommentCard } from "~/components/comment/comment-card";
+import {
+    EditedIndicator,
+    getCommentLastEdit,
+} from "~/components/comment/edited-indicator";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import {
     canEdit,
@@ -43,6 +47,7 @@ interface IssueCommentContentProps {
     provider: Provider;
     owner: string;
     repo: string;
+    number: number;
     permissionContext: PullRequestPermissionContext;
     commentReactions: Record<string, GQLReactionNode[]>;
     editingCommentId: number | null;
@@ -70,6 +75,7 @@ export function IssueCommentContent({
     provider,
     owner,
     repo,
+    number,
     permissionContext,
     commentReactions,
     editingCommentId,
@@ -174,6 +180,19 @@ export function IssueCommentContent({
                 }}
                 owner={owner}
                 repo={repo}
+                headerLeading={
+                    !isPending && (
+                        <EditedIndicator
+                            provider={provider}
+                            owner={owner}
+                            repo={repo}
+                            number={number}
+                            subject="issue"
+                            commentNodeId={event.id}
+                            summary={getCommentLastEdit(event)}
+                        />
+                    )
+                }
                 headerActions={
                     <>
                         {event.isMinimized && (

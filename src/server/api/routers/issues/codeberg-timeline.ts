@@ -57,6 +57,20 @@ export function mapCodebergTimelineEvents(
                     isMinimized: false,
                     minimizedReason: null,
                     reactions: { nodes: [] },
+                    // Forgejo carries no edit history; surface a static
+                    // last-edit marker when the mutation timestamp differs.
+                    edits:
+                        entry.updated_at &&
+                        entry.updated_at !== entry.created_at
+                            ? {
+                                  nodes: [
+                                      {
+                                          editedAt: entry.updated_at,
+                                          editor: null,
+                                      },
+                                  ],
+                              }
+                            : null,
                 });
                 break;
             case "close":

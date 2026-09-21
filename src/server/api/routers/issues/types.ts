@@ -45,6 +45,7 @@ export interface IssueDetail {
     locked: boolean;
     comments: number;
     createdAt: string;
+    updatedAt: string;
     author: IssueAuthor | null;
     /** GitHub author_association (MEMBER/OWNER/...); null where the provider
      *  has no equivalent. */

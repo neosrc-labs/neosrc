@@ -1,3 +1,4 @@
+import { cache } from "react";
 import {
     createGraphql,
     type GraphqlClient,
@@ -99,6 +100,7 @@ query PullRequestTimeline(
 						authorAssociation
 						isMinimized
 						minimizedReason
+						edits: userContentEdits(first: 1) { nodes { editedAt editor { login avatarUrl url } } }
 						reactions(first: 10) {
 							nodes {
 								databaseId
@@ -119,6 +121,7 @@ query PullRequestTimeline(
 						createdAt
 						isMinimized
 						minimizedReason
+						edits: userContentEdits(first: 1) { nodes { editedAt editor { login avatarUrl url } } }
 						reactions(first: 10) {
 							nodes {
 								databaseId
@@ -417,6 +420,7 @@ query IssueTimeline(
 						authorAssociation
 						isMinimized
 						minimizedReason
+						edits: userContentEdits(first: 1) { nodes { editedAt editor { login avatarUrl url } } }
 						reactions(first: 10) {
 							nodes {
 								databaseId
@@ -638,6 +642,26 @@ export type GQLLabel = {
     description: string | null;
 };
 
+export type EditSummary = {
+    editedAt: string;
+    editor: { login: string; avatarUrl: string; url: string } | null;
+} | null;
+
+export type EditHistoryEntry = {
+    editedAt: string;
+    editor: { login: string; avatarUrl: string; url: string } | null;
+    diff: string | null;
+};
+
+export type GQLEdits = {
+    nodes:
+        | ({
+              editedAt: string;
+              editor: GQLActor | null;
+          } | null)[]
+        | null;
+};
+
 export type GQLIssueComment = {
     __typename: "IssueComment";
     id: string;
@@ -649,6 +673,7 @@ export type GQLIssueComment = {
     isMinimized: boolean;
     minimizedReason: string | null;
     reactions: { nodes: (GQLReactionNode | null)[] };
+    edits?: GQLEdits | null;
 };
 
 export type GQLPullRequestReview = {
@@ -664,6 +689,7 @@ export type GQLPullRequestReview = {
     isMinimized: boolean;
     minimizedReason: string | null;
     reactions: { nodes: (GQLReactionNode | null)[] };
+    edits?: GQLEdits | null;
     /** Repo permission of the review author. Set server-side for approved
      *  reviews to decide the green/gray approval check; undefined when
      *  unknown (e.g. anonymous viewer or a failed lookup). */
@@ -2621,3 +2647,116 @@ mutation DisableAutoMerge($pullRequestId: ID!) {
     }>(mutation, { pullRequestId });
     return result.disablePullRequestAutoMerge;
 }
+
+const EDIT_NODES_FIELDS = `
+	editedAt
+	deletedAt
+	diff
+	editor { login avatarUrl url }
+`;
+
+const BODY_EDITS_QUERY = (
+    subjectField: "issue" | "pullRequest",
+    first: number,
+) => `
+query BodyEdits($owner: String!, $repo: String!, $number: Int!) {
+	repository(owner: $owner, name: $repo) {
+		${subjectField}(number: $number) {
+			userContentEdits(first: ${first}) {
+				nodes { ${EDIT_NODES_FIELDS} }
+			}
+		}
+	}
+}
+`;
+
+const NODE_EDITS_QUERY = `
+query NodeEdits($id: ID!) {
+	node(id: $id) {
+		... on IssueComment {
+			userContentEdits(first: 100) { nodes { ${EDIT_NODES_FIELDS} } }
+		}
+		... on PullRequestReview {
+			userContentEdits(first: 100) { nodes { ${EDIT_NODES_FIELDS} } }
+		}
+	}
+}
+`;
+
+type GQLEditNode = {
+    editedAt: string;
+    deletedAt: string | null;
+    diff: string | null;
+    editor: GQLActor | null;
+};
+
+type GQLEditsConnection = { nodes: (GQLEditNode | null)[] | null } | null;
+
+function mapEditNodes(
+    nodes: (GQLEditNode | null)[] | null | undefined,
+    includeDiff: boolean,
+): EditHistoryEntry[] {
+    return (nodes ?? [])
+        .filter((n): n is GQLEditNode => n !== null && n.deletedAt === null)
+        .sort((a, b) => b.editedAt.localeCompare(a.editedAt))
+        .map((n) => ({
+            editedAt: n.editedAt,
+            editor: n.editor,
+            diff: includeDiff ? n.diff : null,
+        }));
+}
+
+export async function getEditHistoryGraphQL(
+    accessToken: string,
+    owner: string,
+    repo: string,
+    subject: "issue" | "pull",
+    number: number,
+    commentNodeId?: string,
+): Promise<EditHistoryEntry[]> {
+    const graphql = createGraphql(accessToken);
+
+    if (commentNodeId) {
+        const result = await graphql<{
+            node: {
+                userContentEdits?: GQLEditsConnection;
+            } | null;
+        }>(NODE_EDITS_QUERY, { id: commentNodeId });
+        return mapEditNodes(result.node?.userContentEdits?.nodes ?? [], true);
+    }
+
+    const subjectField = subject === "pull" ? "pullRequest" : "issue";
+    const result = await graphql<{
+        repository: {
+            [key: string]: { userContentEdits: GQLEditsConnection } | null;
+        } | null;
+    }>(BODY_EDITS_QUERY(subjectField, 100), { owner, repo, number });
+    const parent = result.repository?.[subjectField];
+    return mapEditNodes(parent?.userContentEdits?.nodes ?? [], true);
+}
+
+export const getBodyEditSummaryGraphQL = cache(
+    async (
+        accessToken: string,
+        owner: string,
+        repo: string,
+        subject: "issue" | "pull",
+        number: number,
+    ): Promise<EditSummary> => {
+        const subjectField = subject === "pull" ? "pullRequest" : "issue";
+        const graphql = createGraphql(accessToken);
+        const result = await graphql<{
+            repository: {
+                [key: string]: { userContentEdits: GQLEditsConnection } | null;
+            } | null;
+        }>(BODY_EDITS_QUERY(subjectField, 1), { owner, repo, number });
+        const parent = result.repository?.[subjectField];
+        const entries = mapEditNodes(
+            parent?.userContentEdits?.nodes ?? [],
+            false,
+        );
+        const first = entries[0];
+        if (!first) return null;
+        return { editedAt: first.editedAt, editor: first.editor };
+    },
+);

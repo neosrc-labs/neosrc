@@ -17,6 +17,7 @@ import {
     getStackSuggestion,
     type PullRequestDetail,
 } from "~/server/github";
+import { getBodyEditSummaryGraphQL } from "~/server/github-graphql";
 import { generatePRMetadata } from "~/server/metadata";
 import { HeaderActionBar } from "./_components/action-bar/header-action-bar";
 import { PullRequestDescriptionSection } from "./_components/description";
@@ -95,6 +96,13 @@ export default async function PullRequestPage({ params }: PageProps) {
         subjectPromise: pullRequestPromise,
         userId,
     });
+    const bodyEditSummaryPromise = getBodyEditSummaryGraphQL(
+        accessToken,
+        owner,
+        repo,
+        "pull",
+        number,
+    );
     const stackSuggestionPromise = getStackSuggestion(
         accessToken,
         owner,
@@ -122,6 +130,7 @@ export default async function PullRequestPage({ params }: PageProps) {
                 number={number}
                 pullRequestPromise={pullRequestPromise}
                 permissionContextPromise={permissionContextPromise}
+                bodyEditSummaryPromise={bodyEditSummaryPromise}
                 conflictedFilesPromise={conflictedFilesPromise}
                 stackSuggestionPromise={stackSuggestionPromise}
                 actionSection={

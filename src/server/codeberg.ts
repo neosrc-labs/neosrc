@@ -1399,6 +1399,7 @@ export type CodebergTimelineEntry = {
     type: string;
     body: string;
     created_at: string;
+    updated_at?: string;
     user: CodebergTimelineActor | null;
     label: {
         id: number;

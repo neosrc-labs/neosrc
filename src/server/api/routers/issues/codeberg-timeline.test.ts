@@ -62,6 +62,47 @@ describe("mapCodebergTimelineEvents", () => {
         });
     });
 
+    it("sets a static edit marker when updated_at differs from created_at", () => {
+        const event = only(
+            entry({
+                id: 12,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-01T05:00:00Z",
+            }),
+        );
+
+        if (event.__typename !== "IssueComment") {
+            throw new Error("expected an IssueComment");
+        }
+        expect(event.edits).toEqual({
+            nodes: [{ editedAt: "2026-01-01T05:00:00Z", editor: null }],
+        });
+    });
+
+    it("omits the edit marker when updated_at equals created_at", () => {
+        const event = only(
+            entry({
+                id: 12,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-01T00:00:00Z",
+            }),
+        );
+
+        if (event.__typename !== "IssueComment") {
+            throw new Error("expected an IssueComment");
+        }
+        expect(event.edits).toBeNull();
+    });
+
+    it("omits the edit marker when updated_at is absent", () => {
+        const event = only(entry({ id: 12 }));
+
+        if (event.__typename !== "IssueComment") {
+            throw new Error("expected an IssueComment");
+        }
+        expect(event.edits).toBeNull();
+    });
+
     it("maps close and reopen to state events", () => {
         expect(only(entry({ type: "close" })).__typename).toBe("ClosedEvent");
         expect(only(entry({ type: "reopen" })).__typename).toBe(

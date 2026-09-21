@@ -24,7 +24,10 @@ import {
     searchIssues,
     updateIssue,
 } from "~/server/github";
-import { getIssueTimelineGraphQL } from "~/server/github-graphql";
+import {
+    getEditHistoryGraphQL,
+    getIssueTimelineGraphQL,
+} from "~/server/github-graphql";
 import { mapCbReaction } from "../mappers";
 import { providerSearchProcedures } from "../provider-search";
 import type { TimelineResult } from "../timeline";
@@ -192,6 +195,26 @@ export const issuesRouter = createTRPCRouter({
                 mergeQueueEntry: null,
             };
         },
+    }),
+
+    editHistory: providerQuery({
+        input: providerInput({
+            owner: z.string(),
+            repo: z.string(),
+            number: z.number(),
+            subject: z.enum(["issue", "pull"]),
+            commentNodeId: z.string().optional(),
+        }),
+        gh: ({ input, accessToken }) =>
+            getEditHistoryGraphQL(
+                accessToken,
+                input.owner,
+                input.repo,
+                input.subject,
+                input.number,
+                input.commentNodeId,
+            ),
+        cbFallback: () => [],
     }),
 
     addComment: providerMutation({

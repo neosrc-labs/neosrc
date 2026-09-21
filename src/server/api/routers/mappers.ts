@@ -192,6 +192,7 @@ export function mapGitHubIssueDetail(issue: IssueGetResponseData): IssueDetail {
         locked: issue.locked,
         comments: issue.comments,
         createdAt: issue.created_at,
+        updatedAt: issue.updated_at,
         author: issue.user
             ? {
                   login: issue.user.login,
@@ -242,6 +243,7 @@ export function mapCodebergIssueDetail(
         locked: issue.is_locked ?? false,
         comments: issue.comments ?? 0,
         createdAt: issue.created_at,
+        updatedAt: issue.updated_at,
         author: issue.user
             ? {
                   login: issue.user.login,
