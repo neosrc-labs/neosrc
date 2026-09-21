@@ -197,7 +197,7 @@ export function MergeStatusBar({
             >
                 <button
                     suppressHydrationWarning
-                    className="flex cursor-pointer items-center rounded-r-md border-state-open-solid/70 border-l bg-state-open-solid px-2.5 text-state-solid-foreground transition-colors hover:bg-state-open-solid/90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex cursor-pointer items-center rounded-r-md border-state-solid-foreground/30 border-l bg-state-open-solid px-2.5 text-state-solid-foreground transition-colors hover:bg-state-open-solid/90 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={isMerging}
                     type="button"
                     title="Merge options"
