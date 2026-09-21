@@ -118,16 +118,13 @@ export function TimelineEvent({
             />
 
             <div
-                // content-visibility: auto implies paint containment, which clips
-                // anything drawn outside this box. The CommentCard speech-bubble
-                // tail (issue comments) hangs 8px left of the card, so extend the
-                // box leftward (negative margin plus padding) without moving the
-                // card itself. The review-card up-tail stays inside because a
-                // header row sits above it.
+                // Paint containment clips comment tails and highlight shadows.
+                // Padding contains the tails; the clip margin preserves shadows.
                 className="-ml-2 pt-1 pl-2"
                 style={{
                     contentVisibility: "auto",
                     containIntrinsicSize: "200px",
+                    overflowClipMargin: "8px",
                 }}
             >
                 <div className="max-w-270">
