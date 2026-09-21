@@ -181,7 +181,7 @@ export function MergeStatusBar({
     return (
         <div className="flex items-stretch">
             <button
-                className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-l-md bg-state-open px-1.5 py-2 font-medium text-state-foreground text-xs transition-colors hover:bg-state-open/90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
+                className="flex cursor-pointer items-center gap-1.5 text-nowrap rounded-l-md bg-state-open-solid px-1.5 py-2 font-medium text-state-solid-foreground text-xs transition-colors hover:bg-state-open-solid/90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
                 disabled={isMerging}
                 onClick={onMerge}
                 title={buttonText}
@@ -197,7 +197,7 @@ export function MergeStatusBar({
             >
                 <button
                     suppressHydrationWarning
-                    className="flex cursor-pointer items-center rounded-r-md border-state-open/70 border-l bg-state-open px-2.5 text-state-foreground transition-colors hover:bg-state-open/90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex cursor-pointer items-center rounded-r-md border-state-open-solid/70 border-l bg-state-open-solid px-2.5 text-state-solid-foreground transition-colors hover:bg-state-open-solid/90 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={isMerging}
                     type="button"
                     title="Merge options"
