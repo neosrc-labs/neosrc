@@ -149,6 +149,8 @@ export default function RightSidebar({
         {
             enabled: !!sha && !!checksPromise,
             initialData: initialChecks ?? undefined,
+            staleTime: 0,
+            refetchOnMount: "always",
             refetchInterval(query) {
                 const data = query.state.data as Array<CheckRun> | undefined;
                 if (!data) return false;
