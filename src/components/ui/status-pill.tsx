@@ -23,7 +23,7 @@ export function StatusPill({
             break;
         case "open":
             statusText = "Open";
-            statusColor = "bg-state-open";
+            statusColor = "bg-state-open-solid";
             break;
         case "draft":
             statusText = "Draft";
