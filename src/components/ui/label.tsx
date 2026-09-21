@@ -9,26 +9,54 @@ interface LabelProps extends React.HTMLAttributes<HTMLElement> {
     description?: string;
 }
 
-function luminance(hex: string): number {
-    const r = Number.parseInt(hex.substring(0, 2), 16);
-    const g = Number.parseInt(hex.substring(2, 4), 16);
-    const b = Number.parseInt(hex.substring(4, 6), 16);
-    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+function channels(hex: string): [number, number, number] {
+    const h = hex.startsWith("#") ? hex.slice(1) : hex;
+    return [
+        Number.parseInt(h.substring(0, 2), 16),
+        Number.parseInt(h.substring(2, 4), 16),
+        Number.parseInt(h.substring(4, 6), 16),
+    ];
 }
 
-function getTextColor(hex: string, darkMode: boolean): string {
-    if (darkMode) {
-        return `#${hex}`;
-    }
-
-    return luminance(hex) > 0.5 ? "#1f2328" : "#ffffff";
+// WCAG relative luminance.
+function relLuminance(hex: string): number {
+    const [r, g, b] = channels(hex).map((c) => {
+        const s = c / 255;
+        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    }) as [number, number, number];
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-function getBgColor(hex: string, darkMode: boolean): string {
+// Mix toward white by t (0 = unchanged, 1 = white).
+function lighten(hex: string, t: number): string {
+    const [r, g, b] = channels(hex);
+    const mix = (c: number) => Math.round(c + (255 - c) * t);
+    return [mix(r), mix(g), mix(b)]
+        .map((c) => c.toString(16).padStart(2, "0"))
+        .join("");
+}
+
+function labelStyle(hex: string, darkMode: boolean): React.CSSProperties {
     if (darkMode) {
-        return `#${hex}20`;
+        // Tint over an assumed #0d1117 surface. Lighten the label color for
+        // text instead of falling back to white so the chip keeps its hue.
+        const bgRgb = channels(hex).map((c) =>
+            Math.round(0x0d + (c - 0x0d) * 0.125),
+        );
+        const bg = bgRgb.map((c) => c.toString(16).padStart(2, "0")).join("");
+        return {
+            backgroundColor: `#${bg}`,
+            color: `#${lighten(hex, 0.65)}`,
+            borderColor: `#${hex}66`,
+            borderWidth: 1,
+            borderStyle: "solid",
+        };
     }
-    return `#${hex}`;
+    // Full-color chip in light mode; dark text on light labels, white otherwise.
+    return {
+        backgroundColor: `#${hex}`,
+        color: relLuminance(hex) > 0.35 ? "#1f2328" : "#ffffff",
+    };
 }
 
 export function Label({
@@ -56,10 +84,7 @@ export function Label({
                 "inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-xs",
                 className,
             )}
-            style={{
-                backgroundColor: getBgColor(color, darkMode),
-                color: getTextColor(color, darkMode),
-            }}
+            style={labelStyle(color, darkMode)}
             title={description}
             {...props}
         >

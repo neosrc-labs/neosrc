@@ -9,6 +9,7 @@ import {
     useLazyHoverCardState,
 } from "~/components/hovercards/hover-card-shared";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
+import { Label } from "~/components/ui/label";
 import {
     extractPullRequestState,
     StatusPill,
@@ -92,18 +93,13 @@ function IssueHoverCardContent({
                                         .color === "string",
                             )
                             .map((label) => (
-                                <span
+                                <Label
                                     key={label.name}
-                                    className="inline-block max-w-[120px] truncate rounded-full px-2 py-0.5 font-medium text-xs"
-                                    style={{
-                                        backgroundColor: `#${label.color}20`,
-                                        color: `#${label.color}`,
-                                        borderColor: `#${label.color}40`,
-                                        borderWidth: 1,
-                                    }}
+                                    color={label.color}
+                                    className="inline-block max-w-[120px] truncate"
                                 >
                                     {label.name}
-                                </span>
+                                </Label>
                             ))}
                     </div>
                 )}
