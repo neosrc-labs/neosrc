@@ -452,7 +452,7 @@ export function MarkdownRenderer({
                     table({ children }) {
                         return (
                             <div className="overflow-x-auto">
-                                <table className="w-full border-collapse border border-border">
+                                <table className="w-full border-collapse border border-border leading-normal [font-size:inherit]">
                                     {children}
                                 </table>
                             </div>
