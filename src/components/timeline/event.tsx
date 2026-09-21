@@ -127,7 +127,7 @@ export function TimelineEvent({
                     overflowClipMargin: "8px",
                 }}
             >
-                <div className="max-w-270">
+                <div className="max-w-220">
                     <EventContent
                         event={wrapper.event}
                         provider={provider}
