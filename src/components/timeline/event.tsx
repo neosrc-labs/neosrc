@@ -127,17 +127,19 @@ export function TimelineEvent({
                     overflowClipMargin: "8px",
                 }}
             >
-                <EventContent
-                    event={wrapper.event}
-                    provider={provider}
-                    owner={owner}
-                    repo={repo}
-                    number={number}
-                    commentReactions={commentReactions}
-                    allComments={allComments}
-                    permissionContext={permissionContext}
-                    issueNumber={issueNumber}
-                />
+                <div className="max-w-270">
+                    <EventContent
+                        event={wrapper.event}
+                        provider={provider}
+                        owner={owner}
+                        repo={repo}
+                        number={number}
+                        commentReactions={commentReactions}
+                        allComments={allComments}
+                        permissionContext={permissionContext}
+                        issueNumber={issueNumber}
+                    />
+                </div>
             </div>
         </div>
     );
