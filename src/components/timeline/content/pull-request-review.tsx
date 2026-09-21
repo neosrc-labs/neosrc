@@ -322,6 +322,7 @@ export function PullRequestReviewContent({
                         userHref={event.author?.url}
                         createdAt={event.submittedAt ?? event.createdAt}
                         authorAssociation={event.authorAssociation}
+                        isCurrentUser={isAuthor}
                         isEditing={isEditing}
                         editBody={editBody}
                         onEditBodyChange={onEditBodyChange}

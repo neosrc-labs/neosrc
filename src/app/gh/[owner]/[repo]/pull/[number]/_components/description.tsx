@@ -183,29 +183,45 @@ export function PullRequestDescriptionSection({
                 promise={pullRequestPromise}
             >
                 {(pullRequest) => (
-                    <EditableDescriptionCard
-                        owner={owner}
-                        repo={repo}
-                        number={number}
-                        provider="gh"
-                        kind="pull"
-                        body={pullRequest.body}
-                        authorAssociation={pullRequest.author_association}
-                        permissionContextPromise={permissionContextPromise}
-                        reactionsData={reactionsData}
-                        editor={bodyEditor}
-                        menuOpen={menuOpen}
-                        onMenuOpenChange={setMenuOpen}
-                        onSave={() =>
-                            updateMutation.mutate({
-                                owner,
-                                repo,
-                                number,
-                                body: bodyEditor.editValue,
-                            })
+                    <Async
+                        fallback={
+                            <div className="h-48 w-fill animate-pulse rounded bg-surface-selected" />
                         }
-                        onToggleTask={onToggleTask}
-                    />
+                        promise={permissionContextPromise}
+                    >
+                        {(permissionContext) => (
+                            <EditableDescriptionCard
+                                owner={owner}
+                                repo={repo}
+                                number={number}
+                                provider="gh"
+                                kind="pull"
+                                body={pullRequest.body}
+                                authorAssociation={
+                                    pullRequest.author_association
+                                }
+                                permissionContextPromise={
+                                    permissionContextPromise
+                                }
+                                isCurrentUser={
+                                    permissionContext.isPullRequestAuthor
+                                }
+                                reactionsData={reactionsData}
+                                editor={bodyEditor}
+                                menuOpen={menuOpen}
+                                onMenuOpenChange={setMenuOpen}
+                                onSave={() =>
+                                    updateMutation.mutate({
+                                        owner,
+                                        repo,
+                                        number,
+                                        body: bodyEditor.editValue,
+                                    })
+                                }
+                                onToggleTask={onToggleTask}
+                            />
+                        )}
+                    </Async>
                 )}
             </Async>
         </div>

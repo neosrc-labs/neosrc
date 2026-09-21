@@ -46,6 +46,8 @@
     --color-text-secondary: #475569;
     --color-text-tertiary: #596579;
     --color-text-muted: #64748b;
+    --color-comment-current: #eff6ff;
+    --color-comment-current-border: #93c5fd;
 
     /* Interactive colors */
     --color-action: #2563eb;
@@ -144,6 +146,8 @@
     --color-text-secondary: #d4d4d8;
     --color-text-tertiary: #b4b4bc;
     --color-text-muted: #a1a1aa;
+    --color-comment-current: #192030;
+    --color-comment-current-border: #31558a;
 
     --color-action: #2563eb;
     --color-action-hover: #1d4ed8;

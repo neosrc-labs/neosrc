@@ -29,6 +29,7 @@ interface EditableDescriptionCardProps {
     kind: "pull" | "issue";
     body: string | null;
     authorAssociation: string | null | undefined;
+    isCurrentUser: boolean;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
     reactionsData: ComponentProps<typeof ReactionFooter>["reactionsData"];
     editor: OptimisticTextEditor;
@@ -46,6 +47,7 @@ export function EditableDescriptionCard({
     kind,
     body,
     authorAssociation,
+    isCurrentUser,
     permissionContextPromise,
     reactionsData,
     editor,
@@ -57,8 +59,20 @@ export function EditableDescriptionCard({
     const displayBody = editor.savedValue ?? body ?? "";
 
     return (
-        <div className="rounded-lg border border-border bg-surface-elevated">
-            <div className="flex items-center justify-between rounded-t-lg border-border border-b bg-surface-secondary px-4 py-2">
+        <div
+            className={`rounded-lg border bg-surface-elevated ${
+                isCurrentUser
+                    ? "border-comment-current-border"
+                    : "border-border"
+            }`}
+        >
+            <div
+                className={`flex items-center justify-between rounded-t-lg border-b px-4 py-2 ${
+                    isCurrentUser
+                        ? "border-comment-current-border bg-comment-current"
+                        : "border-border bg-surface-secondary"
+                }`}
+            >
                 <h3 className="text-text-label">Description</h3>
                 <div className="flex items-center gap-0.5">
                     <RoleBadge authorAssociation={authorAssociation} />

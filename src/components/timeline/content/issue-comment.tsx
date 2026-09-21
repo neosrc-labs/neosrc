@@ -164,6 +164,7 @@ export function IssueCommentContent({
                 userHref={event.author?.url}
                 createdAt={event.createdAt}
                 authorAssociation={event.authorAssociation}
+                isCurrentUser={isAuthor}
                 isEditing={isEditing}
                 editBody={editBody}
                 onEditBodyChange={onEditBodyChange}

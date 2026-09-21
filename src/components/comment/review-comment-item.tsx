@@ -96,6 +96,7 @@ export function ReviewCommentItem({
                 authorAssociation={comment.author_association}
                 isPending={isPending}
                 isOutdated={isOutdated}
+                isCurrentUser={isAuthor && placement === "parent"}
                 isEditing={isEditing}
                 editBody={editBody}
                 onEditBodyChange={onEditBodyChange}

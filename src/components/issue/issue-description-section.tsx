@@ -83,30 +83,44 @@ export function IssueDescriptionSection({
                 promise={issuePromise}
             >
                 {(issue) => (
-                    <EditableDescriptionCard
-                        owner={owner}
-                        repo={repo}
-                        number={number}
-                        provider={provider}
-                        kind="issue"
-                        body={issue.body}
-                        authorAssociation={issue.authorAssociation}
-                        permissionContextPromise={permissionContextPromise}
-                        reactionsData={reactionsData}
-                        editor={bodyEditor}
-                        menuOpen={menuOpen}
-                        onMenuOpenChange={setMenuOpen}
-                        onSave={() =>
-                            updateMutation.mutate({
-                                provider,
-                                owner,
-                                repo,
-                                issueNumber: number,
-                                body: bodyEditor.editValue,
-                            })
+                    <Async
+                        fallback={
+                            <div className="h-48 w-fill animate-pulse rounded bg-surface-selected" />
                         }
-                        onToggleTask={onToggleTask}
-                    />
+                        promise={permissionContextPromise}
+                    >
+                        {(permissionContext) => (
+                            <EditableDescriptionCard
+                                owner={owner}
+                                repo={repo}
+                                number={number}
+                                provider={provider}
+                                kind="issue"
+                                body={issue.body}
+                                authorAssociation={issue.authorAssociation}
+                                permissionContextPromise={
+                                    permissionContextPromise
+                                }
+                                isCurrentUser={
+                                    permissionContext.isPullRequestAuthor
+                                }
+                                reactionsData={reactionsData}
+                                editor={bodyEditor}
+                                menuOpen={menuOpen}
+                                onMenuOpenChange={setMenuOpen}
+                                onSave={() =>
+                                    updateMutation.mutate({
+                                        provider,
+                                        owner,
+                                        repo,
+                                        issueNumber: number,
+                                        body: bodyEditor.editValue,
+                                    })
+                                }
+                                onToggleTask={onToggleTask}
+                            />
+                        )}
+                    </Async>
                 )}
             </Async>
         </div>

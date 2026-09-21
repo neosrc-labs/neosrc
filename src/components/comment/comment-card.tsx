@@ -16,6 +16,7 @@ interface CommentCardProps {
     authorAssociation?: string | null;
     isPending?: boolean;
     isOutdated?: boolean;
+    isCurrentUser?: boolean;
     isEditing?: boolean;
     editBody?: string;
     onEditBodyChange?: (body: string) => void;
@@ -42,6 +43,7 @@ export function CommentCard({
     authorAssociation,
     isPending,
     isOutdated,
+    isCurrentUser = false,
     isEditing,
     editBody = "",
     onEditBodyChange,
@@ -81,9 +83,17 @@ export function CommentCard({
             id={id}
             className={`max-w-[800px] ${
                 variant === "default"
-                    ? "relative border-border border-b-1 border-solid bg-surface-elevated"
+                    ? `relative border-b-1 border-solid bg-surface-elevated ${
+                          isCurrentUser
+                              ? "border-comment-current-border"
+                              : "border-border"
+                      }`
                     : variant === "standalone"
-                      ? "relative rounded border-1 border-border border-solid bg-surface-elevated"
+                      ? `relative rounded border-1 border-solid bg-surface-elevated ${
+                            isCurrentUser
+                                ? "border-comment-current-border"
+                                : "border-border"
+                        }`
                       : "relative bg-surface-secondary"
             }`}
         >
@@ -97,13 +107,21 @@ export function CommentCard({
                 >
                     <path
                         d="M 8,0 L 0,8 L 8,16"
-                        className="stroke-border"
+                        className={
+                            isCurrentUser
+                                ? "stroke-comment-current-border"
+                                : "stroke-border"
+                        }
                         fill="none"
                         strokeWidth="1"
                     />
                     <polygon
                         points="8,0 0,8 8,16"
-                        className="fill-surface-elevated"
+                        className={
+                            isCurrentUser
+                                ? "fill-comment-current"
+                                : "fill-surface-elevated"
+                        }
                     />
                 </svg>
             )}
@@ -117,21 +135,35 @@ export function CommentCard({
                 >
                     <path
                         d="M 0,8 L 8,0 L 16,8"
-                        className="stroke-border"
+                        className={
+                            isCurrentUser
+                                ? "stroke-comment-current-border"
+                                : "stroke-border"
+                        }
                         fill="none"
                         strokeWidth="1"
                     />
                     <polygon
                         points="0,8 8,0 16,8"
-                        className="fill-surface-elevated"
+                        className={
+                            isCurrentUser
+                                ? "fill-comment-current"
+                                : "fill-surface-elevated"
+                        }
                     />
                 </svg>
             )}
             <div
                 className={`flex items-center justify-between gap-2 px-4 py-2 ${
                     variant === "standalone"
-                        ? "rounded-t border-border border-b bg-surface-secondary"
-                        : ""
+                        ? `rounded-t border-b ${
+                              isCurrentUser
+                                  ? "border-comment-current-border bg-comment-current"
+                                  : "border-border bg-surface-secondary"
+                          }`
+                        : isCurrentUser
+                          ? "bg-comment-current"
+                          : ""
                 }`}
             >
                 <div className="flex min-w-0 items-center gap-2">
