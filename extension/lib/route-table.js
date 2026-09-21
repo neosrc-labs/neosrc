@@ -281,6 +281,8 @@
             condition: {
                 regexFilter: `^https://(?:www\\.)?${escapeRegex(rule.host)}${body}${suffix}$`,
                 resourceTypes: ["main_frame"],
+                // Leave form submissions and other writes on the host.
+                requestMethods: ["get"],
             },
         };
     }
@@ -393,8 +395,7 @@
 
         let id = REDIRECT_RULE_ID_BASE;
         for (const rule of table.rules) {
-            rules.push(redirectRule(id, rule, origin));
-            id += 1;
+            rules.push(redirectRule(id++, rule, origin));
         }
         return rules;
     }

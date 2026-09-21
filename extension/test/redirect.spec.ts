@@ -38,6 +38,13 @@ interface ChromeApi {
     declarativeNetRequest: {
         getDynamicRules(): Promise<DnrRule[]>;
         getSessionRules(): Promise<DnrRule[]>;
+        testMatchOutcome(request: {
+            url: string;
+            type: "main_frame";
+            method: string;
+        }): Promise<{
+            matchedRules: { ruleId: number; rulesetId: string }[];
+        }>;
     };
 }
 
@@ -154,6 +161,44 @@ test("redirects a supported page before GitHub is ever asked for it", async () =
     expect(neosrcRequest?.headers["x-neosrc-extension"]).toBeTruthy();
 
     await page.close();
+});
+
+test("leaves PR submissions on GitHub while redirecting page visits", async () => {
+    await seed(
+        {
+            enabled: true,
+            neosrcUrl: "https://neosrc.dev",
+            excludedOwners: [],
+        },
+        true,
+    );
+
+    const worker = await serviceWorker();
+    const outcomes = await worker.evaluate(async () => {
+        // The extension API is injected into the service worker.
+        const scope = globalThis as unknown as { chrome: ChromeApi };
+        const dnr = scope.chrome.declarativeNetRequest;
+        const redirects = new Set(
+            (await dnr.getDynamicRules())
+                .filter((rule) => rule.action.type === "redirect")
+                .map((rule) => rule.id),
+        );
+        const outcomes: Record<string, boolean> = {};
+        for (const method of ["post", "get"]) {
+            const { matchedRules } = await dnr.testMatchOutcome({
+                url: "https://github.com/acme/widget/pulls",
+                type: "main_frame",
+                method,
+            });
+            outcomes[method] = matchedRules.some(
+                (rule) =>
+                    rule.rulesetId === "_dynamic" && redirects.has(rule.ruleId),
+            );
+        }
+        return outcomes;
+    });
+
+    expect(outcomes).toEqual({ post: false, get: true });
 });
 
 test("covers the pages Neosrc serves and keeps the rest on GitHub", async () => {
