@@ -139,11 +139,11 @@
     --color-border: #3f3f46;
     --color-border-subtle: #27272a;
     --color-ring: #71717a;
-    --color-text-primary: #e4e4e7;
-    --color-text-label: #d4d4d8;
-    --color-text-secondary: #b4b4bc;
-    --color-text-tertiary: #a1a1aa;
-    --color-text-muted: #85858f;
+    --color-text-primary: #f4f4f5;
+    --color-text-label: #e4e4e7;
+    --color-text-secondary: #d4d4d8;
+    --color-text-tertiary: #b4b4bc;
+    --color-text-muted: #a1a1aa;
 
     --color-action: #2563eb;
     --color-action-hover: #1d4ed8;
