@@ -246,8 +246,7 @@
 
     function redirectRule(id, rule, origin) {
         const body = rule.pattern.replace(/^\^/, "").replace(/\$$/, "");
-        const groups = countGroups(rule.pattern);
-        let next = groups + 1;
+        let next = countGroups(rule.pattern) + 1;
         let queryIndex = 0;
         let hashIndex = 0;
         let suffix = "";
@@ -283,6 +282,9 @@
                 resourceTypes: ["main_frame"],
                 // Leave form submissions and other writes on the host.
                 requestMethods: ["get"],
+                // Let content.js redirect after same-site navigation commits.
+                // Redirecting a form response here can violate form-action CSP.
+                excludedInitiatorDomains: [rule.host],
             },
         };
     }

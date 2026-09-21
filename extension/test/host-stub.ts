@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 export interface StubRequest {
     host: string;
+    method: string | undefined;
     pathname: string;
     search: string;
     headers: Record<string, string | string[] | undefined>;
@@ -88,6 +89,14 @@ function createCertificate() {
 }
 
 function githubPage(pathname: string): string {
+    if (pathname === "/acme/widget/compare/main...feature") {
+        return `<!doctype html>
+<title>Create pull request</title>
+<form action="/acme/widget/pulls" method="post">
+<input name="title" value="New pull request">
+<button type="submit">Create pull request</button>
+</form>`;
+    }
     return `<!doctype html>
 <title>github ${pathname}</title>
 <body>
@@ -127,6 +136,7 @@ export async function startHostStub(): Promise<HostStub> {
         const url = new URL(request.url ?? "/", `https://${host}`);
         requests.push({
             host,
+            method: request.method,
             pathname: url.pathname,
             search: url.search,
             headers: request.headers,
@@ -173,7 +183,27 @@ export async function startHostStub(): Promise<HostStub> {
             return;
         }
 
+        // GitHub also applies form-action to the submission's redirect chain.
+        response.setHeader(
+            "content-security-policy",
+            "form-action 'self' github.com gist.github.com copilot-workspace.githubnext.com objects-origin.githubusercontent.com",
+        );
+        if (
+            request.method === "POST" &&
+            url.pathname === "/acme/widget/pulls"
+        ) {
+            response.writeHead(302, { location: "/acme/widget/pull/101" });
+            response.end();
+            return;
+        }
+
         response.writeHead(200, { "content-type": "text/html" });
+        if (url.pathname === "/acme/widget/pull/101") {
+            // Keep the form response streaming while document_start scripts run.
+            response.write(githubPage(url.pathname));
+            setTimeout(() => response.end(), 500);
+            return;
+        }
         response.end(githubPage(url.pathname));
     });
 

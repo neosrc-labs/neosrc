@@ -1,9 +1,9 @@
 // Runs on github.com at document_start.
 //
-// Full page loads are handled by the service worker's declarativeNetRequest
-// rules, before GitHub is ever rendered. This script covers what the network
-// layer cannot see: GitHub's Turbo navigations, links that would start one, and
-// the "back to GitHub" marker the app sets when it cannot serve a page.
+// The service worker redirects direct visits before GitHub renders. Same-site
+// navigations finish on GitHub so form redirects satisfy its CSP. This script
+// then redirects the loaded page, handles Turbo links and navigations, and
+// consumes the "back to GitHub" marker the app sets for unsupported pages.
 (() => {
     const ROUTES = globalThis.NeosrcRoutes;
     const DEFAULT_NEOSRC_URL = "https://neosrc.dev";
@@ -95,6 +95,8 @@
     }
 
     function redirectFromLocation() {
+        // Wait for pageshow instead of canceling a streamed form response.
+        if (document.readyState !== "complete") return false;
         const target = redirectTarget(new URL(window.location.href));
         if (!target) return false;
         window.location.replace(target);

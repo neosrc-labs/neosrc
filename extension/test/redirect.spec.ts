@@ -201,6 +201,41 @@ test("leaves PR submissions on GitHub while redirecting page visits", async () =
     expect(outcomes).toEqual({ post: false, get: true });
 });
 
+test("finishes the streamed creation response before opening Neosrc", async () => {
+    await seed(
+        {
+            enabled: true,
+            neosrcUrl: "https://neosrc.dev",
+            excludedOwners: [],
+        },
+        true,
+    );
+
+    const requestStart = stub.requests.length;
+    const page = await open(
+        "https://github.com/acme/widget/compare/main...feature",
+    );
+    const createdPage = page.waitForResponse(
+        (response) =>
+            response.url() === "https://github.com/acme/widget/pull/101",
+    );
+    await page.getByRole("button", { name: "Create pull request" }).click();
+    expect(await (await createdPage).finished()).toBeNull();
+    await expect(page).toHaveURL("https://neosrc.dev/gh/acme/widget/pull/101");
+    expect(
+        stub.requests
+            .slice(requestStart)
+            .filter(
+                (request) =>
+                    request.host === "github.com" &&
+                    request.pathname === "/acme/widget/pulls",
+            )
+            .map((request) => request.method),
+    ).toEqual(["POST"]);
+
+    await page.close();
+});
+
 test("covers the pages Neosrc serves and keeps the rest on GitHub", async () => {
     const covered: [string, string][] = [
         ["https://github.com/acme/widget", "https://neosrc.dev/gh/acme/widget"],
