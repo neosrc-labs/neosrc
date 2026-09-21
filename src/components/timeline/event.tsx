@@ -605,7 +605,7 @@ function EventContent({
         }));
     };
 
-    const baseProps = { provider, owner, repo, permissionContext };
+    const baseProps = { provider, owner, repo, number, permissionContext };
 
     switch (event.__typename) {
         case "IssueComment":
@@ -640,7 +640,6 @@ function EventContent({
                 <PullRequestReviewContent
                     event={event}
                     {...baseProps}
-                    number={number}
                     allComments={allComments}
                     commentReactions={commentReactions}
                     editingCommentId={editingCommentId}

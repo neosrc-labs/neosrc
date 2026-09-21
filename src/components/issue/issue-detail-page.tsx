@@ -9,6 +9,7 @@ import {
     getSession,
     githubAccessToken,
 } from "~/server/auth";
+import { getBodyEditSummaryGraphQL } from "~/server/github-graphql";
 import type { Provider } from "~/utils/provider-url";
 import { IssueDescriptionSection } from "./issue-description-section";
 import {
@@ -75,6 +76,18 @@ export async function IssueDetailPage({
         })),
         userId,
     });
+    // Forgejo has no edit history; its description card derives a static
+    // marker from IssueDetail.updatedAt instead.
+    const bodyEditSummaryPromise =
+        provider === "gh"
+            ? getBodyEditSummaryGraphQL(
+                  accessToken,
+                  owner,
+                  repo,
+                  "issue",
+                  number,
+              )
+            : Promise.resolve(null);
 
     return (
         <div className="px-6 py-8">
@@ -90,6 +103,7 @@ export async function IssueDetailPage({
                 number={number}
                 issuePromise={issuePromise}
                 permissionContextPromise={permissionContextPromise}
+                bodyEditSummaryPromise={bodyEditSummaryPromise}
             />
 
             <Suspense

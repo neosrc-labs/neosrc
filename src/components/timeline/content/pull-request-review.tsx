@@ -11,6 +11,10 @@ import {
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { CommentCard } from "~/components/comment/comment-card";
+import {
+    EditedIndicator,
+    getCommentLastEdit,
+} from "~/components/comment/edited-indicator";
 import { ReviewComments } from "~/components/comment/review-comments";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
 import {
@@ -332,6 +336,17 @@ export function PullRequestReviewContent({
                         }}
                         owner={owner}
                         repo={repo}
+                        headerLeading={
+                            <EditedIndicator
+                                provider={provider}
+                                owner={owner}
+                                repo={repo}
+                                number={number}
+                                subject="pull"
+                                commentNodeId={event.id}
+                                summary={getCommentLastEdit(event)}
+                            />
+                        }
                         headerActions={
                             <div className="flex items-center gap-1">
                                 {event.body && !isEditing && (

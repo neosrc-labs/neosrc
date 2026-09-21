@@ -12,6 +12,7 @@ import type { PullRequestPermissionContext } from "~/components/permissions/perm
 import { useOptimisticTextEditor } from "~/hooks/use-optimistic-text-editor";
 import { useTaskToggle } from "~/hooks/use-task-toggle";
 import type { IssueDetail } from "~/server/api/routers/issues/types";
+import type { EditSummary } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import type { Provider } from "~/utils/provider-url";
 
@@ -22,6 +23,8 @@ interface IssueDescriptionSectionProps {
     number: number;
     issuePromise: Promise<IssueDetail>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
+    /** GitHub body edit summary; Codeberg derives one from updatedAt instead. */
+    bodyEditSummaryPromise?: Promise<EditSummary> | null;
 }
 
 export function IssueDescriptionSection({
@@ -31,6 +34,7 @@ export function IssueDescriptionSection({
     number,
     issuePromise,
     permissionContextPromise,
+    bodyEditSummaryPromise,
 }: IssueDescriptionSectionProps) {
     const bodyEditor = useOptimisticTextEditor(
         `issue-autosave:desc-body:${provider}:${owner}:${repo}:${number}`,
@@ -94,6 +98,18 @@ export function IssueDescriptionSection({
                                 author={issue.author}
                                 createdAt={issue.createdAt}
                                 authorAssociation={issue.authorAssociation}
+                                lastEditPromise={
+                                    provider === "cb"
+                                        ? issuePromise.then((i) =>
+                                              i.updatedAt !== i.createdAt
+                                                  ? {
+                                                        editedAt: i.updatedAt,
+                                                        editor: null,
+                                                    }
+                                                  : null,
+                                          )
+                                        : bodyEditSummaryPromise
+                                }
                                 permissionContextPromise={
                                     permissionContextPromise
                                 }

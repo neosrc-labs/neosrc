@@ -5,6 +5,7 @@ import Image from "next/image";
 import type { ComponentProps, ReactNode } from "react";
 import { Async } from "~/components/async";
 import { CommentCard } from "~/components/comment/comment-card";
+import { EditedIndicator } from "~/components/comment/edited-indicator";
 import { ReactionFooter } from "~/components/comment/reaction-footer";
 import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
@@ -21,6 +22,7 @@ import {
     PopoverTrigger,
 } from "~/components/ui/popover";
 import type { OptimisticTextEditor } from "~/hooks/use-optimistic-text-editor";
+import type { EditSummary } from "~/server/github-graphql";
 import type { Provider } from "~/utils/provider-url";
 
 interface EditableDescriptionCardProps {
@@ -39,6 +41,8 @@ interface EditableDescriptionCardProps {
     authorAssociation: string | null | undefined;
     isCurrentUser: boolean;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
+    /** Resolves to the description card's last-edit summary; null/undefined hides the indicator. */
+    lastEditPromise?: Promise<EditSummary> | null;
     reactionsData: ComponentProps<typeof ReactionFooter>["reactionsData"];
     editor: OptimisticTextEditor;
     menuOpen: boolean;
@@ -59,6 +63,7 @@ export function EditableDescriptionCard({
     authorAssociation,
     isCurrentUser,
     permissionContextPromise,
+    lastEditPromise,
     reactionsData,
     editor,
     menuOpen,
@@ -171,6 +176,23 @@ export function EditableDescriptionCard({
                     variant="standalone"
                     hideAvatar
                     tailDirection="left"
+                    headerLeading={
+                        lastEditPromise ? (
+                            <Async fallback={null} promise={lastEditPromise}>
+                                {(summary) => (
+                                    <EditedIndicator
+                                        provider={provider}
+                                        owner={owner}
+                                        repo={repo}
+                                        number={number}
+                                        subject={kind}
+                                        bodyHistory
+                                        summary={summary}
+                                    />
+                                )}
+                            </Async>
+                        ) : undefined
+                    }
                     headerActions={headerActions}
                     footer={footer}
                 >

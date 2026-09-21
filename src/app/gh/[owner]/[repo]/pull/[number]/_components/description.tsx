@@ -29,6 +29,7 @@ import type {
     PullsGetResponseData,
     StackSuggestion,
 } from "~/server/github";
+import type { EditSummary } from "~/server/github-graphql";
 import { api } from "~/trpc/react";
 import { AutoMergeBannerSection } from "./action-bar/auto-merge-banner-section";
 import { ConflictedFiles } from "./action-bar/conflicted-files";
@@ -40,6 +41,7 @@ interface PullRequestDescriptionSectionProps {
     number: number;
     pullRequestPromise: Promise<PullRequestDetail>;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
+    bodyEditSummaryPromise: Promise<EditSummary> | null;
     actionSection?: ReactNode;
     conflictedFilesPromise?: Promise<string[]> | null;
     stackSuggestionPromise: Promise<StackSuggestion | null>;
@@ -51,6 +53,7 @@ export function PullRequestDescriptionSection({
     number,
     pullRequestPromise,
     permissionContextPromise,
+    bodyEditSummaryPromise,
     actionSection,
     conflictedFilesPromise,
     stackSuggestionPromise,
@@ -211,6 +214,7 @@ export function PullRequestDescriptionSection({
                                 authorAssociation={
                                     pullRequest.author_association
                                 }
+                                lastEditPromise={bodyEditSummaryPromise}
                                 permissionContextPromise={
                                     permissionContextPromise
                                 }
