@@ -1,13 +1,12 @@
 "use client";
 
 import { Archive, Lock } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
     ActionErrorBanner,
     ActionErrorProvider,
 } from "~/components/action-errors";
 import { Async } from "~/components/async";
-import { AuthorLabel } from "~/components/comment/author-label";
 import {
     EditableDescriptionCard,
     EditableTitleRow,
@@ -30,7 +29,6 @@ import type {
     StackSuggestion,
 } from "~/server/github";
 import { api } from "~/trpc/react";
-import { formatDateTime, formatRelativeTime } from "~/utils/format-time";
 import { AutoMergeBannerSection } from "./action-bar/auto-merge-banner-section";
 import { ConflictedFiles } from "./action-bar/conflicted-files";
 import { AdditionsDeletionsBadge } from "./files/additions-deletions-badge";
@@ -197,6 +195,18 @@ export function PullRequestDescriptionSection({
                                 provider="gh"
                                 kind="pull"
                                 body={pullRequest.body}
+                                author={
+                                    pullRequest.user
+                                        ? {
+                                              login: pullRequest.user.login,
+                                              avatarUrl:
+                                                  pullRequest.user.avatar_url,
+                                              profileUrl:
+                                                  pullRequest.user.html_url,
+                                          }
+                                        : null
+                                }
+                                createdAt={pullRequest.created_at}
                                 authorAssociation={
                                     pullRequest.author_association
                                 }
@@ -326,18 +336,6 @@ function SubtitleActionRow({
                         repo={repo}
                         pullRequest={pullRequest}
                     />
-                    <div className="flex items-center gap-2 text-sm text-text-secondary">
-                        <OpenedByLabel />
-                        <AuthorLabel
-                            username={pullRequest.user?.login ?? "ghost"}
-                            avatarUrl={pullRequest.user?.avatar_url ?? ""}
-                            profileUrl={pullRequest.user?.html_url ?? "#"}
-                            provider="gh"
-                        />
-                        <span title={formatDateTime(pullRequest.created_at)}>
-                            {formatRelativeTime(pullRequest.created_at)}
-                        </span>
-                    </div>
                     {pullRequest.stack ? (
                         <StackBadge
                             owner={owner}
@@ -403,30 +401,4 @@ export function Branches({
             </a>
         </div>
     );
-}
-
-function OpenedByLabel() {
-    const width = useMainSectionWidth();
-    if (!width || width < 1000) return null;
-    return <span>opened by </span>;
-}
-
-function useMainSectionWidth() {
-    const [width, setWidth] = useState<number | null>(null);
-
-    useEffect(() => {
-        const main = document.querySelector("main");
-        if (!main) return;
-
-        const check = () => {
-            setWidth(main.clientWidth);
-        };
-
-        check();
-        const observer = new ResizeObserver(check);
-        observer.observe(main);
-        return () => observer.disconnect();
-    }, []);
-
-    return width;
 }

@@ -192,7 +192,7 @@ export function TimelineSection({
 
     if (isLoading) {
         return (
-            <div className="mt-5">
+            <div className="mt-5 ml-12">
                 <TimelineSkeleton />
             </div>
         );
@@ -235,7 +235,7 @@ export function TimelineSection({
     const wrappers = aggregateEvents(filteredEvents);
 
     return (
-        <div className="mt-5">
+        <div className="mt-5 ml-12">
             {mergeQueueEntry && <MergeQueueBanner entry={mergeQueueEntry} />}
 
             {revertedBy.map((revert) => (

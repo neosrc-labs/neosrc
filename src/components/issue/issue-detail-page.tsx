@@ -96,7 +96,9 @@ export async function IssueDetailPage({
                 fallback={
                     <div className="mt-4 border-border border-t pt-6">
                         <h2 className="mb-4 text-text-primary">Timeline</h2>
-                        <TimelineSkeleton />
+                        <div className="ml-12">
+                            <TimelineSkeleton />
+                        </div>
                     </div>
                 }
             >

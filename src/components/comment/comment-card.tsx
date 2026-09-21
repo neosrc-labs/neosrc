@@ -30,6 +30,7 @@ interface CommentCardProps {
     repo: string;
     children?: ReactNode;
     variant?: "default" | "nested" | "standalone";
+    fullWidth?: boolean;
     hideAvatar?: boolean;
     tailDirection?: "left" | "up";
     id?: string;
@@ -56,6 +57,7 @@ export function CommentCard({
     repo,
     children,
     variant = "default",
+    fullWidth = false,
     hideAvatar = false,
     tailDirection,
     id,
@@ -81,7 +83,7 @@ export function CommentCard({
     return (
         <div
             id={id}
-            className={`max-w-[800px] ${
+            className={`${fullWidth ? "w-full" : "max-w-[800px]"} ${
                 variant === "default"
                     ? `relative border-b-1 border-solid bg-surface-elevated ${
                           isCurrentUser

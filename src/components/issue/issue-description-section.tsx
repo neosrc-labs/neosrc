@@ -3,7 +3,6 @@
 import { Lock } from "lucide-react";
 import { useState } from "react";
 import { Async } from "~/components/async";
-import { AuthorLabel } from "~/components/comment/author-label";
 import {
     EditableDescriptionCard,
     EditableTitleRow,
@@ -14,7 +13,6 @@ import { useOptimisticTextEditor } from "~/hooks/use-optimistic-text-editor";
 import { useTaskToggle } from "~/hooks/use-task-toggle";
 import type { IssueDetail } from "~/server/api/routers/issues/types";
 import { api } from "~/trpc/react";
-import { formatDateTime, formatRelativeTime } from "~/utils/format-time";
 import type { Provider } from "~/utils/provider-url";
 
 interface IssueDescriptionSectionProps {
@@ -70,10 +68,6 @@ export function IssueDescriptionSection({
                     issuePromise={issuePromise}
                     permissionContextPromise={permissionContextPromise}
                 />
-                <IssueSubtitleRow
-                    issuePromise={issuePromise}
-                    provider={provider}
-                />
             </div>
 
             <Async
@@ -97,6 +91,8 @@ export function IssueDescriptionSection({
                                 provider={provider}
                                 kind="issue"
                                 body={issue.body}
+                                author={issue.author}
+                                createdAt={issue.createdAt}
                                 authorAssociation={issue.authorAssociation}
                                 permissionContextPromise={
                                     permissionContextPromise
@@ -184,39 +180,5 @@ function IssueTitleRow({
                 </>
             )}
         />
-    );
-}
-
-function IssueSubtitleRow({
-    issuePromise,
-    provider,
-}: {
-    issuePromise: Promise<IssueDetail>;
-    provider: Provider;
-}) {
-    return (
-        <Async
-            fallback={
-                <div className="mt-2 h-6 w-104 animate-pulse rounded bg-surface-selected" />
-            }
-            promise={issuePromise}
-        >
-            {(issue) => (
-                <div className="flex h-9 items-center gap-2">
-                    <div className="flex items-center gap-2 text-sm text-text-secondary">
-                        <span>Opened by</span>
-                        <AuthorLabel
-                            username={issue.author?.login ?? "ghost"}
-                            avatarUrl={issue.author?.avatarUrl ?? ""}
-                            profileUrl={issue.author?.profileUrl ?? "#"}
-                            provider={provider}
-                        />
-                        <span title={formatDateTime(issue.createdAt)}>
-                            {formatRelativeTime(issue.createdAt)}
-                        </span>
-                    </div>
-                </div>
-            )}
-        </Async>
     );
 }

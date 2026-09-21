@@ -1,9 +1,12 @@
 "use client";
 
 import { MoreVertical, SmilePlus, SquarePen } from "lucide-react";
+import Image from "next/image";
 import type { ComponentProps, ReactNode } from "react";
 import { Async } from "~/components/async";
+import { CommentCard } from "~/components/comment/comment-card";
 import { ReactionFooter } from "~/components/comment/reaction-footer";
+import { UserHoverCard } from "~/components/hovercards/user-hover-card";
 import { CodeTitle } from "~/components/markdown/accessories/code-title";
 import { MarkdownEditor } from "~/components/markdown/markdown-editor";
 import { MarkdownRenderer } from "~/components/markdown/markdown-renderer";
@@ -17,7 +20,6 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "~/components/ui/popover";
-import { RoleBadge } from "~/components/user/role-badge";
 import type { OptimisticTextEditor } from "~/hooks/use-optimistic-text-editor";
 import type { Provider } from "~/utils/provider-url";
 
@@ -28,6 +30,12 @@ interface EditableDescriptionCardProps {
     provider: Provider;
     kind: "pull" | "issue";
     body: string | null;
+    author: {
+        login: string;
+        avatarUrl: string;
+        profileUrl: string;
+    } | null;
+    createdAt: string;
     authorAssociation: string | null | undefined;
     isCurrentUser: boolean;
     permissionContextPromise: Promise<PullRequestPermissionContext>;
@@ -46,6 +54,8 @@ export function EditableDescriptionCard({
     provider,
     kind,
     body,
+    author,
+    createdAt,
     authorAssociation,
     isCurrentUser,
     permissionContextPromise,
@@ -57,129 +67,158 @@ export function EditableDescriptionCard({
     onToggleTask,
 }: EditableDescriptionCardProps) {
     const displayBody = editor.savedValue ?? body ?? "";
+    const user = {
+        login: author?.login ?? "ghost",
+        avatar_url: author?.avatarUrl ?? "",
+    };
+
+    const headerActions = (
+        <Async fallback={null} promise={permissionContextPromise}>
+            {(permissionContext) =>
+                !editor.isEditing && canInteract(permissionContext) ? (
+                    <Popover open={menuOpen} onOpenChange={onMenuOpenChange}>
+                        <PopoverTrigger asChild>
+                            <button
+                                type="button"
+                                aria-label="More options"
+                                className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
+                            >
+                                <MoreVertical size={14} />
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                            className="w-44 bg-surface p-1"
+                            align="end"
+                        >
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    editor.startEditing(displayBody);
+                                    onMenuOpenChange(false);
+                                }}
+                                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
+                            >
+                                <SquarePen size={14} />
+                                Edit
+                            </button>
+                        </PopoverContent>
+                    </Popover>
+                ) : null
+            }
+        </Async>
+    );
+
+    const footer = !editor.isEditing ? (
+        <Async
+            fallback={<ReactionFooterSkeleton />}
+            promise={permissionContextPromise}
+        >
+            {(permissionContext) => (
+                <ReactionFooter
+                    owner={owner}
+                    repo={repo}
+                    number={number}
+                    kind={kind}
+                    provider={provider}
+                    reactionsData={reactionsData}
+                    permissionContext={permissionContext}
+                />
+            )}
+        </Async>
+    ) : undefined;
 
     return (
-        <div
-            className={`rounded-lg border bg-surface-elevated ${
-                isCurrentUser
-                    ? "border-comment-current-border"
-                    : "border-border"
-            }`}
-        >
-            <div
-                className={`flex items-center justify-between rounded-t-lg border-b px-4 py-2 ${
-                    isCurrentUser
-                        ? "border-comment-current-border bg-comment-current"
-                        : "border-border bg-surface-secondary"
-                }`}
-            >
-                <h3 className="text-text-label">Description</h3>
-                <div className="flex items-center gap-0.5">
-                    <RoleBadge authorAssociation={authorAssociation} />
-                    <Async fallback={null} promise={permissionContextPromise}>
-                        {(permissionContext) =>
-                            !editor.isEditing &&
-                            canInteract(permissionContext) ? (
-                                <Popover
-                                    open={menuOpen}
-                                    onOpenChange={onMenuOpenChange}
-                                >
-                                    <PopoverTrigger asChild>
-                                        <button
-                                            type="button"
-                                            aria-label="More options"
-                                            className="cursor-pointer rounded p-1 text-text-muted transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
-                                        >
-                                            <MoreVertical size={14} />
-                                        </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent
-                                        className="w-44 bg-surface p-1"
-                                        align="end"
-                                    >
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                editor.startEditing(
-                                                    displayBody,
-                                                );
-                                                onMenuOpenChange(false);
-                                            }}
-                                            className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-text-label transition-colors hover:bg-surface-tertiary"
-                                        >
-                                            <SquarePen size={14} />
-                                            Edit
-                                        </button>
-                                    </PopoverContent>
-                                </Popover>
-                            ) : null
-                        }
-                    </Async>
-                </div>
-            </div>
-            <div className="p-4">
-                {editor.isEditing ? (
-                    <MarkdownEditor
-                        autoFocus
-                        onCancel={editor.cancelEditing}
-                        onChange={editor.setEditValue}
-                        value={editor.editValue}
-                        owner={owner}
-                        repo={repo}
-                        minHeight="200px"
-                        footerActions={[
-                            {
-                                label: "Save",
-                                onClick: onSave,
-                                variant: "approve",
-                            },
-                        ]}
-                    />
-                ) : displayBody ? (
-                    <Async
-                        fallback={
-                            <MarkdownRenderer
-                                content={displayBody}
-                                owner={owner}
-                                repo={repo}
-                            />
-                        }
-                        promise={permissionContextPromise}
+        <div className="flex items-start gap-3">
+            {author ? (
+                <UserHoverCard login={author.login} provider={provider}>
+                    <a
+                        aria-label={author.login}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-tertiary font-medium text-sm text-text-label ring-1 ring-border"
+                        href={author.profileUrl}
                     >
-                        {(permissionContext) => (
-                            <MarkdownRenderer
-                                canToggleTasks={canEdit(permissionContext)}
-                                content={displayBody}
-                                onToggleTask={onToggleTask}
-                                owner={owner}
-                                repo={repo}
+                        {author.avatarUrl ? (
+                            <Image
+                                alt={author.login}
+                                className="h-10 w-10 rounded-full"
+                                src={author.avatarUrl}
+                                width={40}
+                                height={40}
                             />
+                        ) : (
+                            author.login.slice(0, 1).toUpperCase()
                         )}
-                    </Async>
-                ) : (
-                    <p className="text-text-tertiary italic">
-                        No description provided.
-                    </p>
-                )}
-            </div>
-            {!editor.isEditing && (
-                <Async
-                    fallback={<ReactionFooterSkeleton />}
-                    promise={permissionContextPromise}
+                    </a>
+                </UserHoverCard>
+            ) : (
+                <div
+                    aria-hidden="true"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-tertiary font-medium text-sm text-text-muted ring-1 ring-border"
                 >
-                    {(permissionContext) => (
-                        <ReactionFooter
+                    ?
+                </div>
+            )}
+            <div className="min-w-0 flex-1">
+                <CommentCard
+                    owner={owner}
+                    repo={repo}
+                    provider={provider}
+                    user={user}
+                    userHref={author?.profileUrl}
+                    createdAt={createdAt}
+                    authorAssociation={authorAssociation}
+                    isCurrentUser={isCurrentUser}
+                    fullWidth
+                    variant="standalone"
+                    hideAvatar
+                    tailDirection="left"
+                    headerActions={headerActions}
+                    footer={footer}
+                >
+                    {editor.isEditing ? (
+                        <MarkdownEditor
+                            autoFocus
+                            onCancel={editor.cancelEditing}
+                            onChange={editor.setEditValue}
+                            value={editor.editValue}
                             owner={owner}
                             repo={repo}
-                            number={number}
-                            kind={kind}
-                            provider={provider}
-                            reactionsData={reactionsData}
-                            permissionContext={permissionContext}
+                            minHeight="200px"
+                            footerActions={[
+                                {
+                                    label: "Save",
+                                    onClick: onSave,
+                                    variant: "approve",
+                                },
+                            ]}
                         />
+                    ) : displayBody ? (
+                        <Async
+                            fallback={
+                                <MarkdownRenderer
+                                    content={displayBody}
+                                    owner={owner}
+                                    repo={repo}
+                                />
+                            }
+                            promise={permissionContextPromise}
+                        >
+                            {(permissionContext) => (
+                                <MarkdownRenderer
+                                    canToggleTasks={canEdit(permissionContext)}
+                                    content={displayBody}
+                                    onToggleTask={onToggleTask}
+                                    owner={owner}
+                                    repo={repo}
+                                />
+                            )}
+                        </Async>
+                    ) : (
+                        <p className="text-text-tertiary italic">
+                            No description provided.
+                        </p>
                     )}
-                </Async>
-            )}
+                </CommentCard>
+            </div>
         </div>
     );
 }

@@ -74,7 +74,7 @@ export function IssueTimelineSection({
 
     if (isLoading) {
         return (
-            <div className="mt-5">
+            <div className="mt-5 ml-12">
                 <TimelineSkeleton />
             </div>
         );
@@ -84,7 +84,7 @@ export function IssueTimelineSection({
     const wrappers = aggregateEvents(filteredEvents);
 
     return (
-        <div className="mt-5">
+        <div className="mt-5 ml-12">
             <TimelineEventList
                 wrappers={wrappers}
                 provider={provider}
