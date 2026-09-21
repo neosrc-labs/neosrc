@@ -78,9 +78,39 @@ export function useTimelineHashScroll(data: unknown): void {
         null,
     );
     const handledHashRef = useRef<string | null>(null);
+    const highlightedElementRef = useRef<HTMLElement | null>(null);
 
     useEffect(() => {
         if (!data) return;
+        const clearHighlight = () => {
+            highlightedElementRef.current?.classList.remove(
+                "comment-highlight",
+            );
+            highlightedElementRef.current = null;
+        };
+
+        const dismissHighlight = (event: KeyboardEvent) => {
+            if (
+                event.key !== "Escape" ||
+                event.defaultPrevented ||
+                !highlightedElementRef.current
+            ) {
+                return;
+            }
+
+            event.preventDefault();
+            clearHighlight();
+            handledHashRef.current = null;
+            if (adjustIntervalRef.current) {
+                clearInterval(adjustIntervalRef.current);
+                adjustIntervalRef.current = null;
+            }
+            window.history.replaceState(
+                null,
+                "",
+                `${window.location.pathname}${window.location.search}`,
+            );
+        };
 
         const scrollToHash = () => {
             const hash = window.location.hash;
@@ -112,7 +142,9 @@ export function useTimelineHashScroll(data: unknown): void {
                         clearInterval(scrollIntervalRef.current);
                         scrollIntervalRef.current = null;
                     }
+                    clearHighlight();
                     el.classList.add("comment-highlight");
+                    highlightedElementRef.current = el;
 
                     const scrollToTarget = () => {
                         const rect = el.getBoundingClientRect();
@@ -151,8 +183,10 @@ export function useTimelineHashScroll(data: unknown): void {
 
         scrollToHash();
         window.addEventListener("hashchange", scrollToHash);
+        document.addEventListener("keydown", dismissHighlight);
         return () => {
             window.removeEventListener("hashchange", scrollToHash);
+            document.removeEventListener("keydown", dismissHighlight);
             if (scrollIntervalRef.current) {
                 clearInterval(scrollIntervalRef.current);
                 scrollIntervalRef.current = null;
