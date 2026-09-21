@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, Lock } from "lucide-react";
+import { Archive, Check, Copy, Lock } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import {
     ActionErrorBanner,
@@ -16,6 +16,7 @@ import { CreateStackDialog } from "~/components/pull/stack/create-stack-dialog";
 import { StackBanner } from "~/components/pull/stack/stack-banner";
 import { StackCreateBadge } from "~/components/pull/stack/stack-create-badge";
 import { StackBadge } from "~/components/pull/stack/stack-popover";
+import { CopyButton } from "~/components/ui/copy-button";
 import {
     extractPullRequestState,
     StatusPill,
@@ -381,7 +382,7 @@ export function Branches({
         "rounded bg-info-surface px-1.5 py-0.5 font-mono text-info-text text-xs hover:bg-info-border/20";
 
     return (
-        <div className="text-sm text-text-secondary">
+        <div className="flex items-center text-sm text-text-secondary">
             <a
                 href={`https://github.com/${baseRepo}/tree/${pullRequest.base.ref}`}
                 className={branchLinkClassName}
@@ -399,6 +400,19 @@ export function Branches({
                     {headLabel}
                 </span>
             </a>
+            <CopyButton
+                text={pullRequest.head.ref}
+                title="Copy branch name"
+                className="ml-1 flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-text-muted hover:text-text-secondary"
+            >
+                {(copied) =>
+                    copied ? (
+                        <Check className="size-3.5 text-success-emphasis" />
+                    ) : (
+                        <Copy className="size-3.5" />
+                    )
+                }
+            </CopyButton>
         </div>
     );
 }
