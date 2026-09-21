@@ -1,6 +1,7 @@
 "use client";
 
 import NextLink from "next/link";
+import { Button } from "~/components/ui/button";
 import { UserLink } from "~/components/user/user-link";
 import type { GQLHeadRefForcePushedEvent } from "~/server/github-graphql";
 import { formatDateTime, formatRelativeTime } from "~/utils/format-time";
@@ -63,14 +64,15 @@ export function HeadRefForcePushContent({
             </p>
             <span title={fullDate}>{timestamp}</span>
             {event.beforeCommit?.oid && event.afterCommit?.oid && (
-                <a
-                    href={`https://${domain(provider)}/${owner}/${repo}/compare/${event.beforeCommit.oid}...${event.afterCommit.oid}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="ml-auto rounded bg-surface-tertiary px-1.5 py-0.5 text-text-secondary text-xs transition-colors hover:bg-surface-selected"
-                >
-                    Compare
-                </a>
+                <Button asChild className="ml-auto" size="xs" variant="outline">
+                    <a
+                        href={`https://${domain(provider)}/${owner}/${repo}/compare/${event.beforeCommit.oid}...${event.afterCommit.oid}`}
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        Compare
+                    </a>
+                </Button>
             )}
         </EventRow>
     );
