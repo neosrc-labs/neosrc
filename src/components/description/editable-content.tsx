@@ -128,7 +128,7 @@ export function EditableDescriptionCard({
     ) : undefined;
 
     return (
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 pr-6">
             {author ? (
                 <UserHoverCard login={author.login} provider={provider}>
                     <a

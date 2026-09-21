@@ -130,7 +130,7 @@ export function TimelineEvent({
                     containIntrinsicSize: "200px",
                 }}
             >
-                <div className="max-w-[880px]">
+                <div className="max-w-270">
                     <EventContent
                         event={wrapper.event}
                         provider={provider}
