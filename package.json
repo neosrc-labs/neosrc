@@ -4,34 +4,34 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "next build",
+        "build": "bun --bun next build",
         "check": "biome check .",
         "check:unsafe": "biome check --write --unsafe .",
         "check:write": "biome check --write .",
-        "verify": "concurrently -n check,typecheck,knip,test 'pnpm:check:write' 'pnpm:typecheck' 'pnpm:knip' 'pnpm:test'",
+        "verify": "concurrently -n check,typecheck,knip,test 'bun run check:write' 'bun run typecheck' 'bun run knip' 'bun run test'",
         "test": "${AI_AGENT:+rtk }vitest run",
         "db:generate": "drizzle-kit generate",
         "db:migrate": "drizzle-kit migrate",
         "db:push": "drizzle-kit push",
         "db:pull": "drizzle-kit pull",
         "db:studio": "drizzle-kit studio",
-        "dev": "concurrently -k -p 'none'  'pnpm:dev:serve' 'pnpm:dev:webhook'",
-        "dev:serve": "next dev",
+        "dev": "concurrently -k -p 'none' 'bun run dev:serve' 'bun run dev:webhook'",
+        "dev:serve": "bun --bun next dev",
         "dev:webhook": "dotenv -e .env -- sh -c 'smee -u $SMEE_URL -P /api/webhook/github'",
         "e2e": "dotenv -e .env.e2e -- playwright test",
         "e2e:install": "playwright install --with-deps chromium",
-        "e2e:setup": "dotenv -e .env.e2e -- npx drizzle-kit push && dotenv -e .env.e2e -- node scripts/e2e-setup.mjs",
+        "e2e:setup": "dotenv -e .env.e2e -- drizzle-kit push && dotenv -e .env.e2e -- bun scripts/e2e-setup.mjs",
         "e2e:ui": "dotenv -e .env.e2e -- playwright test --ui",
         "extension-test": "playwright test --config=playwright.extension.config.ts",
         "extension-test:ui": "playwright test --config=playwright.extension.config.ts --ui",
         "functional-test": "dotenv -e .env.test -- playwright test --config=playwright.functional.config.cjs --project=chromium",
         "functional-test:ui": "dotenv -e .env.test -- playwright test --ui --config=playwright.functional.config.cjs --project=chromium",
-        "functional-test:setup": "dotenv -e .env.test -- npx drizzle-kit push",
-        "generate:icon-map": "pnpx tsx scripts/generate-icon-map.ts",
+        "functional-test:setup": "dotenv -e .env.test -- drizzle-kit push",
+        "generate:icon-map": "bun scripts/generate-icon-map.ts",
         "knip": "SKIP_ENV_VALIDATION=1 knip",
         "jscpd": "jscpd",
-        "preview": "next build && next start",
-        "start": "next start",
+        "preview": "bun run build && bun run start",
+        "start": "bun --bun next start",
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
@@ -111,5 +111,18 @@
     "ct3aMetadata": {
         "initVersion": "7.40.0"
     },
-    "packageManager": "pnpm@11.1.0"
+    "packageManager": "bun@1.4.2",
+    "trustedDependencies": [
+        "esbuild",
+        "msw",
+        "sharp"
+    ],
+    "overrides": {
+        "@types/react": "19.2.18",
+        "@types/react-dom": "19.2.4",
+        "baseline-browser-mapping@>=2.0.0 <2.11.0": "2.11.0",
+        "browserslist@<=4.28.6": "4.28.7",
+        "esbuild@<=0.24.2": "0.25.0",
+        "vite@>=8.0.0 <=8.0.15": "8.0.16"
+    }
 }

@@ -15,6 +15,8 @@ export default defineConfig({
         },
     },
     test: {
+        // Bun's external-module interop drops Zod's named exports in Vitest.
+        server: { deps: { inline: ["zod"] } },
         include: ["src/**/*.test.{ts,tsx}"],
         environment: "jsdom",
         globals: true,

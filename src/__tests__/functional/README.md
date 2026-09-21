@@ -10,4 +10,4 @@ Functional tests use:
 * Should never call the real GitHub/Codeberg API, use `msw` for mocking/stubbing API calls instead
 
 
-To run the functional tests run: `pnpm functional-test`
+To run the functional tests run: `bun run functional-test`

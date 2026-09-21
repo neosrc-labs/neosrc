@@ -40,7 +40,7 @@ export default defineConfig({
         },
     ],
     webServer: {
-        command: "pnpm dev",
+        command: "bun run dev",
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
         env: {

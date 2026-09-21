@@ -1,0 +1,7 @@
+env = false
+
+[run]
+bun = true
+
+[install]
+linker = "isolated"

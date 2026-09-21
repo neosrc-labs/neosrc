@@ -1,6 +1,6 @@
 // Bakes the route table (src/utils/extension-routes.ts) into the extension so a
 // service worker can decide redirects without a network round trip. Re-run
-// after touching the table: pnpm generate:extension-routes
+// after touching the table: bun scripts/generate-extension-routes.ts
 import { writeFileSync } from "node:fs";
 import {
     EXTENSION_EXIT_PARAM,

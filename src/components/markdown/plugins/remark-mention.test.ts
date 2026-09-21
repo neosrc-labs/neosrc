@@ -3,8 +3,6 @@ import remarkParse from "remark-parse";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import remarkStringify from "remark-stringify";
 
-// NOTE: unified, remark-parse, and remark-stringify are transitive
-// dependencies via react-markdown and are resolved by pnpm.
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { unified } from "unified";
 import { describe, expect, it } from "vitest";
