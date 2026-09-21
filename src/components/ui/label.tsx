@@ -18,44 +18,72 @@ function channels(hex: string): [number, number, number] {
     ];
 }
 
-// WCAG relative luminance.
-function relLuminance(hex: string): number {
-    const [r, g, b] = channels(hex).map((c) => {
-        const s = c / 255;
-        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-    }) as [number, number, number];
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+function clamp(n: number, lo: number, hi: number): number {
+    return Math.max(lo, Math.min(n, hi));
 }
 
-// Mix toward white by t (0 = unchanged, 1 = white).
-function lighten(hex: string, t: number): string {
-    const [r, g, b] = channels(hex);
-    const mix = (c: number) => Math.round(c + (255 - c) * t);
-    return [mix(r), mix(g), mix(b)]
-        .map((c) => c.toString(16).padStart(2, "0"))
-        .join("");
+// WCAG relative luminance, normalized to 0..1.
+function perceivedLightness([r, g, b]: [number, number, number]): number {
+    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 }
 
+function hexToHsl(hex: string): [number, number, number] {
+    const [r0, g0, b0] = channels(hex).map((c) => c / 255) as [
+        number,
+        number,
+        number,
+    ];
+    const max = Math.max(r0, g0, b0);
+    const min = Math.min(r0, g0, b0);
+    const l = (max + min) / 2;
+    if (max === min) return [0, 0, l * 100];
+    const d = max - min;
+    const s = d / (1 - Math.abs(2 * l - 1));
+    let h: number;
+    if (max === r0) h = ((g0 - b0) / d) % 6;
+    else if (max === g0) h = (b0 - r0) / d + 2;
+    else h = (r0 - g0) / d + 4;
+    h = Math.round(h * 60);
+    if (h < 0) h += 360;
+    return [h, Math.round(s * 100), Math.round(l * 100)];
+}
+
+// Mirrors GitHub's Primer IssueLabel token styling (primer-react-css
+// .prc-Token-IssueLabel) so chips look identical to github.com.
 function labelStyle(hex: string, darkMode: boolean): React.CSSProperties {
+    const rgb = channels(hex);
+    const perceived = perceivedLightness(rgb);
+    const [h, s, l] = hexToHsl(hex);
+
     if (darkMode) {
-        // Tint over an assumed #0d1117 surface. Lighten the label color for
-        // text instead of falling back to white so the chip keeps its hue.
-        const bgRgb = channels(hex).map((c) =>
-            Math.round(0x0d + (c - 0x0d) * 0.125),
-        );
-        const bg = bgRgb.map((c) => c.toString(16).padStart(2, "0")).join("");
+        // 18% tint of the raw color; text/border use the color itself,
+        // lightened in HSL space when too dark against the background.
+        const threshold = 0.6;
+        const lightenBy =
+            (threshold - perceived) *
+            100 *
+            clamp(1 / (threshold - perceived), 0, 1);
+        const l2 = Math.round(l + lightenBy);
+        const fg = `hsl(${h} ${s}% ${l2}%)`;
         return {
-            backgroundColor: `#${bg}`,
-            color: `#${lighten(hex, 0.65)}`,
-            borderColor: `#${hex}66`,
+            backgroundColor: `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.18)`,
+            color: fg,
+            borderColor: `hsl(${h} ${s}% ${l2}% / 0.3)`,
             borderWidth: 1,
             borderStyle: "solid",
         };
     }
-    // Full-color chip in light mode; dark text on light labels, white otherwise.
+
+    // Full-color chip. Dark labels get white text, light labels black text.
+    const threshold = 0.453;
+    const textSwitch = clamp(1 / (threshold - perceived), 0, 1);
+    const borderAlpha = clamp((perceived - 0.96) * 100, 0, 1);
     return {
-        backgroundColor: `#${hex}`,
-        color: relLuminance(hex) > 0.35 ? "#1f2328" : "#ffffff",
+        backgroundColor: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`,
+        color: textSwitch > 0.5 ? "#ffffff" : "#000000",
+        borderColor: `hsl(${h} ${s}% ${Math.max(l - 25, 0)}% / ${borderAlpha})`,
+        borderWidth: 1,
+        borderStyle: "solid",
     };
 }
 
