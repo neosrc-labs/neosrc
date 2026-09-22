@@ -1,20 +1,15 @@
 import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { type GenericOAuthConfig, genericOAuth } from "better-auth/plugins";
 import { and, eq, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { env } from "~/env";
+import { createAuthDatabaseAdapter } from "~/server/auth/database-adapter";
 import { decrypt, encrypt } from "~/server/auth/encryption";
 import { registerProviderTokenRefresh } from "~/server/auth/token-registry";
 import { db } from "~/server/db";
-import {
-    betterAuthAccount,
-    betterAuthSession,
-    betterAuthUser,
-    betterAuthVerification,
-} from "~/server/db/schema";
+import { betterAuthAccount } from "~/server/db/schema";
 import { getUser as getCodebergUser } from "../codeberg";
 import { getAuthenticatedUser } from "../github";
 
@@ -202,15 +197,7 @@ async function syncAccountUsername(account: {
 export const AUTH_SESSION_FRESH_AGE_SECONDS = 15 * 60;
 
 export const auth = betterAuth({
-    database: drizzleAdapter(db, {
-        provider: "pg",
-        schema: {
-            user: betterAuthUser,
-            session: betterAuthSession,
-            account: betterAuthAccount,
-            verification: betterAuthVerification,
-        },
-    }),
+    database: createAuthDatabaseAdapter(db),
     session: {
         expiresIn: 7 * 24 * 60 * 60,
         updateAge: 24 * 60 * 60,

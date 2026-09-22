@@ -12,7 +12,11 @@ declare global {
     var dbConn: postgres.Sql | undefined;
 }
 
-const conn = globalThis.dbConn ?? postgres(env.DATABASE_URL);
+const conn =
+    globalThis.dbConn ??
+    postgres(env.DATABASE_URL, {
+        idle_timeout: 20,
+    });
 if (env.NODE_ENV !== "production") globalThis.dbConn = conn;
 
 export const db = drizzle(conn, { schema });
