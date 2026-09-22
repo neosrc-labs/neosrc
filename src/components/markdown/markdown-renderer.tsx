@@ -10,10 +10,11 @@ import {
     type ReactNode,
     useContext,
     useEffect,
+    useMemo,
     useRef,
     useState,
 } from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
@@ -106,6 +107,58 @@ export function MarkdownRenderer({
     // heading unique in the new document could still get a "-1" id.
     headingSlugsRef.current.clear();
 
+    // The preview renders the content with HTML comments removed, but task
+    // toggles must edit the original body so comments survive. lineMap
+    // translates line numbers reported against the stripped preview back to
+    // the original content (a multi-line comment can shift them).
+    const { stripped, lineMap } = useMemo(
+        () => stripHtmlCommentsWithLineMap(content),
+        [content],
+    );
+    const interactive = canToggleTasks && Boolean(onToggleTask);
+    // The components object must be referentially stable across re-renders
+    // that don't change its inputs. React reconciles elements by their type
+    // (the override function reference), so fresh closures here would remount
+    // every override-rendered subtree on each parent re-render. Stateful
+    // overrides like MermaidDiagram blank out and re-render asynchronously,
+    // which shows up as a flicker.
+    const components = useMemo(
+        () =>
+            buildComponents({
+                owner,
+                repo,
+                pullNumber,
+                commentPath,
+                commentLine,
+                commentStartLine,
+                commentThreadId,
+                interactive,
+                onToggleTask,
+                content,
+                lineMap,
+                linkableHeadings,
+                headingSlugs: headingSlugsRef.current,
+                imageBaseUrl,
+                imageDocDir,
+            }),
+        [
+            owner,
+            repo,
+            pullNumber,
+            commentPath,
+            commentLine,
+            commentStartLine,
+            commentThreadId,
+            interactive,
+            onToggleTask,
+            content,
+            lineMap,
+            linkableHeadings,
+            imageBaseUrl,
+            imageDocDir,
+        ],
+    );
+
     if (!content) {
         return (
             <p className="text-text-tertiary italic">
@@ -114,12 +167,6 @@ export function MarkdownRenderer({
         );
     }
 
-    // The preview renders the content with HTML comments removed, but task
-    // toggles must edit the original body so comments survive. lineMap
-    // translates line numbers reported against the stripped preview back to
-    // the original content (a multi-line comment can shift them).
-    const { stripped, lineMap } = stripHtmlCommentsWithLineMap(content);
-    const interactive = canToggleTasks && Boolean(onToggleTask);
     return (
         <div
             className={cn(
@@ -139,367 +186,359 @@ export function MarkdownRenderer({
                     remarkAlert,
                 ]}
                 rehypePlugins={[rehypeRaw, [rehypeSanitize, schema]]}
-                components={{
-                    ...(linkableHeadings
-                        ? ({
-                              h1: createHeadingRenderer(
-                                  "h1",
-                                  headingSlugsRef.current,
-                              ),
-                              h2: createHeadingRenderer(
-                                  "h2",
-                                  headingSlugsRef.current,
-                              ),
-                              h3: createHeadingRenderer(
-                                  "h3",
-                                  headingSlugsRef.current,
-                              ),
-                              h4: createHeadingRenderer(
-                                  "h4",
-                                  headingSlugsRef.current,
-                              ),
-                              h5: createHeadingRenderer(
-                                  "h5",
-                                  headingSlugsRef.current,
-                              ),
-                              h6: createHeadingRenderer(
-                                  "h6",
-                                  headingSlugsRef.current,
-                              ),
-                          } as Record<string, unknown>)
-                        : {}),
-                    a({ href, children, node: _node, ...props }) {
-                        const issueMatch = href?.match(
-                            /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/(?:issues|pull)\/(\d+)$/,
-                        );
-                        if (issueMatch?.[1] && issueMatch[2] && issueMatch[3]) {
-                            const matchedOwner = issueMatch[1];
-                            const matchedRepo = issueMatch[2];
-                            const issueNumber = Number.parseInt(
-                                issueMatch[3],
-                                10,
-                            );
-                            const isSameRepo =
-                                matchedOwner === owner && matchedRepo === repo;
-                            const shortRef = isSameRepo
-                                ? `#${issueNumber}`
-                                : `${matchedOwner}/${matchedRepo}#${issueNumber}`;
-                            const childrenText = getPlainText(children);
-                            const displayChildren =
-                                childrenText === href ? shortRef : children;
-                            return (
-                                <IssueHoverCard
-                                    owner={matchedOwner}
-                                    repo={matchedRepo}
-                                    issueNumber={issueNumber}
-                                >
-                                    <a href={href} {...props}>
-                                        {displayChildren}
-                                    </a>
-                                </IssueHoverCard>
-                            );
-                        }
-                        const teamMatch = href?.match(
-                            /^https:\/\/github\.com\/orgs\/([\w.-]+)\/teams\/([\w.-]+)$/,
-                        );
-                        if (teamMatch?.[1] && teamMatch[2]) {
-                            return (
-                                <TeamHoverCard
-                                    org={teamMatch[1]}
-                                    teamSlug={teamMatch[2]}
-                                >
-                                    <a href={href} {...props}>
-                                        {children}
-                                    </a>
-                                </TeamHoverCard>
-                            );
-                        }
-                        const commitMatch = href?.match(
-                            /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/commit\/([a-f0-9]{7,40})$/i,
-                        );
-                        if (
-                            commitMatch?.[1] &&
-                            commitMatch[2] &&
-                            commitMatch[3]
-                        ) {
-                            return (
-                                <MarkdownCommitHoverCard
-                                    owner={commitMatch[1]}
-                                    repo={commitMatch[2]}
-                                    sha={commitMatch[3].toLowerCase()}
-                                >
-                                    <a href={href} {...props}>
-                                        {children}
-                                    </a>
-                                </MarkdownCommitHoverCard>
-                            );
-                        }
-                        const userMatch = href?.match(
-                            /^https:\/\/github\.com\/([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)$/,
-                        );
-                        if (userMatch?.[1]) {
-                            const login = userMatch[1];
-                            if (getPlainText(children) === `@${login}`) {
-                                return (
-                                    <UserMentionLink
-                                        href={userMatch[0]}
-                                        login={login}
-                                        {...props}
-                                    >
-                                        {children}
-                                    </UserMentionLink>
-                                );
-                            }
-                            return (
-                                <UserHoverCard login={login}>
-                                    <a href={href} {...props}>
-                                        {children}
-                                    </a>
-                                </UserHoverCard>
-                            );
-                        }
-                        return (
-                            <a href={href} {...props}>
-                                {children}
-                            </a>
-                        );
-                    },
-                    pre({ children }) {
-                        return (
-                            <CodeBlockContext.Provider value={true}>
-                                {children}
-                            </CodeBlockContext.Provider>
-                        );
-                    },
-                    code({ children, className }) {
-                        if (className?.startsWith("language-suggestion")) {
-                            const codeString = Array.isArray(children)
-                                ? children.join("")
-                                : String(children ?? "");
-                            return (
-                                <SuggestionBlock
-                                    code={codeString}
-                                    owner={owner}
-                                    repo={repo}
-                                    pullNumber={pullNumber}
-                                    path={commentPath}
-                                    line={commentLine}
-                                    startLine={commentStartLine}
-                                    resolveThreadId={commentThreadId}
-                                />
-                            );
-                        }
-                        if (className === "language-mermaid") {
-                            const codeString = Array.isArray(children)
-                                ? children.join("")
-                                : String(children ?? "");
-                            return <MermaidDiagram code={codeString.trim()} />;
-                        }
-                        return (
-                            <CodeElement className={className}>
-                                {children}
-                            </CodeElement>
-                        );
-                    },
-                    img({ width, height, src, ...props }) {
-                        const resolvedSrc =
-                            src &&
-                            typeof src === "string" &&
-                            imageBaseUrl &&
-                            isRelativeImageSrc(src)
-                                ? resolveImageSrc(
-                                      imageBaseUrl,
-                                      imageDocDir ?? "",
-                                      src,
-                                  )
-                                : src;
-                        return (
-                            // biome-ignore lint/performance/noImgElement: markdown images are user content with arbitrary hosts/dimensions that next/image cannot optimize
-                            <img
-                                className="inline-block align-middle"
-                                {...props}
-                                src={resolvedSrc}
-                                width={width}
-                                height={height}
-                                alt={props.alt ?? ""}
-                            />
-                        );
-                    },
-                    ul({ children, className, style, ...props }) {
-                        const items = Children.toArray(children);
-                        const isTaskList = items.some((child) => {
-                            if (
-                                !isValidElement<{ children?: ReactNode }>(child)
-                            )
-                                return false;
-                            const liChildren = Children.toArray(
-                                child.props.children,
-                            );
-                            return liChildren.some(
-                                (c) =>
-                                    isValidElement<{ type?: string }>(c) &&
-                                    c.props.type === "checkbox",
-                            );
-                        });
-                        return (
-                            <ul
-                                style={{
-                                    ...style,
-                                    // List elements look better with no vertical margin
-                                    marginTop: 0,
-                                    marginBottom: 0,
-                                    ...(isTaskList ? { paddingLeft: 0 } : {}),
-                                }}
-                                className={className}
-                                {...props}
-                            >
-                                {children}
-                            </ul>
-                        );
-                    },
-                    ol({ children, className, style, ...props }) {
-                        return (
-                            <ol
-                                style={{
-                                    ...style,
-                                    // List elements look better with no vertical margin
-                                    marginTop: 0,
-                                    marginBottom: 0,
-                                }}
-                                className={className}
-                                {...props}
-                            >
-                                {children}
-                            </ol>
-                        );
-                    },
-                    hr({ style, ...props }) {
-                        return (
-                            <hr
-                                style={{
-                                    ...style,
-                                    marginTop: 24,
-                                    marginBottom: 24,
-                                }}
-                                {...props}
-                            />
-                        );
-                    },
-                    li({ children, className, node, ...props }) {
-                        const childrenArray = Children.toArray(children);
-                        const firstChild = childrenArray[0];
-                        const isTaskItem =
-                            isValidElement<{ type?: string }>(firstChild) &&
-                            firstChild.props.type === "checkbox";
-                        if (isTaskItem) {
-                            // Each task-list <li> knows its own source line via
-                            // the hast `node.position.start.line` (preserved from
-                            // the mdast listItem by remark-rehype). We replace
-                            // the gfm-injected <input> child with our own
-                            // controlled checkbox whose onChange bakes in this
-                            // line (no global index/ref positional matching, so
-                            // toggles work in any document structure:
-                            // blockquotes, ordered lists, nested lists,
-                            // preceding headings, etc).
-                            const line = (node as HastNode | undefined)
-                                ?.position?.start?.line;
-                            const inputEl = firstChild as ReactElement<{
-                                checked?: boolean;
-                            }>;
-                            const originalKey = (firstChild as ReactElement)
-                                .key;
-                            const replacement = (
-                                <input
-                                    key={originalKey ?? "task-checkbox-input"}
-                                    checked={inputEl.props.checked === true}
-                                    className="size-4 cursor-pointer rounded border-border bg-surface-elevated text-action focus:ring-focus disabled:cursor-not-allowed disabled:opacity-60"
-                                    disabled={!interactive}
-                                    onChange={
-                                        interactive
-                                            ? () => {
-                                                  if (typeof line !== "number")
-                                                      return;
-                                                  const originalLine =
-                                                      lineMap[line - 1];
-                                                  if (
-                                                      typeof originalLine !==
-                                                      "number"
-                                                  )
-                                                      return;
-                                                  const newContent =
-                                                      toggleCheckboxAtLine(
-                                                          content,
-                                                          originalLine,
-                                                      );
-                                                  onToggleTask?.(newContent);
-                                              }
-                                            : undefined
-                                    }
-                                    type="checkbox"
-                                />
-                            );
-                            const newChildren = childrenArray.map((c, i) =>
-                                i === 0 ? replacement : c,
-                            );
-                            return (
-                                <li className="list-none" {...props}>
-                                    {newChildren}
-                                </li>
-                            );
-                        }
-                        return <li className={className}>{children}</li>;
-                    },
-                    summary({ children, ...props }) {
-                        return (
-                            <summary className="cursor-pointer" {...props}>
-                                {children}
-                            </summary>
-                        );
-                    },
-                    table({ children }) {
-                        return (
-                            <div className="overflow-x-auto">
-                                <table className="w-full border-collapse border border-border leading-normal [font-size:inherit]">
-                                    {children}
-                                </table>
-                            </div>
-                        );
-                    },
-                    thead({ children }) {
-                        return (
-                            <thead className="bg-surface-tertiary">
-                                {children}
-                            </thead>
-                        );
-                    },
-                    th({ children, style, ...props }) {
-                        return (
-                            <th
-                                className="border border-border px-3 py-2 font-semibold"
-                                style={style}
-                                {...props}
-                            >
-                                {children}
-                            </th>
-                        );
-                    },
-                    td({ children, style, ...props }) {
-                        return (
-                            <td
-                                className="border border-border px-3 py-2"
-                                style={style}
-                                {...props}
-                            >
-                                {children}
-                            </td>
-                        );
-                    },
-                }}
+                components={components}
             >
                 {stripped}
             </ReactMarkdown>
         </div>
     );
+}
+
+/**
+ * Inputs for building the react-markdown component overrides. Mirrors the
+ * MarkdownRenderer props the overrides close over.
+ */
+type ComponentsInputs = {
+    owner: string;
+    repo: string;
+    pullNumber?: number;
+    commentPath?: string;
+    commentLine?: number | null;
+    commentStartLine?: number | null;
+    commentThreadId?: string;
+    interactive: boolean;
+    onToggleTask?: (content: string) => void;
+    content: string;
+    lineMap: number[];
+    linkableHeadings: boolean;
+    headingSlugs: Map<string, number>;
+    imageBaseUrl?: string;
+    imageDocDir?: string;
+};
+
+function buildComponents(inputs: ComponentsInputs): Components {
+    const {
+        owner,
+        repo,
+        pullNumber,
+        commentPath,
+        commentLine,
+        commentStartLine,
+        commentThreadId,
+        interactive,
+        onToggleTask,
+        content,
+        lineMap,
+        linkableHeadings,
+        headingSlugs,
+        imageBaseUrl,
+        imageDocDir,
+    } = inputs;
+    return {
+        ...(linkableHeadings
+            ? ({
+                  h1: createHeadingRenderer("h1", headingSlugs),
+                  h2: createHeadingRenderer("h2", headingSlugs),
+                  h3: createHeadingRenderer("h3", headingSlugs),
+                  h4: createHeadingRenderer("h4", headingSlugs),
+                  h5: createHeadingRenderer("h5", headingSlugs),
+                  h6: createHeadingRenderer("h6", headingSlugs),
+              } as Record<string, unknown>)
+            : {}),
+        a({ href, children, node: _node, ...props }) {
+            const issueMatch = href?.match(
+                /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/(?:issues|pull)\/(\d+)$/,
+            );
+            if (issueMatch?.[1] && issueMatch[2] && issueMatch[3]) {
+                const matchedOwner = issueMatch[1];
+                const matchedRepo = issueMatch[2];
+                const issueNumber = Number.parseInt(issueMatch[3], 10);
+                const isSameRepo =
+                    matchedOwner === owner && matchedRepo === repo;
+                const shortRef = isSameRepo
+                    ? `#${issueNumber}`
+                    : `${matchedOwner}/${matchedRepo}#${issueNumber}`;
+                const childrenText = getPlainText(children);
+                const displayChildren =
+                    childrenText === href ? shortRef : children;
+                return (
+                    <IssueHoverCard
+                        owner={matchedOwner}
+                        repo={matchedRepo}
+                        issueNumber={issueNumber}
+                    >
+                        <a href={href} {...props}>
+                            {displayChildren}
+                        </a>
+                    </IssueHoverCard>
+                );
+            }
+            const teamMatch = href?.match(
+                /^https:\/\/github\.com\/orgs\/([\w.-]+)\/teams\/([\w.-]+)$/,
+            );
+            if (teamMatch?.[1] && teamMatch[2]) {
+                return (
+                    <TeamHoverCard org={teamMatch[1]} teamSlug={teamMatch[2]}>
+                        <a href={href} {...props}>
+                            {children}
+                        </a>
+                    </TeamHoverCard>
+                );
+            }
+            const commitMatch = href?.match(
+                /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/commit\/([a-f0-9]{7,40})$/i,
+            );
+            if (commitMatch?.[1] && commitMatch[2] && commitMatch[3]) {
+                return (
+                    <MarkdownCommitHoverCard
+                        owner={commitMatch[1]}
+                        repo={commitMatch[2]}
+                        sha={commitMatch[3].toLowerCase()}
+                    >
+                        <a href={href} {...props}>
+                            {children}
+                        </a>
+                    </MarkdownCommitHoverCard>
+                );
+            }
+            const userMatch = href?.match(
+                /^https:\/\/github\.com\/([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)$/,
+            );
+            if (userMatch?.[1]) {
+                const login = userMatch[1];
+                if (getPlainText(children) === `@${login}`) {
+                    return (
+                        <UserMentionLink
+                            href={userMatch[0]}
+                            login={login}
+                            {...props}
+                        >
+                            {children}
+                        </UserMentionLink>
+                    );
+                }
+                return (
+                    <UserHoverCard login={login}>
+                        <a href={href} {...props}>
+                            {children}
+                        </a>
+                    </UserHoverCard>
+                );
+            }
+            return (
+                <a href={href} {...props}>
+                    {children}
+                </a>
+            );
+        },
+        pre({ children }) {
+            return (
+                <CodeBlockContext.Provider value={true}>
+                    {children}
+                </CodeBlockContext.Provider>
+            );
+        },
+        code({ children, className }) {
+            if (className?.startsWith("language-suggestion")) {
+                const codeString = Array.isArray(children)
+                    ? children.join("")
+                    : String(children ?? "");
+                return (
+                    <SuggestionBlock
+                        code={codeString}
+                        owner={owner}
+                        repo={repo}
+                        pullNumber={pullNumber}
+                        path={commentPath}
+                        line={commentLine}
+                        startLine={commentStartLine}
+                        resolveThreadId={commentThreadId}
+                    />
+                );
+            }
+            if (className === "language-mermaid") {
+                const codeString = Array.isArray(children)
+                    ? children.join("")
+                    : String(children ?? "");
+                return <MermaidDiagram code={codeString.trim()} />;
+            }
+            return <CodeElement className={className}>{children}</CodeElement>;
+        },
+        img({ width, height, src, ...props }) {
+            const resolvedSrc =
+                src &&
+                typeof src === "string" &&
+                imageBaseUrl &&
+                isRelativeImageSrc(src)
+                    ? resolveImageSrc(imageBaseUrl, imageDocDir ?? "", src)
+                    : src;
+            return (
+                // biome-ignore lint/performance/noImgElement: markdown images are user content with arbitrary hosts/dimensions that next/image cannot optimize
+                <img
+                    className="inline-block align-middle"
+                    {...props}
+                    src={resolvedSrc}
+                    width={width}
+                    height={height}
+                    alt={props.alt ?? ""}
+                />
+            );
+        },
+        ul({ children, className, style, ...props }) {
+            const items = Children.toArray(children);
+            const isTaskList = items.some((child) => {
+                if (!isValidElement<{ children?: ReactNode }>(child))
+                    return false;
+                const liChildren = Children.toArray(child.props.children);
+                return liChildren.some(
+                    (c) =>
+                        isValidElement<{ type?: string }>(c) &&
+                        c.props.type === "checkbox",
+                );
+            });
+            return (
+                <ul
+                    style={{
+                        ...style,
+                        // List elements look better with no vertical margin
+                        marginTop: 0,
+                        marginBottom: 0,
+                        ...(isTaskList ? { paddingLeft: 0 } : {}),
+                    }}
+                    className={className}
+                    {...props}
+                >
+                    {children}
+                </ul>
+            );
+        },
+        ol({ children, className, style, ...props }) {
+            return (
+                <ol
+                    style={{
+                        ...style,
+                        // List elements look better with no vertical margin
+                        marginTop: 0,
+                        marginBottom: 0,
+                    }}
+                    className={className}
+                    {...props}
+                >
+                    {children}
+                </ol>
+            );
+        },
+        hr({ style, ...props }) {
+            return (
+                <hr
+                    style={{
+                        ...style,
+                        marginTop: 24,
+                        marginBottom: 24,
+                    }}
+                    {...props}
+                />
+            );
+        },
+        li({ children, className, node, ...props }) {
+            const childrenArray = Children.toArray(children);
+            const firstChild = childrenArray[0];
+            const isTaskItem =
+                isValidElement<{ type?: string }>(firstChild) &&
+                firstChild.props.type === "checkbox";
+            if (isTaskItem) {
+                // Each task-list <li> knows its own source line via
+                // the hast `node.position.start.line` (preserved from
+                // the mdast listItem by remark-rehype). We replace
+                // the gfm-injected <input> child with our own
+                // controlled checkbox whose onChange bakes in this
+                // line (no global index/ref positional matching, so
+                // toggles work in any document structure:
+                // blockquotes, ordered lists, nested lists,
+                // preceding headings, etc).
+                const line = (node as HastNode | undefined)?.position?.start
+                    ?.line;
+                const inputEl = firstChild as ReactElement<{
+                    checked?: boolean;
+                }>;
+                const originalKey = (firstChild as ReactElement).key;
+                const replacement = (
+                    <input
+                        key={originalKey ?? "task-checkbox-input"}
+                        checked={inputEl.props.checked === true}
+                        className="size-4 cursor-pointer rounded border-border bg-surface-elevated text-action focus:ring-focus disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={!interactive}
+                        onChange={
+                            interactive
+                                ? () => {
+                                      if (typeof line !== "number") return;
+                                      const originalLine = lineMap[line - 1];
+                                      if (typeof originalLine !== "number")
+                                          return;
+                                      const newContent = toggleCheckboxAtLine(
+                                          content,
+                                          originalLine,
+                                      );
+                                      onToggleTask?.(newContent);
+                                  }
+                                : undefined
+                        }
+                        type="checkbox"
+                    />
+                );
+                const newChildren = childrenArray.map((c, i) =>
+                    i === 0 ? replacement : c,
+                );
+                return (
+                    <li className="list-none" {...props}>
+                        {newChildren}
+                    </li>
+                );
+            }
+            return <li className={className}>{children}</li>;
+        },
+        summary({ children, ...props }) {
+            return (
+                <summary className="cursor-pointer" {...props}>
+                    {children}
+                </summary>
+            );
+        },
+        table({ children }) {
+            return (
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-border leading-normal [font-size:inherit]">
+                        {children}
+                    </table>
+                </div>
+            );
+        },
+        thead({ children }) {
+            return <thead className="bg-surface-tertiary">{children}</thead>;
+        },
+        th({ children, style, ...props }) {
+            return (
+                <th
+                    className="border border-border px-3 py-2 font-semibold"
+                    style={style}
+                    {...props}
+                >
+                    {children}
+                </th>
+            );
+        },
+        td({ children, style, ...props }) {
+            return (
+                <td
+                    className="border border-border px-3 py-2"
+                    style={style}
+                    {...props}
+                >
+                    {children}
+                </td>
+            );
+        },
+    };
 }
 
 type HastNode = {
