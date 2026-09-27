@@ -13,7 +13,8 @@ import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
     title: "Neosrc",
-    description: "Neosrc",
+    description:
+        "A unified UI for Git forges. Browse repositories, follow issues, and review pull requests across GitHub and Codeberg.",
     icons: [{ rel: "icon", type: "image/svg+xml", url: "/favicon.svg" }],
 };
 

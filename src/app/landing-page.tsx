@@ -1,6 +1,8 @@
-import { GitPullRequest, LogIn } from "lucide-react";
+import { GitFork } from "lucide-react";
 import { redirect } from "next/navigation";
 
+import { CodebergIcon, GitHubIcon } from "~/components/icons";
+import { Button } from "~/components/ui/button";
 import { auth, isCodebergConfigured } from "~/server/auth";
 
 function Step({
@@ -41,16 +43,17 @@ export function LandingPage({ authError }: { authError: string | null }) {
                 )}
                 <section className="flex flex-col items-center gap-6 text-center">
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-action">
-                        <GitPullRequest className="h-8 w-8 text-action-foreground" />
+                        <GitFork className="h-8 w-8 text-action-foreground" />
                     </div>
                     <h1 className="text-4xl text-text-primary sm:text-5xl">
-                        Review pull requests,
+                        A unified UI
                         <br />
-                        faster.
+                        for Git forges.
                     </h1>
                     <p className="max-w-lg text-lg text-text-secondary">
-                        Neosrc is a refined UX for GitHub that is a drop in
-                        replacement for Github.com
+                        Browse repositories, follow issues, and review pull
+                        requests across GitHub and Codeberg in one consistent
+                        interface. Your projects stay on the forge you choose.
                     </p>
                 </section>
 
@@ -59,30 +62,29 @@ export function LandingPage({ authError }: { authError: string | null }) {
                         How to use Neosrc
                     </h2>
                     <div className="flex flex-col gap-6">
-                        <Step number={1} title="Sign in with GitHub">
-                            Authenticate using your GitHub account. Neosrc
-                            requests read access to your repositories and pull
-                            requests.
+                        <Step number={1} title="Connect your accounts">
+                            Sign in with GitHub or Codeberg, then link another
+                            account from your profile to bring your work
+                            together.
                         </Step>
-                        <Step number={2} title="Navigate to a pull request">
-                            Go to{" "}
-                            <code className="rounded bg-surface-secondary px-1.5 py-0.5 font-mono text-sm text-text-primary">
-                                /&#123;owner&#125;/&#123;repo&#125;/pull/&#123;number&#125;
-                            </code>{" "}
-                            in your browser.
+                        <Step number={2} title="Explore your repositories">
+                            Browse code and commit history, catch up on issues,
+                            and open pull requests with the same familiar layout
+                            across forges.
                         </Step>
-                        <Step number={3} title="Review code">
-                            Browse the conversation timeline, read the diff with
-                            syntax highlighting, leave inline comments, and
-                            submit your review.
+                        <Step number={3} title="Keep up with your projects">
+                            See recent issues and pull requests from your linked
+                            accounts on your dashboard, then jump into a
+                            discussion or code review.
                         </Step>
                     </div>
                 </section>
 
-                <div className="flex flex-col items-center gap-4">
-                    <form>
-                        <button
-                            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-action px-6 py-3 font-semibold text-action-foreground transition hover:bg-action-hover"
+                <div className="flex w-full max-w-xl flex-col justify-center gap-3 self-center sm:flex-row">
+                    <form className="flex-1">
+                        <Button
+                            variant="outline"
+                            className="h-12 w-full gap-3 rounded-xl px-5 text-text-primary shadow-xs"
                             type="submit"
                             formAction={async () => {
                                 "use server";
@@ -101,14 +103,15 @@ export function LandingPage({ authError }: { authError: string | null }) {
                                 redirect(res.url);
                             }}
                         >
-                            <LogIn className="h-4 w-4" />
+                            <GitHubIcon className="size-5" />
                             Sign in with GitHub
-                        </button>
+                        </Button>
                     </form>
                     {isCodebergConfigured() && (
-                        <form>
-                            <button
-                                className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-action px-6 py-3 font-semibold text-action-foreground transition hover:bg-action-hover"
+                        <form className="flex-1">
+                            <Button
+                                variant="outline"
+                                className="h-12 w-full gap-3 rounded-xl px-5 text-text-primary shadow-xs"
                                 type="submit"
                                 formAction={async () => {
                                     "use server";
@@ -130,9 +133,9 @@ export function LandingPage({ authError }: { authError: string | null }) {
                                     redirect(res.url);
                                 }}
                             >
-                                <LogIn className="h-4 w-4" />
+                                <CodebergIcon className="size-5 shrink-0" />
                                 Sign in with Codeberg
-                            </button>
+                            </Button>
                         </form>
                     )}
                 </div>
