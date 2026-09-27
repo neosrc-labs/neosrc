@@ -277,26 +277,6 @@ describe("provider-aware procedures (repos router)", () => {
         expect(getGitHubTokenMock).not.toHaveBeenCalled();
     });
 
-    it("anonymous reads resolve the user id to 'anonymous' before token lookup", async () => {
-        const { repos } = await callerFor(null);
-        vi.mocked(github.fetchRepoIssuePullCounts).mockResolvedValue({
-            openIssuesCount: 0,
-            openPullRequestsCount: 0,
-        });
-
-        await expect(
-            repos.getCountsByOwnerAndRepo({ owner: "acme", repo: "api" }),
-        ).resolves.toEqual({ openIssuesCount: 0, openPullRequestsCount: 0 });
-
-        expect(getGitHubTokenMock).toHaveBeenCalledWith({}, "anonymous");
-        expect(github.fetchRepoIssuePullCounts).toHaveBeenCalledWith(
-            "gh-token",
-            "anonymous",
-            "acme",
-            "api",
-        );
-    });
-
     it("cached counts read the provider-keyed snapshot without a provider call", async () => {
         const { repos } = await callerFor(null);
         const readCacheMock = vi.mocked(cache.readCache);
@@ -594,39 +574,6 @@ describe("issues.timeline cursor validation", () => {
 });
 
 describe("branches router", () => {
-    const refsPage = {
-        refs: [{ name: "main", committedDate: "2026-09-01T00:00:00Z" }],
-        totalCount: 1,
-        hasNextPage: false,
-        endCursor: null,
-        defaultBranch: "main",
-    };
-
-    it("lists through the GitHub handler, resolving an anonymous user id", async () => {
-        const { branches } = await callerFor(null);
-        vi.mocked(github.getBranchRefs).mockResolvedValue(refsPage as never);
-        vi.mocked(github.getBranchDetails).mockResolvedValue([] as never);
-        vi.mocked(github.getBranchProtectionMap).mockResolvedValue({} as never);
-
-        const result = await branches.list({ owner: "acme", repo: "api" });
-
-        expect(getGitHubTokenMock).toHaveBeenCalledWith({}, "anonymous");
-        expect(github.getBranchRefs).toHaveBeenCalledWith(
-            "gh-token",
-            "acme",
-            "api",
-            { query: null, direction: "ASC", pages: 3 },
-        );
-        expect(github.getBranchDetails).toHaveBeenCalledWith(
-            "gh-token",
-            "acme",
-            "api",
-            ["main"],
-        );
-        expect(result.items).toEqual([]);
-        expect(result.defaultBranchRow?.name).toBe("main");
-    });
-
     it("reports a partial ref scan for the date tabs but not for all", async () => {
         const { branches } = await callerFor(null);
         const ref = (name: string) => ({

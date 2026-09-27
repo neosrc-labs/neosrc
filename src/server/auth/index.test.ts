@@ -24,6 +24,8 @@ vi.mock("~/env", () => ({ env: envState }));
 
 vi.mock("~/server/db", () => ({ db: {} }));
 
+import { reposRouter } from "~/server/api/routers/repos";
+import { createCallerFactory } from "~/server/api/trpc";
 import type { db } from "~/server/db";
 import { decrypt, encrypt } from "./encryption";
 import {
@@ -147,6 +149,70 @@ const REFRESHED_BODY = {
 beforeEach(() => {
     vi.unstubAllGlobals();
     envState.GITHUB_ANONYMOUS_TOKEN = undefined;
+});
+
+describe("anonymous repository reads", () => {
+    function callerFor(userId?: string) {
+        const { fakeDb } = createFakeDb([]);
+        return createCallerFactory(reposRouter)({
+            db: fakeDb,
+            session: userId ? ({ user: { id: userId } } as never) : null,
+            isAnonymous: !userId && !!envState.GITHUB_ANONYMOUS_TOKEN,
+            headers: new Headers(),
+        });
+    }
+
+    it("loads repository counts with the shared token without a connected account", async () => {
+        envState.GITHUB_ANONYMOUS_TOKEN = "shared-token";
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(async (_url: string, init: RequestInit) => {
+                const authorized =
+                    new Headers(init.headers).get("authorization") ===
+                    "bearer shared-token";
+                return Response.json(
+                    authorized
+                        ? {
+                              data: {
+                                  repository: {
+                                      issues: { totalCount: 4 },
+                                      pullRequests: { totalCount: 2 },
+                                  },
+                              },
+                          }
+                        : { message: "Bad credentials" },
+                    { status: authorized ? 200 : 401 },
+                );
+            }),
+        );
+
+        await expect(
+            callerFor().getCountsByOwnerAndRepo({
+                owner: "neosrc-labs",
+                repo: "neosrc",
+            }),
+        ).resolves.toEqual({ openIssuesCount: 4, openPullRequestsCount: 2 });
+    });
+
+    it("does not use the shared token for a signed-in user without an account", async () => {
+        envState.GITHUB_ANONYMOUS_TOKEN = "shared-token";
+
+        await expect(
+            callerFor("anonymous").getCountsByOwnerAndRepo({
+                owner: "neosrc-labs",
+                repo: "neosrc",
+            }),
+        ).rejects.toThrow("GitHub account not connected");
+    });
+
+    it("requires sign-in when anonymous browsing is disabled", async () => {
+        await expect(
+            callerFor().getCountsByOwnerAndRepo({
+                owner: "neosrc-labs",
+                repo: "neosrc",
+            }),
+        ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    });
 });
 
 describe("getGitHubToken", () => {

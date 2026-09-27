@@ -195,10 +195,9 @@ export function providerInput<T extends z.ZodRawShape>(shape: T) {
 }
 
 /**
- * How a builder resolves the user id passed to the token getters:
- * as-is passes `ctx.session?.user?.id` through (possibly undefined, which
- * the GitHub getter maps to the shared anonymous token); anonymous falls
- * back to the string "anonymous", which keyed caches expect.
+ * How a builder resolves the user id passed to handlers:
+ * as-is preserves the session identity; anonymous supplies a cache key.
+ * Token getters always receive the session identity.
  */
 type UserIdMode = "as-is" | "anonymous";
 type ResolvedUserId<Mode extends UserIdMode> = Mode extends "anonymous"
@@ -229,14 +228,15 @@ export function providerQuery<
     } & CodebergSide<z.output<S>, ResolvedUserId<Mode>, R>,
 ) {
     return viewerProcedure.input(config.input).query(async ({ ctx, input }) => {
+        const sessionUserId = ctx.session?.user?.id;
         const userId = (
             config.userId === "anonymous"
-                ? (ctx.session?.user?.id ?? "anonymous")
-                : ctx.session?.user?.id
+                ? (sessionUserId ?? "anonymous")
+                : sessionUserId
         ) as ResolvedUserId<Mode>;
         if (input.provider === "cb") {
             if (!config.cb) return config.cbFallback();
-            const accessToken = await getCodebergToken(ctx.db, userId);
+            const accessToken = await getCodebergToken(ctx.db, sessionUserId);
             return config.cb({
                 ctx,
                 // After .input() parsing the runtime value is exactly
@@ -247,7 +247,7 @@ export function providerQuery<
                 userId,
             });
         }
-        const accessToken = await getGitHubToken(ctx.db, userId);
+        const accessToken = await getGitHubToken(ctx.db, sessionUserId);
         return config.gh({
             ctx,
             input: input as z.output<S>,
