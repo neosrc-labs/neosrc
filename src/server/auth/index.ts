@@ -194,14 +194,12 @@ async function syncAccountUsername(account: {
     }
 }
 
-export const AUTH_SESSION_FRESH_AGE_SECONDS = 15 * 60;
-
 export const auth = betterAuth({
     database: createAuthDatabaseAdapter(db),
     session: {
         expiresIn: 7 * 24 * 60 * 60,
         updateAge: 24 * 60 * 60,
-        freshAge: AUTH_SESSION_FRESH_AGE_SECONDS,
+        freshAge: 15 * 60,
         deferSessionRefresh: true,
     },
     account: {
