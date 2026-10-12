@@ -267,7 +267,7 @@ function HeaderContent({
                                     alt="Neosrc"
                                     width={32}
                                     height={32}
-                                    className="size-8 shrink-0"
+                                    className="size-8 shrink-0 dark:invert"
                                 />
                             </Link>
                             {showRepoNav && (
