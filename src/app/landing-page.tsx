@@ -1,4 +1,4 @@
-import { GitFork } from "lucide-react";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 
 import { CodebergIcon, GitHubIcon } from "~/components/icons";
@@ -42,9 +42,13 @@ export function LandingPage({ authError }: { authError: string | null }) {
                     </p>
                 )}
                 <section className="flex flex-col items-center gap-6 text-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-action">
-                        <GitFork className="h-8 w-8 text-action-foreground" />
-                    </div>
+                    <Image
+                        src="/logo.svg"
+                        alt="Neosrc"
+                        width={64}
+                        height={64}
+                        className="size-16 dark:invert"
+                    />
                     <h1 className="text-4xl text-text-primary sm:text-5xl">
                         A unified UI
                         <br />
